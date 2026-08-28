@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { ChevronRightIcon } from '@/components/icons'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
-import { playSnippet } from '@/lib/audio-engine'
+import { playOrToggleSnippet } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
 import {
   MOMENT_VIBE_PICKER_OPTIONS,
@@ -80,33 +80,32 @@ export function ComposeReadyPreview({
 
   const canPlayInline = listen?.canPlayInline ?? false
   const playbackKey = draft?.linkedSongId || draft?.linkedAudioUrl || ''
-  const margoLineIndex = draft?.linkedSongId ? 0 : 0
   const { playing, buffering } = useSnippetPlaybackUi(
     canPlayInline && playbackKey ? playbackKey : null,
-    canPlayInline ? margoLineIndex : null,
+    canPlayInline ? draft?.lyric ?? null : null,
   )
 
   const handlePlay = useCallback(() => {
     if (!draft?.linkedAudioUrl || !canPlayInline) return
     if (draft.snippetStart == null || draft.snippetEnd == null) return
-    void playSnippet({
+    playOrToggleSnippet({
       songId: draft.linkedSongId || draft.linkedAudioUrl,
       audioUrl: draft.linkedAudioUrl,
       title: draft.songName,
       artist: draft.artistName,
       artwork: draft.artwork,
-      lineIndex: margoLineIndex,
+      lineIndex: 0,
       lineText: draft.lyric,
       startSec: draft.snippetStart,
       endSec: draft.snippetEnd,
       source: 'feed',
     })
-  }, [draft, canPlayInline, margoLineIndex])
+  }, [draft, canPlayInline])
 
   if (!draft) return null
 
   return (
-    <div style={{ marginBottom: '32px' }}>
+    <div style={{ marginBottom: '16px' }}>
       {isMulti && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
           <button

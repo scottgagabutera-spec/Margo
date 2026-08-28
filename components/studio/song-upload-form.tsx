@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
+import { normalizeArtistCreditForSave } from '@/lib/artist-identity'
 
 const supabase = createClient()
 
@@ -9,6 +10,7 @@ const font = 'var(--font-lora), serif'
 
 interface SongUploadFormProps {
   artistDisplayName: string
+  artistUsername?: string | null
   onComplete: () => void
   onCancel: () => void
   /** When set, the form updates this songs.id instead of inserting a new row. */
@@ -146,7 +148,7 @@ const STAGE_LABEL: Record<Stage, string> = {
   error: '',
 }
 
-export function SongUploadForm({ artistDisplayName, onComplete, onCancel, songId = null }: SongUploadFormProps) {
+export function SongUploadForm({ artistDisplayName, artistUsername = null, onComplete, onCancel, songId = null }: SongUploadFormProps) {
   const { user } = useIdentity()
   const isEdit = !!songId
   const [title, setTitle] = useState('')
@@ -275,7 +277,10 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel, songId
       body: JSON.stringify({
         srt: whisperData.srt,
         songTitle: title,
-        artist: artistName || artistDisplayName,
+        artist: normalizeArtistCreditForSave(artistName || artistDisplayName, {
+          displayName: artistDisplayName,
+          username: artistUsername,
+        }),
         songId,
       }),
     })
@@ -353,7 +358,10 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel, songId
           .from('songs')
           .update({
             title: title.trim(),
-            artist_display_name: (artistName || artistDisplayName).trim(),
+            artist_display_name: normalizeArtistCreditForSave(artistName || artistDisplayName, {
+              displayName: artistDisplayName,
+              username: artistUsername,
+            }),
             artwork_url: artworkUrl,
             audio_url: audioUrl,
             description: description.trim() || null,
@@ -438,7 +446,10 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel, songId
         id: newSongId,
         owner_profile_id: uid,
         title: title.trim(),
-        artist_display_name: (artistName || artistDisplayName).trim(),
+        artist_display_name: normalizeArtistCreditForSave(artistName || artistDisplayName, {
+          displayName: artistDisplayName,
+          username: artistUsername,
+        }),
         artwork_url: artworkUrl,
         audio_url: audioUrl,
         description: description.trim() || null,
@@ -557,7 +568,24 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel, songId
 
           <div style={{ marginBottom: '16px' }}>
             <label style={labelStyle}>Artist Name</label>
-            <input value={artistName} onChange={e => setArtistName(e.target.value)} placeholder="Artist or stage name" style={inputStyle} disabled={busy} />
+            <input
+              value={artistName}
+              onChange={e => setArtistName(e.target.value)}
+              placeholder={artistDisplayName || 'Artist or stage name'}
+              style={inputStyle}
+              disabled={busy}
+            />
+            <p style={{
+              fontFamily: font,
+              fontSize: '0.7rem',
+              color: 'var(--text-muted)',
+              margin: '8px 0 0',
+              lineHeight: 1.4,
+            }}>
+              Shown on songs as your public name
+              {artistDisplayName ? ` (${artistDisplayName})` : ''}.
+              {artistUsername ? ` @${artistUsername} is your unique handle — not the credit.` : ' Your @username stays unique and is not the song credit.'}
+            </p>
           </div>
 
           <div style={{ marginBottom: '16px' }}>

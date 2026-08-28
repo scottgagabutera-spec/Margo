@@ -77,25 +77,39 @@ export function useIsBuffering(songId: string | null | undefined): boolean {
   return buffering
 }
 
+function snippetUiFlags(
+  s: AudioEngineState,
+  songId: string | null | undefined,
+  lineKey: string | number | null | undefined,
+): { playing: boolean; buffering: boolean } {
+  if (!songId) return { playing: false, buffering: false }
+  const lineMatch =
+    lineKey == null
+      ? true
+      : typeof lineKey === 'number'
+        ? s.snippet?.lineIndex === lineKey
+        : (s.snippet?.lineText || '').slice(0, 140) === lineKey.slice(0, 140)
+  const isThis = s.mode === 'snippet' && s.songId === songId && lineMatch
+  return {
+    playing: s.playing && isThis,
+    buffering: s.buffering && isThis,
+  }
+}
+
 /**
  * Snippet playback UI flags for a specific line (feed cards, discover moments).
+ * Reads current engine state on mount so a card that appears mid-play shows pause, not play.
  */
 export function useSnippetPlaybackUi(
   songId: string | null | undefined,
   lineKey: string | number | null | undefined,
 ): { playing: boolean; buffering: boolean } {
-  const [flags, setFlags] = useState({ playing: false, buffering: false })
+  const [flags, setFlags] = useState(() => snippetUiFlags(getAudioEngineState(), songId, lineKey))
 
   useEffect(() => {
-    const unsub = subscribeAudioEngine(s => {
-      const lineMatch =
-        lineKey == null
-          ? true
-          : s.snippet?.lineIndex === lineKey || s.snippet?.lineText === String(lineKey)
-      const playing = s.playing && s.mode === 'snippet' && s.songId === songId && lineMatch
-      setFlags({ playing, buffering: s.buffering && playing })
-    })
-    return unsub
+    const sync = (s: AudioEngineState) => setFlags(snippetUiFlags(s, songId, lineKey))
+    sync(getAudioEngineState())
+    return subscribeAudioEngine(sync)
   }, [songId, lineKey])
 
   return flags

@@ -9,6 +9,7 @@ interface StageSendBarProps {
   shareItems: MomentActionMenuItem[]
   saving?: boolean
   shareBusy?: boolean
+  videoProgress?: string | null
   onSendToMargo?: () => void
   sending?: boolean
   sentPostId?: string | null
@@ -33,6 +34,7 @@ export function StageSendBar({
   shareItems,
   saving = false,
   shareBusy = false,
+  videoProgress = null,
   onSendToMargo,
   sending = false,
   sentPostId = null,
@@ -74,12 +76,30 @@ export function StageSendBar({
         zIndex: 20,
       }}
     >
+      {videoProgress ? (
+        <p
+          role="status"
+          aria-live="polite"
+          style={{
+            margin: 0,
+            fontFamily: 'var(--font-lora), serif',
+            fontSize: '0.68rem',
+            fontStyle: 'italic',
+            color: 'var(--text-secondary)',
+            textAlign: 'center',
+            lineHeight: 1.4,
+          }}
+        >
+          {videoProgress}
+        </p>
+      ) : null}
       <div style={rowStyle}>
         <MomentActionMenu
           label="Export"
           items={saveItems}
           variant="primary"
           busy={saving}
+          busyLabel={videoProgress}
           open={openMenu === 'save'}
           onOpenChange={(next) => setOpenMenu(next ? 'save' : null)}
         />
@@ -88,6 +108,7 @@ export function StageSendBar({
           items={shareItems.length > 0 ? shareItems : [{ id: 'none', label: 'Not available', disabled: true, onClick: () => {} }]}
           variant="secondary"
           busy={shareBusy}
+          busyLabel={videoProgress}
           disabled={shareItems.length === 0}
           open={openMenu === 'share'}
           onOpenChange={(next) => setOpenMenu(next ? 'share' : null)}

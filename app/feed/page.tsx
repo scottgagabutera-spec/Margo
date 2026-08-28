@@ -1,7 +1,7 @@
 'use client'
 import { toast } from 'sonner'
 import { CloseIcon } from '@/components/icons'
-import { Suspense, useState, useEffect, useMemo, useRef } from 'react'
+import { Suspense, useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
@@ -27,19 +27,15 @@ import { ArtistBadge } from '@/components/artist-badge'
 import { PostCard, normalizeEmotion } from '@/components/post-card'
 import { ReplayAttribution } from '@/components/replay-attribution'
 import { useRecentReplays } from '@/hooks/useRecentReplays'
-import { usePrimaryTab } from '@/components/primary-tab-shell'
+import { usePrimaryTab, restoreActivePrimaryScroll } from '@/components/primary-tab-shell'
 import { FeedPostSkeletonList } from '@/components/margo-skeletons'
+import { stripHandlePrefix } from '@/lib/artist-identity'
+import { feedRankIds, feedSortScore } from '@/lib/feed-rank'
 
 const supabase = createClient()
 
 // Soft-reload Feed-local Realtime payloads after pausing a hidden pane.
 const FEED_STALE_MS = 60_000
-
-// ── Earned-tag thresholds (feed ranking only) ─────────────────────────
-const NEW_WINDOW_HOURS = 24
-const RANK_BADGE_COUNT = 5
-const MIN_TRENDING_ENGAGE = 4
-const MIN_TRENDING_AGE_HOURS = 3
 
 export default function FeedPage() {
   return (
@@ -221,61 +217,16 @@ function FeedPageInner() {
     }
   }, [feedLive, user?.id])
 
-  // Feed rank (client-side on the currently loaded list, not a DB rank):
-  // New badge = created within 24h. Trending = top 5 by engage/(ageHrs+2)^1.4.
-  // Top = top 5 by lifetime engage. engage = views + 4*resonates + 5*echoes.
-  // Replays and song plays do not affect Feed badges.
-  const getEngagement = (post: Post) => {
-    const s = postStats[post.id] || {}
-    return (s.views || 0) + ((s.resonateCount || 0) * 4) + ((s.echoCount || 0) * 5)
-  }
-
-  const getAge = (post: Post) => {
-    if (!post.timestamp) return 999
-    return (Date.now() - post.timestamp) / 3600000
-  }
-
-  // Refactored to take the sort mode as an argument (was reading
-  // selectedSort from closure) so we can score every post under every
-  // mode once, up front, to compute which posts EARN a badge — instead
-  // of only ever knowing scores under whichever single sort was active.
-  const getScoreFor = (post: Post, sort: string) => {
-    const age = getAge(post)
-    const engage = getEngagement(post)
-    if (sort === 'NEW') return Math.exp(-age / 18) * 1000 + engage * 0.05
-    if (sort === 'TRENDING') return engage / Math.pow(age + 2, 1.4)
-    if (sort === 'TOP') return engage
-    return 0
-  }
-
-  // Earned-badge sets — computed once from the full unfiltered post
-  // list, independent of whatever filter is currently active. A badge
-  // is never permanent chrome; it only exists on posts that actually
-  // rank in the top N right now.
-  const { newIds, trendingIds, topIds } = useMemo(() => {
-    const newIds = new Set(posts.filter(p => getAge(p) < NEW_WINDOW_HOURS).map(p => p.id))
-    const trendingIds = new Set(
-      [...posts]
-        .filter(p => !newIds.has(p.id))
-        .filter(p => getAge(p) >= MIN_TRENDING_AGE_HOURS)
-        .filter(p => getEngagement(p) >= MIN_TRENDING_ENGAGE)
-        .sort((a, b) => getScoreFor(b, 'TRENDING') - getScoreFor(a, 'TRENDING'))
-        .slice(0, RANK_BADGE_COUNT)
-        .map(p => p.id)
-    )
-    const topIds = new Set(
-      [...posts]
-        .filter(p => getEngagement(p) > 0)
-        .sort((a, b) => getScoreFor(b, 'TOP') - getScoreFor(a, 'TOP'))
-        .slice(0, RANK_BADGE_COUNT)
-        .map(p => p.id)
-    )
-    return { newIds, trendingIds, topIds }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [posts, postStats])
+  // Feed rank: New = recency only. Trending/Top need mixed costly
+  // actions (resonates, lyric-backs, replays) — views never unlock a
+  // badge. See lib/feed-rank.ts.
+  const { newIds, trendingIds, topIds } = useMemo(
+    () => feedRankIds(posts, postStats),
+    [posts, postStats],
+  )
 
   useEffect(() => {
-    const q = searchQuery.trim()
+    const q = stripHandlePrefix(searchQuery)
     if (q.length < 2) { setPeople([]); return }
     const t = setTimeout(async () => {
       const hits = await searchProfiles(supabase, q)
@@ -288,14 +239,15 @@ function FeedPageInner() {
     const norm = normalizeEmotion(p.emotion || '')
     const matchesVibe = selectedVibe === 'ALL' || norm === selectedVibe
     if (!searchQuery.trim()) return matchesVibe
-    const q = searchQuery.toLowerCase()
+    const q = stripHandlePrefix(searchQuery).toLowerCase()
     const momentHaystack = resolveMomentLines(p).map((l) => l.text).join(' ').toLowerCase()
+    const handle = stripHandlePrefix(p.username || '').toLowerCase()
     return matchesVibe && (
       momentHaystack.includes(q) ||
       (p.knowledge?.song || '').toLowerCase().includes(q) ||
       (p.knowledge?.artist || '').toLowerCase().includes(q) ||
       (p.emotion || '').toLowerCase().includes(q) ||
-      (p.username || '').toLowerCase().includes(q) ||
+      handle.includes(q) ||
       (p.authorDisplayName || '').toLowerCase().includes(q)
     )
   }
@@ -342,7 +294,7 @@ function FeedPageInner() {
     if (selectedSort === 'NEW') {
       merged.sort((a, b) => b.sortAt - a.sortAt)
     } else {
-      merged.sort((a, b) => getScoreFor(b.post, selectedSort) - getScoreFor(a.post, selectedSort))
+      merged.sort((a, b) => feedSortScore(b.post, selectedSort, postStats) - feedSortScore(a.post, selectedSort, postStats))
     }
     return merged
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -421,7 +373,7 @@ function FeedPageInner() {
           .eq('post_id', postId)
           .eq('replayer_id', myId)
         if (error) throw error
-        toast.success('Replay removed')
+        toast('Replay removed')
       } catch (err) {
         console.error('Failed to un-replay:', err)
         setReplayed(prev => {
@@ -450,7 +402,7 @@ function FeedPageInner() {
         quote_text: null,
       })
       if (error) throw error
-      toast.success('Replayed')
+      toast('Replayed')
     } catch (err) {
       console.error('Failed to replay:', err)
       setReplayed(prev => {
@@ -497,7 +449,7 @@ function FeedPageInner() {
         })
         if (error) throw error
       }
-      toast.success('Replayed')
+      toast('Replayed')
     } catch (err) {
       console.error('Failed to quote-replay:', err)
       if (!already) {
@@ -525,7 +477,8 @@ function FeedPageInner() {
     setSelectedSort(prev => (prev === rank ? 'NEW' : rank))
   }
 
-  const listReady = seeded && !loading
+  const listReady = seeded && (posts.length > 0 || !loading)
+  const showFeedSkeleton = !listReady && posts.length === 0
   const hasActiveFilter = selectedVibe !== 'ALL' || selectedSort !== 'NEW'
 
   useEffect(() => {
@@ -558,6 +511,45 @@ function FeedPageInner() {
       window.clearTimeout(glowTimer)
     }
   }, [highlightParam, listReady, posts, router])
+
+  const restoredScrollRef = useRef(false)
+  const restoreTriesRef = useRef(0)
+
+  useLayoutEffect(() => {
+    if (!feedLive) {
+      restoredScrollRef.current = false
+      restoreTriesRef.current = 0
+      return
+    }
+    if (!listReady || highlightParam || restoredScrollRef.current) return
+    restoreTriesRef.current += 1
+    const result = restoreActivePrimaryScroll()
+    const done = result.anchored
+      || (result.applied && !result.waitingForAnchor)
+      || restoreTriesRef.current >= 6
+    if (done) {
+      restoredScrollRef.current = true
+      return
+    }
+    const frame = window.requestAnimationFrame(() => {
+      const next = restoreActivePrimaryScroll()
+      if (next.anchored || (next.applied && !next.waitingForAnchor)) {
+        restoredScrollRef.current = true
+      }
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [feedLive, listReady, posts.length, highlightParam])
+
+  useEffect(() => {
+    if (!feedLive) return
+    const onReselect = (event: Event) => {
+      const id = (event as CustomEvent<{ id?: string }>).detail?.id
+      if (id !== 'feed') return
+      if (pendingCount > 0) flushPending()
+    }
+    window.addEventListener('margo:primary-tab-reselect', onReselect)
+    return () => window.removeEventListener('margo:primary-tab-reselect', onReselect)
+  }, [feedLive, pendingCount, flushPending])
 
   return (
     <PullToRefresh
@@ -618,7 +610,7 @@ function FeedPageInner() {
             <MargoSearchInput
               value={searchQuery}
               onChange={setSearchQuery}
-              placeholder="Search lyrics, songs, artists, people…"
+              placeholder="Search lyrics, songs, artists, @people…"
             />
           </div>
 
@@ -668,7 +660,7 @@ function FeedPageInner() {
             Moment shared
           </p>
         )}
-        {!listReady && <FeedPostSkeletonList count={4} />}
+        {showFeedSkeleton && <FeedPostSkeletonList count={4} />}
 
         {listReady && feedItems.length === 0 && !(searchQuery.trim() && people.length > 0) && (
           <div style={{ textAlign: 'center', padding: '64px 0' }}>
@@ -756,10 +748,7 @@ function FeedPageInner() {
         </div>
 
         {listReady && feedItems.length > 0 && (
-          <div style={{ textAlign: 'center', marginTop: '48px' }}>
-            <div style={{ height: '1px', width: '96px', background: 'linear-gradient(to right, transparent, var(--border), transparent)', margin: '0 auto 16px' }} />
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.82rem', color: 'var(--text-muted)' }}>you&apos;ve felt them all</p>
-          </div>
+          <div style={{ height: '48px' }} aria-hidden />
         )}
       </main>
 

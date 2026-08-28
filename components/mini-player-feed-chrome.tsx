@@ -8,12 +8,23 @@ import { useFloatingPosition } from '@/hooks/useFloatingPosition'
 const PILL_SWIPE_DISTANCE = 36
 const PILL_SWIPE_VELOCITY = 0.45
 
-function composeChromeInsets() {
-  if (typeof document === 'undefined') return { top: 56, right: 12, bottom: 96, left: 12 }
-  const style = getComputedStyle(document.documentElement)
-  const tabbar = parseFloat(style.getPropertyValue('--margo-tabbar-h')) || 0
-  const cta = parseFloat(style.getPropertyValue('--margo-cta-bar-h')) || 0
-  return { top: 56, right: 12, bottom: tabbar + cta + 16, left: 12 }
+function readChromePx(name: string, fallback: number) {
+  if (typeof document === 'undefined') return fallback
+  return parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name)) || fallback
+}
+
+function composeDefaultInsets() {
+  const nav = readChromePx('--nav-height', 56)
+  const tabbar = readChromePx('--margo-tabbar-h', 80)
+  const cta = readChromePx('--margo-cta-bar-h', 0)
+  return { top: nav + 8, right: 12, bottom: tabbar + cta + 16, left: 12 }
+}
+
+/** Looser than default — pill can sit in the CTA band; CTAs keep a higher z-index when overlapping. */
+function composeClampInsets() {
+  const nav = readChromePx('--nav-height', 56)
+  const tabbar = readChromePx('--margo-tabbar-h', 80)
+  return { top: nav + 8, right: 12, bottom: tabbar + 8, left: 12 }
 }
 
 function isInteractiveTarget(target: EventTarget | null) {
@@ -35,10 +46,12 @@ function ComposeFloatingShell({
   onExpand: () => void
 }) {
   const shellRef = useRef<HTMLDivElement>(null)
+  const [stackZ, setStackZ] = useState(95)
   const float = useFloatingPosition({
     storageKey: 'margo-compose-player-pos',
     elementRef: shellRef,
-    getViewportInsets: composeChromeInsets,
+    getViewportInsets: composeDefaultInsets,
+    getClampInsets: composeClampInsets,
   })
 
   useEffect(() => {
@@ -50,6 +63,26 @@ function ComposeFloatingShell({
     float.reclamp()
   }, [float.reclamp])
 
+  useEffect(() => {
+    const updateZ = () => {
+      const el = shellRef.current
+      if (!el || typeof document === 'undefined') return
+      const cta = readChromePx('--margo-cta-bar-h', 0)
+      const tab = readChromePx('--margo-tabbar-h', 80)
+      const vh = window.visualViewport?.height ?? window.innerHeight
+      const ctaTop = vh - tab - cta
+      const overlapsCta = cta > 0 && el.getBoundingClientRect().bottom > ctaTop + 4
+      setStackZ(overlapsCta ? 50 : 95)
+    }
+    updateZ()
+    window.addEventListener('resize', updateZ)
+    window.visualViewport?.addEventListener('resize', updateZ)
+    return () => {
+      window.removeEventListener('resize', updateZ)
+      window.visualViewport?.removeEventListener('resize', updateZ)
+    }
+  }, [float.y, float.isDragging])
+
   return (
     <div
       ref={shellRef}
@@ -58,7 +91,7 @@ function ComposeFloatingShell({
         position: 'fixed',
         left: `${float.x}px`,
         top: `${float.y}px`,
-        zIndex: 95,
+        zIndex: stackZ,
         touchAction: 'none',
         cursor: float.isDragging ? 'grabbing' : 'grab',
         userSelect: 'none',

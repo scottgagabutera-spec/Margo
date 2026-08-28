@@ -42,6 +42,7 @@ export {
   getAudioEngineState,
   attachAudioElements,
   playSnippet,
+  playOrToggleSnippet,
   playFull,
   togglePlayPause,
   stop,

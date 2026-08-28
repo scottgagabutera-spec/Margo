@@ -17,6 +17,11 @@ interface KeyboardSafeCtaBarProps {
   zIndex?: number
   /** Inner content max width — defaults to 640px (Compose). */
   contentMaxWidth?: number | string
+  /**
+   * Extra space between the buttons and tab bar / keyboard.
+   * Compose destination CTAs use a larger gutter so they don't hug the tab bar.
+   */
+  bottomGutter?: number
 }
 
 /**
@@ -41,6 +46,7 @@ export function KeyboardSafeCtaBar({
   solidBackground = false,
   zIndex = 55,
   contentMaxWidth = 640,
+  bottomGutter = 12,
 }: KeyboardSafeCtaBarProps) {
   const rootRef = useRef<HTMLDivElement | null>(null)
 
@@ -69,8 +75,8 @@ export function KeyboardSafeCtaBar({
     paddingLeft: '24px',
     paddingRight: '24px',
     paddingBottom: keyboardOpen
-      ? '12px'
-      : 'calc(12px + var(--margo-page-bottom, var(--margo-tabbar-h, 0px)))',
+      ? `${bottomGutter}px`
+      : `calc(${bottomGutter}px + var(--margo-page-bottom, var(--margo-tabbar-h, 0px)))`,
     background: solidBackground
       ? 'var(--bg)'
       : 'linear-gradient(to top, var(--bg) 55%, transparent)',

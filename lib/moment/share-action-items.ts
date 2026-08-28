@@ -69,33 +69,22 @@ export interface BuildMomentShareActionItemsInput {
   canShareImage: boolean
   canShareVideo?: boolean
   canShareGif?: boolean
-  linksActive: boolean
   onShareImage: () => void
   onShareVideo?: () => void
   onShareGif?: () => void
-  onShareLink: () => void
-  onCopyLink: () => void
-  /** When false, link/copy rows are omitted (not shown disabled). */
-  showPendingLinks?: boolean
-  pendingHint?: string
 }
 
 /**
  * Shared Share ▾ menu items for Stage + Card modal.
- * Pre-publish: image only. Post-publish: image + link + copy.
+ * Image / Video / GIF only — link sharing is not available yet.
  */
 export function buildMomentShareActionItems({
   canShareImage,
   canShareVideo = false,
   canShareGif = false,
-  linksActive,
   onShareImage,
   onShareVideo = () => {},
   onShareGif = () => {},
-  onShareLink,
-  onCopyLink,
-  showPendingLinks = false,
-  pendingHint = 'Post to Margo first',
 }: BuildMomentShareActionItemsInput): MomentActionMenuItem[] {
   const items: MomentActionMenuItem[] = []
 
@@ -109,26 +98,6 @@ export function buildMomentShareActionItems({
 
   if (canShareGif) {
     items.push({ id: 'gif', label: 'Share GIF', onClick: onShareGif })
-  }
-
-  if (linksActive) {
-    items.push({ id: 'link', label: 'Share link', onClick: onShareLink })
-    items.push({ id: 'copy', label: 'Copy link', onClick: onCopyLink })
-  } else if (showPendingLinks) {
-    items.push({
-      id: 'link-wait',
-      label: 'Share link',
-      hint: pendingHint,
-      disabled: true,
-      onClick: () => {},
-    })
-    items.push({
-      id: 'copy-wait',
-      label: 'Copy link',
-      hint: pendingHint,
-      disabled: true,
-      onClick: () => {},
-    })
   }
 
   return items

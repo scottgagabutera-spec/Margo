@@ -5,17 +5,18 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { useSearchParams } from 'next/navigation'
-import { ArrowLeftIcon, SearchIcon } from '@/components/icons'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { ArrowLeftIcon, CardIcon, CloseIcon, MusicNoteIcon, PenLineIcon } from '@/components/icons'
 import { createClient } from '@/lib/supabase/client'
 import { matchLiveCatalogSong, searchMargoSongs, songMatchKey } from '@/lib/search-margo-songs'
 import { useIdentity } from '@/hooks/useIdentity'
-import { usePrimaryTab } from '@/components/primary-tab-shell'
-import { MomentCompletion } from '@/components/moment-completion'
+import { usePrimaryTab, clearPrimaryTabScroll } from '@/components/primary-tab-shell'
+import { toastMomentPosted, toastMomentPrivate, toastMomentSent } from '@/lib/moment-export/moment-export-toasts'
 import { ComposeSendTo } from '@/components/compose-send-to'
 import { ComposeReadyPreview } from '@/components/compose-ready-preview'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { ComposeSearchDropdown } from '@/components/compose-search-dropdown'
+import { StageSearchField } from '@/components/stage/stage-search-field'
 import { MomentShareStudio } from '@/components/moment-share-studio'
 import { MargoSheet } from '@/components/margo-sheet'
 import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle, keyboardSafeSecondaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
@@ -103,6 +104,159 @@ const backBtnStyle: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: '6px', boxSizing: 'border-box',
   transition: 'color 150ms ease',
 }
+/** Quiet utilities under the Moment card — not destination CTAs. */
+const composeToolBtnStyle: React.CSSProperties = {
+  flex: '1 1 0',
+  minWidth: 0,
+  minHeight: 'var(--margo-touch-min)',
+  padding: '6px 4px',
+  display: 'inline-flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '4px',
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  color: 'var(--text-secondary)',
+  WebkitTapHighlightColor: 'transparent',
+}
+const composeToolLabelStyle: React.CSSProperties = {
+  fontFamily: font,
+  fontSize: '0.6rem',
+  fontWeight: 600,
+  letterSpacing: '0.6px',
+  textTransform: 'uppercase',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  maxWidth: '100%',
+  lineHeight: 1.2,
+}
+/** Post / Private share one sticky row — same 44px target, no wrap. */
+const momentSplitSecondaryStyle: React.CSSProperties = {
+  ...keyboardSafeSecondaryBtnStyle,
+  flex: 1,
+  width: 'auto',
+  minWidth: 0,
+  whiteSpace: 'nowrap',
+  letterSpacing: '0.7px',
+  background: 'var(--surface-2)',
+}
+const momentSplitPrivateStyle: React.CSSProperties = {
+  ...momentSplitSecondaryStyle,
+  background: 'transparent',
+  border: '1px solid var(--border)',
+  color: 'var(--text-muted)',
+}
+
+function ComposeDismissButton({
+  onClick,
+  label = 'Cancel',
+}: {
+  onClick: () => void
+  label?: string
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={onClick}
+      style={{
+        width: 'var(--margo-touch-min)',
+        height: 'var(--margo-touch-min)',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        color: 'var(--text-muted)',
+        padding: 0,
+        flexShrink: 0,
+      }}
+    >
+      <CloseIcon size={18} color="currentColor" />
+    </button>
+  )
+}
+
+const composeOverlayStyle: React.CSSProperties = {
+  position: 'fixed',
+  top: 'var(--nav-height, 72px)',
+  left: 0,
+  right: 0,
+  height: 'calc(var(--margo-vv-height, 100dvh) - var(--nav-height, 72px))',
+  zIndex: 80,
+  display: 'flex',
+  flexDirection: 'column',
+  background: 'var(--bg)',
+  paddingLeft: '24px',
+  paddingRight: '24px',
+  paddingTop: '12px',
+  boxSizing: 'border-box',
+  overflowY: 'auto',
+  WebkitOverflowScrolling: 'touch',
+}
+
+function ComposeTopBar({
+  onBack,
+  backDisabled,
+  title,
+  trailing,
+}: {
+  onBack?: () => void
+  backDisabled?: boolean
+  title?: string
+  trailing?: React.ReactNode
+}) {
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'minmax(64px, 1fr) auto minmax(64px, 1fr)',
+      alignItems: 'center',
+      columnGap: '8px',
+      minHeight: 'var(--margo-touch-min)',
+      marginBottom: title ? '16px' : '8px',
+      flexShrink: 0,
+    }}>
+      <div>
+        {onBack ? (
+          <button
+            type="button"
+            aria-label="Back"
+            disabled={backDisabled}
+            onClick={onBack}
+            style={{
+              ...backBtnStyle,
+              marginBottom: 0,
+              opacity: backDisabled ? 0.4 : 1,
+              cursor: backDisabled ? 'not-allowed' : 'pointer',
+            }}
+          >
+            <ArrowLeftIcon size={16} color="currentColor" /> Back
+          </button>
+        ) : null}
+      </div>
+      {title ? (
+        <h1 style={{
+          fontFamily: font,
+          fontStyle: 'italic',
+          fontSize: '1.15rem',
+          fontWeight: 400,
+          color: 'var(--text)',
+          margin: 0,
+          textAlign: 'center',
+          lineHeight: 1.25,
+          letterSpacing: '0.2px',
+        }}>
+          {title}
+        </h1>
+      ) : <span />}
+      <div style={{ justifySelf: 'end' }}>{trailing}</div>
+    </div>
+  )
+}
 function buildDraftSnapshot(state: {
   entryPoint: string
   phase: MomentPhase
@@ -168,9 +322,10 @@ function buildDraftSnapshot(state: {
 function ComposeInner() {
   const { user, identity, loading: identityLoading, updateDisplayName } = useIdentity()
   const { requireAuth, authGateOpen } = useAuthGate()
-  const { isTabActive } = usePrimaryTab()
+  const { isTabActive, navigatePrimaryTab } = usePrimaryTab()
   const composeLive = isTabActive('compose')
   const searchParams = useSearchParams()
+  const router = useRouter()
   const composeStartedRef = useRef(false)
   const prefillHandledRef = useRef(false)
   const draftRestoredRef = useRef(false)
@@ -233,7 +388,6 @@ function ComposeInner() {
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const [bannerDismissed, setBannerDismissed] = useState(false)
-  const [searchFocused, setSearchFocused] = useState(false)
 
   // One-time "Write your line…" reveal — governs animation progress only.
   // Visibility (show/hide) is a separate, render-time check against
@@ -344,7 +498,7 @@ function ComposeInner() {
 
   // Must run before any early return (Rules of Hooks). Publishes --margo-keyboard-inset
   // and hides the mobile tab bar while typing / search sheet is open.
-  const { keyboardOpen, chromeHidden } = useKeyboardSafeChrome(composeLive)
+  const { keyboardOpen } = useKeyboardSafeChrome(composeLive)
 
   const resetComposeViewport = useCallback(() => {
     if (typeof document !== 'undefined') {
@@ -659,6 +813,19 @@ function ComposeInner() {
     resetComposeViewport()
   }, [linkedSongId, selectedSong, resetComposeViewport])
 
+  const handleCancelLine = useCallback(() => {
+    if (committedLines.length > 0) {
+      clearDraftFields()
+      setPhase('moment')
+      resetComposeViewport()
+      return
+    }
+    clearCurrentSongPick()
+    setSelectMode(null)
+    setPhase('find')
+    resetComposeViewport()
+  }, [committedLines.length, clearDraftFields, clearCurrentSongPick, resetComposeViewport])
+
   const handleLinePickerBack = useCallback(() => {
     setPhase('find')
     resetComposeViewport()
@@ -749,6 +916,16 @@ function ComposeInner() {
     setStartOverConfirm(false)
   }
 
+  const finishToFeed = (kind: 'public' | 'private' | 'send', sentName?: string | null) => {
+    resetComposeViewport()
+    resetCompose()
+    if (kind === 'public') toastMomentPosted()
+    else if (kind === 'private') toastMomentPrivate()
+    else toastMomentSent(sentName)
+    clearPrimaryTabScroll('feed')
+    if (!navigatePrimaryTab('/feed')) router.push('/feed')
+  }
+
   const persistMoment = useCallback(async (status: 'active' | 'private') => {
     if (!identity || !user) {
       setPostError('Still setting things up — try again in a moment.')
@@ -813,10 +990,7 @@ function ComposeInner() {
           if (!postId) { setPosting(false); return }
           setPosting(false)
           trackEvent('moment_posted_public')
-          setPhase('success')
-          setCompletionMode('public')
-          clearMomentDraft()
-          resetComposeViewport()
+          finishToFeed('public')
         } catch (e) {
           console.error('Failed to post to feed:', e)
           setPostError('Something went wrong. Please try again.')
@@ -834,10 +1008,7 @@ function ComposeInner() {
           if (!postId) { setPosting(false); return }
           setPosting(false)
           trackEvent('moment_saved_private')
-          setPhase('success')
-          setCompletionMode('private')
-          clearMomentDraft()
-          resetComposeViewport()
+          finishToFeed('private')
         } catch (e) {
           console.error('Failed to save private moment:', e)
           setPostError('Something went wrong. Please try again.')
@@ -845,7 +1016,7 @@ function ComposeInner() {
         }
       })()
     }
-  }, [persistMoment, resetComposeViewport])
+  }, [persistMoment, finishToFeed])
 
   const gateAction = useCallback((action: ComposePendingAction, runner: () => void) => {
     if (user) {
@@ -978,15 +1149,9 @@ function ComposeInner() {
 
   const handleSendComplete = useCallback((name: string) => {
     trackEvent('moment_sent_dm')
-    setSentToName(name)
     setShowSendTo(false)
-    setPhase('success')
-    setCompletionMode('send')
-    setPendingActionState(null)
-    setComposePendingAction(null)
-    clearMomentDraft()
-    resetComposeViewport()
-  }, [resetComposeViewport])
+    finishToFeed('send', name)
+  }, [finishToFeed])
 
   const primaryLine = useMemo(() => {
     const draft = buildCurrentDraft()
@@ -1000,19 +1165,6 @@ function ComposeInner() {
     return { lyric: '', song: '', artist: '' }
   }, [buildCurrentDraft, committedLines])
 
-  if (completionMode) {
-    return (
-      <MomentCompletion
-        mode={completionMode}
-        moment={exportMoment}
-        onDone={resetCompose}
-        sentToName={sentToName}
-      />
-    )
-  }
-
-  // Show the name banner on step 4 until the person has customized their
-  // displayName at least once, or dismissed it for this compose session.
   const showNameBanner = phase === 'moment' && !!identity && identity.displayName === identity.username && !bannerDismissed
   const buttonsBlocked = showNameBanner && editingName
   const showStep1Resume = phase === 'find' && !!selectedSong && (lyric.trim().length > 0 || linePickComplete || committedLines.length > 0)
@@ -1022,17 +1174,26 @@ function ComposeInner() {
 
   return (
     <main ref={composeRootRef} style={{ minHeight: '100dvh', background: 'var(--bg)', position: 'relative' }}>
-      <div style={{ paddingTop: 'calc(var(--nav-height, 72px) + 16px)', paddingBottom: 'calc(var(--margo-page-padding-bottom) + 88px)', paddingLeft: '24px', paddingRight: '24px' }}>
+      <div style={{
+        paddingTop: 'calc(var(--nav-height, 72px) + 16px)',
+        paddingBottom: phase === 'moment' || phase === 'action'
+          ? 'calc(var(--margo-cta-bar-h, 120px) + 16px)'
+          : 'calc(var(--margo-page-padding-bottom) + 88px)',
+        paddingLeft: '24px',
+        paddingRight: '24px',
+      }}>
         <div style={{ maxWidth: '640px', margin: '0 auto' }}>
 
           {/* ── Step 1: Search ── */}
           <div style={{ display: phase === 'find' ? 'block' : 'none' }}>
             {(committedLines.length > 0 || showStep1Resume) && (
-              <button
-                type="button"
-                onClick={handleFindBack}
-                style={backBtnStyle}
-              ><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
+              <ComposeTopBar
+                onBack={handleFindBack}
+                title={committedLines.length > 0 ? 'Add another line' : undefined}
+                trailing={committedLines.length > 0 ? (
+                  <ComposeDismissButton onClick={handleCancelLine} label="Cancel adding a line" />
+                ) : undefined}
+              />
             )}
             {committedLines.length > 0 && (
               <div style={{
@@ -1048,19 +1209,23 @@ function ComposeInner() {
                   Moment so far · {committedLines.length}/{POST_LINES_MAX} lines
                 </p>
                 {committedLines.map((line, i) => (
-                  <p key={i} style={{
-                    fontFamily: font, fontStyle: 'italic', fontSize: '0.9rem',
-                    color: 'var(--text)', margin: '0 0 8px', lineHeight: 1.4,
-                  }}>
-                    {i + 1}. &ldquo;{line.lyric}&rdquo;
-                    <span style={{
-                      display: 'block', fontStyle: 'normal', fontSize: '0.6rem',
-                      color: 'var(--text-muted)', letterSpacing: '1px',
-                      textTransform: 'uppercase', marginTop: '4px',
+                  <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '8px' }}>
+                    <p style={{
+                      flex: 1, minWidth: 0,
+                      fontFamily: font, fontStyle: 'italic', fontSize: '0.9rem',
+                      color: 'var(--text)', margin: 0, lineHeight: 1.4,
                     }}>
-                      {line.songName} · {line.artistName}
-                    </span>
-                  </p>
+                      {i + 1}. &ldquo;{line.lyric}&rdquo;
+                      <span style={{
+                        display: 'block', fontStyle: 'normal', fontSize: '0.6rem',
+                        color: 'var(--text-muted)', letterSpacing: '1px',
+                        textTransform: 'uppercase', marginTop: '4px',
+                      }}>
+                        {line.songName} · {line.artistName}
+                      </span>
+                    </p>
+                    <ComposeDismissButton onClick={() => handleRemoveCommittedLine(i)} label={`Remove line ${i + 1}`} />
+                  </div>
                 ))}
               </div>
             )}
@@ -1126,22 +1291,11 @@ function ComposeInner() {
               ) : null}
             </div>
             <div style={{ position: 'relative', zIndex: 50 }}>
-              <style>{`.compose-search-input::placeholder { color: var(--text-disabled); }`}</style>
-              <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '24px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex' }}><SearchIcon size={20} color="var(--text-disabled)" /></span>
-                <input type="text" value={searchQuery} onChange={(e) => handleSearchChange(e.target.value)}
-                  onFocus={() => setSearchFocused(true)}
-                  onBlur={() => setSearchFocused(false)}
-                  placeholder="Search by lyric, song or artist..."
-                  className="compose-search-input"
-                  style={{
-                    width: '100%', height: '64px', paddingLeft: '56px', paddingRight: '24px',
-                    background: searchFocused ? 'var(--gold-faint)' : 'var(--surface-2)',
-                    border: `1px solid ${searchFocused ? 'var(--gold-border)' : 'var(--border)'}`,
-                    borderRadius: '16px', color: 'var(--text)', fontSize: '1rem', fontFamily: UI_FONT, outline: 'none', boxSizing: 'border-box',
-                    transition: 'background 150ms ease, border-color 150ms ease',
-                  }} />
-              </div>
+              <StageSearchField
+                value={searchQuery}
+                onChange={handleSearchChange}
+                loading={searchLoading}
+              />
               <ComposeSearchDropdown
                 open={showResults}
                 loading={searchLoading}
@@ -1158,22 +1312,22 @@ function ComposeInner() {
 
           {/* ── MOMENT hub ── */}
           <div style={{ display: phase === 'moment' || phase === 'action' ? 'block' : 'none' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <button
-                style={{ ...backBtnStyle, marginBottom: 0, opacity: posting ? 0.4 : 1, cursor: posting ? 'not-allowed' : 'pointer' }}
-                disabled={posting}
-                onClick={() => { if (!posting) setPhase('select') }}
-              ><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
-              <button
-                type="button"
-                onClick={handleStartOver}
-                style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  fontFamily: font, fontSize: '0.72rem', color: 'var(--text-muted)',
-                  minHeight: 'var(--margo-touch-min)', padding: '0 8px',
-                }}
-              >Start over</button>
-            </div>
+            <ComposeTopBar
+              onBack={() => { if (!posting) setPhase('select') }}
+              backDisabled={posting}
+              title="Your Moment"
+              trailing={
+                <button
+                  type="button"
+                  onClick={handleStartOver}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontFamily: font, fontSize: '0.72rem', color: 'var(--text-muted)',
+                    minHeight: 'var(--margo-touch-min)', padding: '0 8px',
+                  }}
+                >Start over</button>
+              }
+            />
 
             <ComposeReadyPreview
               drafts={allLineDrafts}
@@ -1192,31 +1346,53 @@ function ComposeInner() {
                 </p>
                 {committedLines.map((line, i) => (
                   <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '8px' }}>
-                    <p style={{ flex: 1, fontFamily: font, fontStyle: 'italic', fontSize: '0.82rem', margin: 0, lineHeight: 1.4 }}>
+                    <p style={{ flex: 1, minWidth: 0, fontFamily: font, fontStyle: 'italic', fontSize: '0.82rem', margin: 0, lineHeight: 1.4 }}>
                       {i + 1}. &ldquo;{line.lyric}&rdquo;
                     </p>
-                    <button type="button" onClick={() => handleRemoveCommittedLine(i)}
-                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontFamily: UI_FONT, fontSize: '0.65rem', cursor: 'pointer', flexShrink: 0 }}>
-                      Remove
-                    </button>
+                    <ComposeDismissButton onClick={() => handleRemoveCommittedLine(i)} label={`Remove line ${i + 1}`} />
                   </div>
                 ))}
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
-              <button type="button" onClick={() => setShowExportStudio(true)}
-                style={{ padding: '8px 14px', borderRadius: '50px', border: '1px solid var(--gold-border)', background: 'transparent', color: 'var(--gold)', fontFamily: font, fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', cursor: 'pointer' }}>
-                Export / share
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'nowrap',
+                alignItems: 'stretch',
+                width: '100%',
+                margin: '0 0 12px',
+                borderTop: '1px solid var(--border)',
+                paddingTop: '2px',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setShowExportStudio(true)}
+                aria-label="Export"
+                style={composeToolBtnStyle}
+              >
+                <CardIcon size={16} color="currentColor" />
+                <span style={composeToolLabelStyle}>Export</span>
               </button>
-              <button type="button" onClick={handleChangeSong}
-                style={{ padding: '8px 14px', borderRadius: '50px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.58rem', letterSpacing: '0.8px', textTransform: 'uppercase', cursor: 'pointer' }}>
-                Change song
+              <button
+                type="button"
+                onClick={handleChangeSong}
+                aria-label="Change song"
+                style={composeToolBtnStyle}
+              >
+                <MusicNoteIcon size={16} color="currentColor" />
+                <span style={composeToolLabelStyle}>Change song</span>
               </button>
               {committedLines.length + 1 < POST_LINES_MAX && (
-                <button type="button" onClick={handleAddLineFromMoment}
-                  style={{ padding: '8px 14px', borderRadius: '50px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.58rem', letterSpacing: '0.8px', textTransform: 'uppercase', cursor: 'pointer' }}>
-                  Add another line
+                <button
+                  type="button"
+                  onClick={handleAddLineFromMoment}
+                  aria-label="Add another line"
+                  style={composeToolBtnStyle}
+                >
+                  <PenLineIcon size={16} color="currentColor" />
+                  <span style={composeToolLabelStyle}>Add line</span>
                 </button>
               )}
             </div>
@@ -1267,7 +1443,7 @@ function ComposeInner() {
 
       {/* Sticky primary actions — VisualViewport pins above keyboard */}
       {showLinePicker && !linesLoading && margoLines.length === 0 && portalMounted && createPortal(
-        <KeyboardSafeCtaBar keyboardOpen={keyboardOpen || chromeHidden} zIndex={85}>
+        <KeyboardSafeCtaBar keyboardOpen={keyboardOpen} zIndex={85}>
           <button
             type="button"
             onClick={() => {
@@ -1283,20 +1459,17 @@ function ComposeInner() {
 
       {portalMounted && showLinePicker && createPortal(
         <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0,
-          height: 'var(--margo-vv-height, 100dvh)',
-          zIndex: 80,
-          display: 'flex', flexDirection: 'column',
-          background: 'var(--bg)',
-          paddingLeft: '24px', paddingRight: '24px',
-          paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
+          ...composeOverlayStyle,
           paddingBottom: 'calc(var(--margo-cta-bar-h, 0px) + var(--margo-tabbar-h, 80px) + 16px)',
-          boxSizing: 'border-box',
-          overflowY: 'auto',
-          WebkitOverflowScrolling: 'touch',
         }}>
           <div style={{ maxWidth: '640px', width: '100%', margin: '0 auto' }}>
+            <ComposeTopBar
+              onBack={handleLinePickerBack}
+              title="Pick the line"
+              trailing={<ComposeDismissButton onClick={handleCancelLine} label="Cancel line" />}
+            />
             <ComposeLinePicker
+              hideHeader
               lines={margoLines}
               loading={linesLoading}
               songTitle={songName}
@@ -1329,24 +1502,38 @@ function ComposeInner() {
       )}
 
       {showYourLinePanel && portalMounted && createPortal(
-        <KeyboardSafeCtaBar keyboardOpen={keyboardOpen || chromeHidden} zIndex={85}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <KeyboardSafeCtaBar keyboardOpen={keyboardOpen} zIndex={85} bottomGutter={24}>
+          <div style={{ display: 'flex', gap: '8px' }}>
             <button
               type="button"
               onClick={handleLyricComplete}
               disabled={lyric.trim().length === 0}
-              style={{ ...keyboardSafePrimaryBtnStyle, opacity: lyric.trim().length === 0 ? 0.4 : 1 }}
+              style={{
+                ...keyboardSafePrimaryBtnStyle,
+                flex: '1.2 1 0',
+                width: 'auto',
+                minWidth: 0,
+                padding: '0 12px',
+                whiteSpace: 'nowrap',
+                opacity: lyric.trim().length === 0 ? 0.4 : 1,
+              }}
             >Continue</button>
             {committedLines.length + 1 < POST_LINES_MAX && (
               <button
                 type="button"
                 onClick={handleAddAnotherLine}
+                aria-label="Add another line"
                 disabled={lyric.trim().length === 0 || !songName.trim() || !artistName.trim()}
                 style={{
                   ...keyboardSafeSecondaryBtnStyle,
+                  flex: 1,
+                  width: 'auto',
+                  minWidth: 0,
+                  padding: '0 10px',
+                  whiteSpace: 'nowrap',
                   opacity: (lyric.trim().length === 0 || !songName.trim() || !artistName.trim()) ? 0.4 : 1,
                 }}
-              >Add another line</button>
+              >Add line</button>
             )}
           </div>
         </KeyboardSafeCtaBar>,
@@ -1355,31 +1542,38 @@ function ComposeInner() {
 
 
       {phase === 'moment' && (
-        <KeyboardSafeCtaBar keyboardOpen={keyboardOpen || chromeHidden}>
-          <div style={{ opacity: buttonsBlocked ? 0.4 : 1, pointerEvents: buttonsBlocked ? 'none' : 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <KeyboardSafeCtaBar keyboardOpen={keyboardOpen} bottomGutter={28}>
+          <div style={{ opacity: buttonsBlocked ? 0.4 : 1, pointerEvents: buttonsBlocked ? 'none' : 'auto', display: 'flex', gap: '8px' }}>
             <button
               type="button"
+              aria-label="Send to someone"
               onClick={() => { void handleSendToSomeone() }}
               disabled={posting || identityLoading}
-              style={{ ...keyboardSafePrimaryBtnStyle, opacity: posting ? 0.7 : 1, cursor: posting ? 'not-allowed' : 'pointer' }}
-            >Send to someone</button>
+              style={{
+                ...keyboardSafePrimaryBtnStyle,
+                flex: '1.2 1 0',
+                width: 'auto',
+                minWidth: 0,
+                padding: '0 10px',
+                whiteSpace: 'nowrap',
+                opacity: posting ? 0.7 : 1,
+                cursor: posting ? 'not-allowed' : 'pointer',
+              }}
+            >Send</button>
             <button
               type="button"
+              aria-label="Post to Feed"
               onClick={() => { void handlePostToFeed() }}
               disabled={posting || identityLoading}
-              style={keyboardSafeSecondaryBtnStyle}
-            >{posting ? 'Posting…' : 'Post to Feed'}</button>
+              style={momentSplitSecondaryStyle}
+            >Post</button>
             <button
               type="button"
+              aria-label="Keep Private"
               onClick={() => { void handleKeepPrivate() }}
               disabled={posting}
-              style={{
-                ...keyboardSafeSecondaryBtnStyle,
-                background: 'transparent',
-                border: '1px solid var(--border)',
-                color: 'var(--text-muted)',
-              }}
-            >Keep Private</button>
+              style={momentSplitPrivateStyle}
+            >Private</button>
           </div>
         </KeyboardSafeCtaBar>
       )}
@@ -1414,7 +1608,7 @@ function ComposeInner() {
         heightMode="auto"
         bottomInset="tabbar-tight"
       >
-        <MomentShareStudio moment={exportMoment} compact />
+        <MomentShareStudio moment={exportMoment} compact layout="modal" />
       </MargoSheet>
 
       {startOverConfirm && (
@@ -1438,87 +1632,52 @@ function ComposeInner() {
 
       {portalMounted && showYourLinePanel && createPortal(
         <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0,
-          height: 'var(--margo-vv-height, 100dvh)',
-          zIndex: 80,
-          display: 'flex', flexDirection: 'column',
-          background: 'var(--bg)',
-          paddingLeft: '24px', paddingRight: '24px',
-          paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
-          transition: 'height 150ms ease',
-          boxSizing: 'border-box',
+          ...composeOverlayStyle,
+          paddingBottom: 'var(--margo-cta-bar-h, 120px)',
+          overflowY: 'hidden',
         }}>
           <div style={{ maxWidth: '640px', width: '100%', margin: '0 auto', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <button
-                type="button"
-                aria-label="Back"
-                onClick={handleYourLineBack}
-                style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center',
-                  minWidth: 'var(--margo-touch-min)', minHeight: 'var(--margo-touch-min)',
-                  padding: '0 8px', margin: '0 -8px', boxSizing: 'border-box',
-                }}
-              >
-                <ArrowLeftIcon size={16} color="currentColor" />
-                <span style={{ fontFamily: font, fontSize: '0.82rem', marginLeft: '6px', letterSpacing: '0.5px' }}>Back</span>
-              </button>
-              {chromeHidden && (
-                <span style={{ fontFamily: font, fontStyle: 'italic', fontSize: '0.95rem', color: 'var(--text)', marginLeft: '4px' }}>
-                  Your line
-                </span>
-              )}
-            </div>
-
-            {!chromeHidden && (
-              <div style={{ flexShrink: 0, textAlign: 'center', margin: '16px 0 24px' }}>
-                <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: '8px' }}>Your line</h1>
-              </div>
-            )}
+            <ComposeTopBar
+              onBack={handleYourLineBack}
+              title="Your line"
+              trailing={<ComposeDismissButton onClick={handleCancelLine} label="Cancel line" />}
+            />
 
             <ComposeLyricCard style={{
               flex: 1, minHeight: 0, overflow: 'hidden',
               display: 'flex', flexDirection: 'column',
-              marginTop: chromeHidden ? '12px' : 0,
-              padding: chromeHidden ? '16px' : '24px',
-              transition: 'padding 150ms ease, margin 150ms ease',
+              padding: '20px',
             }}>
               <div style={{
-                order: chromeHidden ? 0 : 2,
                 flexShrink: 0,
                 display: 'flex',
-                flexDirection: chromeHidden ? 'row' : 'column',
+                flexDirection: 'row',
                 gap: '10px',
-                marginBottom: chromeHidden ? '10px' : 0,
-                marginTop: chromeHidden ? 0 : '16px',
-                transition: 'all 150ms ease',
+                marginBottom: '12px',
               }}>
-                <div style={{ flex: chromeHidden ? '0 0 58%' : '1', minWidth: 0 }}>
+                <div style={{ flex: '0 0 58%', minWidth: 0 }}>
                   <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--text-on-gold-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Song</label>
                   <input type="text" value={songName} onChange={(e) => setSongName(e.target.value)}
                     style={{
                       width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(7,6,10,0.18)',
                       padding: '4px 0 6px', fontFamily: UI_FONT, fontWeight: 600, color: 'var(--text-on-gold)', outline: 'none', boxSizing: 'border-box',
-                      fontSize: chromeHidden ? '0.8rem' : '0.95rem',
+                      fontSize: '0.9rem',
                       overflow: 'hidden', textOverflow: 'ellipsis',
-                      transition: 'font-size 150ms ease',
                     }} />
                 </div>
-                <div style={{ flex: chromeHidden ? '0 0 38%' : '1', minWidth: 0 }}>
+                <div style={{ flex: '1 1 38%', minWidth: 0 }}>
                   <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--text-on-gold-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Artist</label>
                   <input type="text" value={artistName} onChange={(e) => setArtistName(e.target.value)}
                     style={{
                       width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(7,6,10,0.18)',
                       padding: '4px 0 6px', fontFamily: UI_FONT, fontWeight: 400, color: 'var(--text-on-gold-muted)', outline: 'none', boxSizing: 'border-box',
-                      fontSize: chromeHidden ? '0.7rem' : '0.75rem',
+                      fontSize: '0.75rem',
                       overflow: 'hidden', textOverflow: 'ellipsis',
-                      transition: 'font-size 150ms ease',
                     }} />
                 </div>
               </div>
 
-              <div style={{ order: 1, position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                 {lyric.length === 0 && (
                   <span aria-hidden style={{
                     position: 'absolute', top: 0, left: 0, right: 0,
@@ -1543,18 +1702,10 @@ function ComposeInner() {
                   }} />
               </div>
 
-              <div style={{ order: 3, flexShrink: 0, display: 'flex', justifyContent: 'flex-end', marginTop: chromeHidden ? '4px' : '10px' }}>
+              <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
                 <span style={{ fontFamily: UI_FONT, fontSize: '0.65rem', color: 'var(--text-on-gold-muted)' }}>{lyric.length}/140</span>
               </div>
             </ComposeLyricCard>
-
-            <div style={{
-              flexShrink: 0,
-              height: chromeHidden
-                ? 'var(--margo-cta-bar-h, 0px)'
-                : 'calc(var(--margo-cta-bar-h, 0px) + var(--margo-tabbar-h, 80px) + 68px)',
-              transition: 'height 150ms ease',
-            }} />
           </div>
         </div>,
         document.body,

@@ -8,6 +8,7 @@ import type { Song } from '@/hooks/useSongs'
 import { mapPostLinesRows } from '@/lib/post-lines'
 import type { CatalogLyricAtom } from '@/lib/catalog-lyric-unit'
 import { warmProfile } from '@/lib/profile-warm'
+import { embedProfile, resolvePublicArtistCredit } from '@/lib/artist-identity'
 
 const supabase = createClient()
 
@@ -175,7 +176,8 @@ const SONGS_SELECT_LIGHT = `
   status, coming_soon_label, order, youtube_url, spotify_url,
   apple_music_url, soundcloud_url, audiomack_url, boomplay_url,
   duration_sec, created_at, is_ai_generated,
-  song_stats ( plays, resonate_count, lyric_uses )
+  song_stats ( plays, resonate_count, lyric_uses ),
+  profiles!owner_profile_id ( username, display_name )
 `
 
 interface RawSongRow {
@@ -198,14 +200,20 @@ interface RawSongRow {
   created_at: string
   is_ai_generated: boolean
   song_stats: { plays: number; resonate_count: number; lyric_uses: number }[] | null
+  profiles?: { username?: string | null; display_name?: string | null } | { username?: string | null; display_name?: string | null }[] | null
 }
 
 export function transformSongRowLight(row: RawSongRow): Song {
   const stats = row.song_stats?.[0]
+  const profile = embedProfile(row.profiles)
   return {
     id: row.id,
     title: row.title,
-    artist: row.artist_display_name,
+    artist: resolvePublicArtistCredit({
+      artistDisplayName: row.artist_display_name,
+      ownerDisplayName: profile.display_name,
+      ownerUsername: profile.username,
+    }),
     artwork: row.artwork_url,
     audioUrl: row.audio_url,
     description: row.description,

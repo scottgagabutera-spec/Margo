@@ -100,6 +100,13 @@ Nav links (desktop): `0.75rem` / 700 / uppercase / letter-spacing ~1–2px — s
 | Display name | `1.25rem` | 600 | `--text` | Geist |
 | @username | `0.7rem` | 400 | `--text-secondary` | Geist |
 
+**Product rules (Instagram / X / Spotify):**
+- **Display name** is the public artist or listener name (e.g. Margo). It is what people read first. It is **not unique**.
+- **@username** is the unique handle (e.g. `@trymargo`). It is the profile URL, mentions, and search key. Users cannot share it.
+- Songs credit the **display name**, never the handle. Studio “Artist Name” defaults to display name; typing `@username` saves the display name instead.
+- Search matches both display name and username (leading `@` is stripped).
+- Future artists: pick a public name for credits; pick a unique @handle for identity. Changing display name does not change the handle or upload flow.
+
 ### Song title vs artist (canonical)
 
 Always **stack** when space allows (catalog, karaoke header, SongPreview, mini-player expanded, post attribution):

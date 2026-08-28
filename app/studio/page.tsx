@@ -225,6 +225,7 @@ export default function StudioPage() {
             <SongUploadForm
               key={editingSongId ?? 'new'}
               artistDisplayName={identity.displayName}
+              artistUsername={identity.username}
               songId={editingSongId}
               onComplete={handleUploadComplete}
               onCancel={() => { setShowUpload(false); setEditingSongId(null) }}
