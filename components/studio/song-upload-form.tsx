@@ -649,7 +649,9 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
           margin: '0 0 10px',
           lineHeight: 1.5,
         }}>
-          How the room feels while this song plays. Leave Still for none.
+          How the room feels while this song plays — not the lyric vibe tag.
+          Breath is warm and close. Pulse bumps. Weight sits low and darker.
+          Leave Still for none.
         </p>
         <div
           role="radiogroup"

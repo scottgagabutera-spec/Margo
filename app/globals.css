@@ -682,10 +682,10 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   height: 260px;
   filter: blur(68px);
   --atm-op-lo: 0.09;
-  --atm-op-hi: 0.15;
+  --atm-op-hi: 0.16;
   --atm-scale: 1.1;
   --atm-drift: 36px;
-  --atm-pulse-hi: 0.11;
+  --atm-pulse-hi: 0.14;
 }
 
 .margo-atmosphere--karaoke {
@@ -713,6 +713,12 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 .margo-atmosphere--card.margo-atmosphere--still {
   opacity: 0;
 }
+
+.margo-atmosphere--breath { background: var(--gold-warm); }
+.margo-atmosphere--drift { background: var(--gold); }
+.margo-atmosphere--pulse { background: var(--gold-warm); }
+.margo-atmosphere--weight { background: var(--gold-2); }
+.margo-atmosphere--pulse.margo-atmosphere-veil { background: var(--gold); }
 
 /* Breath: a round chest of air that inhales with the lyric. */
 @keyframes margo-atm-breath {
@@ -742,15 +748,23 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   }
 }
 
-/* Pulse: stays put. Tiny heart, not a flash. */
+/* Pulse: the bump. Warm gold hits, then settles. Not a brightness wash. */
 @keyframes margo-atm-pulse {
   0%, 100% {
     opacity: var(--atm-op-lo);
     transform: translate(-50%, -50%) scale(1);
   }
-  50% {
+  18% {
+    opacity: var(--atm-op-hi);
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+  32% {
+    opacity: calc(var(--atm-op-lo) + 0.02);
+    transform: translate(-50%, -50%) scale(1.02);
+  }
+  48% {
     opacity: var(--atm-pulse-hi);
-    transform: translate(-50%, -50%) scale(1.03);
+    transform: translate(-50%, -50%) scale(1.06);
   }
 }
 
@@ -773,7 +787,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   animation: margo-atm-drift 22s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 .margo-atmosphere--pulse.is-live {
-  animation: margo-atm-pulse 8.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  animation: margo-atm-pulse 3.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 .margo-atmosphere--weight.is-live {
   animation: margo-atm-weight 16s cubic-bezier(0.45, 0, 0.55, 1) infinite;
@@ -812,7 +826,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   filter: blur(90px);
 }
 .margo-atmosphere--pulse.margo-atmosphere-veil {
-  animation-delay: -4.2s;
+  animation-delay: -1.8s;
   width: 140%;
   height: 140%;
   filter: blur(110px);
