@@ -698,9 +698,9 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 /* Weight — mound of mass under the lyric, not a thin bar. */
 .margo-atmosphere--card.margo-atmosphere--weight {
   top: 100%;
-  width: 118%;
-  height: 156px;
-  filter: blur(26px);
+  width: 94%;
+  height: 188px;
+  filter: blur(22px);
 }
 .margo-atmosphere--karaoke.margo-atmosphere--weight {
   top: 100%;
@@ -709,9 +709,9 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   filter: blur(34px);
 }
 .margo-atmosphere--weight.margo-atmosphere-veil {
-  width: 132%;
-  height: 176px;
-  filter: blur(38px);
+  width: 108%;
+  height: 210px;
+  filter: blur(32px);
 }
 .margo-atmosphere--karaoke.margo-atmosphere--weight.margo-atmosphere-veil {
   width: 148%;
