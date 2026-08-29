@@ -18,6 +18,7 @@ export type AtmosphereRoomMatch = {
 /**
  * Single Atmosphere room layer. Card and karaoke share the five personalities;
  * variant only changes scale. Grammar is shape + path + entrance in CSS.
+ * Extra nodes (slabs / shells / threads / rings) mount only while `live`.
  * Reads engine.atmosphere — do not pass a second copy of the song field.
  *
  * Personality class is `still` whenever this room is not live, so switching
@@ -121,9 +122,57 @@ export function AtmosphereLayer({
       data-atmosphere={live ? personality : 'still'}
     >
       {showOrb ? <div className={orbClass} /> : null}
-      {live ? <div className={`${orbClass} margo-atmosphere-veil`} /> : null}
+      {live ? (
+        <AtmosphereLiveExtras personality={personality} variant={variant} />
+      ) : null}
     </div>
   )
+}
+
+/** Extra compositor layers — only while live. Cap 5 (Weight); others 3. */
+function AtmosphereLiveExtras({
+  personality,
+  variant,
+}: {
+  personality: AtmosphereId
+  variant: AtmosphereVariant
+}) {
+  const extra = `margo-atmosphere-extra margo-atmosphere-extra--${variant} is-live`
+  if (personality === 'weight') {
+    return (
+      <>
+        <div className={`${extra} margo-atmosphere-veil margo-atmosphere--weight`} />
+        <div className={`${extra} margo-atmosphere-slab margo-atmosphere-slab--a`} />
+        <div className={`${extra} margo-atmosphere-slab margo-atmosphere-slab--b`} />
+        <div className={`${extra} margo-atmosphere-slab margo-atmosphere-slab--c`} />
+      </>
+    )
+  }
+  if (personality === 'breath') {
+    return (
+      <>
+        <div className={`${extra} margo-atmosphere-shell margo-atmosphere-shell--1`} />
+        <div className={`${extra} margo-atmosphere-shell margo-atmosphere-shell--2`} />
+      </>
+    )
+  }
+  if (personality === 'drift') {
+    return (
+      <>
+        <div className={`${extra} margo-atmosphere-thread margo-atmosphere-thread--b`} />
+        <div className={`${extra} margo-atmosphere-thread margo-atmosphere-thread--c`} />
+      </>
+    )
+  }
+  if (personality === 'pulse') {
+    return (
+      <>
+        <div className={`${extra} margo-atmosphere-ring margo-atmosphere-ring--1`} />
+        <div className={`${extra} margo-atmosphere-ring margo-atmosphere-ring--2`} />
+      </>
+    )
+  }
+  return null
 }
 
 function isThisRoom(

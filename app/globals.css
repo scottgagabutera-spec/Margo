@@ -647,7 +647,8 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 
 /* ── Atmosphere (song room). Transform + opacity only. ───────────
    Grammar is shape + position + entrance + path. Same gold family.
-   Color/opacity/blur may support; they are not the distinction. */
+   Color/opacity/blur may support; they are not the distinction.
+   Extra nodes (slabs/shells/threads/rings) mount only while live. */
 .margo-atmosphere-clip {
   position: absolute;
   inset: 0;
@@ -655,6 +656,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   pointer-events: none;
   z-index: -1;
   border-radius: inherit;
+  container-type: size;
 }
 .margo-atmosphere-clip--karaoke {
   position: absolute;
@@ -708,84 +710,203 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   height: 280px;
   filter: blur(34px);
 }
+.margo-atmosphere-extra.margo-atmosphere-veil {
+  left: 50%;
+  top: 100%;
+}
 .margo-atmosphere--weight.margo-atmosphere-veil {
   width: 108%;
   height: 210px;
   filter: blur(32px);
 }
-.margo-atmosphere--karaoke.margo-atmosphere--weight.margo-atmosphere-veil {
+.margo-atmosphere-clip--karaoke .margo-atmosphere--weight.margo-atmosphere-veil {
   width: 148%;
   height: 320px;
   filter: blur(48px);
 }
 
-/* Breath — round chest volume, centered. */
+/* Breath — ribcage oval, centered. Rest pose is wider than tall. */
 .margo-atmosphere--card.margo-atmosphere--breath {
-  width: 196px;
-  height: 196px;
+  width: 220px;
+  height: 160px;
   top: 44%;
-  filter: blur(34px);
+  filter: blur(28px);
 }
 .margo-atmosphere--karaoke.margo-atmosphere--breath {
-  width: 420px;
-  height: 420px;
-  top: 38%;
-  filter: blur(48px);
-}
-.margo-atmosphere--breath.margo-atmosphere-veil {
-  width: 248px;
-  height: 248px;
-  filter: blur(46px);
-}
-.margo-atmosphere--karaoke.margo-atmosphere--breath.margo-atmosphere-veil {
   width: 520px;
-  height: 520px;
+  height: 380px;
+  top: 38%;
+  filter: blur(42px);
 }
 
-/* Drift — small current that can cross a 320–390px card. */
+/* Drift — lead thread. Extra threads are .margo-atmosphere-thread. */
 .margo-atmosphere--card.margo-atmosphere--drift {
-  width: 76px;
-  height: 54px;
-  top: 42%;
-  filter: blur(20px);
+  width: 90px;
+  height: 36px;
+  top: 38%;
+  filter: blur(16px);
 }
 .margo-atmosphere--karaoke.margo-atmosphere--drift {
-  width: 140px;
-  height: 96px;
-  top: 40%;
-  filter: blur(28px);
-}
-.margo-atmosphere--drift.margo-atmosphere-veil {
-  width: 110px;
-  height: 72px;
-  filter: blur(32px);
-}
-.margo-atmosphere--karaoke.margo-atmosphere--drift.margo-atmosphere-veil {
-  width: 190px;
-  height: 120px;
+  width: 168px;
+  height: 58px;
+  top: 36%;
+  filter: blur(22px);
 }
 
-/* Pulse — compact heart, same seat as Breath but discrete hits. */
+/* Pulse — compact circle. Rest pose is round, smaller than Breath's oval. */
 .margo-atmosphere--card.margo-atmosphere--pulse {
-  width: 150px;
-  height: 150px;
+  width: 128px;
+  height: 128px;
   top: 44%;
-  filter: blur(28px);
+  filter: blur(22px);
 }
 .margo-atmosphere--karaoke.margo-atmosphere--pulse {
-  width: 280px;
-  height: 280px;
+  width: 220px;
+  height: 220px;
   top: 40%;
+  filter: blur(32px);
+}
+
+/* Extra live nodes — gold, compositor-only motion. */
+.margo-atmosphere-extra {
+  position: absolute;
+  pointer-events: none;
+  background: var(--gold);
+  border-radius: 50%;
+  opacity: 0;
+}
+.margo-atmosphere-extra.is-live {
+  will-change: transform, opacity;
+}
+
+/* Weight veil (existing second mass) + 3 falling slabs. */
+.margo-atmosphere-clip--card .margo-atmosphere-slab {
+  top: -6%;
+  border-radius: 42%;
+  filter: blur(16px);
+  transform: translate(-50%, 0);
+}
+.margo-atmosphere-clip--card .margo-atmosphere-slab--a {
+  left: 22%;
+  width: 18%;
+  height: 72px;
+}
+.margo-atmosphere-clip--card .margo-atmosphere-slab--b {
+  left: 48%;
+  width: 14%;
+  height: 58px;
+  filter: blur(18px);
+}
+.margo-atmosphere-clip--card .margo-atmosphere-slab--c {
+  left: 70%;
+  width: 16%;
+  height: 64px;
+}
+.margo-atmosphere-clip--karaoke .margo-atmosphere-slab {
+  top: -8%;
+  border-radius: 42%;
+  filter: blur(24px);
+  transform: translate(-50%, 0);
+}
+.margo-atmosphere-clip--karaoke .margo-atmosphere-slab--a {
+  left: 20%;
+  width: 15%;
+  height: 140px;
+}
+.margo-atmosphere-clip--karaoke .margo-atmosphere-slab--b {
+  left: 46%;
+  width: 12%;
+  height: 112px;
+  filter: blur(28px);
+}
+.margo-atmosphere-clip--karaoke .margo-atmosphere-slab--c {
+  left: 72%;
+  width: 14%;
+  height: 128px;
+}
+
+/* Breath shells — lagged lung volume. */
+.margo-atmosphere-clip--card .margo-atmosphere-shell {
+  left: 50%;
+  top: 44%;
+  transform: translate(-50%, -50%);
+}
+.margo-atmosphere-clip--card .margo-atmosphere-shell--1 {
+  width: 280px;
+  height: 200px;
   filter: blur(40px);
 }
-.margo-atmosphere--pulse.margo-atmosphere-veil {
-  width: 190px;
-  height: 190px;
-  filter: blur(40px);
+.margo-atmosphere-clip--card .margo-atmosphere-shell--2 {
+  width: 340px;
+  height: 240px;
+  filter: blur(48px);
 }
-.margo-atmosphere--karaoke.margo-atmosphere--pulse.margo-atmosphere-veil {
-  width: 360px;
-  height: 360px;
+.margo-atmosphere-clip--karaoke .margo-atmosphere-shell {
+  left: 50%;
+  top: 38%;
+  transform: translate(-50%, -50%);
+}
+.margo-atmosphere-clip--karaoke .margo-atmosphere-shell--1 {
+  width: 640px;
+  height: 460px;
+  filter: blur(56px);
+}
+.margo-atmosphere-clip--karaoke .margo-atmosphere-shell--2 {
+  width: 780px;
+  height: 540px;
+  filter: blur(64px);
+}
+
+/* Drift threads B / C. */
+.margo-atmosphere-clip--card .margo-atmosphere-thread {
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+.margo-atmosphere-clip--card .margo-atmosphere-thread--b {
+  width: 120px;
+  height: 44px;
+  top: 48%;
+  filter: blur(24px);
+}
+.margo-atmosphere-clip--card .margo-atmosphere-thread--c {
+  width: 64px;
+  height: 28px;
+  top: 58%;
+  filter: blur(14px);
+}
+.margo-atmosphere-clip--karaoke .margo-atmosphere-thread {
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+.margo-atmosphere-clip--karaoke .margo-atmosphere-thread--b {
+  width: 220px;
+  height: 72px;
+  top: 48%;
+  filter: blur(32px);
+}
+.margo-atmosphere-clip--karaoke .margo-atmosphere-thread--c {
+  width: 120px;
+  height: 44px;
+  top: 58%;
+  filter: blur(20px);
+}
+
+/* Pulse hit-rings. */
+.margo-atmosphere-clip--card .margo-atmosphere-ring {
+  left: 50%;
+  top: 44%;
+  width: 128px;
+  height: 128px;
+  filter: blur(18px);
+  transform: translate(-50%, -50%);
+}
+.margo-atmosphere-clip--karaoke .margo-atmosphere-ring {
+  left: 50%;
+  top: 40%;
+  width: 220px;
+  height: 220px;
+  filter: blur(26px);
+  transform: translate(-50%, -50%);
 }
 
 @keyframes margo-atm-weight-in {
@@ -812,46 +933,120 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 @keyframes margo-atm-breath-in {
   0% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.62);
+    transform: translate(-50%, -50%) scale(0.7, 0.85);
   }
   100% {
     opacity: 0.16;
-    transform: translate(-50%, -50%) scale(1);
+    transform: translate(-50%, -50%) scale(1, 1);
   }
 }
 @keyframes margo-atm-breath {
   0%, 100% {
     opacity: 0.15;
-    transform: translate(-50%, -50%) scale(1);
+    transform: translate(-50%, -50%) scale(1, 1);
   }
   50% {
     opacity: 0.17;
-    transform: translate(-50%, -50%) scale(1.16);
+    transform: translate(-50%, -50%) scale(1.22, 1.1);
+  }
+}
+
+@keyframes margo-atm-breath-shell-in {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.7, 0.85);
+  }
+  100% {
+    opacity: 0.08;
+    transform: translate(-50%, -50%) scale(1, 1);
+  }
+}
+@keyframes margo-atm-breath-shell {
+  0%, 100% {
+    opacity: 0.08;
+    transform: translate(-50%, -50%) scale(1, 1);
+  }
+  50% {
+    opacity: 0.1;
+    transform: translate(-50%, -50%) scale(1.22, 1.1);
+  }
+}
+@keyframes margo-atm-breath-shell-2 {
+  0%, 100% {
+    opacity: 0.05;
+    transform: translate(-50%, -50%) scale(1, 1);
+  }
+  50% {
+    opacity: 0.06;
+    transform: translate(-50%, -56%) scale(1.22, 1.1);
   }
 }
 
 @keyframes margo-atm-drift-in {
   0% {
     opacity: 0;
-    transform: translate(calc(-50% - 168px), -52%) scale(1.7, 0.82);
+    transform: translate(calc(-50% - 36cqw), -52%) scale(1.7, 0.82);
   }
   100% {
     opacity: 0.2;
-    transform: translate(calc(-50% - 118px), -48%) scale(1.7, 0.82);
+    transform: translate(calc(-50% - 28cqw), -48%) scale(1.7, 0.82);
   }
 }
 @keyframes margo-atm-drift {
   0% {
     opacity: 0.18;
-    transform: translate(calc(-50% - 118px), -50%) scale(1.7, 0.82);
+    transform: translate(calc(-50% - 28cqw), -50%) scale(1.7, 0.82);
   }
   50% {
     opacity: 0.2;
-    transform: translate(calc(-50% + 118px), -40%) scale(1.85, 0.78);
+    transform: translate(calc(-50% + 28cqw), -40%) scale(1.85, 0.78);
   }
   100% {
     opacity: 0.18;
-    transform: translate(calc(-50% - 118px), -50%) scale(1.7, 0.82);
+    transform: translate(calc(-50% - 28cqw), -50%) scale(1.7, 0.82);
+  }
+}
+@keyframes margo-atm-drift-c-in {
+  0% {
+    opacity: 0;
+    transform: translate(calc(-50% - 32cqw), -50%) scale(1.5, 0.85);
+  }
+  100% {
+    opacity: 0.16;
+    transform: translate(calc(-50% - 24cqw), -48%) scale(1.5, 0.85);
+  }
+}
+@keyframes margo-atm-drift-c {
+  0% {
+    opacity: 0.14;
+    transform: translate(calc(-50% - 24cqw), -48%) scale(1.5, 0.85);
+  }
+  50% {
+    opacity: 0.18;
+    transform: translate(calc(-50% + 34cqw), -38%) scale(1.65, 0.8);
+  }
+  100% {
+    opacity: 0.14;
+    transform: translate(calc(-50% - 24cqw), -48%) scale(1.5, 0.85);
+  }
+}
+
+@keyframes margo-atm-slab-fall {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0);
+  }
+  14% {
+    opacity: 0.18;
+    transform: translate(-50%, 12cqh);
+  }
+  86% {
+    opacity: 0.1;
+    transform: translate(-50%, 96cqh);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 112cqh);
   }
 }
 
@@ -891,6 +1086,42 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
     transform: translate(-50%, -50%) scale(1);
   }
 }
+@keyframes margo-atm-pulse-ring-1 {
+  0%, 8% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  14% {
+    opacity: 0.2;
+    transform: translate(-50%, -50%) scale(1.12);
+  }
+  32% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2.1);
+  }
+  33%, 100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+@keyframes margo-atm-pulse-ring-2 {
+  0%, 24% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  30% {
+    opacity: 0.14;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+  42% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2.4);
+  }
+  43%, 100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
 
 .margo-atmosphere--weight.is-live {
   animation:
@@ -913,26 +1144,104 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
     margo-atm-pulse 2.9s 0.48s cubic-bezier(0.33, 0.9, 0.4, 1) infinite;
 }
 
-/* Depth: same grammar, slight lag — Pulse stays on the same hits. */
+/* Weight veil + slabs. Slabs start after the mound rises. */
 .margo-atmosphere--weight.margo-atmosphere-veil.is-live {
   animation:
     margo-atm-weight-in 0.92s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both,
     margo-atm-weight 14s 1.02s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
-.margo-atmosphere--breath.margo-atmosphere-veil.is-live {
-  animation:
-    margo-atm-breath-in 0.86s 0.08s cubic-bezier(0.16, 1, 0.3, 1) both,
-    margo-atm-breath 7.4s 0.86s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+.margo-atmosphere-slab--a.is-live {
+  animation: margo-atm-slab-fall 5.6s 0.78s linear infinite;
 }
-.margo-atmosphere--drift.margo-atmosphere-veil.is-live {
+.margo-atmosphere-slab--b.is-live {
+  animation: margo-atm-slab-fall 7.1s 2.58s linear infinite;
+}
+.margo-atmosphere-slab--c.is-live {
+  animation: margo-atm-slab-fall 6.4s 3.98s linear infinite;
+}
+
+/* Breath shells — same inhale clock, lagged. */
+.margo-atmosphere-shell--1.is-live {
+  animation:
+    margo-atm-breath-shell-in 0.86s 0.08s cubic-bezier(0.16, 1, 0.3, 1) both,
+    margo-atm-breath-shell 7.4s 0.88s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.margo-atmosphere-shell--2.is-live {
+  animation:
+    margo-atm-breath-shell-in 0.86s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both,
+    margo-atm-breath-shell-2 7.4s 1.06s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+/* Drift threads B (wake) + C (offset fetch). */
+.margo-atmosphere-thread--b.is-live {
   animation:
     margo-atm-drift-in 1.05s 0.16s cubic-bezier(0.16, 1, 0.3, 1) both,
-    margo-atm-drift 16s 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+    margo-atm-drift 16s 2.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
-.margo-atmosphere--pulse.margo-atmosphere-veil.is-live {
+.margo-atmosphere-thread--c.is-live {
   animation:
-    margo-atm-pulse-in 0.52s 0.06s cubic-bezier(0.16, 1, 0.3, 1) both,
-    margo-atm-pulse 2.9s 0.54s cubic-bezier(0.33, 0.9, 0.4, 1) infinite;
+    margo-atm-drift-c-in 1s 0.35s cubic-bezier(0.16, 1, 0.3, 1) both,
+    margo-atm-drift-c 19s 1.35s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+/* Pulse rings — same 2.9s hits as the core, not a Breath sine. */
+.margo-atmosphere-ring--1.is-live {
+  animation: margo-atm-pulse-ring-1 2.9s 0.48s cubic-bezier(0.33, 0.9, 0.4, 1) infinite;
+}
+.margo-atmosphere-ring--2.is-live {
+  animation: margo-atm-pulse-ring-2 2.9s 0.48s cubic-bezier(0.33, 0.9, 0.4, 1) infinite;
+}
+
+/* Desktop / tablet feed cards cap at 880px — scale card tokens, not karaoke. */
+@media (min-width: 640px) {
+  .margo-atmosphere--card.margo-atmosphere--breath {
+    width: 280px;
+    height: 200px;
+    filter: blur(32px);
+  }
+  .margo-atmosphere--card.margo-atmosphere--pulse {
+    width: 160px;
+    height: 160px;
+    filter: blur(24px);
+  }
+  .margo-atmosphere--card.margo-atmosphere--drift {
+    width: 118px;
+    height: 44px;
+    filter: blur(18px);
+  }
+  .margo-atmosphere--card.margo-atmosphere--weight {
+    height: 220px;
+    filter: blur(24px);
+  }
+  .margo-atmosphere-clip--card .margo-atmosphere-shell--1 {
+    width: 360px;
+    height: 250px;
+  }
+  .margo-atmosphere-clip--card .margo-atmosphere-shell--2 {
+    width: 430px;
+    height: 300px;
+  }
+  .margo-atmosphere-clip--card .margo-atmosphere-thread--b {
+    width: 156px;
+    height: 54px;
+  }
+  .margo-atmosphere-clip--card .margo-atmosphere-thread--c {
+    width: 84px;
+    height: 34px;
+  }
+  .margo-atmosphere-clip--card .margo-atmosphere-ring {
+    width: 160px;
+    height: 160px;
+  }
+  .margo-atmosphere-clip--card .margo-atmosphere-slab--a {
+    height: 92px;
+  }
+  .margo-atmosphere-clip--card .margo-atmosphere-slab--b {
+    height: 74px;
+  }
+  .margo-atmosphere-clip--card .margo-atmosphere-slab--c {
+    height: 82px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -942,7 +1251,12 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   .margo-atmosphere--drift,
   .margo-atmosphere--pulse,
   .margo-atmosphere--weight,
-  .margo-atmosphere-veil {
+  .margo-atmosphere-veil,
+  .margo-atmosphere-extra,
+  .margo-atmosphere-slab,
+  .margo-atmosphere-shell,
+  .margo-atmosphere-thread,
+  .margo-atmosphere-ring {
     animation: none !important;
   }
   .margo-atmosphere--card {
