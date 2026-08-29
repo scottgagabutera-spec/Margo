@@ -196,8 +196,6 @@ export function renderMomentFrame(
 
   ctx.save()
   ctx.globalAlpha = alpha
-  drawRoundedRectPath(ctx, 0, 0, W, H, layout.borderRadius)
-  ctx.clip()
   ctx.fillStyle = layout.background.base
   ctx.fillRect(0, 0, W, H)
   const highlight = ctx.createLinearGradient(0, 0, 0, H * layout.background.highlightHeightFraction)
@@ -211,8 +209,7 @@ export function renderMomentFrame(
   ctx.globalAlpha = alpha
   ctx.strokeStyle = layout.background.border
   ctx.lineWidth = 1
-  drawRoundedRectPath(ctx, 0.5, 0.5, W - 1, H - 1, layout.borderRadius)
-  ctx.stroke()
+  ctx.strokeRect(0.5, 0.5, W - 1, H - 1)
   ctx.restore()
 
   drawMarkBadge(ctx, layout, theme, alpha)
