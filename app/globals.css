@@ -682,10 +682,10 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   height: 280px;
   filter: blur(72px);
   --atm-op-lo: 0.08;
-  --atm-op-hi: 0.14;
-  --atm-scale: 1.035;
-  --atm-drift: 10px;
-  --atm-pulse-hi: 0.11;
+  --atm-op-hi: 0.13;
+  --atm-scale: 1.04;
+  --atm-drift: 14px;
+  --atm-pulse-hi: 0.10;
 }
 
 .margo-atmosphere--karaoke {
@@ -714,6 +714,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   opacity: 0;
 }
 
+/* Breath: the room inhales with the lyric. */
 @keyframes margo-atm-breath {
   0%, 100% {
     opacity: var(--atm-op-lo);
@@ -725,17 +726,19 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   }
 }
 
+/* Drift: air wandering. Almost-flat opacity — motion is the feel. */
 @keyframes margo-atm-drift {
   0%, 100% {
-    opacity: var(--atm-op-lo);
+    opacity: 0.10;
     transform: translate(calc(-50% - var(--atm-drift)), -50%) scale(1);
   }
   50% {
-    opacity: var(--atm-op-hi);
-    transform: translate(calc(-50% + var(--atm-drift)), calc(-50% + 3px)) scale(1.01);
+    opacity: 0.11;
+    transform: translate(calc(-50% + var(--atm-drift)), calc(-50% + 10px)) scale(1.02);
   }
 }
 
+/* Pulse: a distant heartbeat. Not a brightness flash. */
 @keyframes margo-atm-pulse {
   0%, 100% {
     opacity: var(--atm-op-lo);
@@ -743,38 +746,47 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   }
   50% {
     opacity: var(--atm-pulse-hi);
-    transform: translate(-50%, -50%) scale(1.006);
+    transform: translate(-50%, -50%) scale(1.012);
   }
 }
 
+/* Weight: mass settling. Density and drop — not a brighter gold. */
 @keyframes margo-atm-weight {
   0%, 100% {
-    opacity: var(--atm-op-hi);
-    transform: translate(-50%, -42%) scale(1.02);
+    opacity: 0.11;
+    transform: translate(-50%, -50%) scale(1.05);
   }
   50% {
-    opacity: var(--atm-op-lo);
-    transform: translate(-50%, -56%) scale(1.05);
+    opacity: 0.12;
+    transform: translate(-50%, -38%) scale(1.09);
   }
 }
 
 .margo-atmosphere--breath.is-live {
-  animation: margo-atm-breath 6.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  animation: margo-atm-breath 7.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 .margo-atmosphere--drift.is-live {
-  animation: margo-atm-drift 16s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  animation: margo-atm-drift 18s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 .margo-atmosphere--pulse.is-live {
-  animation: margo-atm-pulse 8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  animation: margo-atm-pulse 8.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 .margo-atmosphere--weight.is-live {
-  animation: margo-atm-weight 11s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  animation: margo-atm-weight 14s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.margo-atmosphere--card.margo-atmosphere--weight {
+  width: 340px;
+  height: 340px;
+  top: 78%;
+  filter: blur(96px);
 }
 
 .margo-atmosphere--karaoke.margo-atmosphere--weight {
-  width: 520px;
-  height: 520px;
-  top: 34%;
+  width: 620px;
+  height: 620px;
+  top: 52%;
+  filter: blur(120px);
 }
 
 @media (prefers-reduced-motion: reduce) {
