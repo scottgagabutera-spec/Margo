@@ -347,7 +347,7 @@ export default function SongPage() {
         .tray-action-btn span { font-family: var(--font-lora), serif; font-size: 0.52rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.35); }
       `}</style>
 
-      {/* Ambient glow — Atmosphere room (Still keeps the previous static orb) */}
+      {/* Atmosphere room. Still is a faint wash; living rooms mount only while playing. */}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
         <AtmosphereLayer variant="karaoke" songId={songId} />
       </div>

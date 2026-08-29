@@ -160,7 +160,6 @@ function AtmosphereRoom({
   const dropFillId = useId().replace(/:/g, '')
   const room = [
     'margo-atm-room',
-    `margo-atm-room--${variant}`,
     live ? 'is-live' : 'is-hold',
   ].join(' ')
 
