@@ -779,50 +779,50 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   will-change: transform, opacity;
 }
 
-/* Weight veil (existing second mass) + 3 falling slabs. */
+/* Weight lumps — sit on the mound and settle with it. Not falling drops. */
 .margo-atmosphere-clip--card .margo-atmosphere-slab {
-  top: -6%;
-  border-radius: 42%;
-  filter: blur(16px);
-  transform: translate(-50%, 0);
+  top: 100%;
+  border-radius: 46%;
+  filter: blur(22px);
+  transform: translate(-50%, -58%);
 }
 .margo-atmosphere-clip--card .margo-atmosphere-slab--a {
-  left: 22%;
-  width: 18%;
-  height: 72px;
+  left: 28%;
+  width: 28%;
+  height: 96px;
 }
 .margo-atmosphere-clip--card .margo-atmosphere-slab--b {
-  left: 48%;
-  width: 14%;
-  height: 58px;
-  filter: blur(18px);
+  left: 50%;
+  width: 34%;
+  height: 110px;
+  filter: blur(26px);
 }
 .margo-atmosphere-clip--card .margo-atmosphere-slab--c {
-  left: 70%;
-  width: 16%;
-  height: 64px;
+  left: 72%;
+  width: 26%;
+  height: 88px;
 }
 .margo-atmosphere-clip--karaoke .margo-atmosphere-slab {
-  top: -8%;
-  border-radius: 42%;
-  filter: blur(24px);
-  transform: translate(-50%, 0);
+  top: 100%;
+  border-radius: 46%;
+  filter: blur(32px);
+  transform: translate(-50%, -58%);
 }
 .margo-atmosphere-clip--karaoke .margo-atmosphere-slab--a {
-  left: 20%;
-  width: 15%;
-  height: 140px;
+  left: 26%;
+  width: 26%;
+  height: 160px;
 }
 .margo-atmosphere-clip--karaoke .margo-atmosphere-slab--b {
-  left: 46%;
-  width: 12%;
-  height: 112px;
-  filter: blur(28px);
+  left: 50%;
+  width: 32%;
+  height: 190px;
+  filter: blur(38px);
 }
 .margo-atmosphere-clip--karaoke .margo-atmosphere-slab--c {
-  left: 72%;
-  width: 14%;
-  height: 128px;
+  left: 74%;
+  width: 24%;
+  height: 150px;
 }
 
 /* Breath shells — lagged lung volume. */
@@ -897,7 +897,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   top: 44%;
   width: 128px;
   height: 128px;
-  filter: blur(18px);
+  filter: blur(14px);
   transform: translate(-50%, -50%);
 }
 .margo-atmosphere-clip--karaoke .margo-atmosphere-ring {
@@ -905,7 +905,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   top: 40%;
   width: 220px;
   height: 220px;
-  filter: blur(26px);
+  filter: blur(20px);
   transform: translate(-50%, -50%);
 }
 
@@ -1031,22 +1031,24 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   }
 }
 
-@keyframes margo-atm-slab-fall {
+@keyframes margo-atm-slab-in {
   0% {
     opacity: 0;
-    transform: translate(-50%, 0);
-  }
-  14% {
-    opacity: 0.18;
-    transform: translate(-50%, 12cqh);
-  }
-  86% {
-    opacity: 0.1;
-    transform: translate(-50%, 96cqh);
+    transform: translate(-50%, -28%) scale(1.06, 0.7);
   }
   100% {
-    opacity: 0;
-    transform: translate(-50%, 112cqh);
+    opacity: 0.1;
+    transform: translate(-50%, -58%) scale(1, 1);
+  }
+}
+@keyframes margo-atm-slab-settle {
+  0%, 100% {
+    opacity: 0.09;
+    transform: translate(-50%, -58%) scale(1, 1);
+  }
+  50% {
+    opacity: 0.12;
+    transform: translate(-50%, -48%) scale(1.03, 1.12);
   }
 }
 
@@ -1092,14 +1094,22 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
     transform: translate(-50%, -50%) scale(1);
   }
   14% {
-    opacity: 0.2;
-    transform: translate(-50%, -50%) scale(1.12);
+    opacity: 0.32;
+    transform: translate(-50%, -50%) scale(1.2);
   }
-  32% {
+  28% {
+    opacity: 0.22;
+    transform: translate(-50%, -50%) scale(1.55);
+  }
+  50% {
+    opacity: 0.12;
+    transform: translate(-50%, -50%) scale(1.9);
+  }
+  72% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(2.1);
+    transform: translate(-50%, -50%) scale(2.15);
   }
-  33%, 100% {
+  73%, 100% {
     opacity: 0;
     transform: translate(-50%, -50%) scale(1);
   }
@@ -1110,14 +1120,18 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
     transform: translate(-50%, -50%) scale(1);
   }
   30% {
-    opacity: 0.14;
-    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 0.26;
+    transform: translate(-50%, -50%) scale(1.18);
   }
-  42% {
+  48% {
+    opacity: 0.16;
+    transform: translate(-50%, -50%) scale(1.7);
+  }
+  78% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(2.4);
+    transform: translate(-50%, -50%) scale(2.25);
   }
-  43%, 100% {
+  79%, 100% {
     opacity: 0;
     transform: translate(-50%, -50%) scale(1);
   }
@@ -1144,20 +1158,26 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
     margo-atm-pulse 2.9s 0.48s cubic-bezier(0.33, 0.9, 0.4, 1) infinite;
 }
 
-/* Weight veil + slabs. Slabs start after the mound rises. */
+/* Weight veil + lumps. Same 14s settle as the mound — attached, not falling. */
 .margo-atmosphere--weight.margo-atmosphere-veil.is-live {
   animation:
     margo-atm-weight-in 0.92s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both,
     margo-atm-weight 14s 1.02s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 .margo-atmosphere-slab--a.is-live {
-  animation: margo-atm-slab-fall 5.6s 0.78s linear infinite;
+  animation:
+    margo-atm-slab-in 0.9s 0.12s cubic-bezier(0.16, 1, 0.3, 1) both,
+    margo-atm-slab-settle 14s 1.02s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 .margo-atmosphere-slab--b.is-live {
-  animation: margo-atm-slab-fall 7.1s 2.58s linear infinite;
+  animation:
+    margo-atm-slab-in 0.96s 0.22s cubic-bezier(0.16, 1, 0.3, 1) both,
+    margo-atm-slab-settle 14s 1.18s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 .margo-atmosphere-slab--c.is-live {
-  animation: margo-atm-slab-fall 6.4s 3.98s linear infinite;
+  animation:
+    margo-atm-slab-in 0.88s 0.32s cubic-bezier(0.16, 1, 0.3, 1) both,
+    margo-atm-slab-settle 14s 1.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
 /* Breath shells — same inhale clock, lagged. */
@@ -1234,13 +1254,13 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
     height: 160px;
   }
   .margo-atmosphere-clip--card .margo-atmosphere-slab--a {
-    height: 92px;
+    height: 118px;
   }
   .margo-atmosphere-clip--card .margo-atmosphere-slab--b {
-    height: 74px;
+    height: 134px;
   }
   .margo-atmosphere-clip--card .margo-atmosphere-slab--c {
-    height: 82px;
+    height: 108px;
   }
 }
 

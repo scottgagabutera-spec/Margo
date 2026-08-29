@@ -650,7 +650,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
           lineHeight: 1.5,
         }}>
           How the room feels while this song plays — not the lyric vibe tag.
-          Weight falls as mass. Breath opens like a chest. Drift is a current.
+          Weight presses low. Breath opens like a chest. Drift is a current.
           Pulse thumps, then rests. Leave Still for none.
         </p>
         <div
