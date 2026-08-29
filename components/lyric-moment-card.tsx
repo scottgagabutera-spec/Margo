@@ -57,7 +57,7 @@ export function LyricMomentCard({
         isolation: 'isolate',
       }}
     >
-      <AtmosphereLayer variant="card" active={isPlaying} />
+      <AtmosphereLayer variant="card" songId={moment.songId} lineText={moment.line} />
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
         <div style={{ minWidth: 0, flex: 1 }}>
           {primaryVibe && (

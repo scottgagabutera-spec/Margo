@@ -80,7 +80,11 @@ export function MomentRecipientView({
         background: 'var(--bg)',
       }}
     >
-      <AtmosphereLayer variant="card" active={playing} />
+      <AtmosphereLayer
+        variant="card"
+        songId={listen?.songId}
+        lineText={listen?.lineLyric || primary?.lyric || ''}
+      />
       <header
         style={{
           display: 'flex',

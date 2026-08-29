@@ -10,18 +10,31 @@ import {
 
 type AtmosphereVariant = 'card' | 'karaoke'
 
+export type AtmosphereRoomMatch = {
+  songId: string
+  lineText: string
+}
+
 /**
  * Single Atmosphere room layer. Card and karaoke share the five personalities;
  * variant only changes scale tokens in CSS. Reads engine.atmosphere — do not
  * pass a second copy of the song field.
+ *
+ * Personality class is `still` whenever this room is not live, so switching
+ * to a NULL/Still song cannot leave Breath/Drift/Pulse/Weight behind.
  */
 export function AtmosphereLayer({
   variant,
-  active,
+  songId = null,
+  lineText = null,
+  rooms,
 }: {
   variant: AtmosphereVariant
-  /** True when this surface is the current room (this Moment / this karaoke song). */
-  active: boolean
+  /** Karaoke: this page's song. Card: single-line Moment when `rooms` omitted. */
+  songId?: string | null
+  lineText?: string | null
+  /** Multi-line Feed Moments — any matching line owns this room. */
+  rooms?: AtmosphereRoomMatch[]
 }) {
   const engine = useAtmosphereRoomState()
   const rootRef = useRef<HTMLDivElement>(null)
@@ -31,6 +44,7 @@ export function AtmosphereLayer({
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const personality: AtmosphereId = parseAtmosphere(engine.atmosphere)
+  const active = isThisRoom(variant, engine, songId, lineText, rooms)
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -104,9 +118,30 @@ export function AtmosphereLayer({
       ref={rootRef}
       aria-hidden
       className={`margo-atmosphere-clip margo-atmosphere-clip--${variant}`}
-      data-atmosphere={personality}
+      data-atmosphere={live ? personality : 'still'}
     >
       {showOrb ? <div className={orbClass} /> : null}
     </div>
   )
+}
+
+function isThisRoom(
+  variant: AtmosphereVariant,
+  engine: { mode: string; songId: string | null; lineText: string | null },
+  songId: string | null,
+  lineText: string | null,
+  rooms: AtmosphereRoomMatch[] | undefined,
+): boolean {
+  if (!engine.songId) return false
+  if (variant === 'karaoke') {
+    return engine.mode === 'full' && engine.songId === songId
+  }
+  if (engine.mode !== 'snippet') return false
+  const matches = rooms && rooms.length > 0
+    ? rooms
+    : (songId ? [{ songId, lineText: lineText || '' }] : [])
+  return matches.some((r) => (
+    r.songId === engine.songId &&
+    (r.lineText ? engine.lineText === r.lineText : true)
+  ))
 }

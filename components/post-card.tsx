@@ -27,7 +27,7 @@ import {
   togglePlayPause,
   warmUrl,
 } from '@/lib/audio-engine'
-import { useAudioEngine, useAtmosphereRoomState } from '@/hooks/useAudioEngine'
+import { useAudioEngine } from '@/hooks/useAudioEngine'
 import { useWarmAudioUrlOnVisible } from '@/hooks/useWarmAudioUrl'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { persistActivePrimaryScroll } from '@/components/primary-tab-shell'
@@ -543,11 +543,6 @@ export function PostCard({
   const [rowExpanded, setRowExpanded] = useState(false)
   const [avatarBroken, setAvatarBroken] = useState(false)
   useEffect(() => { setAvatarBroken(false) }, [post.authorAvatarUrl, post.authorUid])
-  const engineState = useAtmosphereRoomState()
-  const momentLines = resolveMomentLines(post)
-  const isAtmosphereRoom = engineState.mode === 'snippet' && momentLines.some(
-    (l) => !!l.songId && engineState.songId === l.songId && engineState.lineText === l.text,
-  )
   const closeReplayMenu = useCallback(() => {
     setReplayMenuOpen(false)
     setQuoteOpen(false)
@@ -680,7 +675,12 @@ export function PostCard({
         ...(isRow ? { margin: '6px 0 10px' } : null),
       }}
     >
-      <AtmosphereLayer variant="card" active={isAtmosphereRoom} />
+      <AtmosphereLayer
+        variant="card"
+        rooms={resolveMomentLines(post).flatMap((l) => (
+          l.songId ? [{ songId: l.songId, lineText: l.text }] : []
+        ))}
+      />
       {label && !isRow ? (
         <VibeTag
           label={label}

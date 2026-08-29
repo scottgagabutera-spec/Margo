@@ -349,10 +349,7 @@ export default function SongPage() {
 
       {/* Ambient glow — Atmosphere room (Still keeps the previous static orb) */}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
-        <AtmosphereLayer
-          variant="karaoke"
-          active={engineState.mode === 'full' && engineState.songId === songId}
-        />
+        <AtmosphereLayer variant="karaoke" songId={songId} />
       </div>
 
       {/* Top progress bar */}

@@ -460,6 +460,12 @@ function beginCrossfade(generation: number, durationMs: number): void {
   _cfNextIndex = nextIndex
   _cfOutgoing = outgoing
   _cfIncoming = incoming
+  // Room follows the incoming mix: drop the outgoing Atmosphere immediately
+  // so Breath/Pulse cannot remain on the old card while the next song is
+  // already audible. finishCrossfade() applies the next song's value with
+  // songId in the same patch. Restore if this fade aborts (incoming play fails).
+  const outgoingAtmosphere = _state.atmosphere
+  patch({ atmosphere: null })
 
   // Should already be preloaded via preloadInactiveForCrossfade(), called
   // when this crossfade was scheduled — this is just a safety net in case
@@ -488,6 +494,7 @@ function beginCrossfade(generation: number, durationMs: number): void {
     if (!_crossfadeActive) return
     _brokenAudioUrls.add(nextItem.audioUrl)
     cancelCrossfade()
+    patch({ atmosphere: outgoingAtmosphere })
     outgoing.volume = _state.muted ? 0 : _state.volume
     armSnippetTimer(generation)
   })
