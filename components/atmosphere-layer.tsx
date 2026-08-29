@@ -17,8 +17,8 @@ export type AtmosphereRoomMatch = {
 
 /**
  * Single Atmosphere room layer. Card and karaoke share the five personalities;
- * variant only changes scale tokens in CSS. Reads engine.atmosphere — do not
- * pass a second copy of the song field.
+ * variant only changes scale. Grammar is shape + path + entrance in CSS.
+ * Reads engine.atmosphere — do not pass a second copy of the song field.
  *
  * Personality class is `still` whenever this room is not live, so switching
  * to a NULL/Still song cannot leave Breath/Drift/Pulse/Weight behind.
