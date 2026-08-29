@@ -645,9 +645,8 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   }
 }
 
-/* ── Atmosphere (song room). Transform + opacity only. ───────────
-   Grammar is shape + position + entrance + path. Same gold family.
-   Color/opacity/blur may support; they are not the distinction. */
+/* ── Atmosphere (full-card rooms). Transform + opacity + static gradients.
+   No filter:blur. Extra nodes mount only while a room is live. */
 .margo-atmosphere-clip {
   position: absolute;
   inset: 0;
@@ -663,293 +662,273 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   z-index: 0;
 }
 
-.margo-atmosphere {
+.margo-atm-still-wash {
   position: absolute;
-  left: 50%;
-  top: 44%;
-  border-radius: 50%;
+  inset: 0;
   pointer-events: none;
   background: var(--gold);
-  transform: translate(-50%, -50%) scale(1);
-  opacity: 0;
-  transition: opacity 380ms cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 0.04;
 }
 
-.margo-atmosphere.is-live {
+.margo-atm-room {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 1;
+}
+.margo-atm-room.is-live {
+  will-change: opacity;
+}
+.margo-atm-room.is-hold {
+  opacity: 0;
+  transition: opacity 420ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Breath: the card surface is the lung ── */
+.margo-atm-breath-wash {
+  position: absolute;
+  inset: 0;
+  background: var(--gold);
+  opacity: 0.045;
+  pointer-events: none;
+}
+.margo-atm-room.is-live .margo-atm-breath-wash {
+  will-change: opacity;
+  animation: margo-atm-breath-wash 7.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@keyframes margo-atm-breath-wash {
+  0%, 100% { opacity: 0.035; }
+  50% { opacity: 0.155; }
+}
+.margo-atm-breath-stretch {
+  position: absolute;
+  inset: -12%;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      transparent 0,
+      transparent 17px,
+      color-mix(in srgb, var(--gold) 7%, transparent) 17px,
+      color-mix(in srgb, var(--gold) 7%, transparent) 18px
+    );
+  opacity: 0.45;
+}
+.margo-atm-room.is-live .margo-atm-breath-stretch {
   will-change: transform, opacity;
+  animation: margo-atm-breath-stretch 7.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
-
-.margo-atmosphere--card.is-live {
-  transition: none;
-}
-
-.margo-atmosphere--karaoke.margo-atmosphere--still {
-  width: 500px;
-  height: 500px;
-  top: 30%;
-  filter: blur(100px);
-  opacity: 0.055;
-}
-
-.margo-atmosphere--card.margo-atmosphere--still {
-  opacity: 0;
-}
-
-/* Weight — mound of mass under the lyric, not a thin bar. */
-.margo-atmosphere--card.margo-atmosphere--weight {
-  top: 100%;
-  width: 94%;
-  height: 188px;
-  filter: blur(22px);
-}
-.margo-atmosphere--karaoke.margo-atmosphere--weight {
-  top: 100%;
-  width: 132%;
-  height: 280px;
-  filter: blur(34px);
-}
-.margo-atmosphere--weight.margo-atmosphere-veil {
-  width: 108%;
-  height: 210px;
-  filter: blur(32px);
-}
-.margo-atmosphere--karaoke.margo-atmosphere--weight.margo-atmosphere-veil {
-  width: 148%;
-  height: 320px;
-  filter: blur(48px);
-}
-
-/* Breath — round chest volume, centered. */
-.margo-atmosphere--card.margo-atmosphere--breath {
-  width: 196px;
-  height: 196px;
-  top: 44%;
-  filter: blur(34px);
-}
-.margo-atmosphere--karaoke.margo-atmosphere--breath {
-  width: 420px;
-  height: 420px;
-  top: 38%;
-  filter: blur(48px);
-}
-.margo-atmosphere--breath.margo-atmosphere-veil {
-  width: 248px;
-  height: 248px;
-  filter: blur(46px);
-}
-.margo-atmosphere--karaoke.margo-atmosphere--breath.margo-atmosphere-veil {
-  width: 520px;
-  height: 520px;
-}
-
-/* Drift — small current that can cross a 320–390px card. */
-.margo-atmosphere--card.margo-atmosphere--drift {
-  width: 76px;
-  height: 54px;
-  top: 42%;
-  filter: blur(20px);
-}
-.margo-atmosphere--karaoke.margo-atmosphere--drift {
-  width: 140px;
-  height: 96px;
-  top: 40%;
-  filter: blur(28px);
-}
-.margo-atmosphere--drift.margo-atmosphere-veil {
-  width: 110px;
-  height: 72px;
-  filter: blur(32px);
-}
-.margo-atmosphere--karaoke.margo-atmosphere--drift.margo-atmosphere-veil {
-  width: 190px;
-  height: 120px;
-}
-
-/* Pulse — compact heart, same seat as Breath but discrete hits. */
-.margo-atmosphere--card.margo-atmosphere--pulse {
-  width: 150px;
-  height: 150px;
-  top: 44%;
-  filter: blur(28px);
-}
-.margo-atmosphere--karaoke.margo-atmosphere--pulse {
-  width: 280px;
-  height: 280px;
-  top: 40%;
-  filter: blur(40px);
-}
-.margo-atmosphere--pulse.margo-atmosphere-veil {
-  width: 190px;
-  height: 190px;
-  filter: blur(40px);
-}
-.margo-atmosphere--karaoke.margo-atmosphere--pulse.margo-atmosphere-veil {
-  width: 360px;
-  height: 360px;
-}
-
-@keyframes margo-atm-weight-in {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, 20%) scale(1.05, 0.72);
-  }
-  100% {
-    opacity: 0.2;
-    transform: translate(-50%, -62%) scale(1, 1);
-  }
-}
-@keyframes margo-atm-weight {
+@keyframes margo-atm-breath-stretch {
   0%, 100% {
-    opacity: 0.2;
-    transform: translate(-50%, -62%) scale(1, 1);
+    opacity: 0.28;
+    transform: scale(1, 1);
   }
   50% {
-    opacity: 0.22;
-    transform: translate(-50%, -54%) scale(1.02, 1.1);
+    opacity: 0.7;
+    transform: scale(1.09, 1.045);
   }
 }
 
-@keyframes margo-atm-breath-in {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.62);
-  }
-  100% {
-    opacity: 0.16;
-    transform: translate(-50%, -50%) scale(1);
-  }
+/* ── Pulse: the card edge hits, lyric stays put ── */
+.margo-atm-pulse-wash {
+  position: absolute;
+  inset: 0;
+  background: var(--gold);
+  opacity: 0.03;
+  pointer-events: none;
 }
-@keyframes margo-atm-breath {
-  0%, 100% {
-    opacity: 0.15;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  50% {
-    opacity: 0.17;
-    transform: translate(-50%, -50%) scale(1.16);
-  }
+.margo-atm-pulse-edge {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--gold) 18%, transparent),
+    inset 0 0 28px 4px color-mix(in srgb, var(--gold) 22%, transparent),
+    inset 0 0 70px 10px color-mix(in srgb, var(--gold) 10%, transparent);
+  opacity: 0.22;
 }
-
-@keyframes margo-atm-drift-in {
-  0% {
-    opacity: 0;
-    transform: translate(calc(-50% - 168px), -52%) scale(1.7, 0.82);
-  }
-  100% {
-    opacity: 0.2;
-    transform: translate(calc(-50% - 118px), -48%) scale(1.7, 0.82);
-  }
+.margo-atm-room.is-live .margo-atm-pulse-wash,
+.margo-atm-room.is-live .margo-atm-pulse-edge {
+  will-change: opacity;
 }
-@keyframes margo-atm-drift {
-  0% {
-    opacity: 0.18;
-    transform: translate(calc(-50% - 118px), -50%) scale(1.7, 0.82);
-  }
-  50% {
-    opacity: 0.2;
-    transform: translate(calc(-50% + 118px), -40%) scale(1.85, 0.78);
-  }
-  100% {
-    opacity: 0.18;
-    transform: translate(calc(-50% - 118px), -50%) scale(1.7, 0.82);
-  }
+.margo-atm-room.is-live .margo-atm-pulse-wash {
+  animation: margo-atm-pulse-wash 2.9s cubic-bezier(0.33, 0.9, 0.4, 1) infinite;
+}
+.margo-atm-room.is-live .margo-atm-pulse-edge {
+  animation: margo-atm-pulse-edge 2.9s cubic-bezier(0.33, 0.9, 0.4, 1) infinite;
+}
+@keyframes margo-atm-pulse-wash {
+  0%, 8% { opacity: 0.03; }
+  14% { opacity: 0.16; }
+  24% { opacity: 0.05; }
+  30% { opacity: 0.12; }
+  50%, 100% { opacity: 0.03; }
+}
+@keyframes margo-atm-pulse-edge {
+  0%, 8% { opacity: 0.18; }
+  14% { opacity: 0.95; }
+  24% { opacity: 0.28; }
+  30% { opacity: 0.7; }
+  55%, 100% { opacity: 0.18; }
 }
 
-@keyframes margo-atm-pulse-in {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.86);
-  }
-  28% {
-    opacity: 0.24;
-    transform: translate(-50%, -50%) scale(1.18);
-  }
-  100% {
-    opacity: 0.14;
-    transform: translate(-50%, -50%) scale(1);
-  }
+/* ── Drift: the card is the river ── */
+.margo-atm-drift-well {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
-@keyframes margo-atm-pulse {
-  0%, 8% {
-    opacity: 0.13;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  14% {
-    opacity: 0.24;
-    transform: translate(-50%, -50%) scale(1.18);
-  }
-  24% {
-    opacity: 0.14;
-    transform: translate(-50%, -50%) scale(1.02);
-  }
-  30% {
-    opacity: 0.21;
-    transform: translate(-50%, -50%) scale(1.12);
-  }
-  42%, 100% {
-    opacity: 0.13;
-    transform: translate(-50%, -50%) scale(1);
-  }
+.margo-atm-drift-band {
+  position: absolute;
+  top: -10%;
+  height: 120%;
+  width: 220%;
+  left: -80%;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    transparent 28%,
+    color-mix(in srgb, var(--gold) 5%, transparent) 36%,
+    color-mix(in srgb, var(--gold) 16%, transparent) 48%,
+    color-mix(in srgb, var(--gold-warm) 12%, transparent) 54%,
+    color-mix(in srgb, var(--gold) 4%, transparent) 64%,
+    transparent 78%,
+    transparent 100%
+  );
+}
+.margo-atm-drift-band--b {
+  width: 240%;
+  left: -100%;
+  background: linear-gradient(
+    98deg,
+    transparent 0%,
+    color-mix(in srgb, var(--gold) 3%, transparent) 30%,
+    color-mix(in srgb, var(--gold) 11%, transparent) 46%,
+    transparent 62%,
+    transparent 100%
+  );
+}
+.margo-atm-drift-band--c {
+  width: 200%;
+  left: -70%;
+  opacity: 0.7;
+  background: linear-gradient(
+    112deg,
+    transparent 40%,
+    color-mix(in srgb, var(--gold-warm) 10%, transparent) 52%,
+    transparent 66%
+  );
+}
+.margo-atm-room.is-live .margo-atm-drift-band {
+  will-change: transform;
+  animation: margo-atm-drift-a 16s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.margo-atm-room.is-live .margo-atm-drift-band--b {
+  animation: margo-atm-drift-b 22s 1.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.margo-atm-room.is-live .margo-atm-drift-band--c {
+  animation: margo-atm-drift-c 19s 0.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@keyframes margo-atm-drift-a {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(42%); }
+}
+@keyframes margo-atm-drift-b {
+  0% { transform: translateX(8%); }
+  100% { transform: translateX(-28%); }
+}
+@keyframes margo-atm-drift-c {
+  0% { transform: translateX(-6%); }
+  100% { transform: translateX(36%); }
 }
 
-.margo-atmosphere--weight.is-live {
-  animation:
-    margo-atm-weight-in 0.78s cubic-bezier(0.16, 1, 0.3, 1) both,
-    margo-atm-weight 14s 0.78s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+/* ── Weight: drops across the bottom half, collect as a floor ── */
+.margo-atm-weight-well {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  bottom: 0;
+  overflow: hidden;
+  pointer-events: none;
+  container-type: size;
 }
-.margo-atmosphere--breath.is-live {
-  animation:
-    margo-atm-breath-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both,
-    margo-atm-breath 7.4s 0.7s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+.margo-atm-drop-defs {
+  position: absolute;
 }
-.margo-atmosphere--drift.is-live {
-  animation:
-    margo-atm-drift-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) both,
-    margo-atm-drift 16s 0.9s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+.margo-atm-weight-floor {
+  position: absolute;
+  left: -8%;
+  right: -8%;
+  bottom: -18%;
+  height: 52%;
+  background: radial-gradient(ellipse at 50% 100%,
+    color-mix(in srgb, var(--gold) 28%, transparent) 0%,
+    color-mix(in srgb, var(--gold) 12%, transparent) 42%,
+    transparent 74%);
 }
-.margo-atmosphere--pulse.is-live {
-  animation:
-    margo-atm-pulse-in 0.48s cubic-bezier(0.16, 1, 0.3, 1) both,
-    margo-atm-pulse 2.9s 0.48s cubic-bezier(0.33, 0.9, 0.4, 1) infinite;
+.margo-atm-room.is-live .margo-atm-weight-floor {
+  will-change: transform, opacity;
+  animation: margo-atm-weight-floor 14s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
-
-/* Depth: same grammar, slight lag — Pulse stays on the same hits. */
-.margo-atmosphere--weight.margo-atmosphere-veil.is-live {
-  animation:
-    margo-atm-weight-in 0.92s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both,
-    margo-atm-weight 14s 1.02s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+@keyframes margo-atm-weight-floor {
+  0%, 100% { opacity: 0.85; transform: translateY(0) scaleY(1); }
+  50% { opacity: 1; transform: translateY(4%) scaleY(1.08); }
 }
-.margo-atmosphere--breath.margo-atmosphere-veil.is-live {
-  animation:
-    margo-atm-breath-in 0.86s 0.08s cubic-bezier(0.16, 1, 0.3, 1) both,
-    margo-atm-breath 7.4s 0.86s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+.margo-atm-drop {
+  position: absolute;
+  width: 11px;
+  height: 15px;
+  top: -18px;
 }
-.margo-atmosphere--drift.margo-atmosphere-veil.is-live {
-  animation:
-    margo-atm-drift-in 1.05s 0.16s cubic-bezier(0.16, 1, 0.3, 1) both,
-    margo-atm-drift 16s 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+.margo-atm-drop svg { display: block; width: 100%; height: 100%; }
+.margo-atm-drop-shade {
+  fill: color-mix(in srgb, var(--bg) 40%, transparent);
 }
-.margo-atmosphere--pulse.margo-atmosphere-veil.is-live {
-  animation:
-    margo-atm-pulse-in 0.52s 0.06s cubic-bezier(0.16, 1, 0.3, 1) both,
-    margo-atm-pulse 2.9s 0.54s cubic-bezier(0.33, 0.9, 0.4, 1) infinite;
+.margo-atm-drop-shine {
+  fill: color-mix(in srgb, var(--text) 50%, transparent);
+}
+.margo-atm-room.is-live .margo-atm-drop {
+  will-change: transform, opacity;
+  animation-name: margo-atm-drop-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes margo-atm-drop-fall {
+  0% { transform: translateY(0) scale(0.85, 1); opacity: 0; }
+  8% { opacity: 0.9; }
+  82% { opacity: 0.85; transform: translateY(100cqh) scale(1, 1); }
+  92% { opacity: 0.4; transform: translateY(108cqh) scale(1.25, 0.55); }
+  100% { opacity: 0; transform: translateY(112cqh) scale(1.4, 0.35); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .margo-atmosphere,
-  .margo-atmosphere.is-live,
-  .margo-atmosphere--breath,
-  .margo-atmosphere--drift,
-  .margo-atmosphere--pulse,
-  .margo-atmosphere--weight,
-  .margo-atmosphere-veil {
+  .margo-atm-breath-wash,
+  .margo-atm-breath-stretch,
+  .margo-atm-pulse-wash,
+  .margo-atm-pulse-edge,
+  .margo-atm-drift-band,
+  .margo-atm-weight-floor,
+  .margo-atm-drop,
+  .margo-atm-room.is-live .margo-atm-breath-wash,
+  .margo-atm-room.is-live .margo-atm-breath-stretch,
+  .margo-atm-room.is-live .margo-atm-pulse-wash,
+  .margo-atm-room.is-live .margo-atm-pulse-edge,
+  .margo-atm-room.is-live .margo-atm-drift-band,
+  .margo-atm-room.is-live .margo-atm-weight-floor,
+  .margo-atm-room.is-live .margo-atm-drop {
     animation: none !important;
   }
-  .margo-atmosphere--card {
+  .margo-atm-room,
+  .margo-atm-room.is-live,
+  .margo-atm-room.is-hold {
     opacity: 0 !important;
   }
-  .margo-atmosphere--karaoke {
-    opacity: 0.055 !important;
-    transform: translate(-50%, -50%) scale(1) !important;
+  .margo-atmosphere-clip--karaoke .margo-atm-still-wash {
+    opacity: 0.04;
   }
 }

@@ -650,7 +650,6 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
           lineHeight: 1.5,
         }}>
           How the room feels while this song plays — not the lyric vibe tag.
-          Breath is warm and close. Pulse bumps. Weight sits low and darker.
           Leave Still for none.
         </p>
         <div
@@ -688,6 +687,15 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
             )
           })}
         </div>
+        <p style={{
+          fontFamily: font,
+          fontSize: '0.7rem',
+          color: 'var(--text-muted)',
+          margin: '10px 0 0',
+          lineHeight: 1.5,
+        }}>
+          {ATMOSPHERE_OPTIONS.find((opt) => opt.id === atmosphere)?.hint}
+        </p>
       </div>
 
       <div style={{

@@ -13,12 +13,12 @@ export type AtmosphereId = (typeof ATMOSPHERE_IDS)[number]
 /** Values that may be persisted on songs.atmosphere (Still is NULL). */
 export type AtmosphereColumn = Exclude<AtmosphereId, 'still'>
 
-export const ATMOSPHERE_OPTIONS: { id: AtmosphereId; label: string }[] = [
-  { id: 'still', label: 'Still' },
-  { id: 'breath', label: 'Breath' },
-  { id: 'drift', label: 'Drift' },
-  { id: 'pulse', label: 'Pulse' },
-  { id: 'weight', label: 'Weight' },
+export const ATMOSPHERE_OPTIONS: { id: AtmosphereId; label: string; hint: string }[] = [
+  { id: 'still', label: 'Still', hint: 'No room motion.' },
+  { id: 'breath', label: 'Breath', hint: 'Open mix, slow inhale, lots of space between hits.' },
+  { id: 'drift', label: 'Drift', hint: 'Forward motion. The track keeps traveling.' },
+  { id: 'pulse', label: 'Pulse', hint: 'Tight rhythm. Hits, then a rest, then another hit.' },
+  { id: 'weight', label: 'Weight', hint: 'Heavy low end. The mix sits on the floor.' },
 ]
 
 /** Live song fields joined onto posts / post_lines. Never copied onto those rows. */
