@@ -121,6 +121,7 @@ export function AtmosphereLayer({
       data-atmosphere={live ? personality : 'still'}
     >
       {showOrb ? <div className={orbClass} /> : null}
+      {live ? <div className={`${orbClass} margo-atmosphere-veil`} /> : null}
     </div>
   )
 }
