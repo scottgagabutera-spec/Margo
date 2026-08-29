@@ -79,6 +79,33 @@
       0%, 100% { opacity: 0.035; }
       50% { opacity: 0.155; }
     }
+    /* Full-card fabric — scales as one surface. Lyric is not on this layer. */
+    .breath-stretch {
+      position: absolute;
+      inset: -12%;
+      pointer-events: none;
+      transform-origin: 50% 50%;
+      background:
+        repeating-linear-gradient(
+          180deg,
+          transparent 0,
+          transparent 17px,
+          rgba(232,197,71,0.07) 17px,
+          rgba(232,197,71,0.07) 18px
+        );
+      opacity: 0.45;
+      animation: breath-stretch 7.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+    }
+    @keyframes breath-stretch {
+      0%, 100% {
+        opacity: 0.28;
+        transform: scale(1, 1);
+      }
+      50% {
+        opacity: 0.7;
+        transform: scale(1.09, 1.045);
+      }
+    }
 
     /* ── Pulse: the card edge hits, lyric stays put ── */
     .pulse-wash {
@@ -236,7 +263,7 @@
     .d12 { left: 69%; width: 7px; height: 10px; animation-duration: 7.8s; animation-delay: 4.8s; }
 
     @media (prefers-reduced-motion: reduce) {
-      .breath-wash, .pulse-wash, .pulse-edge, .drift-band, .drift-band-b, .drift-band-c,
+      .breath-wash, .breath-stretch, .pulse-wash, .pulse-edge, .drift-band, .drift-band-b, .drift-band-c,
       .weight-floor, .drop { animation: none !important; }
       .breath-wash, .pulse-wash { opacity: 0.06; }
       .pulse-edge { opacity: 0.2; }
@@ -280,6 +307,7 @@
 
       <article class="card" data-room="breath">
         <div class="breath-wash"></div>
+        <div class="breath-stretch"></div>
         <p class="lyric">breathe me back in</p>
         <span class="name">Breath</span>
       </article>
