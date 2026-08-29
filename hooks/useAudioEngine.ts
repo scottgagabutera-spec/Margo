@@ -180,3 +180,42 @@ export function useAudioCurrentTime(): number {
 
   return time
 }
+
+function pickAtmosphereRoom(s: AudioEngineState) {
+  return {
+    playing: s.playing,
+    mode: s.mode,
+    songId: s.songId,
+    atmosphere: s.atmosphere,
+    lineText: s.snippet?.lineText ?? null,
+  }
+}
+
+/** Atmosphere room fields only — ignores currentTime so cards do not tick. */
+export function useAtmosphereRoomState(): {
+  playing: boolean
+  mode: AudioEngineState['mode']
+  songId: string | null
+  atmosphere: AudioEngineState['atmosphere']
+  lineText: string | null
+} {
+  const [slice, setSlice] = useState(() => pickAtmosphereRoom(getAudioEngineState()))
+
+  useEffect(() => {
+    const unsub = subscribeAudioEngine((s) => {
+      const next = pickAtmosphereRoom(s)
+      setSlice((prev) => (
+        prev.playing === next.playing &&
+        prev.mode === next.mode &&
+        prev.songId === next.songId &&
+        prev.atmosphere === next.atmosphere &&
+        prev.lineText === next.lineText
+          ? prev
+          : next
+      ))
+    })
+    return unsub
+  }, [])
+
+  return slice
+}

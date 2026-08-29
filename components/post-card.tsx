@@ -27,7 +27,7 @@ import {
   togglePlayPause,
   warmUrl,
 } from '@/lib/audio-engine'
-import { useAudioEngine } from '@/hooks/useAudioEngine'
+import { useAudioEngine, useAtmosphereRoomState } from '@/hooks/useAudioEngine'
 import { useWarmAudioUrlOnVisible } from '@/hooks/useWarmAudioUrl'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { persistActivePrimaryScroll } from '@/components/primary-tab-shell'
@@ -44,6 +44,8 @@ import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { resolveMomentLines } from '@/lib/post-lines'
 import { PostCardSuggestedReply } from '@/components/post-card-suggested-reply'
 import { SongMeta } from '@/components/song-meta'
+import { AtmosphereLayer } from '@/components/atmosphere-layer'
+import { livingAtmosphereOrNull } from '@/lib/atmosphere'
 
 const supabase = createClient()
 
@@ -135,10 +137,11 @@ async function fetchLyricLines(songId: string): Promise<LyricLine[]> {
   return data.map(l => ({ id: l.line_index, line: l.text, start: l.start_sec, end: l.end_sec }))
 }
 
-function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artwork, snippetStart, snippetEnd }: {
+function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artwork, snippetStart, snippetEnd, atmosphere }: {
   audioUrl: string; songId: string | null; postText?: string
   songTitle?: string; artist?: string; artwork?: string | null
   snippetStart?: number | null; snippetEnd?: number | null
+  atmosphere?: string | null
 }) {
   const btnRef = useRef<HTMLButtonElement>(null)
   const engineState = useAudioEngine()
@@ -189,6 +192,7 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
       lineText: postText || '',
       startSec,
       endSec,
+      atmosphere: livingAtmosphereOrNull(atmosphere),
       source: 'feed',
     })
   }
@@ -279,6 +283,7 @@ function PostMomentBody({
                   artwork={line.artworkUrl || null}
                   snippetStart={line.snippetStart}
                   snippetEnd={line.snippetEnd}
+                  atmosphere={line.atmosphere}
                 />
               ) : showBesideLyric ? (
                 <PostThumbnail
@@ -538,6 +543,11 @@ export function PostCard({
   const [rowExpanded, setRowExpanded] = useState(false)
   const [avatarBroken, setAvatarBroken] = useState(false)
   useEffect(() => { setAvatarBroken(false) }, [post.authorAvatarUrl, post.authorUid])
+  const engineState = useAtmosphereRoomState()
+  const momentLines = resolveMomentLines(post)
+  const isAtmosphereRoom = engineState.mode === 'snippet' && momentLines.some(
+    (l) => !!l.songId && engineState.songId === l.songId && engineState.lineText === l.text,
+  )
   const closeReplayMenu = useCallback(() => {
     setReplayMenuOpen(false)
     setQuoteOpen(false)
@@ -664,11 +674,13 @@ export function PostCard({
         border: `1px solid ${isTier1 ? 'rgba(232,197,71,0.22)' : 'rgba(255,255,255,0.06)'}`,
         borderRadius: '18px', padding: cardPadding,
         position: 'relative', overflow: 'visible',
+        isolation: 'isolate',
         transition: 'border-color 200ms ease',
         cursor: disableCardNav || isRow ? 'default' : 'pointer',
         ...(isRow ? { margin: '6px 0 10px' } : null),
       }}
     >
+      <AtmosphereLayer variant="card" active={isAtmosphereRoom} />
       {label && !isRow ? (
         <VibeTag
           label={label}

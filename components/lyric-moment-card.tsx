@@ -7,6 +7,7 @@ import { VibeTagPill } from '@/components/vibe-tag-pill'
 import { buildSnippetQueueOverflowItems } from '@/components/song-card-actions'
 import { useWarmAudioUrlOnVisible } from '@/hooks/useWarmAudioUrl'
 import type { LyricMoment } from '@/lib/lyric-moments-board'
+import { AtmosphereLayer } from '@/components/atmosphere-layer'
 
 export function LyricMomentCard({
   moment,
@@ -52,8 +53,11 @@ export function LyricMomentCard({
         transition: 'border-color 200ms ease, background 200ms ease',
         boxSizing: 'border-box',
         height: '100%',
+        position: 'relative',
+        isolation: 'isolate',
       }}
     >
+      <AtmosphereLayer variant="card" active={isPlaying} />
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
         <div style={{ minWidth: 0, flex: 1 }}>
           {primaryVibe && (

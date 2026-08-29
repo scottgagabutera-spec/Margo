@@ -15,6 +15,8 @@ import { CardExportModal } from '@/components/card-export-modal'
 import { useAudioEngine, useAudioCurrentTime } from '@/hooks/useAudioEngine'
 import { playFull, togglePlayPause, stop, playFullSeek, setQueue, playQueueItem, fullSongToQueueItem, isFullQueueItem, getAudioEngineState, getQueueNavigationState, queuePlayNext, queueAdd } from '@/lib/audio-engine'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+import { AtmosphereLayer } from '@/components/atmosphere-layer'
+import { livingAtmosphereOrNull } from '@/lib/atmosphere'
 
 interface LyricLine {
   id: number
@@ -153,6 +155,7 @@ export default function SongPage() {
         title: songTitle,
         artist: songArtist,
         artwork: songArtwork,
+        atmosphere: livingAtmosphereOrNull(song?.atmosphere),
       }),
       ...nextSongs
         .filter((s) => !!s.audioUrl)
@@ -163,6 +166,7 @@ export default function SongPage() {
             title: s.title,
             artist: s.artist,
             artwork: s.artwork ?? null,
+            atmosphere: livingAtmosphereOrNull(s.atmosphere),
           }),
         ),
     ]
@@ -177,8 +181,9 @@ export default function SongPage() {
       startSec,
       autoplay: true,
       source: 'karaoke',
+      atmosphere: livingAtmosphereOrNull(song?.atmosphere),
     })
-  }, [requireAuth, audioUrl, songId, songArtist, songArtwork, songTitle, startAtParam, nextSongs])
+  }, [requireAuth, audioUrl, songId, songArtist, songArtwork, songTitle, startAtParam, nextSongs, song?.atmosphere])
 
   // Follow engine queue advances onto the next full track (same session).
   useEffect(() => {
@@ -342,9 +347,12 @@ export default function SongPage() {
         .tray-action-btn span { font-family: var(--font-lora), serif; font-size: 0.52rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.35); }
       `}</style>
 
-      {/* Ambient glow */}
+      {/* Ambient glow — Atmosphere room (Still keeps the previous static orb) */}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
-        <div style={{ position: 'absolute', top: '30%', left: '50%', transform: 'translateX(-50%)', width: '500px', height: '500px', background: 'rgba(232,197,71,0.055)', borderRadius: '50%', filter: 'blur(100px)' }} />
+        <AtmosphereLayer
+          variant="karaoke"
+          active={engineState.mode === 'full' && engineState.songId === songId}
+        />
       </div>
 
       {/* Top progress bar */}

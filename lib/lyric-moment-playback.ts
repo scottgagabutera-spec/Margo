@@ -24,6 +24,7 @@ export function playLyricMomentPool(
     startSec: m.start,
     endSec: m.end,
     vibe: (m.vibes && m.vibes[0]) || null,
+    atmosphere: m.atmosphere ?? null,
   }))
   const idx = queueItems.findIndex(q => q.songId === moment.songId && q.lineIndex === moment.lineId)
   setQueue(queueItems, idx >= 0 ? idx : 0)
@@ -38,6 +39,7 @@ export function playLyricMomentPool(
     startSec: moment.start,
     endSec: moment.end,
     vibe: (moment.vibes && moment.vibes[0]) || null,
+    atmosphere: moment.atmosphere ?? null,
     source: 'music-board',
   })
 }
@@ -55,6 +57,7 @@ export function queueLyricMoment(moment: LyricMoment, mode: 'next' | 'add'): voi
     startSec: moment.start,
     endSec: moment.end,
     vibe: (moment.vibes && moment.vibes[0]) || null,
+    atmosphere: moment.atmosphere ?? null,
   })
   if (mode === 'next') queuePlayNext(item)
   else queueAdd(item)

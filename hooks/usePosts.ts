@@ -9,6 +9,7 @@ import {
   warmFeedPosts,
 } from '@/lib/primary-tab-prefetch'
 import type { PostLine } from '@/lib/post-lines'
+import type { AtmosphereId } from '@/lib/atmosphere'
 
 const supabase = createClient()
 
@@ -35,6 +36,8 @@ export interface Post {
   snippetStart?: number | null
   snippetEnd?: number | null
   isAiGenerated?: boolean
+  /** Live join from songs.atmosphere — never stored on the post. */
+  atmosphere?: AtmosphereId
   /**
    * Multi-line moment segments when joined. Empty/undefined → render from
    * top-level text/song/snippet (position-0 mirror).

@@ -1,6 +1,7 @@
 import { buildCatalogLyricUnits } from '@/lib/catalog-lyric-unit'
 import type { CatalogLyricAtom } from '@/lib/catalog-lyric-unit'
 import type { LyricMomentRow } from '@/lib/primary-tab-prefetch'
+import type { AtmosphereId } from '@/lib/atmosphere'
 
 const MIN_MOMENT_WORDS = 4
 const SHORT_LINE_WORDS = 3
@@ -16,6 +17,7 @@ export type LyricMoment = {
   artwork?: string | null
   audioUrl?: string | null
   vibes: string[]
+  atmosphere?: AtmosphereId
 }
 
 function wordCount(text: string): number {
@@ -71,6 +73,7 @@ export function buildLyricMomentsFromRows(
       artwork: row.artwork,
       audioUrl: row.audioUrl,
       vibes: unit.vibes.length > 0 ? unit.vibes : row.vibes,
+      atmosphere: row.atmosphere,
     })
   })
 

@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Post } from '@/hooks/usePosts'
 import { mapPostLinesRows } from '@/lib/post-lines'
+import { SONG_POST_EMBED } from '@/lib/atmosphere'
 
 const supabase = createClient()
 
@@ -11,7 +12,7 @@ const PRIVATE_POST_SELECT = `
   post_lines (
     id, position, text, song_id, song_title, artist_name, artwork_url,
     snippet_start_sec, snippet_end_sec, source,
-    songs:song_id ( audio_url, artwork_url, is_ai_generated )
+    songs:song_id ( ${SONG_POST_EMBED} )
   )
 `
 

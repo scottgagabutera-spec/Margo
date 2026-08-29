@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Post } from '@/hooks/usePosts'
 import { mapPostLinesRows } from '@/lib/post-lines'
+import { parseAtmosphere, SONG_POST_EMBED } from '@/lib/atmosphere'
 
 const supabase = createClient()
 
@@ -27,7 +28,7 @@ const POST_SELECT = `
   snippet_end_sec,
   profiles:author_profile_id ( username, avatar_url ),
   post_stats ( resonate_count, echo_count ),
-  songs:song_id ( audio_url, artwork_url, is_ai_generated ),
+  songs:song_id ( ${SONG_POST_EMBED} ),
   post_lines (
     id,
     position,
@@ -39,7 +40,7 @@ const POST_SELECT = `
     snippet_start_sec,
     snippet_end_sec,
     source,
-    songs:song_id ( audio_url, artwork_url, is_ai_generated )
+    songs:song_id ( ${SONG_POST_EMBED} )
   )
 `
 
@@ -82,6 +83,7 @@ function mapRow(row: any): Post {
     snippetStart: row.snippet_start_sec ?? null,
     snippetEnd: row.snippet_end_sec ?? null,
     isAiGenerated: linkedSong?.is_ai_generated ?? false,
+    atmosphere: parseAtmosphere(linkedSong?.atmosphere),
     lines: mapPostLinesRows(row.post_lines),
   }
 }

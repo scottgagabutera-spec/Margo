@@ -6,6 +6,8 @@
  * Engagement timers (play qualification) live in engine internals until Phase 2.
  */
 
+import type { AtmosphereId } from '@/lib/atmosphere'
+
 // ── Playback mode ─────────────────────────────────────────────────
 
 /** idle = no active session; snippet = SRT window; full = karaoke / tier-1 */
@@ -61,6 +63,8 @@ export interface LyricMomentQueueItem {
   startSec: number
   endSec: number
   vibe?: string | null
+  /** Song room feeling — not lyric vibe. Null / omitted = Still. */
+  atmosphere?: AtmosphereId | null
 }
 
 /** True when this queue item is a full-track entry (not a lyric window). */
@@ -80,6 +84,7 @@ export function fullSongToQueueItem(song: {
   title: string
   artist: string
   artwork?: string | null
+  atmosphere?: AtmosphereId | null
 }): LyricMomentQueueItem {
   return {
     kind: 'full',
@@ -92,6 +97,7 @@ export function fullSongToQueueItem(song: {
     lineText: '',
     startSec: 0,
     endSec: 0,
+    atmosphere: song.atmosphere ?? null,
   }
 }
 
@@ -107,6 +113,7 @@ export function snippetToQueueItem(snippet: {
   startSec: number
   endSec: number
   vibe?: string | null
+  atmosphere?: AtmosphereId | null
 }): LyricMomentQueueItem {
   return {
     kind: 'snippet',
@@ -120,6 +127,7 @@ export function snippetToQueueItem(snippet: {
     startSec: snippet.startSec,
     endSec: snippet.endSec,
     vibe: snippet.vibe ?? null,
+    atmosphere: snippet.atmosphere ?? null,
   }
 }
 
@@ -145,6 +153,8 @@ export interface PlaySnippetRequest {
   startSec: number
   endSec: number
   vibe?: string | null
+  /** Song room feeling — not lyric vibe. Null / omitted = Still. */
+  atmosphere?: AtmosphereId | null
   source: SnippetPlaybackSource
 }
 
@@ -162,6 +172,8 @@ export interface PlayFullRequest {
    */
   autoplay?: boolean
   source: FullPlaybackSource
+  /** Song room feeling — not lyric vibe. Null / omitted = Still. */
+  atmosphere?: AtmosphereId | null
 }
 
 // ── Public engine state (Section 2.2) ─────────────────────────────
@@ -190,6 +202,8 @@ export interface AudioEngineState {
   artist: string
   artwork: string | null
   vibe: string | null
+  /** Song room feeling. Null = Still. Distinct from `vibe`. */
+  atmosphere: AtmosphereId | null
   snippet: SnippetBounds | null
   queue: LyricMomentQueueItem[]
   queueIndex: number
@@ -229,6 +243,7 @@ export const INITIAL_AUDIO_ENGINE_STATE: AudioEngineState = {
   artist: '',
   artwork: null,
   vibe: null,
+  atmosphere: null,
   snippet: null,
   queue: [],
   queueIndex: 0,
@@ -294,6 +309,7 @@ export function queueItemToSnippetRequest(
     startSec: item.startSec,
     endSec: item.endSec,
     vibe: item.vibe ?? null,
+    atmosphere: item.atmosphere ?? null,
     source,
   }
 }
@@ -311,5 +327,6 @@ export function queueItemToFullRequest(
     artwork: item.artwork ?? null,
     autoplay: true,
     source,
+    atmosphere: item.atmosphere ?? null,
   }
 }

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { mapPostLinesRows } from '@/lib/post-lines'
+import { parseAtmosphere } from '@/lib/atmosphere'
 import {
   resolveMargoMomentFromPost,
   type PostLikeForMoment,
@@ -31,6 +32,7 @@ const MOMENT_POST_SELECT = `
     audio_url,
     artwork_url,
     is_ai_generated,
+    atmosphere,
     apple_music_url,
     spotify_url,
     youtube_url
@@ -49,6 +51,7 @@ const MOMENT_POST_SELECT = `
     songs:song_id (
       audio_url,
       is_ai_generated,
+      atmosphere,
       apple_music_url,
       spotify_url,
       youtube_url
@@ -89,6 +92,7 @@ function mapRowToPostLike(row: Record<string, unknown>): PostLikeForMoment {
     snippetStart: row.snippet_start_sec != null ? Number(row.snippet_start_sec) : null,
     snippetEnd: row.snippet_end_sec != null ? Number(row.snippet_end_sec) : null,
     isAiGenerated: (songRecord?.is_ai_generated as boolean) ?? false,
+    atmosphere: parseAtmosphere(songRecord?.atmosphere as string | null | undefined),
     appleMusicUrl: (songRecord?.apple_music_url as string) ?? null,
     spotifyUrl: (songRecord?.spotify_url as string) ?? null,
     youtubeUrlFromSong: (songRecord?.youtube_url as string) ?? null,

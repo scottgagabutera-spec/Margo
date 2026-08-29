@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Song } from '@/hooks/useSongs'
 import { embedProfile, resolvePublicArtistCredit } from '@/lib/artist-identity'
+import { parseAtmosphere } from '@/lib/atmosphere'
 
 const supabase = createClient()
 
@@ -20,7 +21,7 @@ const SONG_SELECT = `
   id, title, artist_display_name, artwork_url, audio_url, description,
   status, coming_soon_label, order, youtube_url, spotify_url,
   apple_music_url, soundcloud_url, audiomack_url, boomplay_url,
-  duration_sec, created_at, is_ai_generated,
+  duration_sec, created_at, is_ai_generated, atmosphere,
   song_stats ( plays, resonate_count, lyric_uses ),
   profiles!owner_profile_id ( username, display_name ),
   lyric_lines (
@@ -48,6 +49,7 @@ interface RawSongRow {
   duration_sec: number | null
   created_at: string
   is_ai_generated: boolean
+  atmosphere: string | null
   song_stats: { plays: number; resonate_count: number; lyric_uses: number }[] | null
   profiles?: { username?: string | null; display_name?: string | null } | { username?: string | null; display_name?: string | null }[] | null
   lyric_lines: {
@@ -100,6 +102,7 @@ function transformRow(row: RawSongRow): Song {
     lyricUses: stats?.lyric_uses ?? 0,
     createdAt: row.created_at,
     isAiGenerated: row.is_ai_generated ?? false,
+    atmosphere: parseAtmosphere(row.atmosphere),
     lyricLines,
   }
 }

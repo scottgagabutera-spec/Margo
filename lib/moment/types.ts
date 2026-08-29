@@ -1,4 +1,5 @@
 import type { PostLineSource } from '@/lib/post-lines'
+import type { AtmosphereId } from '@/lib/atmosphere'
 import type { MomentComposition } from '@/lib/moment/compose'
 import type { MomentListenResolution } from '@/lib/moment/listen'
 
@@ -26,6 +27,7 @@ export interface MargoMomentLine {
   snippetEnd?: number | null
   source?: PostLineSource
   isAiGenerated?: boolean
+  atmosphere?: AtmosphereId
   position?: number
   /** Catalog song external URLs — used by resolveMomentListen() */
   appleMusicUrl?: string | null

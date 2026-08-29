@@ -44,6 +44,7 @@ export function playResonancePost(post: Post, song: Song | undefined): void {
     startSec,
     endSec,
     vibe: null,
+    atmosphere: post.atmosphere ?? song?.atmosphere ?? null,
     source: 'music-resonance-row',
   })
 }
@@ -66,6 +67,7 @@ export function queueResonancePost(
     startSec,
     endSec,
     vibe: null,
+    atmosphere: post.atmosphere ?? song?.atmosphere ?? null,
   })
   if (mode === 'next') queuePlayNext(item)
   else queueAdd(item)

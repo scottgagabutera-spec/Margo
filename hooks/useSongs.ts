@@ -7,6 +7,7 @@ import {
   peekSongsCache,
   warmSongs,
 } from '@/lib/primary-tab-prefetch'
+import type { AtmosphereId } from '@/lib/atmosphere'
 
 const supabase = createClient()
 
@@ -40,6 +41,8 @@ export interface Song {
   lyricUses?: number
   createdAt?: string
   isAiGenerated?: boolean
+  /** Song room feeling. Still when omitted / null. Distinct from line vibes. */
+  atmosphere?: AtmosphereId
   /**
    * Catalog fetch is light (no embed). Full lines come from `useSong(id)`
    * or Discover phase-2 `useLyricMoments`. Kept for compatibility; usually [].

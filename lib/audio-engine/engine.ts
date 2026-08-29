@@ -45,6 +45,7 @@ import {
   warmPreloadUrl,
 } from './preload-cache'
 import { recordQualifiedPlay, getPlayThresholdSec } from '@/lib/engagement/plays'
+import { livingAtmosphereOrNull } from '@/lib/atmosphere'
 
 // ── Module state ──────────────────────────────────────────────────
 
@@ -559,6 +560,7 @@ function finishCrossfade(
     artist: nextItem.artist,
     artwork: nextItem.artwork ?? null,
     vibe: nextItem.vibe ?? null,
+    atmosphere: livingAtmosphereOrNull(nextItem.atmosphere),
     snippet,
     queueIndex: nextIndex,
     currentTime: nextItem.startSec,
@@ -644,10 +646,11 @@ async function startPlayingAt(
 }
 
 function applyTrackMetadata(
-  req: (Pick<PlaySnippetRequest, 'songId' | 'audioUrl' | 'title' | 'artist' | 'artwork'> & { vibe?: string | null }) | Pick<PlayFullRequest, 'songId' | 'audioUrl' | 'title' | 'artist' | 'artwork'>,
+  req: (Pick<PlaySnippetRequest, 'songId' | 'audioUrl' | 'title' | 'artist' | 'artwork'> & { vibe?: string | null; atmosphere?: string | null }) | (Pick<PlayFullRequest, 'songId' | 'audioUrl' | 'title' | 'artist' | 'artwork'> & { atmosphere?: string | null }),
   mode: AudioEngineState['mode'],
   snippet: SnippetBounds | null,
 ): void {
+  const atmosphere = livingAtmosphereOrNull('atmosphere' in req ? req.atmosphere : null)
   patch({
     mode,
     songId: req.songId,
@@ -656,6 +659,7 @@ function applyTrackMetadata(
     artist: req.artist,
     artwork: req.artwork ?? null,
     vibe: ('vibe' in req ? req.vibe : null) ?? null,
+    atmosphere,
     snippet,
     error: null,
     currentTime: 0,
@@ -917,6 +921,7 @@ export function stop(options?: StopOptions): void {
     progress: 0,
     snippet: null,
     error: null,
+    atmosphere: null,
     ...(clearQueue ? { queue: [], queueIndex: 0 } : {}),
   })
 

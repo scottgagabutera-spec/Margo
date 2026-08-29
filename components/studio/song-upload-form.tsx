@@ -3,6 +3,12 @@ import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 import { normalizeArtistCreditForSave } from '@/lib/artist-identity'
+import {
+  ATMOSPHERE_OPTIONS,
+  parseAtmosphere,
+  toAtmosphereColumn,
+  type AtmosphereId,
+} from '@/lib/atmosphere'
 
 const supabase = createClient()
 
@@ -155,6 +161,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
   const [artistName, setArtistName] = useState(artistDisplayName)
   const [description, setDescription] = useState('')
   const [isAiGenerated, setIsAiGenerated] = useState(false)
+  const [atmosphere, setAtmosphere] = useState<AtmosphereId>('still')
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [artworkFile, setArtworkFile] = useState<File | null>(null)
   const [artworkPreview, setArtworkPreview] = useState<string | null>(null)
@@ -192,7 +199,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
       setError('')
       const { data: song, error: songErr } = await supabase
         .from('songs')
-        .select('id, title, artist_display_name, description, artwork_url, audio_url, is_ai_generated, youtube_url, spotify_url, apple_music_url, soundcloud_url, audiomack_url, boomplay_url')
+        .select('id, title, artist_display_name, description, artwork_url, audio_url, is_ai_generated, atmosphere, youtube_url, spotify_url, apple_music_url, soundcloud_url, audiomack_url, boomplay_url')
         .eq('id', songId)
         .single()
       if (cancelled) return
@@ -206,6 +213,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
       setArtistName(song.artist_display_name || artistDisplayName)
       setDescription(song.description || '')
       setIsAiGenerated(song.is_ai_generated ?? false)
+      setAtmosphere(parseAtmosphere(song.atmosphere))
       setExistingArtworkUrl(song.artwork_url)
       setExistingAudioUrl(song.audio_url)
       setArtworkPreview(song.artwork_url)
@@ -372,6 +380,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
             audiomack_url: audiomackUrl.trim() || null,
             boomplay_url: boomplayUrl.trim() || null,
             is_ai_generated: isAiGenerated,
+            atmosphere: toAtmosphereColumn(atmosphere),
             updated_at: new Date().toISOString(),
           })
           .eq('id', songId)
@@ -461,6 +470,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
         audiomack_url: audiomackUrl.trim() || null,
         boomplay_url: boomplayUrl.trim() || null,
         is_ai_generated: isAiGenerated,
+        ...(atmosphere === 'still' ? {} : { atmosphere: toAtmosphereColumn(atmosphere) }),
       })
       if (insertErr) throw new Error('Could not save song: ' + insertErr.message)
 
@@ -628,6 +638,54 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
           style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
           disabled={busy}
         />
+      </div>
+
+      <div style={{ marginBottom: '16px' }}>
+        <label style={labelStyle}>Atmosphere (optional)</label>
+        <p style={{
+          fontFamily: font,
+          fontSize: '0.7rem',
+          color: 'var(--text-muted)',
+          margin: '0 0 10px',
+          lineHeight: 1.5,
+        }}>
+          How the room feels while this song plays. Leave Still for none.
+        </p>
+        <div
+          role="radiogroup"
+          aria-label="Atmosphere"
+          style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}
+        >
+          {ATMOSPHERE_OPTIONS.map((opt) => {
+            const selected = atmosphere === opt.id
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                disabled={busy}
+                onClick={() => setAtmosphere(opt.id)}
+                style={{
+                  minHeight: '44px',
+                  padding: '0 14px',
+                  borderRadius: '50px',
+                  border: `1px solid ${selected ? 'var(--gold-border)' : 'var(--border)'}`,
+                  background: selected ? 'var(--gold-faint)' : 'transparent',
+                  color: selected ? 'var(--gold)' : 'var(--text-secondary)',
+                  fontFamily: font,
+                  fontSize: '0.7rem',
+                  fontWeight: selected ? 600 : 400,
+                  letterSpacing: '0.6px',
+                  cursor: busy ? 'default' : 'pointer',
+                  opacity: busy ? 0.6 : 1,
+                }}
+              >
+                {opt.label}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       <div style={{

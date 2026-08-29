@@ -1,4 +1,5 @@
 import { resolveMomentLines, type PostLine, type PostLineSource } from '@/lib/post-lines'
+import type { AtmosphereId } from '@/lib/atmosphere'
 import { composeMoment } from '@/lib/moment/compose'
 import { emotionToVibeLabel } from '@/lib/moment/vibe'
 import { resolveMomentListen } from '@/lib/moment/listen'
@@ -28,6 +29,7 @@ export interface PostLikeForMoment {
   snippetEnd?: number | null
   knowledge?: { song?: string; artist?: string; artwork?: string | null }
   isAiGenerated?: boolean
+  atmosphere?: AtmosphereId
   lines?: PostLine[]
   username?: string | null
   authorUid?: string | null
@@ -97,6 +99,7 @@ function postLineToMomentLine(
     snippetEnd: line.snippetEnd ?? null,
     source: line.source,
     isAiGenerated: line.isAiGenerated ?? false,
+    atmosphere: line.atmosphere,
     position: line.position,
     appleMusicUrl: songUrls?.appleMusicUrl ?? null,
     spotifyUrl: songUrls?.spotifyUrl ?? null,
@@ -331,5 +334,6 @@ export function margoMomentToPostLines(moment: MargoMoment): PostLine[] {
     snippetEnd: line.snippetEnd ?? null,
     source: line.source,
     isAiGenerated: line.isAiGenerated ?? false,
+    atmosphere: line.atmosphere,
   }))
 }

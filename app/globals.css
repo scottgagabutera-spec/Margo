@@ -644,3 +644,148 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
     transition: none !important;
   }
 }
+
+/* ── Atmosphere (song room). Transform + opacity only. ─────────── */
+.margo-atmosphere-clip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: -1;
+  border-radius: inherit;
+}
+.margo-atmosphere-clip--karaoke {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.margo-atmosphere {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  border-radius: 50%;
+  pointer-events: none;
+  background: var(--gold);
+  will-change: transform, opacity;
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 0;
+  transition: opacity 380ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.margo-atmosphere--card {
+  width: 210px;
+  height: 210px;
+  filter: blur(72px);
+  --atm-op-lo: 0.034;
+  --atm-op-hi: 0.062;
+  --atm-scale: 1.022;
+  --atm-drift: 7px;
+}
+
+.margo-atmosphere--karaoke {
+  width: 500px;
+  height: 500px;
+  top: 30%;
+  filter: blur(100px);
+  --atm-op-lo: 0.042;
+  --atm-op-hi: 0.078;
+  --atm-scale: 1.04;
+  --atm-drift: 16px;
+  /* Still karaoke matches the previous static gold orb. */
+  opacity: 0.055;
+}
+
+.margo-atmosphere--card.is-live {
+  transition: none;
+}
+
+.margo-atmosphere--karaoke.margo-atmosphere--still {
+  opacity: 0.055;
+}
+
+.margo-atmosphere--card.margo-atmosphere--still {
+  opacity: 0;
+}
+
+@keyframes margo-atm-breath {
+  0%, 100% {
+    opacity: var(--atm-op-lo);
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: var(--atm-op-hi);
+    transform: translate(-50%, -50%) scale(var(--atm-scale));
+  }
+}
+
+@keyframes margo-atm-drift {
+  0%, 100% {
+    opacity: var(--atm-op-lo);
+    transform: translate(calc(-50% - var(--atm-drift)), -50%) scale(1);
+  }
+  50% {
+    opacity: var(--atm-op-hi);
+    transform: translate(calc(-50% + var(--atm-drift)), calc(-50% + 4px)) scale(1.015);
+  }
+}
+
+@keyframes margo-atm-pulse {
+  0%, 100% {
+    opacity: var(--atm-op-lo);
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: var(--atm-op-hi);
+    transform: translate(-50%, -50%) scale(1.018);
+  }
+}
+
+@keyframes margo-atm-weight {
+  0%, 100% {
+    opacity: var(--atm-op-hi);
+    transform: translate(-50%, -46%) scale(1.02);
+  }
+  50% {
+    opacity: var(--atm-op-lo);
+    transform: translate(-50%, -52%) scale(1.05);
+  }
+}
+
+.margo-atmosphere--breath.is-live {
+  animation: margo-atm-breath 6.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.margo-atmosphere--drift.is-live {
+  animation: margo-atm-drift 14s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.margo-atmosphere--pulse.is-live {
+  animation: margo-atm-pulse 2.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.margo-atmosphere--weight.is-live {
+  animation: margo-atm-weight 9s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.margo-atmosphere--karaoke.margo-atmosphere--weight {
+  width: 560px;
+  height: 560px;
+  top: 38%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .margo-atmosphere,
+  .margo-atmosphere.is-live,
+  .margo-atmosphere--breath,
+  .margo-atmosphere--drift,
+  .margo-atmosphere--pulse,
+  .margo-atmosphere--weight {
+    animation: none !important;
+  }
+  .margo-atmosphere--card {
+    opacity: 0 !important;
+  }
+  .margo-atmosphere--karaoke {
+    opacity: 0.055 !important;
+    transform: translate(-50%, -50%) scale(1) !important;
+  }
+}

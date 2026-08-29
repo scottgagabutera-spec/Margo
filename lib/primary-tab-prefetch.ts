@@ -9,6 +9,7 @@ import { mapPostLinesRows } from '@/lib/post-lines'
 import type { CatalogLyricAtom } from '@/lib/catalog-lyric-unit'
 import { warmProfile } from '@/lib/profile-warm'
 import { embedProfile, resolvePublicArtistCredit } from '@/lib/artist-identity'
+import { parseAtmosphere, SONG_POST_EMBED, type AtmosphereId } from '@/lib/atmosphere'
 
 const supabase = createClient()
 
@@ -26,6 +27,7 @@ export type LyricMomentRow = {
   artwork?: string | null
   audioUrl?: string | null
   vibes: string[]
+  atmosphere?: AtmosphereId
 }
 
 // ── Posts (Feed / Discover resonance) ────────────────────────────────
@@ -51,7 +53,7 @@ const POST_SELECT = `
   snippet_end_sec,
   profiles:author_profile_id ( username, display_name, avatar_url ),
   post_stats ( resonate_count, echo_count, replay_count ),
-  songs:song_id ( audio_url, artwork_url, is_ai_generated ),
+  songs:song_id ( ${SONG_POST_EMBED} ),
   post_lines (
     id,
     position,
@@ -63,7 +65,7 @@ const POST_SELECT = `
     snippet_start_sec,
     snippet_end_sec,
     source,
-    songs:song_id ( audio_url, artwork_url, is_ai_generated )
+    songs:song_id ( ${SONG_POST_EMBED} )
   )
 `
 
@@ -108,6 +110,7 @@ function mapPostRow(row: any): Post {
     snippetStart: row.snippet_start_sec ?? null,
     snippetEnd: row.snippet_end_sec ?? null,
     isAiGenerated: linkedSong?.is_ai_generated ?? false,
+    atmosphere: parseAtmosphere(linkedSong?.atmosphere),
     lines: mapPostLinesRows(row.post_lines),
   }
 }
@@ -175,7 +178,7 @@ const SONGS_SELECT_LIGHT = `
   id, title, artist_display_name, artwork_url, audio_url, description,
   status, coming_soon_label, order, youtube_url, spotify_url,
   apple_music_url, soundcloud_url, audiomack_url, boomplay_url,
-  duration_sec, created_at, is_ai_generated,
+  duration_sec, created_at, is_ai_generated, atmosphere,
   song_stats ( plays, resonate_count, lyric_uses ),
   profiles!owner_profile_id ( username, display_name )
 `
@@ -199,6 +202,7 @@ interface RawSongRow {
   duration_sec: number | null
   created_at: string
   is_ai_generated: boolean
+  atmosphere: string | null
   song_stats: { plays: number; resonate_count: number; lyric_uses: number }[] | null
   profiles?: { username?: string | null; display_name?: string | null } | { username?: string | null; display_name?: string | null }[] | null
 }
@@ -232,6 +236,7 @@ export function transformSongRowLight(row: RawSongRow): Song {
     lyricUses: stats?.lyric_uses ?? 0,
     createdAt: row.created_at,
     isAiGenerated: row.is_ai_generated ?? false,
+    atmosphere: parseAtmosphere(row.atmosphere),
     lyricLines: [],
   }
 }
@@ -344,7 +349,8 @@ export async function fetchLyricMoments(): Promise<LyricMomentRow[]> {
         artist_display_name,
         artwork_url,
         audio_url,
-        status
+        status,
+        atmosphere
       )
     `)
 
@@ -374,6 +380,7 @@ export async function fetchLyricMoments(): Promise<LyricMomentRow[]> {
       artwork: song.artwork_url,
       audioUrl: song.audio_url,
       vibes,
+      atmosphere: parseAtmosphere(song.atmosphere),
     })
   }
 

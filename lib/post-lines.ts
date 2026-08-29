@@ -2,6 +2,8 @@
  * One segment of a multi-line moment. Prefer this over inventing a second
  * top-level post. Position 0 mirrors posts.text / song_id / snippets.
  */
+import { parseAtmosphere, type AtmosphereId } from '@/lib/atmosphere'
+
 export type PostLineSource = 'catalog' | 'external' | 'freeform'
 
 export interface PostLine {
@@ -17,6 +19,8 @@ export interface PostLine {
   snippetEnd?: number | null
   source?: PostLineSource
   isAiGenerated?: boolean
+  /** Live join from songs.atmosphere. */
+  atmosphere?: AtmosphereId
 }
 
 export const POST_LINES_MAX = 3
@@ -45,6 +49,7 @@ export function mapPostLinesRows(raw: any[] | null | undefined): PostLine[] | un
         snippetEnd: row.snippet_end_sec ?? null,
         source: (row.source as PostLineSource) || 'external',
         isAiGenerated: linked?.is_ai_generated ?? false,
+        atmosphere: parseAtmosphere(linked?.atmosphere),
       }
     })
 }
@@ -58,6 +63,7 @@ export function resolveMomentLines(post: {
   snippetEnd?: number | null
   knowledge?: { song?: string; artist?: string; artwork?: string | null }
   isAiGenerated?: boolean
+  atmosphere?: AtmosphereId
   lines?: PostLine[]
 }): PostLine[] {
   if (post.lines && post.lines.length > 0) {
@@ -77,6 +83,7 @@ export function resolveMomentLines(post: {
       snippetEnd: post.snippetEnd ?? null,
       source: post.songId ? 'catalog' : 'external',
       isAiGenerated: post.isAiGenerated ?? false,
+      atmosphere: post.atmosphere,
     },
   ]
 }

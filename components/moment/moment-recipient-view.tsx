@@ -13,6 +13,7 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { trackEvent } from '@/lib/analytics/track'
 import type { MargoMoment } from '@/lib/moment/types'
 import { LYRIC_FONT, UI_FONT } from '@/lib/fonts'
+import { AtmosphereLayer } from '@/components/atmosphere-layer'
 
 interface MomentRecipientViewProps {
   moment: MargoMoment
@@ -53,6 +54,7 @@ export function MomentRecipientView({
       lineText: listen.lineLyric || primary?.lyric || '',
       startSec: listen.snippetStart!,
       endSec: listen.snippetEnd!,
+      atmosphere: primary?.atmosphere ?? null,
       source: 'feed',
     })
   }, [canPlay, listen, primary, artworkUrl])
@@ -73,8 +75,12 @@ export function MomentRecipientView({
         maxWidth: '480px',
         margin: '0 auto',
         boxSizing: 'border-box',
+        position: 'relative',
+        isolation: 'isolate',
+        background: 'var(--bg)',
       }}
     >
+      <AtmosphereLayer variant="card" active={playing} />
       <header
         style={{
           display: 'flex',
