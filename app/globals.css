@@ -678,14 +678,14 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 }
 
 .margo-atmosphere--card {
-  width: 200px;
-  height: 200px;
-  filter: blur(80px);
-  --atm-op-lo: 0.028;
-  --atm-op-hi: 0.048;
-  --atm-scale: 1.016;
-  --atm-drift: 5px;
-  --atm-pulse-hi: 0.038;
+  width: 280px;
+  height: 280px;
+  filter: blur(72px);
+  --atm-op-lo: 0.08;
+  --atm-op-hi: 0.14;
+  --atm-scale: 1.035;
+  --atm-drift: 10px;
+  --atm-pulse-hi: 0.11;
 }
 
 .margo-atmosphere--karaoke {
@@ -693,11 +693,11 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   height: 500px;
   top: 30%;
   filter: blur(100px);
-  --atm-op-lo: 0.038;
-  --atm-op-hi: 0.062;
-  --atm-scale: 1.03;
-  --atm-drift: 12px;
-  --atm-pulse-hi: 0.05;
+  --atm-op-lo: 0.07;
+  --atm-op-hi: 0.12;
+  --atm-scale: 1.04;
+  --atm-drift: 14px;
+  --atm-pulse-hi: 0.10;
   /* Still karaoke matches the previous static gold orb. */
   opacity: 0.055;
 }
@@ -750,11 +750,11 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 @keyframes margo-atm-weight {
   0%, 100% {
     opacity: var(--atm-op-hi);
-    transform: translate(-50%, -48%) scale(1.01);
+    transform: translate(-50%, -42%) scale(1.02);
   }
   50% {
     opacity: var(--atm-op-lo);
-    transform: translate(-50%, -51%) scale(1.024);
+    transform: translate(-50%, -56%) scale(1.05);
   }
 }
 

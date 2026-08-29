@@ -46,6 +46,7 @@ import {
 } from './preload-cache'
 import { recordQualifiedPlay, getPlayThresholdSec } from '@/lib/engagement/plays'
 import { livingAtmosphereOrNull } from '@/lib/atmosphere'
+import { createClient } from '@/lib/supabase/client'
 
 // ── Module state ──────────────────────────────────────────────────
 
@@ -575,6 +576,7 @@ function finishCrossfade(
     error: null,
   })
 
+  hydrateAtmosphereFromCatalog(nextItem.songId, generation)
   bindAudioHandlers(generation)
   syncMediaSessionFromState(_state)
   armSnippetTimer(generation)
@@ -674,6 +676,22 @@ function applyTrackMetadata(
   })
 }
 
+/** Live song row wins over a stale Feed/Discover join (Studio save, keepalive cache). */
+function hydrateAtmosphereFromCatalog(songId: string | null, generation: number): void {
+  if (!songId) return
+  void createClient()
+    .from('songs')
+    .select('atmosphere')
+    .eq('id', songId)
+    .maybeSingle()
+    .then(({ data, error }) => {
+      if (error) return
+      if (generation !== _handlerGeneration) return
+      if (_state.songId !== songId) return
+      patch({ atmosphere: livingAtmosphereOrNull(data?.atmosphere) })
+    })
+}
+
 // ── Public API: subscription ──────────────────────────────────────
 
 export function subscribeAudioEngine(listener: AudioEngineListener): () => void {
@@ -719,6 +737,7 @@ export async function playSnippet(request: PlaySnippetRequest): Promise<void> {
   }
 
   applyTrackMetadata(request, 'snippet', snippet)
+  hydrateAtmosphereFromCatalog(request.songId, generation)
   registerPreloadSong(request.songId, request.audioUrl)
 
   assignSourceForPlayback(request.audioUrl)
@@ -786,6 +805,7 @@ export async function playFull(request: PlayFullRequest): Promise<void> {
 
   const startSec = request.startSec ?? 0
   applyTrackMetadata(request, 'full', null)
+  hydrateAtmosphereFromCatalog(request.songId, generation)
   registerPreloadSong(request.songId, request.audioUrl)
 
   assignSourceForPlayback(request.audioUrl)
