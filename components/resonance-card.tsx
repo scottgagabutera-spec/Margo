@@ -13,6 +13,7 @@ import { EditMomentModal } from '@/components/edit-moment-modal'
 import { DeleteMomentDialog } from '@/components/delete-moment-dialog'
 import type { Post } from '@/hooks/usePosts'
 import { DISCOVER_VIBES } from '@/lib/discover-vibes'
+import { AtmosphereLayer } from '@/components/atmosphere-layer'
 
 export function ResonanceCard({
   post,
@@ -90,8 +91,16 @@ export function ResonanceCard({
           textDecoration: 'none',
           boxSizing: 'border-box',
           height: '100%',
+          position: 'relative',
+          isolation: 'isolate',
         }}
       >
+        <AtmosphereLayer
+          variant="card"
+          rooms={momentLines.flatMap((l) => (
+            l.songId ? [{ songId: l.songId, lineText: l.text }] : []
+          ))}
+        />
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
           <div style={{ minWidth: 0, flex: 1 }}>
             {hasVibeTag && (
