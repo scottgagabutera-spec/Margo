@@ -478,7 +478,6 @@ export default function AccountSettingsPage() {
           { key: 'newMessage', label: 'New messages' },
           { key: 'lyricBack', label: 'Lyric Backs on your posts' },
           { key: 'resonate', label: 'Resonates on your posts' },
-          { key: 'emailDigest', label: 'Weekly email digest' },
         ].map((row) => (
           <div
             key={row.key}
