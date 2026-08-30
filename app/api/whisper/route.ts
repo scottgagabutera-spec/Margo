@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { assertSongPipelineAccess } from '@/lib/song-pipeline-auth'
 
 export async function POST(request: NextRequest) {
   try {
     const { audioUrl, songId, language, prompt } = await request.json()
     if (!audioUrl) return NextResponse.json({ error: 'audioUrl required' }, { status: 400 })
     if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: 'OpenAI not configured' }, { status: 503 })
+
+    const gate = await assertSongPipelineAccess(typeof songId === 'string' ? songId : null)
+    if (!gate.ok) return gate.res
 
     // Fetch the audio file
     const audioRes = await fetch(audioUrl)

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
+import { assertSongPipelineAccess } from '@/lib/song-pipeline-auth'
 
 const VIBES = ['CHILL', 'HOPE', 'HEALING', 'GRATEFUL', 'SPIRITUAL', 'NOSTALGIA', 'JOY', 'LOVE', 'HYPE', 'PROUD']
 
@@ -39,6 +40,9 @@ export async function POST(request: NextRequest) {
     if (!srt) return NextResponse.json({ error: 'srt required' }, { status: 400 })
     if (!songId) return NextResponse.json({ error: 'songId required' }, { status: 400 })
     if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: 'OpenAI not configured' }, { status: 503 })
+
+    const gate = await assertSongPipelineAccess(songId)
+    if (!gate.ok) return gate.res
 
     const lines = parseSRT(srt)
     if (lines.length === 0) return NextResponse.json({ error: 'No lines parsed from SRT' }, { status: 400 })
