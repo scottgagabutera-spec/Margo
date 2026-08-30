@@ -246,7 +246,7 @@ export function ArtistApplicationForm({ onSubmitted }: ArtistApplicationFormProp
               </div>
             )}
             {sunoVerified && (
-              <p style={{ fontFamily: font, fontSize: '0.7rem', color: '#4ade80' }}>✓ Verified — you can remove the code from your bio now.</p>
+              <p style={{ fontFamily: font, fontSize: '0.7rem', color: '#4ade80' }}>✓ Found in your bio — keep it there until you submit. We check again when you apply.</p>
             )}
             {sunoStatus.kind === 'error' && sunoStatus.message && (
               <p style={{ fontFamily: font, fontSize: '0.65rem', color: '#ff6060', marginTop: '6px' }}>{sunoStatus.message}</p>
