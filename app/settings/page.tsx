@@ -221,6 +221,7 @@ export default function AccountSettingsPage() {
   const [newPassword, setNewPassword] = useState('')
   const [passwordStatus, setPasswordStatus] = useState<string | null>(null)
   const [savingSection, setSavingSection] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const [confirmUsername, setConfirmUsername] = useState('')
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -313,30 +314,48 @@ export default function AccountSettingsPage() {
 
   async function saveNotifications(next: NotificationPrefs) {
     if (!userId || !profile) return
+    const prev = notifications
     setNotifications(next)
+    setSaveError(null)
     setSavingSection('notifications')
     const nextSettings = { ...(profile.settings ?? {}), notifications: next }
-    await supabase.from('profiles').update({ settings: nextSettings }).eq('id', userId)
-    setProfile({ ...profile, settings: nextSettings })
+    const { error } = await supabase.from('profiles').update({ settings: nextSettings }).eq('id', userId)
     setSavingSection(null)
+    if (error) {
+      setNotifications(prev)
+      setSaveError('Could not save notification preferences. Try again.')
+      return
+    }
+    setProfile({ ...profile, settings: nextSettings })
   }
 
   async function savePrivacy(patch: Partial<Pick<ProfileRow, 'is_private' | 'who_can_message'>>) {
     if (!userId || !profile) return
+    const prev = profile
     setSavingSection('privacy')
+    setSaveError(null)
     const updated = { ...profile, ...patch }
     setProfile(updated)
-    await supabase.from('profiles').update(patch).eq('id', userId)
+    const { error } = await supabase.from('profiles').update(patch).eq('id', userId)
     setSavingSection(null)
+    if (error) {
+      setProfile(prev)
+      setSaveError('Could not save privacy settings. Try again.')
+    }
   }
 
   async function toggleHidden() {
     if (!userId || !profile) return
     setSavingSection('account')
+    setSaveError(null)
     const nextValue = profile.deactivated_at ? null : new Date().toISOString()
-    await supabase.from('profiles').update({ deactivated_at: nextValue }).eq('id', userId)
-    setProfile({ ...profile, deactivated_at: nextValue })
+    const { error } = await supabase.from('profiles').update({ deactivated_at: nextValue }).eq('id', userId)
     setSavingSection(null)
+    if (error) {
+      setSaveError('Could not update account visibility. Try again.')
+      return
+    }
+    setProfile({ ...profile, deactivated_at: nextValue })
   }
 
   async function deleteAccount() {
@@ -416,6 +435,11 @@ export default function AccountSettingsPage() {
       >
         Account Settings
       </h1>
+      {saveError ? (
+        <p style={{ fontFamily: font, fontSize: '0.85rem', color: '#ff6060', margin: '-16px 0 24px' }} role="alert">
+          {saveError}
+        </p>
+      ) : null}
 
       {/* Profile */}
       <Card>
