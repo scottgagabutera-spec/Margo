@@ -41,7 +41,7 @@ interface ProfileRow {
 
 interface ArtistApplication {
   status: string
-  created_at: string
+  submitted_at: string
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -263,9 +263,9 @@ export default function AccountSettingsPage() {
 
       const { data: applicationRow } = await supabase
         .from('artist_applications')
-        .select('status, created_at')
-        .eq('user_id', user!.id)
-        .order('created_at', { ascending: false })
+        .select('status, submitted_at')
+        .eq('profile_id', user!.id)
+        .order('submitted_at', { ascending: false })
         .limit(1)
         .maybeSingle()
 
