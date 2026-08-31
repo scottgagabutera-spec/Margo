@@ -39,6 +39,7 @@ import {
 import { syncMediaSessionFromState, bindMediaSessionHandlers, clearMediaSessionHandlers } from './media-session'
 import {
   getPreloadReadyState,
+  isTimeBuffered,
   recycleElementToPool,
   registerPreloadSong,
   takeBufferedPoolElement,
@@ -150,6 +151,9 @@ function clearCrossfadeContext(): void {
 // newer tap's result.
 let _toggleToken = 0
 
+/** Mute the element until snippet seek lands so mid-file windows don't leak t=0. */
+let _holdVolumeForSeek = false
+
 /**
  * If a crossfade is currently in flight, snap it to completion right now
  * instead of letting it keep animating. Called at the top of any action
@@ -227,8 +231,15 @@ function patch(partial: Partial<AudioEngineState>): void {
   notify()
 }
 
+function releaseSeekHold(audio: HTMLAudioElement | null): void {
+  if (!_holdVolumeForSeek) return
+  _holdVolumeForSeek = false
+  if (audio) audio.volume = _state.muted ? 0 : _state.volume
+}
+
 function bumpSession(): number {
   cancelCrossfade()
+  releaseSeekHold(activeAudio())
   _handlerGeneration += 1
   patch({ sessionGeneration: _handlerGeneration })
   return _handlerGeneration
@@ -276,7 +287,27 @@ function bindAudioHandlers(generation: number): void {
 
   audio.onloadedmetadata = () => {
     if (generation !== _handlerGeneration) return
-    patch({ duration: audio.duration || 0, buffering: false })
+    const snippet = _state.snippet
+    if (_state.mode === 'snippet' && snippet && snippet.startSec > 0.15) {
+      if (Math.abs(audio.currentTime - snippet.startSec) > 0.2) {
+        try { audio.currentTime = snippet.startSec } catch { /* ignore */ }
+        patch({ duration: audio.duration || 0 })
+        return
+      }
+    }
+    patch({ duration: audio.duration || 0, buffering: audio.readyState < 2 && !_holdVolumeForSeek })
+  }
+
+  audio.onseeked = () => {
+    if (generation !== _handlerGeneration) return
+    const snippet = _state.snippet
+    if (_state.mode === 'snippet' && snippet && Math.abs(audio.currentTime - snippet.startSec) <= 0.4) {
+      releaseSeekHold(audio)
+      patch({ buffering: false, currentTime: audio.currentTime })
+    } else if (_holdVolumeForSeek && _state.mode === 'full') {
+      releaseSeekHold(audio)
+      patch({ buffering: false })
+    }
   }
 
   audio.ontimeupdate = () => {
@@ -422,15 +453,24 @@ function assignSourceForPlayback(audioUrl: string): void {
 }
 
 function preloadInactiveForCrossfade(nextItem: LyricMomentQueueItem): void {
-  warmPreloadUrl(nextItem.audioUrl)
+  const startSec = isSnippetQueueItem(nextItem) ? nextItem.startSec : 0
+  warmPreloadUrl(nextItem.audioUrl, startSec)
   const incoming = inactiveAudio()
   if (!incoming) return
-  if (urlsMatch(incoming.src, nextItem.audioUrl)) return
-  incoming.pause()
-  incoming.src = nextItem.audioUrl
-  incoming.volume = 0
-  if (getPreloadReadyState(nextItem.audioUrl) < 2) {
-    incoming.load()
+  if (!urlsMatch(incoming.src, nextItem.audioUrl)) {
+    incoming.pause()
+    incoming.src = nextItem.audioUrl
+    incoming.volume = 0
+    if (getPreloadReadyState(nextItem.audioUrl) < 2) {
+      incoming.load()
+    }
+  }
+  if (startSec > 0.15) {
+    const seek = () => {
+      try { incoming.currentTime = startSec } catch { /* ignore */ }
+    }
+    if (incoming.readyState >= 1) seek()
+    else incoming.addEventListener('loadedmetadata', seek, { once: true })
   }
 }
 
@@ -744,13 +784,21 @@ export async function playSnippet(request: PlaySnippetRequest): Promise<void> {
 
   const audio = requireAudio()
 
-  // Seek to snippet start synchronously
-  try { audio.currentTime = request.startSec } catch { /* ignore if not ready yet */ }
-
   bindAudioHandlers(generation)
   bindMediaSessionHandlers()
   syncMediaSessionFromState(_state)
-  patch({ buffering: audio.readyState < 2 })
+
+  const startSec = request.startSec
+  const alreadyAtWindow = Math.abs(audio.currentTime - startSec) <= 0.25 && isTimeBuffered(audio, startSec)
+  if (!alreadyAtWindow && startSec > 0.15) {
+    _holdVolumeForSeek = true
+    audio.volume = 0
+    try { audio.currentTime = startSec } catch { /* ignore if not ready yet */ }
+    patch({ buffering: true })
+  } else {
+    try { audio.currentTime = startSec } catch { /* ignore if not ready yet */ }
+    patch({ buffering: audio.readyState < 2 })
+  }
 
   // Call play() NOW — still within the user gesture call stack
   const playPromise = audio.play()
@@ -768,14 +816,16 @@ export async function playSnippet(request: PlaySnippetRequest): Promise<void> {
   // Handle play promise result in background — does not block gesture
   playPromise.then(() => {
     if (generation !== _handlerGeneration) return
-    patch({ buffering: false, error: null })
-    // Re-seek if currentTime drifted during buffer
-    if (Math.abs(audio.currentTime - request.startSec) > 1) {
-      audio.currentTime = request.startSec
+    if (Math.abs(audio.currentTime - startSec) > 0.35) {
+      try { audio.currentTime = startSec } catch { /* ignore */ }
+    } else {
+      releaseSeekHold(audio)
+      patch({ buffering: false, error: null })
     }
     armSnippetTimer(generation)
   }).catch(() => {
     if (generation !== _handlerGeneration) return
+    releaseSeekHold(audio)
     patch({ playing: false, buffering: false, error: 'Play blocked — tap to start' })
   })
 }
@@ -1114,8 +1164,8 @@ export function preloadSong(songId: string, audioUrl: string): void {
   registerPreloadSong(songId, audioUrl)
 }
 
-export function warmUrl(audioUrl: string): void {
-  warmPreloadUrl(audioUrl)
+export function warmUrl(audioUrl: string, startSec = 0): void {
+  warmPreloadUrl(audioUrl, startSec)
 }
 
 // ── Public API: volume ────────────────────────────────────────────

@@ -145,7 +145,7 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
 }) {
   const btnRef = useRef<HTMLButtonElement>(null)
   const engineState = useAudioEngine()
-  useWarmAudioUrlOnVisible(audioUrl, btnRef)
+  useWarmAudioUrlOnVisible(audioUrl, btnRef, true, snippetStart ?? 0)
   const isThisPlaying = engineState.playing &&
     engineState.mode === 'snippet' &&
     engineState.songId === songId &&
@@ -366,8 +366,10 @@ function PostMomentBody({
   )
 }
 
-function Tier1Player({ audioUrl, songId, postText }: {
+function Tier1Player({ audioUrl, songId, postText, title, artist, artwork, atmosphere }: {
   audioUrl: string; songId: string | null; postText?: string
+  title?: string; artist?: string; artwork?: string | null
+  atmosphere?: string | null
 }) {
   const engineState = useAudioEngine()
   const { requireAuth } = useAuthGate()
@@ -403,12 +405,13 @@ function Tier1Player({ audioUrl, songId, postText }: {
     void playFull({
       songId: songId || audioUrl,
       audioUrl,
-      title: '',
-      artist: '',
-      artwork: null,
+      title: title || '',
+      artist: artist || '',
+      artwork: artwork ?? null,
       startSec: 0,
       autoplay: true,
       source: 'feed-tier1',
+      atmosphere: livingAtmosphereOrNull(atmosphere),
     })
   }
 
@@ -561,6 +564,10 @@ export function PostCard({
   const avatarPx = isCompact ? '32px' : '40px'
   const cardPadding = isCompact ? '12px' : '16px'
 
+  const lines = resolveMomentLines(post)
+  const fullLine = lines.find((l) => l.songId && l.songId === post.songId) || lines[0]
+  const snippetWarmSec = fullLine?.snippetStart ?? post.snippetStart ?? 0
+
   useEffect(() => {
     if (!audioUrl || !isTier1) return
     const el = cardRef.current
@@ -568,7 +575,7 @@ export function PostCard({
     const obs = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
-          warmUrl(audioUrl)
+          warmUrl(audioUrl, snippetWarmSec)
           obs.disconnect()
         }
       },
@@ -576,7 +583,7 @@ export function PostCard({
     )
     obs.observe(el)
     return () => obs.disconnect()
-  }, [audioUrl, isTier1])
+  }, [audioUrl, isTier1, snippetWarmSec])
 
   useEffect(() => {
     if (viewedRef.current) return
@@ -1204,7 +1211,17 @@ export function PostCard({
         <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(232,197,71,0.12)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ flex: 1 }}>
-              {audioUrl && <Tier1Player audioUrl={audioUrl} songId={post.songId || null} postText={post.text} />}
+              {audioUrl && (
+                <Tier1Player
+                  audioUrl={audioUrl}
+                  songId={post.songId || null}
+                  postText={post.text}
+                  title={fullLine?.songTitle || post.knowledge?.song || ''}
+                  artist={fullLine?.artistName || post.knowledge?.artist || ''}
+                  artwork={fullLine?.artworkUrl || post.knowledge?.artwork || null}
+                  atmosphere={fullLine?.atmosphere || post.atmosphere}
+                />
+              )}
             </div>
             {variant === 'feed' && post.songId && (
               <PendingNavLink

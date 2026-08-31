@@ -31,7 +31,7 @@ export function LyricMomentCard({
   onAddQueue: () => void
 }) {
   const cardRef = useRef<HTMLDivElement>(null)
-  useWarmAudioUrlOnVisible(moment.audioUrl, cardRef)
+  useWarmAudioUrlOnVisible(moment.audioUrl, cardRef, true, moment.start)
   const primaryVibe = moment.vibes[0]
   return (
     <div

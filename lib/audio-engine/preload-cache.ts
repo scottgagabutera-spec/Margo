@@ -17,6 +17,7 @@ interface PoolSlot {
   audio: HTMLAudioElement
   url: string
   lastUsed: number
+  startSec: number
 }
 
 // ── Module state ──────────────────────────────────────────────────
@@ -42,6 +43,36 @@ function createPoolAudio(): HTMLAudioElement {
 
 function findSlot(url: string): PoolSlot | undefined {
   return _pool.find(s => s.url === url)
+}
+
+/** True when `t` is inside a buffered range (enough to start without a stall). */
+export function isTimeBuffered(audio: HTMLAudioElement, t: number): boolean {
+  if (!Number.isFinite(t) || t < 0) return audio.readyState >= 2
+  try {
+    const { buffered } = audio
+    for (let i = 0; i < buffered.length; i++) {
+      if (buffered.start(i) <= t && buffered.end(i) >= t + 0.4) return true
+    }
+  } catch {
+    /* TimeRanges can throw while the element is mid-load */
+  }
+  return t <= 0.15 && audio.readyState >= 2
+}
+
+function seekPoolTo(slot: PoolSlot, startSec: number): void {
+  const t = Number.isFinite(startSec) && startSec > 0.15 ? startSec : 0
+  slot.startSec = t
+  if (t <= 0) return
+  const audio = slot.audio
+  const apply = () => {
+    try {
+      if (Math.abs(audio.currentTime - t) > 0.2) audio.currentTime = t
+    } catch {
+      /* metadata not ready */
+    }
+  }
+  if (audio.readyState >= 1) apply()
+  else audio.addEventListener('loadedmetadata', apply, { once: true })
 }
 
 function evictLRU(): PoolSlot {
@@ -71,32 +102,39 @@ export function getCachedAudioUrl(songId: string): string | undefined {
 /**
  * Actively buffer an audio URL in the preload pool.
  * Creates or reuses a hidden <audio> element and sets src + load().
- * No-op in SSR or if already in pool.
+ * Pass startSec so the browser Range-requests the snippet window instead of
+ * only buffering from byte 0 of a multi-minute MP3.
  */
-export function warmPreloadUrl(audioUrl: string): void {
+export function warmPreloadUrl(audioUrl: string, startSec = 0): void {
   if (typeof document === 'undefined') return
   if (!audioUrl) return
-  if (findSlot(audioUrl)) return   // already warming or warmed
+
+  const existing = findSlot(audioUrl)
+  if (existing) {
+    existing.lastUsed = Date.now()
+    seekPoolTo(existing, startSec)
+    return
+  }
 
   let slot: PoolSlot
 
   if (_pool.length < POOL_SIZE) {
-    // Pool has room — add a new slot
     const audio = createPoolAudio()
-    slot = { audio, url: audioUrl, lastUsed: Date.now() }
+    slot = { audio, url: audioUrl, lastUsed: Date.now(), startSec: 0 }
     _pool.push(slot)
   } else {
-    // Evict LRU slot and reuse its audio element
     slot = evictLRU()
     slot.audio.pause()
     slot.audio.removeAttribute('src')
     slot.audio.load()
     slot.url = audioUrl
     slot.lastUsed = Date.now()
+    slot.startSec = 0
   }
 
   slot.audio.src = audioUrl
   slot.audio.load()
+  seekPoolTo(slot, startSec)
 }
 
 /**
@@ -158,16 +196,18 @@ export function getPoolAudio(audioUrl: string): HTMLAudioElement | null {
 }
 
 /**
- * Remove a warmed pool element (readyState >= 2) for handoff to the main
- * engine. Replaces the slot with a fresh hidden <audio> for future warms.
+ * Hand the pool element for this URL to the main engine — even if it is
+ * still buffering. Reusing the in-flight download avoids a second GET of
+ * the same MP3 (the old readyState>=2 gate started a competing load).
  */
 export function takeBufferedPoolElement(audioUrl: string): HTMLAudioElement | null {
   const slot = findSlot(audioUrl)
-  if (!slot || slot.audio.readyState < 2) return null
+  if (!slot) return null
   const el = slot.audio
   slot.audio = createPoolAudio()
   slot.url = ''
   slot.lastUsed = 0
+  slot.startSec = 0
   el.muted = false
   el.style.display = 'none'
   return el
@@ -191,11 +231,12 @@ export function recycleElementToPool(el: HTMLAudioElement): void {
     emptySlot.audio = el
     emptySlot.url = ''
     emptySlot.lastUsed = 0
+    emptySlot.startSec = 0
     return
   }
 
   if (_pool.length < POOL_SIZE) {
-    _pool.push({ audio: el, url: '', lastUsed: 0 })
+    _pool.push({ audio: el, url: '', lastUsed: 0, startSec: 0 })
     return
   }
 
@@ -204,6 +245,7 @@ export function recycleElementToPool(el: HTMLAudioElement): void {
   slot.audio = el
   slot.url = ''
   slot.lastUsed = 0
+  slot.startSec = 0
 }
 
 /**
@@ -218,6 +260,7 @@ export function releaseFromPool(audioUrl: string): void {
   slot.audio.removeAttribute('src')
   slot.url = ''
   slot.lastUsed = 0
+  slot.startSec = 0
   // Keep the audio element in the pool for reuse — don't remove from DOM
 }
 
@@ -231,5 +274,6 @@ export function clearPreloadCache(): void {
     slot.audio.removeAttribute('src')
     slot.url = ''
     slot.lastUsed = 0
+    slot.startSec = 0
   }
 }

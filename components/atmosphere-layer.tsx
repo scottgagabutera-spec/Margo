@@ -251,10 +251,15 @@ function isThisRoom(
   if (variant === 'karaoke') {
     return engine.mode === 'full' && engine.songId === songId
   }
-  if (engine.mode !== 'snippet') return false
   const matches = rooms && rooms.length > 0
     ? rooms
     : (songId ? [{ songId, lineText: lineText || '' }] : [])
+  // Snippet button → mode snippet, match this lyric. Play-full / karaoke
+  // on the card → mode full, match the song (room is song-owned).
+  if (engine.mode === 'full') {
+    return matches.some((r) => r.songId === engine.songId)
+  }
+  if (engine.mode !== 'snippet') return false
   return matches.some((r) => (
     r.songId === engine.songId &&
     (r.lineText ? engine.lineText === r.lineText : true)

@@ -10,6 +10,7 @@ export function useWarmAudioUrlOnVisible(
   audioUrl: string | null | undefined,
   rootRef: RefObject<HTMLElement | null>,
   enabled = true,
+  startSec?: number | null,
 ): void {
   useEffect(() => {
     if (!enabled || !audioUrl) return
@@ -19,7 +20,7 @@ export function useWarmAudioUrlOnVisible(
     const obs = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting) {
-          warmUrl(audioUrl)
+          warmUrl(audioUrl, startSec ?? 0)
           obs.disconnect()
         }
       },
@@ -27,5 +28,5 @@ export function useWarmAudioUrlOnVisible(
     )
     obs.observe(el)
     return () => obs.disconnect()
-  }, [audioUrl, enabled, rootRef])
+  }, [audioUrl, enabled, rootRef, startSec])
 }

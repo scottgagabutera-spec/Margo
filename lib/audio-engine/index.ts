@@ -71,6 +71,7 @@ export {
   warmPreloadUrl,
   warmUrls,
   warmSong,
+  isTimeBuffered,
 } from './preload-cache'
 
 // Snippet resolver
