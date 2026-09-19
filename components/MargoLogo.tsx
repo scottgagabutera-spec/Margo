@@ -9,8 +9,6 @@ interface MargoLogoProps {
   tier?: 'mark' | 'symbol' | 'lockup'
   size?: number
   rings?: boolean
-  /** Clip ring animation to the mark bounds (no bleed into page background). */
-  containRings?: boolean
   /** Gold drop-shadow on the mark SVG. */
   glow?: boolean
   wordmark?: boolean
@@ -22,7 +20,6 @@ export default function MargoLogo({
   tier = 'symbol',
   size = 32,
   rings = false,
-  containRings = false,
   glow = true,
   wordmark = false,
   wordmarkOnly = false,
@@ -68,13 +65,7 @@ export default function MargoLogo({
         `}</style>
       )}
       <div style={{ display: 'flex', alignItems: 'center', gap: Math.max(6, Math.round(size * 0.25)) }}>
-        <div style={{
-          position: 'relative',
-          width: size,
-          height: size,
-          flexShrink: 0,
-          overflow: containRings ? 'hidden' : undefined,
-        }}>
+        <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
           {rings && (
             <>
               <span className="margo-ring" />
