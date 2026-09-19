@@ -50,7 +50,7 @@ export function useSharedLines(song: string | null | undefined, artist: string |
         .from('posts')
         .select('text, song_title, artist_name, post_stats ( resonate_count )')
         .is('parent_post_id', null)
-        .not('status', 'in', '("hidden","private")')
+        .not('status', 'in', '("hidden","private","sent")')
         .not('text', 'is', null)
 
       if (cancelled) return

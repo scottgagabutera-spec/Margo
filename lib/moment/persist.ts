@@ -20,7 +20,7 @@ export type PersistMomentPostInput = {
   lines: MomentPersistLine[]
   /** Stored emotion enum key (e.g. GRATEFUL) — same as Compose. */
   emotion: string | null
-  status: 'active' | 'private'
+  status: 'active' | 'private' | 'sent'
   authorId: string
   lang?: string
 }

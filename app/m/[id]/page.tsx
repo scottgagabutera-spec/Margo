@@ -17,9 +17,16 @@ export async function generateMetadata({ params }: MomentPageProps): Promise<Met
       robots: { index: false, follow: false },
     }
   }
-  return buildMomentPageMetadata(loaded.moment, id, {
+  const meta = buildMomentPageMetadata(loaded.moment, id, {
     senderLabel: loaded.senderLabel,
   })
+  if (loaded.visibility === 'sent') {
+    return {
+      ...meta,
+      robots: { index: false, follow: false },
+    }
+  }
+  return meta
 }
 
 export default async function MomentRecipientPage({ params }: MomentPageProps) {

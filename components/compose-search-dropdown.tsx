@@ -1,6 +1,7 @@
 'use client'
 
 import { MusicNoteIcon, PlayIcon } from '@/components/icons'
+import { highlightSearchText } from '@/lib/search-highlight'
 import { UI_FONT } from '@/lib/fonts'
 
 export interface ComposeSearchHit {
@@ -25,6 +26,7 @@ interface ComposeSearchDropdownProps {
   open: boolean
   loading: boolean
   results: ComposeSearchHit[]
+  highlightQuery?: string
   onSelect: (result: ComposeSearchHit) => void
   onClose: () => void
   /** Stage landing — no source badges, catalog play hint, stage empty copy. */
@@ -52,6 +54,7 @@ export function ComposeSearchDropdown({
   open,
   loading,
   results,
+  highlightQuery = '',
   onSelect,
   onClose,
   variant = 'compose',
@@ -188,7 +191,7 @@ export function ComposeSearchDropdown({
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                 }}>
-                  {result.title}
+                  {highlightSearchText(result.title, highlightQuery)}
                 </p>
                 <p style={{
                   fontFamily: UI_FONT,
@@ -198,7 +201,7 @@ export function ComposeSearchDropdown({
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                 }}>
-                  {result.artist}
+                  {highlightSearchText(result.artist, highlightQuery)}
                 </p>
               </div>
               {isStage ? (

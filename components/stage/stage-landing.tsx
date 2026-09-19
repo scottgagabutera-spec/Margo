@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { matchLiveCatalogSong, searchMargoSongs, songMatchKey } from '@/lib/search-margo-songs'
 import { ComposeSearchDropdown, type ComposeSearchHit } from '@/components/compose-search-dropdown'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
-import { StageSearchField } from '@/components/stage/stage-search-field'
+import { MargoSearchInput } from '@/components/margo-search-input'
 import { StageSongChip } from '@/components/stage/stage-song-chip'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { MomentExportCustomizeBar } from '@/components/moment-export-customize-bar'
@@ -813,16 +813,19 @@ export function StageLanding() {
 
       {!selectedSong ? (
         <div style={{ position: 'relative', zIndex: 50 }}>
-          <StageSearchField
+          <MargoSearchInput
             value={searchQuery}
             onChange={handleSearchChange}
             loading={searchLoading}
+            placeholder="Search by lyric, song or artist…"
+            ariaLabel="Search songs on Stage"
           />
           <ComposeSearchDropdown
             variant="stage"
             open={showResults}
             loading={searchLoading}
             results={searchResults}
+            highlightQuery={searchQuery}
             onSelect={handleSelectSong}
             onClose={() => setShowResults(false)}
           />
