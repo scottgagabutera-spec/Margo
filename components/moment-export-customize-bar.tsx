@@ -29,6 +29,14 @@ interface MomentExportCustomizeBarProps {
   style?: CSSProperties
 }
 
+const EFFECT_CAPTIONS: Record<AtmosphereId, string> = {
+  still: 'Off',
+  breath: 'Wash',
+  drift: 'Band',
+  pulse: 'Hit',
+  weight: 'Drops',
+}
+
 function columnLabelStyle(): CSSProperties {
   return {
     fontFamily: UI_FONT,
@@ -186,7 +194,7 @@ export function MomentExportCustomizeBar({
           </span>
         </button>
         <span style={captionStyle()}>
-          {exportAtmosphereId === 'still' ? 'None' : 'Live'}
+          {EFFECT_CAPTIONS[exportAtmosphereId]}
         </span>
       </div>
 
