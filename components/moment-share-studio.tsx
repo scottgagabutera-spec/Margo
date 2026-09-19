@@ -528,6 +528,7 @@ export function MomentShareStudio({
           />
           </MomentExportPreviewFrame>
           <MomentVibeRow
+            key={`${exportAtmosphereId}-${shapeId}`}
             vibeLabel={exportVibeLabel}
             vibeOptions={MOMENT_VIBE_PICKER_OPTIONS}
             onVibeSelect={setExportVibeLabel}

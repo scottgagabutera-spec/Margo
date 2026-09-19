@@ -925,6 +925,7 @@ export function StageLanding() {
                 />
                 </MomentExportPreviewFrame>
                 <MomentVibeRow
+                  key={`${exportAtmosphereId}-${shapeId}`}
                   vibeLabel={vibeLabel}
                   suggestedVibeLabel={suggestedVibeLabel}
                   vibeOptions={STAGE_VIBE_OPTIONS}
