@@ -25,12 +25,57 @@ export interface LyricMatch {
   confidence: number
 }
 
+export interface LyricLineWindow {
+  lineId: number
+  lineText: string
+  startSec: number
+  endSec: number
+}
+
+export interface MatchableLyricLine {
+  id?: number
+  line_index?: number
+  lineId?: number
+  line?: string
+  text?: string
+  start?: number
+  start_sec?: number
+  end?: number
+  end_sec?: number
+}
+
+/** When playback cannot resolve a line, play this many seconds from the top. */
+export const FALLBACK_SNIPPET_SEC = 8
+
 function normalize(str: string): string {
   return (str || '')
     .toLowerCase()
     .trim()
     .replace(/[.,!?;:"'\u2018\u2019\u201c\u201d]/g, '')
     .replace(/\s+/g, ' ')
+}
+
+/** Single-word needles must not win over a longer quoted line (Nawala bug). */
+export function isSubstantialPhrase(text: string): boolean {
+  const n = normalize(text)
+  const words = n.split(/\s+/).filter(Boolean)
+  return words.length >= 2 || n.length >= 12
+}
+
+function lineIdOf(line: MatchableLyricLine): number {
+  return line.id ?? line.line_index ?? line.lineId ?? 0
+}
+
+function lineTextOf(line: MatchableLyricLine): string {
+  return line.line ?? line.text ?? ''
+}
+
+function startSecOf(line: MatchableLyricLine): number {
+  return line.start ?? line.start_sec ?? 0
+}
+
+function endSecOf(line: MatchableLyricLine): number {
+  return line.end ?? line.end_sec ?? 0
 }
 
 // Standard iterative Levenshtein distance. Lyric lines are short (well
@@ -65,16 +110,100 @@ function similarity(a: string, b: string): number {
   if (!na || !nb) return 0
   if (na === nb) return 1
 
-  // One fully containing the other is a strong signal even before edit-
-  // distance — handles the common case of a truncated (140-char cap) or
-  // slightly expanded quote of the real line.
-  const containmentBoost = na.includes(nb) || nb.includes(na) ? 0.25 : 0
+  // Containment boost only when the contained side is substantial — stops
+  // one-word lines like "Everything" from winning inside a longer quote.
+  let containmentBoost = 0
+  if (na.includes(nb) && isSubstantialPhrase(b)) {
+    containmentBoost = 0.25
+  } else if (nb.includes(na) && isSubstantialPhrase(a)) {
+    containmentBoost = 0.25
+  }
 
   const dist = levenshtein(na, nb)
   const maxLen = Math.max(na.length, nb.length)
   const editSimilarity = 1 - dist / maxLen
 
   return Math.min(1, editSimilarity + containmentBoost)
+}
+
+export function clampWindow(
+  startSec: number,
+  endSec: number,
+  fallbackDuration = FALLBACK_SNIPPET_SEC,
+): { startSec: number; endSec: number } {
+  const start = Math.max(0, startSec)
+  const end = endSec > start ? endSec : start + fallbackDuration
+  return { startSec: start, endSec: end }
+}
+
+export function fallbackSnippetWindow(): { startSec: number; endSec: number } {
+  return { startSec: 0, endSec: FALLBACK_SNIPPET_SEC }
+}
+
+/**
+ * Strict play-time matcher: exact → line-contains-quote → quote-contains-
+ * substantial-line. Returns null when nothing is confident — callers should
+ * fall back to {@link fallbackSnippetWindow} instead of silently no-oping.
+ */
+export function matchLyricWindowFromLines(
+  lines: MatchableLyricLine[],
+  quoteText: string,
+): LyricLineWindow | null {
+  if (!lines?.length || !quoteText?.trim()) return null
+
+  const needle = normalize(quoteText)
+
+  for (const line of lines) {
+    const text = lineTextOf(line)
+    if (normalize(text) === needle) {
+      return {
+        lineId: lineIdOf(line),
+        lineText: text,
+        startSec: startSecOf(line),
+        endSec: endSecOf(line),
+      }
+    }
+  }
+
+  let bestContains: MatchableLyricLine | null = null
+  let bestContainsLen = 0
+  for (const line of lines) {
+    const text = lineTextOf(line)
+    const nl = normalize(text)
+    if (nl.includes(needle) && nl.length > bestContainsLen) {
+      bestContains = line
+      bestContainsLen = nl.length
+    }
+  }
+  if (bestContains) {
+    return {
+      lineId: lineIdOf(bestContains),
+      lineText: lineTextOf(bestContains),
+      startSec: startSecOf(bestContains),
+      endSec: endSecOf(bestContains),
+    }
+  }
+
+  let bestSubstantial: MatchableLyricLine | null = null
+  let bestSubstantialLen = 0
+  for (const line of lines) {
+    const text = lineTextOf(line)
+    const nl = normalize(text)
+    if (needle.includes(nl) && isSubstantialPhrase(text) && nl.length > bestSubstantialLen) {
+      bestSubstantial = line
+      bestSubstantialLen = nl.length
+    }
+  }
+  if (bestSubstantial) {
+    return {
+      lineId: lineIdOf(bestSubstantial),
+      lineText: lineTextOf(bestSubstantial),
+      startSec: startSecOf(bestSubstantial),
+      endSec: endSecOf(bestSubstantial),
+    }
+  }
+
+  return null
 }
 
 // Below this confidence, we return null rather than guess — a missing
@@ -95,6 +224,24 @@ export async function matchLyricLine(
     .eq('song_id', songId)
 
   if (error || !data || data.length === 0) return null
+
+  const strict = matchLyricWindowFromLines(
+    data.map(l => ({
+      line_index: l.line_index,
+      text: l.text,
+      start_sec: l.start_sec,
+      end_sec: l.end_sec,
+    })),
+    text,
+  )
+  if (strict) {
+    return {
+      lineId: strict.lineId,
+      startSec: strict.startSec,
+      endSec: strict.endSec,
+      confidence: 1,
+    }
+  }
 
   let best: LyricMatch | null = null
   for (const line of data) {

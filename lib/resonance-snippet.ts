@@ -6,14 +6,27 @@ import {
   queuePlayNext,
   snippetToQueueItem,
 } from '@/lib/audio-engine'
+import {
+  fallbackSnippetWindow,
+  matchLyricWindowFromLines,
+} from '@/lib/lyric-match'
 
 export function matchLineInSong(song: Song | undefined, text: string | undefined) {
   if (!song || !text) return null
-  const needle = text.toLowerCase().trim()
-  const match = song.lyricLines?.find(l =>
-    l.text.toLowerCase().includes(needle) || needle.includes(l.text.toLowerCase())
-  )
-  return match || null
+  const lines = song.lyricLines?.map(l => ({
+    id: l.lineIndex,
+    line: l.text,
+    start: l.startSec,
+    end: l.endSec,
+  })) ?? []
+  const match = matchLyricWindowFromLines(lines, text)
+  if (!match) return null
+  return {
+    lineIndex: match.lineId,
+    text: match.lineText,
+    startSec: match.startSec,
+    endSec: match.endSec,
+  }
 }
 
 export function resolveResonanceWindow(
@@ -24,8 +37,14 @@ export function resolveResonanceWindow(
   let endSec = post.snippetEnd
   if (startSec == null || endSec == null) {
     const matched = matchLineInSong(song, post.text)
-    startSec = matched ? matched.startSec : 0
-    endSec = matched ? matched.endSec : 5
+    if (matched) {
+      startSec = matched.startSec
+      endSec = matched.endSec
+    } else {
+      const fb = fallbackSnippetWindow()
+      startSec = fb.startSec
+      endSec = fb.endSec
+    }
   }
   return { startSec, endSec }
 }
@@ -44,7 +63,6 @@ export function playResonancePost(post: Post, song: Song | undefined): void {
     startSec,
     endSec,
     vibe: null,
-    atmosphere: post.atmosphere ?? song?.atmosphere ?? null,
     source: 'music-resonance-row',
   })
 }
@@ -67,7 +85,6 @@ export function queueResonancePost(
     startSec,
     endSec,
     vibe: null,
-    atmosphere: post.atmosphere ?? song?.atmosphere ?? null,
   })
   if (mode === 'next') queuePlayNext(item)
   else queueAdd(item)
