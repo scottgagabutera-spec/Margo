@@ -1,4 +1,4 @@
-import { getStageCardTheme } from '@/lib/moment/stage-theme'
+import { resolveExportPaintTheme } from '@/lib/moment/stage-theme'
 import {
   roundStageToken,
   scaleStageToken,
@@ -58,7 +58,7 @@ export function resolveStageCardLayout(
 ): ResolvedStageCardLayout {
   const W = Math.max(1, input.outputWidthPx)
   const s = stageCardScale(W)
-  const theme = getStageCardTheme(input.themeId)
+  const theme = resolveExportPaintTheme(input.themeId, input.exportAtmosphereId)
   const ref = STAGE_CARD_LAYOUT_REF
   const format: StageCardFormat = input.format === 'shorts' ? 'shorts' : 'feed'
   const shorts = format === 'shorts'
@@ -102,15 +102,19 @@ export function resolveStageCardLayout(
   }
 
   const includeVibe = input.includeVibePill !== false && !!(input.vibeLabel || '').trim()
-  const vibeH = includeVibe
+  const vibeH = includeVibe && !shorts
     ? scaleStageToken(ref.vibePill.rowGap, W) + roundStageToken(ref.vibePill.height, W)
+    : 0
+  const vibePillH = includeVibe ? roundStageToken(ref.vibePill.height, W) : 0
+  const vibeReserve = includeVibe && shorts
+    ? scaleStageToken(ref.vibePill.maxWidth, W) + artGap
     : 0
 
   let cursorY = padding.top
   let outputHeight = shorts ? Math.round(W * SHORTS_ASPECT) : 0
   if (shorts) {
-    const footerH = hasArt ? Math.max(artSize, metaHeight) : metaHeight
-    const footerBlock = (footerH > 0 ? footerH + artGap : 0) + vibeH
+    const footerH = Math.max(hasArt ? artSize : 0, metaHeight, vibePillH)
+    const footerBlock = footerH > 0 ? footerH + artGap : 0
     const available = Math.max(lyricLineHeight, outputHeight - padding.top - padding.bottom - footerBlock)
     cursorY = lyricHeight <= available
       ? padding.top + Math.max(0, (available - lyricHeight) / 2)
@@ -141,8 +145,8 @@ export function resolveStageCardLayout(
   if (songTitle || artistName) {
     const songFont = metaSongFont(songFS, geistFamily)
     const artistFont = metaArtistFont(artistFS, geistFamily)
-    const metaMaxW = shorts && hasArt
-      ? Math.max(24, contentWidth - artSize - artGap)
+    const metaMaxW = shorts
+      ? Math.max(24, contentWidth - (hasArt ? artSize + artGap : 0) - vibeReserve)
       : contentWidth
     const metaX = shorts && hasArt
       ? padding.left + artSize + artGap
@@ -150,8 +154,8 @@ export function resolveStageCardLayout(
 
     let metaY: number
     if (shorts) {
-      const footerH = hasArt ? Math.max(artSize, metaHeight) : metaHeight
-      const footerY = outputHeight! - padding.bottom - vibeH - footerH
+      const footerH = Math.max(hasArt ? artSize : 0, metaHeight, vibePillH)
+      const footerY = outputHeight! - padding.bottom - footerH
       metaY = footerY + Math.max(0, (footerH - metaHeight) / 2)
     } else {
       metaY = cursorY + metaGap
@@ -202,8 +206,8 @@ export function resolveStageCardLayout(
   let artwork: ResolvedStageCardLayout['artwork'] = null
   if (hasArt) {
     if (shorts) {
-      const footerH = Math.max(artSize, metaHeight)
-      const footerY = outputHeight! - padding.bottom - vibeH - footerH
+      const footerH = Math.max(artSize, metaHeight, vibePillH)
+      const footerY = outputHeight! - padding.bottom - footerH
       artwork = {
         x: padding.left,
         y: footerY + Math.max(0, (footerH - artSize) / 2),
@@ -255,7 +259,9 @@ export function resolveStageCardLayout(
     const textW = measure(display, font)
     const pillW = Math.min(maxPillW, Math.max(scaleStageToken(ref.vibePill.minWidth, W), textW + padH * 2))
     const x = W - padding.right - pillW
-    const y = outputHeight! - padding.bottom - pillH
+    const y = shorts
+      ? outputHeight! - padding.bottom - Math.max(hasArt ? artSize : 0, metaHeight, pillH) / 2 - pillH / 2
+      : outputHeight! - padding.bottom - pillH
     vibePill = {
       label: display,
       rect: { x, y, width: pillW, height: pillH },

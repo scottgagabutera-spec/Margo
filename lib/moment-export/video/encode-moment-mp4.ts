@@ -93,6 +93,7 @@ export async function encodeMargoMomentMp4(
     artworkUrl: line.artworkUrl,
     vibeLabel: moment.vibeLabel,
     themeId: moment.themeId,
+    exportAtmosphereId: moment.exportAtmosphereId,
     outputWidthPx: STAGE_CARD_EXPORT_WIDTH,
     includeVibePill: !!moment.vibeLabel?.trim(),
     format: isVertical ? 'shorts' : 'feed',

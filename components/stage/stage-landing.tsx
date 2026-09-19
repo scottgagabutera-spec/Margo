@@ -10,6 +10,7 @@ import { StageSearchField } from '@/components/stage/stage-search-field'
 import { StageSongChip } from '@/components/stage/stage-song-chip'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { MomentExportCustomizeBar } from '@/components/moment-export-customize-bar'
+import { MomentVibeRow } from '@/components/moment-vibe-row'
 import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
 import { useSongAtmosphere } from '@/hooks/useSongAtmosphere'
 import { livingAtmosphereOrNull } from '@/lib/atmosphere'
@@ -911,15 +912,11 @@ export function StageLanding() {
                   artistName={artistName}
                   artwork={selectedSong.artwork}
                   vibeLabel={vibeLabel}
-                  suggestedVibeLabel={suggestedVibeLabel}
-                  vibeOptions={STAGE_VIBE_OPTIONS}
-                  onVibeSelect={(label) => {
-                    setVibeLabel(label)
-                    setVibeUserPicked(true)
-                  }}
                   cardThemeId={cardThemeId}
                   atmosphereId={exportAtmosphereId}
                   shapeId={shapeId}
+                  hideVibeChrome
+                  effectOwnsFill
                   canPlay={listen?.canPlayInline ?? false}
                   playing={playing}
                   buffering={buffering}
@@ -927,6 +924,15 @@ export function StageLanding() {
                   listenUrl={listen && !listen.canPlayInline ? listen.externalUrl : null}
                 />
                 </MomentExportPreviewFrame>
+                <MomentVibeRow
+                  vibeLabel={vibeLabel}
+                  suggestedVibeLabel={suggestedVibeLabel}
+                  vibeOptions={STAGE_VIBE_OPTIONS}
+                  onVibeSelect={(label) => {
+                    setVibeLabel(label)
+                    setVibeUserPicked(true)
+                  }}
+                />
                 <MomentExportCustomizeBar
                   cardThemeId={cardThemeId}
                   onThemeChange={setCardThemeId}

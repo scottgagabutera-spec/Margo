@@ -217,8 +217,6 @@ export function renderMomentFrame(
     timeSec,
     layout.borderRadius,
     alpha,
-    light,
-    layout.background.base,
   )
   ctx.restore()
 

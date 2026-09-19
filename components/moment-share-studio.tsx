@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronRightIcon } from '@/components/icons'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { MomentExportCustomizeBar } from '@/components/moment-export-customize-bar'
+import { MomentVibeRow } from '@/components/moment-vibe-row'
 import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
 import { MomentActionMenu, type MomentActionMenuItem } from '@/components/moment-action-menu'
 import { recordCardExport } from '@/lib/engagement/card-exports'
@@ -518,14 +519,19 @@ export function MomentShareStudio({
             artistName={previewLine.artistName}
             artwork={previewLine.artworkUrl}
             vibeLabel={exportVibeLabel}
-            vibeOptions={MOMENT_VIBE_PICKER_OPTIONS}
-            onVibeSelect={setExportVibeLabel}
             cardThemeId={cardThemeId}
             atmosphereId={exportAtmosphereId}
             shapeId={shapeId}
+            hideVibeChrome
+            effectOwnsFill
             canPlay={false}
           />
           </MomentExportPreviewFrame>
+          <MomentVibeRow
+            vibeLabel={exportVibeLabel}
+            vibeOptions={MOMENT_VIBE_PICKER_OPTIONS}
+            onVibeSelect={setExportVibeLabel}
+          />
           <MomentExportCustomizeBar
             cardThemeId={cardThemeId}
             onThemeChange={setCardThemeId}

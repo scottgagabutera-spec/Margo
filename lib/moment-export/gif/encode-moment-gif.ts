@@ -89,6 +89,7 @@ export async function encodeMargoMomentGif(
     artworkUrl: line.artworkUrl,
     vibeLabel: moment.vibeLabel,
     themeId: moment.themeId,
+    exportAtmosphereId: moment.exportAtmosphereId,
     outputWidthPx: MOMENT_GIF_EXPORT_WIDTH,
     includeVibePill: !!moment.vibeLabel?.trim(),
     format: isVertical ? 'shorts' : 'feed',

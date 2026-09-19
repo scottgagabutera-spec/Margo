@@ -148,24 +148,21 @@ export function AtmosphereLayer({
   )
 }
 
-/** Forced preview room — export/share UI without audio engine. */
+/** Forced preview room — same CSS rooms as Feed / karaoke, no engine. */
 export function AtmospherePreviewRoom({
   personality,
   variant = 'card',
-  tone = 'dark',
 }: {
   personality: AtmosphereId
   variant?: AtmosphereVariant
-  /** Card theme tone — light themes need ink-based effects to stay visible. */
-  tone?: 'light' | 'dark'
 }) {
   if (!isLivingAtmosphere(personality)) return null
   return (
     <div
       aria-hidden
-      className={`margo-atmosphere-clip margo-atmosphere-clip--preview margo-atmosphere-clip--${variant}`}
+      className={`margo-atmosphere-clip margo-atmosphere-clip--${variant}`}
       data-atmosphere={personality}
-      data-tone={tone}
+      style={{ zIndex: 1 }}
     >
       <AtmosphereRoom personality={personality} variant={variant} live />
     </div>

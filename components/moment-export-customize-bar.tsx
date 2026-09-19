@@ -109,6 +109,7 @@ export function MomentExportCustomizeBar({
 }: MomentExportCustomizeBarProps) {
   const theme = getStageCardTheme(cardThemeId)
   const effectLabel = exportAtmosphereLabel(exportAtmosphereId)
+  const effectOn = exportAtmosphereId !== 'still'
 
   const tapStyle: CSSProperties = {
     width: '100%',
@@ -134,7 +135,7 @@ export function MomentExportCustomizeBar({
         gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
         gap: '8px',
         width: '100%',
-        marginTop: '14px',
+        marginTop: '10px',
         padding: '14px 10px 12px',
         borderRadius: '16px',
         background: 'var(--surface-2)',
@@ -143,13 +144,34 @@ export function MomentExportCustomizeBar({
         ...style,
       }}
     >
-      <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div
+        style={{
+          minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          opacity: effectOn ? 0.38 : 1,
+          transition: 'opacity 200ms var(--ease-out)',
+        }}
+      >
         <span style={columnLabelStyle()}>Color</span>
         <button
           type="button"
-          aria-label={`Color: ${theme.label}. Tap to change.`}
-          onClick={() => onThemeChange(cycleStageCardTheme(cardThemeId).id)}
-          style={tapStyle}
+          aria-label={
+            effectOn
+              ? `Color: ${theme.label}. Turn Effect off to use Color.`
+              : `Color: ${theme.label}. Tap to change.`
+          }
+          aria-disabled={effectOn}
+          disabled={effectOn}
+          onClick={() => {
+            if (effectOn) return
+            onThemeChange(cycleStageCardTheme(cardThemeId).id)
+          }}
+          style={{
+            ...tapStyle,
+            cursor: effectOn ? 'default' : 'pointer',
+          }}
         >
           <span
             aria-hidden
@@ -165,7 +187,7 @@ export function MomentExportCustomizeBar({
             }}
           />
         </button>
-        <span style={captionStyle()}>{theme.label}</span>
+        <span style={captionStyle()}>{effectOn ? 'Off' : theme.label}</span>
       </div>
 
       <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>

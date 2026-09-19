@@ -13,9 +13,9 @@ import {
   stageCardMarkStyle,
   useStageCardLayout,
 } from '@/hooks/useStageCardLayout'
-import { ExportAtmosphereOverlay } from '@/components/export-atmosphere-overlay'
+import { AtmospherePreviewRoom } from '@/components/atmosphere-layer'
 import { isLivingAtmosphere, type AtmosphereId } from '@/lib/atmosphere'
-import { getStageCardTheme, type StageCardThemeId } from '@/lib/moment/stage-theme'
+import { resolveExportPaintTheme, type StageCardTheme, type StageCardThemeId } from '@/lib/moment/stage-theme'
 import type { MomentShapeId } from '@/lib/moment/types'
 
 interface StageMomentCardProps {
@@ -42,6 +42,13 @@ interface StageMomentCardProps {
   buffering?: boolean
   onPlay?: () => void
   listenUrl?: string | null
+  /** When true, Vibe chrome is rendered by the parent (never inside a 9:16 clip). */
+  hideVibeChrome?: boolean
+  /**
+   * Export customize: a living Effect replaces Color (platform room).
+   * Off for compose/platform preview, where Color is not a user control.
+   */
+  effectOwnsFill?: boolean
   style?: CSSProperties
 }
 
@@ -68,7 +75,7 @@ function footerLabelStyle(inkMuted: string): CSSProperties {
   }
 }
 
-function footerChipStyle(theme: ReturnType<typeof getStageCardTheme>): CSSProperties {
+function footerChipStyle(theme: StageCardTheme): CSSProperties {
   return {
     display: 'inline-flex',
     alignItems: 'center',
@@ -114,17 +121,19 @@ export function StageMomentCard({
   buffering = false,
   onPlay,
   listenUrl,
+  hideVibeChrome = false,
+  effectOwnsFill = false,
   style,
 }: StageMomentCardProps) {
   const [vibePickerOpen, setVibePickerOpen] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
   const [cardWidth, setCardWidth] = useState<number | null>(null)
-  const theme = getStageCardTheme(cardThemeId)
+  const theme = resolveExportPaintTheme(cardThemeId, effectOwnsFill ? atmosphereId : 'still')
   const canPickVibe = vibeOptions.length > 0 && !!onVibeSelect
   const markVariant = theme.markVariant === 'on-light' ? 'ink' : 'gold'
   const showAtmosphere = isLivingAtmosphere(atmosphereId)
-  const showVibeFooter = !!vibeLabel
   const isShorts = shapeId === 'vertical'
+  const showVibeFooter = !hideVibeChrome && !isShorts && !!vibeLabel
 
   const layout = useStageCardLayout({
     lyric,
@@ -135,6 +144,7 @@ export function StageMomentCard({
     themeId: cardThemeId,
     includeVibePill: false,
     format: isShorts ? 'shorts' : 'feed',
+    exportAtmosphereId: effectOwnsFill ? atmosphereId : 'still',
   }, cardWidth)
 
   useEffect(() => {
@@ -176,8 +186,11 @@ export function StageMomentCard({
     position: 'relative',
     textAlign: 'left',
     overflow: 'hidden',
+    isolation: 'isolate',
     border: `1px solid ${theme.border}`,
     boxSizing: 'border-box',
+    background: theme.bg,
+    transition: 'background 200ms var(--ease-out), border-color 200ms var(--ease-out)',
     ...shellPadding,
     ...style,
   }
@@ -247,15 +260,9 @@ export function StageMomentCard({
     <div ref={cardRef} style={isShorts ? { width: '100%', height: '100%' } : undefined}>
       <ComposeLyricCard style={shellStyle}>
         <div aria-hidden style={fillLayerStyle} />
-        <div aria-hidden style={highlightLayerStyle} />
+        {!showAtmosphere ? <div aria-hidden style={highlightLayerStyle} /> : null}
         {showAtmosphere ? (
-          <ExportAtmosphereOverlay
-            key={atmosphereId}
-            personality={atmosphereId}
-            onLight={theme.markVariant === 'on-light'}
-            borderRadius={layout?.borderRadius ?? (isShorts ? 0 : 16)}
-            roomColor={layout?.background.base ?? theme.bg}
-          />
+          <AtmospherePreviewRoom key={atmosphereId} personality={atmosphereId} />
         ) : null}
         <div style={markStyle} aria-hidden>
           <MargoSymbol size={markSymbolSize} variant={markVariant} />
@@ -352,12 +359,20 @@ export function StageMomentCard({
               style={{
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: isShorts ? 'flex-end' : undefined,
                 marginTop: isShorts ? 0 : '16px',
                 gap: '12px',
                 minHeight: 'var(--margo-touch-min)',
                 position: isShorts ? 'absolute' : undefined,
-                right: isShorts ? 12 : undefined,
-                bottom: isShorts ? 12 : undefined,
+                right: isShorts && layout ? layout.padding.right : undefined,
+                top: isShorts && layout
+                  ? (layout.artwork
+                    ? layout.artwork.y + (layout.artwork.height - 44) / 2
+                    : layout.meta
+                      ? layout.meta.y + (layout.meta.height - 44) / 2
+                      : undefined)
+                  : undefined,
+                bottom: isShorts && !(layout?.artwork || layout?.meta) ? 36 : undefined,
                 zIndex: 4,
               }}
             >
@@ -368,6 +383,8 @@ export function StageMomentCard({
                   aria-label={playing ? 'Pause' : 'Play'}
                   style={{
                     ...playControlStyle,
+                    width: isShorts ? 44 : playControlStyle.width,
+                    height: isShorts ? 44 : playControlStyle.height,
                     background: theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.1)' : 'rgba(255,255,255,0.12)',
                     border: `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.14)' : 'rgba(255,255,255,0.16)'}`,
                     cursor: 'pointer',
@@ -447,8 +464,8 @@ export function StageMomentCard({
                   aria-label="Choose a vibe"
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
-                    gap: '6px',
+                    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                    gap: '8px',
                     marginTop: '14px',
                     width: '100%',
                     paddingBottom: '2px',
@@ -471,8 +488,8 @@ export function StageMomentCard({
                         }}
                         style={{
                           position: 'relative',
-                          minHeight: '26px',
-                          padding: '0 4px',
+                          minHeight: 'var(--margo-touch-min)',
+                          padding: '0 8px',
                           borderRadius: '50px',
                           border: selected
                             ? `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.35)' : 'rgba(255,255,255,0.35)'}`

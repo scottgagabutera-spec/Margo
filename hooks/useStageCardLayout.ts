@@ -21,6 +21,7 @@ export interface UseStageCardLayoutArgs {
   /** When false, omit export-style vibe pill from layout height */
   includeVibePill?: boolean
   format?: StageCardLayoutInput['format']
+  exportAtmosphereId?: StageCardLayoutInput['exportAtmosphereId']
 }
 
 function defaultWidth(): number {
@@ -50,6 +51,7 @@ export function useStageCardLayout(
     outputWidthPx: width,
     includeVibePill: args.includeVibePill,
     format: args.format,
+    exportAtmosphereId: args.exportAtmosphereId,
   }), [
     args.lyric,
     args.songTitle,
@@ -59,6 +61,7 @@ export function useStageCardLayout(
     args.themeId,
     args.includeVibePill,
     args.format,
+    args.exportAtmosphereId,
     width,
   ])
 
