@@ -65,6 +65,7 @@ interface MomentShareStudioProps {
   lyric?: string
   song?: string
   artist?: string
+  artwork?: string | null
   postId?: string
   vibeLabel?: string | null
   parentLyric?: string
@@ -84,6 +85,7 @@ export function MomentShareStudio({
   lyric = '',
   song = '',
   artist = '',
+  artwork = null,
   postId,
   vibeLabel,
   parentLyric,
@@ -135,10 +137,15 @@ export function MomentShareStudio({
 
   const momentLines = useMemo<NormalizedLine[]>(() => {
     const fromProp = (lineSource || []).map(normalizeLine).filter((l) => l.lyric.trim().length > 0)
-    if (fromProp.length > 0) return fromProp
-    if (lyric.trim()) return [{ lyric, songTitle: song, artistName: artist }]
+    if (fromProp.length > 0) {
+      if (!artwork) return fromProp
+      return fromProp.map((l) => ({ ...l, artworkUrl: l.artworkUrl || artwork }))
+    }
+    if (lyric.trim()) {
+      return [{ lyric, songTitle: song, artistName: artist, artworkUrl: artwork || null }]
+    }
     return []
-  }, [lineSource, lyric, song, artist])
+  }, [lineSource, lyric, song, artist, artwork])
 
   const isMulti = !isDualCard && momentLines.length > 1
   const previewIndex = isMulti ? lineIndex : 0

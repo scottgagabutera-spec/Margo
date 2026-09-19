@@ -33,6 +33,7 @@ import {
   getSnippetStopDurationMs,
   isFullQueueItem,
   isSnippetQueueItem,
+  fullSongToQueueItem,
   queueItemToFullRequest,
   queueItemToSnippetRequest,
 } from './types'
@@ -46,7 +47,7 @@ import {
   warmPreloadUrl,
 } from './preload-cache'
 import { recordQualifiedPlay, getPlayThresholdSec } from '@/lib/engagement/plays'
-import { livingAtmosphereOrNull } from '@/lib/atmosphere'
+import { livingAtmosphereOrNull, type AtmosphereId } from '@/lib/atmosphere'
 import { createClient } from '@/lib/supabase/client'
 
 // ── Module state ──────────────────────────────────────────────────
@@ -1084,6 +1085,53 @@ export function playQueueIndex(index: number): void {
   if (!item) return
   patch({ queueIndex: index })
   playQueueItem(item)
+}
+
+/** Full-track payload used when the user picks a different karaoke song. */
+export type SwitchToFullSongInput = {
+  id: string
+  audioUrl: string
+  title: string
+  artist: string
+  artwork?: string | null
+  atmosphere?: AtmosphereId | null
+}
+
+/**
+ * Stop whatever is playing and start this full track immediately.
+ * If the song is already in the session queue and no replacement tail
+ * was passed, jump to that row so Up Next stays intact.
+ */
+export function switchToFullSong(
+  song: SwitchToFullSongInput,
+  opts?: { startSec?: number; queueAfter?: SwitchToFullSongInput[] },
+): void {
+  if (!opts?.queueAfter) {
+    const existing = _state.queue.findIndex(
+      (i) => isFullQueueItem(i) && i.songId === song.id,
+    )
+    if (existing >= 0) {
+      playQueueIndex(existing)
+      return
+    }
+  }
+
+  const current = fullSongToQueueItem(song)
+  const after = (opts?.queueAfter ?? [])
+    .filter((s) => s.id !== song.id && !!s.audioUrl)
+    .map((s) => fullSongToQueueItem({ ...s, audioUrl: s.audioUrl }))
+  setQueue([current, ...after], 0)
+  void playFull({
+    songId: song.id,
+    audioUrl: song.audioUrl,
+    title: song.title,
+    artist: song.artist,
+    artwork: song.artwork ?? null,
+    startSec: opts?.startSec ?? 0,
+    autoplay: true,
+    source: 'karaoke',
+    atmosphere: song.atmosphere ?? null,
+  })
 }
 
 /**

@@ -1,8 +1,6 @@
 'use client'
-import { CloseIcon, MusicNoteIcon, ReplayIcon, ShareIcon, CardIcon } from '@/components/icons'
+import { ShareIcon, CardIcon } from '@/components/icons'
 import { BackButton } from '@/components/back-button'
-import { AiGeneratedLabel } from '@/components/ai-generated-label'
-
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Image from 'next/image'
@@ -12,8 +10,11 @@ import { useSong } from '@/hooks/useSong'
 import { useSongs } from '@/hooks/useSongs'
 import { Song } from '@/hooks/useSongs'
 import { CardExportModal } from '@/components/card-export-modal'
+import { KaraokeUpNextTray } from '@/components/karaoke-up-next'
+import { SongMeta } from '@/components/song-meta'
 import { useAudioEngine, useAudioCurrentTime } from '@/hooks/useAudioEngine'
-import { playFull, togglePlayPause, stop, playFullSeek, setQueue, playQueueItem, fullSongToQueueItem, isFullQueueItem, getAudioEngineState, getQueueNavigationState, queuePlayNext, queueAdd } from '@/lib/audio-engine'
+import { playFull, togglePlayPause, stop, playFullSeek, setQueue, fullSongToQueueItem, isFullQueueItem, getAudioEngineState, getQueueNavigationState, switchToFullSong } from '@/lib/audio-engine'
+import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { AtmosphereLayer } from '@/components/atmosphere-layer'
 import { livingAtmosphereOrNull } from '@/lib/atmosphere'
@@ -93,28 +94,23 @@ export default function SongPage() {
 
   const navigateToSong = useCallback((s: Song) => {
     if (autoNavRef.current) clearTimeout(autoNavRef.current)
-    if (!s.audioUrl) {
-      router.push(`/song/${s.id}`)
-      return
+    if (s.audioUrl) {
+      switchToFullSong({
+        id: s.id,
+        audioUrl: s.audioUrl,
+        title: s.title,
+        artist: s.artist,
+        artwork: s.artwork ?? null,
+        atmosphere: livingAtmosphereOrNull(s.atmosphere),
+      })
     }
-    const st = getAudioEngineState()
-    const idx = st.queue.findIndex((i) => isFullQueueItem(i) && i.songId === s.id)
-    if (idx >= 0) {
-      const item = st.queue[idx]
-      setQueue(st.queue, idx)
-      playQueueItem(item)
-      router.replace(`/song/${s.id}`)
-      return
-    }
-    router.push(`/song/${s.id}`)
+    router.replace(`/song/${s.id}`)
   }, [router])
 
   // ─── Reset on song change (skip stop when session queue advanced here) ─
   useEffect(() => {
     const st = getAudioEngineState()
-    const q = st.queue[st.queueIndex]
-    const fromSessionQueue =
-      !!q && isFullQueueItem(q) && q.songId === songId && st.mode === 'full'
+    const fromSessionQueue = st.mode === 'full' && st.songId === songId
 
     if (fromSessionQueue) {
       playedSongIdRef.current = songId
@@ -185,18 +181,50 @@ export default function SongPage() {
     })
   }, [requireAuth, audioUrl, songId, songArtist, songArtwork, songTitle, startAtParam, nextSongs, song?.atmosphere])
 
-  // Follow engine queue advances onto the next full track (same session).
+  // Follow engine → URL only when the engine advances (auto next).
+  // Do not yank the user back if they picked a different song while one is playing.
+  const lastEngineSongRef = useRef<string | null | undefined>(undefined)
   useEffect(() => {
-    if (engineState.mode !== 'full' || !engineState.songId) return
-    if (engineState.songId === songId) return
+    const engineSong = engineState.songId
+    const prevEngineSong = lastEngineSongRef.current
+    lastEngineSongRef.current = engineSong
+    if (prevEngineSong === undefined) return
+    const engineMoved = prevEngineSong !== engineSong
+    if (engineState.mode !== 'full' || !engineSong) return
+    if (engineSong === songId) return
+    if (!engineMoved) return
     const inQueue = engineState.queue.some(
-      (i) => isFullQueueItem(i) && i.songId === engineState.songId,
+      (i) => isFullQueueItem(i) && i.songId === engineSong,
     )
     if (inQueue) {
       if (autoNavRef.current) clearTimeout(autoNavRef.current)
-      router.replace(`/song/${engineState.songId}`)
+      router.replace(`/song/${engineSong}`)
     }
   }, [engineState.songId, engineState.mode, engineState.queue, songId, router])
+
+  // After Play & Lyrics starts this track, attach catalog Up Next to the queue.
+  useEffect(() => {
+    if (!songId) return
+    const st = getAudioEngineState()
+    if (st.mode !== 'full' || st.songId !== songId) return
+    const have = new Set(
+      st.queue.filter(isFullQueueItem).map((i) => i.songId),
+    )
+    const extras = nextSongs
+      .filter((s) => !!s.audioUrl && !have.has(s.id))
+      .map((s) =>
+        fullSongToQueueItem({
+          id: s.id,
+          audioUrl: s.audioUrl!,
+          title: s.title,
+          artist: s.artist,
+          artwork: s.artwork ?? null,
+          atmosphere: livingAtmosphereOrNull(s.atmosphere),
+        }),
+      )
+    if (extras.length === 0) return
+    setQueue([...st.queue, ...extras], st.queueIndex)
+  }, [songId, nextSongs])
 
   // ─── Detect natural end when nothing left in session queue (D4 stop) ─
   useEffect(() => {
@@ -309,10 +337,10 @@ export default function SongPage() {
           className="margo-tap-overlay"
           style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
         >
-          <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#E8C547', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 40px rgba(232,197,71,0.4)', marginBottom: '20px' }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M5 3.5L19 12L5 20.5V3.5Z" fill="#07060A" /></svg>
+          <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 40px var(--gold-glow)', marginBottom: '20px' }}>
+            <PlayPauseIcon playing={false} size={28} color="var(--bg)" />
           </div>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.85rem', color: 'rgba(244,241,237,0.7)', letterSpacing: '2px', textTransform: 'uppercase' }}>Tap to play</p>
+          <p style={{ fontFamily: UI_FONT, fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '2px', textTransform: 'uppercase' }}>Tap to play</p>
         </div>
       )}
       <style>{`
@@ -325,26 +353,12 @@ export default function SongPage() {
         @media (max-width: 639px) {
           .share-sheet-overlay { background: var(--margo-scrim) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
         }
-        .share-sheet { position: fixed; bottom: 0; left: 0; right: 0; z-index: 101; background: #0f0e14; border-top: 1px solid rgba(232,197,71,0.15); border-radius: 24px 24px 0 0; padding: 28px 20px var(--margo-player-share-sheet-padding-bottom); animation: ss-up 300ms cubic-bezier(0.32,0.72,0,1) forwards; }
+        .share-sheet { position: fixed; bottom: 0; left: 0; right: 0; z-index: 101; background: var(--surface); border-top: 1px solid var(--gold-border); border-radius: 24px 24px 0 0; padding: 28px 20px var(--margo-player-share-sheet-padding-bottom); animation: ss-up 300ms cubic-bezier(0.32,0.72,0,1) forwards; }
         @keyframes ss-fade { from { opacity: 0 } to { opacity: 1 } }
         @keyframes ss-up { from { transform: translateY(100%) } to { transform: translateY(0) } }
-        @keyframes tray-rise { from { transform: translateY(100%); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
         .share-pill { width: 36px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.15); margin: 0 auto 24px; }
         .share-option { width: 100%; padding: 16px 18px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; display: flex; align-items: center; gap: 14px; cursor: pointer; transition: background 150ms ease, border-color 150ms ease; text-decoration: none; margin-bottom: 10px; }
-        .share-option:hover, .share-option:active { background: rgba(232,197,71,0.06); border-color: rgba(232,197,71,0.22); }
-        .next-song-card { width: 100%; display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); cursor: pointer; transition: all 200ms ease; text-align: left; font-family: inherit; }
-        .next-song-card:hover, .next-song-card:active { background: rgba(232,197,71,0.07); border-color: rgba(232,197,71,0.3); }
-        .next-song-card.primary { background: rgba(232,197,71,0.06); border-color: rgba(232,197,71,0.28); }
-        .next-song-card.primary:active { background: rgba(232,197,71,0.1); border-color: rgba(232,197,71,0.5); }
-        @media (hover: hover) and (pointer: fine) {
-          .next-song-card.primary:hover { background: rgba(232,197,71,0.1); border-color: rgba(232,197,71,0.5); }
-        }
-        .tray-action-btn { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 32px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.05); cursor: pointer; transition: all 150ms ease; color: rgba(255,255,255,0.7); font-size: 1.1rem; font-family: inherit; }
-        .tray-action-btn:active { background: rgba(255,255,255,0.1); color: var(--text); border-color: rgba(255,255,255,0.25); }
-        @media (hover: hover) and (pointer: fine) {
-          .tray-action-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); border-color: rgba(255,255,255,0.25); }
-        }
-        .tray-action-btn span { font-family: var(--font-lora), serif; font-size: 0.52rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.35); }
+        .share-option:hover, .share-option:active { background: var(--gold-faint); border-color: var(--gold-border); }
       `}</style>
 
       {/* Atmosphere room. Still is a faint wash; living rooms mount only while playing. */}
@@ -354,7 +368,7 @@ export default function SongPage() {
 
       {/* Top progress bar */}
       <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50, height: '2px', background: 'rgba(255,255,255,0.07)' }}>
-        <div style={{ height: '100%', background: 'linear-gradient(to right, var(--gold), #f5d878)', width: `${progress}%`, transition: 'width 100ms linear' }} />
+        <div style={{ height: '100%', background: 'var(--gold)', width: `${progress}%`, transition: 'width 100ms linear' }} />
       </div>
 
       {/* Header — immersive Mode B: shell chrome is hidden; this is the only top exit */}
@@ -362,37 +376,13 @@ export default function SongPage() {
         <div style={{ maxWidth: '56rem', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <BackButton fallbackHref="/discover" />
           <div style={{ textAlign: 'center', minWidth: 0, flex: 1, padding: '0 8px' }}>
-            <p style={{
-              fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
-              fontSize: '0.95rem',
-              fontWeight: 600,
-              color: 'var(--text)',
-              margin: 0,
-              display: 'flex',
-              alignItems: 'baseline',
-              justifyContent: 'center',
-              minWidth: 0,
-            }}>
-              <span style={{
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                minWidth: 0,
-                flex: '1 1 auto',
-              }}>
-                {song?.title || '—'}
-              </span>
-              {song?.isAiGenerated ? <AiGeneratedLabel show spaced={false} /> : null}
-            </p>
-            <p style={{
-              fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
-              fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-secondary)',
-              margin: '2px 0 0', lineHeight: 1.3,
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              minWidth: 0,
-            }}>
-              {song?.artist || '—'}
-            </p>
+            <SongMeta
+              title={song?.title}
+              artist={song?.artist}
+              aiGenerated={!!song?.isAiGenerated}
+              titleStyle={{ justifyContent: 'center' }}
+              artistStyle={{ textAlign: 'center' }}
+            />
           </div>
           <div style={{ width: '60px' }} />
         </div>
@@ -451,142 +441,19 @@ export default function SongPage() {
       {/* Tap hint */}
       {!trayOpen && (
         <div style={{ position: 'fixed', bottom: 'var(--margo-player-hint-bottom)', left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 21, pointerEvents: 'none' }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.62rem', fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase', color: 'rgba(232,197,71,0.55)', margin: 0 }}>Tap any line to jump</p>
+          <p style={{ fontFamily: UI_FONT, fontSize: '0.6rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--gold)', margin: 0, opacity: 0.7 }}>Tap any line to jump</p>
         </div>
       )}
 
-      {/* ── Up Next Tray ── */}
       {trayOpen && (
-        <div className="margo-upnext-tray" style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 60,
-          borderTop: '1px solid rgba(232,197,71,0.1)',
-          borderRadius: '24px 24px 0 0',
-          padding: '24px 20px var(--margo-player-tray-padding-bottom)',
-          animation: 'tray-rise 380ms cubic-bezier(0.32,0.72,0,1) forwards',
-        }}>
-
-          {/* Song ended label */}
-          {songEnded ? (
-            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '3px', textTransform: 'uppercase', margin: 0, marginBottom: '4px' }}>Song ended</p>
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '1rem', color: 'var(--text)', margin: 0, opacity: 0.8 }}>{endedTitle}</p>
-            </div>
-          ) : (
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', margin: 0, marginBottom: '16px', opacity: 0.85, textAlign: 'center' }}>Up Next</p>
-          )}
-
-          {/* Song cards */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
-            {nextSongs.length > 0 ? nextSongs.map((s, i) => (
-              <div
-                key={s.id}
-                style={{
-                  display: 'flex', flexDirection: 'column', gap: '6px',
-                  padding: '10px 12px',
-                  borderRadius: '14px',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  background: i === 0 ? 'rgba(232,197,71,0.06)' : 'rgba(255,255,255,0.02)',
-                }}
-              >
-                <button
-                  type="button"
-                  className={`next-song-card${i === 0 ? ' primary' : ''}`}
-                  onClick={() => navigateToSong(s)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '12px',
-                    width: '100%', background: 'none', border: 'none',
-                    cursor: 'pointer', padding: 0, textAlign: 'left',
-                  }}
-                >
-                  <div style={{ position: 'relative', width: i === 0 ? '50px' : '42px', height: i === 0 ? '50px' : '42px', borderRadius: '10px', overflow: 'hidden', flexShrink: 0 }}>
-                    {s.artwork
-                      ? <Image src={s.artwork} alt={s.title} fill style={{ objectFit: 'cover' }} />
-                      : <div style={{ width: '100%', height: '100%', background: 'rgba(232,197,71,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <MusicNoteIcon size={16} color="var(--gold)" />
-                        </div>
-                    }
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: i === 0 ? '0.95rem' : '0.82rem', fontWeight: 600, color: i === 0 ? 'var(--text)' : 'rgba(255,255,255,0.6)', margin: 0, marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</p>
-                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.68rem', color: 'var(--text-secondary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.artist}</p>
-                  </div>
-                </button>
-                {s.audioUrl && (
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        queuePlayNext(fullSongToQueueItem({
-                          id: s.id,
-                          audioUrl: s.audioUrl!,
-                          title: s.title,
-                          artist: s.artist,
-                          artwork: s.artwork ?? null,
-                        }))
-                      }}
-                      style={{
-                        flex: 1, minHeight: 'var(--margo-touch-min)',
-                        borderRadius: '50px',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        background: 'rgba(255,255,255,0.04)',
-                        color: 'var(--text-secondary)',
-                        fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
-                        fontSize: '0.55rem', fontWeight: 700,
-                        letterSpacing: '1px', textTransform: 'uppercase',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Play Next
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        queueAdd(fullSongToQueueItem({
-                          id: s.id,
-                          audioUrl: s.audioUrl!,
-                          title: s.title,
-                          artist: s.artist,
-                          artwork: s.artwork ?? null,
-                        }))
-                      }}
-                      style={{
-                        flex: 1, minHeight: 'var(--margo-touch-min)',
-                        borderRadius: '50px',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        background: 'rgba(255,255,255,0.04)',
-                        color: 'var(--text-secondary)',
-                        fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
-                        fontSize: '0.55rem', fontWeight: 700,
-                        letterSpacing: '1px', textTransform: 'uppercase',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Add to Queue
-                    </button>
-                  </div>
-                )}
-              </div>
-            )) : (
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '0.88rem', textAlign: 'center', padding: '12px 0' }}>No more songs available</p>
-            )}
-          </div>
-
-          {/* Loop + Close — centered, prominent */}
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-            <button type="button" className="tray-action-btn" onClick={handleLoop}>
-              <ReplayIcon size={16} color="currentColor" /><span>Loop</span>
-            </button>
-            <button type="button" className="tray-action-btn" onClick={handleDismiss}>
-              <CloseIcon size={16} color="currentColor" /><span>Close</span>
-            </button>
-          </div>
-
-          {songEnded && (
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '12px', letterSpacing: '1px' }}>
-              Queue ended
-            </p>
-          )}
-        </div>
+        <KaraokeUpNextTray
+          songEnded={songEnded}
+          endedTitle={endedTitle}
+          songs={nextSongs}
+          onPlaySong={navigateToSong}
+          onLoop={handleLoop}
+          onClose={handleDismiss}
+        />
       )}
 
       {/* Bottom controls — hidden when tray open */}
@@ -605,7 +472,7 @@ export default function SongPage() {
             ><PlayPauseIcon playing={isPlaying} buffering={isBuffering} size={20} color="var(--text)" /></button>
             <button
               onClick={() => setShareOpen(true)}
-              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '15px 32px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', border: 'none', cursor: 'pointer', minHeight: '52px', boxShadow: '0 6px 28px rgba(232,197,71,0.28)', transition: 'all 150ms ease' }}
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '15px 32px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: UI_FONT, fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', border: 'none', cursor: 'pointer', minHeight: '52px', boxShadow: '0 6px 28px var(--gold-glow)', transition: 'all 150ms ease' }}
             >Share This Lyric</button>
           </div>
         </footer>
@@ -617,15 +484,24 @@ export default function SongPage() {
           <div className="share-sheet-overlay" onClick={() => setShareOpen(false)} />
           <div className="share-sheet">
             <div className="share-pill" />
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '1rem', color: 'var(--gold)', textAlign: 'center', marginBottom: '6px', lineHeight: 1.5 }}>"{currentLyric?.line}"</p>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.62rem', color: 'var(--text-muted)', textAlign: 'center', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '24px' }}>{song?.title} · {song?.artist}</p>
+            <p style={{ fontFamily: LYRIC_FONT, fontStyle: 'italic', fontSize: '1.1rem', color: 'var(--text)', textAlign: 'center', marginBottom: '16px', lineHeight: 1.45 }}>"{currentLyric?.line}"</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '0 auto 24px', maxWidth: '280px' }}>
+              <div style={{ position: 'relative', width: '48px', height: '48px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: 'var(--surface-2)' }}>
+                {song?.artwork ? (
+                  <Image src={song.artwork} alt="" fill sizes="48px" style={{ objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', background: 'var(--gold-faint)' }} />
+                )}
+              </div>
+              <SongMeta title={song?.title} artist={song?.artist} aiGenerated={!!song?.isAiGenerated} />
+            </div>
             <Link href={composeUrl} className="share-option" onClick={() => setShareOpen(false)}>
-              <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(232,197,71,0.1)', border: '1px solid rgba(232,197,71,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <ShareIcon size={20} color="var(--gold)" />
               </div>
               <div>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.88rem', color: 'var(--text)', margin: 0 }}>Send a line</p>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '3px 0 0' }}>Send this line to someone</p>
+                <p style={{ fontFamily: UI_FONT, fontWeight: 600, fontSize: '0.88rem', color: 'var(--text)', margin: 0 }}>Send a line</p>
+                <p style={{ fontFamily: UI_FONT, fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '3px 0 0' }}>Send this line to someone</p>
               </div>
             </Link>
             <button
@@ -636,15 +512,15 @@ export default function SongPage() {
                 setTimeout(() => setCardExportOpen(true), 180)
               }}
             >
-              <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'var(--surface-2)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <CardIcon size={20} color="var(--text)" />
               </div>
               <div style={{ textAlign: 'left' }}>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.88rem', color: 'var(--text)', margin: 0 }}>Share as Card</p>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '3px 0 0' }}>Export a lyric card — choose theme, shape, save or share</p>
+                <p style={{ fontFamily: UI_FONT, fontWeight: 600, fontSize: '0.88rem', color: 'var(--text)', margin: 0 }}>Share as Card</p>
+                <p style={{ fontFamily: UI_FONT, fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '3px 0 0' }}>Export a lyric card — choose theme, shape, save or share</p>
               </div>
             </button>
-            <button onClick={() => setShareOpen(false)} style={{ width: '100%', padding: '16px', marginTop: '8px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'var(--text-secondary)', letterSpacing: '1px' }}>Cancel</button>
+            <button onClick={() => setShareOpen(false)} style={{ width: '100%', padding: '16px', marginTop: '8px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: UI_FONT, fontSize: '0.75rem', color: 'var(--text-secondary)', letterSpacing: '1px' }}>Cancel</button>
           </div>
         </>
       )}
@@ -655,6 +531,7 @@ export default function SongPage() {
         lyric={currentLyric?.line || ''}
         song={song?.title || ''}
         artist={song?.artist || ''}
+        artwork={song?.artwork || null}
       />
     </div>
   )

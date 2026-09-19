@@ -11,6 +11,7 @@ interface CardExportModalProps {
   lyric?: string
   song?: string
   artist?: string
+  artwork?: string | null
   postId?: string
   vibeLabel?: string | null
   moment?: MargoMoment | null
@@ -23,6 +24,7 @@ interface CardExportModalProps {
 export function CardExportModal({
   open, onOpenChange,
   lyric = '', song = '', artist = '',
+  artwork = null,
   postId,
   vibeLabel,
   moment,
@@ -46,6 +48,7 @@ export function CardExportModal({
         lyric={lyric}
         song={song}
         artist={artist}
+        artwork={artwork}
         postId={postId}
         vibeLabel={vibeLabel}
         parentLyric={parentLyric}

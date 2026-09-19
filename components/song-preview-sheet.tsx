@@ -23,7 +23,9 @@ import {
   fullSongToQueueItem,
   queueAdd,
   queuePlayNext,
+  switchToFullSong,
 } from '@/lib/audio-engine'
+import { livingAtmosphereOrNull } from '@/lib/atmosphere'
 import { shareSong } from '@/lib/song-share'
 import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 
@@ -134,6 +136,16 @@ export function SongPreviewSheet({
 
   const handlePlayAndLyrics = () => {
     if (!requireAuth()) return
+    if (song.audioUrl) {
+      switchToFullSong({
+        id: song.id,
+        audioUrl: song.audioUrl,
+        title: song.title,
+        artist: song.artist,
+        artwork: song.artwork ?? null,
+        atmosphere: livingAtmosphereOrNull(song.atmosphere),
+      })
+    }
     router.push(`/song/${song.id}`)
   }
 

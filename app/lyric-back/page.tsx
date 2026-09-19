@@ -188,7 +188,7 @@ function LyricBackContent() {
   const [linesLoading, setLinesLoading] = useState(false)
   const [linePickComplete, setLinePickComplete] = useState(false)
   const [cardData, setCardData] = useState<{
-    lyric: string; song: string; artist: string; id: string;
+    lyric: string; song: string; artist: string; artwork?: string | null; id: string;
     parentLyric?: string; parentSong?: string; parentArtist?: string;
   } | null>(null)
   const emotionAbortRef = useRef<AbortController | null>(null)
@@ -1040,6 +1040,7 @@ function LyricBackContent() {
                       lyric: p.text || '',
                       song: p.knowledge?.song || '',
                       artist: p.knowledge?.artist || '',
+                      artwork: p.knowledge?.artwork || selectedSong?.artwork || null,
                       id: p.id,
                       parentLyric: respondingTo
                         ? resolveMomentLines(respondingTo).map((l) => l.text).join('  /  ')
@@ -1064,6 +1065,7 @@ function LyricBackContent() {
           lyric={cardData?.lyric || ''}
           song={cardData?.song || ''}
           artist={cardData?.artist || ''}
+          artwork={cardData?.artwork || null}
           postId={cardData?.id}
           parentLyric={cardData?.parentLyric}
           parentSong={cardData?.parentSong}
