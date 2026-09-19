@@ -69,11 +69,6 @@ const inputStyle: React.CSSProperties = {
   boxSizing: 'border-box',
 }
 
-const inputDisabledStyle: React.CSSProperties = {
-  opacity: 0.55,
-  cursor: 'not-allowed',
-}
-
 const oauthBtnBase: React.CSSProperties = {
   width: '100%',
   height: '42px',
@@ -223,6 +218,12 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
   const signupBlocked = isSignup && !termsAccepted
   const oauthLoading = loading
   const oauthVisuallyMuted = oauthLoading || signupBlocked
+
+  const remindConsentIfNeeded = () => {
+    if (isSignup && !termsAccepted) {
+      setError(CONSENT_REQUIRED_MESSAGE)
+    }
+  }
 
   const handleEmailSubmit = async () => {
     if (isSignup && !termsAccepted) {
@@ -387,13 +388,11 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !signupBlocked && void handleEmailSubmit()}
-            disabled={signupBlocked}
-            aria-disabled={signupBlocked}
-            style={{
-              ...inputStyle,
-              ...(signupBlocked ? inputDisabledStyle : {}),
-            }}
+            onFocus={remindConsentIfNeeded}
+            onClick={remindConsentIfNeeded}
+            onKeyDown={(e) => e.key === 'Enter' && void handleEmailSubmit()}
+            disabled={loading}
+            style={inputStyle}
           />
         </div>
         <div>
@@ -404,13 +403,11 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
             autoComplete={isSignup ? 'new-password' : 'current-password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !signupBlocked && void handleEmailSubmit()}
-            disabled={signupBlocked}
-            aria-disabled={signupBlocked}
-            style={{
-              ...inputStyle,
-              ...(signupBlocked ? inputDisabledStyle : {}),
-            }}
+            onFocus={remindConsentIfNeeded}
+            onClick={remindConsentIfNeeded}
+            onKeyDown={(e) => e.key === 'Enter' && void handleEmailSubmit()}
+            disabled={loading}
+            style={inputStyle}
           />
         </div>
 

@@ -6,8 +6,7 @@ import type { ReactNode } from 'react'
 const lora = 'var(--font-lora), serif'
 const ui = 'var(--font-geist-sans), system-ui, sans-serif'
 
-export const CONSENT_REQUIRED_MESSAGE =
-  'Please agree to the Terms of Service and Privacy Policy.'
+export { CONSENT_REQUIRED_MESSAGE } from '@/lib/legal/consent-copy'
 
 const linkStyle: React.CSSProperties = {
   color: 'var(--gold)',
@@ -76,7 +75,7 @@ export function SignupConsentCheckbox({
         lineHeight: 1.55,
         color: 'var(--text-secondary)',
       }}>
-        I agree to the <PolicyLinks />.
+        I have read and agree to the <PolicyLinks />.
       </span>
     </label>
   )
@@ -98,7 +97,7 @@ export function SignupConsentIntro({ children }: SignupConsentIntroProps) {
     }}>
       {children ?? (
         <>
-          First, please review and accept our <PolicyLinks />.
+          First, read our <PolicyLinks />, then check the box below to continue.
         </>
       )}
     </p>
@@ -162,7 +161,7 @@ export function TermsCompletionIntro() {
       margin: 0,
       lineHeight: 1.55,
     }}>
-      To finish creating your Margo account, please review and accept our <PolicyLinks />.
+      To finish creating your Margo account, please read and accept our <PolicyLinks />.
     </p>
   )
 }

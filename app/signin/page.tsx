@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { AuthForm, TermsCompletionForm, type AuthMode } from '@/components/auth-form'
+import { CONSENT_REQUIRED_MESSAGE } from '@/lib/legal/consent-copy'
 import { BackButton } from '@/components/back-button'
 import MargoLogo from '@/components/MargoLogo'
 import { useAuthGate } from '@/components/supabase-auth-provider'
@@ -16,7 +17,7 @@ function parseMode(value: string | null): AuthMode {
 
 function parseAuthError(code: string | null): string | null {
   if (code === 'terms') {
-    return 'Please agree to the Terms of Service and Privacy Policy before creating an account.'
+    return CONSENT_REQUIRED_MESSAGE
   }
   if (code === 'auth') {
     return 'Sign-in was interrupted. Please try again.'

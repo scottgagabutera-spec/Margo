@@ -1,3 +1,4 @@
+import { CONSENT_REQUIRED_MESSAGE } from '@/lib/legal/consent-copy'
 import { sanitizeOAuthReturnPath } from '@/lib/oauth-return'
 
 export type OAuthSurfaceErrorCode = 'auth' | 'terms'
@@ -12,7 +13,7 @@ export function parseAuthGateErrorCode(value: string | null | undefined): OAuthS
 
 export function authGateErrorMessage(code: OAuthSurfaceErrorCode): string {
   if (code === 'terms') {
-    return 'Please agree to the Terms of Service and Privacy Policy before creating an account.'
+    return CONSENT_REQUIRED_MESSAGE
   }
   return 'Sign-in was interrupted. Please try again.'
 }
