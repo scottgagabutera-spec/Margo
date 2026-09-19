@@ -9,6 +9,7 @@ import { BackButton } from '@/components/back-button'
 import MargoLogo from '@/components/MargoLogo'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { AUTH_RETURN_QUERY, sanitizeAuthReturnPath } from '@/lib/auth-return'
+import './auth-layout.css'
 
 const lora = 'var(--font-lora), serif'
 const ui = 'var(--font-geist-sans), system-ui, sans-serif'
@@ -78,7 +79,7 @@ function SigninPageInner() {
             <div className="margo-auth-layout__back">
               <BackButton fallbackHref={returnTo || '/'} />
             </div>
-            <div className="margo-auth-layout__tabs margo-auth-layout__tabs-mobile">
+            <div className="margo-auth-layout__tabs">
               <AuthModeTabs mode={mode} onChange={setMode} />
             </div>
           </div>
@@ -116,19 +117,13 @@ function SigninPageInner() {
               onSuccess={finishAuth}
             />
           ) : (
-            <>
-              <div className="margo-auth-layout__tabs-desktop">
-                <AuthModeTabs mode={mode} onChange={setMode} />
-              </div>
-
-              <AuthForm
-                mode={mode}
-                onSwitchMode={setMode}
-                externalError={externalError}
-                oauthReturnTo={returnTo}
-                onSuccess={finishAuth}
-              />
-            </>
+            <AuthForm
+              mode={mode}
+              onSwitchMode={setMode}
+              externalError={externalError}
+              oauthReturnTo={returnTo}
+              onSuccess={finishAuth}
+            />
           )}
         </main>
       </div>
