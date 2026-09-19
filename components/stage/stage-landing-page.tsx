@@ -67,11 +67,6 @@ export function StageLandingPage() {
 
   return (
     <div style={{ position: 'relative', width: '100%', overflow: 'hidden', background: 'var(--bg)' }}>
-      <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
-        <div style={{ position: 'absolute', top: '-10rem', left: '-10rem', width: '22rem', height: '22rem', background: 'rgba(232,197,71,0.05)', borderRadius: '50%', filter: 'blur(120px)' }} />
-        <div style={{ position: 'absolute', bottom: '-10rem', right: '-10rem', width: '22rem', height: '22rem', background: 'rgba(232,197,71,0.03)', borderRadius: '50%', filter: 'blur(120px)' }} />
-      </div>
-
       <nav
         className="margo-landing-nav"
         style={{
@@ -84,7 +79,7 @@ export function StageLandingPage() {
         }}
       >
         <a href="/" style={{ textDecoration: 'none' }}>
-          <MargoLogo tier="lockup" size={36} rings />
+          <MargoLogo tier="lockup" size={36} rings containRings glow={false} />
         </a>
         <div className="margo-landing-nav__account">
           {isSignedIn ? (

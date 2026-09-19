@@ -6,6 +6,7 @@ import {
   OAUTH_TERMS_PENDING_COOKIE,
   parseOAuthIntent,
 } from '@/lib/legal/oauth-intent'
+import { buildOAuthErrorRedirectResponse } from '@/lib/oauth-error-redirect'
 import {
   OAUTH_RETURN_COOKIE,
   OAUTH_RETURN_COOKIE_OPTS,
@@ -35,17 +36,19 @@ export async function GET(
 ) {
   const { provider: raw } = await context.params
   const origin = new URL(request.url).origin
+  const returnTo = sanitizeOAuthReturnPath(request.nextUrl.searchParams.get('returnTo'))
 
   if (!ALLOWED.has(raw as OAuthProvider)) {
-    return NextResponse.redirect(`${origin}/signin?error=auth`)
+    return NextResponse.redirect(buildOAuthErrorRedirectResponse(origin, returnTo, 'auth'))
   }
   const provider = raw as OAuthProvider
   const intent = parseOAuthIntent(request.nextUrl.searchParams.get('intent'))
   const termsAcknowledged = request.nextUrl.searchParams.get('terms') === '1'
-  const returnTo = sanitizeOAuthReturnPath(request.nextUrl.searchParams.get('returnTo'))
 
   if (intent === 'signup' && !termsAcknowledged) {
-    return NextResponse.redirect(`${origin}/signin?mode=signup&error=terms`)
+    return NextResponse.redirect(
+      buildOAuthErrorRedirectResponse(origin, returnTo, 'terms', { mode: 'signup' }),
+    )
   }
 
   // Collect Set-Cookie during signInWithOAuth, then attach to the final redirect.
@@ -87,7 +90,14 @@ export async function GET(
 
   if (error || !data.url) {
     console.error('signInWithOAuth failed:', error?.message || 'no url')
-    return NextResponse.redirect(`${origin}/signin?error=auth`)
+    return NextResponse.redirect(
+      buildOAuthErrorRedirectResponse(
+        origin,
+        returnTo,
+        'auth',
+        intent === 'signup' ? { mode: 'signup' } : undefined,
+      ),
+    )
   }
 
   const redirect = NextResponse.redirect(data.url)

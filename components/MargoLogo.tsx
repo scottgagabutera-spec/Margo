@@ -9,6 +9,10 @@ interface MargoLogoProps {
   tier?: 'mark' | 'symbol' | 'lockup'
   size?: number
   rings?: boolean
+  /** Clip ring animation to the mark bounds (no bleed into page background). */
+  containRings?: boolean
+  /** Gold drop-shadow on the mark SVG. */
+  glow?: boolean
   wordmark?: boolean
   /** Wordmark only — no circular M mark (hero / search lockup). */
   wordmarkOnly?: boolean
@@ -18,6 +22,8 @@ export default function MargoLogo({
   tier = 'symbol',
   size = 32,
   rings = false,
+  containRings = false,
+  glow = true,
   wordmark = false,
   wordmarkOnly = false,
 }: MargoLogoProps) {
@@ -62,7 +68,13 @@ export default function MargoLogo({
         `}</style>
       )}
       <div style={{ display: 'flex', alignItems: 'center', gap: Math.max(6, Math.round(size * 0.25)) }}>
-        <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+        <div style={{
+          position: 'relative',
+          width: size,
+          height: size,
+          flexShrink: 0,
+          overflow: containRings ? 'hidden' : undefined,
+        }}>
           {rings && (
             <>
               <span className="margo-ring" />
@@ -75,7 +87,10 @@ export default function MargoLogo({
             height={size}
             viewBox="-4 -4 88 88"
             xmlns="http://www.w3.org/2000/svg"
-            style={{ display: 'block', filter: 'drop-shadow(0 2px 8px rgba(232,197,71,0.25))' }}
+            style={{
+              display: 'block',
+              filter: glow ? 'drop-shadow(0 2px 8px rgba(232,197,71,0.25))' : undefined,
+            }}
           >
             <circle cx="40" cy="40" r="36" fill="#E8C547" />
             <path

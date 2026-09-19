@@ -6,6 +6,7 @@ import {
   OAUTH_INTENT_COOKIE,
   OAUTH_TERMS_PENDING_COOKIE,
 } from '@/lib/legal/oauth-intent'
+import { buildOAuthErrorRedirectResponse } from '@/lib/oauth-error-redirect'
 import {
   OAUTH_RETURN_COOKIE,
   sanitizeOAuthReturnPath,
@@ -20,13 +21,23 @@ import {
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  const oauthReturn = sanitizeOAuthReturnPath(
+    request.cookies.get(OAUTH_RETURN_COOKIE)?.value,
+  )
+  const oauthIntent = request.cookies.get(OAUTH_INTENT_COOKIE)?.value
 
   if (!code) {
-    return NextResponse.redirect(`${origin}/signin?error=auth`)
+    return NextResponse.redirect(
+      buildOAuthErrorRedirectResponse(
+        origin,
+        oauthReturn,
+        'auth',
+        oauthIntent === 'signup' ? { mode: 'signup' } : undefined,
+      ),
+    )
   }
 
   const termsPending = request.cookies.get(OAUTH_TERMS_PENDING_COOKIE)?.value === '1'
-  const oauthIntent = request.cookies.get(OAUTH_INTENT_COOKIE)?.value
 
   const pendingCookies: {
     name: string
@@ -59,10 +70,14 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabase.auth.exchangeCodeForSession(code)
   if (error) {
     console.error('exchangeCodeForSession failed:', error.message)
-    const errTarget = oauthIntent === 'signup'
-      ? `${origin}/signin?mode=signup&error=auth`
-      : `${origin}/signin?error=auth`
-    return NextResponse.redirect(errTarget)
+    return NextResponse.redirect(
+      buildOAuthErrorRedirectResponse(
+        origin,
+        oauthReturn,
+        'auth',
+        oauthIntent === 'signup' ? { mode: 'signup' } : undefined,
+      ),
+    )
   }
 
   let user = data.user
@@ -81,10 +96,6 @@ export async function GET(request: NextRequest) {
       user = updateData.user
     }
   }
-
-  const oauthReturn = sanitizeOAuthReturnPath(
-    request.cookies.get(OAUTH_RETURN_COOKIE)?.value,
-  )
 
   let redirectTarget = oauthReturn ? `${origin}${oauthReturn}` : `${origin}/feed`
   if (user && userNeedsTermsAcceptance(user)) {

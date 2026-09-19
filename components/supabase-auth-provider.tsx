@@ -12,6 +12,7 @@ import {
 } from '@/lib/supabase/auth-broadcast'
 import type { User } from '@supabase/supabase-js'
 import { AuthGateModal } from '@/components/auth-gate-modal'
+import { AuthGateErrorHandler } from '@/components/auth-gate-error-handler'
 import { LegalConsentEnforcer } from '@/components/legal-consent-enforcer'
 import { disarmComposePendingAction } from '@/lib/moment-draft'
 import { Suspense } from 'react'
@@ -51,6 +52,10 @@ interface AuthGateContextValue {
   authGateOpen: boolean
   /** OAuth return path set when the auth gate last opened. */
   authReturnTo: string | null
+  /** Inline error for auth gate (e.g. OAuth failure on origin page). */
+  authGateExternalError: string | null
+  /** Open auth gate with an error after OAuth failure on a product page. */
+  openAuthGateWithError: (message: string, returnTo: string) => void
   /** Re-read httpOnly session → memory access token (after login/logout). */
   rehydrate: (opts?: RehydrateOptions) => Promise<void>
 }
@@ -69,6 +74,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   const [needsTermsAcceptance, setNeedsTermsAcceptance] = useState(false)
   const [gateOpen, setGateOpen] = useState(false)
   const [authReturnTo, setAuthReturnTo] = useState<string | null>(null)
+  const [authGateExternalError, setAuthGateExternalError] = useState<string | null>(null)
   const userRef = useRef<User | null>(null)
   const applyingRemoteRef = useRef(false)
   const inflightRef = useRef<Promise<void> | null>(null)
@@ -284,23 +290,49 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
       typeof window !== 'undefined'
         ? `${window.location.pathname}${window.location.search}`
         : '/compose'
+    setAuthGateExternalError(null)
     setAuthReturnTo(opts?.returnTo ?? fallback)
     setGateOpen(true)
     return false
   }, [user])
 
+  const openAuthGateWithError = useCallback((message: string, returnTo: string) => {
+    setAuthReturnTo(returnTo)
+    setAuthGateExternalError(message)
+    setGateOpen(true)
+  }, [])
+
   const handleGateOpenChange = useCallback((open: boolean) => {
     if (!open && !userRef.current) {
       disarmComposePendingAction()
+    }
+    if (!open) {
+      setAuthGateExternalError(null)
     }
     setGateOpen(open)
   }, [])
 
   return (
-    <AuthGateContext.Provider value={{ user, loading, hasPasswordAuth, needsTermsAcceptance, requireAuth, authGateOpen: gateOpen, authReturnTo, rehydrate }}>
+    <AuthGateContext.Provider value={{
+      user,
+      loading,
+      hasPasswordAuth,
+      needsTermsAcceptance,
+      requireAuth,
+      authGateOpen: gateOpen,
+      authReturnTo,
+      authGateExternalError,
+      openAuthGateWithError,
+      rehydrate,
+    }}>
       {children}
-      <AuthGateModal open={gateOpen} onOpenChange={handleGateOpenChange} />
+      <AuthGateModal
+        open={gateOpen}
+        onOpenChange={handleGateOpenChange}
+        externalError={authGateExternalError}
+      />
       <Suspense fallback={null}>
+        <AuthGateErrorHandler />
         <LegalConsentEnforcer />
       </Suspense>
     </AuthGateContext.Provider>

@@ -6,8 +6,29 @@ import type { ReactNode } from 'react'
 const lora = 'var(--font-lora), serif'
 const ui = 'var(--font-geist-sans), system-ui, sans-serif'
 
-export const CONSENT_REQUIRED_MESSAGE =
-  'Please agree to the Terms of Service and Privacy Policy.'
+import { CONSENT_REQUIRED_MESSAGE } from '@/lib/legal/consent-copy'
+
+export { CONSENT_REQUIRED_MESSAGE }
+
+/** Consent reminder — Lora, single line, scales down on narrow viewports. */
+export function ConsentRequiredAlert({ message }: { message: string }) {
+  return (
+    <p
+      role="alert"
+      className="margo-consent-alert"
+      style={{
+        fontFamily: lora,
+        fontSize: 'clamp(0.52rem, 2.55vw, 0.72rem)',
+        color: '#ff7070',
+        margin: 0,
+        lineHeight: 1.25,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {message}
+    </p>
+  )
+}
 
 const linkStyle: React.CSSProperties = {
   color: 'var(--gold)',
@@ -76,7 +97,7 @@ export function SignupConsentCheckbox({
         lineHeight: 1.55,
         color: 'var(--text-secondary)',
       }}>
-        I agree to the <PolicyLinks />.
+        I have read and agree to the <PolicyLinks />.
       </span>
     </label>
   )
@@ -88,19 +109,34 @@ interface SignupConsentIntroProps {
 
 /** Create-account first step — review before choosing signup method. */
 export function SignupConsentIntro({ children }: SignupConsentIntroProps) {
+  if (children) {
+    return (
+      <p style={{
+        fontFamily: lora,
+        fontSize: 'clamp(0.52rem, 2.55vw, 0.72rem)',
+        lineHeight: 1.25,
+        color: 'var(--text-secondary)',
+        margin: '0 0 14px',
+        whiteSpace: 'nowrap',
+      }}>
+        {children}
+      </p>
+    )
+  }
+
   return (
-    <p style={{
-      fontFamily: ui,
-      fontSize: '0.82rem',
-      lineHeight: 1.55,
-      color: 'var(--text-secondary)',
-      margin: '0 0 14px',
-    }}>
-      {children ?? (
-        <>
-          First, please review and accept our <PolicyLinks />.
-        </>
-      )}
+    <p
+      className="margo-consent-alert"
+      style={{
+        fontFamily: lora,
+        fontSize: 'clamp(0.52rem, 2.55vw, 0.72rem)',
+        lineHeight: 1.25,
+        color: 'var(--text-secondary)',
+        margin: '0 0 14px',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {CONSENT_REQUIRED_MESSAGE}
     </p>
   )
 }
@@ -162,7 +198,7 @@ export function TermsCompletionIntro() {
       margin: 0,
       lineHeight: 1.55,
     }}>
-      To finish creating your Margo account, please review and accept our <PolicyLinks />.
+      To finish creating your Margo account, please read and accept our <PolicyLinks />.
     </p>
   )
 }

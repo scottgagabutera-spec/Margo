@@ -3,6 +3,8 @@
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { AuthForm, TermsCompletionForm, type AuthMode } from '@/components/auth-form'
+import { AuthModeTabs } from '@/components/auth-mode-tabs'
+import { CONSENT_REQUIRED_MESSAGE } from '@/lib/legal/consent-copy'
 import { BackButton } from '@/components/back-button'
 import MargoLogo from '@/components/MargoLogo'
 import { useAuthGate } from '@/components/supabase-auth-provider'
@@ -16,7 +18,7 @@ function parseMode(value: string | null): AuthMode {
 
 function parseAuthError(code: string | null): string | null {
   if (code === 'terms') {
-    return 'Please agree to the Terms of Service and Privacy Policy before creating an account.'
+    return CONSENT_REQUIRED_MESSAGE
   }
   if (code === 'auth') {
     return 'Sign-in was interrupted. Please try again.'
@@ -52,62 +54,123 @@ function SigninPageInner() {
     }
   }, [loading, isTermsStep, user, needsTermsAcceptance, router])
 
+  const showModeTabs = !isTermsStep
+
   return (
     <div style={{
       minHeight: '100dvh',
       background: 'var(--bg)',
-      position: 'relative',
       display: 'flex',
       flexDirection: 'column',
     }}>
-      {!isTermsStep ? (
-        <div style={{
-          position: 'fixed',
-          top: 'max(16px, env(safe-area-inset-top))',
-          left: 'max(16px, env(safe-area-inset-left))',
-          zIndex: 60,
-        }}>
-          <BackButton fallbackHref="/" />
-        </div>
-      ) : null}
-
       <style jsx>{`
-        .auth-shell {
+        .auth-layout {
           flex: 1;
           display: grid;
-          grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
-          gap: clamp(32px, 6vw, 80px);
-          align-items: center;
           width: 100%;
           max-width: 1080px;
           margin: 0 auto;
-          padding: max(48px, env(safe-area-inset-top)) clamp(24px, 5vw, 48px) max(40px, env(safe-area-inset-bottom));
           box-sizing: border-box;
+          padding:
+            max(12px, env(safe-area-inset-top))
+            max(16px, env(safe-area-inset-right))
+            max(40px, env(safe-area-inset-bottom))
+            max(16px, env(safe-area-inset-left));
+          gap: clamp(20px, 4vw, 36px);
+          align-items: start;
         }
-        .auth-brand {
+
+        .auth-layout__toolbar {
+          grid-area: toolbar;
           display: flex;
+          align-items: center;
+          gap: 12px;
+          min-width: 0;
+          width: 100%;
         }
+
+        .auth-layout__back {
+          flex: 0 0 auto;
+        }
+
+        .auth-layout__tabs {
+          flex: 1 1 auto;
+          min-width: 0;
+        }
+
+        .auth-layout__brand {
+          grid-area: brand;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          padding-right: clamp(16px, 4vw, 40px);
+        }
+
+        .auth-layout__main {
+          grid-area: main;
+          width: 100%;
+          min-width: 0;
+        }
+
+        .auth-layout__tabs-desktop {
+          display: none;
+          margin-bottom: 36px;
+        }
+
         @media (max-width: 900px) {
-          .auth-shell {
-            grid-template-columns: 1fr;
-            max-width: 420px;
-            padding-top: max(72px, calc(env(safe-area-inset-top) + 48px));
+          .auth-layout {
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-areas:
+              "toolbar"
+              "main";
+            padding-top: max(16px, env(safe-area-inset-top));
           }
-          .auth-brand {
+
+          .auth-layout__brand {
             display: none;
+          }
+
+          .auth-layout__tabs-mobile {
+            display: block;
+          }
+
+          .auth-layout__tabs-desktop {
+            display: none;
+          }
+        }
+
+        @media (min-width: 901px) {
+          .auth-layout {
+            grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+            grid-template-areas:
+              "toolbar toolbar"
+              "brand main";
+            padding-top: max(24px, env(safe-area-inset-top));
+          }
+
+          .auth-layout__tabs-mobile {
+            display: none;
+          }
+
+          .auth-layout__tabs-desktop {
+            display: block;
           }
         }
       `}</style>
 
-      <div className="auth-shell">
-        <aside
-          className="auth-brand"
-          style={{
-            flexDirection: 'column',
-            justifyContent: 'center',
-            paddingRight: 'clamp(16px, 4vw, 40px)',
-          }}
-        >
+      <div className="auth-layout">
+        {showModeTabs ? (
+          <div className="auth-layout__toolbar">
+            <div className="auth-layout__back">
+              <BackButton fallbackHref="/" />
+            </div>
+            <div className="auth-layout__tabs auth-layout__tabs-mobile">
+              <AuthModeTabs mode={mode} onChange={setMode} />
+            </div>
+          </div>
+        ) : null}
+
+        <aside className="auth-layout__brand">
           <div style={{ marginBottom: '36px' }}>
             <MargoLogo tier="lockup" size={36} rings />
           </div>
@@ -132,7 +195,7 @@ function SigninPageInner() {
           </p>
         </aside>
 
-        <main style={{ width: '100%' }}>
+        <main className="auth-layout__main">
           {isTermsStep ? (
             <TermsCompletionForm
               externalError={externalError}
@@ -140,46 +203,8 @@ function SigninPageInner() {
             />
           ) : (
             <>
-              <div
-                role="tablist"
-                aria-label="Authentication mode"
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '6px',
-                  padding: '3px',
-                  borderRadius: '12px',
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  marginBottom: '36px',
-                }}
-              >
-                {(['signin', 'signup'] as const).map((tab) => {
-                  const active = mode === tab
-                  return (
-                    <button
-                      key={tab}
-                      type="button"
-                      role="tab"
-                      aria-selected={active}
-                      onClick={() => setMode(tab)}
-                      style={{
-                        height: '36px',
-                        borderRadius: '9px',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontFamily: ui,
-                        fontSize: '0.76rem',
-                        fontWeight: active ? 600 : 500,
-                        color: active ? 'var(--text-on-gold, var(--bg))' : 'var(--text-secondary)',
-                        background: active ? 'var(--gold)' : 'transparent',
-                        transition: 'background 150ms ease, color 150ms ease',
-                      }}
-                    >
-                      {tab === 'signin' ? 'Sign in' : 'Create account'}
-                    </button>
-                  )
-                })}
+              <div className="auth-layout__tabs-desktop">
+                <AuthModeTabs mode={mode} onChange={setMode} />
               </div>
 
               <AuthForm
