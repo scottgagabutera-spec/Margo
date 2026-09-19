@@ -221,7 +221,8 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
   }, [externalError])
 
   const signupBlocked = isSignup && !termsAccepted
-  const oauthDisabled = loading || signupBlocked
+  const oauthLoading = loading
+  const oauthVisuallyMuted = oauthLoading || signupBlocked
 
   const handleEmailSubmit = async () => {
     if (isSignup && !termsAccepted) {
@@ -318,15 +319,15 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
         <button
           type="button"
           onClick={() => handleOAuthSubmit('google')}
-          disabled={oauthDisabled}
-          aria-disabled={oauthDisabled}
+          disabled={oauthLoading}
+          aria-disabled={oauthVisuallyMuted}
           style={{
             ...oauthBtnBase,
             background: 'rgba(255,255,255,0.03)',
             border: '1px solid rgba(255,255,255,0.1)',
             color: 'var(--text)',
-            opacity: oauthDisabled ? 0.55 : 1,
-            cursor: oauthDisabled ? 'not-allowed' : 'pointer',
+            opacity: oauthVisuallyMuted ? 0.55 : 1,
+            cursor: oauthLoading ? 'not-allowed' : 'pointer',
           }}
         >
           <svg width="16" height="16" viewBox="0 0 18 18" aria-hidden>
@@ -341,15 +342,15 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
         <button
           type="button"
           onClick={() => handleOAuthSubmit('discord')}
-          disabled={oauthDisabled}
-          aria-disabled={oauthDisabled}
+          disabled={oauthLoading}
+          aria-disabled={oauthVisuallyMuted}
           style={{
             ...oauthBtnBase,
             background: 'rgba(88,101,242,0.1)',
             border: '1px solid rgba(88,101,242,0.28)',
             color: 'var(--text)',
-            opacity: oauthDisabled ? 0.55 : 1,
-            cursor: oauthDisabled ? 'not-allowed' : 'pointer',
+            opacity: oauthVisuallyMuted ? 0.55 : 1,
+            cursor: oauthLoading ? 'not-allowed' : 'pointer',
           }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="#5865F2" aria-hidden>
@@ -358,6 +359,18 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
           {isSignup ? 'Continue with Discord' : 'Sign in with Discord'}
         </button>
       </div>
+
+      {(error || externalError) ? (
+        <p role="alert" style={{
+          fontFamily: ui,
+          fontSize: '0.78rem',
+          color: '#ff7070',
+          margin: '0 0 16px',
+          lineHeight: 1.45,
+        }}>
+          {error || externalError}
+        </p>
+      ) : null}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '0 0 20px' }}>
         <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.07)' }} />

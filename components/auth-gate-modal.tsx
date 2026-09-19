@@ -8,13 +8,14 @@ const font = 'var(--font-lora), serif'
 interface AuthGateModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  externalError?: string | null
 }
 
 /**
  * Dismissible sign-up/sign-in prompt shown by requireAuth().
  * On success, Compose consumes its pending action via sessionStorage resume.
  */
-export function AuthGateModal({ open, onOpenChange }: AuthGateModalProps) {
+export function AuthGateModal({ open, onOpenChange, externalError }: AuthGateModalProps) {
   const [mode, setMode] = useState<'signup' | 'signin'>('signup')
   const { authReturnTo } = useAuthGate()
 
@@ -68,6 +69,7 @@ export function AuthGateModal({ open, onOpenChange }: AuthGateModalProps) {
           onSuccess={() => onOpenChange(false)}
           onSwitchMode={setMode}
           oauthReturnTo={authReturnTo}
+          externalError={externalError}
         />
 
         <button
