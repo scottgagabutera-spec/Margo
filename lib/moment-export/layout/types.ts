@@ -19,16 +19,27 @@ export interface LayoutTextStyle {
 }
 
 /**
- * Lyric block after paragraph-aware wrapping.
+ * Lyric block after stanza-aware fitting.
  * displayLines preserves intentional \\n as paragraph boundaries.
  */
 export type StageCardFormat = 'feed' | 'shorts'
 
+export interface LayoutLyricLine {
+  text: string
+  /** Top of the line box in output pixels */
+  y: number
+  /** True when this row continues a stanza that could not fit on one line. */
+  continuation: boolean
+}
+
 export interface LayoutLyricBlock {
   /** Raw lyric input (may contain \\n) */
   sourceText: string
-  /** Visual lines — word-wrapped within each paragraph */
+  /** Visual lines — fitted, then wrapped within each paragraph if needed */
   displayLines: string[]
+  lines: LayoutLyricLine[]
+  /** Extra gap between selected lines (0 between wrap continuations) */
+  stanzaGap: number
   style: LayoutTextStyle
   align: 'left' | 'center'
   x: number

@@ -5,8 +5,9 @@
  *   tokenPx = refToken * (outputWidthPx / STAGE_CARD_REF_WIDTH)
  *
  * This is the single source of truth for spacing and typography — not an
- * export-only artifact. One lyric size per format for a single line or a
- * paragraph (no compact step-down). Feed at 1080 ≈ 76px; Shorts ≈ 103px.
+ * export-only artifact. Type scales down from these maxima so each selected
+ * lyric line stays on one row when it can; wrapping is the last resort.
+ * Feed at 1080 ≈ 76px max; Shorts ≈ 103px max.
  *
  * Future: resolveMomentLayout() may compose multiple segment layouts;
  * MomentTimeline will consume the same resolved geometry over time.
@@ -30,9 +31,12 @@ export const STAGE_CARD_LAYOUT_REF = {
     fontFamily: 'Lora, serif',
     fontStyle: 'italic' as const,
     fontWeight: 400,
-    /** Uniform Feed lyric size — one line and paragraphs share this */
+    /** Maximum Feed lyric size — shrinks to minFontSize to keep a thought intact */
     fontSize: 28,
-    lineHeight: 1.3,
+    minFontSize: 18,
+    lineHeight: 1.34,
+    /** Extra space between selected lines (not wrap continuations), in em */
+    stanzaGapEm: 0.42,
   },
   meta: {
     gap: 14,
@@ -77,9 +81,11 @@ export const STAGE_SHORTS_LAYOUT_REF = {
   padding: { top: 56, right: 32, bottom: 44, left: 32 },
   borderRadius: 0,
   lyric: {
-    /** Uniform Shorts lyric size — stacked poem, not a feed card scaled up */
+    /** Maximum Shorts lyric size — stacked poem, not a feed card scaled up */
     fontSize: 38,
-    lineHeight: 1.22,
+    minFontSize: 22,
+    lineHeight: 1.26,
+    stanzaGapEm: 0.36,
   },
   artwork: { size: 56, radius: 10, gap: 16 },
 } as const
