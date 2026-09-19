@@ -46,6 +46,10 @@ import { PostCardSuggestedReply } from '@/components/post-card-suggested-reply'
 import { SongMeta } from '@/components/song-meta'
 import { AtmosphereLayer } from '@/components/atmosphere-layer'
 import { livingAtmosphereOrNull } from '@/lib/atmosphere'
+import {
+  fallbackSnippetWindow,
+  matchLyricWindowFromLines,
+} from '@/lib/lyric-match'
 
 const supabase = createClient()
 
@@ -172,14 +176,16 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
     let lineIndex = 0
 
     if (!hasExactTiming) {
-      const needle = (postText || '').toLowerCase().trim()
-      const match = lyrics.find(l =>
-        l.line.toLowerCase().includes(needle) || needle.includes(l.line.toLowerCase())
-      )
-      if (!match) return
-      startSec = match.start
-      endSec = match.end
-      lineIndex = match.id
+      const match = matchLyricWindowFromLines(lyrics, postText || '')
+      if (match) {
+        startSec = match.startSec
+        endSec = match.endSec
+        lineIndex = match.lineId
+      } else {
+        const fb = fallbackSnippetWindow()
+        startSec = fb.startSec
+        endSec = fb.endSec
+      }
     }
 
     void playSnippet({
