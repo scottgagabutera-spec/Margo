@@ -75,11 +75,3 @@ export {
   isTimeBuffered,
   hasWarmedUrl,
 } from './preload-cache'
-
-// Snippet resolver
-export type { SrtLine, ResolvedSnippet } from './snippet-resolver'
-export {
-  resolveSnippetFromLines,
-  findLineIndexForText,
-  resolveCurrentLineIndex,
-} from './snippet-resolver'

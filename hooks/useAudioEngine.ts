@@ -116,23 +116,6 @@ export function useSnippetPlaybackUi(
 }
 
 /**
- * Returns whether the given songId is the current track
- * (playing or paused — just loaded in engine).
- */
-export function useIsActiveTrack(songId: string | null | undefined): boolean {
-  const [active, setActive] = useState(false)
-
-  useEffect(() => {
-    const unsub = subscribeAudioEngine(s => {
-      setActive(s.songId === songId && s.mode !== 'idle')
-    })
-    return unsub
-  }, [songId])
-
-  return active
-}
-
-/**
  * Current playback progress 0–100 (mode-aware).
  * Use on scrubbers and progress bars.
  */

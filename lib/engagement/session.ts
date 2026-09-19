@@ -6,8 +6,6 @@
  *                   Used for: play dedup, view dedup, rate limits, analytics.
  *                   Never PII. Safe for anonymous users and future auth migration.
  *
- * margoActorId    — sanitized display name for resonate writes and UI.
- *                   Falls back to 'anon' if no name set.
  */
 
 // ── UUID v4 generator (no external dependency) ────────────────────
@@ -45,31 +43,4 @@ export function getMargoSessionId(): string {
     // localStorage blocked (private browsing extreme mode, etc.)
     return 'blocked-session'
   }
-}
-
-// ── Actor ID (display name for writes) ───────────────────────────
-
-const ACTOR_KEY = 'margoAnonName'
-
-/**
- * Get the sanitized actor ID for Firebase path segments.
- * Uses margoAnonName if set, otherwise 'anon'.
- * Sanitizes characters that are illegal in Firebase paths.
- */
-export function getMargoActorId(): string {
-  if (typeof window === 'undefined') return 'anon'
-  try {
-    const name = localStorage.getItem(ACTOR_KEY) || 'anon'
-    return name.replace(/[.#$[\]/]/g, '_').trim() || 'anon'
-  } catch {
-    return 'anon'
-  }
-}
-
-/**
- * Check if two session IDs belong to the same device.
- * Used to prevent self-resonates and duplicate play counts.
- */
-export function isCurrentSession(sessionId: string): boolean {
-  return sessionId === getMargoSessionId()
 }
