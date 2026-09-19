@@ -474,7 +474,7 @@ export function ComposeLinePicker({
               cursor: canConfirmParagraph ? 'pointer' : 'not-allowed',
             }}
           >
-            Use {selectionCount} lines
+            Use {selectionCount} {selectionCount === 1 ? 'line' : 'lines'}
           </button>
         </div>
       ) : null}
