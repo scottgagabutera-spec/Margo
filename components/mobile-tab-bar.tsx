@@ -10,6 +10,9 @@ import { HubTabButton } from '@/components/hub-menu'
 import { usePrimaryTab, usePrimaryTabLinkProps } from '@/components/primary-tab-shell'
 import { hidesTabBar } from '@/lib/chrome-mode'
 import { useStageChromeHidden } from '@/lib/stage-chrome'
+import { useSigninHref } from '@/components/signin-link'
+import { persistAuthReturnScroll } from '@/lib/auth-return'
+import { persistActivePrimaryScroll } from '@/components/primary-tab-shell'
 
 const font = 'var(--font-geist-sans), system-ui, sans-serif'
 
@@ -65,7 +68,8 @@ export function MobileTabBar() {
   const isOnCompose = activeTab === 'compose' || (!activeTab && pathname === '/compose')
 
   const isSignedIn = !!user && !user.isAnonymous
-  const ownProfileHref = identity ? `/profile/${identity.username}` : '/signin'
+  const signinHref = useSigninHref()
+  const ownProfileHref = identity ? `/profile/${identity.username}` : signinHref
   const youLink = usePrimaryTabLinkProps(ownProfileHref)
   const isOnProfile = activeTab === 'you' || (isSignedIn && pathname === ownProfileHref)
 
@@ -134,7 +138,17 @@ export function MobileTabBar() {
 
       <HubTabButton style={tabStyle(false)} labelStyle={labelStyle} />
 
-      <Link href={ownProfileHref} style={tabStyle(isOnProfile)} {...(isSignedIn ? youLink : {})}>
+      <Link
+        href={ownProfileHref}
+        style={tabStyle(isOnProfile)}
+        {...(isSignedIn ? youLink : {})}
+        onClick={() => {
+          if (!isSignedIn) {
+            persistActivePrimaryScroll()
+            persistAuthReturnScroll()
+          }
+        }}
+      >
         {isSignedIn && identity?.avatarUrl ? (
           <span style={{
             width: '20px', height: '20px', borderRadius: '50%', overflow: 'hidden',

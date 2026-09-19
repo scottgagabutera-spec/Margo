@@ -14,6 +14,7 @@ import {
   playPlaylistSession,
   type LibraryPlaylistSummary,
 } from '@/lib/library/playlists'
+import { SignInLink } from '@/components/signin-link'
 import { LYRIC_FONT, UI_FONT } from '@/lib/fonts'
 
 function PlayAllButton({
@@ -207,7 +208,7 @@ export default function LibraryPage() {
             }}>
               Sign in to open your library
             </p>
-            <Link href="/signin" style={{
+            <SignInLink style={{
               padding: '10px 24px',
               border: '1px solid var(--border)',
               borderRadius: '50px',
@@ -219,7 +220,7 @@ export default function LibraryPage() {
               textDecoration: 'none',
             }}>
               Sign In
-            </Link>
+            </SignInLink>
           </div>
         ) : loading ? (
           <p style={{ fontFamily: UI_FONT, color: 'var(--text-muted)' }}>Loading…</p>

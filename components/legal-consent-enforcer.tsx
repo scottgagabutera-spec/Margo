@@ -8,6 +8,7 @@ import {
   isConsentEnforcementExemptPath,
   isTermsCompletionPage,
 } from '@/lib/legal/consent-paths'
+import { AUTH_RETURN_QUERY, buildSigninHref } from '@/lib/auth-return'
 
 /**
  * Client-side consent enforcement: redirect to /signin?step=terms when
@@ -27,9 +28,9 @@ export function LegalConsentEnforcer() {
     if (loading || !user || !needsTermsAcceptance) return
     if (onTermsPage) return
     if (pathname === '/signin') {
-      router.replace('/signin?step=terms')
+      router.replace(buildSigninHref(searchParams.get(AUTH_RETURN_QUERY), { step: 'terms' }))
     }
-  }, [loading, user, needsTermsAcceptance, onTermsPage, pathname, router])
+  }, [loading, user, needsTermsAcceptance, onTermsPage, pathname, router, searchParams])
 
   if (loading || !user || !needsTermsAcceptance) return null
   if (onTermsPage || isConsentEnforcementExemptPath(pathname)) return null

@@ -949,3 +949,87 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
     opacity: 0.04;
   }
 }
+
+/* /signin — mobile-first so the lyric column never duplicates the form */
+.margo-auth-layout {
+  flex: 1;
+  display: grid;
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  padding:
+    max(16px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    max(40px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+  gap: clamp(20px, 4vw, 36px);
+  align-items: start;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "toolbar"
+    "main";
+}
+
+.margo-auth-layout__toolbar {
+  grid-area: toolbar;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  width: 100%;
+}
+
+.margo-auth-layout__back {
+  flex: 0 0 auto;
+}
+
+.margo-auth-layout__tabs {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.margo-auth-layout__brand {
+  display: none;
+}
+
+.margo-auth-layout__main {
+  grid-area: main;
+  width: 100%;
+  min-width: 0;
+}
+
+.margo-auth-layout__tabs-mobile {
+  display: block;
+}
+
+.margo-auth-layout__tabs-desktop {
+  display: none;
+  margin-bottom: 36px;
+}
+
+@media (min-width: 901px) {
+  .margo-auth-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+    grid-template-areas:
+      "toolbar toolbar"
+      "brand main";
+    padding-top: max(24px, env(safe-area-inset-top));
+  }
+
+  .margo-auth-layout__brand {
+    grid-area: brand;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-right: clamp(16px, 4vw, 40px);
+  }
+
+  .margo-auth-layout__tabs-mobile {
+    display: none;
+  }
+
+  .margo-auth-layout__tabs-desktop {
+    display: block;
+  }
+}

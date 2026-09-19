@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
+import { SignInLink } from '@/components/signin-link'
 import { BackButton } from '@/components/back-button'
 import { PlaylistLyricRow } from '@/components/playlist-lyric-row'
 import { useAuthGate } from '@/components/supabase-auth-provider'
@@ -122,7 +123,7 @@ export default function LibraryPlaylistPage() {
             }}>
               Sign in to open your library
             </p>
-            <Link href="/signin" style={{
+            <SignInLink style={{
               padding: '10px 24px',
               border: '1px solid var(--border)',
               borderRadius: '50px',
@@ -134,7 +135,7 @@ export default function LibraryPlaylistPage() {
               textDecoration: 'none',
             }}>
               Sign In
-            </Link>
+            </SignInLink>
           </div>
         ) : !detail || !isOwner ? (
           <div>

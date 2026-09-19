@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { createClient, signOutBrowser } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { BackButton } from '@/components/back-button'
+import { SignInLink } from '@/components/signin-link'
 import { UI_FONT } from '@/lib/fonts'
 
 const supabase = createClient()
@@ -399,7 +400,24 @@ export default function AccountSettingsPage() {
   if (!user) {
     return (
       <div style={{ padding: 'calc(var(--nav-height, 72px) + 24px) 24px', textAlign: 'center', color: 'var(--text-secondary)', fontFamily: font }}>
-        Sign in to view account settings.
+        <p style={{ marginBottom: '16px' }}>Sign in to view account settings.</p>
+        <SignInLink
+          returnTo="/settings"
+          style={{
+            display: 'inline-block',
+            padding: '10px 24px',
+            border: '1px solid var(--border)',
+            borderRadius: '50px',
+            color: 'var(--text-secondary)',
+            fontFamily: font,
+            fontSize: '0.6rem',
+            letterSpacing: '1px',
+            textTransform: 'uppercase',
+            textDecoration: 'none',
+          }}
+        >
+          Sign In
+        </SignInLink>
       </div>
     )
   }

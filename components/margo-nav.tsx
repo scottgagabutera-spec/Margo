@@ -11,6 +11,7 @@ import { HubIconButton, HomeNavLink, LibraryNavLink } from '@/components/hub-men
 import { usePrimaryTab, usePrimaryTabLinkProps } from '@/components/primary-tab-shell'
 import { hidesAppNav, isMessageThreadPath } from '@/lib/chrome-mode'
 import { PendingNavLink } from '@/components/pending-nav-link'
+import { SignInLink } from '@/components/signin-link'
 
 const font = 'var(--font-geist-sans), system-ui, sans-serif'
 
@@ -221,7 +222,7 @@ export function MargoNav() {
             </div>
 
             {!isSignedIn ? (
-              <Link href="/signin" style={{
+              <SignInLink style={{
                 fontSize: '0.65rem', fontFamily: font,
                 fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase',
                 textDecoration: 'none',
@@ -231,7 +232,7 @@ export function MargoNav() {
                 display: 'inline-flex', alignItems: 'center',
                 boxSizing: 'border-box',
                 transition: 'color 150ms ease', whiteSpace: 'nowrap',
-              }}>Sign In</Link>
+              }}>Sign In</SignInLink>
             ) : null}
 
             {isSignedIn && identity && ownProfileHref && (

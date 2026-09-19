@@ -273,9 +273,13 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
   const [consentAttention, setConsentAttention] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!isSignup) setTermsAccepted(false)
+    if (!isSignup) {
+      setTermsAccepted(false)
+      setPendingEmail(null)
+    }
   }, [isSignup])
 
   useEffect(() => {
@@ -334,8 +338,7 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
       }
 
       if (isSignup && body.needs_confirmation) {
-        toast.success('Check your email to confirm your account.')
-        onSuccess?.()
+        setPendingEmail(email.trim())
         return
       }
 
@@ -359,6 +362,47 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
     if (isSignup) params.set('terms', '1')
     if (oauthReturnTo?.startsWith('/')) params.set('returnTo', oauthReturnTo)
     window.location.assign(`/api/auth/oauth/${provider}?${params.toString()}`)
+  }
+
+  if (pendingEmail) {
+    return (
+      <div style={{ width: '100%' }}>
+        <header style={{ marginBottom: '22px', textAlign: 'center' }}>
+          <h1 style={{
+            fontFamily: lora,
+            fontSize: '1.55rem',
+            color: 'var(--text)',
+            fontWeight: 400,
+            margin: '0 0 14px',
+          }}>
+            Check your email to confirm your account
+          </h1>
+          <p style={{
+            fontFamily: ui,
+            fontSize: '0.88rem',
+            lineHeight: 1.5,
+            color: 'var(--text-secondary)',
+            margin: 0,
+          }}>
+            We sent a confirmation link to <span style={{ color: 'var(--text)' }}>{pendingEmail}</span>.
+            Open it to confirm your account, then come back and sign in.
+          </p>
+        </header>
+        <button
+          type="button"
+          onClick={() => {
+            setPendingEmail(null)
+            onSwitchMode?.('signin')
+          }}
+          style={{
+            ...primaryBtnStyle,
+            cursor: 'pointer',
+          }}
+        >
+          Back to sign in
+        </button>
+      </div>
+    )
   }
 
   const primaryDisabled = loading || !email || !password || signupBlocked
