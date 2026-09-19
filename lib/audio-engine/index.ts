@@ -53,6 +53,7 @@ export {
   queuePrev,
   playQueueItem,
   playQueueIndex,
+  switchToFullSong,
   removeQueueIndex,
   moveQueueItem,
   queuePlayNext,
