@@ -21,7 +21,6 @@ export function useWarmAudioUrlOnVisible(
       (entries) => {
         if (entries[0]?.isIntersecting) {
           warmUrl(audioUrl, startSec ?? 0)
-          obs.disconnect()
         }
       },
       { threshold: 0.1 },

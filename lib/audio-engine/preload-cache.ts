@@ -28,6 +28,12 @@ const _pool: PoolSlot[] = []
 /** songId → audioUrl (metadata only) */
 const _urlCache = new Map<string, string>()
 
+/** Dedupe in-flight Range fetches (iOS ignores muted preload without HTTP warm). */
+const _httpWarmInflight = new Set<string>()
+
+/** Rough MP3 bytes/sec for mid-snippet Range requests when duration is unknown. */
+const EST_MP3_BYTES_PER_SEC = 16000
+
 // ── Pool helpers ──────────────────────────────────────────────────
 
 function createPoolAudio(): HTMLAudioElement {
@@ -81,6 +87,50 @@ function evictLRU(): PoolSlot {
   return _pool[0]
 }
 
+function httpWarmKey(audioUrl: string, startSec: number): string {
+  return audioUrl + '@' + String(startSec)
+}
+
+/**
+ * Prime the browser HTTP cache with real Range GETs. Muted hidden <audio>
+ * preload alone is unreliable on iOS; this gives prepareSource() something
+ * to reuse even after pool LRU eviction.
+ */
+function warmAudioHttpCache(audioUrl: string, startSec = 0): void {
+  if (typeof fetch === 'undefined' || !audioUrl) return
+  const key = httpWarmKey(audioUrl, startSec)
+  if (_httpWarmInflight.has(key)) return
+  _httpWarmInflight.add(key)
+
+  const ranges: string[] = ['bytes=0-131071']
+  if (startSec > 0.15) {
+    const byteStart = Math.floor(startSec * EST_MP3_BYTES_PER_SEC)
+    ranges.push('bytes=' + byteStart + '-' + (byteStart + 131071))
+  }
+
+  void (async () => {
+    try {
+      for (const range of ranges) {
+        await fetch(audioUrl, {
+          method: 'GET',
+          headers: { Range: range },
+          credentials: 'omit',
+          cache: 'force-cache',
+        })
+      }
+    } catch {
+      /* CDN may reject Range — element warm still helps */
+    } finally {
+      _httpWarmInflight.delete(key)
+    }
+  })()
+}
+
+/** True when this URL is in the pool or an HTTP warm is in flight. */
+export function hasWarmedUrl(audioUrl: string, startSec = 0): boolean {
+  return !!findSlot(audioUrl) || _httpWarmInflight.has(httpWarmKey(audioUrl, startSec))
+}
+
 // ── Public API ────────────────────────────────────────────────────
 
 /**
@@ -108,6 +158,8 @@ export function getCachedAudioUrl(songId: string): string | undefined {
 export function warmPreloadUrl(audioUrl: string, startSec = 0): void {
   if (typeof document === 'undefined') return
   if (!audioUrl) return
+
+  warmAudioHttpCache(audioUrl, startSec)
 
   const existing = findSlot(audioUrl)
   if (existing) {

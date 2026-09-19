@@ -582,7 +582,6 @@ export function PostCard({
       (entries) => {
         if (entries[0].isIntersecting) {
           warmUrl(audioUrl, snippetWarmSec)
-          obs.disconnect()
         }
       },
       { threshold: 0.1 }
