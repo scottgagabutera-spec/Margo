@@ -47,6 +47,7 @@ import {
 } from '@/lib/moment-draft'
 
 const supabase = createClient()
+const composeChromeEase = '280ms cubic-bezier(0.4, 0, 0.2, 1)'
 
 type Source = 'margo' | 'genius' | 'apple'
 
@@ -204,12 +205,18 @@ function ComposeTopBar({
   backDisabled,
   title,
   trailing,
+  keyboardCompact,
+  chromeHidden,
 }: {
   onBack?: () => void
   backDisabled?: boolean
   title?: string
   trailing?: React.ReactNode
+  /** Collapse centered title when the keyboard is open (Your Line). */
+  keyboardCompact?: boolean
+  chromeHidden?: boolean
 }) {
+  const compact = !!(keyboardCompact && chromeHidden && title)
   return (
     <div style={{
       display: 'grid',
@@ -217,10 +224,11 @@ function ComposeTopBar({
       alignItems: 'center',
       columnGap: '8px',
       minHeight: 'var(--margo-touch-min)',
-      marginBottom: title ? '16px' : '8px',
+      marginBottom: compact ? '8px' : (title ? '16px' : '8px'),
       flexShrink: 0,
+      transition: `margin-bottom ${composeChromeEase}`,
     }}>
-      <div>
+      <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
         {onBack ? (
           <button
             type="button"
@@ -237,8 +245,25 @@ function ComposeTopBar({
             <ArrowLeftIcon size={16} color="currentColor" /> Back
           </button>
         ) : null}
+        {compact ? (
+          <span style={{
+            fontFamily: font,
+            fontStyle: 'italic',
+            fontSize: '0.95rem',
+            color: 'var(--text)',
+            marginLeft: '4px',
+            opacity: 1,
+            maxWidth: 200,
+            overflow: 'hidden',
+            whiteSpace: 'nowrap',
+            textOverflow: 'ellipsis',
+            transition: `opacity ${composeChromeEase}, max-width ${composeChromeEase}`,
+          }}>
+            {title}
+          </span>
+        ) : null}
       </div>
-      {title ? (
+      {title && !compact ? (
         <h1 style={{
           fontFamily: font,
           fontStyle: 'italic',
@@ -249,6 +274,10 @@ function ComposeTopBar({
           textAlign: 'center',
           lineHeight: 1.25,
           letterSpacing: '0.2px',
+          opacity: chromeHidden && keyboardCompact ? 0 : 1,
+          maxHeight: chromeHidden && keyboardCompact ? 0 : 40,
+          overflow: 'hidden',
+          transition: `opacity 220ms ease, max-height ${composeChromeEase}`,
         }}>
           {title}
         </h1>
@@ -498,7 +527,7 @@ function ComposeInner() {
 
   // Must run before any early return (Rules of Hooks). Publishes --margo-keyboard-inset
   // and hides the mobile tab bar while typing / search sheet is open.
-  const { keyboardOpen } = useKeyboardSafeChrome(composeLive)
+  const { keyboardOpen, chromeHidden } = useKeyboardSafeChrome(composeLive)
 
   const resetComposeViewport = useCallback(() => {
     if (typeof document !== 'undefined') {
@@ -510,8 +539,12 @@ function ComposeInner() {
   }, [])
 
   useEffect(() => {
+    const onYourLine = phase === 'select' && !(
+      linkedSongId && (selectedSong?.source === 'margo' || selectedSong?.margoSongId) && !linePickComplete
+    )
+    if (onYourLine) return
     resetComposeViewport()
-  }, [phase, linePickComplete, resetComposeViewport])
+  }, [phase, linePickComplete, linkedSongId, selectedSong, resetComposeViewport])
 
   const runSearch = useCallback(async (value: string) => {
     const gen = ++searchGenRef.current
@@ -1181,6 +1214,7 @@ function ComposeInner() {
           : 'calc(var(--margo-page-padding-bottom) + 88px)',
         paddingLeft: '24px',
         paddingRight: '24px',
+        transition: `padding-bottom ${composeChromeEase}`,
       }}>
         <div style={{ maxWidth: '640px', margin: '0 auto' }}>
 
@@ -1339,29 +1373,13 @@ function ComposeInner() {
               onThemeChange={setThemeId}
             />
 
-            {committedLines.length > 0 && (
-              <div style={{ margin: '20px 0', padding: '12px 14px', border: '1px solid var(--border)', borderRadius: '12px' }}>
-                <p style={{ fontFamily: font, fontSize: '0.58rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--gold)', margin: '0 0 8px' }}>
-                  Moment so far · {committedLines.length}/{POST_LINES_MAX} lines
-                </p>
-                {committedLines.map((line, i) => (
-                  <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '8px' }}>
-                    <p style={{ flex: 1, minWidth: 0, fontFamily: font, fontStyle: 'italic', fontSize: '0.82rem', margin: 0, lineHeight: 1.4 }}>
-                      {i + 1}. &ldquo;{line.lyric}&rdquo;
-                    </p>
-                    <ComposeDismissButton onClick={() => handleRemoveCommittedLine(i)} label={`Remove line ${i + 1}`} />
-                  </div>
-                ))}
-              </div>
-            )}
-
             <div
               style={{
                 display: 'flex',
                 flexWrap: 'nowrap',
                 alignItems: 'stretch',
                 width: '100%',
-                margin: '0 0 12px',
+                margin: '12px 0',
                 borderTop: '1px solid var(--border)',
                 paddingTop: '2px',
               }}
@@ -1396,6 +1414,22 @@ function ComposeInner() {
                 </button>
               )}
             </div>
+
+            {committedLines.length > 0 && (
+              <div style={{ margin: '0 0 20px', padding: '12px 14px', border: '1px solid var(--border)', borderRadius: '12px' }}>
+                <p style={{ fontFamily: font, fontSize: '0.58rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--gold)', margin: '0 0 8px' }}>
+                  Moment so far · {committedLines.length}/{POST_LINES_MAX} lines
+                </p>
+                {committedLines.map((line, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '8px' }}>
+                    <p style={{ flex: 1, minWidth: 0, fontFamily: font, fontStyle: 'italic', fontSize: '0.82rem', margin: 0, lineHeight: 1.4 }}>
+                      {i + 1}. &ldquo;{line.lyric}&rdquo;
+                    </p>
+                    <ComposeDismissButton onClick={() => handleRemoveCommittedLine(i)} label={`Remove line ${i + 1}`} />
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Display name banner — shown until customized once, or dismissed */}
             {showNameBanner && identity && (
@@ -1502,7 +1536,7 @@ function ComposeInner() {
       )}
 
       {showYourLinePanel && portalMounted && createPortal(
-        <KeyboardSafeCtaBar keyboardOpen={keyboardOpen} zIndex={85} bottomGutter={24}>
+        <KeyboardSafeCtaBar keyboardOpen={keyboardOpen || chromeHidden} zIndex={85} bottomGutter={24}>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               type="button"
@@ -1633,20 +1667,22 @@ function ComposeInner() {
       {portalMounted && showYourLinePanel && createPortal(
         <div style={{
           ...composeOverlayStyle,
-          paddingBottom: 'var(--margo-cta-bar-h, 120px)',
           overflowY: 'hidden',
         }}>
           <div style={{ maxWidth: '640px', width: '100%', margin: '0 auto', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <ComposeTopBar
               onBack={handleYourLineBack}
               title="Your line"
+              keyboardCompact
+              chromeHidden={chromeHidden}
               trailing={<ComposeDismissButton onClick={handleCancelLine} label="Cancel line" />}
             />
 
             <ComposeLyricCard style={{
               flex: 1, minHeight: 0, overflow: 'hidden',
               display: 'flex', flexDirection: 'column',
-              padding: '20px',
+              padding: chromeHidden ? '18px 20px' : '20px',
+              transition: `padding ${composeChromeEase}`,
             }}>
               <div style={{
                 flexShrink: 0,
@@ -1706,6 +1742,17 @@ function ComposeInner() {
                 <span style={{ fontFamily: UI_FONT, fontSize: '0.65rem', color: 'var(--text-on-gold-muted)' }}>{lyric.length}/140</span>
               </div>
             </ComposeLyricCard>
+
+            <div
+              aria-hidden
+              style={{
+                flexShrink: 0,
+                height: chromeHidden
+                  ? 'var(--margo-cta-bar-h, 0px)'
+                  : 'calc(var(--margo-cta-bar-h, 0px) + var(--margo-tabbar-h, 80px) + 24px)',
+                transition: `height ${composeChromeEase}`,
+              }}
+            />
           </div>
         </div>,
         document.body,
