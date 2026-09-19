@@ -8,9 +8,10 @@ import {
   stageCardScale,
 } from '@/lib/moment-export/layout/constants'
 import {
-  layoutLyricText,
+  presentLyricText,
   truncateToWidth,
 } from '@/lib/moment-export/layout/text-layout'
+import type { LayoutLyricLine } from '@/lib/moment-export/layout/types'
 import type {
   LayoutLyricBlock,
   LayoutMetaBlock,
@@ -19,11 +20,6 @@ import type {
   StageCardLayoutInput,
   TextMeasureFn,
 } from '@/lib/moment-export/layout/types'
-
-function lyricFont(measureFontSize: number): string {
-  const ref = STAGE_CARD_LAYOUT_REF.lyric
-  return `${ref.fontStyle} ${measureFontSize}px ${ref.fontFamily}`
-}
 
 function metaSongFont(size: number, geistFamily: string): string {
   const ref = STAGE_CARD_LAYOUT_REF.meta.song
@@ -40,8 +36,41 @@ function vibeFont(size: number, geistFamily: string): string {
   return `${ref.fontWeight} ${size}px ${geistFamily}`
 }
 
-function measureFontSizeForCanvas(px: number): number {
-  return Math.round(px)
+function lyricBlockHeight(
+  lines: Array<{ text: string; continuation: boolean }>,
+  linePx: number,
+  stanzaGap: number,
+): number {
+  if (lines.length === 0) return linePx
+  let height = 0
+  for (let i = 0; i < lines.length; i++) {
+    height += linePx
+    const next = lines[i + 1]
+    if (next && !next.continuation && lines[i].text !== '' && next.text !== '') {
+      height += stanzaGap
+    }
+  }
+  return height
+}
+
+function placeLyricLines(
+  rows: Array<{ text: string; continuation: boolean }>,
+  startY: number,
+  linePx: number,
+  stanzaGap: number,
+): LayoutLyricLine[] {
+  const lines: LayoutLyricLine[] = []
+  let y = startY
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]
+    lines.push({ text: row.text, y, continuation: row.continuation })
+    y += linePx
+    const next = rows[i + 1]
+    if (next && !next.continuation && row.text !== '' && next.text !== '') {
+      y += stanzaGap
+    }
+  }
+  return lines
 }
 
 /**
@@ -77,12 +106,20 @@ export function resolveStageCardLayout(
 
   const lyricSource = input.lyric || ''
   const lyricSizeRef = shorts ? STAGE_SHORTS_LAYOUT_REF.lyric.fontSize : ref.lyric.fontSize
+  const lyricMinRef = shorts ? STAGE_SHORTS_LAYOUT_REF.lyric.minFontSize : ref.lyric.minFontSize
   const lyricLeading = shorts ? STAGE_SHORTS_LAYOUT_REF.lyric.lineHeight : ref.lyric.lineHeight
-  const lyricFontSize = roundStageToken(lyricSizeRef, W)
-  const lyricMeasureFont = lyricFont(measureFontSizeForCanvas(lyricFontSize))
-  const displayLines = layoutLyricText(lyricSource, contentWidth, measure, lyricMeasureFont)
+  const lyricGapEm = shorts ? STAGE_SHORTS_LAYOUT_REF.lyric.stanzaGapEm : ref.lyric.stanzaGapEm
+  const presented = presentLyricText(lyricSource, contentWidth, measure, {
+    fontStyle: ref.lyric.fontStyle,
+    fontFamily: ref.lyric.fontFamily,
+    maxFontSize: roundStageToken(lyricSizeRef, W),
+    minFontSize: roundStageToken(lyricMinRef, W),
+  })
+  const lyricFontSize = presented.fontSize
+  const displayLines = presented.lines.map((line) => line.text)
   const lyricLineHeight = lyricFontSize * lyricLeading
-  const lyricHeight = displayLines.length * lyricLineHeight
+  const stanzaGap = lyricFontSize * lyricGapEm
+  const lyricHeight = lyricBlockHeight(presented.lines, lyricLineHeight, stanzaGap)
 
   const songTitle = (input.songTitle || '').trim()
   const artistName = (input.artistName || '').trim()
@@ -121,9 +158,12 @@ export function resolveStageCardLayout(
       : padding.top
   }
 
+  const lyricLines = placeLyricLines(presented.lines, cursorY, lyricLineHeight, stanzaGap)
   const lyric: LayoutLyricBlock = {
     sourceText: lyricSource,
     displayLines,
+    lines: lyricLines,
+    stanzaGap,
     align: shorts ? 'center' : 'left',
     style: {
       fontFamily: ref.lyric.fontFamily,

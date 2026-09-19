@@ -9,6 +9,7 @@ import { ShareIcon } from '@/components/icons'
 import { LYRIC_FONT, UI_FONT } from '@/lib/fonts'
 import {
   lyricDisplayText,
+  lyricLineOffset,
   stageCardLyricStyle,
   stageCardMarkStyle,
   useStageCardLayout,
@@ -224,8 +225,8 @@ export function StageMomentCard({
         lineHeight: 1.35,
         margin: 0,
         whiteSpace: 'pre-line' as const,
-        overflowWrap: 'anywhere' as const,
-        wordBreak: 'break-word' as const,
+        overflowWrap: 'normal' as const,
+        wordBreak: 'keep-all' as const,
       }
 
   const markStyle: CSSProperties = layout
@@ -280,7 +281,20 @@ export function StageMomentCard({
                 }
               : lyricStyle}
           >
-            {layout ? lyricDisplayText(layout) : lyric}
+            {layout && layout.lyric.lines.length > 0
+              ? layout.lyric.lines.map((line, i) => (
+                  <span
+                    key={`${i}-${line.text}`}
+                    style={{
+                      display: 'block',
+                      whiteSpace: 'pre',
+                      marginTop: lyricLineOffset(layout, i),
+                    }}
+                  >
+                    {line.text || '\u00a0'}
+                  </span>
+                ))
+              : (layout ? lyricDisplayText(layout) : lyric)}
           </p>
 
           {(songTitle || artistName) ? (

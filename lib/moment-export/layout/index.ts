@@ -24,9 +24,11 @@ export {
 export {
   layoutLyricText,
   normalizeLineEndings,
+  presentLyricText,
   splitIntentionalParagraphs,
   truncateToWidth,
   wrapParagraph,
+  wrapParagraphBalanced,
 } from '@/lib/moment-export/layout/text-layout'
 
 export {
@@ -42,6 +44,7 @@ export {
 export type {
   LayoutBackground,
   LayoutLyricBlock,
+  LayoutLyricLine,
   LayoutMarkBadge,
   LayoutMetaBlock,
   LayoutRect,

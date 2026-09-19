@@ -152,25 +152,27 @@ function computeWordPositions(
   const linePx = lyric.style.fontSize * lyric.style.lineHeight
   const positions: Array<{ x: number; y: number; timing: MomentTimeline['words'][number] }> = []
   let wordIdx = 0
-  let lineY = lyric.y
+  const lyricRows = lyric.lines.length > 0
+    ? lyric.lines
+    : lyric.displayLines.map((text, i) => ({
+        text,
+        y: lyric.y + i * linePx,
+        continuation: false,
+      }))
 
-  for (const line of lyric.displayLines) {
-    if (line === '') {
-      lineY += linePx
-      continue
-    }
-    const baseline = lineY + lyric.style.fontSize * 0.92
-    const lineWidth = ctx.measureText(line).width
+  for (const line of lyricRows) {
+    if (line.text === '') continue
+    const baseline = line.y + lyric.style.fontSize * 0.92
+    const lineWidth = ctx.measureText(line.text).width
     let x = lyric.align === 'center'
       ? lyric.x + (lyric.maxWidth - lineWidth) / 2
       : lyric.x
-    for (const token of line.split(/\s+/).filter(Boolean)) {
+    for (const token of line.text.split(/\s+/).filter(Boolean)) {
       if (wordIdx >= words.length) return positions
       positions.push({ x, y: baseline, timing: words[wordIdx] })
       x += ctx.measureText(token + ' ').width
       wordIdx++
     }
-    lineY += linePx
   }
 
   return positions

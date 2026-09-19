@@ -170,17 +170,17 @@ export function renderStageCardFrame(
   ctx.textBaseline = 'alphabetic'
   ctx.font = `${lyric.style.fontStyle} ${lyric.style.fontSize}px ${lyric.style.fontFamily}`
   ctx.fillStyle = lyric.style.color
-  const linePx = lyric.style.fontSize * lyric.style.lineHeight
   const originX = lyric.align === 'center' ? lyric.x + lyric.maxWidth / 2 : lyric.x
-  let y = lyric.y
-  for (const line of lyric.displayLines) {
-    if (line === '') {
-      y += linePx
-      continue
-    }
-    y += lyric.style.fontSize * 0.92
-    ctx.fillText(line, originX, y)
-    y += linePx - lyric.style.fontSize * 0.92
+  const lyricRows = lyric.lines.length > 0
+    ? lyric.lines
+    : lyric.displayLines.map((text, i) => ({
+        text,
+        y: lyric.y + i * lyric.style.fontSize * lyric.style.lineHeight,
+        continuation: false,
+      }))
+  for (const line of lyricRows) {
+    if (line.text === '') continue
+    ctx.fillText(line.text, originX, line.y + lyric.style.fontSize * 0.92)
   }
 
   if (layout.meta) {

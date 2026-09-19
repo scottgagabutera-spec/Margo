@@ -107,10 +107,18 @@ export function stageCardLyricStyle(layout: ResolvedStageCardLayout): React.CSSP
     lineHeight: layout.lyric.style.lineHeight,
     margin: 0,
     textAlign: layout.lyric.align === 'center' ? 'center' : 'left',
-    whiteSpace: 'pre-line',
-    overflowWrap: 'anywhere',
-    wordBreak: 'break-word',
+    whiteSpace: 'pre',
+    overflowWrap: 'normal',
+    wordBreak: 'keep-all',
   }
+}
+
+/** Extra space above a stanza line — 0 for the first row and wrap continuations. */
+export function lyricLineOffset(layout: ResolvedStageCardLayout, index: number): number {
+  const lines = layout.lyric.lines
+  if (index <= 0 || !lines[index] || !lines[index - 1]) return 0
+  const box = layout.lyric.style.fontSize * layout.lyric.style.lineHeight
+  return Math.max(0, lines[index].y - lines[index - 1].y - box)
 }
 
 export function stageCardMarkStyle(layout: ResolvedStageCardLayout): React.CSSProperties {
@@ -134,7 +142,10 @@ export function stageCardMarkStyle(layout: ResolvedStageCardLayout): React.CSSPr
 }
 
 export function lyricDisplayText(layout: ResolvedStageCardLayout): string {
-  return layout.lyric.displayLines.join('\n')
+  const rows = layout.lyric.lines.length > 0
+    ? layout.lyric.lines.map((line) => line.text)
+    : layout.lyric.displayLines
+  return rows.join('\n')
 }
 
 export function getStageCardThemeFromLayout(layout: ResolvedStageCardLayout) {
