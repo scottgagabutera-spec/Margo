@@ -16,6 +16,7 @@ import {
 import { ExportAtmosphereOverlay } from '@/components/export-atmosphere-overlay'
 import { isLivingAtmosphere, type AtmosphereId } from '@/lib/atmosphere'
 import { getStageCardTheme, type StageCardThemeId } from '@/lib/moment/stage-theme'
+import type { MomentShapeId } from '@/lib/moment/types'
 
 interface StageMomentCardProps {
   lyric: string
@@ -34,6 +35,8 @@ interface StageMomentCardProps {
    * Export preview: pass the user's export effect choice.
    */
   atmosphereId?: AtmosphereId
+  /** Export size — Shorts uses a native 9:16 layout instead of a feed card on a stage. */
+  shapeId?: MomentShapeId
   canPlay: boolean
   playing?: boolean
   buffering?: boolean
@@ -105,6 +108,7 @@ export function StageMomentCard({
   onVibeSelect,
   cardThemeId = 'gold',
   atmosphereId = 'still',
+  shapeId = 'square',
   canPlay,
   playing = false,
   buffering = false,
@@ -120,6 +124,7 @@ export function StageMomentCard({
   const markVariant = theme.markVariant === 'on-light' ? 'ink' : 'gold'
   const showAtmosphere = isLivingAtmosphere(atmosphereId)
   const showVibeFooter = !!vibeLabel
+  const isShorts = shapeId === 'vertical'
 
   const layout = useStageCardLayout({
     lyric,
@@ -129,6 +134,7 @@ export function StageMomentCard({
     vibeLabel,
     themeId: cardThemeId,
     includeVibePill: false,
+    format: isShorts ? 'shorts' : 'feed',
   }, cardWidth)
 
   useEffect(() => {
@@ -144,18 +150,26 @@ export function StageMomentCard({
   }, [])
 
   const shellPadding = layout
-    ? {
-        paddingTop: layout.padding.top,
-        paddingRight: layout.padding.right,
-        paddingBottom: layout.padding.bottom,
-        paddingLeft: layout.padding.left,
-        borderRadius: layout.borderRadius,
-        minHeight: layout.outputHeight,
-      }
+    ? isShorts
+      ? {
+          padding: 0,
+          borderRadius: 0,
+          height: layout.outputHeight,
+          minHeight: layout.outputHeight,
+        }
+      : {
+          paddingTop: layout.padding.top,
+          paddingRight: layout.padding.right,
+          paddingBottom: layout.padding.bottom,
+          paddingLeft: layout.padding.left,
+          borderRadius: layout.borderRadius,
+          minHeight: layout.outputHeight,
+        }
     : {
-        padding: '20px 52px 18px 20px',
-        borderRadius: '16px',
+        padding: isShorts ? 0 : '20px 52px 18px 20px',
+        borderRadius: isShorts ? 0 : '16px',
         minHeight: undefined as number | undefined,
+        height: isShorts ? '100%' : undefined,
       }
 
   const shellStyle: CSSProperties = {
@@ -230,28 +244,49 @@ export function StageMomentCard({
   const metaMarginTop = layout?.meta ? (layout.meta.y - layout.lyric.y - layout.lyric.height) : 14
 
   return (
-    <div ref={cardRef}>
+    <div ref={cardRef} style={isShorts ? { width: '100%', height: '100%' } : undefined}>
       <ComposeLyricCard style={shellStyle}>
         <div aria-hidden style={fillLayerStyle} />
+        <div aria-hidden style={highlightLayerStyle} />
         {showAtmosphere ? (
           <ExportAtmosphereOverlay
             key={atmosphereId}
             personality={atmosphereId}
             onLight={theme.markVariant === 'on-light'}
-            borderRadius={layout?.borderRadius ?? 16}
+            borderRadius={layout?.borderRadius ?? (isShorts ? 0 : 16)}
           />
         ) : null}
-        <div aria-hidden style={highlightLayerStyle} />
         <div style={markStyle} aria-hidden>
           <MargoSymbol size={markSymbolSize} variant={markVariant} />
         </div>
-        <div style={{ position: 'relative', zIndex: 2 }}>
-          <p style={lyricStyle}>
+        <div style={{ position: 'relative', zIndex: 3, height: isShorts && layout ? layout.outputHeight : undefined }}>
+          <p
+            style={isShorts && layout
+              ? {
+                  ...lyricStyle,
+                  position: 'absolute',
+                  left: layout.lyric.x,
+                  top: layout.lyric.y,
+                  width: layout.lyric.maxWidth,
+                  margin: 0,
+                }
+              : lyricStyle}
+          >
             {layout ? lyricDisplayText(layout) : lyric}
           </p>
 
           {(songTitle || artistName) ? (
-            <div style={{ marginTop: metaMarginTop, minWidth: 0 }}>
+            <div
+              style={isShorts && layout?.meta
+                ? {
+                    position: 'absolute',
+                    left: layout.meta.x,
+                    top: layout.meta.y,
+                    minWidth: 0,
+                    maxWidth: layout.contentWidth,
+                  }
+                : { marginTop: metaMarginTop, minWidth: 0 }}
+            >
               {songTitle ? (
                 <p
                   style={{
@@ -298,7 +333,10 @@ export function StageMomentCard({
                 height: artSize,
                 borderRadius: artRadius,
                 objectFit: 'cover',
-                marginTop: layout?.artwork
+                position: isShorts && layout?.artwork ? 'absolute' : undefined,
+                left: isShorts && layout?.artwork ? layout.artwork.x : undefined,
+                top: isShorts && layout?.artwork ? layout.artwork.y : undefined,
+                marginTop: isShorts ? 0 : layout?.artwork
                   ? layout.artwork.y - (layout.meta
                     ? layout.meta.y + layout.meta.height
                     : layout.lyric.y + layout.lyric.height)
@@ -313,9 +351,13 @@ export function StageMomentCard({
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                marginTop: '16px',
+                marginTop: isShorts ? 0 : '16px',
                 gap: '12px',
                 minHeight: 'var(--margo-touch-min)',
+                position: isShorts ? 'absolute' : undefined,
+                right: isShorts ? 12 : undefined,
+                bottom: isShorts ? 12 : undefined,
+                zIndex: 4,
               }}
             >
               {canPlay ? (
@@ -358,7 +400,13 @@ export function StageMomentCard({
           ) : null}
 
           {showVibeFooter ? (
-            <div style={{ marginTop: '16px' }}>
+            <div style={{
+              marginTop: isShorts ? 0 : '16px',
+              position: isShorts ? 'absolute' : undefined,
+              right: isShorts && layout ? layout.padding.right : undefined,
+              bottom: isShorts && layout ? layout.padding.bottom : undefined,
+              zIndex: 4,
+            }}>
               <div
                 style={{
                   display: 'flex',

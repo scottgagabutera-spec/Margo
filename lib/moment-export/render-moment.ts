@@ -12,7 +12,6 @@ import {
 } from '@/lib/moment-export/layout'
 import { renderStageCardFrame } from '@/lib/moment-export/render-stage-card-frame'
 import { loadMomentArtwork } from '@/lib/moment-export/video/load-artwork'
-import { verticalStageCardWidth } from '@/lib/moment-export/export-shapes'
 
 export { STAGE_CARD_EXPORT_WIDTH }
 
@@ -881,10 +880,7 @@ async function renderStageMomentCardToCanvas(
   const measureCtx = measureCanvas.getContext('2d')
   if (!measureCtx) return
   const geist = resolveGeistFontFamily()
-
-  const cardWidth = shape.id === 'vertical'
-    ? verticalStageCardWidth()
-    : STAGE_CARD_EXPORT_WIDTH
+  const isShorts = shape.id === 'vertical'
 
   const layout = resolveStageCardLayout({
     lyric: line.lyric,
@@ -894,8 +890,9 @@ async function renderStageMomentCardToCanvas(
     vibeLabel: options.vibeLabel,
     themeId: options.themeId,
     exportAtmosphereId: options.exportAtmosphereId,
-    outputWidthPx: cardWidth,
+    outputWidthPx: STAGE_CARD_EXPORT_WIDTH,
     includeVibePill: !!options.vibeLabel,
+    format: isShorts ? 'shorts' : 'feed',
   }, buildCanvasTextMeasure(measureCtx), geist)
 
   const artworkImg = await loadMomentArtwork(line.artworkUrl)
@@ -905,23 +902,16 @@ async function renderStageMomentCardToCanvas(
     atmosphereTimeSec: 0,
   }
 
-  if (shape.id === 'vertical') {
-    const canvasW = shape.w
-    const canvasH = shape.h
+  if (isShorts) {
+    const canvasW = layout.outputWidth
+    const canvasH = layout.outputHeight
     canvas.width = canvasW * SCALE
     canvas.height = canvasH * SCALE
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.scale(SCALE, SCALE)
-    ctx.fillStyle = '#07060A'
-    ctx.fillRect(0, 0, canvasW, canvasH)
-    const cardX = Math.round((canvasW - cardWidth) / 2)
-    const cardY = Math.round((canvasH - layout.outputHeight) / 2)
-    ctx.save()
-    ctx.translate(cardX, cardY)
     renderStageCardFrame(ctx, layout, frameAssets)
-    ctx.restore()
     return
   }
 

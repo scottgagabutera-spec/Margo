@@ -86,7 +86,7 @@ function ComposeLineRow({
   line: ComposeLyricLine
   songTitle: string
   artistName: string
-  audioUrl: string
+  audioUrl: string | null
   songId: string | null
   artwork: string | null
   onPick: (line: ComposeLyricLine) => void
@@ -98,7 +98,7 @@ function ComposeLineRow({
   stage?: boolean
   isLast?: boolean
 }) {
-  const { playing, buffering } = useSnippetPlaybackUi(songId || audioUrl, line.lineIndex)
+  const { playing, buffering } = useSnippetPlaybackUi(songId || audioUrl || '', line.lineIndex)
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const longPressTriggered = useRef(false)
 
@@ -111,21 +111,23 @@ function ComposeLineRow({
 
   const handlePick = () => {
     if (selectionMode) {
-      if (!selectionDisabled || selected) onSelectionTap(line)
+      onSelectionTap(line)
       return
     }
-    void playSnippet({
-      songId: songId || audioUrl,
-      audioUrl,
-      title: songTitle,
-      artist: artistName,
-      artwork,
-      lineIndex: line.lineIndex,
-      lineText: line.text,
-      startSec: line.startSec,
-      endSec: line.endSec,
-      source: 'feed',
-    })
+    if (audioUrl) {
+      void playSnippet({
+        songId: songId || audioUrl,
+        audioUrl,
+        title: songTitle,
+        artist: artistName,
+        artwork,
+        lineIndex: line.lineIndex,
+        lineText: line.text,
+        startSec: line.startSec,
+        endSec: line.endSec,
+        source: 'feed',
+      })
+    }
     onPick(line)
   }
 
@@ -154,8 +156,8 @@ function ComposeLineRow({
       onPointerUp={clearPressTimer}
       onPointerLeave={clearPressTimer}
       onPointerCancel={clearPressTimer}
-      disabled={selectionMode && selectionDisabled && !selected}
       aria-pressed={selectionMode ? selected : undefined}
+      aria-disabled={selectionMode && selectionDisabled && !selected ? true : undefined}
       style={{
         width: '100%',
         display: 'flex',
@@ -164,16 +166,17 @@ function ComposeLineRow({
         padding: stage ? '12px 14px' : '14px 16px',
         minHeight: 'var(--margo-touch-min)',
         background: selected
-          ? 'rgba(232,197,71,0.16)'
+          ? 'var(--gold-faint)'
           : playing
             ? 'var(--gold-faint)'
             : 'none',
-        border: selected ? '1px solid rgba(232,197,71,0.45)' : 'none',
+        border: 'none',
         borderBottom: isLast ? 'none' : '1px solid var(--border)',
-        cursor: selectionMode && selectionDisabled && !selected ? 'not-allowed' : 'pointer',
+        boxShadow: selected ? 'inset 3px 0 0 var(--gold)' : 'none',
+        cursor: selectionMode && selectionDisabled && !selected ? 'default' : 'pointer',
         textAlign: 'left',
         boxSizing: 'border-box',
-        opacity: selectionMode && selectionDisabled && !selected ? 0.45 : 1,
+        opacity: selectionMode && selectionDisabled && !selected ? 0.42 : 1,
       }}
     >
       {selectionMode ? (
@@ -185,7 +188,7 @@ function ComposeLineRow({
             borderRadius: '6px',
             flexShrink: 0,
             marginTop: stage ? '4px' : '2px',
-            border: selected ? '2px solid var(--gold)' : '1.5px solid var(--border)',
+            border: selected ? '2px solid var(--gold)' : '1.5px solid var(--text-muted)',
             background: selected ? 'var(--gold)' : 'transparent',
             display: 'flex',
             alignItems: 'center',
@@ -194,10 +197,19 @@ function ComposeLineRow({
           }}
         >
           {selected ? (
-            <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: 'var(--ink)' }} />
+            <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden>
+              <path
+                d="M2.4 6.2 L4.8 8.7 L9.6 3.3"
+                fill="none"
+                stroke="var(--bg)"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           ) : null}
         </span>
-      ) : (
+      ) : audioUrl ? (
         <span
           style={{
             width: `${playSize}px`,
@@ -215,6 +227,8 @@ function ComposeLineRow({
         >
           <PlayPauseIcon playing={playing} buffering={buffering} size={playIconSize} color="var(--gold)" />
         </span>
+      ) : (
+        <span style={{ width: `${playSize}px`, flexShrink: 0 }} />
       )}
       {!stage ? (
         <span
@@ -287,18 +301,34 @@ export function ComposeLinePicker({
   const listRef = useRef<HTMLDivElement>(null)
   const canHear = !!audioUrl
   const isStage = variant === 'stage'
-  const paragraphEnabled = enableParagraphPick && !!onPickParagraph && !isStage
+  const paragraphEnabled = enableParagraphPick && !!onPickParagraph
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([])
+  const [limitHint, setLimitHint] = useState<string | null>(null)
+  const limitHintTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (!audioUrl || loading || lines.length === 0) return
     warmUrl(audioUrl)
   }, [audioUrl, loading, lines.length])
 
+  const showLimitHint = useCallback((message: string) => {
+    setLimitHint(message)
+    if (limitHintTimer.current) clearTimeout(limitHintTimer.current)
+    limitHintTimer.current = setTimeout(() => {
+      setLimitHint(null)
+      limitHintTimer.current = null
+    }, 2400)
+  }, [])
+
+  useEffect(() => () => {
+    if (limitHintTimer.current) clearTimeout(limitHintTimer.current)
+  }, [])
+
   const resetSelection = useCallback(() => {
     setSelectionMode(false)
     setSelectedIndexes([])
+    setLimitHint(null)
   }, [])
 
   const beginSelection = useCallback((line: ComposeLyricLine) => {
@@ -314,11 +344,14 @@ export function ComposeLinePicker({
         if (next.length === 0) setSelectionMode(false)
         return next
       }
-      if (prev.length >= maxParagraphLines) return prev
+      if (prev.length >= maxParagraphLines) {
+        showLimitHint(`You can combine up to ${maxParagraphLines} lines`)
+        return prev
+      }
       if (!canToggleLine(prev, line.lineIndex)) return prev
       return [...prev, line.lineIndex]
     })
-  }, [maxParagraphLines])
+  }, [maxParagraphLines, showLimitHint])
 
   const confirmParagraph = useCallback(() => {
     if (!onPickParagraph || selectedIndexes.length < 2) return
@@ -373,13 +406,30 @@ export function ComposeLinePicker({
           marginBottom: isStage ? 0 : '4px',
         }}>
           {selectionMode
-            ? `Tap adjacent lines (${selectionCount}/${maxParagraphLines} selected)`
+            ? `Tap adjacent lines · ${selectionCount} of ${maxParagraphLines} selected`
             : canHear
               ? (paragraphEnabled
-                ? (isStage ? 'Tap to preview' : 'Tap a line to hear it · long-press to combine')
+                ? (isStage ? 'Tap a line · long-press to combine' : 'Tap a line to hear it · long-press to combine')
                 : (isStage ? 'Tap to preview' : 'Tap a line to hear it'))
-              : (isStage ? 'Tap the line you mean' : 'Pick the line you want')}
+              : (paragraphEnabled
+                ? (isStage ? 'Tap a line · long-press to combine' : 'Pick the line · long-press to combine')
+                : (isStage ? 'Tap the line you mean' : 'Pick the line you want'))}
         </p>
+        {limitHint ? (
+          <p
+            role="status"
+            aria-live="polite"
+            style={{
+              fontFamily: UI_FONT,
+              fontSize: '0.72rem',
+              fontWeight: 600,
+              color: 'var(--gold)',
+              margin: '8px 0 0',
+            }}
+          >
+            {limitHint}
+          </p>
+        ) : null}
         {!isStage ? (
           <p style={{ fontFamily: lyricFont, fontSize: '0.72rem', color: 'var(--text-muted)' }}>
             {artistName} · {songTitle}
@@ -471,13 +521,12 @@ export function ComposeLinePicker({
           }}
         >
           {lines.map((line, index) => (
-            canHear ? (
               <ComposeLineRow
                 key={line.lineIndex}
                 line={line}
                 songTitle={songTitle}
                 artistName={artistName}
-                audioUrl={audioUrl!}
+                audioUrl={audioUrl}
                 songId={songId}
                 artwork={artwork}
                 onPick={onPick}
@@ -489,53 +538,6 @@ export function ComposeLinePicker({
                 stage={isStage}
                 isLast={index === lines.length - 1}
               />
-            ) : (
-              <button
-                key={line.lineIndex}
-                type="button"
-                onClick={() => onPick(line)}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '12px',
-                  padding: isStage ? '12px 14px' : '14px 16px',
-                  minHeight: 'var(--margo-touch-min)',
-                  background: 'none',
-                  border: 'none',
-                  borderBottom: index < lines.length - 1 ? '1px solid var(--border)' : 'none',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  boxSizing: 'border-box',
-                }}
-              >
-                <span
-                  style={{
-                    fontFamily: isStage ? UI_FONT : lyricFont,
-                    fontSize: '0.65rem',
-                    color: isStage ? 'var(--text-muted)' : 'var(--gold)',
-                    letterSpacing: '0.3px',
-                    flexShrink: 0,
-                    paddingTop: '4px',
-                    minWidth: '36px',
-                  }}
-                >
-                  {formatTime(line.startSec)}
-                </span>
-                <span
-                  style={{
-                    fontFamily: lyricFont,
-                    fontStyle: 'italic',
-                    fontSize: '0.95rem',
-                    color: 'var(--text)',
-                    lineHeight: 1.45,
-                    flex: 1,
-                  }}
-                >
-                  {line.text}
-                </span>
-              </button>
-            )
           ))}
         </div>
       )}

@@ -9,7 +9,6 @@ import {
 } from '@/lib/moment-export/layout'
 import { renderMomentFrame } from '@/lib/moment-export/video/render-moment-frame'
 import { loadMomentArtwork } from '@/lib/moment-export/video/load-artwork'
-import { verticalStageCardWidth } from '@/lib/moment-export/export-shapes'
 import {
   fetchAndDecodeAudioSnippet,
   truncateAudioBuffer,
@@ -87,10 +86,6 @@ export async function encodeMargoMomentMp4(
   const measure = buildCanvasTextMeasure(measureCtx)
 
   const isVertical = moment.shapeId === 'vertical'
-  const cardWidth = isVertical
-    ? verticalStageCardWidth()
-    : STAGE_CARD_EXPORT_WIDTH
-
   const layout = resolveStageCardLayout({
     lyric: line.lyric,
     songTitle: line.songTitle,
@@ -98,8 +93,9 @@ export async function encodeMargoMomentMp4(
     artworkUrl: line.artworkUrl,
     vibeLabel: moment.vibeLabel,
     themeId: moment.themeId,
-    outputWidthPx: cardWidth,
+    outputWidthPx: STAGE_CARD_EXPORT_WIDTH,
     includeVibePill: !!moment.vibeLabel?.trim(),
+    format: isVertical ? 'shorts' : 'feed',
   }, measure, geistFamily)
 
   onProgress?.({ phase: 'audio' })
@@ -127,10 +123,8 @@ export async function encodeMargoMomentMp4(
 
   const frameCount = Math.max(1, Math.round(totalDurationSec * MOMENT_VIDEO_FPS))
   const frameDuration = 1 / MOMENT_VIDEO_FPS
-  const canvasW = isVertical ? 1080 : exportLayout.outputWidth
-  const canvasH = isVertical ? 1920 : exportLayout.outputHeight
-  const cardOffsetX = isVertical ? Math.round((canvasW - exportLayout.outputWidth) / 2) : 0
-  const cardOffsetY = isVertical ? Math.round((canvasH - exportLayout.outputHeight) / 2) : 0
+  const canvasW = exportLayout.outputWidth
+  const canvasH = exportLayout.outputHeight
 
   const canvas = document.createElement('canvas')
   canvas.width = canvasW
@@ -170,17 +164,7 @@ export async function encodeMargoMomentMp4(
     }
     const timeSec = frame / MOMENT_VIDEO_FPS
     const renderTimeSec = resolveExportRenderTimeSec(frame, MOMENT_VIDEO_FPS, posterRenderSec)
-    if (isVertical) {
-      ctx.setTransform(1, 0, 0, 1, 0, 0)
-      ctx.fillStyle = '#07060A'
-      ctx.fillRect(0, 0, canvasW, canvasH)
-      ctx.save()
-      ctx.translate(cardOffsetX, cardOffsetY)
-      renderMomentFrame(ctx, exportLayout, exportTimeline, assets, renderTimeSec, moment.exportAtmosphereId)
-      ctx.restore()
-    } else {
-      renderMomentFrame(ctx, exportLayout, exportTimeline, assets, renderTimeSec, moment.exportAtmosphereId)
-    }
+    renderMomentFrame(ctx, exportLayout, exportTimeline, assets, renderTimeSec, moment.exportAtmosphereId)
     await videoSource.add(timeSec, frameDuration)
     if (frame % 30 === 0) {
       onProgress?.({ phase: 'frames', frame, frameCount })

@@ -160,7 +160,10 @@ function computeWordPositions(
       continue
     }
     const baseline = lineY + lyric.style.fontSize * 0.92
-    let x = lyric.x
+    const lineWidth = ctx.measureText(line).width
+    let x = lyric.align === 'center'
+      ? lyric.x + (lyric.maxWidth - lineWidth) / 2
+      : lyric.x
     for (const token of line.split(/\s+/).filter(Boolean)) {
       if (wordIdx >= words.length) return positions
       positions.push({ x, y: baseline, timing: words[wordIdx] })
@@ -201,6 +204,11 @@ export function renderMomentFrame(
   ctx.globalAlpha = alpha
   ctx.fillStyle = layout.background.base
   ctx.fillRect(0, 0, W, H)
+  const highlight = ctx.createLinearGradient(0, 0, 0, H * layout.background.highlightHeightFraction)
+  highlight.addColorStop(0, `rgba(255,255,255,${layout.background.highlightTopOpacity})`)
+  highlight.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.fillStyle = highlight
+  ctx.fillRect(0, 0, W, H)
   drawExportAtmosphere(
     ctx,
     W,
@@ -211,11 +219,6 @@ export function renderMomentFrame(
     alpha,
     light,
   )
-  const highlight = ctx.createLinearGradient(0, 0, 0, H * layout.background.highlightHeightFraction)
-  highlight.addColorStop(0, `rgba(255,255,255,${layout.background.highlightTopOpacity})`)
-  highlight.addColorStop(1, 'rgba(255,255,255,0)')
-  ctx.fillStyle = highlight
-  ctx.fillRect(0, 0, W, H)
   ctx.restore()
 
   ctx.save()
@@ -266,13 +269,13 @@ export function renderMomentFrame(
       const s = layout.meta.song
       ctx.font = `${s.style.fontWeight} ${s.style.fontSize}px ${s.style.fontFamily}`
       ctx.fillStyle = s.style.color
-      ctx.fillText(s.text, layout.padding.left, s.y + s.style.fontSize - lift)
+      ctx.fillText(s.text, layout.meta.x, s.y + s.style.fontSize - lift)
     }
     if (layout.meta.artist) {
       const a = layout.meta.artist
       ctx.font = `${a.style.fontWeight} ${a.style.fontSize}px ${a.style.fontFamily}`
       ctx.fillStyle = a.style.color
-      ctx.fillText(a.text, layout.padding.left, a.y + a.style.fontSize - lift)
+      ctx.fillText(a.text, layout.meta.x, a.y + a.style.fontSize - lift)
     }
     ctx.restore()
   }

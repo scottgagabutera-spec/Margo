@@ -81,6 +81,7 @@ export async function encodeMargoMomentGif(
   if (!measureCtx) throw new Error('Canvas is not available')
   const measure = buildCanvasTextMeasure(measureCtx)
 
+  const isVertical = moment.shapeId === 'vertical'
   const layout = resolveStageCardLayout({
     lyric: line.lyric,
     songTitle: line.songTitle,
@@ -90,6 +91,7 @@ export async function encodeMargoMomentGif(
     themeId: moment.themeId,
     outputWidthPx: MOMENT_GIF_EXPORT_WIDTH,
     includeVibePill: !!moment.vibeLabel?.trim(),
+    format: isVertical ? 'shorts' : 'feed',
   }, measure, geistFamily)
 
   const artworkImage = await loadMomentArtwork(line.artworkUrl)

@@ -522,6 +522,7 @@ export function MomentShareStudio({
             onVibeSelect={setExportVibeLabel}
             cardThemeId={cardThemeId}
             atmosphereId={exportAtmosphereId}
+            shapeId={shapeId}
             canPlay={false}
           />
           </MomentExportPreviewFrame>

@@ -770,6 +770,13 @@ function LyricBackContent() {
                   setLyric((line.text || '').slice(0, 140))
                   setLinePickComplete(true)
                 }}
+                onPickParagraph={(picked) => {
+                  const joined = picked.map((l) => l.text.trim()).filter(Boolean).join('\n')
+                  setSnippetStart(picked[0].startSec)
+                  setSnippetEnd(picked[picked.length - 1].endSec)
+                  setLyric(joined.slice(0, 280))
+                  setLinePickComplete(true)
+                }}
                 onSkip={() => {
                   setSnippetStart(null)
                   setSnippetEnd(null)

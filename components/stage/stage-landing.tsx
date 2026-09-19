@@ -464,6 +464,34 @@ export function StageLanding() {
     linkedSongId, linkedAudioUrl, revealMoment,
   ])
 
+  const handleLineParagraph = useCallback((picked: ComposeLyricLine[]) => {
+    const joined = picked.map((l) => l.text.trim()).filter(Boolean).join('\n')
+    const capped = joined.slice(0, 280)
+    const start = picked[0]?.startSec ?? null
+    const end = picked[picked.length - 1]?.endSec ?? null
+    if (signedIn) {
+      router.push(buildComposePrefillUrl({
+        lyric: capped,
+        song: songName,
+        artist: artistName,
+        artwork: selectedSong?.artwork || null,
+        songId: linkedSongId,
+        audioUrl: linkedAudioUrl,
+        start,
+        end,
+      }))
+      return
+    }
+    setSnippetStart(start)
+    setSnippetEnd(end)
+    setLyric(capped)
+    setLinePickComplete(true)
+    revealMoment(capped, { animate: true, fetchVibe: true })
+  }, [
+    signedIn, router, songName, artistName, selectedSong?.artwork,
+    linkedSongId, linkedAudioUrl, revealMoment,
+  ])
+
   const navigateToCompose = useCallback(() => {
     if (!lyric.trim() || !songName.trim() || !artistName.trim()) return
     router.push(buildComposePrefillUrl({
@@ -820,6 +848,7 @@ export function StageLanding() {
                 artwork={selectedSong.artwork || null}
                 stickySkip
                 onPick={handleLinePick}
+                onPickParagraph={handleLineParagraph}
                 onSkip={() => {
                   setSnippetStart(null)
                   setSnippetEnd(null)
@@ -835,7 +864,7 @@ export function StageLanding() {
               <textarea
                 value={lyric}
                 onChange={(e) => handleWriteLineChange(e.target.value)}
-                maxLength={140}
+                maxLength={280}
                 rows={3}
                 placeholder="Type the line…"
                 autoFocus={selectedSong.source !== 'margo'}
@@ -890,6 +919,7 @@ export function StageLanding() {
                   }}
                   cardThemeId={cardThemeId}
                   atmosphereId={exportAtmosphereId}
+                  shapeId={shapeId}
                   canPlay={listen?.canPlayInline ?? false}
                   playing={playing}
                   buffering={buffering}

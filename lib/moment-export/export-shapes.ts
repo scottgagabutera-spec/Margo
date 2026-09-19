@@ -17,8 +17,10 @@ export const EXPORT_SHAPE_HINTS: Record<MomentShapeId, string> = {
   wide: '16:9',
 }
 
-/** Card width as a fraction of the 9:16 canvas — preview and file share this. */
+/** Card width as a fraction of the 9:16 canvas — kept for older callers. */
 export const VERTICAL_CARD_WIDTH_FRACTION = 0.88
+
+export const SHORTS_EXPORT = { w: 1080, h: 1920 } as const
 
 export function verticalStageCardWidth(canvasWidth = STAGE_CARD_EXPORT_WIDTH): number {
   return Math.round(canvasWidth * VERTICAL_CARD_WIDTH_FRACTION)

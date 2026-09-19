@@ -22,12 +22,15 @@ export interface LayoutTextStyle {
  * Lyric block after paragraph-aware wrapping.
  * displayLines preserves intentional \\n as paragraph boundaries.
  */
+export type StageCardFormat = 'feed' | 'shorts'
+
 export interface LayoutLyricBlock {
   /** Raw lyric input (may contain \\n) */
   sourceText: string
   /** Visual lines — word-wrapped within each paragraph */
   displayLines: string[]
   style: LayoutTextStyle
+  align: 'left' | 'center'
   x: number
   y: number
   maxWidth: number
@@ -44,6 +47,7 @@ export interface LayoutMetaLine {
 export interface LayoutMetaBlock {
   song: LayoutMetaLine | null
   artist: LayoutMetaLine | null
+  x: number
   y: number
   height: number
 }
@@ -78,6 +82,7 @@ export interface LayoutBackground {
  * a second layout system for MP4 / Animated Text.
  */
 export interface ResolvedStageCardLayout {
+  format: StageCardFormat
   outputWidth: number
   outputHeight: number
   scale: number
@@ -103,6 +108,8 @@ export interface StageCardLayoutInput {
   themeId?: string | null
   exportAtmosphereId?: string | null
   outputWidthPx: number
+  /** feed = content-height card; shorts = native 9:16 full-bleed */
+  format?: StageCardFormat
   /** When false, vibe pill is omitted from layout height (preview-only footers) */
   includeVibePill?: boolean
 }
