@@ -12,6 +12,7 @@ import {
 } from '@/lib/moment-export/layout'
 import { renderStageCardFrame } from '@/lib/moment-export/render-stage-card-frame'
 import { loadMomentArtwork } from '@/lib/moment-export/video/load-artwork'
+import { verticalStageCardWidth } from '@/lib/moment-export/export-shapes'
 
 export { STAGE_CARD_EXPORT_WIDTH }
 
@@ -57,7 +58,7 @@ export const THEMES: ExportTheme[] = [
 /* ─── Shapes ────────────────────────────────────────────────── */
 export const SHAPES = [
   { id: 'square',   label: 'Square',  ratio: '1:1',   w: 1080, h: 1080 },
-  { id: 'vertical', label: 'Story',   ratio: '9:16',  w: 1080, h: 1920 },
+  { id: 'vertical', label: 'Shorts',  ratio: '9:16',  w: 1080, h: 1920 },
   { id: 'wide',     label: 'Wide',    ratio: '16:9',  w: 1920, h: 1080 },
 ]
 
@@ -882,7 +883,7 @@ async function renderStageMomentCardToCanvas(
   const geist = resolveGeistFontFamily()
 
   const cardWidth = shape.id === 'vertical'
-    ? Math.round(STAGE_CARD_EXPORT_WIDTH * 0.88)
+    ? verticalStageCardWidth()
     : STAGE_CARD_EXPORT_WIDTH
 
   const layout = resolveStageCardLayout({

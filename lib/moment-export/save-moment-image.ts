@@ -96,7 +96,7 @@ export async function saveMargoMomentImage(
   const base = normalized.length > 1 ? 'Moment' : slugify(primary.songTitle || '', 'Lyric')
   const shapeLabel = renderOpts.variant === 'stage-card'
     ? 'Moment'
-    : moment.shapeId === 'vertical' ? 'Story' : moment.shapeId === 'wide' ? 'Wide' : 'Square'
+    : moment.shapeId === 'vertical' ? 'Shorts' : moment.shapeId === 'wide' ? 'Wide' : 'Square'
   const filename = options?.filename ?? `MARGO_${base}_${shapeLabel}.png`
   await downloadCanvas(canvas, filename)
 }
@@ -124,7 +124,7 @@ export async function renderMargoMomentPngFile(
   const base = normalized.length > 1 ? 'Moment' : slugify(primary.songTitle || '', 'Lyric')
   const shapeLabel = renderOpts.variant === 'stage-card'
     ? 'Moment'
-    : moment.shapeId === 'vertical' ? 'Story' : moment.shapeId === 'wide' ? 'Wide' : 'Square'
+    : moment.shapeId === 'vertical' ? 'Shorts' : moment.shapeId === 'wide' ? 'Wide' : 'Square'
   return new File([blob], `MARGO_${base}_${shapeLabel}.png`, { type: 'image/png' })
 }
 

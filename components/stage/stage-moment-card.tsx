@@ -11,10 +11,9 @@ import {
   lyricDisplayText,
   stageCardLyricStyle,
   stageCardMarkStyle,
-  stageCardShellStyle,
   useStageCardLayout,
 } from '@/hooks/useStageCardLayout'
-import { AtmospherePreviewRoom } from '@/components/atmosphere-layer'
+import { ExportAtmosphereOverlay } from '@/components/export-atmosphere-overlay'
 import { isLivingAtmosphere, type AtmosphereId } from '@/lib/atmosphere'
 import { getStageCardTheme, type StageCardThemeId } from '@/lib/moment/stage-theme'
 
@@ -119,7 +118,6 @@ export function StageMomentCard({
   const theme = getStageCardTheme(cardThemeId)
   const canPickVibe = vibeOptions.length > 0 && !!onVibeSelect
   const markVariant = theme.markVariant === 'on-light' ? 'ink' : 'gold'
-  const atmosphereTone = theme.markVariant === 'on-light' ? 'light' : 'dark'
   const showAtmosphere = isLivingAtmosphere(atmosphereId)
   const showVibeFooter = !!vibeLabel
 
@@ -170,13 +168,24 @@ export function StageMomentCard({
     ...style,
   }
 
-  const bgLayerStyle: CSSProperties = layout
-    ? {
-        background: `linear-gradient(180deg, rgba(255,255,255,${layout.background.highlightTopOpacity}) 0%, transparent ${layout.background.highlightHeightFraction * 100}%), ${layout.background.base}`,
-      }
-    : {
-        background: `linear-gradient(180deg, ${theme.markVariant === 'on-light' ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.04)'} 0%, transparent 28%), ${theme.bg}`,
-      }
+  const fillLayerStyle: CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    borderRadius: 'inherit',
+    zIndex: 0,
+    background: layout ? layout.background.base : theme.bg,
+  }
+
+  const highlightLayerStyle: CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    borderRadius: 'inherit',
+    zIndex: 1,
+    pointerEvents: 'none',
+    background: layout
+      ? `linear-gradient(180deg, rgba(255,255,255,${layout.background.highlightTopOpacity}) 0%, transparent ${layout.background.highlightHeightFraction * 100}%)`
+      : `linear-gradient(180deg, ${theme.markVariant === 'on-light' ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.04)'} 0%, transparent 28%)`,
+  }
 
   const lyricStyle = layout
     ? stageCardLyricStyle(layout)
@@ -192,23 +201,26 @@ export function StageMomentCard({
         wordBreak: 'break-word' as const,
       }
 
-  const markStyle = layout ? stageCardMarkStyle(layout) : {
-    position: 'absolute' as const,
-    top: '16px',
-    right: '16px',
-    width: '34px',
-    height: '34px',
-    borderRadius: '50%',
-    background: theme.badgeFill,
-    border: `1px solid ${theme.badgeStroke}`,
-    boxShadow: theme.markVariant === 'on-light'
-      ? '0 1px 0 rgba(255,255,255,0.22) inset'
-      : '0 1px 0 rgba(255,255,255,0.08) inset',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    pointerEvents: 'none' as const,
-  }
+  const markStyle: CSSProperties = layout
+    ? { ...stageCardMarkStyle(layout), zIndex: 3 }
+    : {
+        position: 'absolute',
+        top: '16px',
+        right: '16px',
+        zIndex: 3,
+        width: '34px',
+        height: '34px',
+        borderRadius: '50%',
+        background: theme.badgeFill,
+        border: `1px solid ${theme.badgeStroke}`,
+        boxShadow: theme.markVariant === 'on-light'
+          ? '0 1px 0 rgba(255,255,255,0.22) inset'
+          : '0 1px 0 rgba(255,255,255,0.08) inset',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        pointerEvents: 'none',
+      }
 
   const markSymbolSize = layout?.mark.symbolSize ?? 22
   const metaSongSize = layout?.meta?.song?.style.fontSize
@@ -220,28 +232,20 @@ export function StageMomentCard({
   return (
     <div ref={cardRef}>
       <ComposeLyricCard style={shellStyle}>
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute',
-            inset: 0,
-            borderRadius: 'inherit',
-            zIndex: 0,
-            ...bgLayerStyle,
-          }}
-        />
+        <div aria-hidden style={fillLayerStyle} />
         {showAtmosphere ? (
-          <AtmospherePreviewRoom
+          <ExportAtmosphereOverlay
+            key={atmosphereId}
             personality={atmosphereId}
-            variant="card"
-            tone={atmosphereTone}
+            onLight={theme.markVariant === 'on-light'}
+            borderRadius={layout?.borderRadius ?? 16}
           />
         ) : null}
+        <div aria-hidden style={highlightLayerStyle} />
+        <div style={markStyle} aria-hidden>
+          <MargoSymbol size={markSymbolSize} variant={markVariant} />
+        </div>
         <div style={{ position: 'relative', zIndex: 2 }}>
-          <div style={markStyle} aria-hidden>
-            <MargoSymbol size={markSymbolSize} variant={markVariant} />
-          </div>
-
           <p style={lyricStyle}>
             {layout ? lyricDisplayText(layout) : lyric}
           </p>

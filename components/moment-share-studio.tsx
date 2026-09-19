@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronRightIcon } from '@/components/icons'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { MomentExportCustomizeBar } from '@/components/moment-export-customize-bar'
+import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
 import { MomentActionMenu, type MomentActionMenuItem } from '@/components/moment-action-menu'
 import { recordCardExport } from '@/lib/engagement/card-exports'
 import {
@@ -510,6 +511,7 @@ export function MomentShareStudio({
               </button>
             </div>
           )}
+          <MomentExportPreviewFrame shapeId={shapeId}>
           <StageMomentCard
             lyric={previewLine.lyric}
             songTitle={previewLine.songTitle}
@@ -522,6 +524,7 @@ export function MomentShareStudio({
             atmosphereId={exportAtmosphereId}
             canPlay={false}
           />
+          </MomentExportPreviewFrame>
           <MomentExportCustomizeBar
             cardThemeId={cardThemeId}
             onThemeChange={setCardThemeId}

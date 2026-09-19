@@ -10,6 +10,7 @@ import { StageSearchField } from '@/components/stage/stage-search-field'
 import { StageSongChip } from '@/components/stage/stage-song-chip'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { MomentExportCustomizeBar } from '@/components/moment-export-customize-bar'
+import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
 import { useSongAtmosphere } from '@/hooks/useSongAtmosphere'
 import { livingAtmosphereOrNull } from '@/lib/atmosphere'
 import { StageSendBar } from '@/components/stage/stage-send-bar'
@@ -874,6 +875,7 @@ export function StageLanding() {
           >
             {hasMoment && (
               <>
+                <MomentExportPreviewFrame shapeId={shapeId}>
                 <StageMomentCard
                   lyric={lyric}
                   songTitle={songName}
@@ -894,6 +896,7 @@ export function StageLanding() {
                   onPlay={handlePlay}
                   listenUrl={listen && !listen.canPlayInline ? listen.externalUrl : null}
                 />
+                </MomentExportPreviewFrame>
                 <MomentExportCustomizeBar
                   cardThemeId={cardThemeId}
                   onThemeChange={setCardThemeId}

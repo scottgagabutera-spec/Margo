@@ -9,6 +9,7 @@ import {
 } from '@/lib/moment-export/layout'
 import { renderMomentFrame } from '@/lib/moment-export/video/render-moment-frame'
 import { loadMomentArtwork } from '@/lib/moment-export/video/load-artwork'
+import { verticalStageCardWidth } from '@/lib/moment-export/export-shapes'
 import {
   fetchAndDecodeAudioSnippet,
   truncateAudioBuffer,
@@ -87,7 +88,7 @@ export async function encodeMargoMomentMp4(
 
   const isVertical = moment.shapeId === 'vertical'
   const cardWidth = isVertical
-    ? Math.round(STAGE_CARD_EXPORT_WIDTH * 0.88)
+    ? verticalStageCardWidth()
     : STAGE_CARD_EXPORT_WIDTH
 
   const layout = resolveStageCardLayout({

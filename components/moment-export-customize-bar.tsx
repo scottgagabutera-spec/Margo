@@ -8,7 +8,8 @@ import {
   type AtmosphereId,
 } from '@/lib/atmosphere'
 import {
-  cycleExportShape,
+  EXPORT_SHAPE_CYCLE,
+  EXPORT_SHAPE_HINTS,
   EXPORT_SHAPE_LABELS,
 } from '@/lib/moment-export/export-shapes'
 import type { MomentShapeId } from '@/lib/moment/types'
@@ -28,25 +29,66 @@ interface MomentExportCustomizeBarProps {
   style?: CSSProperties
 }
 
-function columnLabelStyle(muted: string): CSSProperties {
+function columnLabelStyle(): CSSProperties {
   return {
     fontFamily: UI_FONT,
     fontSize: '0.56rem',
     fontWeight: 600,
     letterSpacing: '0.55px',
     textTransform: 'uppercase',
-    color: muted,
+    color: 'var(--text-muted)',
     lineHeight: 1,
-    marginBottom: '8px',
+    marginBottom: '10px',
     display: 'block',
     textAlign: 'center',
   }
 }
 
+function captionStyle(): CSSProperties {
+  return {
+    fontFamily: UI_FONT,
+    fontSize: '0.58rem',
+    fontWeight: 600,
+    letterSpacing: '0.2px',
+    color: 'var(--text-secondary)',
+    lineHeight: 1.2,
+    marginTop: '8px',
+    textAlign: 'center',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  }
+}
+
+function AspectGlyph({
+  ratio,
+  selected,
+}: {
+  ratio: '1:1' | '9:16'
+  selected: boolean
+}) {
+  const w = ratio === '1:1' ? 14 : 10
+  const h = ratio === '1:1' ? 14 : 18
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden>
+      <rect
+        x="0.75"
+        y="0.75"
+        width={w - 1.5}
+        height={h - 1.5}
+        rx="2.25"
+        fill={selected ? 'var(--gold-faint)' : 'transparent'}
+        stroke={selected ? 'var(--gold)' : 'var(--text-muted)'}
+        strokeWidth="1.5"
+      />
+    </svg>
+  )
+}
+
 /**
  * Export-only customization — lives below the card, not inside it.
- * Three equal columns (Color / Effect / Size) inspired by Stories toolbars:
- * label above, tap target below, no horizontal overflow.
+ * Editor chrome (not card-themed) so Color / Effect / Size stay readable
+ * on the dark page while the canvas above is the live preview.
  */
 export function MomentExportCustomizeBar({
   cardThemeId,
@@ -58,12 +100,7 @@ export function MomentExportCustomizeBar({
   style,
 }: MomentExportCustomizeBarProps) {
   const theme = getStageCardTheme(cardThemeId)
-  const chipBorder = theme.markVariant === 'on-light'
-    ? 'rgba(7,6,10,0.16)'
-    : 'rgba(255,255,255,0.18)'
-  const chipBg = theme.markVariant === 'on-light'
-    ? 'rgba(7,6,10,0.06)'
-    : 'rgba(255,255,255,0.08)'
+  const effectLabel = exportAtmosphereLabel(exportAtmosphereId)
 
   const tapStyle: CSSProperties = {
     width: '100%',
@@ -73,8 +110,8 @@ export function MomentExportCustomizeBar({
     justifyContent: 'center',
     padding: '8px 6px',
     borderRadius: '12px',
-    border: `1px solid ${chipBorder}`,
-    background: chipBg,
+    border: '1px solid var(--border-hi)',
+    background: 'var(--surface-3)',
     cursor: 'pointer',
     WebkitTapHighlightColor: 'transparent',
     boxSizing: 'border-box',
@@ -87,14 +124,19 @@ export function MomentExportCustomizeBar({
       style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-        gap: '10px',
+        gap: '8px',
         width: '100%',
         marginTop: '14px',
+        padding: '14px 10px 12px',
+        borderRadius: '16px',
+        background: 'var(--surface-2)',
+        border: '1px solid var(--border)',
+        boxSizing: 'border-box',
         ...style,
       }}
     >
-      <div style={{ minWidth: 0 }}>
-        <span style={columnLabelStyle(theme.inkMuted)}>Color</span>
+      <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <span style={columnLabelStyle()}>Color</span>
         <button
           type="button"
           aria-label={`Color: ${theme.label}. Tap to change.`}
@@ -104,10 +146,10 @@ export function MomentExportCustomizeBar({
           <span
             aria-hidden
             style={{
-              width: '26px',
-              height: '26px',
+              width: '28px',
+              height: '28px',
               borderRadius: '50%',
-              border: `2px solid ${theme.ink}`,
+              border: '2px solid var(--text)',
               background: theme.swatch,
               boxShadow: theme.markVariant === 'on-light'
                 ? 'inset 0 0 0 1.5px rgba(255,255,255,0.55)'
@@ -115,24 +157,24 @@ export function MomentExportCustomizeBar({
             }}
           />
         </button>
+        <span style={captionStyle()}>{theme.label}</span>
       </div>
 
-      <div style={{ minWidth: 0 }}>
-        <span style={columnLabelStyle(theme.inkMuted)}>Effect</span>
+      <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <span style={columnLabelStyle()}>Effect</span>
         <button
           type="button"
-          aria-label={`Effect: ${exportAtmosphereLabel(exportAtmosphereId)}. Tap to change.`}
+          aria-label={`Effect: ${effectLabel}. Tap to change.`}
           onClick={() => onExportAtmosphereChange(cycleExportAtmosphere(exportAtmosphereId))}
           style={tapStyle}
         >
           <span
             style={{
               fontFamily: UI_FONT,
-              fontSize: '0.62rem',
+              fontSize: '0.72rem',
               fontWeight: 700,
-              letterSpacing: '0.35px',
-              textTransform: 'uppercase',
-              color: theme.ink,
+              letterSpacing: '0.3px',
+              color: 'var(--text)',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -140,32 +182,61 @@ export function MomentExportCustomizeBar({
               padding: '0 4px',
             }}
           >
-            {exportAtmosphereLabel(exportAtmosphereId)}
+            {effectLabel}
           </span>
         </button>
+        <span style={captionStyle()}>
+          {exportAtmosphereId === 'still' ? 'None' : 'Live'}
+        </span>
       </div>
 
-      <div style={{ minWidth: 0 }}>
-        <span style={columnLabelStyle(theme.inkMuted)}>Size</span>
-        <button
-          type="button"
-          aria-label={`Size: ${EXPORT_SHAPE_LABELS[shapeId]}. Tap to change.`}
-          onClick={() => onShapeChange(cycleExportShape(shapeId))}
-          style={tapStyle}
+      <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <span style={columnLabelStyle()}>Size</span>
+        <div
+          role="group"
+          aria-label="Export size"
+          style={{
+            display: 'flex',
+            width: '100%',
+            gap: '6px',
+          }}
         >
-          <span
-            style={{
-              fontFamily: UI_FONT,
-              fontSize: '0.62rem',
-              fontWeight: 700,
-              letterSpacing: '0.35px',
-              textTransform: 'uppercase',
-              color: theme.ink,
-            }}
-          >
-            {EXPORT_SHAPE_LABELS[shapeId]}
-          </span>
-        </button>
+          {EXPORT_SHAPE_CYCLE.map((id) => {
+            const selected = shapeId === id
+            const ratio = id === 'vertical' ? '9:16' : '1:1'
+            return (
+              <button
+                key={id}
+                type="button"
+                aria-label={`${EXPORT_SHAPE_LABELS[id]}, ${EXPORT_SHAPE_HINTS[id]}`}
+                aria-pressed={selected}
+                onClick={() => onShapeChange(id)}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  minHeight: 'var(--margo-touch-min)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: 0,
+                  borderRadius: '12px',
+                  border: selected
+                    ? '1px solid var(--gold-border)'
+                    : '1px solid var(--border-hi)',
+                  background: selected ? 'var(--gold-faint)' : 'var(--surface-3)',
+                  cursor: 'pointer',
+                  WebkitTapHighlightColor: 'transparent',
+                  boxSizing: 'border-box',
+                }}
+              >
+                <AspectGlyph ratio={ratio} selected={selected} />
+              </button>
+            )
+          })}
+        </div>
+        <span style={captionStyle()}>
+          {EXPORT_SHAPE_LABELS[shapeId]} · {EXPORT_SHAPE_HINTS[shapeId]}
+        </span>
       </div>
     </div>
   )
