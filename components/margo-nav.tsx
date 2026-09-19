@@ -76,6 +76,7 @@ export function MargoNav() {
 
   const isOnFeed = activeTab === 'feed' || (!activeTab && pathname === '/feed')
   // Full lockup (mark + MARGO) only on Feed home. Landing has its own lockup.
+  // Logo returns to Stage landing (`/`) — expression front door; Feed tab stays in-app home.
   // Elsewhere: mark/symbol only — tab or page context owns the destination name.
   const showWordmark = isOnFeed
   const isOnDiscover = activeTab === 'discover' || (!activeTab && !!pathname?.startsWith('/discover'))
@@ -165,7 +166,7 @@ export function MargoNav() {
         display: 'flex', alignItems: 'center',
         justifyContent: 'space-between',
       }}>
-        <Link href="/feed" {...feedLink} style={{ textDecoration: 'none', flexShrink: 0 }}>
+        <Link href="/" aria-label="Margo — expression home" style={{ textDecoration: 'none', flexShrink: 0 }}>
           <MargoLogo tier="symbol" size={28} wordmark={showWordmark} rings />
         </Link>
 
