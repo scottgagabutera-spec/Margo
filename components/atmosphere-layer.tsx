@@ -211,8 +211,6 @@ function AtmosphereRoom({
       <div className={room}>
         <div className="margo-atm-drift-well">
           <div className="margo-atm-drift-band" />
-          <div className="margo-atm-drift-band margo-atm-drift-band--b" />
-          <div className="margo-atm-drift-band margo-atm-drift-band--c" />
         </div>
       </div>
     )
