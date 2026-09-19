@@ -1375,12 +1375,6 @@ function ComposeInner() {
               suggestedVibeLabel={suggestedVibe ? vibeKeyToLabel(suggestedVibe) : null}
               emotionLoading={emotionLoading}
               onVibeSelect={handleVibeLabelSelect}
-              cardThemeId={themeId}
-              onThemeChange={setThemeId}
-              exportAtmosphereId={exportAtmosphereId}
-              onExportAtmosphereChange={setExportAtmosphereId}
-              shapeId={exportShapeId}
-              onShapeChange={setExportShapeId}
             />
 
             <div
@@ -1531,6 +1525,18 @@ function ComposeInner() {
                 handleLyricSelected()
                 setPhase('moment')
                 void fetchEmotionSuggestion((line.text || '').slice(0, 140), vibeUserPicked)
+              }}
+              onPickParagraph={(picked) => {
+                const joined = picked.map((l) => l.text.trim()).filter(Boolean).join('\n')
+                const capped = joined.slice(0, 280)
+                setSnippetStart(picked[0].startSec)
+                setSnippetEnd(picked[picked.length - 1].endSec)
+                setLyric(capped)
+                setLinePickComplete(true)
+                setSelectMode('write')
+                handleLyricSelected()
+                setPhase('moment')
+                void fetchEmotionSuggestion(capped, vibeUserPicked)
               }}
               onSkip={() => {
                 setSnippetStart(null)

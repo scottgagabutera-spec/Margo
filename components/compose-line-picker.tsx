@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowLeftIcon } from '@/components/icons'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { playSnippet, warmUrl } from '@/lib/audio-engine'
@@ -14,11 +14,37 @@ export interface ComposeLyricLine {
 }
 
 const lyricFont = 'var(--font-lora), serif'
+const LONG_PRESS_MS = 480
+const DEFAULT_PARAGRAPH_MAX = 3
 
 function formatTime(s: number) {
   const m = Math.floor(s / 60)
   const sec = Math.floor(s % 60)
   return `${m}:${sec.toString().padStart(2, '0')}`
+}
+
+function sortedSelection(selected: number[]): number[] {
+  return [...selected].sort((a, b) => a - b)
+}
+
+function isContiguous(selected: number[]): boolean {
+  const s = sortedSelection(selected)
+  for (let i = 1; i < s.length; i++) {
+    if (s[i] !== s[i - 1] + 1) return false
+  }
+  return true
+}
+
+function canToggleLine(selected: number[], lineIndex: number): boolean {
+  if (selected.length === 0) return true
+  if (selected.includes(lineIndex)) {
+    const s = sortedSelection(selected)
+    return lineIndex === s[0] || lineIndex === s[s.length - 1]
+  }
+  const s = sortedSelection(selected)
+  const min = s[0]
+  const max = s[s.length - 1]
+  return lineIndex === min - 1 || lineIndex === max + 1
 }
 
 interface ComposeLinePickerProps {
@@ -27,17 +53,17 @@ interface ComposeLinePickerProps {
   songTitle: string
   artistName: string
   onPick: (line: ComposeLyricLine) => void
+  /** Combine adjacent lines into one paragraph Moment (long-press to start). */
+  onPickParagraph?: (lines: ComposeLyricLine[]) => void
+  enableParagraphPick?: boolean
+  maxParagraphLines?: number
   onSkip?: () => void
   onBack: () => void
-  /** When true, parent renders Skip in KeyboardSafeCtaBar — hide inline Skip. */
   stickySkip?: boolean
-  /** Catalog audio. When omitted, rows stay text-only (Lyric Back / no file). */
   audioUrl?: string | null
   songId?: string | null
   artwork?: string | null
-  /** Stage landing — quieter chrome, smaller title. */
   variant?: 'compose' | 'stage'
-  /** When true, parent owns Back / title (Compose overlay under the nav mark). */
   hideHeader?: boolean
 }
 
@@ -49,6 +75,11 @@ function ComposeLineRow({
   songId,
   artwork,
   onPick,
+  onLongPressStart,
+  onSelectionTap,
+  selectionMode,
+  selected,
+  selectionDisabled,
   stage = false,
   isLast = false,
 }: {
@@ -59,12 +90,30 @@ function ComposeLineRow({
   songId: string | null
   artwork: string | null
   onPick: (line: ComposeLyricLine) => void
+  onLongPressStart: (line: ComposeLyricLine) => void
+  onSelectionTap: (line: ComposeLyricLine) => void
+  selectionMode: boolean
+  selected: boolean
+  selectionDisabled: boolean
   stage?: boolean
   isLast?: boolean
 }) {
   const { playing, buffering } = useSnippetPlaybackUi(songId || audioUrl, line.lineIndex)
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressTriggered = useRef(false)
+
+  const clearPressTimer = () => {
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current)
+      pressTimer.current = null
+    }
+  }
 
   const handlePick = () => {
+    if (selectionMode) {
+      if (!selectionDisabled || selected) onSelectionTap(line)
+      return
+    }
     void playSnippet({
       songId: songId || audioUrl,
       audioUrl,
@@ -86,7 +135,27 @@ function ComposeLineRow({
   return (
     <button
       type="button"
-      onClick={handlePick}
+      onClick={() => {
+        if (longPressTriggered.current) {
+          longPressTriggered.current = false
+          return
+        }
+        handlePick()
+      }}
+      onPointerDown={() => {
+        longPressTriggered.current = false
+        clearPressTimer()
+        if (selectionMode) return
+        pressTimer.current = setTimeout(() => {
+          longPressTriggered.current = true
+          onLongPressStart(line)
+        }, LONG_PRESS_MS)
+      }}
+      onPointerUp={clearPressTimer}
+      onPointerLeave={clearPressTimer}
+      onPointerCancel={clearPressTimer}
+      disabled={selectionMode && selectionDisabled && !selected}
+      aria-pressed={selectionMode ? selected : undefined}
       style={{
         width: '100%',
         display: 'flex',
@@ -94,31 +163,59 @@ function ComposeLineRow({
         gap: stage ? '12px' : '14px',
         padding: stage ? '12px 14px' : '14px 16px',
         minHeight: 'var(--margo-touch-min)',
-        background: playing ? 'var(--gold-faint)' : 'none',
-        border: 'none',
+        background: selected
+          ? 'rgba(232,197,71,0.16)'
+          : playing
+            ? 'var(--gold-faint)'
+            : 'none',
+        border: selected ? '1px solid rgba(232,197,71,0.45)' : 'none',
         borderBottom: isLast ? 'none' : '1px solid var(--border)',
-        cursor: 'pointer',
+        cursor: selectionMode && selectionDisabled && !selected ? 'not-allowed' : 'pointer',
         textAlign: 'left',
         boxSizing: 'border-box',
+        opacity: selectionMode && selectionDisabled && !selected ? 0.45 : 1,
       }}
     >
-      <span
-        style={{
-          width: `${playSize}px`,
-          height: `${playSize}px`,
-          borderRadius: '50%',
-          flexShrink: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: playing ? 'var(--gold-glow)' : 'var(--gold-faint)',
-          border: '1px solid var(--gold-border)',
-          boxSizing: 'border-box',
-          marginTop: stage ? '2px' : 0,
-        }}
-      >
-        <PlayPauseIcon playing={playing} buffering={buffering} size={playIconSize} color="var(--gold)" />
-      </span>
+      {selectionMode ? (
+        <span
+          aria-hidden
+          style={{
+            width: '22px',
+            height: '22px',
+            borderRadius: '6px',
+            flexShrink: 0,
+            marginTop: stage ? '4px' : '2px',
+            border: selected ? '2px solid var(--gold)' : '1.5px solid var(--border)',
+            background: selected ? 'var(--gold)' : 'transparent',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxSizing: 'border-box',
+          }}
+        >
+          {selected ? (
+            <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: 'var(--ink)' }} />
+          ) : null}
+        </span>
+      ) : (
+        <span
+          style={{
+            width: `${playSize}px`,
+            height: `${playSize}px`,
+            borderRadius: '50%',
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: playing ? 'var(--gold-glow)' : 'var(--gold-faint)',
+            border: '1px solid var(--gold-border)',
+            boxSizing: 'border-box',
+            marginTop: stage ? '2px' : 0,
+          }}
+        >
+          <PlayPauseIcon playing={playing} buffering={buffering} size={playIconSize} color="var(--gold)" />
+        </span>
+      )}
       {!stage ? (
         <span
           style={{
@@ -167,6 +264,7 @@ function ComposeLineRow({
 
 /**
  * Tap-to-pick a real lyric_lines row for a Margo catalog song.
+ * Long-press a line to enter multi-select and combine adjacent lines.
  */
 export function ComposeLinePicker({
   lines,
@@ -174,6 +272,9 @@ export function ComposeLinePicker({
   songTitle,
   artistName,
   onPick,
+  onPickParagraph,
+  enableParagraphPick = true,
+  maxParagraphLines = DEFAULT_PARAGRAPH_MAX,
   onSkip,
   onBack,
   stickySkip = false,
@@ -186,11 +287,52 @@ export function ComposeLinePicker({
   const listRef = useRef<HTMLDivElement>(null)
   const canHear = !!audioUrl
   const isStage = variant === 'stage'
+  const paragraphEnabled = enableParagraphPick && !!onPickParagraph && !isStage
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedIndexes, setSelectedIndexes] = useState<number[]>([])
 
   useEffect(() => {
     if (!audioUrl || loading || lines.length === 0) return
     warmUrl(audioUrl)
   }, [audioUrl, loading, lines.length])
+
+  const resetSelection = useCallback(() => {
+    setSelectionMode(false)
+    setSelectedIndexes([])
+  }, [])
+
+  const beginSelection = useCallback((line: ComposeLyricLine) => {
+    if (!paragraphEnabled) return
+    setSelectionMode(true)
+    setSelectedIndexes([line.lineIndex])
+  }, [paragraphEnabled])
+
+  const toggleSelection = useCallback((line: ComposeLyricLine) => {
+    setSelectedIndexes((prev) => {
+      if (prev.includes(line.lineIndex)) {
+        const next = prev.filter((i) => i !== line.lineIndex)
+        if (next.length === 0) setSelectionMode(false)
+        return next
+      }
+      if (prev.length >= maxParagraphLines) return prev
+      if (!canToggleLine(prev, line.lineIndex)) return prev
+      return [...prev, line.lineIndex]
+    })
+  }, [maxParagraphLines])
+
+  const confirmParagraph = useCallback(() => {
+    if (!onPickParagraph || selectedIndexes.length < 2) return
+    const sorted = sortedSelection(selectedIndexes)
+    const picked = sorted
+      .map((idx) => lines.find((l) => l.lineIndex === idx))
+      .filter((l): l is ComposeLyricLine => !!l)
+    if (picked.length < 2 || !isContiguous(sorted)) return
+    onPickParagraph(picked)
+    resetSelection()
+  }, [lines, onPickParagraph, resetSelection, selectedIndexes])
+
+  const selectionCount = selectedIndexes.length
+  const canConfirmParagraph = selectionCount >= 2 && isContiguous(selectedIndexes)
 
   return (
     <div>
@@ -221,7 +363,7 @@ export function ComposeLinePicker({
           fontWeight: 400,
           lineHeight: 1.15,
         }}>
-          {isStage ? 'Choose a line' : 'Pick the line'}
+          {selectionMode ? 'Combine lines' : isStage ? 'Choose a line' : 'Pick the line'}
         </h1>
         ) : null}
         <p style={{
@@ -230,9 +372,13 @@ export function ComposeLinePicker({
           color: 'var(--text-secondary)',
           marginBottom: isStage ? 0 : '4px',
         }}>
-          {canHear
-            ? (isStage ? 'Tap to preview' : 'Tap a line to hear it')
-            : (isStage ? 'Tap the line you mean' : 'Pick the line you want')}
+          {selectionMode
+            ? `Tap adjacent lines (${selectionCount}/${maxParagraphLines} selected)`
+            : canHear
+              ? (paragraphEnabled
+                ? (isStage ? 'Tap to preview' : 'Tap a line to hear it · long-press to combine')
+                : (isStage ? 'Tap to preview' : 'Tap a line to hear it'))
+              : (isStage ? 'Tap the line you mean' : 'Pick the line you want')}
         </p>
         {!isStage ? (
           <p style={{ fontFamily: lyricFont, fontSize: '0.72rem', color: 'var(--text-muted)' }}>
@@ -240,6 +386,48 @@ export function ComposeLinePicker({
           </p>
         ) : null}
       </div>
+
+      {selectionMode ? (
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+          <button
+            type="button"
+            onClick={resetSelection}
+            style={{
+              flex: 1,
+              minHeight: 'var(--margo-touch-min)',
+              borderRadius: '50px',
+              border: '1px solid var(--border)',
+              background: 'transparent',
+              color: 'var(--text-secondary)',
+              fontFamily: UI_FONT,
+              fontSize: '0.72rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={confirmParagraph}
+            disabled={!canConfirmParagraph}
+            style={{
+              flex: 1.4,
+              minHeight: 'var(--margo-touch-min)',
+              borderRadius: '50px',
+              border: 'none',
+              background: canConfirmParagraph ? 'var(--gold)' : 'rgba(232,197,71,0.25)',
+              color: canConfirmParagraph ? 'var(--text-on-gold, var(--bg))' : 'var(--text-muted)',
+              fontFamily: UI_FONT,
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              cursor: canConfirmParagraph ? 'pointer' : 'not-allowed',
+            }}
+          >
+            Use {selectionCount} lines
+          </button>
+        </div>
+      ) : null}
 
       {loading && (
         <p style={{ textAlign: isStage ? 'left' : 'center', fontFamily: isStage ? UI_FONT : lyricFont, color: 'var(--gold)', fontSize: '0.82rem' }}>
@@ -293,6 +481,11 @@ export function ComposeLinePicker({
                 songId={songId}
                 artwork={artwork}
                 onPick={onPick}
+                onLongPressStart={beginSelection}
+                onSelectionTap={toggleSelection}
+                selectionMode={selectionMode}
+                selected={selectedIndexes.includes(line.lineIndex)}
+                selectionDisabled={!canToggleLine(selectedIndexes, line.lineIndex)}
                 stage={isStage}
                 isLast={index === lines.length - 1}
               />

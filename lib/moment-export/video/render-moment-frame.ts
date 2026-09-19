@@ -209,6 +209,7 @@ export function renderMomentFrame(
     timeSec,
     layout.borderRadius,
     alpha,
+    light,
   )
   const highlight = ctx.createLinearGradient(0, 0, 0, H * layout.background.highlightHeightFraction)
   highlight.addColorStop(0, `rgba(255,255,255,${layout.background.highlightTopOpacity})`)

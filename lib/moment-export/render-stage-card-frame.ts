@@ -150,6 +150,8 @@ export function renderStageCardFrame(
     atmosphereId,
     assets.atmosphereTimeSec ?? 0,
     layout.borderRadius,
+    1,
+    light,
   )
 
   const highlight = ctx.createLinearGradient(0, 0, 0, H * layout.background.highlightHeightFraction)

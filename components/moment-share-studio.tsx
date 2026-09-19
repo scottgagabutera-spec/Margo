@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronRightIcon } from '@/components/icons'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
+import { MomentExportCustomizeBar } from '@/components/moment-export-customize-bar'
 import { MomentActionMenu, type MomentActionMenuItem } from '@/components/moment-action-menu'
 import { recordCardExport } from '@/lib/engagement/card-exports'
 import {
@@ -518,12 +519,16 @@ export function MomentShareStudio({
             vibeOptions={MOMENT_VIBE_PICKER_OPTIONS}
             onVibeSelect={setExportVibeLabel}
             cardThemeId={cardThemeId}
+            atmosphereId={exportAtmosphereId}
+            canPlay={false}
+          />
+          <MomentExportCustomizeBar
+            cardThemeId={cardThemeId}
             onThemeChange={setCardThemeId}
             exportAtmosphereId={exportAtmosphereId}
             onExportAtmosphereChange={setExportAtmosphereId}
             shapeId={shapeId}
             onShapeChange={setShapeId}
-            canPlay={false}
           />
         </>
       ) : null}

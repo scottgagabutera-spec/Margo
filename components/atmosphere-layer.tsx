@@ -152,16 +152,20 @@ export function AtmosphereLayer({
 export function AtmospherePreviewRoom({
   personality,
   variant = 'card',
+  tone = 'dark',
 }: {
   personality: AtmosphereId
   variant?: AtmosphereVariant
+  /** Card theme tone — light themes need ink-based effects to stay visible. */
+  tone?: 'light' | 'dark'
 }) {
   if (!isLivingAtmosphere(personality)) return null
   return (
     <div
       aria-hidden
-      className={`margo-atmosphere-clip margo-atmosphere-clip--${variant}`}
+      className={`margo-atmosphere-clip margo-atmosphere-clip--preview margo-atmosphere-clip--${variant}`}
       data-atmosphere={personality}
+      data-tone={tone}
     >
       <AtmosphereRoom personality={personality} variant={variant} live />
     </div>

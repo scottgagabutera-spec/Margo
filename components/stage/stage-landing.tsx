@@ -9,6 +9,9 @@ import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-l
 import { StageSearchField } from '@/components/stage/stage-search-field'
 import { StageSongChip } from '@/components/stage/stage-song-chip'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
+import { MomentExportCustomizeBar } from '@/components/moment-export-customize-bar'
+import { useSongAtmosphere } from '@/hooks/useSongAtmosphere'
+import { livingAtmosphereOrNull } from '@/lib/atmosphere'
 import { StageSendBar } from '@/components/stage/stage-send-bar'
 import MargoLogo from '@/components/MargoLogo'
 import { useStageChromePublisher, useStageSearchPublisher, useStageIdlePublisher, useStageMomentPublisher } from '@/lib/stage-chrome'
@@ -130,6 +133,7 @@ export function StageLanding() {
   const [cardThemeId, setCardThemeId] = useState<StageCardThemeId>('gold')
   const [exportAtmosphereId, setExportAtmosphereId] = useState<AtmosphereId>('still')
   const [shapeId, setShapeId] = useState<MomentShapeId>('square')
+  const songAtmosphere = useSongAtmosphere(linkedSongId)
   const [saving, setSaving] = useState(false)
   const [shareBusy, setShareBusy] = useState(false)
   const [videoProgress, setVideoProgress] = useState<string | null>(null)
@@ -501,38 +505,10 @@ export function StageLanding() {
       lineText: lyric,
       startSec: snippetStart!,
       endSec: snippetEnd!,
+      atmosphere: livingAtmosphereOrNull(songAtmosphere),
       source: 'feed',
     })
-  }, [canPlay, linkedAudioUrl, linkedSongId, songName, artistName, selectedSong?.artwork, lineIndex, lyric, snippetStart, snippetEnd])
-
-  const handleSaveImage = useCallback(async () => {
-    if (!hasMoment) return
-    setSaving(true)
-    try {
-      const moment = resolveMargoMomentFromStage({
-        lyric,
-        songName,
-        artistName,
-        artworkUrl: selectedSong?.artwork || null,
-        songId: linkedSongId,
-        audioUrl: linkedAudioUrl,
-        snippetStart,
-        snippetEnd,
-        vibeLabel,
-        source: linkedSongId ? 'catalog' : 'external',
-        externalListenUrl: selectedSong?.externalListenUrl ?? null,
-      }, { themeId: cardThemeId })
-      await saveMargoMomentImage(moment)
-      toastMomentImageSaved()
-    } catch {
-      toastMomentExportFailed('image')
-    } finally {
-      setSaving(false)
-    }
-  }, [
-    hasMoment, lyric, songName, artistName, selectedSong?.artwork,
-    linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, vibeLabel, selectedSong?.externalListenUrl, cardThemeId,
-  ])
+  }, [canPlay, linkedAudioUrl, linkedSongId, songName, artistName, selectedSong?.artwork, lineIndex, lyric, snippetStart, snippetEnd, songAtmosphere])
 
   const buildExportMoment = useCallback(() => {
     return resolveMargoMomentFromStage({
@@ -555,8 +531,21 @@ export function StageLanding() {
   }, [
     lyric, songName, artistName, selectedSong?.artwork, linkedSongId,
     linkedAudioUrl, snippetStart, snippetEnd, vibeLabel,
-    selectedSong?.externalListenUrl, cardThemeId,
+    selectedSong?.externalListenUrl, cardThemeId, shapeId, exportAtmosphereId,
   ])
+
+  const handleSaveImage = useCallback(async () => {
+    if (!hasMoment) return
+    setSaving(true)
+    try {
+      await saveMargoMomentImage(buildExportMoment())
+      toastMomentImageSaved()
+    } catch {
+      toastMomentExportFailed('image')
+    } finally {
+      setSaving(false)
+    }
+  }, [hasMoment, buildExportMoment])
 
   const handleShareImage = useCallback(async () => {
     if (!hasMoment) return
@@ -898,16 +887,20 @@ export function StageLanding() {
                     setVibeUserPicked(true)
                   }}
                   cardThemeId={cardThemeId}
-                  onThemeChange={setCardThemeId}
-                  exportAtmosphereId={exportAtmosphereId}
-                  onExportAtmosphereChange={setExportAtmosphereId}
-                  shapeId={shapeId}
-                  onShapeChange={setShapeId}
+                  atmosphereId={exportAtmosphereId}
                   canPlay={listen?.canPlayInline ?? false}
                   playing={playing}
                   buffering={buffering}
                   onPlay={handlePlay}
                   listenUrl={listen && !listen.canPlayInline ? listen.externalUrl : null}
+                />
+                <MomentExportCustomizeBar
+                  cardThemeId={cardThemeId}
+                  onThemeChange={setCardThemeId}
+                  exportAtmosphereId={exportAtmosphereId}
+                  onExportAtmosphereChange={setExportAtmosphereId}
+                  shapeId={shapeId}
+                  onShapeChange={setShapeId}
                 />
                 {signedIn ? (
                   <div style={{ width: '100%', marginTop: 'var(--stage-moment-to-actions, 22px)' }}>

@@ -15,22 +15,8 @@ import {
   useStageCardLayout,
 } from '@/hooks/useStageCardLayout'
 import { AtmospherePreviewRoom } from '@/components/atmosphere-layer'
-import {
-  cycleExportAtmosphere,
-  exportAtmosphereLabel,
-  isLivingAtmosphere,
-  type AtmosphereId,
-} from '@/lib/atmosphere'
-import {
-  cycleExportShape,
-  EXPORT_SHAPE_LABELS,
-} from '@/lib/moment-export/export-shapes'
-import type { MomentShapeId } from '@/lib/moment/types'
-import {
-  cycleStageCardTheme,
-  getStageCardTheme,
-  type StageCardThemeId,
-} from '@/lib/moment/stage-theme'
+import { isLivingAtmosphere, type AtmosphereId } from '@/lib/atmosphere'
+import { getStageCardTheme, type StageCardThemeId } from '@/lib/moment/stage-theme'
 
 interface StageMomentCardProps {
   lyric: string
@@ -43,11 +29,12 @@ interface StageMomentCardProps {
   vibeOptions?: string[]
   onVibeSelect?: (label: string) => void
   cardThemeId?: StageCardThemeId
-  onThemeChange?: (id: StageCardThemeId) => void
-  exportAtmosphereId?: AtmosphereId
-  onExportAtmosphereChange?: (id: AtmosphereId) => void
-  shapeId?: MomentShapeId
-  onShapeChange?: (id: MomentShapeId) => void
+  /**
+   * Atmosphere overlay on the card.
+   * Platform preview: pass the song's assigned atmosphere.
+   * Export preview: pass the user's export effect choice.
+   */
+  atmosphereId?: AtmosphereId
   canPlay: boolean
   playing?: boolean
   buffering?: boolean
@@ -85,7 +72,7 @@ function footerChipStyle(theme: ReturnType<typeof getStageCardTheme>): CSSProper
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: '22px',
-    maxWidth: '88px',
+    maxWidth: '100%',
     padding: '0 10px',
     borderRadius: '50px',
     border: `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.18)' : 'rgba(255,255,255,0.2)'}`,
@@ -106,6 +93,7 @@ function footerChipStyle(theme: ReturnType<typeof getStageCardTheme>): CSSProper
 
 /**
  * Gold Moment for The Stage — lyric-dominant, not a Feed post.
+ * Export customization (Color / Effect / Size) lives in MomentExportCustomizeBar.
  */
 export function StageMomentCard({
   lyric,
@@ -117,11 +105,7 @@ export function StageMomentCard({
   vibeOptions = [],
   onVibeSelect,
   cardThemeId = 'gold',
-  onThemeChange,
-  exportAtmosphereId = 'still',
-  onExportAtmosphereChange,
-  shapeId = 'square',
-  onShapeChange,
+  atmosphereId = 'still',
   canPlay,
   playing = false,
   buffering = false,
@@ -134,12 +118,10 @@ export function StageMomentCard({
   const [cardWidth, setCardWidth] = useState<number | null>(null)
   const theme = getStageCardTheme(cardThemeId)
   const canPickVibe = vibeOptions.length > 0 && !!onVibeSelect
-  const canCycleTheme = !!onThemeChange
-  const canCycleAtmosphere = !!onExportAtmosphereChange
-  const canCycleShape = !!onShapeChange
   const markVariant = theme.markVariant === 'on-light' ? 'ink' : 'gold'
-  const showFooter = vibeLabel || canCycleTheme || canCycleAtmosphere || canCycleShape
-  const showAtmosphere = isLivingAtmosphere(exportAtmosphereId)
+  const atmosphereTone = theme.markVariant === 'on-light' ? 'light' : 'dark'
+  const showAtmosphere = isLivingAtmosphere(atmosphereId)
+  const showVibeFooter = !!vibeLabel
 
   const layout = useStageCardLayout({
     lyric,
@@ -163,20 +145,37 @@ export function StageMomentCard({
     return () => ro.disconnect()
   }, [])
 
-  const baseShellStyle = layout ? stageCardShellStyle(layout) : null
-  const shellStyle = baseShellStyle
+  const shellPadding = layout
     ? {
-        ...baseShellStyle,
-        overflow: showAtmosphere ? 'hidden' : baseShellStyle.overflow,
+        paddingTop: layout.padding.top,
+        paddingRight: layout.padding.right,
+        paddingBottom: layout.padding.bottom,
+        paddingLeft: layout.padding.left,
+        borderRadius: layout.borderRadius,
+        minHeight: layout.outputHeight,
       }
     : {
-        position: 'relative' as const,
-        textAlign: 'left' as const,
-        borderRadius: '16px',
         padding: '20px 52px 18px 20px',
+        borderRadius: '16px',
+        minHeight: undefined as number | undefined,
+      }
+
+  const shellStyle: CSSProperties = {
+    position: 'relative',
+    textAlign: 'left',
+    overflow: 'hidden',
+    border: `1px solid ${theme.border}`,
+    boxSizing: 'border-box',
+    ...shellPadding,
+    ...style,
+  }
+
+  const bgLayerStyle: CSSProperties = layout
+    ? {
+        background: `linear-gradient(180deg, rgba(255,255,255,${layout.background.highlightTopOpacity}) 0%, transparent ${layout.background.highlightHeightFraction * 100}%), ${layout.background.base}`,
+      }
+    : {
         background: `linear-gradient(180deg, ${theme.markVariant === 'on-light' ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.04)'} 0%, transparent 28%), ${theme.bg}`,
-        border: `1px solid ${theme.border}`,
-        overflow: showAtmosphere ? 'hidden' as const : undefined,
       }
 
   const lyricStyle = layout
@@ -220,320 +219,249 @@ export function StageMomentCard({
 
   return (
     <div ref={cardRef}>
-    <ComposeLyricCard
-      style={{
-        ...shellStyle,
-        ...style,
-      }}
-    >
-      {showAtmosphere ? (
-        <AtmospherePreviewRoom personality={exportAtmosphereId} variant="card" />
-      ) : null}
-      <div style={markStyle} aria-hidden>
-        <MargoSymbol size={markSymbolSize} variant={markVariant} />
-      </div>
-
-      <p style={lyricStyle}>
-        {layout ? lyricDisplayText(layout) : lyric}
-      </p>
-
-      {(songTitle || artistName) ? (
-        <div style={{ marginTop: metaMarginTop, minWidth: 0 }}>
-          {songTitle ? (
-            <p
-              style={{
-                margin: 0,
-                fontFamily: UI_FONT,
-                fontSize: metaSongSize ?? '0.78rem',
-                fontWeight: 700,
-                color: theme.ink,
-                lineHeight: 1.25,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {layout?.meta?.song?.text ?? songTitle}
-            </p>
-          ) : null}
-          {artistName ? (
-            <p
-              style={{
-                margin: songTitle ? '3px 0 0' : 0,
-                fontFamily: UI_FONT,
-                fontSize: metaArtistSize ?? '0.72rem',
-                fontWeight: 400,
-                color: theme.inkMuted,
-                lineHeight: 1.25,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {layout?.meta?.artist?.text ?? artistName}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-
-      {artwork ? (
-        <img
-          src={artwork}
-          alt=""
+      <ComposeLyricCard style={shellStyle}>
+        <div
+          aria-hidden
           style={{
-            width: artSize,
-            height: artSize,
-            borderRadius: artRadius,
-            objectFit: 'cover',
-            marginTop: layout?.artwork
-              ? layout.artwork.y - (layout.meta
-                ? layout.meta.y + layout.meta.height
-                : layout.lyric.y + layout.lyric.height)
-              : 14,
-            display: 'block',
+            position: 'absolute',
+            inset: 0,
+            borderRadius: 'inherit',
+            zIndex: 0,
+            ...bgLayerStyle,
           }}
         />
-      ) : null}
-
-      {(canPlay || listenUrl) ? (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            marginTop: '16px',
-            gap: '12px',
-            minHeight: 'var(--margo-touch-min)',
-          }}
-        >
-          {canPlay ? (
-            <button
-              type="button"
-              onClick={onPlay}
-              aria-label={playing ? 'Pause' : 'Play'}
-              style={{
-                ...playControlStyle,
-                background: theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.1)' : 'rgba(255,255,255,0.12)',
-                border: `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.14)' : 'rgba(255,255,255,0.16)'}`,
-                cursor: 'pointer',
-                padding: 0,
-              }}
-            >
-              <PlayPauseIcon playing={playing} buffering={buffering} size={14} color={theme.ink} />
-            </button>
-          ) : listenUrl ? (
-            <a
-              href={listenUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                minHeight: 'var(--margo-touch-min)',
-                textDecoration: 'none',
-                fontFamily: UI_FONT,
-                fontSize: '0.72rem',
-                fontWeight: 600,
-                letterSpacing: '0.2px',
-                color: theme.ink,
-              }}
-            >
-              Listen <ShareIcon size={12} color="currentColor" />
-            </a>
-          ) : null}
-        </div>
-      ) : null}
-
-      {showFooter ? (
-        <div style={{ marginTop: '16px' }}>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              alignItems: 'center',
-              gap: '16px',
-              minHeight: '22px',
-            }}
-          >
-            {canCycleTheme ? (
-              <button
-                type="button"
-                aria-label={`Color: ${theme.label}. Tap to change.`}
-                onClick={() => onThemeChange?.(cycleStageCardTheme(cardThemeId).id)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: 0,
-                  border: 'none',
-                  background: 'none',
-                  cursor: 'pointer',
-                  WebkitTapHighlightColor: 'transparent',
-                  flexShrink: 0,
-                }}
-              >
-                <span style={footerLabelStyle(theme.inkMuted)}>Color</span>
-                <span
-                  aria-hidden
-                  style={{
-                    width: '22px',
-                    height: '22px',
-                    borderRadius: '50%',
-                    border: `2px solid ${theme.ink}`,
-                    background: theme.swatch,
-                    boxShadow: theme.markVariant === 'on-light'
-                      ? 'inset 0 0 0 1.5px rgba(255,255,255,0.55)'
-                      : 'inset 0 0 0 1.5px rgba(255,255,255,0.14)',
-                    flexShrink: 0,
-                  }}
-                />
-              </button>
-            ) : null}
-
-            {canCycleAtmosphere ? (
-              <button
-                type="button"
-                aria-label={`Effect: ${exportAtmosphereLabel(exportAtmosphereId)}. Tap to change.`}
-                onClick={() => onExportAtmosphereChange?.(cycleExportAtmosphere(exportAtmosphereId))}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: 0,
-                  border: 'none',
-                  background: 'none',
-                  cursor: 'pointer',
-                  WebkitTapHighlightColor: 'transparent',
-                  flexShrink: 0,
-                }}
-              >
-                <span style={footerLabelStyle(theme.inkMuted)}>Effect</span>
-                <span style={footerChipStyle(theme)}>{exportAtmosphereLabel(exportAtmosphereId)}</span>
-              </button>
-            ) : null}
-
-            {canCycleShape ? (
-              <button
-                type="button"
-                aria-label={`Size: ${EXPORT_SHAPE_LABELS[shapeId]}. Tap to change.`}
-                onClick={() => onShapeChange?.(cycleExportShape(shapeId))}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: 0,
-                  border: 'none',
-                  background: 'none',
-                  cursor: 'pointer',
-                  WebkitTapHighlightColor: 'transparent',
-                  flexShrink: 0,
-                }}
-              >
-                <span style={footerLabelStyle(theme.inkMuted)}>Size</span>
-                <span style={footerChipStyle(theme)}>{EXPORT_SHAPE_LABELS[shapeId]}</span>
-              </button>
-            ) : null}
-
-            {vibeLabel ? (
-              <button
-                type="button"
-                aria-label={canPickVibe ? `Vibe: ${vibeLabel}. Tap to change.` : `Vibe: ${vibeLabel}`}
-                onClick={canPickVibe ? () => setVibePickerOpen((open) => !open) : undefined}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: 0,
-                  border: 'none',
-                  background: 'none',
-                  cursor: canPickVibe ? 'pointer' : 'default',
-                  WebkitTapHighlightColor: 'transparent',
-                  flexShrink: 0,
-                  maxWidth: '100%',
-                  minWidth: 0,
-                }}
-              >
-                <span style={footerLabelStyle(theme.inkMuted)}>Vibe</span>
-                <span style={footerChipStyle(theme)} title={vibeLabel}>
-                  {vibeLabel}
-                </span>
-              </button>
-            ) : null}
+        {showAtmosphere ? (
+          <AtmospherePreviewRoom
+            personality={atmosphereId}
+            variant="card"
+            tone={atmosphereTone}
+          />
+        ) : null}
+        <div style={{ position: 'relative', zIndex: 2 }}>
+          <div style={markStyle} aria-hidden>
+            <MargoSymbol size={markSymbolSize} variant={markVariant} />
           </div>
 
-          {vibePickerOpen && canPickVibe ? (
-            <div
-              role="listbox"
-              aria-label="Choose a vibe"
+          <p style={lyricStyle}>
+            {layout ? lyricDisplayText(layout) : lyric}
+          </p>
+
+          {(songTitle || artistName) ? (
+            <div style={{ marginTop: metaMarginTop, minWidth: 0 }}>
+              {songTitle ? (
+                <p
+                  style={{
+                    margin: 0,
+                    fontFamily: UI_FONT,
+                    fontSize: metaSongSize ?? '0.78rem',
+                    fontWeight: 700,
+                    color: theme.ink,
+                    lineHeight: 1.25,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {layout?.meta?.song?.text ?? songTitle}
+                </p>
+              ) : null}
+              {artistName ? (
+                <p
+                  style={{
+                    margin: songTitle ? '3px 0 0' : 0,
+                    fontFamily: UI_FONT,
+                    fontSize: metaArtistSize ?? '0.72rem',
+                    fontWeight: 400,
+                    color: theme.inkMuted,
+                    lineHeight: 1.25,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {layout?.meta?.artist?.text ?? artistName}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {artwork ? (
+            <img
+              src={artwork}
+              alt=""
               style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
-                gap: '6px',
-                marginTop: '14px',
-                width: '100%',
-                paddingBottom: '2px',
-                borderTop: `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.1)' : 'rgba(255,255,255,0.1)'}`,
-                paddingTop: '14px',
+                width: artSize,
+                height: artSize,
+                borderRadius: artRadius,
+                objectFit: 'cover',
+                marginTop: layout?.artwork
+                  ? layout.artwork.y - (layout.meta
+                    ? layout.meta.y + layout.meta.height
+                    : layout.lyric.y + layout.lyric.height)
+                  : 14,
+                display: 'block',
+              }}
+            />
+          ) : null}
+
+          {(canPlay || listenUrl) ? (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                marginTop: '16px',
+                gap: '12px',
+                minHeight: 'var(--margo-touch-min)',
               }}
             >
-              {vibeOptions.map((option) => {
-                const selected = option === vibeLabel
-                const suggested = option === suggestedVibeLabel && !selected
-                return (
-                  <button
-                    key={option}
-                    type="button"
-                    role="option"
-                    aria-selected={selected}
-                    onClick={() => {
-                      onVibeSelect?.(option)
-                      setVibePickerOpen(false)
-                    }}
-                    style={{
-                      position: 'relative',
-                      minHeight: '26px',
-                      padding: '0 4px',
-                      borderRadius: '50px',
-                      border: selected
-                        ? `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.35)' : 'rgba(255,255,255,0.35)'}`
-                        : `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.16)' : 'rgba(255,255,255,0.16)'}`,
-                      background: selected
-                        ? (theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.14)' : 'rgba(255,255,255,0.14)')
-                        : (theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.06)' : 'rgba(255,255,255,0.06)'),
-                      color: theme.ink,
-                      fontFamily: UI_FONT,
-                      fontSize: '0.58rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {option}
-                    {suggested ? (
-                      <span
-                        aria-hidden
-                        style={{
-                          position: 'absolute',
-                          top: '-3px',
-                          right: '-3px',
-                          width: '7px',
-                          height: '7px',
-                          borderRadius: '50%',
-                          background: theme.ink,
-                          border: `1.5px solid ${theme.bg}`,
+              {canPlay ? (
+                <button
+                  type="button"
+                  onClick={onPlay}
+                  aria-label={playing ? 'Pause' : 'Play'}
+                  style={{
+                    ...playControlStyle,
+                    background: theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.1)' : 'rgba(255,255,255,0.12)',
+                    border: `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.14)' : 'rgba(255,255,255,0.16)'}`,
+                    cursor: 'pointer',
+                    padding: 0,
+                  }}
+                >
+                  <PlayPauseIcon playing={playing} buffering={buffering} size={14} color={theme.ink} />
+                </button>
+              ) : listenUrl ? (
+                <a
+                  href={listenUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    minHeight: 'var(--margo-touch-min)',
+                    textDecoration: 'none',
+                    fontFamily: UI_FONT,
+                    fontSize: '0.72rem',
+                    fontWeight: 600,
+                    letterSpacing: '0.2px',
+                    color: theme.ink,
+                  }}
+                >
+                  Listen <ShareIcon size={12} color="currentColor" />
+                </a>
+              ) : null}
+            </div>
+          ) : null}
+
+          {showVibeFooter ? (
+            <div style={{ marginTop: '16px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  alignItems: 'center',
+                  minHeight: '22px',
+                }}
+              >
+                <button
+                  type="button"
+                  aria-label={canPickVibe ? `Vibe: ${vibeLabel}. Tap to change.` : `Vibe: ${vibeLabel}`}
+                  onClick={canPickVibe ? () => setVibePickerOpen((open) => !open) : undefined}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: 0,
+                    border: 'none',
+                    background: 'none',
+                    cursor: canPickVibe ? 'pointer' : 'default',
+                    WebkitTapHighlightColor: 'transparent',
+                    flexShrink: 0,
+                    maxWidth: '100%',
+                    minWidth: 0,
+                  }}
+                >
+                  <span style={footerLabelStyle(theme.inkMuted)}>Vibe</span>
+                  <span style={footerChipStyle(theme)} title={vibeLabel}>
+                    {vibeLabel}
+                  </span>
+                </button>
+              </div>
+
+              {vibePickerOpen && canPickVibe ? (
+                <div
+                  role="listbox"
+                  aria-label="Choose a vibe"
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+                    gap: '6px',
+                    marginTop: '14px',
+                    width: '100%',
+                    paddingBottom: '2px',
+                    borderTop: `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.1)' : 'rgba(255,255,255,0.1)'}`,
+                    paddingTop: '14px',
+                  }}
+                >
+                  {vibeOptions.map((option) => {
+                    const selected = option === vibeLabel
+                    const suggested = option === suggestedVibeLabel && !selected
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        role="option"
+                        aria-selected={selected}
+                        onClick={() => {
+                          onVibeSelect?.(option)
+                          setVibePickerOpen(false)
                         }}
-                      />
-                    ) : null}
-                  </button>
-                )
-              })}
+                        style={{
+                          position: 'relative',
+                          minHeight: '26px',
+                          padding: '0 4px',
+                          borderRadius: '50px',
+                          border: selected
+                            ? `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.35)' : 'rgba(255,255,255,0.35)'}`
+                            : `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.16)' : 'rgba(255,255,255,0.16)'}`,
+                          background: selected
+                            ? (theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.14)' : 'rgba(255,255,255,0.14)')
+                            : (theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.06)' : 'rgba(255,255,255,0.06)'),
+                          color: theme.ink,
+                          fontFamily: UI_FONT,
+                          fontSize: '0.58rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {option}
+                        {suggested ? (
+                          <span
+                            aria-hidden
+                            style={{
+                              position: 'absolute',
+                              top: '-3px',
+                              right: '-3px',
+                              width: '7px',
+                              height: '7px',
+                              borderRadius: '50%',
+                              background: theme.ink,
+                              border: `1.5px solid ${theme.bg}`,
+                            }}
+                          />
+                        ) : null}
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>
-      ) : null}
-    </ComposeLyricCard>
+      </ComposeLyricCard>
     </div>
   )
 }
