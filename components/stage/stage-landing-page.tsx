@@ -11,6 +11,7 @@ import {
   SpotifyIcon,
 } from '@/components/icons'
 import Link from 'next/link'
+import { SignInLink } from '@/components/signin-link'
 import { UI_FONT } from '@/lib/fonts'
 import { useIdentity } from '@/hooks/useIdentity'
 
@@ -117,9 +118,9 @@ export function StageLandingPage() {
               <span>You</span>
             </Link>
           ) : (
-            <Link href="/signin" style={landingAccountLinkStyle}>
+            <SignInLink style={landingAccountLinkStyle}>
               Sign in
-            </Link>
+            </SignInLink>
           )}
         </div>
       </nav>

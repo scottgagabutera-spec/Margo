@@ -26,6 +26,8 @@ interface LyricLine {
   end: number
 }
 
+const KARAOKE_RESUME_KEY = 'margo-karaoke-resume'
+
 // This is the permanent canonical content route for a song — /song/[id].
 // Unlike the old /music/player?id=&au= page, everything the page needs
 // (title, artist, audio URL, lyrics) comes from useSong(id) via the path
@@ -46,7 +48,8 @@ export default function SongPage() {
   const router = useRouter()
   const { song, lyrics, loading } = useSong(songId ?? null)
   const { songs } = useSongs()
-  const { requireAuth } = useAuthGate()
+  const { requireAuth, user } = useAuthGate()
+  const resumePlayRef = useRef(false)
 
   // ── Engine state ─────────────────────────────────────────────────
   const engineState = useAudioEngine()
@@ -135,8 +138,7 @@ export default function SongPage() {
     setShowTapOverlay(true)
   }, [songId])
 
-  const startPlayback = useCallback(() => {
-    if (!requireAuth()) return
+  const beginPlayback = useCallback(() => {
     if (!songId || !audioUrl) return
     setShowTapOverlay(false)
     playedSongIdRef.current = songId
@@ -179,7 +181,38 @@ export default function SongPage() {
       source: 'karaoke',
       atmosphere: livingAtmosphereOrNull(song?.atmosphere),
     })
-  }, [requireAuth, audioUrl, songId, songArtist, songArtwork, songTitle, startAtParam, nextSongs, song?.atmosphere])
+  }, [audioUrl, songId, songArtist, songArtwork, songTitle, startAtParam, nextSongs, song?.atmosphere])
+
+  const startPlayback = useCallback(() => {
+    if (!requireAuth()) {
+      resumePlayRef.current = true
+      try {
+        sessionStorage.setItem(KARAOKE_RESUME_KEY, JSON.stringify({ songId }))
+      } catch {
+        /* private mode */
+      }
+      return
+    }
+    beginPlayback()
+  }, [requireAuth, beginPlayback, songId])
+
+  useEffect(() => {
+    if (!user || !songId || !audioUrl) return
+    let shouldResume = resumePlayRef.current
+    try {
+      const raw = sessionStorage.getItem(KARAOKE_RESUME_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw) as { songId?: string }
+        if (parsed.songId === songId) shouldResume = true
+        sessionStorage.removeItem(KARAOKE_RESUME_KEY)
+      }
+    } catch {
+      /* ignore */
+    }
+    if (!shouldResume) return
+    resumePlayRef.current = false
+    beginPlayback()
+  }, [user, songId, audioUrl, beginPlayback])
 
   // Follow engine → URL only when the engine advances (auto next).
   // Do not yank the user back if they picked a different song while one is playing.

@@ -5,6 +5,8 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { useArtistApplication } from '@/hooks/useArtistApplication'
 import { ArtistApplicationForm } from '@/components/artist-application-form'
 import { BackButton } from '@/components/back-button'
+import { SignInLink } from '@/components/signin-link'
+import { buildSigninHref } from '@/lib/auth-return'
 
 import { UI_FONT } from '@/lib/fonts'
 
@@ -15,18 +17,45 @@ export default function ApplyArtistPage() {
   const { user, identity, loading } = useIdentity()
   const { application } = useArtistApplication()
 
-  // Applying requires a real account — anonymous visitors get sent to sign in first.
   useEffect(() => {
     if (loading) return
     if (!user || user.isAnonymous) {
-      router.push('/signin')
+      router.replace(buildSigninHref('/apply-artist'))
     }
   }, [loading, user, router])
 
-  if (loading || !identity || !user || user.isAnonymous) {
+  if (loading) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ fontFamily: font, color: 'rgba(255,255,255,0.3)' }}>Loading…</p>
+        <p style={{ fontFamily: font, color: 'var(--text-muted)' }}>Loading…</p>
+      </div>
+    )
+  }
+
+  if (!user || user.isAnonymous || !identity) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center', padding: '24px' }}>
+          <p style={{ fontFamily: font, color: 'var(--text-secondary)', marginBottom: '16px' }}>
+            Sign in to apply as an artist
+          </p>
+          <SignInLink
+            returnTo="/apply-artist"
+            style={{
+              padding: '10px 24px',
+              border: '1px solid var(--border)',
+              borderRadius: '50px',
+              color: 'var(--text-secondary)',
+              fontFamily: font,
+              fontSize: '0.6rem',
+              letterSpacing: '1px',
+              textTransform: 'uppercase',
+              textDecoration: 'none',
+            }}
+          >
+            Sign In
+          </SignInLink>
+        </div>
       </div>
     )
   }

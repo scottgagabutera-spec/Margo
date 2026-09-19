@@ -9,9 +9,11 @@ import { MargoNav } from '@/components/margo-nav'
 import { MobileTabBar } from '@/components/mobile-tab-bar'
 import { HubProvider } from '@/components/hub-menu'
 import { ChromeModePublisher } from '@/components/chrome-mode'
+import { AuthReturnRestorer } from '@/components/auth-return-restorer'
 import { TabSwipeProvider } from '@/hooks/useTabSwipe'
 import { Toaster } from '@/components/ui/sonner'
 import type { Metadata, Viewport } from 'next'
+import { Suspense } from 'react'
 import { Lora, Sora } from 'next/font/google'
 import { GeistSans } from 'geist/font/sans'
 import { Analytics } from '@vercel/analytics/next'
@@ -177,6 +179,9 @@ export default function RootLayout({
                 <MessagingProvider>
                   <HubProvider>
                   <ChromeModePublisher />
+                  <Suspense fallback={null}>
+                    <AuthReturnRestorer />
+                  </Suspense>
                   <TabSwipeProvider
                     chrome={
                       <>

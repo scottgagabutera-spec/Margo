@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { supabaseCookieOptions } from '@/lib/supabase/cookie-options'
 import { userNeedsTermsAcceptance } from '@/lib/legal/consent'
 import { isConsentEnforcementExemptPath } from '@/lib/legal/consent-paths'
+import { sanitizeAuthReturnPath } from '@/lib/auth-return'
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -41,8 +42,17 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   if (user && userNeedsTermsAcceptance(user) && !isConsentEnforcementExemptPath(pathname)) {
     const url = request.nextUrl.clone()
+    const existingReturn = request.nextUrl.searchParams.get('returnTo')
     url.pathname = '/signin'
-    url.search = 'step=terms'
+    url.search = ''
+    url.searchParams.set('step', 'terms')
+    const from = pathname === '/signin'
+      ? existingReturn
+      : `${pathname}${request.nextUrl.search}`
+    const safeFrom = sanitizeAuthReturnPath(from)
+    if (safeFrom) {
+      url.searchParams.set('returnTo', safeFrom)
+    }
     return NextResponse.redirect(url)
   }
 

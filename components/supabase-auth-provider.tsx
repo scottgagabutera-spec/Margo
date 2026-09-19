@@ -15,6 +15,8 @@ import { AuthGateModal } from '@/components/auth-gate-modal'
 import { AuthGateErrorHandler } from '@/components/auth-gate-error-handler'
 import { LegalConsentEnforcer } from '@/components/legal-consent-enforcer'
 import { disarmComposePendingAction } from '@/lib/moment-draft'
+import { persistAuthReturnScroll } from '@/lib/auth-return'
+import { persistActivePrimaryScroll } from '@/components/primary-tab-shell'
 import { Suspense } from 'react'
 
 const supabase = createClient()
@@ -290,9 +292,12 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
       typeof window !== 'undefined'
         ? `${window.location.pathname}${window.location.search}`
         : '/compose'
+    const returnTo = opts?.returnTo ?? fallback
     setAuthGateExternalError(null)
-    setAuthReturnTo(opts?.returnTo ?? fallback)
+    setAuthReturnTo(returnTo)
     setGateOpen(true)
+    persistAuthReturnScroll(returnTo)
+    persistActivePrimaryScroll()
     return false
   }, [user])
 

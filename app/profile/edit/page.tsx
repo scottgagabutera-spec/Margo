@@ -5,6 +5,7 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { AvatarUpload } from '@/components/avatar-upload'
 import { BackButton } from '@/components/back-button'
+import { SignInLink } from '@/components/signin-link'
 import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { ARTIST_LINK_FIELDS, sanitizeArtistLinks } from '@/lib/artist-links'
 
@@ -46,14 +47,12 @@ export default function EditProfilePage() {
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
 
-  // This page has nothing to show without an identity — bounce signed-out
-  // visitors back and prompt auth rather than rendering an empty form.
+  // Stay here and open the auth gate so a successful sign-in returns to edit.
   useEffect(() => {
     if (!loading && !user) {
-      requireAuth()
-      router.replace('/feed')
+      requireAuth({ returnTo: '/profile/edit' })
     }
-  }, [loading, user, requireAuth, router])
+  }, [loading, user, requireAuth])
 
   // Seed local form state once identity resolves. Runs again if identity
   // changes underneath us (e.g. another tab updated it).
@@ -142,6 +141,44 @@ export default function EditProfilePage() {
       }, 900)
     }
   }, [identity, displayName, username, bio, lyric, song, artist, isPrivate, artistLinkDraft, updateDisplayName, changeUsername, updateBio, updateSignatureLyric, setPrivate, updateArtistLinks, router])
+
+  if (!loading && !user) {
+    return (
+      <main style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+        <div style={{
+          maxWidth: '420px',
+          margin: '0 auto',
+          padding: 'calc(var(--nav-height, 72px) + 48px) 24px',
+          textAlign: 'center',
+        }}>
+          <p style={{
+            fontFamily: lyricFont,
+            fontStyle: 'italic',
+            color: 'var(--text-secondary)',
+            marginBottom: '16px',
+          }}>
+            Sign in to edit your profile
+          </p>
+          <SignInLink
+            returnTo="/profile/edit"
+            style={{
+              padding: '10px 24px',
+              border: '1px solid var(--border)',
+              borderRadius: '50px',
+              color: 'var(--text-secondary)',
+              fontFamily: font,
+              fontSize: '0.6rem',
+              letterSpacing: '1px',
+              textTransform: 'uppercase',
+              textDecoration: 'none',
+            }}
+          >
+            Sign In
+          </SignInLink>
+        </div>
+      </main>
+    )
+  }
 
   if (loading || !identity) {
     return (
