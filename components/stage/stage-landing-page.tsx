@@ -79,7 +79,7 @@ export function StageLandingPage() {
         }}
       >
         <a href="/" style={{ textDecoration: 'none' }}>
-          <MargoLogo tier="lockup" size={36} />
+          <MargoLogo tier="lockup" size={36} rings containRings glow={false} />
         </a>
         <div className="margo-landing-nav__account">
           {isSignedIn ? (

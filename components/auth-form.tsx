@@ -7,14 +7,16 @@ import { setBrowserAccessToken } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import {
   CONSENT_REQUIRED_MESSAGE,
+  ConsentRequiredAlert,
   SignupConsentCheckbox,
   SignupConsentGate,
   SignupConsentIntro,
   TermsCompletionIntro,
 } from '@/components/signup-legal-notice'
+import { UI_FONT } from '@/lib/fonts'
 
 const lora = 'var(--font-lora), serif'
-const ui = 'var(--font-geist-sans), system-ui, sans-serif'
+const ui = UI_FONT
 
 export type AuthMode = 'signup' | 'signin'
 
@@ -55,28 +57,95 @@ function friendlyError(e: { message?: string }): string {
   return msg || 'Something went wrong. Please try again.'
 }
 
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  height: '42px',
-  padding: '0 12px',
-  background: 'rgba(255,255,255,0.03)',
-  border: '1px solid rgba(255,255,255,0.1)',
-  borderRadius: '10px',
-  color: 'var(--text)',
+const fieldLabelStyle: React.CSSProperties = {
+  display: 'block',
   fontFamily: ui,
-  fontSize: '0.84rem',
-  outline: 'none',
-  boxSizing: 'border-box',
+  fontSize: '0.6rem',
+  color: 'var(--text-muted)',
+  textTransform: 'uppercase',
+  letterSpacing: '1.5px',
+  marginBottom: '8px',
+  fontWeight: 700,
+}
+
+interface AuthTextFieldProps {
+  id: string
+  label: string
+  type: 'email' | 'password'
+  value: string
+  autoComplete: string
+  disabled?: boolean
+  onChange: (value: string) => void
+  onFocus?: () => void
+  onClick?: () => void
+  onEnter?: () => void
+}
+
+function AuthTextField({
+  id,
+  label,
+  type,
+  value,
+  autoComplete,
+  disabled = false,
+  onChange,
+  onFocus,
+  onClick,
+  onEnter,
+}: AuthTextFieldProps) {
+  const [focused, setFocused] = useState(false)
+
+  return (
+    <div>
+      <label htmlFor={id} style={fieldLabelStyle}>{label}</label>
+      <input
+        id={id}
+        type={type}
+        autoComplete={autoComplete}
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => {
+          setFocused(true)
+          onFocus?.()
+        }}
+        onBlur={() => setFocused(false)}
+        onClick={onClick}
+        onKeyDown={(e) => e.key === 'Enter' && onEnter?.()}
+        className="margo-auth-input"
+        style={{
+          width: '100%',
+          height: '44px',
+          padding: '0 14px',
+          background: 'var(--surface-2)',
+          border: `1px solid ${focused ? 'var(--gold-border)' : 'var(--border)'}`,
+          borderRadius: '12px',
+          color: 'var(--text)',
+          fontFamily: ui,
+          fontSize: '0.95rem',
+          letterSpacing: '-0.01em',
+          outline: 'none',
+          boxSizing: 'border-box',
+          transition: 'border-color 150ms ease',
+        }}
+      />
+      <style jsx>{`
+        .margo-auth-input::placeholder {
+          color: var(--text-muted);
+        }
+      `}</style>
+    </div>
+  )
 }
 
 const oauthBtnBase: React.CSSProperties = {
   width: '100%',
-  height: '42px',
+  height: '44px',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   gap: '8px',
-  borderRadius: '10px',
+  borderRadius: '12px',
   fontFamily: ui,
   fontSize: '0.8rem',
   fontWeight: 500,
@@ -87,7 +156,7 @@ const oauthBtnBase: React.CSSProperties = {
 
 const primaryBtnStyle: React.CSSProperties = {
   width: '100%',
-  height: '42px',
+  height: '44px',
   padding: '0 14px',
   background: 'var(--gold)',
   color: 'var(--text-on-gold, var(--bg))',
@@ -165,9 +234,15 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
       </div>
 
       {(error || externalError) ? (
-        <p role="alert" style={{ fontFamily: ui, fontSize: '0.78rem', color: '#ff7070', margin: '0 0 16px', lineHeight: 1.45 }}>
-          {error || externalError}
-        </p>
+        <div style={{ margin: '0 0 16px' }}>
+          {(error || externalError) === CONSENT_REQUIRED_MESSAGE
+            ? <ConsentRequiredAlert message={CONSENT_REQUIRED_MESSAGE} />
+            : (
+              <p role="alert" style={{ fontFamily: ui, fontSize: '0.78rem', color: '#ff7070', margin: 0, lineHeight: 1.45 }}>
+                {error || externalError}
+              </p>
+            )}
+        </div>
       ) : null}
 
       <button
@@ -287,6 +362,24 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
   }
 
   const primaryDisabled = loading || !email || !password || signupBlocked
+  const alertMessage = error || externalError
+
+  const renderFormError = (message: string) => {
+    if (message === CONSENT_REQUIRED_MESSAGE) {
+      return <ConsentRequiredAlert message={message} />
+    }
+    return (
+      <p role="alert" style={{
+        fontFamily: ui,
+        fontSize: '0.78rem',
+        color: '#ff7070',
+        margin: 0,
+        lineHeight: 1.45,
+      }}>
+        {message}
+      </p>
+    )
+  }
 
   return (
     <div style={{ width: '100%' }}>
@@ -314,6 +407,12 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
             />
           </SignupConsentGate>
         </>
+      ) : null}
+
+      {alertMessage ? (
+        <div style={{ margin: '0 0 16px' }}>
+          {renderFormError(alertMessage)}
+        </div>
       ) : null}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '22px' }}>
@@ -361,61 +460,37 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
         </button>
       </div>
 
-      {(error || externalError) ? (
-        <p role="alert" style={{
-          fontFamily: ui,
-          fontSize: '0.78rem',
-          color: '#ff7070',
-          margin: '0 0 16px',
-          lineHeight: 1.45,
-        }}>
-          {error || externalError}
-        </p>
-      ) : null}
-
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '0 0 20px' }}>
         <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.07)' }} />
         <span style={{ fontFamily: ui, fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>or email</span>
         <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.07)' }} />
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <div>
-          <label htmlFor={emailId} style={{ display: 'block', fontFamily: ui, fontSize: '0.62rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1.1px', marginBottom: '5px' }}>Email</label>
-          <input
-            id={emailId}
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            onFocus={remindConsentIfNeeded}
-            onClick={remindConsentIfNeeded}
-            onKeyDown={(e) => e.key === 'Enter' && void handleEmailSubmit()}
-            disabled={loading}
-            style={inputStyle}
-          />
-        </div>
-        <div>
-          <label htmlFor={passwordId} style={{ display: 'block', fontFamily: ui, fontSize: '0.62rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1.1px', marginBottom: '5px' }}>Password</label>
-          <input
-            id={passwordId}
-            type="password"
-            autoComplete={isSignup ? 'new-password' : 'current-password'}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onFocus={remindConsentIfNeeded}
-            onClick={remindConsentIfNeeded}
-            onKeyDown={(e) => e.key === 'Enter' && void handleEmailSubmit()}
-            disabled={loading}
-            style={inputStyle}
-          />
-        </div>
-
-        {(error || externalError) ? (
-          <p role="alert" style={{ fontFamily: ui, fontSize: '0.78rem', color: '#ff7070', margin: 0, lineHeight: 1.45 }}>
-            {error || externalError}
-          </p>
-        ) : null}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <AuthTextField
+          id={emailId}
+          label="Email"
+          type="email"
+          autoComplete="email"
+          value={email}
+          disabled={loading}
+          onChange={setEmail}
+          onFocus={remindConsentIfNeeded}
+          onClick={remindConsentIfNeeded}
+          onEnter={() => { void handleEmailSubmit() }}
+        />
+        <AuthTextField
+          id={passwordId}
+          label="Password"
+          type="password"
+          autoComplete={isSignup ? 'new-password' : 'current-password'}
+          value={password}
+          disabled={loading}
+          onChange={setPassword}
+          onFocus={remindConsentIfNeeded}
+          onClick={remindConsentIfNeeded}
+          onEnter={() => { void handleEmailSubmit() }}
+        />
 
         <button
           type="button"
