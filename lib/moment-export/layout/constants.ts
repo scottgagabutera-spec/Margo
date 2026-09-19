@@ -31,8 +31,12 @@ export const STAGE_CARD_LAYOUT_REF = {
     fontStyle: 'italic' as const,
     fontWeight: 400,
     /** Lyric size at ref width — scales linearly with output width */
-    fontSize: 29.6,
+    fontSize: 27.2,
+    /** Uniform smaller size for paragraphs / multi-line Moments */
+    fontSizeMulti: 21.6,
     lineHeight: 1.35,
+    /** Max wrapped lines before stepping down to fontSizeMulti */
+    multiLineThreshold: 2,
   },
   meta: {
     gap: 14,

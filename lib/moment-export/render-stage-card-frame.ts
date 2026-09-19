@@ -1,4 +1,6 @@
+import { parseAtmosphere, type AtmosphereId } from '@/lib/atmosphere'
 import type { StageCardTheme } from '@/lib/moment/stage-theme'
+import { drawExportAtmosphere } from '@/lib/moment-export/draw-export-atmosphere'
 import type { ResolvedStageCardLayout } from '@/lib/moment-export/layout/types'
 
 const MARGO_GOLD = '#E8C547'
@@ -121,6 +123,8 @@ function drawVibePill(
 
 export interface StageCardFrameAssets {
   artworkImage?: HTMLImageElement | null
+  exportAtmosphereId?: AtmosphereId | null
+  atmosphereTimeSec?: number
 }
 
 /**
@@ -137,6 +141,17 @@ export function renderStageCardFrame(
 
   ctx.fillStyle = layout.background.base
   ctx.fillRect(0, 0, W, H)
+
+  const atmosphereId = parseAtmosphere(assets.exportAtmosphereId ?? null)
+  drawExportAtmosphere(
+    ctx,
+    W,
+    H,
+    atmosphereId,
+    assets.atmosphereTimeSec ?? 0,
+    layout.borderRadius,
+  )
+
   const highlight = ctx.createLinearGradient(0, 0, 0, H * layout.background.highlightHeightFraction)
   highlight.addColorStop(0, `rgba(255,255,255,${layout.background.highlightTopOpacity})`)
   highlight.addColorStop(1, 'rgba(255,255,255,0)')

@@ -1,3 +1,4 @@
+import type { AtmosphereId } from '@/lib/atmosphere'
 import type { PostLine } from '@/lib/post-lines'
 import {
   composeMoment,
@@ -806,6 +807,7 @@ export interface RenderMomentOptions {
   lines: NormalizedLine[]
   themeId?: string
   shapeId?: string
+  exportAtmosphereId?: AtmosphereId | null
   vibeLabel?: string | null
   seedKey?: string
   scale?: number
@@ -868,7 +870,7 @@ async function renderStageMomentCardToCanvas(
   canvas: HTMLCanvasElement,
   options: RenderMomentOptions,
 ): Promise<void> {
-  const W = STAGE_CARD_EXPORT_WIDTH
+  const shape = SHAPES.find((s) => s.id === (options.shapeId || 'square')) || SHAPES[0]
   const SCALE = options.scale ?? 2
   const line = options.lines[0]
   if (!line) return
@@ -878,6 +880,11 @@ async function renderStageMomentCardToCanvas(
   const measureCtx = measureCanvas.getContext('2d')
   if (!measureCtx) return
   const geist = resolveGeistFontFamily()
+
+  const cardWidth = shape.id === 'vertical'
+    ? Math.round(STAGE_CARD_EXPORT_WIDTH * 0.88)
+    : STAGE_CARD_EXPORT_WIDTH
+
   const layout = resolveStageCardLayout({
     lyric: line.lyric,
     songTitle: line.songTitle,
@@ -885,10 +892,39 @@ async function renderStageMomentCardToCanvas(
     artworkUrl: line.artworkUrl,
     vibeLabel: options.vibeLabel,
     themeId: options.themeId,
-    outputWidthPx: W,
+    exportAtmosphereId: options.exportAtmosphereId,
+    outputWidthPx: cardWidth,
     includeVibePill: !!options.vibeLabel,
   }, buildCanvasTextMeasure(measureCtx), geist)
 
+  const artworkImg = await loadMomentArtwork(line.artworkUrl)
+  const frameAssets = {
+    artworkImage: artworkImg,
+    exportAtmosphereId: options.exportAtmosphereId ?? null,
+    atmosphereTimeSec: 0,
+  }
+
+  if (shape.id === 'vertical') {
+    const canvasW = shape.w
+    const canvasH = shape.h
+    canvas.width = canvasW * SCALE
+    canvas.height = canvasH * SCALE
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.scale(SCALE, SCALE)
+    ctx.fillStyle = '#07060A'
+    ctx.fillRect(0, 0, canvasW, canvasH)
+    const cardX = Math.round((canvasW - cardWidth) / 2)
+    const cardY = Math.round((canvasH - layout.outputHeight) / 2)
+    ctx.save()
+    ctx.translate(cardX, cardY)
+    renderStageCardFrame(ctx, layout, frameAssets)
+    ctx.restore()
+    return
+  }
+
+  const W = layout.outputWidth
   const H = layout.outputHeight
   canvas.width = W * SCALE
   canvas.height = H * SCALE
@@ -896,9 +932,7 @@ async function renderStageMomentCardToCanvas(
   if (!ctx) return
   ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.scale(SCALE, SCALE)
-
-  const artworkImg = await loadMomentArtwork(line.artworkUrl)
-  renderStageCardFrame(ctx, layout, { artworkImage: artworkImg })
+  renderStageCardFrame(ctx, layout, frameAssets)
 }
 
 export async function renderMomentToCanvas(

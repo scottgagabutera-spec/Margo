@@ -1,3 +1,5 @@
+import { parseAtmosphere } from '@/lib/atmosphere'
+import { drawExportAtmosphere } from '@/lib/moment-export/draw-export-atmosphere'
 import type { MomentTimeline } from '@/lib/moment-export/timeline/types'
 import { wordRevealProgress } from '@/lib/moment-export/timeline/build-moment-timeline'
 import { clamp01, easeOutCubic, windowProgress } from '@/lib/moment-export/timeline/interpolate'
@@ -184,6 +186,7 @@ export function renderMomentFrame(
   timeline: MomentTimeline,
   assets: MomentFrameAssets,
   timeSec: number,
+  exportAtmosphereId?: string | null,
 ): void {
   const W = layout.outputWidth
   const H = layout.outputHeight
@@ -198,6 +201,15 @@ export function renderMomentFrame(
   ctx.globalAlpha = alpha
   ctx.fillStyle = layout.background.base
   ctx.fillRect(0, 0, W, H)
+  drawExportAtmosphere(
+    ctx,
+    W,
+    H,
+    parseAtmosphere(exportAtmosphereId ?? null),
+    timeSec,
+    layout.borderRadius,
+    alpha,
+  )
   const highlight = ctx.createLinearGradient(0, 0, 0, H * layout.background.highlightHeightFraction)
   highlight.addColorStop(0, `rgba(255,255,255,${layout.background.highlightTopOpacity})`)
   highlight.addColorStop(1, 'rgba(255,255,255,0)')

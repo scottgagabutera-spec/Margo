@@ -10,6 +10,8 @@ import {
   resolveMargoMomentFromComposeDrafts,
   resolveMomentListen,
 } from '@/lib/moment'
+import type { AtmosphereId } from '@/lib/atmosphere'
+import type { MomentShapeId } from '@/lib/moment/types'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 
 export type ComposeReadyLineDraft = {
@@ -33,6 +35,10 @@ type Props = {
   onVibeSelect?: (label: string) => void
   cardThemeId?: StageCardThemeId
   onThemeChange?: (id: StageCardThemeId) => void
+  exportAtmosphereId?: AtmosphereId
+  onExportAtmosphereChange?: (id: AtmosphereId) => void
+  shapeId?: MomentShapeId
+  onShapeChange?: (id: MomentShapeId) => void
 }
 
 export function ComposeReadyPreview({
@@ -43,11 +49,21 @@ export function ComposeReadyPreview({
   onVibeSelect,
   cardThemeId: cardThemeIdProp,
   onThemeChange: onThemeChangeProp,
+  exportAtmosphereId: exportAtmosphereIdProp,
+  onExportAtmosphereChange: onExportAtmosphereChangeProp,
+  shapeId: shapeIdProp,
+  onShapeChange: onShapeChangeProp,
 }: Props) {
   const [lineIndex, setLineIndex] = useState(0)
   const [cardThemeIdLocal, setCardThemeIdLocal] = useState<StageCardThemeId>('gold')
+  const [exportAtmosphereIdLocal, setExportAtmosphereIdLocal] = useState<AtmosphereId>('still')
+  const [shapeIdLocal, setShapeIdLocal] = useState<MomentShapeId>('square')
   const cardThemeId = cardThemeIdProp ?? cardThemeIdLocal
   const setCardThemeId = onThemeChangeProp ?? setCardThemeIdLocal
+  const exportAtmosphereId = exportAtmosphereIdProp ?? exportAtmosphereIdLocal
+  const setExportAtmosphereId = onExportAtmosphereChangeProp ?? setExportAtmosphereIdLocal
+  const shapeId = shapeIdProp ?? shapeIdLocal
+  const setShapeId = onShapeChangeProp ?? setShapeIdLocal
 
   const validDrafts = useMemo(
     () => drafts.filter((d) => d.lyric.trim() && d.songName.trim() && d.artistName.trim()),
@@ -142,6 +158,10 @@ export function ComposeReadyPreview({
         onVibeSelect={onVibeSelect}
         cardThemeId={cardThemeId}
         onThemeChange={setCardThemeId}
+        exportAtmosphereId={exportAtmosphereId}
+        onExportAtmosphereChange={setExportAtmosphereId}
+        shapeId={shapeId}
+        onShapeChange={setShapeId}
         canPlay={canPlayInline}
         playing={playing}
         buffering={buffering}

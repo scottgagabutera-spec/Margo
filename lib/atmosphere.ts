@@ -42,3 +42,14 @@ export function isLivingAtmosphere(id: AtmosphereId): boolean {
 export function livingAtmosphereOrNull(raw: string | null | undefined): AtmosphereColumn | null {
   return toAtmosphereColumn(parseAtmosphere(raw))
 }
+
+/** Export/share UI cycles all atmosphere personalities (Still = no overlay). */
+export function cycleExportAtmosphere(id: AtmosphereId): AtmosphereId {
+  const idx = ATMOSPHERE_IDS.indexOf(id)
+  const next = ATMOSPHERE_IDS[(idx + 1) % ATMOSPHERE_IDS.length]
+  return next ?? 'still'
+}
+
+export function exportAtmosphereLabel(id: AtmosphereId): string {
+  return ATMOSPHERE_OPTIONS.find((o) => o.id === id)?.label ?? 'Still'
+}

@@ -77,6 +77,7 @@ export interface StageMomentInput {
 export interface ResolveMargoMomentOptions {
   themeId?: MomentThemeId
   shapeId?: MomentShapeId
+  exportAtmosphereId?: AtmosphereId
   vibeLabel?: string | null
   seedKey?: string
   status?: MomentStatus | null
@@ -231,6 +232,7 @@ export function resolveMargoMomentFromPost(
     postId: options.postId ?? post.id ?? null,
     themeId: options.themeId ?? DEFAULT_MOMENT_THEME_ID,
     shapeId: options.shapeId ?? DEFAULT_MOMENT_SHAPE_ID,
+    exportAtmosphereId: options.exportAtmosphereId,
     seedKey,
     status: options.status ?? postStatusToMomentStatus(post.status),
   }
@@ -276,6 +278,7 @@ export function resolveMargoMomentFromComposeDrafts(
     postId: options.postId ?? null,
     themeId: options.themeId ?? DEFAULT_MOMENT_THEME_ID,
     shapeId: options.shapeId ?? DEFAULT_MOMENT_SHAPE_ID,
+    exportAtmosphereId: options.exportAtmosphereId,
     seedKey,
     status: options.status ?? (options.postId ? null : 'ephemeral'),
   }
@@ -309,6 +312,7 @@ export function resolveMargoMomentFromStage(
     postId: options.postId ?? null,
     themeId: options.themeId ?? DEFAULT_MOMENT_THEME_ID,
     shapeId: options.shapeId ?? DEFAULT_MOMENT_SHAPE_ID,
+    exportAtmosphereId: options.exportAtmosphereId,
     seedKey,
     status: options.status ?? (options.postId ? 'active' : 'ephemeral'),
   }

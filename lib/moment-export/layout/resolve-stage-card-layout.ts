@@ -5,7 +5,11 @@ import {
   STAGE_CARD_LAYOUT_REF,
   stageCardScale,
 } from '@/lib/moment-export/layout/constants'
-import { layoutLyricText, truncateToWidth } from '@/lib/moment-export/layout/text-layout'
+import {
+  layoutLyricText,
+  splitIntentionalParagraphs,
+  truncateToWidth,
+} from '@/lib/moment-export/layout/text-layout'
 import type {
   LayoutLyricBlock,
   LayoutMetaBlock,
@@ -57,16 +61,26 @@ export function resolveStageCardLayout(
   const borderRadius = roundStageToken(ref.borderRadius, W)
   const contentWidth = W - padding.left - padding.right
 
-  const lyricFontSize = roundStageToken(ref.lyric.fontSize, W)
-  const lyricLineHeight = lyricFontSize * ref.lyric.lineHeight
-  const lyricMeasureFont = lyricFont(measureFontSizeForCanvas(lyricFontSize))
+  const lyricSource = input.lyric || ''
+  const paragraphCount = splitIntentionalParagraphs(lyricSource).filter((p) => p.trim()).length
+  const baseRefSize = ref.lyric.fontSize
+  const compactRefSize = ref.lyric.fontSizeMulti
 
-  const displayLines = layoutLyricText(
-    input.lyric || '',
-    contentWidth,
-    measure,
-    lyricMeasureFont,
-  )
+  let lyricFontSize = roundStageToken(baseRefSize, W)
+  let lyricMeasureFont = lyricFont(measureFontSizeForCanvas(lyricFontSize))
+  let displayLines = layoutLyricText(lyricSource, contentWidth, measure, lyricMeasureFont)
+
+  const needsCompact =
+    paragraphCount > 1 ||
+    displayLines.length > ref.lyric.multiLineThreshold
+
+  if (needsCompact) {
+    lyricFontSize = roundStageToken(compactRefSize, W)
+    lyricMeasureFont = lyricFont(measureFontSizeForCanvas(lyricFontSize))
+    displayLines = layoutLyricText(lyricSource, contentWidth, measure, lyricMeasureFont)
+  }
+
+  const lyricLineHeight = lyricFontSize * ref.lyric.lineHeight
   const lyricHeight = displayLines.length * lyricLineHeight
 
   let cursorY = padding.top

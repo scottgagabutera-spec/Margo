@@ -47,6 +47,8 @@ import { playOrToggleSnippet } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
 import { useIdentity } from '@/hooks/useIdentity'
 import { UI_FONT } from '@/lib/fonts'
+import type { AtmosphereId } from '@/lib/atmosphere'
+import type { MomentShapeId } from '@/lib/moment/types'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 
 const supabase = createClient()
@@ -126,6 +128,8 @@ export function StageLanding() {
   const [suggestedVibeLabel, setSuggestedVibeLabel] = useState<string | null>(null)
   const [vibeUserPicked, setVibeUserPicked] = useState(false)
   const [cardThemeId, setCardThemeId] = useState<StageCardThemeId>('gold')
+  const [exportAtmosphereId, setExportAtmosphereId] = useState<AtmosphereId>('still')
+  const [shapeId, setShapeId] = useState<MomentShapeId>('square')
   const [saving, setSaving] = useState(false)
   const [shareBusy, setShareBusy] = useState(false)
   const [videoProgress, setVideoProgress] = useState<string | null>(null)
@@ -545,6 +549,8 @@ export function StageLanding() {
       externalListenUrl: selectedSong?.externalListenUrl ?? null,
     }, {
       themeId: cardThemeId,
+      shapeId,
+      exportAtmosphereId,
     })
   }, [
     lyric, songName, artistName, selectedSong?.artwork, linkedSongId,
@@ -893,6 +899,10 @@ export function StageLanding() {
                   }}
                   cardThemeId={cardThemeId}
                   onThemeChange={setCardThemeId}
+                  exportAtmosphereId={exportAtmosphereId}
+                  onExportAtmosphereChange={setExportAtmosphereId}
+                  shapeId={shapeId}
+                  onShapeChange={setShapeId}
                   canPlay={listen?.canPlayInline ?? false}
                   playing={playing}
                   buffering={buffering}

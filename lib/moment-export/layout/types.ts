@@ -101,6 +101,7 @@ export interface StageCardLayoutInput {
   artworkUrl?: string | null
   vibeLabel?: string | null
   themeId?: string | null
+  exportAtmosphereId?: string | null
   outputWidthPx: number
   /** When false, vibe pill is omitted from layout height (preview-only footers) */
   includeVibePill?: boolean

@@ -1,4 +1,5 @@
-import type { MargoMoment } from '@/lib/moment/types'
+import type { AtmosphereId } from '@/lib/atmosphere'
+import type { MargoMoment, MomentShapeId } from '@/lib/moment/types'
 import { margoMomentToPostLines } from '@/lib/moment/resolve'
 import {
   normalizeLine,
@@ -55,7 +56,8 @@ function normalizedFromMoment(moment: MargoMoment): NormalizedLine[] {
 
 function renderOptionsFromMoment(moment: MargoMoment): {
   themeId: string
-  shapeId: string
+  shapeId: MomentShapeId
+  exportAtmosphereId?: AtmosphereId | null
   vibeLabel?: string | null
   seedKey: string
   variant: 'poster' | 'stage-card'
@@ -69,6 +71,7 @@ function renderOptionsFromMoment(moment: MargoMoment): {
   return {
     themeId: moment.themeId,
     shapeId: moment.shapeId,
+    exportAtmosphereId: moment.exportAtmosphereId ?? null,
     vibeLabel: moment.vibeLabel,
     seedKey: moment.seedKey,
     variant: isStageCard ? 'stage-card' : 'poster',

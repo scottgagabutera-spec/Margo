@@ -121,7 +121,7 @@ export async function encodeMargoMomentGif(
   for (const idx of sampleIndices) {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
     const renderTimeSec = resolveExportRenderTimeSec(idx, MOMENT_GIF_FPS, posterRenderSec)
-    renderMomentFrame(ctx, layout, timeline, { artworkImage }, renderTimeSec)
+    renderMomentFrame(ctx, layout, timeline, { artworkImage }, renderTimeSec, moment.exportAtmosphereId)
     samples.push(subsampleRgba(ctx.getImageData(0, 0, W, H).data))
   }
   const globalPalette = quantize(concatRgba(samples), 256, { format: PALETTE_FORMAT })
@@ -132,7 +132,7 @@ export async function encodeMargoMomentGif(
   for (let frame = 0; frame < frameCount; frame++) {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
     const renderTimeSec = resolveExportRenderTimeSec(frame, MOMENT_GIF_FPS, posterRenderSec)
-    renderMomentFrame(ctx, layout, timeline, { artworkImage }, renderTimeSec)
+    renderMomentFrame(ctx, layout, timeline, { artworkImage }, renderTimeSec, moment.exportAtmosphereId)
     const rgba = ctx.getImageData(0, 0, W, H).data
     const index = applyPalette(rgba, globalPalette, { format: PALETTE_FORMAT })
     gif.writeFrame(index, W, H, { palette: globalPalette, delay: delayMs })

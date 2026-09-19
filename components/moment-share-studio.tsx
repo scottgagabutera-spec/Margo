@@ -19,6 +19,8 @@ import {
   slugify,
 } from '@/lib/moment-export/save-moment-image'
 import type { MargoMoment } from '@/lib/moment/types'
+import type { AtmosphereId } from '@/lib/atmosphere'
+import type { MomentShapeId } from '@/lib/moment/types'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 import {
   buildMargoMomentFromExportProps,
@@ -91,6 +93,8 @@ export function MomentShareStudio({
   onExported,
 }: MomentShareStudioProps) {
   const [cardThemeId, setCardThemeId] = useState<StageCardThemeId>('gold')
+  const [exportAtmosphereId, setExportAtmosphereId] = useState<AtmosphereId>('still')
+  const [shapeId, setShapeId] = useState<MomentShapeId>('square')
   const [exportVibeLabel, setExportVibeLabel] = useState<string | null>(null)
   const [lineIndex, setLineIndex] = useState(0)
   const [exportBusy, setExportBusy] = useState(false)
@@ -161,11 +165,12 @@ export function MomentShareStudio({
         snippetEnd: baseMoment.lines[previewIndex]?.snippetEnd ?? null,
       }],
       themeId: cardThemeId,
-      shapeId: 'square',
+      shapeId,
+      exportAtmosphereId,
       vibeLabel: exportVibeLabel ?? baseMoment.vibeLabel ?? vibeLabel ?? null,
       seedKey: resolvedPostId ? `${resolvedPostId}:line${previewIndex}` : baseMoment.seedKey,
     }
-  }, [baseMoment, previewLine, isDualCard, cardThemeId, exportVibeLabel, vibeLabel, resolvedPostId, previewIndex])
+  }, [baseMoment, previewLine, isDualCard, cardThemeId, shapeId, exportAtmosphereId, exportVibeLabel, vibeLabel, resolvedPostId, previewIndex])
 
   const hasSnippet = exportMoment ? momentHasPlayableSnippet(exportMoment) : false
 
@@ -514,6 +519,10 @@ export function MomentShareStudio({
             onVibeSelect={setExportVibeLabel}
             cardThemeId={cardThemeId}
             onThemeChange={setCardThemeId}
+            exportAtmosphereId={exportAtmosphereId}
+            onExportAtmosphereChange={setExportAtmosphereId}
+            shapeId={shapeId}
+            onShapeChange={setShapeId}
             canPlay={false}
           />
         </>

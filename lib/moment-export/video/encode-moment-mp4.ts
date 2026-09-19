@@ -85,6 +85,11 @@ export async function encodeMargoMomentMp4(
   if (!measureCtx) throw new Error('Canvas is not available')
   const measure = buildCanvasTextMeasure(measureCtx)
 
+  const isVertical = moment.shapeId === 'vertical'
+  const cardWidth = isVertical
+    ? Math.round(STAGE_CARD_EXPORT_WIDTH * 0.88)
+    : STAGE_CARD_EXPORT_WIDTH
+
   const layout = resolveStageCardLayout({
     lyric: line.lyric,
     songTitle: line.songTitle,
@@ -92,7 +97,7 @@ export async function encodeMargoMomentMp4(
     artworkUrl: line.artworkUrl,
     vibeLabel: moment.vibeLabel,
     themeId: moment.themeId,
-    outputWidthPx: STAGE_CARD_EXPORT_WIDTH,
+    outputWidthPx: cardWidth,
     includeVibePill: !!moment.vibeLabel?.trim(),
   }, measure, geistFamily)
 
@@ -121,12 +126,14 @@ export async function encodeMargoMomentMp4(
 
   const frameCount = Math.max(1, Math.round(totalDurationSec * MOMENT_VIDEO_FPS))
   const frameDuration = 1 / MOMENT_VIDEO_FPS
-  const W = exportLayout.outputWidth
-  const H = exportLayout.outputHeight
+  const canvasW = isVertical ? 1080 : exportLayout.outputWidth
+  const canvasH = isVertical ? 1920 : exportLayout.outputHeight
+  const cardOffsetX = isVertical ? Math.round((canvasW - exportLayout.outputWidth) / 2) : 0
+  const cardOffsetY = isVertical ? Math.round((canvasH - exportLayout.outputHeight) / 2) : 0
 
   const canvas = document.createElement('canvas')
-  canvas.width = W
-  canvas.height = H
+  canvas.width = canvasW
+  canvas.height = canvasH
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('Canvas is not available')
 
@@ -162,7 +169,17 @@ export async function encodeMargoMomentMp4(
     }
     const timeSec = frame / MOMENT_VIDEO_FPS
     const renderTimeSec = resolveExportRenderTimeSec(frame, MOMENT_VIDEO_FPS, posterRenderSec)
-    renderMomentFrame(ctx, exportLayout, exportTimeline, assets, renderTimeSec)
+    if (isVertical) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      ctx.fillStyle = '#07060A'
+      ctx.fillRect(0, 0, canvasW, canvasH)
+      ctx.save()
+      ctx.translate(cardOffsetX, cardOffsetY)
+      renderMomentFrame(ctx, exportLayout, exportTimeline, assets, renderTimeSec, moment.exportAtmosphereId)
+      ctx.restore()
+    } else {
+      renderMomentFrame(ctx, exportLayout, exportTimeline, assets, renderTimeSec, moment.exportAtmosphereId)
+    }
     await videoSource.add(timeSec, frameDuration)
     if (frame % 30 === 0) {
       onProgress?.({ phase: 'frames', frame, frameCount })
@@ -184,7 +201,7 @@ export async function encodeMargoMomentMp4(
     encodeMs: performance.now() - t0,
     videoCodec,
     audioCodec,
-    width: W,
-    height: H,
+    width: canvasW,
+    height: canvasH,
   }
 }

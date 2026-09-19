@@ -56,6 +56,8 @@ export interface MargoMoment {
   postId?: string | null
   themeId: MomentThemeId
   shapeId: MomentShapeId
+  /** Export-only atmosphere overlay (Still = none). Not persisted to posts. */
+  exportAtmosphereId?: AtmosphereId
   /** Deterministic identity for composition + future render caches */
   seedKey: string
   status?: MomentStatus | null

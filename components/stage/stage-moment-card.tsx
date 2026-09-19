@@ -14,6 +14,18 @@ import {
   stageCardShellStyle,
   useStageCardLayout,
 } from '@/hooks/useStageCardLayout'
+import { AtmospherePreviewRoom } from '@/components/atmosphere-layer'
+import {
+  cycleExportAtmosphere,
+  exportAtmosphereLabel,
+  isLivingAtmosphere,
+  type AtmosphereId,
+} from '@/lib/atmosphere'
+import {
+  cycleExportShape,
+  EXPORT_SHAPE_LABELS,
+} from '@/lib/moment-export/export-shapes'
+import type { MomentShapeId } from '@/lib/moment/types'
 import {
   cycleStageCardTheme,
   getStageCardTheme,
@@ -32,6 +44,10 @@ interface StageMomentCardProps {
   onVibeSelect?: (label: string) => void
   cardThemeId?: StageCardThemeId
   onThemeChange?: (id: StageCardThemeId) => void
+  exportAtmosphereId?: AtmosphereId
+  onExportAtmosphereChange?: (id: AtmosphereId) => void
+  shapeId?: MomentShapeId
+  onShapeChange?: (id: MomentShapeId) => void
   canPlay: boolean
   playing?: boolean
   buffering?: boolean
@@ -102,6 +118,10 @@ export function StageMomentCard({
   onVibeSelect,
   cardThemeId = 'gold',
   onThemeChange,
+  exportAtmosphereId = 'still',
+  onExportAtmosphereChange,
+  shapeId = 'square',
+  onShapeChange,
   canPlay,
   playing = false,
   buffering = false,
@@ -115,8 +135,11 @@ export function StageMomentCard({
   const theme = getStageCardTheme(cardThemeId)
   const canPickVibe = vibeOptions.length > 0 && !!onVibeSelect
   const canCycleTheme = !!onThemeChange
+  const canCycleAtmosphere = !!onExportAtmosphereChange
+  const canCycleShape = !!onShapeChange
   const markVariant = theme.markVariant === 'on-light' ? 'ink' : 'gold'
-  const showFooter = vibeLabel || canCycleTheme
+  const showFooter = vibeLabel || canCycleTheme || canCycleAtmosphere || canCycleShape
+  const showAtmosphere = isLivingAtmosphere(exportAtmosphereId)
 
   const layout = useStageCardLayout({
     lyric,
@@ -140,8 +163,12 @@ export function StageMomentCard({
     return () => ro.disconnect()
   }, [])
 
-  const shellStyle = layout
-    ? stageCardShellStyle(layout)
+  const baseShellStyle = layout ? stageCardShellStyle(layout) : null
+  const shellStyle = baseShellStyle
+    ? {
+        ...baseShellStyle,
+        overflow: showAtmosphere ? 'hidden' : baseShellStyle.overflow,
+      }
     : {
         position: 'relative' as const,
         textAlign: 'left' as const,
@@ -149,6 +176,7 @@ export function StageMomentCard({
         padding: '20px 52px 18px 20px',
         background: `linear-gradient(180deg, ${theme.markVariant === 'on-light' ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.04)'} 0%, transparent 28%), ${theme.bg}`,
         border: `1px solid ${theme.border}`,
+        overflow: showAtmosphere ? 'hidden' as const : undefined,
       }
 
   const lyricStyle = layout
@@ -198,6 +226,9 @@ export function StageMomentCard({
         ...style,
       }}
     >
+      {showAtmosphere ? (
+        <AtmospherePreviewRoom personality={exportAtmosphereId} variant="card" />
+      ) : null}
       <div style={markStyle} aria-hidden>
         <MargoSymbol size={markSymbolSize} variant={markVariant} />
       </div>
@@ -356,6 +387,50 @@ export function StageMomentCard({
                     flexShrink: 0,
                   }}
                 />
+              </button>
+            ) : null}
+
+            {canCycleAtmosphere ? (
+              <button
+                type="button"
+                aria-label={`Effect: ${exportAtmosphereLabel(exportAtmosphereId)}. Tap to change.`}
+                onClick={() => onExportAtmosphereChange?.(cycleExportAtmosphere(exportAtmosphereId))}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: 0,
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  WebkitTapHighlightColor: 'transparent',
+                  flexShrink: 0,
+                }}
+              >
+                <span style={footerLabelStyle(theme.inkMuted)}>Effect</span>
+                <span style={footerChipStyle(theme)}>{exportAtmosphereLabel(exportAtmosphereId)}</span>
+              </button>
+            ) : null}
+
+            {canCycleShape ? (
+              <button
+                type="button"
+                aria-label={`Size: ${EXPORT_SHAPE_LABELS[shapeId]}. Tap to change.`}
+                onClick={() => onShapeChange?.(cycleExportShape(shapeId))}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: 0,
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  WebkitTapHighlightColor: 'transparent',
+                  flexShrink: 0,
+                }}
+              >
+                <span style={footerLabelStyle(theme.inkMuted)}>Size</span>
+                <span style={footerChipStyle(theme)}>{EXPORT_SHAPE_LABELS[shapeId]}</span>
               </button>
             ) : null}
 
