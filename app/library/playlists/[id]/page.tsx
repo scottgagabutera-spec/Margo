@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { SignInLink } from '@/components/sign-in-link'
 import { useParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { BackButton } from '@/components/back-button'
@@ -122,7 +123,7 @@ export default function LibraryPlaylistPage() {
             }}>
               Sign in to open your library
             </p>
-            <Link href="/signin" style={{
+            <SignInLink style={{
               padding: '10px 24px',
               border: '1px solid var(--border)',
               borderRadius: '50px',
@@ -134,7 +135,7 @@ export default function LibraryPlaylistPage() {
               textDecoration: 'none',
             }}>
               Sign In
-            </Link>
+            </SignInLink>
           </div>
         ) : !detail || !isOwner ? (
           <div>

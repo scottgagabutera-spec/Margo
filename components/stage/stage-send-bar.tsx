@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { UI_FONT } from '@/lib/fonts'
 import { MomentActionMenu, type MomentActionMenuItem } from '@/components/moment-action-menu'
+import { SignInLink } from '@/components/sign-in-link'
 
 interface StageSendBarProps {
   saveItems: MomentActionMenuItem[]
@@ -126,8 +127,7 @@ export function StageSendBar({
             {sending ? 'Posting…' : 'Post to Margo'}
           </button>
         ) : (
-          <a
-            href="/signin"
+          <SignInLink
             style={{
               ...publishButtonStyle,
               display: 'inline-flex',
@@ -137,7 +137,7 @@ export function StageSendBar({
             }}
           >
             Sign in to post
-          </a>
+          </SignInLink>
         )
       ) : (
         <button

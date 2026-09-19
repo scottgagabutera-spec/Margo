@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { SignInLink } from '@/components/sign-in-link'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useThread } from '@/hooks/useThread'
 import { useConversationScroll } from '@/hooks/useConversationScroll'
@@ -110,11 +111,11 @@ export default function ThreadPage() {
           <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-secondary)', marginBottom: '16px' }}>
             Sign in to send messages
           </p>
-          <Link href="/signin" style={{
+          <SignInLink style={{
             padding: '10px 24px', border: '1px solid var(--border)', borderRadius: '50px',
             color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.6rem',
             letterSpacing: '1px', textTransform: 'uppercase', textDecoration: 'none',
-          }}>Sign In</Link>
+          }}>Sign In</SignInLink>
         </div>
       </div>
     )

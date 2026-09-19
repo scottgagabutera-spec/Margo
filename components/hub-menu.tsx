@@ -23,6 +23,8 @@ import { PendingNavLink } from '@/components/pending-nav-link'
 import { UI_FONT } from '@/lib/fonts'
 import type { HubSurface, HubSurfaceId } from '@/lib/hub/surfaces'
 import { MargoSymbol } from '@/components/margo-symbol'
+import { SignInLink } from '@/components/sign-in-link'
+import { captureAuthReturnScroll, currentReturnPath, formatSigninHref } from '@/lib/auth-return'
 
 /** UI chrome — MARGO_BRAND §3 Geist Sans */
 const font = UI_FONT
@@ -80,10 +82,14 @@ function HubTile({
 }) {
   const { href, id, label, unread, wide, public: isPublic } = surface
   const badge = signedIn ? badgeLabel(unread) : ''
-  const dest = signedIn || isPublic ? href : '/signin'
+  const isSigninGate = !signedIn && !isPublic
+  const dest = isSigninGate ? formatSigninHref({ returnTo: currentReturnPath() }) : href
   return (
     <Link
       href={dest}
+      onPointerDown={() => {
+        if (isSigninGate) captureAuthReturnScroll()
+      }}
       onClick={(e) => {
         if (locked || pending || !onBeginNavigate(dest)) {
           e.preventDefault()
@@ -223,8 +229,7 @@ function HubTiles({
           >
             Sign in to see your Messages, Music Library, and Notifications. The Stage is open without an account.
           </p>
-          <Link
-            href="/signin"
+          <SignInLink
             onClick={close}
             data-margo-hub-root
             style={{
@@ -246,11 +251,11 @@ function HubTiles({
             }}
           >
             Sign In
-          </Link>
+          </SignInLink>
         </div>
       )}
       {surfaces.map((surface) => {
-        const dest = signedIn || surface.public ? surface.href : '/signin'
+        const dest = signedIn || surface.public ? surface.href : formatSigninHref({ returnTo: currentReturnPath() })
         return (
           <HubTile
             key={surface.id}

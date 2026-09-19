@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
+import { SignInLink } from '@/components/sign-in-link'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useConversations } from '@/hooks/useConversations'
@@ -29,11 +30,11 @@ export default function MessagesPage() {
             <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-secondary)', marginBottom: '16px' }}>
               Sign in to see your messages
             </p>
-            <Link href="/signin" style={{
+            <SignInLink style={{
               padding: '10px 24px', border: '1px solid var(--border)', borderRadius: '50px',
               color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.6rem',
               letterSpacing: '1px', textTransform: 'uppercase', textDecoration: 'none',
-            }}>Sign In</Link>
+            }}>Sign In</SignInLink>
           </div>
         ) : (
           <>

@@ -88,7 +88,9 @@ export async function GET(request: NextRequest) {
 
   let redirectTarget = oauthReturn ? `${origin}${oauthReturn}` : `${origin}/feed`
   if (user && userNeedsTermsAcceptance(user)) {
-    redirectTarget = `${origin}/signin?step=terms`
+    const termsParams = new URLSearchParams({ step: 'terms' })
+    if (oauthReturn) termsParams.set('returnTo', oauthReturn)
+    redirectTarget = `${origin}/signin?${termsParams.toString()}`
   }
 
   const response = NextResponse.redirect(redirectTarget)

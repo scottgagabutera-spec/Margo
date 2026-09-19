@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRef, useLayoutEffect, type CSSProperties } from 'react'
 import { usePathname } from 'next/navigation'
+import { captureAuthReturnScroll, currentReturnPath, formatSigninHref } from '@/lib/auth-return'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useAudioEngine } from '@/hooks/useAudioEngine'
 import { CompassIcon, FeedIcon, PenLineIcon } from '@/components/icons'
@@ -65,7 +66,9 @@ export function MobileTabBar() {
   const isOnCompose = activeTab === 'compose' || (!activeTab && pathname === '/compose')
 
   const isSignedIn = !!user && !user.isAnonymous
-  const ownProfileHref = identity ? `/profile/${identity.username}` : '/signin'
+  const ownProfileHref = identity
+    ? `/profile/${identity.username}`
+    : formatSigninHref({ returnTo: currentReturnPath() })
   const youLink = usePrimaryTabLinkProps(ownProfileHref)
   const isOnProfile = activeTab === 'you' || (isSignedIn && pathname === ownProfileHref)
 
@@ -134,7 +137,15 @@ export function MobileTabBar() {
 
       <HubTabButton style={tabStyle(false)} labelStyle={labelStyle} />
 
-      <Link href={ownProfileHref} style={tabStyle(isOnProfile)} {...(isSignedIn ? youLink : {})}>
+      <Link
+        href={ownProfileHref}
+        style={tabStyle(isOnProfile)}
+        {...(isSignedIn ? youLink : {})}
+        onPointerDown={() => {
+          if (!isSignedIn) captureAuthReturnScroll()
+          youLink.onPointerDown?.()
+        }}
+      >
         {isSignedIn && identity?.avatarUrl ? (
           <span style={{
             width: '20px', height: '20px', borderRadius: '50%', overflow: 'hidden',

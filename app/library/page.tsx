@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { SignInLink } from '@/components/sign-in-link'
 import { useState } from 'react'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useLibraryShelves } from '@/hooks/useLibraryShelves'
@@ -207,7 +208,7 @@ export default function LibraryPage() {
             }}>
               Sign in to open your library
             </p>
-            <Link href="/signin" style={{
+            <SignInLink style={{
               padding: '10px 24px',
               border: '1px solid var(--border)',
               borderRadius: '50px',
@@ -219,7 +220,7 @@ export default function LibraryPage() {
               textDecoration: 'none',
             }}>
               Sign In
-            </Link>
+            </SignInLink>
           </div>
         ) : loading ? (
           <p style={{ fontFamily: UI_FONT, color: 'var(--text-muted)' }}>Loading…</p>

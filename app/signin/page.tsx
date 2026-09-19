@@ -6,6 +6,7 @@ import { AuthForm, TermsCompletionForm, type AuthMode } from '@/components/auth-
 import { BackButton } from '@/components/back-button'
 import MargoLogo from '@/components/MargoLogo'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+import { resolvePostAuthPath } from '@/lib/auth-return'
 
 const lora = 'var(--font-lora), serif'
 const ui = 'var(--font-geist-sans), system-ui, sans-serif'
@@ -40,6 +41,9 @@ function SigninPageInner() {
   const isTermsStep = searchParams.get('step') === 'terms'
   const [mode, setMode] = useState<AuthMode>(initialMode)
 
+  const returnTo = searchParams.get('returnTo')
+  const postAuthPath = resolvePostAuthPath(returnTo)
+
   const externalError = useMemo(
     () => parseAuthError(searchParams.get('error')),
     [searchParams],
@@ -48,9 +52,9 @@ function SigninPageInner() {
   useEffect(() => {
     if (loading) return
     if (isTermsStep && user && !needsTermsAcceptance) {
-      router.replace('/feed')
+      router.replace(postAuthPath)
     }
-  }, [loading, isTermsStep, user, needsTermsAcceptance, router])
+  }, [loading, isTermsStep, user, needsTermsAcceptance, router, postAuthPath])
 
   return (
     <div style={{
@@ -136,7 +140,8 @@ function SigninPageInner() {
           {isTermsStep ? (
             <TermsCompletionForm
               externalError={externalError}
-              onSuccess={() => router.push('/feed')}
+              returnTo={returnTo}
+              onSuccess={() => router.push(postAuthPath)}
             />
           ) : (
             <>
@@ -186,7 +191,9 @@ function SigninPageInner() {
                 mode={mode}
                 onSwitchMode={setMode}
                 externalError={externalError}
-                onSuccess={() => router.push('/feed')}
+                returnTo={returnTo}
+                oauthReturnTo={returnTo}
+                onSuccess={() => router.push(postAuthPath)}
               />
             </>
           )}

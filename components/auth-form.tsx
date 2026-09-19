@@ -12,6 +12,7 @@ import {
   SignupConsentIntro,
   TermsCompletionIntro,
 } from '@/components/signup-legal-notice'
+import { captureAuthReturnScroll, resolvePostAuthPath } from '@/lib/auth-return'
 
 const lora = 'var(--font-lora), serif'
 const ui = 'var(--font-geist-sans), system-ui, sans-serif'
@@ -23,13 +24,17 @@ interface AuthFormProps {
   onSuccess?: () => void
   onSwitchMode?: (mode: AuthMode) => void
   externalError?: string | null
-  /** Post-OAuth redirect path (e.g. /compose) — set by auth gate. */
+  /** Post-OAuth redirect path (e.g. /compose) — set by auth gate or ?returnTo=. */
   oauthReturnTo?: string | null
+  /** Email/password success redirect when onSuccess is not provided. */
+  returnTo?: string | null
 }
 
 interface TermsCompletionFormProps {
   onSuccess?: () => void
   externalError?: string | null
+  /** Post-auth redirect path (from ?returnTo=). */
+  returnTo?: string | null
 }
 
 function friendlyError(e: { message?: string }): string {
@@ -104,9 +109,10 @@ const primaryBtnStyle: React.CSSProperties = {
   letterSpacing: '0.2px',
 }
 
-export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletionFormProps) {
+export function TermsCompletionForm({ onSuccess, externalError, returnTo }: TermsCompletionFormProps) {
   const router = useRouter()
   const { rehydrate } = useAuthGate()
+  const postAuthPath = resolvePostAuthPath(returnTo)
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -135,7 +141,8 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
       }
       await rehydrate()
       toast.success('Welcome to Margo.')
-      onSuccess?.() ?? router.push('/feed')
+      if (onSuccess) onSuccess()
+      else router.push(postAuthPath)
     } catch (e) {
       setError(friendlyError(e as { message?: string }))
     } finally {
@@ -191,8 +198,10 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
   )
 }
 
-export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthReturnTo }: AuthFormProps) {
+export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthReturnTo, returnTo }: AuthFormProps) {
   const { rehydrate } = useAuthGate()
+  const postAuthPath = resolvePostAuthPath(returnTo ?? oauthReturnTo)
+  const oauthReturnPath = oauthReturnTo ?? returnTo
   const emailId = useId()
   const passwordId = useId()
   const isSignup = mode === 'signup'
@@ -277,10 +286,11 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
     }
     setLoading(true)
     setError('')
+    const savedReturn = captureAuthReturnScroll(oauthReturnPath ?? undefined)
     const params = new URLSearchParams()
     params.set('intent', isSignup ? 'signup' : 'signin')
     if (isSignup) params.set('terms', '1')
-    if (oauthReturnTo?.startsWith('/')) params.set('returnTo', oauthReturnTo)
+    if (savedReturn.startsWith('/')) params.set('returnTo', savedReturn)
     window.location.assign(`/api/auth/oauth/${provider}?${params.toString()}`)
   }
 

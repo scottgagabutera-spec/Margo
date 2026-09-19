@@ -13,8 +13,10 @@ import {
 import type { User } from '@supabase/supabase-js'
 import { AuthGateModal } from '@/components/auth-gate-modal'
 import { LegalConsentEnforcer } from '@/components/legal-consent-enforcer'
+import { captureAuthReturnScroll } from '@/lib/auth-return'
 import { disarmComposePendingAction } from '@/lib/moment-draft'
 import { Suspense } from 'react'
+import { AuthReturnRestorer } from '@/components/auth-return-restorer'
 
 const supabase = createClient()
 
@@ -284,7 +286,11 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
       typeof window !== 'undefined'
         ? `${window.location.pathname}${window.location.search}`
         : '/compose'
-    setAuthReturnTo(opts?.returnTo ?? fallback)
+    const returnTo = opts?.returnTo ?? fallback
+    if (typeof window !== 'undefined') {
+      captureAuthReturnScroll(returnTo)
+    }
+    setAuthReturnTo(returnTo)
     setGateOpen(true)
     return false
   }, [user])
@@ -301,6 +307,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
       {children}
       <AuthGateModal open={gateOpen} onOpenChange={handleGateOpenChange} />
       <Suspense fallback={null}>
+        <AuthReturnRestorer />
         <LegalConsentEnforcer />
       </Suspense>
     </AuthGateContext.Provider>

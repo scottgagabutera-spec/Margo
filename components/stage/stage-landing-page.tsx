@@ -11,6 +11,7 @@ import {
   SpotifyIcon,
 } from '@/components/icons'
 import Link from 'next/link'
+import { SignInLink } from '@/components/sign-in-link'
 import { UI_FONT } from '@/lib/fonts'
 import { useIdentity } from '@/hooks/useIdentity'
 
@@ -67,11 +68,6 @@ export function StageLandingPage() {
 
   return (
     <div style={{ position: 'relative', width: '100%', overflow: 'hidden', background: 'var(--bg)' }}>
-      <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
-        <div style={{ position: 'absolute', top: '-10rem', left: '-10rem', width: '22rem', height: '22rem', background: 'rgba(232,197,71,0.05)', borderRadius: '50%', filter: 'blur(120px)' }} />
-        <div style={{ position: 'absolute', bottom: '-10rem', right: '-10rem', width: '22rem', height: '22rem', background: 'rgba(232,197,71,0.03)', borderRadius: '50%', filter: 'blur(120px)' }} />
-      </div>
-
       <nav
         className="margo-landing-nav"
         style={{
@@ -122,9 +118,9 @@ export function StageLandingPage() {
               <span>You</span>
             </Link>
           ) : (
-            <Link href="/signin" style={landingAccountLinkStyle}>
+            <SignInLink style={landingAccountLinkStyle}>
               Sign in
-            </Link>
+            </SignInLink>
           )}
         </div>
       </nav>
