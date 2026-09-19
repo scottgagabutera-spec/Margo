@@ -85,6 +85,7 @@ export async function encodeMargoMomentMp4(
   if (!measureCtx) throw new Error('Canvas is not available')
   const measure = buildCanvasTextMeasure(measureCtx)
 
+  const isVertical = moment.shapeId === 'vertical'
   const layout = resolveStageCardLayout({
     lyric: line.lyric,
     songTitle: line.songTitle,
@@ -92,8 +93,10 @@ export async function encodeMargoMomentMp4(
     artworkUrl: line.artworkUrl,
     vibeLabel: moment.vibeLabel,
     themeId: moment.themeId,
+    exportAtmosphereId: moment.exportAtmosphereId,
     outputWidthPx: STAGE_CARD_EXPORT_WIDTH,
     includeVibePill: !!moment.vibeLabel?.trim(),
+    format: isVertical ? 'shorts' : 'feed',
   }, measure, geistFamily)
 
   onProgress?.({ phase: 'audio' })
@@ -121,12 +124,12 @@ export async function encodeMargoMomentMp4(
 
   const frameCount = Math.max(1, Math.round(totalDurationSec * MOMENT_VIDEO_FPS))
   const frameDuration = 1 / MOMENT_VIDEO_FPS
-  const W = exportLayout.outputWidth
-  const H = exportLayout.outputHeight
+  const canvasW = exportLayout.outputWidth
+  const canvasH = exportLayout.outputHeight
 
   const canvas = document.createElement('canvas')
-  canvas.width = W
-  canvas.height = H
+  canvas.width = canvasW
+  canvas.height = canvasH
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('Canvas is not available')
 
@@ -162,7 +165,7 @@ export async function encodeMargoMomentMp4(
     }
     const timeSec = frame / MOMENT_VIDEO_FPS
     const renderTimeSec = resolveExportRenderTimeSec(frame, MOMENT_VIDEO_FPS, posterRenderSec)
-    renderMomentFrame(ctx, exportLayout, exportTimeline, assets, renderTimeSec)
+    renderMomentFrame(ctx, exportLayout, exportTimeline, assets, renderTimeSec, moment.exportAtmosphereId)
     await videoSource.add(timeSec, frameDuration)
     if (frame % 30 === 0) {
       onProgress?.({ phase: 'frames', frame, frameCount })
@@ -184,7 +187,7 @@ export async function encodeMargoMomentMp4(
     encodeMs: performance.now() - t0,
     videoCodec,
     audioCodec,
-    width: W,
-    height: H,
+    width: canvasW,
+    height: canvasH,
   }
 }

@@ -20,6 +20,8 @@ export interface UseStageCardLayoutArgs {
   themeId?: string | null
   /** When false, omit export-style vibe pill from layout height */
   includeVibePill?: boolean
+  format?: StageCardLayoutInput['format']
+  exportAtmosphereId?: StageCardLayoutInput['exportAtmosphereId']
 }
 
 function defaultWidth(): number {
@@ -48,6 +50,8 @@ export function useStageCardLayout(
     themeId: args.themeId,
     outputWidthPx: width,
     includeVibePill: args.includeVibePill,
+    format: args.format,
+    exportAtmosphereId: args.exportAtmosphereId,
   }), [
     args.lyric,
     args.songTitle,
@@ -56,6 +60,8 @@ export function useStageCardLayout(
     args.vibeLabel,
     args.themeId,
     args.includeVibePill,
+    args.format,
+    args.exportAtmosphereId,
     width,
   ])
 
@@ -100,8 +106,10 @@ export function stageCardLyricStyle(layout: ResolvedStageCardLayout): React.CSSP
     color: layout.lyric.style.color,
     lineHeight: layout.lyric.style.lineHeight,
     margin: 0,
-    textAlign: 'left',
+    textAlign: layout.lyric.align === 'center' ? 'center' : 'left',
     whiteSpace: 'pre-line',
+    overflowWrap: 'anywhere',
+    wordBreak: 'break-word',
   }
 }
 

@@ -11,9 +11,11 @@
  */
 
 export {
+  SHORTS_ASPECT,
   STAGE_CARD_EXPORT_WIDTH,
   STAGE_CARD_LAYOUT_REF,
   STAGE_CARD_REF_WIDTH,
+  STAGE_SHORTS_LAYOUT_REF,
   roundStageToken,
   scaleStageToken,
   stageCardScale,
@@ -46,6 +48,7 @@ export type {
   LayoutTextStyle,
   LayoutVibePill,
   ResolvedStageCardLayout,
+  StageCardFormat,
   StageCardLayoutInput,
   TextMeasureFn,
 } from '@/lib/moment-export/layout/types'

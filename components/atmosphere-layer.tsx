@@ -148,6 +148,27 @@ export function AtmosphereLayer({
   )
 }
 
+/** Forced preview room — same CSS rooms as Feed / karaoke, no engine. */
+export function AtmospherePreviewRoom({
+  personality,
+  variant = 'card',
+}: {
+  personality: AtmosphereId
+  variant?: AtmosphereVariant
+}) {
+  if (!isLivingAtmosphere(personality)) return null
+  return (
+    <div
+      aria-hidden
+      className={`margo-atmosphere-clip margo-atmosphere-clip--${variant}`}
+      data-atmosphere={personality}
+      style={{ zIndex: 1 }}
+    >
+      <AtmosphereRoom personality={personality} variant={variant} live />
+    </div>
+  )
+}
+
 function AtmosphereRoom({
   personality,
   variant,

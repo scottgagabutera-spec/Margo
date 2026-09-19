@@ -9,6 +9,11 @@ import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-l
 import { StageSearchField } from '@/components/stage/stage-search-field'
 import { StageSongChip } from '@/components/stage/stage-song-chip'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
+import { MomentExportCustomizeBar } from '@/components/moment-export-customize-bar'
+import { MomentVibeRow } from '@/components/moment-vibe-row'
+import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
+import { useSongAtmosphere } from '@/hooks/useSongAtmosphere'
+import { livingAtmosphereOrNull } from '@/lib/atmosphere'
 import { StageSendBar } from '@/components/stage/stage-send-bar'
 import MargoLogo from '@/components/MargoLogo'
 import { useStageChromePublisher, useStageSearchPublisher, useStageIdlePublisher, useStageMomentPublisher } from '@/lib/stage-chrome'
@@ -47,6 +52,8 @@ import { playOrToggleSnippet } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
 import { useIdentity } from '@/hooks/useIdentity'
 import { UI_FONT } from '@/lib/fonts'
+import type { AtmosphereId } from '@/lib/atmosphere'
+import type { MomentShapeId } from '@/lib/moment/types'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 
 const supabase = createClient()
@@ -126,6 +133,9 @@ export function StageLanding() {
   const [suggestedVibeLabel, setSuggestedVibeLabel] = useState<string | null>(null)
   const [vibeUserPicked, setVibeUserPicked] = useState(false)
   const [cardThemeId, setCardThemeId] = useState<StageCardThemeId>('gold')
+  const [exportAtmosphereId, setExportAtmosphereId] = useState<AtmosphereId>('still')
+  const [shapeId, setShapeId] = useState<MomentShapeId>('square')
+  const songAtmosphere = useSongAtmosphere(linkedSongId)
   const [saving, setSaving] = useState(false)
   const [shareBusy, setShareBusy] = useState(false)
   const [videoProgress, setVideoProgress] = useState<string | null>(null)
@@ -455,6 +465,34 @@ export function StageLanding() {
     linkedSongId, linkedAudioUrl, revealMoment,
   ])
 
+  const handleLineParagraph = useCallback((picked: ComposeLyricLine[]) => {
+    const joined = picked.map((l) => l.text.trim()).filter(Boolean).join('\n')
+    const capped = joined.slice(0, 280)
+    const start = picked[0]?.startSec ?? null
+    const end = picked[picked.length - 1]?.endSec ?? null
+    if (signedIn) {
+      router.push(buildComposePrefillUrl({
+        lyric: capped,
+        song: songName,
+        artist: artistName,
+        artwork: selectedSong?.artwork || null,
+        songId: linkedSongId,
+        audioUrl: linkedAudioUrl,
+        start,
+        end,
+      }))
+      return
+    }
+    setSnippetStart(start)
+    setSnippetEnd(end)
+    setLyric(capped)
+    setLinePickComplete(true)
+    revealMoment(capped, { animate: true, fetchVibe: true })
+  }, [
+    signedIn, router, songName, artistName, selectedSong?.artwork,
+    linkedSongId, linkedAudioUrl, revealMoment,
+  ])
+
   const navigateToCompose = useCallback(() => {
     if (!lyric.trim() || !songName.trim() || !artistName.trim()) return
     router.push(buildComposePrefillUrl({
@@ -497,38 +535,10 @@ export function StageLanding() {
       lineText: lyric,
       startSec: snippetStart!,
       endSec: snippetEnd!,
+      atmosphere: livingAtmosphereOrNull(songAtmosphere),
       source: 'feed',
     })
-  }, [canPlay, linkedAudioUrl, linkedSongId, songName, artistName, selectedSong?.artwork, lineIndex, lyric, snippetStart, snippetEnd])
-
-  const handleSaveImage = useCallback(async () => {
-    if (!hasMoment) return
-    setSaving(true)
-    try {
-      const moment = resolveMargoMomentFromStage({
-        lyric,
-        songName,
-        artistName,
-        artworkUrl: selectedSong?.artwork || null,
-        songId: linkedSongId,
-        audioUrl: linkedAudioUrl,
-        snippetStart,
-        snippetEnd,
-        vibeLabel,
-        source: linkedSongId ? 'catalog' : 'external',
-        externalListenUrl: selectedSong?.externalListenUrl ?? null,
-      }, { themeId: cardThemeId })
-      await saveMargoMomentImage(moment)
-      toastMomentImageSaved()
-    } catch {
-      toastMomentExportFailed('image')
-    } finally {
-      setSaving(false)
-    }
-  }, [
-    hasMoment, lyric, songName, artistName, selectedSong?.artwork,
-    linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, vibeLabel, selectedSong?.externalListenUrl, cardThemeId,
-  ])
+  }, [canPlay, linkedAudioUrl, linkedSongId, songName, artistName, selectedSong?.artwork, lineIndex, lyric, snippetStart, snippetEnd, songAtmosphere])
 
   const buildExportMoment = useCallback(() => {
     return resolveMargoMomentFromStage({
@@ -545,12 +555,27 @@ export function StageLanding() {
       externalListenUrl: selectedSong?.externalListenUrl ?? null,
     }, {
       themeId: cardThemeId,
+      shapeId,
+      exportAtmosphereId,
     })
   }, [
     lyric, songName, artistName, selectedSong?.artwork, linkedSongId,
     linkedAudioUrl, snippetStart, snippetEnd, vibeLabel,
-    selectedSong?.externalListenUrl, cardThemeId,
+    selectedSong?.externalListenUrl, cardThemeId, shapeId, exportAtmosphereId,
   ])
+
+  const handleSaveImage = useCallback(async () => {
+    if (!hasMoment) return
+    setSaving(true)
+    try {
+      await saveMargoMomentImage(buildExportMoment())
+      toastMomentImageSaved()
+    } catch {
+      toastMomentExportFailed('image')
+    } finally {
+      setSaving(false)
+    }
+  }, [hasMoment, buildExportMoment])
 
   const handleShareImage = useCallback(async () => {
     if (!hasMoment) return
@@ -824,6 +849,7 @@ export function StageLanding() {
                 artwork={selectedSong.artwork || null}
                 stickySkip
                 onPick={handleLinePick}
+                onPickParagraph={handleLineParagraph}
                 onSkip={() => {
                   setSnippetStart(null)
                   setSnippetEnd(null)
@@ -839,7 +865,7 @@ export function StageLanding() {
               <textarea
                 value={lyric}
                 onChange={(e) => handleWriteLineChange(e.target.value)}
-                maxLength={140}
+                maxLength={280}
                 rows={3}
                 placeholder="Type the line…"
                 autoFocus={selectedSong.source !== 'margo'}
@@ -879,11 +905,27 @@ export function StageLanding() {
           >
             {hasMoment && (
               <>
+                <MomentExportPreviewFrame shapeId={shapeId}>
                 <StageMomentCard
                   lyric={lyric}
                   songTitle={songName}
                   artistName={artistName}
                   artwork={selectedSong.artwork}
+                  vibeLabel={vibeLabel}
+                  cardThemeId={cardThemeId}
+                  atmosphereId={exportAtmosphereId}
+                  shapeId={shapeId}
+                  hideVibeChrome
+                  effectOwnsFill
+                  canPlay={listen?.canPlayInline ?? false}
+                  playing={playing}
+                  buffering={buffering}
+                  onPlay={handlePlay}
+                  listenUrl={listen && !listen.canPlayInline ? listen.externalUrl : null}
+                />
+                </MomentExportPreviewFrame>
+                <MomentVibeRow
+                  key={`${exportAtmosphereId}-${shapeId}`}
                   vibeLabel={vibeLabel}
                   suggestedVibeLabel={suggestedVibeLabel}
                   vibeOptions={STAGE_VIBE_OPTIONS}
@@ -891,13 +933,14 @@ export function StageLanding() {
                     setVibeLabel(label)
                     setVibeUserPicked(true)
                   }}
+                />
+                <MomentExportCustomizeBar
                   cardThemeId={cardThemeId}
                   onThemeChange={setCardThemeId}
-                  canPlay={listen?.canPlayInline ?? false}
-                  playing={playing}
-                  buffering={buffering}
-                  onPlay={handlePlay}
-                  listenUrl={listen && !listen.canPlayInline ? listen.externalUrl : null}
+                  exportAtmosphereId={exportAtmosphereId}
+                  onExportAtmosphereChange={setExportAtmosphereId}
+                  shapeId={shapeId}
+                  onShapeChange={setShapeId}
                 />
                 {signedIn ? (
                   <div style={{ width: '100%', marginTop: 'var(--stage-moment-to-actions, 22px)' }}>

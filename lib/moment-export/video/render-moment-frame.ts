@@ -1,3 +1,5 @@
+import { parseAtmosphere } from '@/lib/atmosphere'
+import { drawExportAtmosphere } from '@/lib/moment-export/draw-export-atmosphere'
 import type { MomentTimeline } from '@/lib/moment-export/timeline/types'
 import { wordRevealProgress } from '@/lib/moment-export/timeline/build-moment-timeline'
 import { clamp01, easeOutCubic, windowProgress } from '@/lib/moment-export/timeline/interpolate'
@@ -158,7 +160,10 @@ function computeWordPositions(
       continue
     }
     const baseline = lineY + lyric.style.fontSize * 0.92
-    let x = lyric.x
+    const lineWidth = ctx.measureText(line).width
+    let x = lyric.align === 'center'
+      ? lyric.x + (lyric.maxWidth - lineWidth) / 2
+      : lyric.x
     for (const token of line.split(/\s+/).filter(Boolean)) {
       if (wordIdx >= words.length) return positions
       positions.push({ x, y: baseline, timing: words[wordIdx] })
@@ -184,6 +189,7 @@ export function renderMomentFrame(
   timeline: MomentTimeline,
   assets: MomentFrameAssets,
   timeSec: number,
+  exportAtmosphereId?: string | null,
 ): void {
   const W = layout.outputWidth
   const H = layout.outputHeight
@@ -203,6 +209,15 @@ export function renderMomentFrame(
   highlight.addColorStop(1, 'rgba(255,255,255,0)')
   ctx.fillStyle = highlight
   ctx.fillRect(0, 0, W, H)
+  drawExportAtmosphere(
+    ctx,
+    W,
+    H,
+    parseAtmosphere(exportAtmosphereId ?? null),
+    timeSec,
+    layout.borderRadius,
+    alpha,
+  )
   ctx.restore()
 
   ctx.save()
@@ -253,13 +268,13 @@ export function renderMomentFrame(
       const s = layout.meta.song
       ctx.font = `${s.style.fontWeight} ${s.style.fontSize}px ${s.style.fontFamily}`
       ctx.fillStyle = s.style.color
-      ctx.fillText(s.text, layout.padding.left, s.y + s.style.fontSize - lift)
+      ctx.fillText(s.text, layout.meta.x, s.y + s.style.fontSize - lift)
     }
     if (layout.meta.artist) {
       const a = layout.meta.artist
       ctx.font = `${a.style.fontWeight} ${a.style.fontSize}px ${a.style.fontFamily}`
       ctx.fillStyle = a.style.color
-      ctx.fillText(a.text, layout.padding.left, a.y + a.style.fontSize - lift)
+      ctx.fillText(a.text, layout.meta.x, a.y + a.style.fontSize - lift)
     }
     ctx.restore()
   }

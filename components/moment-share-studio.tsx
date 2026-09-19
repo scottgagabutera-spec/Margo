@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronRightIcon } from '@/components/icons'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
+import { MomentExportCustomizeBar } from '@/components/moment-export-customize-bar'
+import { MomentVibeRow } from '@/components/moment-vibe-row'
+import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
 import { MomentActionMenu, type MomentActionMenuItem } from '@/components/moment-action-menu'
 import { recordCardExport } from '@/lib/engagement/card-exports'
 import {
@@ -19,6 +22,8 @@ import {
   slugify,
 } from '@/lib/moment-export/save-moment-image'
 import type { MargoMoment } from '@/lib/moment/types'
+import type { AtmosphereId } from '@/lib/atmosphere'
+import type { MomentShapeId } from '@/lib/moment/types'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 import {
   buildMargoMomentFromExportProps,
@@ -91,6 +96,8 @@ export function MomentShareStudio({
   onExported,
 }: MomentShareStudioProps) {
   const [cardThemeId, setCardThemeId] = useState<StageCardThemeId>('gold')
+  const [exportAtmosphereId, setExportAtmosphereId] = useState<AtmosphereId>('still')
+  const [shapeId, setShapeId] = useState<MomentShapeId>('square')
   const [exportVibeLabel, setExportVibeLabel] = useState<string | null>(null)
   const [lineIndex, setLineIndex] = useState(0)
   const [exportBusy, setExportBusy] = useState(false)
@@ -161,11 +168,12 @@ export function MomentShareStudio({
         snippetEnd: baseMoment.lines[previewIndex]?.snippetEnd ?? null,
       }],
       themeId: cardThemeId,
-      shapeId: 'square',
+      shapeId,
+      exportAtmosphereId,
       vibeLabel: exportVibeLabel ?? baseMoment.vibeLabel ?? vibeLabel ?? null,
       seedKey: resolvedPostId ? `${resolvedPostId}:line${previewIndex}` : baseMoment.seedKey,
     }
-  }, [baseMoment, previewLine, isDualCard, cardThemeId, exportVibeLabel, vibeLabel, resolvedPostId, previewIndex])
+  }, [baseMoment, previewLine, isDualCard, cardThemeId, shapeId, exportAtmosphereId, exportVibeLabel, vibeLabel, resolvedPostId, previewIndex])
 
   const hasSnippet = exportMoment ? momentHasPlayableSnippet(exportMoment) : false
 
@@ -504,17 +512,34 @@ export function MomentShareStudio({
               </button>
             </div>
           )}
+          <MomentExportPreviewFrame shapeId={shapeId}>
           <StageMomentCard
             lyric={previewLine.lyric}
             songTitle={previewLine.songTitle}
             artistName={previewLine.artistName}
             artwork={previewLine.artworkUrl}
             vibeLabel={exportVibeLabel}
+            cardThemeId={cardThemeId}
+            atmosphereId={exportAtmosphereId}
+            shapeId={shapeId}
+            hideVibeChrome
+            effectOwnsFill
+            canPlay={false}
+          />
+          </MomentExportPreviewFrame>
+          <MomentVibeRow
+            key={`${exportAtmosphereId}-${shapeId}`}
+            vibeLabel={exportVibeLabel}
             vibeOptions={MOMENT_VIBE_PICKER_OPTIONS}
             onVibeSelect={setExportVibeLabel}
+          />
+          <MomentExportCustomizeBar
             cardThemeId={cardThemeId}
             onThemeChange={setCardThemeId}
-            canPlay={false}
+            exportAtmosphereId={exportAtmosphereId}
+            onExportAtmosphereChange={setExportAtmosphereId}
+            shapeId={shapeId}
+            onShapeChange={setShapeId}
           />
         </>
       ) : null}

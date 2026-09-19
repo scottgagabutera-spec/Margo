@@ -22,6 +22,8 @@ export function momentVideoCacheKey(moment: MargoMoment): string {
     line?.snippetStart ?? '',
     line?.snippetEnd ?? '',
     line?.audioUrl ?? '',
+    moment.exportAtmosphereId ?? 'still',
+    moment.shapeId ?? 'square',
   ].join('|')
 }
 

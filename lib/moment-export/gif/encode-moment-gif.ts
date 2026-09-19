@@ -81,6 +81,7 @@ export async function encodeMargoMomentGif(
   if (!measureCtx) throw new Error('Canvas is not available')
   const measure = buildCanvasTextMeasure(measureCtx)
 
+  const isVertical = moment.shapeId === 'vertical'
   const layout = resolveStageCardLayout({
     lyric: line.lyric,
     songTitle: line.songTitle,
@@ -88,8 +89,10 @@ export async function encodeMargoMomentGif(
     artworkUrl: line.artworkUrl,
     vibeLabel: moment.vibeLabel,
     themeId: moment.themeId,
+    exportAtmosphereId: moment.exportAtmosphereId,
     outputWidthPx: MOMENT_GIF_EXPORT_WIDTH,
     includeVibePill: !!moment.vibeLabel?.trim(),
+    format: isVertical ? 'shorts' : 'feed',
   }, measure, geistFamily)
 
   const artworkImage = await loadMomentArtwork(line.artworkUrl)
@@ -121,7 +124,7 @@ export async function encodeMargoMomentGif(
   for (const idx of sampleIndices) {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
     const renderTimeSec = resolveExportRenderTimeSec(idx, MOMENT_GIF_FPS, posterRenderSec)
-    renderMomentFrame(ctx, layout, timeline, { artworkImage }, renderTimeSec)
+    renderMomentFrame(ctx, layout, timeline, { artworkImage }, renderTimeSec, moment.exportAtmosphereId)
     samples.push(subsampleRgba(ctx.getImageData(0, 0, W, H).data))
   }
   const globalPalette = quantize(concatRgba(samples), 256, { format: PALETTE_FORMAT })
@@ -132,7 +135,7 @@ export async function encodeMargoMomentGif(
   for (let frame = 0; frame < frameCount; frame++) {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
     const renderTimeSec = resolveExportRenderTimeSec(frame, MOMENT_GIF_FPS, posterRenderSec)
-    renderMomentFrame(ctx, layout, timeline, { artworkImage }, renderTimeSec)
+    renderMomentFrame(ctx, layout, timeline, { artworkImage }, renderTimeSec, moment.exportAtmosphereId)
     const rgba = ctx.getImageData(0, 0, W, H).data
     const index = applyPalette(rgba, globalPalette, { format: PALETTE_FORMAT })
     gif.writeFrame(index, W, H, { palette: globalPalette, delay: delayMs })

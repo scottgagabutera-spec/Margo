@@ -5,12 +5,13 @@ import { ChevronRightIcon } from '@/components/icons'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { playOrToggleSnippet } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
+import { useSongAtmosphere } from '@/hooks/useSongAtmosphere'
+import { livingAtmosphereOrNull } from '@/lib/atmosphere'
 import {
   MOMENT_VIBE_PICKER_OPTIONS,
   resolveMargoMomentFromComposeDrafts,
   resolveMomentListen,
 } from '@/lib/moment'
-import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 
 export type ComposeReadyLineDraft = {
   lyric: string
@@ -31,8 +32,6 @@ type Props = {
   suggestedVibeLabel?: string | null
   emotionLoading?: boolean
   onVibeSelect?: (label: string) => void
-  cardThemeId?: StageCardThemeId
-  onThemeChange?: (id: StageCardThemeId) => void
 }
 
 export function ComposeReadyPreview({
@@ -41,13 +40,8 @@ export function ComposeReadyPreview({
   suggestedVibeLabel,
   emotionLoading = false,
   onVibeSelect,
-  cardThemeId: cardThemeIdProp,
-  onThemeChange: onThemeChangeProp,
 }: Props) {
   const [lineIndex, setLineIndex] = useState(0)
-  const [cardThemeIdLocal, setCardThemeIdLocal] = useState<StageCardThemeId>('gold')
-  const cardThemeId = cardThemeIdProp ?? cardThemeIdLocal
-  const setCardThemeId = onThemeChangeProp ?? setCardThemeIdLocal
 
   const validDrafts = useMemo(
     () => drafts.filter((d) => d.lyric.trim() && d.songName.trim() && d.artistName.trim()),
@@ -56,6 +50,7 @@ export function ComposeReadyPreview({
   const isMulti = validDrafts.length > 1
   const previewIndex = isMulti ? lineIndex : 0
   const draft = validDrafts[previewIndex]
+  const songAtmosphere = useSongAtmosphere(draft?.linkedSongId)
 
   const listen = useMemo(() => {
     if (!draft) return null
@@ -64,31 +59,24 @@ export function ComposeReadyPreview({
         lyric: draft.lyric,
         songName: draft.songName,
         artistName: draft.artistName,
-        artwork: draft.artwork,
         linkedSongId: draft.linkedSongId,
         linkedAudioUrl: draft.linkedAudioUrl,
+        artwork: draft.artwork,
         snippetStart: draft.snippetStart,
         snippetEnd: draft.snippetEnd,
         source: draft.source,
       }],
-      { vibeLabel, themeId: cardThemeId },
     )
-    return resolveMomentListen(moment, {
-      itunesTrackUrl: draft.externalListenUrl ?? null,
-    })
-  }, [draft, vibeLabel, cardThemeId])
+    return resolveMomentListen(moment)
+  }, [draft])
 
   const canPlayInline = listen?.canPlayInline ?? false
   const playbackKey = draft?.linkedSongId || draft?.linkedAudioUrl || ''
-  const { playing, buffering } = useSnippetPlaybackUi(
-    canPlayInline && playbackKey ? playbackKey : null,
-    canPlayInline ? draft?.lyric ?? null : null,
-  )
+  const { playing, buffering } = useSnippetPlaybackUi(playbackKey, 0)
 
   const handlePlay = useCallback(() => {
-    if (!draft?.linkedAudioUrl || !canPlayInline) return
-    if (draft.snippetStart == null || draft.snippetEnd == null) return
-    playOrToggleSnippet({
+    if (!draft || !listen?.canPlayInline || !draft.linkedAudioUrl) return
+    void playOrToggleSnippet({
       songId: draft.linkedSongId || draft.linkedAudioUrl,
       audioUrl: draft.linkedAudioUrl,
       title: draft.songName,
@@ -96,18 +84,19 @@ export function ComposeReadyPreview({
       artwork: draft.artwork,
       lineIndex: 0,
       lineText: draft.lyric,
-      startSec: draft.snippetStart,
-      endSec: draft.snippetEnd,
+      startSec: draft.snippetStart ?? 0,
+      endSec: draft.snippetEnd ?? (draft.snippetStart ?? 0) + 8,
+      atmosphere: livingAtmosphereOrNull(songAtmosphere),
       source: 'feed',
     })
-  }, [draft, canPlayInline])
+  }, [draft, listen, songAtmosphere])
 
   if (!draft) return null
 
   return (
-    <div style={{ marginBottom: '16px' }}>
+    <div>
       {isMulti && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '12px' }}>
           <button
             type="button"
             aria-label="Previous line"
@@ -140,8 +129,7 @@ export function ComposeReadyPreview({
         suggestedVibeLabel={suggestedVibeLabel}
         vibeOptions={MOMENT_VIBE_PICKER_OPTIONS}
         onVibeSelect={onVibeSelect}
-        cardThemeId={cardThemeId}
-        onThemeChange={setCardThemeId}
+        atmosphereId={songAtmosphere}
         canPlay={canPlayInline}
         playing={playing}
         buffering={buffering}

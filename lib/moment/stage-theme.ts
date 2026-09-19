@@ -1,6 +1,11 @@
+import { isLivingAtmosphere, parseAtmosphere } from '@/lib/atmosphere'
+
 /**
  * Stage Moment card color families — preview + PNG export share these tokens.
  * Mark badge variant is derived from background luminance, not ad-hoc opacity.
+ *
+ * When a living Effect is on, Color is not painted. The card uses the same
+ * dark room as Feed / karaoke Atmosphere — Color returns only on Still.
  */
 
 export type StageCardThemeId = 'gold' | 'blush' | 'sage' | 'dusk'
@@ -83,4 +88,28 @@ export function cycleStageCardTheme(id?: string | null): StageCardTheme {
   const idx = STAGE_CARD_THEMES.findIndex((t) => t.id === id)
   const next = STAGE_CARD_THEMES[(idx + 1) % STAGE_CARD_THEMES.length]
   return next ?? THEME_BY_ID.gold
+}
+
+/** Feed / karaoke room — used whenever a living Effect is on. */
+export const ATMOSPHERE_ROOM_PAINT = {
+  bg: '#07060A',
+  ink: '#F4F1ED',
+  inkMuted: 'rgba(244,241,237,0.62)',
+  border: 'rgba(255,255,255,0.08)',
+  badgeFill: 'rgba(255,255,255,0.10)',
+  badgeStroke: 'rgba(255,255,255,0.16)',
+  markVariant: 'on-dark' as const,
+}
+
+/** Color tokens only apply on Still. Living effects paint the platform room. */
+export function resolveExportPaintTheme(
+  themeId?: string | null,
+  atmosphereId?: string | null,
+): StageCardTheme {
+  const chosen = getStageCardTheme(themeId)
+  if (!isLivingAtmosphere(parseAtmosphere(atmosphereId))) return chosen
+  return {
+    ...chosen,
+    ...ATMOSPHERE_ROOM_PAINT,
+  }
 }

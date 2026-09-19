@@ -29,6 +29,8 @@ import { trackEvent } from '@/lib/analytics/track'
 import { ComposeLyricCard, composeLyricTextStyle } from '@/components/compose-lyric-card'
 import { UI_FONT } from '@/lib/fonts'
 import { MARGO_EXPRESSION_TAGLINE } from '@/lib/margo-expression'
+import type { AtmosphereId } from '@/lib/atmosphere'
+import type { MomentShapeId } from '@/lib/moment/types'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 import {
   clearMomentDraft,
@@ -377,6 +379,8 @@ function ComposeInner() {
     avatarUrl: string | null
   } | null>(null)
   const [themeId, setThemeId] = useState<StageCardThemeId>('gold')
+  const [exportAtmosphereId, setExportAtmosphereId] = useState<AtmosphereId>('still')
+  const [exportShapeId, setExportShapeId] = useState<MomentShapeId>('square')
   const [vibeUserPicked, setVibeUserPicked] = useState(false)
   const [parentPostId] = useState<string | null>(searchParams.get('parentPostId'))
   const [showExportStudio, setShowExportStudio] = useState(false)
@@ -787,9 +791,11 @@ function ComposeInner() {
       vibeLabel: selectedVibe ? vibeKeyToLabel(selectedVibe) : null,
       emotion: selectedVibe ? selectedVibe.toLowerCase() : null,
       themeId,
+      shapeId: exportShapeId,
+      exportAtmosphereId,
       status: completionMode === 'private' ? 'private' : 'active',
     })
-  }, [committedLines, buildCurrentDraft, postedId, selectedVibe, themeId, completionMode])
+  }, [committedLines, buildCurrentDraft, postedId, selectedVibe, themeId, exportShapeId, exportAtmosphereId, completionMode])
 
   const clearDraftFields = useCallback(() => {
     setSearchQuery('')
@@ -1369,8 +1375,6 @@ function ComposeInner() {
               suggestedVibeLabel={suggestedVibe ? vibeKeyToLabel(suggestedVibe) : null}
               emotionLoading={emotionLoading}
               onVibeSelect={handleVibeLabelSelect}
-              cardThemeId={themeId}
-              onThemeChange={setThemeId}
             />
 
             <div
@@ -1521,6 +1525,18 @@ function ComposeInner() {
                 handleLyricSelected()
                 setPhase('moment')
                 void fetchEmotionSuggestion((line.text || '').slice(0, 140), vibeUserPicked)
+              }}
+              onPickParagraph={(picked) => {
+                const joined = picked.map((l) => l.text.trim()).filter(Boolean).join('\n')
+                const capped = joined.slice(0, 280)
+                setSnippetStart(picked[0].startSec)
+                setSnippetEnd(picked[picked.length - 1].endSec)
+                setLyric(capped)
+                setLinePickComplete(true)
+                setSelectMode('write')
+                handleLyricSelected()
+                setPhase('moment')
+                void fetchEmotionSuggestion(capped, vibeUserPicked)
               }}
               onSkip={() => {
                 setSnippetStart(null)

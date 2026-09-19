@@ -1,4 +1,6 @@
+import { parseAtmosphere, type AtmosphereId } from '@/lib/atmosphere'
 import type { StageCardTheme } from '@/lib/moment/stage-theme'
+import { drawExportAtmosphere } from '@/lib/moment-export/draw-export-atmosphere'
 import type { ResolvedStageCardLayout } from '@/lib/moment-export/layout/types'
 
 const MARGO_GOLD = '#E8C547'
@@ -121,6 +123,8 @@ function drawVibePill(
 
 export interface StageCardFrameAssets {
   artworkImage?: HTMLImageElement | null
+  exportAtmosphereId?: AtmosphereId | null
+  atmosphereTimeSec?: number
 }
 
 /**
@@ -137,11 +141,23 @@ export function renderStageCardFrame(
 
   ctx.fillStyle = layout.background.base
   ctx.fillRect(0, 0, W, H)
+
   const highlight = ctx.createLinearGradient(0, 0, 0, H * layout.background.highlightHeightFraction)
   highlight.addColorStop(0, `rgba(255,255,255,${layout.background.highlightTopOpacity})`)
   highlight.addColorStop(1, 'rgba(255,255,255,0)')
   ctx.fillStyle = highlight
   ctx.fillRect(0, 0, W, H)
+
+  const atmosphereId = parseAtmosphere(assets.exportAtmosphereId ?? null)
+  drawExportAtmosphere(
+    ctx,
+    W,
+    H,
+    atmosphereId,
+    assets.atmosphereTimeSec ?? 0,
+    layout.borderRadius,
+    1,
+  )
 
   ctx.strokeStyle = layout.background.border
   ctx.lineWidth = 1
@@ -150,11 +166,12 @@ export function renderStageCardFrame(
   drawMarkBadge(ctx, layout, theme)
 
   const { lyric } = layout
-  ctx.textAlign = 'left'
+  ctx.textAlign = lyric.align === 'center' ? 'center' : 'left'
   ctx.textBaseline = 'alphabetic'
   ctx.font = `${lyric.style.fontStyle} ${lyric.style.fontSize}px ${lyric.style.fontFamily}`
   ctx.fillStyle = lyric.style.color
   const linePx = lyric.style.fontSize * lyric.style.lineHeight
+  const originX = lyric.align === 'center' ? lyric.x + lyric.maxWidth / 2 : lyric.x
   let y = lyric.y
   for (const line of lyric.displayLines) {
     if (line === '') {
@@ -162,22 +179,25 @@ export function renderStageCardFrame(
       continue
     }
     y += lyric.style.fontSize * 0.92
-    ctx.fillText(line, lyric.x, y)
+    ctx.fillText(line, originX, y)
     y += linePx - lyric.style.fontSize * 0.92
   }
 
   if (layout.meta) {
+    const metaX = layout.meta.x
     if (layout.meta.song) {
       const s = layout.meta.song
+      ctx.textAlign = 'left'
       ctx.font = `${s.style.fontWeight} ${s.style.fontSize}px ${s.style.fontFamily}`
       ctx.fillStyle = s.style.color
-      ctx.fillText(s.text, layout.padding.left, s.y + s.style.fontSize)
+      ctx.fillText(s.text, metaX, s.y + s.style.fontSize)
     }
     if (layout.meta.artist) {
       const a = layout.meta.artist
+      ctx.textAlign = 'left'
       ctx.font = `${a.style.fontWeight} ${a.style.fontSize}px ${a.style.fontFamily}`
       ctx.fillStyle = a.style.color
-      ctx.fillText(a.text, layout.padding.left, a.y + a.style.fontSize)
+      ctx.fillText(a.text, metaX, a.y + a.style.fontSize)
     }
   }
 
