@@ -24,7 +24,7 @@ export function MomentVibeRow({
   style,
 }: MomentVibeRowProps) {
   const [open, setOpen] = useState(false)
-  const label = vibeLabel || 'Vibe'
+  const label = vibeLabel || 'Choose'
 
   return (
     <div
