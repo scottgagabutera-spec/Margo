@@ -203,9 +203,13 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
   const [consentAttention, setConsentAttention] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!isSignup) setTermsAccepted(false)
+    if (!isSignup) {
+      setTermsAccepted(false)
+      setConfirmationEmail(null)
+    }
   }, [isSignup])
 
   useEffect(() => {
@@ -257,8 +261,7 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
       }
 
       if (isSignup && body.needs_confirmation) {
-        toast.success('Check your email to confirm your account.')
-        onSuccess?.()
+        setConfirmationEmail(email.trim())
         return
       }
 
@@ -285,6 +288,59 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
   }
 
   const primaryDisabled = loading || !email || !password || signupBlocked
+
+  if (confirmationEmail) {
+    return (
+      <div style={{ width: '100%' }}>
+        <header style={{ marginBottom: '20px', textAlign: 'center' }}>
+          <h1 style={{
+            fontFamily: lora,
+            fontSize: '1.55rem',
+            color: 'var(--text)',
+            fontWeight: 400,
+            margin: '0 0 14px',
+          }}>
+            Check your email
+          </h1>
+          <p style={{
+            fontFamily: ui,
+            fontSize: '0.82rem',
+            lineHeight: 1.55,
+            color: 'var(--text-secondary)',
+            margin: 0,
+          }}>
+            Check your email to confirm your account, then come back to sign in.
+          </p>
+        </header>
+        <p style={{
+          fontFamily: ui,
+          fontSize: '0.78rem',
+          lineHeight: 1.5,
+          color: 'var(--text-muted)',
+          textAlign: 'center',
+          margin: '0 0 24px',
+        }}>
+          We sent a confirmation link to{' '}
+          <span style={{ color: 'var(--text-secondary)' }}>{confirmationEmail}</span>.
+        </p>
+        {onSwitchMode ? (
+          <button
+            type="button"
+            onClick={() => {
+              setConfirmationEmail(null)
+              onSwitchMode('signin')
+            }}
+            style={{
+              ...primaryBtnStyle,
+              cursor: 'pointer',
+            }}
+          >
+            Back to sign in
+          </button>
+        ) : null}
+      </div>
+    )
+  }
 
   return (
     <div style={{ width: '100%' }}>

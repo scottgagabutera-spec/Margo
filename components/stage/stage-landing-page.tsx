@@ -56,11 +56,46 @@ const landingAccountLinkStyle: CSSProperties = {
   gap: '8px',
 }
 
+const skeletonBlock = (width: string, height: string, radius = '10px'): CSSProperties => ({
+  width,
+  height,
+  borderRadius: radius,
+  background: 'rgba(255,255,255,0.04)',
+})
+
+function StageLandingSkeleton() {
+  return (
+    <div style={{ position: 'relative', width: '100%', overflow: 'hidden', background: 'var(--bg)', minHeight: '100dvh' }}>
+      <nav
+        className="margo-landing-nav"
+        style={{
+          position: 'relative',
+          zIndex: 10,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '16px 24px',
+        }}
+        aria-hidden
+      >
+        <div style={skeletonBlock('132px', '36px')} />
+        <div style={skeletonBlock('72px', '32px', '999px')} />
+      </nav>
+
+      <section className="margo-stage-zone" aria-hidden>
+        <div style={{ ...skeletonBlock('min(100%, 36rem)', 'var(--stage-search-h, 48px)', '12px'), maxWidth: '36rem' }} />
+        <div style={{ ...skeletonBlock('min(100%, 22rem)', '14px', '6px'), marginTop: '20px', maxWidth: '22rem' }} />
+        <div style={{ ...skeletonBlock('min(100%, 18rem)', '14px', '6px'), marginTop: '10px', maxWidth: '18rem', opacity: 0.7 }} />
+      </section>
+    </div>
+  )
+}
+
 export function StageLandingPage() {
   const [mounted, setMounted] = useState(false)
   const { user, identity } = useIdentity()
   useEffect(() => { setMounted(true) }, [])
-  if (!mounted) return null
+  if (!mounted) return <StageLandingSkeleton />
 
   const isSignedIn = !!user && !user.isAnonymous
   const profileHref = identity ? `/profile/${identity.username}` : '/feed'
