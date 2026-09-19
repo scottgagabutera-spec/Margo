@@ -105,6 +105,8 @@ export function stageCardLyricStyle(layout: ResolvedStageCardLayout): React.CSSP
     margin: 0,
     textAlign: layout.lyric.align === 'center' ? 'center' : 'left',
     whiteSpace: 'pre-line',
+    overflowWrap: 'anywhere',
+    wordBreak: 'break-word',
   }
 }
 

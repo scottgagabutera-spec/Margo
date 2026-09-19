@@ -14,8 +14,10 @@ export interface ComposeLyricLine {
 }
 
 const lyricFont = 'var(--font-lora), serif'
-const LONG_PRESS_MS = 480
+const LONG_PRESS_MS = 400
+const LONG_PRESS_MOVE_PX = 12
 const DEFAULT_PARAGRAPH_MAX = 3
+const SELECTED_FILL = 'color-mix(in srgb, var(--gold) 22%, transparent)'
 
 function formatTime(s: number) {
   const m = Math.floor(s / 60)
@@ -101,12 +103,14 @@ function ComposeLineRow({
   const { playing, buffering } = useSnippetPlaybackUi(songId || audioUrl || '', line.lineIndex)
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const longPressTriggered = useRef(false)
+  const pressOrigin = useRef<{ x: number; y: number } | null>(null)
 
   const clearPressTimer = () => {
     if (pressTimer.current) {
       clearTimeout(pressTimer.current)
       pressTimer.current = null
     }
+    pressOrigin.current = null
   }
 
   const handlePick = () => {
@@ -144,18 +148,35 @@ function ComposeLineRow({
         }
         handlePick()
       }}
-      onPointerDown={() => {
+      onPointerDown={(event) => {
         longPressTriggered.current = false
         clearPressTimer()
         if (selectionMode) return
+        try {
+          event.currentTarget.setPointerCapture(event.pointerId)
+        } catch {
+          /* capture is best-effort */
+        }
+        pressOrigin.current = { x: event.clientX, y: event.clientY }
         pressTimer.current = setTimeout(() => {
           longPressTriggered.current = true
+          pressTimer.current = null
           onLongPressStart(line)
         }, LONG_PRESS_MS)
       }}
+      onPointerMove={(event) => {
+        if (!pressOrigin.current || !pressTimer.current) return
+        const dx = event.clientX - pressOrigin.current.x
+        const dy = event.clientY - pressOrigin.current.y
+        if ((dx * dx + dy * dy) > LONG_PRESS_MOVE_PX * LONG_PRESS_MOVE_PX) {
+          clearPressTimer()
+        }
+      }}
       onPointerUp={clearPressTimer}
-      onPointerLeave={clearPressTimer}
       onPointerCancel={clearPressTimer}
+      onContextMenu={(event) => {
+        event.preventDefault()
+      }}
       aria-pressed={selectionMode ? selected : undefined}
       aria-disabled={selectionMode && selectionDisabled && !selected ? true : undefined}
       style={{
@@ -166,34 +187,38 @@ function ComposeLineRow({
         padding: stage ? '12px 14px' : '14px 16px',
         minHeight: 'var(--margo-touch-min)',
         background: selected
-          ? 'var(--gold-faint)'
+          ? SELECTED_FILL
           : playing
             ? 'var(--gold-faint)'
             : 'none',
         border: 'none',
         borderBottom: isLast ? 'none' : '1px solid var(--border)',
-        boxShadow: selected ? 'inset 3px 0 0 var(--gold)' : 'none',
+        boxShadow: selected ? 'inset 4px 0 0 var(--gold)' : 'none',
         cursor: selectionMode && selectionDisabled && !selected ? 'default' : 'pointer',
         textAlign: 'left',
         boxSizing: 'border-box',
         opacity: selectionMode && selectionDisabled && !selected ? 0.42 : 1,
+        WebkitUserSelect: 'none',
+        userSelect: 'none',
+        WebkitTouchCallout: 'none',
       }}
     >
       {selectionMode ? (
         <span
           aria-hidden
           style={{
-            width: '22px',
-            height: '22px',
-            borderRadius: '6px',
+            width: '24px',
+            height: '24px',
+            borderRadius: '7px',
             flexShrink: 0,
-            marginTop: stage ? '4px' : '2px',
-            border: selected ? '2px solid var(--gold)' : '1.5px solid var(--text-muted)',
-            background: selected ? 'var(--gold)' : 'transparent',
+            marginTop: stage ? '3px' : '1px',
+            border: selected ? '2px solid var(--gold)' : '2px solid var(--text-muted)',
+            background: selected ? 'var(--gold)' : 'var(--surface)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             boxSizing: 'border-box',
+            boxShadow: selected ? '0 0 0 3px color-mix(in srgb, var(--gold) 28%, transparent)' : 'none',
           }}
         >
           {selected ? (
@@ -201,7 +226,7 @@ function ComposeLineRow({
               <path
                 d="M2.4 6.2 L4.8 8.7 L9.6 3.3"
                 fill="none"
-                stroke="var(--bg)"
+                stroke="var(--text-on-gold, var(--bg))"
                 strokeWidth="1.8"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -415,21 +440,6 @@ export function ComposeLinePicker({
                 ? (isStage ? 'Tap a line · long-press to combine' : 'Pick the line · long-press to combine')
                 : (isStage ? 'Tap the line you mean' : 'Pick the line you want'))}
         </p>
-        {limitHint ? (
-          <p
-            role="status"
-            aria-live="polite"
-            style={{
-              fontFamily: UI_FONT,
-              fontSize: '0.72rem',
-              fontWeight: 600,
-              color: 'var(--gold)',
-              margin: '8px 0 0',
-            }}
-          >
-            {limitHint}
-          </p>
-        ) : null}
         {!isStage ? (
           <p style={{ fontFamily: lyricFont, fontSize: '0.72rem', color: 'var(--text-muted)' }}>
             {artistName} · {songTitle}
@@ -507,6 +517,27 @@ export function ComposeLinePicker({
       )}
 
       {!loading && lines.length > 0 && (
+        <>
+        {limitHint ? (
+          <div
+            role="status"
+            aria-live="assertive"
+            style={{
+              marginBottom: '10px',
+              padding: '10px 14px',
+              borderRadius: '12px',
+              background: 'var(--gold)',
+              color: 'var(--text-on-gold, var(--bg))',
+              fontFamily: UI_FONT,
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              textAlign: 'center',
+              lineHeight: 1.3,
+            }}
+          >
+            {limitHint}
+          </div>
+        ) : null}
         <div
           ref={listRef}
           style={{
@@ -540,6 +571,7 @@ export function ComposeLinePicker({
               />
           ))}
         </div>
+        </>
       )}
     </div>
   )

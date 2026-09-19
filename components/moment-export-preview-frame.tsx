@@ -34,12 +34,13 @@ export function MomentExportPreviewFrame({
       <div
         aria-label="Shorts preview, 9:16"
         style={{
-          width: 'min(100%, 270px)',
+          width: 'min(100%, 320px)',
           aspectRatio: '9 / 16',
           border: '1px solid var(--border-hi)',
           borderRadius: '18px',
           overflow: 'hidden',
           boxSizing: 'border-box',
+          background: 'var(--bg)',
         }}
       >
         {children}

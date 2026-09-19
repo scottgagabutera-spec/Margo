@@ -8,6 +8,7 @@ interface ExportAtmosphereOverlayProps {
   personality: AtmosphereId
   onLight: boolean
   borderRadius: number
+  roomColor: string
 }
 
 /**
@@ -19,6 +20,7 @@ export function ExportAtmosphereOverlay({
   personality,
   onLight,
   borderRadius,
+  roomColor,
 }: ExportAtmosphereOverlayProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -57,7 +59,7 @@ export function ExportAtmosphereOverlay({
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
         ctx.clearRect(0, 0, w, h)
         const t = reduced ? 0 : (now - start) / 1000
-        drawExportAtmosphere(ctx, w, h, personality, t, borderRadius, 1, onLight)
+        drawExportAtmosphere(ctx, w, h, personality, t, borderRadius, 1, onLight, roomColor)
       }
       if (!reduced) raf = requestAnimationFrame(paint)
     }
@@ -75,7 +77,7 @@ export function ExportAtmosphereOverlay({
       cancelAnimationFrame(raf)
       ro?.disconnect()
     }
-  }, [personality, onLight, borderRadius])
+  }, [personality, onLight, borderRadius, roomColor])
 
   if (!isLivingAtmosphere(personality)) return null
 

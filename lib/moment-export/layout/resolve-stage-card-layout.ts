@@ -76,10 +76,12 @@ export function resolveStageCardLayout(
   const contentWidth = W - padding.left - padding.right
 
   const lyricSource = input.lyric || ''
-  const lyricFontSize = roundStageToken(ref.lyric.fontSize, W)
+  const lyricSizeRef = shorts ? STAGE_SHORTS_LAYOUT_REF.lyric.fontSize : ref.lyric.fontSize
+  const lyricLeading = shorts ? STAGE_SHORTS_LAYOUT_REF.lyric.lineHeight : ref.lyric.lineHeight
+  const lyricFontSize = roundStageToken(lyricSizeRef, W)
   const lyricMeasureFont = lyricFont(measureFontSizeForCanvas(lyricFontSize))
   const displayLines = layoutLyricText(lyricSource, contentWidth, measure, lyricMeasureFont)
-  const lyricLineHeight = lyricFontSize * ref.lyric.lineHeight
+  const lyricLineHeight = lyricFontSize * lyricLeading
   const lyricHeight = displayLines.length * lyricLineHeight
 
   const songTitle = (input.songTitle || '').trim()
@@ -87,8 +89,9 @@ export function resolveStageCardLayout(
   const songFS = roundStageToken(ref.meta.song.fontSize, W)
   const artistFS = roundStageToken(ref.meta.artist.fontSize, W)
   const metaGap = scaleStageToken(ref.meta.gap, W)
-  const artGap = scaleStageToken(ref.artwork.gap, W)
-  const artSize = roundStageToken(ref.artwork.size, W)
+  const artRef = shorts ? STAGE_SHORTS_LAYOUT_REF.artwork : ref.artwork
+  const artGap = scaleStageToken(artRef.gap, W)
+  const artSize = roundStageToken(artRef.size, W)
   const hasArt = !!input.artworkUrl
 
   let metaHeight = 0
@@ -109,7 +112,9 @@ export function resolveStageCardLayout(
     const footerH = hasArt ? Math.max(artSize, metaHeight) : metaHeight
     const footerBlock = (footerH > 0 ? footerH + artGap : 0) + vibeH
     const available = Math.max(lyricLineHeight, outputHeight - padding.top - padding.bottom - footerBlock)
-    cursorY = padding.top + Math.max(0, (available - lyricHeight) / 2)
+    cursorY = lyricHeight <= available
+      ? padding.top + Math.max(0, (available - lyricHeight) / 2)
+      : padding.top
   }
 
   const lyric: LayoutLyricBlock = {
@@ -121,7 +126,7 @@ export function resolveStageCardLayout(
       fontStyle: ref.lyric.fontStyle,
       fontWeight: ref.lyric.fontWeight,
       fontSize: lyricFontSize,
-      lineHeight: ref.lyric.lineHeight,
+      lineHeight: lyricLeading,
       color: theme.ink,
     },
     x: padding.left,

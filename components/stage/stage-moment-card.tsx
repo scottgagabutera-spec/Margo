@@ -154,8 +154,8 @@ export function StageMomentCard({
       ? {
           padding: 0,
           borderRadius: 0,
-          height: layout.outputHeight,
-          minHeight: layout.outputHeight,
+          height: '100%',
+          minHeight: '100%',
         }
       : {
           paddingTop: layout.padding.top,
@@ -239,8 +239,8 @@ export function StageMomentCard({
   const markSymbolSize = layout?.mark.symbolSize ?? 22
   const metaSongSize = layout?.meta?.song?.style.fontSize
   const metaArtistSize = layout?.meta?.artist?.style.fontSize
-  const artSize = layout?.artwork?.width ?? 48
-  const artRadius = artSize * (8 / 48)
+  const artSize = layout?.artwork?.width ?? (isShorts ? 56 : 48)
+  const artRadius = artSize * (isShorts ? 10 / 56 : 8 / 48)
   const metaMarginTop = layout?.meta ? (layout.meta.y - layout.lyric.y - layout.lyric.height) : 14
 
   return (
@@ -254,12 +254,13 @@ export function StageMomentCard({
             personality={atmosphereId}
             onLight={theme.markVariant === 'on-light'}
             borderRadius={layout?.borderRadius ?? (isShorts ? 0 : 16)}
+            roomColor={layout?.background.base ?? theme.bg}
           />
         ) : null}
         <div style={markStyle} aria-hidden>
           <MargoSymbol size={markSymbolSize} variant={markVariant} />
         </div>
-        <div style={{ position: 'relative', zIndex: 3, height: isShorts && layout ? layout.outputHeight : undefined }}>
+        <div style={{ position: 'relative', zIndex: 3, height: isShorts ? '100%' : undefined }}>
           <p
             style={isShorts && layout
               ? {

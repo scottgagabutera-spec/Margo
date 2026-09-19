@@ -158,6 +158,7 @@ export function renderStageCardFrame(
     layout.borderRadius,
     1,
     light,
+    layout.background.base,
   )
 
   ctx.strokeStyle = layout.background.border
