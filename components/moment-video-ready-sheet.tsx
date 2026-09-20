@@ -11,6 +11,8 @@ interface MomentVideoReadySheetProps {
   format?: MomentMediaReadyFormat
   previewUrl: string | null
   filename: string
+  /** Silent visual-loop export — no audio in file. */
+  silent?: boolean
   busy?: boolean
   onPrimary: () => void
   onClose: () => void
@@ -24,6 +26,7 @@ export function MomentVideoReadySheet({
   format = 'video',
   previewUrl,
   filename,
+  silent = false,
   busy = false,
   onPrimary,
   onClose,
@@ -48,7 +51,9 @@ export function MomentVideoReadySheet({
     ? `Tap Save ${mediaLabel} to download to your device.`
     : format === 'gif'
       ? 'Preview, then share when it feels right.'
-      : 'Listen, then share when it feels right.'
+      : silent
+        ? 'Visual loop only — no audio. Share when it feels right.'
+        : 'Listen, then share when it feels right.'
 
   return (
     <div
@@ -102,6 +107,20 @@ export function MomentVideoReadySheet({
         }}>
           {hint}
         </p>
+        {silent ? (
+          <p style={{
+            margin: 0,
+            fontFamily: 'var(--font-geist-sans, sans-serif)',
+            fontSize: '0.58rem',
+            fontWeight: 600,
+            letterSpacing: '0.35px',
+            textTransform: 'uppercase',
+            color: 'var(--gold)',
+            textAlign: 'center',
+          }}>
+            Visual loop · No audio
+          </p>
+        ) : null}
         {format === 'gif' ? (
           <img
             src={previewUrl}

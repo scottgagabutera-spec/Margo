@@ -1,11 +1,15 @@
 import type { MomentActionMenuItem } from '@/components/moment-action-menu'
-import { MOMENT_CLIP_EXPORT_HINT } from '@/lib/moment-export/export-hints'
+import {
+  MOMENT_CLIP_EXPORT_HINT,
+  MOMENT_VISUAL_LOOP_LABEL,
+} from '@/lib/moment-export/export-hints'
 
 export interface BuildMomentExportActionItemsInput {
   onExportImage: () => void
   /** When false, only Image (e.g. lyric-back dual card). */
   showFormats?: boolean
   hasPlayableSnippet?: boolean
+  hasVisualLoopExport?: boolean
   canExportVideo?: boolean
   videoUnavailableHint?: string
   onExportVideo?: () => void
@@ -19,6 +23,7 @@ export function buildMomentExportActionItems({
   onExportImage,
   showFormats = true,
   hasPlayableSnippet = false,
+  hasVisualLoopExport = false,
   canExportVideo = false,
   videoUnavailableHint = 'Not available on this device',
   onExportVideo = () => {},
@@ -31,17 +36,22 @@ export function buildMomentExportActionItems({
   ]
   if (!showFormats) return items
 
-  const videoEnabled = hasPlayableSnippet && canExportVideo
+  const canClipExport = hasPlayableSnippet || hasVisualLoopExport
+  const videoEnabled = canClipExport && canExportVideo
   let videoHint: string | undefined
-  if (!hasPlayableSnippet) {
+  if (videoEnabled && hasVisualLoopExport && !hasPlayableSnippet) {
+    videoHint = MOMENT_VISUAL_LOOP_LABEL
+  } else if (!canClipExport) {
     videoHint = MOMENT_CLIP_EXPORT_HINT
   } else if (!canExportVideo) {
     videoHint = videoUnavailableHint
   }
 
-  const gifEnabled = hasPlayableSnippet && canExportGif
+  const gifEnabled = canClipExport && canExportGif
   let gifHint: string | undefined
-  if (!hasPlayableSnippet) {
+  if (gifEnabled && hasVisualLoopExport && !hasPlayableSnippet) {
+    gifHint = MOMENT_VISUAL_LOOP_LABEL
+  } else if (!canClipExport) {
     gifHint = MOMENT_CLIP_EXPORT_HINT
   } else if (!canExportGif) {
     gifHint = gifUnavailableHint
@@ -51,13 +61,13 @@ export function buildMomentExportActionItems({
     {
       id: 'video',
       label: 'Video',
-      ...(videoEnabled ? {} : { hint: videoHint, disabled: true }),
+      ...(videoEnabled ? { hint: videoHint } : { hint: videoHint, disabled: true }),
       onClick: onExportVideo,
     },
     {
       id: 'gif',
       label: 'GIF',
-      ...(gifEnabled ? {} : { hint: gifHint, disabled: true }),
+      ...(gifEnabled ? { hint: gifHint } : { hint: gifHint, disabled: true }),
       onClick: onExportGif,
     },
     { id: 'pdf', label: 'PDF', hint: 'Coming soon', disabled: true, onClick: () => {} },

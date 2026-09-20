@@ -1,7 +1,13 @@
+import { parseAtmosphere } from '@/lib/atmosphere'
 import type { MargoMoment } from '@/lib/moment/types'
+import { bindStageExportCanvas } from '@/lib/moment-export/export-canvas-quality'
+import {
+  canEncodeMomentVideo,
+  momentUsesVisualLoopExport,
+  resolveVisualLoopDurationSec,
+} from '@/lib/moment-export/visual-loop-export'
 import {
   buildMomentTimeline,
-  momentHasPlayableSnippet,
   snippetDurationSec,
 } from '@/lib/moment-export/timeline/build-moment-timeline'
 import {
@@ -39,6 +45,7 @@ export interface EncodeMomentGifResult {
   width: number
   height: number
   fps: number
+  silent?: boolean
 }
 
 function subsampleRgba(rgba: Uint8ClampedArray, step = 3): Uint8Array {
@@ -66,12 +73,13 @@ export async function encodeMargoMomentGif(
   onProgress?: (p: EncodeMomentGifProgress) => void,
   signal?: AbortSignal,
 ): Promise<EncodeMomentGifResult> {
-  if (!momentHasPlayableSnippet(moment)) {
+  if (!canEncodeMomentVideo(moment)) {
     throw new Error('This Moment needs a playable audio snippet for GIF export')
   }
 
   const line = moment.lines[0]
   const t0 = performance.now()
+  const visualLoop = momentUsesVisualLoopExport(moment)
 
   onProgress?.({ phase: 'prepare' })
   await waitForExportFonts()
@@ -96,20 +104,32 @@ export async function encodeMargoMomentGif(
   }, measure, geistFamily)
 
   const artworkImage = await loadMomentArtwork(line.artworkUrl)
-  const audioDurationSec = snippetDurationSec(moment)
-  const timeline = buildMomentTimeline(moment, audioDurationSec)
-  const posterRenderSec = completedCardRenderTimeSec(timeline)
-  const totalDurationSec = exportTotalDurationSec(audioDurationSec)
+
+  let timeline: ReturnType<typeof buildMomentTimeline>
+  let posterRenderSec: number
+  let totalDurationSec: number
+
+  if (visualLoop) {
+    const loopDurationSec = resolveVisualLoopDurationSec(parseAtmosphere(moment.exportAtmosphereId ?? null))
+    timeline = buildMomentTimeline(moment, loopDurationSec)
+    posterRenderSec = completedCardRenderTimeSec(timeline)
+    totalDurationSec = loopDurationSec
+  } else {
+    const audioDurationSec = snippetDurationSec(moment)
+    timeline = buildMomentTimeline(moment, audioDurationSec)
+    posterRenderSec = completedCardRenderTimeSec(timeline)
+    totalDurationSec = exportTotalDurationSec(audioDurationSec)
+  }
+
   const frameCount = Math.max(1, Math.round(totalDurationSec * MOMENT_GIF_FPS))
   const delayMs = 1000 / MOMENT_GIF_FPS
 
   const W = layout.outputWidth
   const H = layout.outputHeight
   const canvas = document.createElement('canvas')
-  canvas.width = W
-  canvas.height = H
-  const ctx = canvas.getContext('2d', { willReadFrequently: true })
-  if (!ctx) throw new Error('Canvas is not available')
+  const ctx = bindStageExportCanvas(canvas, W, H)
+  const pixelW = canvas.width
+  const pixelH = canvas.height
 
   const { GIFEncoder, quantize, applyPalette } = await import('gifenc')
 
@@ -123,9 +143,23 @@ export async function encodeMargoMomentGif(
   const samples: Uint8Array[] = []
   for (const idx of sampleIndices) {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
-    const renderTimeSec = resolveExportRenderTimeSec(idx, MOMENT_GIF_FPS, posterRenderSec)
-    renderMomentFrame(ctx, layout, timeline, { artworkImage }, renderTimeSec, moment.exportAtmosphereId)
-    samples.push(subsampleRgba(ctx.getImageData(0, 0, W, H).data))
+    if (visualLoop) {
+      const clockSec = idx / MOMENT_GIF_FPS
+      const contentSec = Math.min(clockSec, posterRenderSec)
+      renderMomentFrame(
+        ctx,
+        layout,
+        timeline,
+        { artworkImage },
+        contentSec,
+        moment.exportAtmosphereId,
+        { atmosphereTimeSec: clockSec },
+      )
+    } else {
+      const renderTimeSec = resolveExportRenderTimeSec(idx, MOMENT_GIF_FPS, posterRenderSec)
+      renderMomentFrame(ctx, layout, timeline, { artworkImage }, renderTimeSec, moment.exportAtmosphereId)
+    }
+    samples.push(subsampleRgba(ctx.getImageData(0, 0, pixelW, pixelH).data))
   }
   const globalPalette = quantize(concatRgba(samples), 256, { format: PALETTE_FORMAT })
 
@@ -134,11 +168,25 @@ export async function encodeMargoMomentGif(
 
   for (let frame = 0; frame < frameCount; frame++) {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
-    const renderTimeSec = resolveExportRenderTimeSec(frame, MOMENT_GIF_FPS, posterRenderSec)
-    renderMomentFrame(ctx, layout, timeline, { artworkImage }, renderTimeSec, moment.exportAtmosphereId)
-    const rgba = ctx.getImageData(0, 0, W, H).data
+    if (visualLoop) {
+      const clockSec = frame / MOMENT_GIF_FPS
+      const contentSec = Math.min(clockSec, posterRenderSec)
+      renderMomentFrame(
+        ctx,
+        layout,
+        timeline,
+        { artworkImage },
+        contentSec,
+        moment.exportAtmosphereId,
+        { atmosphereTimeSec: clockSec },
+      )
+    } else {
+      const renderTimeSec = resolveExportRenderTimeSec(frame, MOMENT_GIF_FPS, posterRenderSec)
+      renderMomentFrame(ctx, layout, timeline, { artworkImage }, renderTimeSec, moment.exportAtmosphereId)
+    }
+    const rgba = ctx.getImageData(0, 0, pixelW, pixelH).data
     const index = applyPalette(rgba, globalPalette, { format: PALETTE_FORMAT })
-    gif.writeFrame(index, W, H, { palette: globalPalette, delay: delayMs })
+    gif.writeFrame(index, pixelW, pixelH, { palette: globalPalette, delay: delayMs })
     if (frame % MOMENT_GIF_FPS === 0) {
       onProgress?.({ phase: 'frames', frame, frameCount })
     }
@@ -155,8 +203,9 @@ export async function encodeMargoMomentGif(
     frameCount,
     fileSizeBytes: blob.size,
     encodeMs: performance.now() - t0,
-    width: W,
-    height: H,
+    width: pixelW,
+    height: pixelH,
     fps: MOMENT_GIF_FPS,
+    silent: visualLoop,
   }
 }

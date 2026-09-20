@@ -185,6 +185,11 @@ function globalAlphaAt(timeSec: number, timeline: MomentTimeline): number {
 /**
  * Deterministic animated frame — same geometry as PNG stage card export.
  */
+export interface RenderMomentFrameOptions {
+  /** When set, atmosphere loops on this clock while lyric/meta use timeSec. */
+  atmosphereTimeSec?: number
+}
+
 export function renderMomentFrame(
   ctx: CanvasRenderingContext2D,
   layout: ResolvedStageCardLayout,
@@ -192,7 +197,9 @@ export function renderMomentFrame(
   assets: MomentFrameAssets,
   timeSec: number,
   exportAtmosphereId?: string | null,
+  frameOptions?: RenderMomentFrameOptions,
 ): void {
+  const atmosphereTimeSec = frameOptions?.atmosphereTimeSec ?? timeSec
   const W = layout.outputWidth
   const H = layout.outputHeight
   const theme = layout.theme
@@ -216,7 +223,7 @@ export function renderMomentFrame(
     W,
     H,
     parseAtmosphere(exportAtmosphereId ?? null),
-    timeSec,
+    atmosphereTimeSec,
     layout.borderRadius,
     alpha,
   )

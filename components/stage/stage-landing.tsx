@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { matchLiveCatalogSong, searchMargoSongs, songMatchKey } from '@/lib/search-margo-songs'
@@ -30,6 +30,7 @@ import {
   canShareGifFiles,
 } from '@/lib/moment-export/save-moment-gif'
 import { canExportMomentGif } from '@/lib/moment-export/gif/capabilities'
+import { momentUsesVisualLoopExport } from '@/lib/moment-export/visual-loop-export'
 import { probeMomentVideoCapability } from '@/lib/moment-export/video/capabilities'
 import {
   MomentVideoReadySheet,
@@ -151,6 +152,7 @@ export function StageLanding() {
     format: MomentMediaReadyFormat
     previewUrl: string
     file: File
+    silent?: boolean
   } | null>(null)
   const [momentVisible, setMomentVisible] = useState(false)
 
@@ -606,8 +608,19 @@ export function StageLanding() {
     }
   }, [])
 
+  const exportMomentSnapshot = useMemo(() => {
+    if (!hasMoment) return null
+    return buildExportMoment()
+  }, [hasMoment, buildExportMoment])
+
+  const hasVisualLoopExport = exportMomentSnapshot
+    ? momentUsesVisualLoopExport(exportMomentSnapshot)
+    : false
+
+  const canClipExport = canPlay || hasVisualLoopExport
+
   const prepareVideo = useCallback(async () => {
-    if (!hasMoment || !canExportVideo || !canPlay) return null
+    if (!hasMoment || !canExportVideo || !canClipExport) return null
     gifAbortRef.current?.abort()
     videoAbortRef.current?.abort()
     const ac = new AbortController()
@@ -629,7 +642,7 @@ export function StageLanding() {
       setVideoProgress(null)
       if (videoAbortRef.current === ac) videoAbortRef.current = null
     }
-  }, [hasMoment, canExportVideo, canPlay, buildExportMoment])
+  }, [hasMoment, canExportVideo, canClipExport, buildExportMoment])
 
   const handleSaveVideo = useCallback(async () => {
     if (!hasMoment) return
@@ -642,6 +655,7 @@ export function StageLanding() {
         format: 'video',
         file: out.file,
         previewUrl: out.previewUrl,
+        silent: hasVisualLoopExport,
       })
     } finally {
       setSaving(false)
@@ -658,6 +672,7 @@ export function StageLanding() {
         format: 'video',
         file: out.file,
         previewUrl: out.previewUrl,
+        silent: hasVisualLoopExport,
       })
     } finally {
       setShareBusy(false)
@@ -665,7 +680,7 @@ export function StageLanding() {
   }, [prepareVideo])
 
   const prepareGif = useCallback(async () => {
-    if (!hasMoment || !canExportGif || !canPlay) return null
+    if (!hasMoment || !canExportGif || !canClipExport) return null
     videoAbortRef.current?.abort()
     gifAbortRef.current?.abort()
     const ac = new AbortController()
@@ -687,7 +702,7 @@ export function StageLanding() {
       setVideoProgress(null)
       if (gifAbortRef.current === ac) gifAbortRef.current = null
     }
-  }, [hasMoment, canExportGif, canPlay, buildExportMoment])
+  }, [hasMoment, canExportGif, canClipExport, buildExportMoment])
 
   const handleSaveGif = useCallback(async () => {
     if (!hasMoment) return
@@ -700,11 +715,12 @@ export function StageLanding() {
         format: 'gif',
         file: out.file,
         previewUrl: out.previewUrl,
+        silent: hasVisualLoopExport,
       })
     } finally {
       setSaving(false)
     }
-  }, [hasMoment, prepareGif])
+  }, [hasMoment, prepareGif, hasVisualLoopExport])
 
   const handleShareGif = useCallback(async () => {
     setShareBusy(true)
@@ -716,6 +732,7 @@ export function StageLanding() {
         format: 'gif',
         file: out.file,
         previewUrl: out.previewUrl,
+        silent: hasVisualLoopExport,
       })
     } finally {
       setShareBusy(false)
@@ -762,6 +779,7 @@ export function StageLanding() {
   const saveItems: MomentActionMenuItem[] = buildMomentExportActionItems({
     onExportImage: () => { void handleSaveImage() },
     hasPlayableSnippet: canPlay,
+    hasVisualLoopExport,
     canExportVideo,
     videoUnavailableHint,
     onExportVideo: () => { void handleSaveVideo() },
@@ -771,8 +789,8 @@ export function StageLanding() {
 
   const shareItems = buildMomentShareActionItems({
     canShareImage: canShareImg,
-    canShareVideo: canShareVid && canExportVideo && canPlay,
-    canShareGif: canShareGif && canExportGif && canPlay,
+    canShareVideo: canShareVid && canExportVideo && canClipExport,
+    canShareGif: canShareGif && canExportGif && canClipExport,
     onShareImage: () => { void handleShareImage() },
     onShareVideo: () => { void handleShareVideo() },
     onShareGif: () => { void handleShareGif() },
@@ -786,6 +804,7 @@ export function StageLanding() {
         format={mediaReadySheet?.format ?? 'video'}
         previewUrl={mediaReadySheet?.previewUrl ?? null}
         filename={mediaReadySheet?.file.name ?? 'MARGO_Moment.mp4'}
+        silent={mediaReadySheet?.silent}
         busy={mediaReadySheet?.mode === 'save' ? saving : shareBusy}
         onPrimary={() => { void confirmMediaReady() }}
         onClose={() => setMediaReadySheet(null)}
