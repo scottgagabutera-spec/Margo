@@ -148,23 +148,24 @@ export function AtmosphereLayer({
   )
 }
 
-/** Forced preview room — same CSS rooms as Feed / karaoke, no engine. */
+/** Forced preview room — export/compose card; sits above fill, below lyric. */
 export function AtmospherePreviewRoom({
   personality,
-  variant = 'card',
+  tone = 'dark',
 }: {
   personality: AtmosphereId
-  variant?: AtmosphereVariant
+  /** Card ink family — drives preview blend mode in globals.css */
+  tone?: 'light' | 'dark'
 }) {
   if (!isLivingAtmosphere(personality)) return null
   return (
     <div
       aria-hidden
-      className={`margo-atmosphere-clip margo-atmosphere-clip--${variant}`}
+      className="margo-atmosphere-clip margo-atmosphere-clip--preview"
       data-atmosphere={personality}
-      style={{ zIndex: 1 }}
+      data-tone={tone}
     >
-      <AtmosphereRoom personality={personality} variant={variant} live />
+      <AtmosphereRoom personality={personality} variant="card" live />
     </div>
   )
 }

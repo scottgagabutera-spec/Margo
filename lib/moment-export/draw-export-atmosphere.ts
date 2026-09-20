@@ -211,7 +211,7 @@ export function drawExportAtmosphere(
     floor.addColorStop(0.74, `rgba(${GOLD_RGB},0)`)
     ctx.globalAlpha = alpha * lerp(0.82, 1, floorWave)
     ctx.fillStyle = floor
-    ctx.fillRect(0, h * 0.5, w, h * 0.5)
+    ctx.fillRect(0, h * 0.62, w, h * 0.38)
 
     const drops = [
       { left: 0.08, duration: 3.4, delay: 0, rw: 5.5, rh: 7.5 },
@@ -227,25 +227,24 @@ export function drawExportAtmosphere(
       { left: 0.13, duration: 5.2, delay: 3.4, rw: 3.5, rh: 5 },
       { left: 0.69, duration: 4.4, delay: 3.1, rw: 3.5, rh: 5 },
     ]
-    const fallH = h * 0.5
     for (const d of drops) {
       const p = ((timeSec - d.delay) / d.duration) % 1
       if (p < 0) continue
       const wobble = Math.sin((timeSec + d.delay) * 4.2 + d.left * 20) * 2
-      const y = h * 0.5 + keyframe(
+      const y = keyframe(
         [
-          [0, 0], [0.06, fallH * 0.04], [0.22, fallH * 0.18], [0.48, fallH * 0.52],
-          [0.72, fallH * 0.82], [0.88, fallH * 1.04], [1, fallH * 1.18],
+          [0, -h * 0.06], [0.05, -h * 0.02], [0.2, h * 0.12], [0.45, h * 0.42],
+          [0.68, h * 0.68], [0.84, h * 0.84], [0.92, h * 0.92], [1, h * 1.02],
         ],
         p,
       )
-      const op = keyframe([[0, 0], [0.06, 0.88], [0.72, 0.55], [0.88, 0.32], [1, 0]], p)
+      const op = keyframe([[0, 0], [0.05, 0.9], [0.68, 0.58], [0.84, 0.34], [1, 0]], p)
       const stretchY = keyframe(
-        [[0, 0.35], [0.06, 0.88], [0.22, 1.08], [0.48, 1.14], [0.72, 1.06], [0.88, 0.62], [1, 0.38]],
+        [[0, 0.35], [0.05, 0.88], [0.2, 1.1], [0.45, 1.16], [0.68, 1.08], [0.84, 0.68], [1, 0.32]],
         p,
       )
       const stretchX = keyframe(
-        [[0, 0.55], [0.06, 0.72], [0.48, 0.84], [0.88, 1.12], [1, 1.28]],
+        [[0, 0.55], [0.05, 0.72], [0.45, 0.84], [0.84, 1.1], [1, 1.32]],
         p,
       )
       ctx.globalAlpha = alpha * op
