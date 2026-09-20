@@ -434,6 +434,59 @@ function ComposeInner() {
 
   useEffect(() => {
     if (prefillHandledRef.current) return
+    const phaseParam = searchParams.get('phase')
+    const pickerSongId = searchParams.get('songId')
+    if (phaseParam === 'picker' && pickerSongId) {
+      prefillHandledRef.current = true
+      draftRestoredRef.current = true
+      setEntryPoint(searchParams.get('source') || 'studio-promote')
+      const songParam = searchParams.get('song')
+      const artistParam = searchParams.get('artist')
+      const audioUrlParam = searchParams.get('audioUrl')
+      const artworkParam = searchParams.get('artwork')
+      if (songParam) setSongName(songParam)
+      if (artistParam) setArtistName(artistParam)
+      setLinkedSongId(pickerSongId)
+      if (audioUrlParam) setLinkedAudioUrl(audioUrlParam)
+      setSelectedSong({
+        id: pickerSongId,
+        title: songParam || 'Song',
+        artist: artistParam || '',
+        artwork: artworkParam || '',
+        source: 'margo',
+        margoSongId: pickerSongId,
+        audioUrl: audioUrlParam || null,
+      })
+      setLinePickComplete(false)
+      setSelectMode('picker')
+      setMargoLines([])
+      setLinesLoading(true)
+      setPhase('select')
+      let cancelled = false
+      void (async () => {
+        try {
+          const { data, error } = await supabase
+            .from('lyric_lines')
+            .select('line_index, text, start_sec, end_sec')
+            .eq('song_id', pickerSongId)
+            .order('line_index', { ascending: true })
+          if (cancelled) return
+          if (!error && data) {
+            setMargoLines(data.map((row) => ({
+              lineIndex: row.line_index,
+              text: row.text,
+              startSec: row.start_sec,
+              endSec: row.end_sec,
+            })))
+          }
+        } catch (e) {
+          console.error('Studio promote picker prefill failed:', e)
+        } finally {
+          if (!cancelled) setLinesLoading(false)
+        }
+      })()
+      return () => { cancelled = true }
+    }
     const lyricParam = searchParams.get('lyric')
     const songParam = searchParams.get('song')
     const artistParam = searchParams.get('artist')
