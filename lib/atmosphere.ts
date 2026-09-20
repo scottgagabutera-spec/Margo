@@ -13,12 +13,42 @@ export type AtmosphereId = (typeof ATMOSPHERE_IDS)[number]
 /** Values that may be persisted on songs.atmosphere (Still is NULL). */
 export type AtmosphereColumn = Exclude<AtmosphereId, 'still'>
 
+/** Living effects only — export Effect picker never cycles through Still. */
+export const LIVING_ATMOSPHERE_IDS = ['breath', 'drift', 'pulse', 'weight'] as const
+
+export type LivingAtmosphereId = (typeof LIVING_ATMOSPHERE_IDS)[number]
+
+/** Loop durations (seconds) — keep CSS + canvas in sync. */
+export const ATMOSPHERE_TIMING = {
+  breath: 8.2,
+  drift: 6.4,
+  driftEcho: 8.2,
+  pulse: 1.875,
+  weightFloor: 11,
+} as const
+
 export const ATMOSPHERE_OPTIONS: { id: AtmosphereId; label: string; hint: string }[] = [
-  { id: 'still', label: 'Still', hint: 'No room motion.' },
-  { id: 'breath', label: 'Breath', hint: 'Open mix, slow inhale, lots of space between hits.' },
-  { id: 'drift', label: 'Drift', hint: 'Forward motion. The track keeps traveling.' },
-  { id: 'pulse', label: 'Pulse', hint: 'Tight rhythm. Hits, then a rest, then another hit.' },
-  { id: 'weight', label: 'Weight', hint: 'Heavy low end. The mix sits on the floor.' },
+  { id: 'still', label: 'None', hint: 'Color only. No motion.' },
+  {
+    id: 'breath',
+    label: 'Slow Rise',
+    hint: 'The card gently swells in and out.',
+  },
+  {
+    id: 'drift',
+    label: 'Rolling Wave',
+    hint: 'Waves roll across the card, one after another.',
+  },
+  {
+    id: 'pulse',
+    label: 'On the Beat',
+    hint: 'Rhythmic hits like bass on a reggaeton track.',
+  },
+  {
+    id: 'weight',
+    label: 'Falling Tears',
+    hint: 'Golden drops fall and pool at the bottom.',
+  },
 ]
 
 /** Live song fields joined onto posts / post_lines. Never copied onto those rows. */
@@ -34,7 +64,7 @@ export function toAtmosphereColumn(id: AtmosphereId): AtmosphereColumn | null {
   return id === 'still' ? null : id
 }
 
-export function isLivingAtmosphere(id: AtmosphereId): boolean {
+export function isLivingAtmosphere(id: AtmosphereId): id is LivingAtmosphereId {
   return id !== 'still'
 }
 
@@ -43,13 +73,25 @@ export function livingAtmosphereOrNull(raw: string | null | undefined): Atmosphe
   return toAtmosphereColumn(parseAtmosphere(raw))
 }
 
-/** Export/share UI cycles all atmosphere personalities (Still = no overlay). */
+/** @deprecated Prefer cycleLivingAtmosphere for export Effect control. */
 export function cycleExportAtmosphere(id: AtmosphereId): AtmosphereId {
   const idx = ATMOSPHERE_IDS.indexOf(id)
   const next = ATMOSPHERE_IDS[(idx + 1) % ATMOSPHERE_IDS.length]
   return next ?? 'still'
 }
 
+/** Export Effect column — cycles living personalities only (never lands on Still). */
+export function cycleLivingAtmosphere(id: AtmosphereId): LivingAtmosphereId {
+  if (!isLivingAtmosphere(id)) return LIVING_ATMOSPHERE_IDS[0]
+  const idx = LIVING_ATMOSPHERE_IDS.indexOf(id)
+  return LIVING_ATMOSPHERE_IDS[(idx + 1) % LIVING_ATMOSPHERE_IDS.length]
+}
+
 export function exportAtmosphereLabel(id: AtmosphereId): string {
-  return ATMOSPHERE_OPTIONS.find((o) => o.id === id)?.label ?? 'Still'
+  if (id === 'still') return 'None'
+  return ATMOSPHERE_OPTIONS.find((o) => o.id === id)?.label ?? 'None'
+}
+
+export function exportAtmosphereHint(id: AtmosphereId): string {
+  return ATMOSPHERE_OPTIONS.find((o) => o.id === id)?.hint ?? ''
 }

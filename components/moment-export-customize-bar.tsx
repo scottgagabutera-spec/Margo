@@ -1,10 +1,11 @@
 'use client'
 
-import type { CSSProperties } from 'react'
+import type { CSSProperties, Dispatch, SetStateAction } from 'react'
 import { UI_FONT } from '@/lib/fonts'
 import {
-  cycleExportAtmosphere,
+  cycleLivingAtmosphere,
   exportAtmosphereLabel,
+  LIVING_ATMOSPHERE_IDS,
   type AtmosphereId,
 } from '@/lib/atmosphere'
 import {
@@ -23,18 +24,10 @@ interface MomentExportCustomizeBarProps {
   cardThemeId: StageCardThemeId
   onThemeChange: (id: StageCardThemeId) => void
   exportAtmosphereId: AtmosphereId
-  onExportAtmosphereChange: (id: AtmosphereId) => void
+  onExportAtmosphereChange: Dispatch<SetStateAction<AtmosphereId>>
   shapeId: MomentShapeId
   onShapeChange: (id: MomentShapeId) => void
   style?: CSSProperties
-}
-
-const EFFECT_CAPTIONS: Record<AtmosphereId, string> = {
-  still: 'Off',
-  breath: 'Wash',
-  drift: 'Band',
-  pulse: 'Hit',
-  weight: 'Drops',
 }
 
 function columnLabelStyle(): CSSProperties {
@@ -52,19 +45,40 @@ function columnLabelStyle(): CSSProperties {
   }
 }
 
-function captionStyle(): CSSProperties {
+function captionStyle(twoLine = false): CSSProperties {
   return {
     fontFamily: UI_FONT,
     fontSize: '0.58rem',
     fontWeight: 600,
     letterSpacing: '0.2px',
     color: 'var(--text-secondary)',
-    lineHeight: 1.2,
+    lineHeight: 1.25,
     marginTop: '8px',
     textAlign: 'center',
+    width: '100%',
+    minHeight: twoLine ? '2.5em' : undefined,
     overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
+    display: twoLine ? '-webkit-box' : 'block',
+    WebkitLineClamp: twoLine ? 2 : undefined,
+    WebkitBoxOrient: twoLine ? 'vertical' : undefined,
+    textOverflow: twoLine ? undefined : 'ellipsis',
+    whiteSpace: twoLine ? 'normal' : 'nowrap',
+  }
+}
+
+function modeColumnStyle(active: boolean): CSSProperties {
+  return {
+    minWidth: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: '6px 4px 4px',
+    borderRadius: '14px',
+    border: active ? '1px solid var(--gold-border)' : '1px solid transparent',
+    background: active ? 'var(--gold-faint)' : 'transparent',
+    boxSizing: 'border-box',
+    transition: 'border-color 200ms var(--ease-out), background 200ms var(--ease-out), opacity 200ms var(--ease-out)',
+    opacity: active ? 1 : 0.72,
   }
 }
 
@@ -95,8 +109,7 @@ function AspectGlyph({
 
 /**
  * Export-only customization — lives below the card, not inside it.
- * Editor chrome (not card-themed) so Color / Effect / Size stay readable
- * on the dark page while the canvas above is the live preview.
+ * Color and Effect are mutually exclusive modes with direct switching.
  */
 export function MomentExportCustomizeBar({
   cardThemeId,
@@ -108,8 +121,9 @@ export function MomentExportCustomizeBar({
   style,
 }: MomentExportCustomizeBarProps) {
   const theme = getStageCardTheme(cardThemeId)
+  const colorMode = exportAtmosphereId === 'still'
+  const effectMode = !colorMode
   const effectLabel = exportAtmosphereLabel(exportAtmosphereId)
-  const effectOn = exportAtmosphereId !== 'still'
 
   const tapStyle: CSSProperties = {
     width: '100%',
@@ -144,34 +158,24 @@ export function MomentExportCustomizeBar({
         ...style,
       }}
     >
-      <div
-        style={{
-          minWidth: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          opacity: effectOn ? 0.38 : 1,
-          transition: 'opacity 200ms var(--ease-out)',
-        }}
-      >
-        <span style={columnLabelStyle()}>Color</span>
+      <div style={modeColumnStyle(colorMode)}>
+        <span style={columnLabelStyle()}>Color{colorMode ? ' · On' : ''}</span>
         <button
           type="button"
           aria-label={
-            effectOn
-              ? `Color: ${theme.label}. Turn Effect off to use Color.`
-              : `Color: ${theme.label}. Tap to change.`
+            colorMode
+              ? `Color is on: ${theme.label}. Tap to change color.`
+              : 'Turn Color on and turn Effect off.'
           }
-          aria-disabled={effectOn}
-          disabled={effectOn}
+          aria-pressed={colorMode}
           onClick={() => {
-            if (effectOn) return
+            if (effectMode) {
+              onExportAtmosphereChange('still')
+              return
+            }
             onThemeChange(cycleStageCardTheme(cardThemeId).id)
           }}
-          style={{
-            ...tapStyle,
-            cursor: effectOn ? 'default' : 'pointer',
-          }}
+          style={tapStyle}
         >
           <span
             aria-hidden
@@ -179,23 +183,34 @@ export function MomentExportCustomizeBar({
               width: '28px',
               height: '28px',
               borderRadius: '50%',
-              border: '2px solid var(--text)',
+              border: colorMode ? '2px solid var(--gold)' : '2px solid var(--text-muted)',
               background: theme.swatch,
               boxShadow: theme.markVariant === 'on-light'
                 ? 'inset 0 0 0 1.5px rgba(255,255,255,0.55)'
                 : 'inset 0 0 0 1.5px rgba(255,255,255,0.14)',
+              opacity: colorMode ? 1 : 0.55,
             }}
           />
         </button>
-        <span style={captionStyle()}>{effectOn ? 'Off' : theme.label}</span>
+        <span style={captionStyle()}>{colorMode ? theme.label : 'Tap for color'}</span>
       </div>
 
-      <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <span style={columnLabelStyle()}>Effect</span>
+      <div style={modeColumnStyle(effectMode)}>
+        <span style={columnLabelStyle()}>Effect{effectMode ? ' · On' : ''}</span>
         <button
           type="button"
-          aria-label={`Effect: ${effectLabel}. Tap to change.`}
-          onClick={() => onExportAtmosphereChange(cycleExportAtmosphere(exportAtmosphereId))}
+          aria-label={
+            effectMode
+              ? `Effect is on: ${effectLabel}. Tap to change effect.`
+              : 'Turn Effect on and turn Color off.'
+          }
+          aria-pressed={effectMode}
+          onClick={() => {
+            onExportAtmosphereChange((prev) => {
+              if (prev === 'still') return LIVING_ATMOSPHERE_IDS[0]
+              return cycleLivingAtmosphere(prev)
+            })
+          }}
           style={tapStyle}
         >
           <span
@@ -204,7 +219,7 @@ export function MomentExportCustomizeBar({
               fontSize: '0.72rem',
               fontWeight: 700,
               letterSpacing: '0.3px',
-              color: 'var(--text)',
+              color: effectMode ? 'var(--gold)' : 'var(--text-muted)',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -212,12 +227,12 @@ export function MomentExportCustomizeBar({
               padding: '0 4px',
             }}
           >
-            {effectLabel}
+            {effectMode ? effectLabel : 'Choose…'}
           </span>
         </button>
-        <span style={captionStyle()}>
-          {EFFECT_CAPTIONS[exportAtmosphereId]}
-        </span>
+        {!effectMode ? (
+          <span style={captionStyle()}>Tap for motion</span>
+        ) : null}
       </div>
 
       <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
