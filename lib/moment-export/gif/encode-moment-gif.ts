@@ -1,6 +1,9 @@
 import { parseAtmosphere } from '@/lib/atmosphere'
 import type { MargoMoment } from '@/lib/moment/types'
-import { bindStageVideoExportCanvas } from '@/lib/moment-export/export-canvas-quality'
+import {
+  applyExportCanvasQuality,
+  bindStageVideoExportCanvas,
+} from '@/lib/moment-export/export-canvas-quality'
 import {
   canEncodeMomentVideo,
   momentUsesVisualLoopExport,
@@ -21,6 +24,8 @@ import { loadMomentArtwork } from '@/lib/moment-export/video/load-artwork'
 import {
   MOMENT_GIF_EXPORT_WIDTH,
   MOMENT_GIF_FPS,
+  MOMENT_GIF_VISUAL_LOOP_FPS,
+  MOMENT_GIF_VISUAL_LOOP_RENDER_SCALE,
 } from '@/lib/moment-export/gif/constants'
 import {
   exportTotalDurationSec,
@@ -84,6 +89,19 @@ function concatRgba(chunks: Uint8Array[]): Uint8Array {
   return out
 }
 
+function createDownscaleCanvas(width: number, height: number): {
+  canvas: HTMLCanvasElement
+  ctx: CanvasRenderingContext2D
+} {
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  if (!ctx) throw new Error('Canvas is not available')
+  applyExportCanvasQuality(ctx)
+  return { canvas, ctx }
+}
+
 export async function encodeMargoMomentGif(
   moment: MargoMoment,
   onProgress?: (p: EncodeMomentGifProgress) => void,
@@ -96,6 +114,7 @@ export async function encodeMargoMomentGif(
   const line = moment.lines[0]
   const t0 = performance.now()
   const visualLoop = momentUsesVisualLoopExport(moment)
+  const exportFps = visualLoop ? MOMENT_GIF_VISUAL_LOOP_FPS : MOMENT_GIF_FPS
 
   onProgress?.({ phase: 'prepare' })
   await waitForExportFonts()
@@ -137,74 +156,88 @@ export async function encodeMargoMomentGif(
     totalDurationSec = exportTotalDurationSec(audioDurationSec)
   }
 
-  const frameCount = Math.max(1, Math.round(totalDurationSec * MOMENT_GIF_FPS))
-  const delayMs = 1000 / MOMENT_GIF_FPS
+  const frameCount = Math.max(1, Math.round(totalDurationSec * exportFps))
+  const delayMs = 1000 / exportFps
+  const progressStride = exportFps
 
   const W = layout.outputWidth
   const H = layout.outputHeight
-  const canvas = document.createElement('canvas')
-  const ctx = bindStageVideoExportCanvas(canvas, W, H)
-  const pixelW = canvas.width
-  const pixelH = canvas.height
+  const pixelW = W
+  const pixelH = H
 
   const { GIFEncoder, quantize, applyPalette } = await import('gifenc')
-
-  const sampleIndices = [...new Set([
-    0,
-    Math.floor(frameCount / 2),
-    Math.floor(frameCount * 0.82),
-    frameCount - 1,
-  ])].sort((a, b) => a - b)
-
-  const samples: Uint8Array[] = []
-  for (const idx of sampleIndices) {
-    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
-    if (visualLoop) {
-      const clockSec = idx / MOMENT_GIF_FPS
-      const contentSec = Math.min(clockSec, posterRenderSec)
-      renderMomentFrame(
-        ctx,
-        layout,
-        timeline,
-        { artworkImage },
-        contentSec,
-        moment.exportAtmosphereId,
-        { atmosphereTimeSec: clockSec },
-      )
-    } else {
-      const renderTimeSec = resolveExportRenderTimeSec(idx, MOMENT_GIF_FPS, posterRenderSec)
-      renderMomentFrame(ctx, layout, timeline, { artworkImage }, renderTimeSec, moment.exportAtmosphereId)
-    }
-    samples.push(subsampleRgba(ctx.getImageData(0, 0, pixelW, pixelH).data))
-  }
-  const globalPalette = quantize(concatRgba(samples), 256, { format: PALETTE_FORMAT })
 
   const gif = GIFEncoder()
   await reportGifFrameProgress(onProgress, 0, frameCount)
 
-  for (let frame = 0; frame < frameCount; frame++) {
-    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
-    if (visualLoop) {
-      const clockSec = frame / MOMENT_GIF_FPS
+  if (visualLoop) {
+    const renderScale = MOMENT_GIF_VISUAL_LOOP_RENDER_SCALE
+    const renderCanvas = document.createElement('canvas')
+    renderCanvas.width = pixelW * renderScale
+    renderCanvas.height = pixelH * renderScale
+    const renderCtx = renderCanvas.getContext('2d')
+    if (!renderCtx) throw new Error('Canvas is not available')
+    applyExportCanvasQuality(renderCtx)
+
+    const { ctx: downscaleCtx } = createDownscaleCanvas(pixelW, pixelH)
+    const frameOptions = {
+      exportScale: renderScale,
+    } as const
+
+    for (let frame = 0; frame < frameCount; frame++) {
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+      const clockSec = frame / exportFps
       const contentSec = Math.min(clockSec, posterRenderSec)
       renderMomentFrame(
-        ctx,
+        renderCtx,
         layout,
         timeline,
         { artworkImage },
         contentSec,
         moment.exportAtmosphereId,
-        { atmosphereTimeSec: clockSec },
+        { atmosphereTimeSec: clockSec, ...frameOptions },
       )
-    } else {
-      const renderTimeSec = resolveExportRenderTimeSec(frame, MOMENT_GIF_FPS, posterRenderSec)
-      renderMomentFrame(ctx, layout, timeline, { artworkImage }, renderTimeSec, moment.exportAtmosphereId)
+      downscaleCtx.clearRect(0, 0, pixelW, pixelH)
+      downscaleCtx.drawImage(renderCanvas, 0, 0, pixelW, pixelH)
+      const rgbaClamped = downscaleCtx.getImageData(0, 0, pixelW, pixelH).data
+      const rgba = new Uint8Array(rgbaClamped.buffer, rgbaClamped.byteOffset, rgbaClamped.byteLength)
+      const palette = quantize(rgba, 256, { format: PALETTE_FORMAT })
+      const index = applyPalette(rgbaClamped, palette, { format: PALETTE_FORMAT })
+      gif.writeFrame(index, pixelW, pixelH, { palette, delay: delayMs })
+      if (frame % progressStride === 0 || frame === frameCount - 1) {
+        await reportGifFrameProgress(onProgress, frame, frameCount)
+      }
     }
-    const rgba = ctx.getImageData(0, 0, pixelW, pixelH).data
-    const index = applyPalette(rgba, globalPalette, { format: PALETTE_FORMAT })
-    gif.writeFrame(index, pixelW, pixelH, { palette: globalPalette, delay: delayMs })
-    if (frame % MOMENT_GIF_FPS === 0 || frame === frameCount - 1) {
-      await reportGifFrameProgress(onProgress, frame, frameCount)
+  } else {
+    const canvas = document.createElement('canvas')
+    const ctx = bindStageVideoExportCanvas(canvas, W, H)
+
+    const sampleIndices = [...new Set([
+      0,
+      Math.floor(frameCount / 2),
+      Math.floor(frameCount * 0.82),
+      frameCount - 1,
+    ])].sort((a, b) => a - b)
+
+    const samples: Uint8Array[] = []
+    for (const idx of sampleIndices) {
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+      const renderTimeSec = resolveExportRenderTimeSec(idx, exportFps, posterRenderSec)
+      renderMomentFrame(ctx, layout, timeline, { artworkImage }, renderTimeSec, moment.exportAtmosphereId)
+      samples.push(subsampleRgba(ctx.getImageData(0, 0, pixelW, pixelH).data))
+    }
+    const globalPalette = quantize(concatRgba(samples), 256, { format: PALETTE_FORMAT })
+
+    for (let frame = 0; frame < frameCount; frame++) {
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+      const renderTimeSec = resolveExportRenderTimeSec(frame, exportFps, posterRenderSec)
+      renderMomentFrame(ctx, layout, timeline, { artworkImage }, renderTimeSec, moment.exportAtmosphereId)
+      const rgba = ctx.getImageData(0, 0, pixelW, pixelH).data
+      const index = applyPalette(rgba, globalPalette, { format: PALETTE_FORMAT })
+      gif.writeFrame(index, pixelW, pixelH, { palette: globalPalette, delay: delayMs })
+      if (frame % progressStride === 0 || frame === frameCount - 1) {
+        await reportGifFrameProgress(onProgress, frame, frameCount)
+      }
     }
   }
 
@@ -222,7 +255,7 @@ export async function encodeMargoMomentGif(
     encodeMs: performance.now() - t0,
     width: pixelW,
     height: pixelH,
-    fps: MOMENT_GIF_FPS,
+    fps: exportFps,
     silent: visualLoop,
   }
 }

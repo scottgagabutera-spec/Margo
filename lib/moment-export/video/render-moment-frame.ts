@@ -188,6 +188,8 @@ function globalAlphaAt(timeSec: number, timeline: MomentTimeline): number {
 export interface RenderMomentFrameOptions {
   /** When set, atmosphere loops on this clock while lyric/meta use timeSec. */
   atmosphereTimeSec?: number
+  /** Pixel ratio for GIF supersampling — canvas backing store should be layout × scale. */
+  exportScale?: number
 }
 
 export function renderMomentFrame(
@@ -200,13 +202,14 @@ export function renderMomentFrame(
   frameOptions?: RenderMomentFrameOptions,
 ): void {
   const atmosphereTimeSec = frameOptions?.atmosphereTimeSec ?? timeSec
+  const exportScale = frameOptions?.exportScale ?? 1
   const W = layout.outputWidth
   const H = layout.outputHeight
   const theme = layout.theme
   const alpha = globalAlphaAt(timeSec, timeline)
   const light = layout.background.onLight
 
-  ctx.setTransform(1, 0, 0, 1, 0, 0)
+  ctx.setTransform(exportScale, 0, 0, exportScale, 0, 0)
   ctx.clearRect(0, 0, W, H)
 
   ctx.save()
