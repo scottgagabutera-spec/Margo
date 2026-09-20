@@ -16,18 +16,18 @@ export type AtmosphereRoomMatch = {
 }
 
 const WEIGHT_DROPS = [
-  { left: '8%', duration: '5.8s', delay: '0s', w: 11, h: 15 },
-  { left: '18%', duration: '7.2s', delay: '1.1s', w: 8, h: 11 },
-  { left: '27%', duration: '6.4s', delay: '2.4s', w: 11, h: 15 },
-  { left: '36%', duration: '8.1s', delay: '0.6s', w: 9, h: 13 },
-  { left: '46%', duration: '5.5s', delay: '3.2s', w: 11, h: 15 },
-  { left: '55%', duration: '6.9s', delay: '1.8s', w: 8, h: 11 },
-  { left: '64%', duration: '7.6s', delay: '4.1s', w: 11, h: 15 },
-  { left: '73%', duration: '5.2s', delay: '2.8s', w: 10, h: 14 },
-  { left: '82%', duration: '8.4s', delay: '0.3s', w: 11, h: 15 },
-  { left: '90%', duration: '6.1s', delay: '3.7s', w: 8, h: 11 },
-  { left: '13%', duration: '9s', delay: '5.2s', w: 7, h: 10 },
-  { left: '69%', duration: '7.8s', delay: '4.8s', w: 7, h: 10 },
+  { left: '8%', duration: '3.4s', delay: '0s', w: 11, h: 15 },
+  { left: '18%', duration: '4.1s', delay: '0.7s', w: 8, h: 11 },
+  { left: '27%', duration: '3.8s', delay: '1.5s', w: 11, h: 15 },
+  { left: '36%', duration: '4.6s', delay: '0.4s', w: 9, h: 13 },
+  { left: '46%', duration: '3.2s', delay: '2.1s', w: 11, h: 15 },
+  { left: '55%', duration: '4.2s', delay: '1.1s', w: 8, h: 11 },
+  { left: '64%', duration: '4.8s', delay: '2.8s', w: 11, h: 15 },
+  { left: '73%', duration: '3.1s', delay: '1.9s', w: 10, h: 14 },
+  { left: '82%', duration: '4.9s', delay: '0.2s', w: 11, h: 15 },
+  { left: '90%', duration: '3.6s', delay: '2.5s', w: 8, h: 11 },
+  { left: '13%', duration: '5.2s', delay: '3.4s', w: 7, h: 10 },
+  { left: '69%', duration: '4.4s', delay: '3.1s', w: 7, h: 10 },
 ] as const
 
 /**
@@ -222,6 +222,7 @@ function AtmosphereRoom({
     return (
       <div className={room}>
         <div className="margo-atm-breath-wash" />
+        <div className="margo-atm-breath-deep" />
         <div className="margo-atm-breath-stretch" />
       </div>
     )
@@ -232,6 +233,8 @@ function AtmosphereRoom({
       <div className={room}>
         <div className="margo-atm-drift-well">
           <div className="margo-atm-drift-band" />
+          <div className="margo-atm-drift-band margo-atm-drift-band--b" />
+          <div className="margo-atm-drift-band margo-atm-drift-band--c" />
         </div>
       </div>
     )
@@ -240,6 +243,7 @@ function AtmosphereRoom({
   if (personality === 'pulse') {
     return (
       <div className={room}>
+        <div className="margo-atm-pulse-bloom" />
         <div className="margo-atm-pulse-wash" />
         <div className="margo-atm-pulse-edge" />
       </div>

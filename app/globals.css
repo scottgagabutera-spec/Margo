@@ -666,7 +666,9 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   opacity: 0.92;
 }
 .margo-atmosphere-clip--preview[data-tone="light"] .margo-atm-breath-wash,
-.margo-atmosphere-clip--preview[data-tone="light"] .margo-atm-pulse-wash {
+.margo-atmosphere-clip--preview[data-tone="light"] .margo-atm-breath-deep,
+.margo-atmosphere-clip--preview[data-tone="light"] .margo-atm-pulse-wash,
+.margo-atmosphere-clip--preview[data-tone="light"] .margo-atm-pulse-bloom {
   background: var(--ink);
 }
 .margo-atmosphere-clip--preview[data-tone="light"] .margo-atm-breath-stretch {
@@ -734,11 +736,11 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 }
 .margo-atm-room.is-live .margo-atm-breath-wash {
   will-change: opacity;
-  animation: margo-atm-breath-wash 7.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  animation: margo-atm-breath-wash 8.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 @keyframes margo-atm-breath-wash {
-  0%, 100% { opacity: 0.035; }
-  50% { opacity: 0.155; }
+  0%, 100% { opacity: 0.032; }
+  50% { opacity: 0.168; }
 }
 .margo-atm-breath-stretch {
   position: absolute;
@@ -755,9 +757,27 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
     );
   opacity: 0.45;
 }
+.margo-atm-breath-deep {
+  position: absolute;
+  inset: -22%;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 48%,
+    color-mix(in srgb, var(--gold) 14%, transparent) 0%,
+    transparent 68%
+  );
+  opacity: 0.38;
+}
 .margo-atm-room.is-live .margo-atm-breath-stretch {
   will-change: transform, opacity;
-  animation: margo-atm-breath-stretch 7.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  animation: margo-atm-breath-stretch 8.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.margo-atm-room.is-live .margo-atm-breath-deep {
+  will-change: transform, opacity;
+  animation: margo-atm-breath-deep 11.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  animation-delay: -4.1s;
 }
 @keyframes margo-atm-breath-stretch {
   0%, 100% {
@@ -765,8 +785,18 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
     transform: scale(1, 1);
   }
   50% {
-    opacity: 0.7;
-    transform: scale(1.09, 1.045);
+    opacity: 0.72;
+    transform: scale(1.1, 1.05);
+  }
+}
+@keyframes margo-atm-breath-deep {
+  0%, 100% {
+    opacity: 0.14;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 0.42;
+    transform: scale(1.14);
   }
 }
 
@@ -789,32 +819,68 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
     inset 0 0 70px 10px color-mix(in srgb, var(--gold) 10%, transparent);
   opacity: 0.22;
 }
+.margo-atm-pulse-bloom {
+  position: absolute;
+  inset: -4%;
+  pointer-events: none;
+  transform-origin: 50% 44%;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle at 50% 44%,
+    color-mix(in srgb, var(--gold) 20%, transparent) 0%,
+    transparent 64%
+  );
+  opacity: 0.22;
+}
 .margo-atm-room.is-live .margo-atm-pulse-wash,
-.margo-atm-room.is-live .margo-atm-pulse-edge {
-  will-change: opacity;
+.margo-atm-room.is-live .margo-atm-pulse-edge,
+.margo-atm-room.is-live .margo-atm-pulse-bloom {
+  will-change: opacity, transform;
 }
 .margo-atm-room.is-live .margo-atm-pulse-wash {
-  animation: margo-atm-pulse-wash 2.9s cubic-bezier(0.33, 0.9, 0.4, 1) infinite;
+  animation: margo-atm-pulse-wash 1.875s cubic-bezier(0.22, 0.9, 0.28, 1) infinite;
 }
 .margo-atm-room.is-live .margo-atm-pulse-edge {
-  animation: margo-atm-pulse-edge 2.9s cubic-bezier(0.33, 0.9, 0.4, 1) infinite;
+  animation: margo-atm-pulse-edge 1.875s cubic-bezier(0.22, 0.9, 0.28, 1) infinite;
+}
+.margo-atm-room.is-live .margo-atm-pulse-bloom {
+  animation: margo-atm-pulse-bloom 1.875s cubic-bezier(0.22, 0.9, 0.28, 1) infinite;
 }
 @keyframes margo-atm-pulse-wash {
-  0%, 8% { opacity: 0.03; }
-  14% { opacity: 0.16; }
-  24% { opacity: 0.05; }
-  30% { opacity: 0.12; }
-  50%, 100% { opacity: 0.03; }
+  0%, 100% { opacity: 0.022; }
+  8% { opacity: 0.18; }
+  16% { opacity: 0.028; }
+  28% { opacity: 0.14; }
+  36% { opacity: 0.024; }
+  48% { opacity: 0.12; }
+  56% { opacity: 0.026; }
+  68% { opacity: 0.1; }
+  76% { opacity: 0.024; }
 }
 @keyframes margo-atm-pulse-edge {
-  0%, 8% { opacity: 0.18; }
-  14% { opacity: 0.95; }
-  24% { opacity: 0.28; }
-  30% { opacity: 0.7; }
-  55%, 100% { opacity: 0.18; }
+  0%, 100% { opacity: 0.16; transform: scale(1); }
+  8% { opacity: 0.98; transform: scale(1.028); }
+  16% { opacity: 0.22; transform: scale(0.996); }
+  28% { opacity: 0.82; transform: scale(1.018); }
+  36% { opacity: 0.2; transform: scale(0.998); }
+  48% { opacity: 0.72; transform: scale(1.012); }
+  56% { opacity: 0.18; transform: scale(1); }
+  68% { opacity: 0.62; transform: scale(1.008); }
+  76% { opacity: 0.16; transform: scale(0.998); }
+}
+@keyframes margo-atm-pulse-bloom {
+  0%, 100% { opacity: 0.18; transform: scale(1); }
+  8% { opacity: 0.72; transform: scale(1.032); }
+  16% { opacity: 0.2; transform: scale(0.994); }
+  28% { opacity: 0.58; transform: scale(1.02); }
+  36% { opacity: 0.18; transform: scale(0.998); }
+  48% { opacity: 0.5; transform: scale(1.014); }
+  56% { opacity: 0.16; transform: scale(1); }
+  68% { opacity: 0.44; transform: scale(1.01); }
+  76% { opacity: 0.16; transform: scale(0.996); }
 }
 
-/* ── Drift: one narrow current crossing the card ── */
+/* ── Drift: overlapping currents — always rolling, never parked ── */
 .margo-atm-drift-well {
   position: absolute;
   inset: 0;
@@ -841,23 +907,44 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   transform: skewX(-14deg);
   opacity: 0;
 }
+.margo-atm-drift-band--b {
+  top: 18%;
+  height: 88%;
+  width: 18%;
+  opacity: 0.72;
+  filter: blur(1px);
+}
+.margo-atm-drift-band--c {
+  top: 42%;
+  height: 72%;
+  width: 14%;
+  opacity: 0.55;
+  filter: blur(2px);
+}
 .margo-atm-room.is-live .margo-atm-drift-band {
   will-change: transform, opacity;
-  animation: margo-atm-drift-current 6.2s cubic-bezier(0.42, 0, 0.58, 1) infinite;
+  animation: margo-atm-drift-current 5.5s linear infinite;
+}
+.margo-atm-room.is-live .margo-atm-drift-band--b {
+  animation-duration: 7.2s;
+  animation-delay: -2.8s;
+}
+.margo-atm-room.is-live .margo-atm-drift-band--c {
+  animation-duration: 6.8s;
+  animation-delay: -4.6s;
 }
 @keyframes margo-atm-drift-current {
   0% {
     transform: translateX(-120%) skewX(-14deg);
     opacity: 0;
   }
-  8% {
+  6% {
     opacity: 0.88;
   }
-  42% {
-    transform: translateX(420%) skewX(-14deg);
+  94% {
     opacity: 0.72;
   }
-  72%, 100% {
+  100% {
     transform: translateX(420%) skewX(-14deg);
     opacity: 0;
   }
@@ -890,17 +977,18 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 }
 .margo-atm-room.is-live .margo-atm-weight-floor {
   will-change: transform, opacity;
-  animation: margo-atm-weight-floor 14s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  animation: margo-atm-weight-floor 11s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 @keyframes margo-atm-weight-floor {
-  0%, 100% { opacity: 0.85; transform: translateY(0) scaleY(1); }
-  50% { opacity: 1; transform: translateY(4%) scaleY(1.08); }
+  0%, 100% { opacity: 0.82; transform: translateY(0) scaleY(1); }
+  50% { opacity: 1; transform: translateY(5%) scaleY(1.1); }
 }
 .margo-atm-drop {
   position: absolute;
   width: 11px;
   height: 15px;
   top: -18px;
+  transform-origin: top center;
 }
 .margo-atm-drop svg { display: block; width: 100%; height: 100%; }
 .margo-atm-drop-shade {
@@ -911,30 +999,62 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 }
 .margo-atm-room.is-live .margo-atm-drop {
   will-change: transform, opacity;
-  animation-name: margo-atm-drop-fall;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
+  animation-name: margo-atm-drop-fall, margo-atm-drop-wobble;
+  animation-timing-function: cubic-bezier(0.32, 0.08, 0.52, 0.94), ease-in-out;
+  animation-iteration-count: infinite, infinite;
 }
 @keyframes margo-atm-drop-fall {
-  0% { transform: translateY(0) scale(0.85, 1); opacity: 0; }
-  8% { opacity: 0.9; }
-  82% { opacity: 0.85; transform: translateY(100cqh) scale(1, 1); }
-  92% { opacity: 0.4; transform: translateY(108cqh) scale(1.25, 0.55); }
-  100% { opacity: 0; transform: translateY(112cqh) scale(1.4, 0.35); }
+  0% {
+    transform: translateY(0) scale(0.55, 0.35);
+    opacity: 0;
+  }
+  6% {
+    opacity: 0.88;
+    transform: translateY(2%) scale(0.72, 0.88);
+  }
+  22% {
+    transform: translateY(18%) scale(0.78, 1.08);
+  }
+  48% {
+    transform: translateY(52%) scale(0.84, 1.14);
+    opacity: 0.78;
+  }
+  72% {
+    transform: translateY(82%) scale(0.88, 1.06);
+    opacity: 0.55;
+  }
+  88% {
+    transform: translateY(104%) scale(1.12, 0.62);
+    opacity: 0.32;
+  }
+  100% {
+    transform: translateY(118%) scale(1.28, 0.38);
+    opacity: 0;
+  }
+}
+@keyframes margo-atm-drop-wobble {
+  0%, 100% { margin-left: 0; }
+  25% { margin-left: 2px; }
+  50% { margin-left: -1.5px; }
+  75% { margin-left: 1.5px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .margo-atm-breath-wash,
   .margo-atm-breath-stretch,
+  .margo-atm-breath-deep,
   .margo-atm-pulse-wash,
   .margo-atm-pulse-edge,
+  .margo-atm-pulse-bloom,
   .margo-atm-drift-band,
   .margo-atm-weight-floor,
   .margo-atm-drop,
   .margo-atm-room.is-live .margo-atm-breath-wash,
   .margo-atm-room.is-live .margo-atm-breath-stretch,
+  .margo-atm-room.is-live .margo-atm-breath-deep,
   .margo-atm-room.is-live .margo-atm-pulse-wash,
   .margo-atm-room.is-live .margo-atm-pulse-edge,
+  .margo-atm-room.is-live .margo-atm-pulse-bloom,
   .margo-atm-room.is-live .margo-atm-drift-band,
   .margo-atm-room.is-live .margo-atm-weight-floor,
   .margo-atm-room.is-live .margo-atm-drop {
