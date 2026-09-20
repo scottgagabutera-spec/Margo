@@ -164,6 +164,7 @@ export async function encodeMargoMomentMp4(
       hasAudio: true,
       width: canvasW,
       height: canvasH,
+      format: isVertical ? 'shorts' : 'feed',
     })
     const exportAudio = prependSilence(
       truncateAudioBuffer(audioBuffer, audioDurationSec),
@@ -235,6 +236,7 @@ export async function encodeMargoMomentMp4(
     hasAudio: encodeHasAudio,
     width: canvasW,
     height: canvasH,
+    format: isVertical ? 'shorts' : 'feed',
   })
   const frameDuration = 1 / MOMENT_VIDEO_FPS
   const output = new Output({
