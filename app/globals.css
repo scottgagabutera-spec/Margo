@@ -659,18 +659,16 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 /* Export / compose preview — above card fill, below lyric (StageMomentCard). */
 .margo-atmosphere-clip--preview {
   z-index: 1;
-  mix-blend-mode: soft-light;
 }
-/* Export preview — keep motion behind lyric; no harsh stripe overlay */
-.margo-atmosphere-clip--preview .margo-atm-breath-stretch {
-  opacity: 0.14;
-  mix-blend-mode: soft-light;
+/*
+ * Effect export uses the dark room (#07060A). soft-light collapses gold motion
+ * into the fill and reads as flat black — use normal compositing instead.
+ */
+.margo-atmosphere-clip--preview[data-tone="dark"] {
+  mix-blend-mode: normal;
 }
-.margo-atmosphere-clip--preview .margo-atm-pulse-edge {
-  mix-blend-mode: soft-light;
-}
-.margo-atmosphere-clip--preview .margo-atm-pulse-bloom {
-  mix-blend-mode: soft-light;
+.margo-atmosphere-clip--preview[data-tone="dark"] .margo-atm-breath-stretch {
+  opacity: 0.26;
 }
 .margo-atmosphere-clip--preview[data-tone="light"] {
   mix-blend-mode: multiply;
@@ -999,9 +997,8 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   width: 100%;
   height: 100%;
 }
-.margo-atmosphere-clip--preview .margo-atm-weight-eyes {
-  mix-blend-mode: soft-light;
-  opacity: 0.5;
+.margo-atmosphere-clip--preview[data-tone="dark"] .margo-atm-weight-eyes {
+  opacity: 0.55;
 }
 .margo-atm-room.is-live .margo-atm-weight-floor {
   will-change: transform, opacity;
