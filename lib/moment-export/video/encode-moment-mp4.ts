@@ -1,6 +1,6 @@
 import { parseAtmosphere } from '@/lib/atmosphere'
 import type { MargoMoment } from '@/lib/moment/types'
-import { bindStageExportCanvas } from '@/lib/moment-export/export-canvas-quality'
+import { bindStageVideoExportCanvas } from '@/lib/moment-export/export-canvas-quality'
 import {
   canEncodeMomentVideo,
   momentUsesVisualLoopExport,
@@ -124,7 +124,7 @@ export async function encodeMargoMomentMp4(
   const canvasW = exportLayout.outputWidth
   const canvasH = exportLayout.outputHeight
   const canvas = document.createElement('canvas')
-  const ctx = bindStageExportCanvas(canvas, canvasW, canvasH)
+  const ctx = bindStageVideoExportCanvas(canvas, canvasW, canvasH)
 
   let totalDurationSec: number
   let frameCount: number
