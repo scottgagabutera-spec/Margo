@@ -213,6 +213,19 @@ export function drawExportAtmosphere(
     ctx.fillStyle = floor
     ctx.fillRect(0, h * 0.62, w, h * 0.38)
 
+    ctx.globalAlpha = alpha * 0.42
+    ctx.strokeStyle = GOLD
+    ctx.lineWidth = 1.2
+    for (const cx of [w * 0.38, w * 0.62]) {
+      ctx.beginPath()
+      ctx.ellipse(cx, h * 0.11, w * 0.045, h * 0.014, 0, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.beginPath()
+      ctx.arc(cx, h * 0.112, w * 0.008, 0, Math.PI * 2)
+      ctx.fillStyle = GOLD
+      ctx.fill()
+    }
+
     const drops = [
       { left: 0.08, duration: 3.4, delay: 0, rw: 5.5, rh: 7.5 },
       { left: 0.18, duration: 4.1, delay: 0.7, rw: 4, rh: 5.5 },

@@ -17,6 +17,8 @@ interface MargoSearchInputProps {
   onBlur?: () => void
   /** Left search icon (compose/landing/lyric-back) vs clear-only pill (feed). */
   icon?: 'left' | 'none'
+  /** Keep typed text above dropdown scrims (Stage / Compose search). */
+  stackAboveOverlay?: boolean
   id?: string
 }
 
@@ -35,6 +37,7 @@ export function MargoSearchInput({
   onFocus,
   onBlur,
   icon = 'left',
+  stackAboveOverlay = false,
   id: idProp,
 }: MargoSearchInputProps) {
   const autoId = useId()
@@ -43,7 +46,7 @@ export function MargoSearchInput({
   const showLeftIcon = icon === 'left'
 
   return (
-    <div style={{ position: 'relative', width: '100%' }}>
+    <div style={{ position: 'relative', width: '100%', zIndex: stackAboveOverlay ? 1 : undefined }}>
       {showLeftIcon ? (
         <span
           aria-hidden
@@ -112,7 +115,7 @@ export function MargoSearchInput({
           color: 'var(--text)',
           fontFamily: UI_FONT,
           fontSize: '0.82rem',
-          fontWeight: 400,
+          fontWeight: focused || value.length > 0 ? 500 : 400,
           letterSpacing: '-0.01em',
           lineHeight: 1.3,
           outline: 'none',
