@@ -24,11 +24,10 @@ import {
 import { ensureAacEncoderRegistered } from '@/lib/moment-export/video/capabilities'
 import {
   MOMENT_VIDEO_FPS,
-  MOMENT_VIDEO_BITRATE,
-  MOMENT_VIDEO_AUDIO_BITRATE,
   MOMENT_VIDEO_MAX_DURATION_SEC,
   MOMENT_EXPORT_INTRO_HOLD_SEC,
 } from '@/lib/moment-export/video/constants'
+import { resolveMomentVideoQualityPreset } from '@/lib/moment-export/video/resolve-moment-video-quality'
 import {
   exportTotalDurationSec,
   completedCardRenderTimeSec,
@@ -127,6 +126,7 @@ export async function encodeMargoMomentMp4(
   const ctx = bindStageVideoExportCanvas(canvas, canvasW, canvasH)
 
   let totalDurationSec: number
+  let encodeHasAudio: boolean
   let frameCount: number
   let exportTimeline: ReturnType<typeof buildMomentTimeline>
   let posterRenderSec: number
@@ -137,6 +137,7 @@ export async function encodeMargoMomentMp4(
     exportTimeline = buildMomentTimeline(moment, loopDurationSec)
     posterRenderSec = completedCardRenderTimeSec(exportTimeline)
     totalDurationSec = loopDurationSec
+    encodeHasAudio = false
     frameCount = Math.max(1, Math.round(totalDurationSec * MOMENT_VIDEO_FPS))
     artworkImage = await loadMomentArtwork(line.artworkUrl)
   } else {
@@ -155,8 +156,10 @@ export async function encodeMargoMomentMp4(
     exportTimeline = buildMomentTimeline(moment, audioDurationSec)
     posterRenderSec = completedCardRenderTimeSec(exportTimeline)
     totalDurationSec = exportTotalDurationSec(audioDurationSec)
+    encodeHasAudio = true
     frameCount = Math.max(1, Math.round(totalDurationSec * MOMENT_VIDEO_FPS))
 
+    const qualityPreset = resolveMomentVideoQualityPreset(totalDurationSec, true)
     const exportAudio = prependSilence(
       truncateAudioBuffer(audioBuffer, audioDurationSec),
       MOMENT_EXPORT_INTRO_HOLD_SEC,
@@ -170,11 +173,11 @@ export async function encodeMargoMomentMp4(
 
     const videoSource = new CanvasSource(canvas, {
       codec: videoCodec,
-      quality: new Quality({ bitrate: MOMENT_VIDEO_BITRATE }),
+      quality: new Quality(qualityPreset.video),
     })
     const audioSource = new AudioBufferSource({
       codec: audioCodecName as AudioCodecName,
-      quality: new Quality({ bitrate: MOMENT_VIDEO_AUDIO_BITRATE }),
+      quality: new Quality({ bitrate: qualityPreset.audioBitrate }),
     })
 
     output.addVideoTrack(videoSource, { frameRate: MOMENT_VIDEO_FPS })
@@ -222,6 +225,7 @@ export async function encodeMargoMomentMp4(
     }
   }
 
+  const qualityPreset = resolveMomentVideoQualityPreset(totalDurationSec, encodeHasAudio)
   const frameDuration = 1 / MOMENT_VIDEO_FPS
   const output = new Output({
     format: new Mp4OutputFormat({ fastStart: 'in-memory' }),
@@ -230,7 +234,7 @@ export async function encodeMargoMomentMp4(
 
   const videoSource = new CanvasSource(canvas, {
     codec: videoCodec,
-    quality: new Quality({ bitrate: MOMENT_VIDEO_BITRATE }),
+    quality: new Quality(qualityPreset.video),
   })
 
   output.addVideoTrack(videoSource, { frameRate: MOMENT_VIDEO_FPS })

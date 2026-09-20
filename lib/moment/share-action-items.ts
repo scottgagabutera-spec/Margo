@@ -13,12 +13,9 @@ export interface BuildMomentExportActionItemsInput {
   canExportVideo?: boolean
   videoUnavailableHint?: string
   onExportVideo?: () => void
-  canExportGif?: boolean
-  gifUnavailableHint?: string
-  onExportGif?: () => void
 }
 
-/** Export ▾ submenu: Image / Video / GIF / PDF — shared by Stage + Card modal. */
+/** Export ▾ submenu: Image / Video / PDF — shared by Stage + Card modal. */
 export function buildMomentExportActionItems({
   onExportImage,
   showFormats = true,
@@ -27,9 +24,6 @@ export function buildMomentExportActionItems({
   canExportVideo = false,
   videoUnavailableHint = 'Not available on this device',
   onExportVideo = () => {},
-  canExportGif = false,
-  gifUnavailableHint = 'Not available on this device',
-  onExportGif = () => {},
 }: BuildMomentExportActionItemsInput): MomentActionMenuItem[] {
   const items: MomentActionMenuItem[] = [
     { id: 'png', label: 'Image', onClick: onExportImage },
@@ -47,28 +41,12 @@ export function buildMomentExportActionItems({
     videoHint = videoUnavailableHint
   }
 
-  const gifEnabled = canClipExport && canExportGif
-  let gifHint: string | undefined
-  if (gifEnabled && hasVisualLoopExport && !hasPlayableSnippet) {
-    gifHint = MOMENT_VISUAL_LOOP_LABEL
-  } else if (!canClipExport) {
-    gifHint = MOMENT_CLIP_EXPORT_HINT
-  } else if (!canExportGif) {
-    gifHint = gifUnavailableHint
-  }
-
   items.push(
     {
       id: 'video',
       label: 'Video',
       ...(videoEnabled ? { hint: videoHint } : { hint: videoHint, disabled: true }),
       onClick: onExportVideo,
-    },
-    {
-      id: 'gif',
-      label: 'GIF',
-      ...(gifEnabled ? { hint: gifHint } : { hint: gifHint, disabled: true }),
-      onClick: onExportGif,
     },
     { id: 'pdf', label: 'PDF', hint: 'Coming soon', disabled: true, onClick: () => {} },
   )
@@ -78,23 +56,19 @@ export function buildMomentExportActionItems({
 export interface BuildMomentShareActionItemsInput {
   canShareImage: boolean
   canShareVideo?: boolean
-  canShareGif?: boolean
   onShareImage: () => void
   onShareVideo?: () => void
-  onShareGif?: () => void
 }
 
 /**
  * Shared Share ▾ menu items for Stage + Card modal.
- * Image / Video / GIF only — link sharing is not available yet.
+ * Image / Video only — link sharing is not available yet.
  */
 export function buildMomentShareActionItems({
   canShareImage,
   canShareVideo = false,
-  canShareGif = false,
   onShareImage,
   onShareVideo = () => {},
-  onShareGif = () => {},
 }: BuildMomentShareActionItemsInput): MomentActionMenuItem[] {
   const items: MomentActionMenuItem[] = []
 
@@ -104,10 +78,6 @@ export function buildMomentShareActionItems({
 
   if (canShareVideo) {
     items.push({ id: 'vid', label: 'Share video', onClick: onShareVideo })
-  }
-
-  if (canShareGif) {
-    items.push({ id: 'gif', label: 'Share GIF', onClick: onShareGif })
   }
 
   return items
