@@ -228,10 +228,16 @@ export function MomentShareStudio({
     songAtmosphere,
   ])
 
+  const snippetIdentity = canPlayInline && listen?.audioUrl && listen.snippetStart != null && listen.snippetEnd != null
+    ? `${listen.songId || listen.audioUrl}|${listen.snippetStart}|${listen.snippetEnd}`
+    : null
+  const startPreviewPlaybackRef = useRef(startPreviewPlayback)
+  startPreviewPlaybackRef.current = startPreviewPlayback
+
   useEffect(() => {
-    if (!canPlayInline) return
-    startPreviewPlayback()
-  }, [canPlayInline, startPreviewPlayback])
+    if (!snippetIdentity) return
+    startPreviewPlaybackRef.current()
+  }, [snippetIdentity])
 
   const persistExportPrefs = useCallback(() => {
     if (!resolvedPostId) return

@@ -105,3 +105,27 @@ export function platformsForShape(shapeId: MomentShapeId): PromotePlatform[] {
   if (shapeId === 'vertical') return ['youtube']
   return []
 }
+
+/** Queue items that no longer need artist action. */
+export const PROMOTE_RESOLVED_STATUSES = ['published', 'rejected', 'failed'] as const
+
+export const PROMOTE_RESOLVED_RETENTION_MS = 24 * 60 * 60 * 1000
+
+export function isResolvedPromoteStatus(
+  status: PromoteQueueStatus | string,
+): status is typeof PROMOTE_RESOLVED_STATUSES[number] {
+  return (PROMOTE_RESOLVED_STATUSES as readonly string[]).includes(status)
+}
+
+/** Keep pending_review / approved / publishing / partial. Hide resolved rows after 24h. */
+export function isPromoteQueueItemVisible(
+  status: PromoteQueueStatus | string,
+  updatedAt: string | Date | null | undefined,
+  nowMs = Date.now(),
+): boolean {
+  if (!isResolvedPromoteStatus(status)) return true
+  if (!updatedAt) return true
+  const resolvedAt = new Date(updatedAt).getTime()
+  if (!Number.isFinite(resolvedAt)) return true
+  return nowMs - resolvedAt < PROMOTE_RESOLVED_RETENTION_MS
+}

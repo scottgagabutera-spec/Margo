@@ -119,7 +119,7 @@ export async function POST(
 
   const youtubeTarget = (targets || []).find((t) => t.platform === 'youtube')
   if (!youtubeTarget || youtubeTarget.status === 'skipped') {
-    await admin.from('promote_queue').update({ status: 'failed' }).eq('id', queueId)
+    await admin.from('promote_queue').update({ status: 'failed', updated_at: new Date().toISOString() }).eq('id', queueId)
     return NextResponse.json({ error: 'YouTube target not available — connect YouTube in Settings.' }, { status: 400 })
   }
 
@@ -138,7 +138,7 @@ export async function POST(
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to store rendered video'
     console.error('[promote/publish] R2 upload failed', err)
-    await admin.from('promote_queue').update({ status: 'failed' }).eq('id', queueId)
+    await admin.from('promote_queue').update({ status: 'failed', updated_at: new Date().toISOString() }).eq('id', queueId)
     return NextResponse.json({ error: `Failed to store rendered video: ${message}` }, { status: 500 })
   }
 
@@ -157,7 +157,7 @@ export async function POST(
         error_message: 'YouTube not connected',
       })
       .eq('id', youtubeTarget.id)
-    await admin.from('promote_queue').update({ status: 'failed' }).eq('id', queueId)
+    await admin.from('promote_queue').update({ status: 'failed', updated_at: new Date().toISOString() }).eq('id', queueId)
     await cleanupPromoteStagingVideoIfComplete(admin, queueId, objectKey)
     return NextResponse.json({ error: 'YouTube not connected' }, { status: 400 })
   }
@@ -239,7 +239,7 @@ export async function POST(
       .from('artist_social_connections')
       .update({ last_error: message })
       .eq('id', connection.id)
-    await admin.from('promote_queue').update({ status: 'failed' }).eq('id', queueId)
+    await admin.from('promote_queue').update({ status: 'failed', updated_at: new Date().toISOString() }).eq('id', queueId)
     await cleanupPromoteStagingVideoIfComplete(admin, queueId, objectKey)
     return NextResponse.json({ error: message }, { status: 502 })
   }

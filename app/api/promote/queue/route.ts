@@ -3,7 +3,12 @@ import { createClient as createServerSupabase } from '@/lib/supabase/server'
 import { getPromoteAdmin } from '@/lib/promote/admin-client'
 import { requirePromoteSession } from '@/lib/promote/api-auth'
 import { createPromoteQueueFromMoment } from '@/lib/promote/queue-from-moment'
-import type { PromoteQueueRow, PromoteQueueTargetRow } from '@/lib/promote/types'
+import {
+  isPromoteQueueItemVisible,
+  PROMOTE_RESOLVED_RETENTION_MS,
+  type PromoteQueueRow,
+  type PromoteQueueTargetRow,
+} from '@/lib/promote/types'
 
 function mapQueue(row: Record<string, unknown>, targets: Record<string, unknown>[]): PromoteQueueRow {
   return {
@@ -45,18 +50,34 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const supabase = await createServerSupabase()
-  const { data: rows, error } = await supabase
-    .from('promote_queue')
-    .select('*')
-    .eq('profile_id', session.userId)
-    .in('status', ['pending_review', 'approved', 'publishing', 'published', 'partial', 'failed'])
-    .order('created_at', { ascending: false })
-    .limit(50)
+  const resolvedCutoff = new Date(Date.now() - PROMOTE_RESOLVED_RETENTION_MS).toISOString()
+  const [activeRes, resolvedRes] = await Promise.all([
+    supabase
+      .from('promote_queue')
+      .select('*')
+      .eq('profile_id', session.userId)
+      .in('status', ['pending_review', 'approved', 'publishing', 'partial'])
+      .order('created_at', { ascending: false })
+      .limit(50),
+    supabase
+      .from('promote_queue')
+      .select('*')
+      .eq('profile_id', session.userId)
+      .in('status', ['published', 'failed', 'rejected'])
+      .gte('updated_at', resolvedCutoff)
+      .order('created_at', { ascending: false })
+      .limit(50),
+  ])
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  if (!rows?.length) return NextResponse.json({ items: [] })
+  if (activeRes.error) return NextResponse.json({ error: activeRes.error.message }, { status: 500 })
+  if (resolvedRes.error) return NextResponse.json({ error: resolvedRes.error.message }, { status: 500 })
 
-  const ids = rows.map((r) => r.id)
+  const visible = [...(activeRes.data || []), ...(resolvedRes.data || [])]
+    .filter((row) => isPromoteQueueItemVisible(String(row.status), row.updated_at as string | null))
+    .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+  if (!visible.length) return NextResponse.json({ items: [] })
+
+  const ids = visible.map((r) => r.id)
   const { data: targets, error: targetErr } = await supabase
     .from('promote_queue_targets')
     .select('*')
@@ -72,7 +93,7 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    items: rows.map((row) => mapQueue(row, byQueue.get(row.id as string) || [])),
+    items: visible.map((row) => mapQueue(row, byQueue.get(row.id as string) || [])),
   })
 }
 
