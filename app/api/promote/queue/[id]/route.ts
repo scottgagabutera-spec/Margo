@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
-import { createClient as createServerSupabase } from '@/lib/supabase/server'
+import { getPromoteAdmin } from '@/lib/promote/admin-client'
 import { requirePromoteSession } from '@/lib/promote/api-auth'
+
+const EDITABLE_STATUSES = ['pending_review', 'approved'] as const
 
 export async function PATCH(
   request: Request,
@@ -26,13 +28,15 @@ export async function PATCH(
   if (body.overrideAtmosphereId !== undefined) patch.override_atmosphere_id = body.overrideAtmosphereId
   if (body.overrideShapeId !== undefined) patch.override_shape_id = body.overrideShapeId
 
-  const supabase = await createServerSupabase()
-  const { data, error } = await supabase
+  const admin = getPromoteAdmin()
+  if (!admin) return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
+
+  const { data, error } = await admin
     .from('promote_queue')
     .update(patch)
     .eq('id', id)
     .eq('profile_id', session.userId)
-    .eq('status', 'pending_review')
+    .in('status', [...EDITABLE_STATUSES])
     .select('id')
     .maybeSingle()
 

@@ -5,6 +5,7 @@ import { resolveQueueVisualPrefs, type PromoteQueueRow } from '@/lib/promote/typ
 export function buildPromoteQueueMoment(
   row: PromoteQueueRow,
   audio?: {
+    songId?: string | null
     audioUrl?: string | null
     snippetStart?: number | null
     snippetEnd?: number | null
@@ -17,9 +18,10 @@ export function buildPromoteQueueMoment(
       songTitle: row.songTitle,
       artistName: row.artistName,
       artworkUrl: row.artworkUrl,
+      songId: audio?.songId ?? row.sourceSongId ?? null,
       audioUrl: audio?.audioUrl ?? null,
-      snippetStart: audio?.snippetStart ?? null,
-      snippetEnd: audio?.snippetEnd ?? null,
+      snippetStart: audio?.snippetStart ?? row.snippetStartSec ?? null,
+      snippetEnd: audio?.snippetEnd ?? row.snippetEndSec ?? null,
     }],
     themeId: prefs.exportThemeId,
     shapeId: prefs.exportShapeId,
