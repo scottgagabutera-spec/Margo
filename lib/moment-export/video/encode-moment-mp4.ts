@@ -1,6 +1,10 @@
 import { parseAtmosphere } from '@/lib/atmosphere'
 import type { MargoMoment } from '@/lib/moment/types'
-import { bindStageVideoExportCanvas } from '@/lib/moment-export/export-canvas-quality'
+import {
+  bindStageVideoExportCanvas,
+  bindStageVideoRenderCanvas,
+  downscaleVideoFrameToEncodeCanvas,
+} from '@/lib/moment-export/export-canvas-quality'
 import {
   canEncodeMomentVideo,
   momentUsesVisualLoopExport,
@@ -13,6 +17,7 @@ import {
   STAGE_CARD_EXPORT_WIDTH,
   resolveGeistFontFamily,
   waitForExportFonts,
+  type ResolvedStageCardLayout,
 } from '@/lib/moment-export/layout'
 import { renderMomentFrame } from '@/lib/moment-export/video/render-moment-frame'
 import { loadMomentArtwork } from '@/lib/moment-export/video/load-artwork'
@@ -26,6 +31,8 @@ import {
   MOMENT_VIDEO_FPS,
   MOMENT_VIDEO_MAX_DURATION_SEC,
   MOMENT_EXPORT_INTRO_HOLD_SEC,
+  MOMENT_SHORTS_VIDEO_RENDER_SCALE,
+  MOMENT_SHORTS_KEY_FRAME_INTERVAL_SEC,
 } from '@/lib/moment-export/video/constants'
 import { resolveMomentVideoQualityPreset } from '@/lib/moment-export/video/resolve-moment-video-quality'
 import {
@@ -52,6 +59,86 @@ export interface EncodeMomentResult {
   height: number
   /** True when export is a silent visual loop (no audio track). */
   silent?: boolean
+}
+
+interface VideoFramePipeline {
+  renderCanvas: HTMLCanvasElement
+  renderCtx: CanvasRenderingContext2D
+  encodeCanvas: HTMLCanvasElement
+  encodeCtx: CanvasRenderingContext2D
+  renderLayout: ResolvedStageCardLayout
+  encodeWidth: number
+  encodeHeight: number
+  usesSupersampling: boolean
+}
+
+function ensureEvenHeight(layout: ResolvedStageCardLayout): ResolvedStageCardLayout {
+  return layout.outputHeight % 2 === 0
+    ? layout
+    : { ...layout, outputHeight: layout.outputHeight + 1 }
+}
+
+function scaleLayoutDown(layout: ResolvedStageCardLayout, scale: number): ResolvedStageCardLayout {
+  const factor = 1 / scale
+  return {
+    ...layout,
+    outputWidth: Math.round(layout.outputWidth * factor),
+    outputHeight: Math.round(layout.outputHeight * factor),
+  }
+}
+
+function createVideoFramePipeline(isVertical: boolean, layout: ResolvedStageCardLayout): VideoFramePipeline {
+  const renderLayout = ensureEvenHeight(layout)
+  if (!isVertical) {
+    const canvas = document.createElement('canvas')
+    const ctx = bindStageVideoExportCanvas(canvas, renderLayout.outputWidth, renderLayout.outputHeight)
+    return {
+      renderCanvas: canvas,
+      renderCtx: ctx,
+      encodeCanvas: canvas,
+      encodeCtx: ctx,
+      renderLayout,
+      encodeWidth: renderLayout.outputWidth,
+      encodeHeight: renderLayout.outputHeight,
+      usesSupersampling: false,
+    }
+  }
+
+  const encodeLayout = ensureEvenHeight(
+    scaleLayoutDown(renderLayout, MOMENT_SHORTS_VIDEO_RENDER_SCALE),
+  )
+  const renderCanvas = document.createElement('canvas')
+  const renderCtx = bindStageVideoRenderCanvas(
+    renderCanvas,
+    renderLayout.outputWidth,
+    renderLayout.outputHeight,
+  )
+  const encodeCanvas = document.createElement('canvas')
+  const encodeCtx = bindStageVideoExportCanvas(
+    encodeCanvas,
+    encodeLayout.outputWidth,
+    encodeLayout.outputHeight,
+  )
+  return {
+    renderCanvas,
+    renderCtx,
+    encodeCanvas,
+    encodeCtx,
+    renderLayout,
+    encodeWidth: encodeLayout.outputWidth,
+    encodeHeight: encodeLayout.outputHeight,
+    usesSupersampling: true,
+  }
+}
+
+function commitVideoFrame(pipeline: VideoFramePipeline): void {
+  if (!pipeline.usesSupersampling) return
+  downscaleVideoFrameToEncodeCanvas(
+    pipeline.renderCanvas,
+    pipeline.encodeCtx,
+    pipeline.encodeWidth,
+    pipeline.encodeHeight,
+  )
 }
 
 export async function encodeMargoMomentMp4(
@@ -103,6 +190,9 @@ export async function encodeMargoMomentMp4(
   const measure = buildCanvasTextMeasure(measureCtx)
 
   const isVertical = moment.shapeId === 'vertical'
+  const layoutOutputWidthPx = isVertical
+    ? STAGE_CARD_EXPORT_WIDTH * MOMENT_SHORTS_VIDEO_RENDER_SCALE
+    : STAGE_CARD_EXPORT_WIDTH
   const layout = resolveStageCardLayout({
     lyric: line.lyric,
     songTitle: line.songTitle,
@@ -111,19 +201,13 @@ export async function encodeMargoMomentMp4(
     vibeLabel: moment.vibeLabel,
     themeId: moment.themeId,
     exportAtmosphereId: moment.exportAtmosphereId,
-    outputWidthPx: STAGE_CARD_EXPORT_WIDTH,
+    outputWidthPx: layoutOutputWidthPx,
     includeVibePill: !!moment.vibeLabel?.trim(),
     format: isVertical ? 'shorts' : 'feed',
   }, measure, geistFamily)
 
-  const exportLayout = layout.outputHeight % 2 === 0
-    ? layout
-    : { ...layout, outputHeight: layout.outputHeight + 1 }
-
-  const canvasW = exportLayout.outputWidth
-  const canvasH = exportLayout.outputHeight
-  const canvas = document.createElement('canvas')
-  const ctx = bindStageVideoExportCanvas(canvas, canvasW, canvasH)
+  const pipeline = createVideoFramePipeline(isVertical, layout)
+  const { encodeCanvas, encodeWidth, encodeHeight } = pipeline
 
   let totalDurationSec: number
   let encodeHasAudio: boolean
@@ -162,8 +246,8 @@ export async function encodeMargoMomentMp4(
     const qualityPreset = resolveMomentVideoQualityPreset({
       durationSec: totalDurationSec,
       hasAudio: true,
-      width: canvasW,
-      height: canvasH,
+      width: encodeWidth,
+      height: encodeHeight,
       format: isVertical ? 'shorts' : 'feed',
     })
     const exportAudio = prependSilence(
@@ -177,9 +261,10 @@ export async function encodeMargoMomentMp4(
       target: new BufferTarget(),
     })
 
-    const videoSource = new CanvasSource(canvas, {
+    const videoSource = new CanvasSource(encodeCanvas, {
       codec: videoCodec,
       quality: new Quality(qualityPreset.video),
+      ...(isVertical ? { keyFrameInterval: MOMENT_SHORTS_KEY_FRAME_INTERVAL_SEC } : {}),
     })
     const audioSource = new AudioBufferSource({
       codec: audioCodecName as AudioCodecName,
@@ -203,7 +288,15 @@ export async function encodeMargoMomentMp4(
       }
       const timeSec = frame / MOMENT_VIDEO_FPS
       const renderTimeSec = resolveExportRenderTimeSec(frame, MOMENT_VIDEO_FPS, posterRenderSec)
-      renderMomentFrame(ctx, exportLayout, exportTimeline, assets, renderTimeSec, moment.exportAtmosphereId)
+      renderMomentFrame(
+        pipeline.renderCtx,
+        pipeline.renderLayout,
+        exportTimeline,
+        assets,
+        renderTimeSec,
+        moment.exportAtmosphereId,
+      )
+      commitVideoFrame(pipeline)
       await videoSource.add(timeSec, frameDuration)
       if (frame % 30 === 0) {
         onProgress?.({ phase: 'frames', frame, frameCount })
@@ -225,8 +318,8 @@ export async function encodeMargoMomentMp4(
       encodeMs: performance.now() - t0,
       videoCodec,
       audioCodec: audioCodecName,
-      width: canvas.width,
-      height: canvas.height,
+      width: encodeWidth,
+      height: encodeHeight,
       silent: false,
     }
   }
@@ -234,8 +327,8 @@ export async function encodeMargoMomentMp4(
   const qualityPreset = resolveMomentVideoQualityPreset({
     durationSec: totalDurationSec,
     hasAudio: encodeHasAudio,
-    width: canvasW,
-    height: canvasH,
+    width: encodeWidth,
+    height: encodeHeight,
     format: isVertical ? 'shorts' : 'feed',
   })
   const frameDuration = 1 / MOMENT_VIDEO_FPS
@@ -244,9 +337,10 @@ export async function encodeMargoMomentMp4(
     target: new BufferTarget(),
   })
 
-  const videoSource = new CanvasSource(canvas, {
+  const videoSource = new CanvasSource(encodeCanvas, {
     codec: videoCodec,
     quality: new Quality(qualityPreset.video),
+    ...(isVertical ? { keyFrameInterval: MOMENT_SHORTS_KEY_FRAME_INTERVAL_SEC } : {}),
   })
 
   output.addVideoTrack(videoSource, { frameRate: MOMENT_VIDEO_FPS })
@@ -265,14 +359,15 @@ export async function encodeMargoMomentMp4(
     const clockSec = frame / MOMENT_VIDEO_FPS
     const contentSec = Math.min(clockSec, posterRenderSec)
     renderMomentFrame(
-      ctx,
-      exportLayout,
+      pipeline.renderCtx,
+      pipeline.renderLayout,
       exportTimeline,
       assets,
       contentSec,
       moment.exportAtmosphereId,
       { atmosphereTimeSec: clockSec },
     )
+    commitVideoFrame(pipeline)
     await videoSource.add(clockSec, frameDuration)
     if (frame % 30 === 0) {
       onProgress?.({ phase: 'frames', frame, frameCount })
@@ -294,8 +389,8 @@ export async function encodeMargoMomentMp4(
     encodeMs: performance.now() - t0,
     videoCodec,
     audioCodec: 'none',
-    width: canvas.width,
-    height: canvas.height,
+    width: encodeWidth,
+    height: encodeHeight,
     silent: true,
   }
 }
