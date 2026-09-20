@@ -19,6 +19,7 @@ export default function StudioPromotePage() {
   const { user, identity, loading: identityLoading } = useIdentity()
   const [items, setItems] = useState<PromoteQueueRow[]>([])
   const [audioByPost, setAudioByPost] = useState<Record<string, {
+    songId: string | null
     audioUrl: string | null
     snippetStart: number | null
     snippetEnd: number | null
@@ -55,35 +56,57 @@ export default function StudioPromotePage() {
     () => items.map((i) => i.sourcePostId).filter(Boolean) as string[],
     [items],
   )
+  const songIds = useMemo(
+    () => [...new Set(items.map((i) => i.sourceSongId).filter(Boolean))] as string[],
+    [items],
+  )
 
   useEffect(() => {
-    if (postIds.length === 0) return
+    if (postIds.length === 0 && songIds.length === 0) return
     let cancelled = false
     void (async () => {
-      const { data } = await supabase
-        .from('posts')
-        .select(`
-          id,
-          snippet_start_sec,
-          snippet_end_sec,
-          songs:song_id ( audio_url )
-        `)
-        .in('id', postIds)
+      const [postsRes, songsRes] = await Promise.all([
+        postIds.length
+          ? supabase
+            .from('posts')
+            .select('id, song_id, snippet_start_sec, snippet_end_sec, songs:song_id ( audio_url )')
+            .in('id', postIds)
+          : Promise.resolve({ data: [] as Record<string, unknown>[] }),
+        songIds.length
+          ? supabase.from('songs').select('id, audio_url').in('id', songIds)
+          : Promise.resolve({ data: [] as Array<{ id: string; audio_url: string | null }> }),
+      ])
 
-      if (cancelled || !data) return
+      if (cancelled) return
+      const audioBySong = new Map(
+        (songsRes.data || []).map((s) => [s.id, s.audio_url]),
+      )
       const map: typeof audioByPost = {}
-      for (const row of data) {
+      for (const row of postsRes.data || []) {
         const song = Array.isArray(row.songs) ? row.songs[0] : row.songs
+        const songId = (row.song_id as string | null) ?? null
         map[row.id as string] = {
-          audioUrl: (song as { audio_url?: string } | null)?.audio_url ?? null,
+          songId,
+          audioUrl: (song as { audio_url?: string } | null)?.audio_url
+            ?? (songId ? audioBySong.get(songId) ?? null : null),
           snippetStart: row.snippet_start_sec as number | null,
           snippetEnd: row.snippet_end_sec as number | null,
+        }
+      }
+      for (const item of items) {
+        if (!item.sourcePostId && item.sourceSongId) {
+          map[item.id] = {
+            songId: item.sourceSongId,
+            audioUrl: audioBySong.get(item.sourceSongId) ?? null,
+            snippetStart: item.snippetStartSec,
+            snippetEnd: item.snippetEndSec,
+          }
         }
       }
       setAudioByPost(map)
     })()
     return () => { cancelled = true }
-  }, [postIds])
+  }, [postIds, songIds, items])
 
   useEffect(() => {
     const queueId = searchParams.get('autopublish')
@@ -93,7 +116,12 @@ export default function StudioPromotePage() {
     if (!item) return
     autopublishAttempted.current = queueId
     const audio = item.sourcePostId ? audioByPost[item.sourcePostId] : undefined
-    const moment = buildPromoteQueueMoment(item, audio)
+    const moment = buildPromoteQueueMoment(item, {
+      songId: audio?.songId ?? item.sourceSongId,
+      audioUrl: audio?.audioUrl,
+      snippetStart: audio?.snippetStart ?? item.snippetStartSec,
+      snippetEnd: audio?.snippetEnd ?? item.snippetEndSec,
+    })
     void publishQueueMomentVideo(queueId, moment)
       .then(() => loadQueue())
       .catch((err) => setError(err instanceof Error ? err.message : 'Auto-publish failed'))
@@ -153,9 +181,10 @@ export default function StudioPromotePage() {
               <PromoteQueueCard
                 key={item.id}
                 item={item}
+                songId={audio?.songId ?? item.sourceSongId}
                 audioUrl={audio?.audioUrl}
-                snippetStart={audio?.snippetStart}
-                snippetEnd={audio?.snippetEnd}
+                snippetStart={audio?.snippetStart ?? item.snippetStartSec}
+                snippetEnd={audio?.snippetEnd ?? item.snippetEndSec}
                 onUpdated={() => void loadQueue()}
               />
             )

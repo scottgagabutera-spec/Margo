@@ -1,22 +1,33 @@
 'use client'
 
-import { useCallback, useMemo, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { MomentExportCustomizeBar } from '@/components/moment-export-customize-bar'
+import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
 import { UI_FONT } from '@/lib/fonts'
+import { playSnippet } from '@/lib/audio-engine'
+import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
+import { useSongAtmosphere } from '@/hooks/useSongAtmosphere'
+import { livingAtmosphereOrNull } from '@/lib/atmosphere'
+import { resolveMomentListen } from '@/lib/moment'
 import { buildPromoteQueueMoment } from '@/lib/promote/build-queue-moment'
 import { publishQueueMomentVideo } from '@/lib/promote/publish-client'
 import type { PromoteQueueRow } from '@/lib/promote/types'
 import type { AtmosphereId } from '@/lib/atmosphere'
 import type { MomentShapeId } from '@/lib/moment/types'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
-import { isLivingAtmosphere, parseAtmosphere } from '@/lib/atmosphere'
 
 const font = UI_FONT
+
+function asStageTheme(id: string | null | undefined): StageCardThemeId {
+  if (id === 'blush' || id === 'sage' || id === 'dusk' || id === 'gold') return id
+  return 'gold'
+}
 
 interface PromoteQueueCardProps {
   item: PromoteQueueRow
   audioUrl?: string | null
+  songId?: string | null
   snippetStart?: number | null
   snippetEnd?: number | null
   onUpdated: () => void
@@ -25,6 +36,7 @@ interface PromoteQueueCardProps {
 export function PromoteQueueCard({
   item,
   audioUrl,
+  songId,
   snippetStart,
   snippetEnd,
   onUpdated,
@@ -32,12 +44,17 @@ export function PromoteQueueCard({
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [themeId, setThemeId] = useState<StageCardThemeId>(
-    (item.overrideThemeId ?? item.defaultThemeId) as StageCardThemeId,
+    asStageTheme(item.overrideThemeId ?? item.defaultThemeId),
   )
   const [atmosphereId, setAtmosphereId] = useState<AtmosphereId>(
     item.overrideAtmosphereId ?? item.defaultAtmosphereId,
   )
   const [shapeId] = useState<MomentShapeId>(item.overrideShapeId ?? item.defaultShapeId)
+
+  const resolvedSongId = songId ?? item.sourceSongId ?? null
+  const resolvedStart = snippetStart ?? item.snippetStartSec ?? null
+  const resolvedEnd = snippetEnd ?? item.snippetEndSec ?? null
+  const songAtmosphere = useSongAtmosphere(resolvedSongId)
 
   const previewRow = useMemo<PromoteQueueRow>(() => ({
     ...item,
@@ -47,9 +64,55 @@ export function PromoteQueueCard({
   }), [item, themeId, atmosphereId, shapeId])
 
   const previewMoment = useMemo(
-    () => buildPromoteQueueMoment(previewRow, { audioUrl, snippetStart, snippetEnd }),
-    [previewRow, audioUrl, snippetStart, snippetEnd],
+    () => buildPromoteQueueMoment(previewRow, {
+      songId: resolvedSongId,
+      audioUrl,
+      snippetStart: resolvedStart,
+      snippetEnd: resolvedEnd,
+    }),
+    [previewRow, resolvedSongId, audioUrl, resolvedStart, resolvedEnd],
   )
+
+  const listen = useMemo(() => resolveMomentListen(previewMoment), [previewMoment])
+  const canPlayInline = listen.canPlayInline
+  const playbackKey = resolvedSongId || audioUrl || ''
+  const { playing, buffering } = useSnippetPlaybackUi(
+    canPlayInline ? playbackKey : null,
+    canPlayInline ? previewMoment.lines[0]?.lyric ?? null : null,
+  )
+
+  const startPreviewPlayback = useCallback(() => {
+    if (!canPlayInline || !audioUrl || resolvedStart == null || resolvedEnd == null) return
+    void playSnippet({
+      songId: resolvedSongId || audioUrl,
+      audioUrl,
+      title: item.songTitle,
+      artist: item.artistName,
+      artwork: item.artworkUrl,
+      lineIndex: 0,
+      lineText: item.lyricText,
+      startSec: resolvedStart,
+      endSec: resolvedEnd,
+      atmosphere: livingAtmosphereOrNull(songAtmosphere),
+      source: 'feed',
+    })
+  }, [
+    canPlayInline,
+    audioUrl,
+    resolvedSongId,
+    resolvedStart,
+    resolvedEnd,
+    item.songTitle,
+    item.artistName,
+    item.artworkUrl,
+    item.lyricText,
+    songAtmosphere,
+  ])
+
+  useEffect(() => {
+    if (!canPlayInline) return
+    startPreviewPlayback()
+  }, [canPlayInline, startPreviewPlayback])
 
   const saveOverrides = useCallback(async () => {
     const res = await fetch(`/api/promote/queue/${item.id}`, {
@@ -62,8 +125,21 @@ export function PromoteQueueCard({
         overrideShapeId: shapeId,
       }),
     })
-    if (!res.ok) throw new Error('Could not save changes')
+    const body = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      throw new Error(typeof body.error === 'string' ? body.error : 'Could not save changes')
+    }
   }, [item.id, themeId, atmosphereId, shapeId])
+
+  useEffect(() => {
+    if (item.status !== 'pending_review' && item.status !== 'approved') return
+    const timer = window.setTimeout(() => {
+      void saveOverrides().catch((err) => {
+        setError(err instanceof Error ? err.message : 'Could not save changes')
+      })
+    }, 400)
+    return () => window.clearTimeout(timer)
+  }, [item.status, saveOverrides])
 
   const runPublish = useCallback(async () => {
     setBusy('Rendering and uploading to YouTube…')
@@ -105,8 +181,9 @@ export function PromoteQueueCard({
   }
 
   const youtubeTarget = item.targets.find((t) => t.platform === 'youtube')
-  const canEdit = item.status === 'pending_review'
+  const canEdit = item.status === 'pending_review' || item.status === 'approved'
   const canPublish = item.status === 'approved' || item.status === 'partial'
+  const canApprove = item.status === 'pending_review'
 
   return (
     <div
@@ -129,18 +206,24 @@ export function PromoteQueueCard({
       </div>
 
       <div style={{ maxWidth: 280, margin: '0 auto 16px' }}>
-        <StageMomentCard
-          lyric={previewMoment.lines[0]?.lyric || ''}
-          songTitle={previewMoment.lines[0]?.songTitle || ''}
-          artistName={previewMoment.lines[0]?.artistName || ''}
-          artwork={previewMoment.lines[0]?.artworkUrl}
-          vibeLabel={previewMoment.vibeLabel}
-          cardThemeId={previewMoment.themeId as StageCardThemeId}
-          atmosphereId={previewMoment.exportAtmosphereId}
-          shapeId={previewMoment.shapeId}
-          canPlay={false}
-          effectOwnsFill
-        />
+        <MomentExportPreviewFrame shapeId={shapeId}>
+          <StageMomentCard
+            lyric={previewMoment.lines[0]?.lyric || ''}
+            songTitle={previewMoment.lines[0]?.songTitle || ''}
+            artistName={previewMoment.lines[0]?.artistName || ''}
+            artwork={previewMoment.lines[0]?.artworkUrl}
+            vibeLabel={previewMoment.vibeLabel}
+            cardThemeId={themeId}
+            atmosphereId={atmosphereId}
+            shapeId={shapeId}
+            canPlay={canPlayInline}
+            playing={playing}
+            buffering={buffering}
+            onPlay={startPreviewPlayback}
+            hideVibeChrome
+            effectOwnsFill
+          />
+        </MomentExportPreviewFrame>
       </div>
 
       {canEdit && (
@@ -154,9 +237,6 @@ export function PromoteQueueCard({
           onExportAtmosphereChange={(next) => {
             const resolved = typeof next === 'function' ? next(atmosphereId) : next
             setAtmosphereId(resolved)
-            if (isLivingAtmosphere(parseAtmosphere(resolved))) {
-              /* effect mode — color fill handled by resolveExportPaintTheme */
-            }
           }}
           shapeId={shapeId}
           onShapeChange={() => {}}
@@ -196,7 +276,7 @@ export function PromoteQueueCard({
       )}
 
       <div style={{ display: 'flex', gap: '10px', marginTop: '16px', flexWrap: 'wrap' }}>
-        {canEdit && (
+        {canApprove && (
           <>
             <button
               type="button"
@@ -214,6 +294,11 @@ export function PromoteQueueCard({
         {canPublish && shapeId === 'vertical' && (
           <button type="button" onClick={() => void runPublish()} disabled={!!busy} style={primaryBtn}>
             Publish to YouTube
+          </button>
+        )}
+        {item.status === 'approved' && (
+          <button type="button" onClick={() => void reject()} disabled={!!busy} style={ghostBtn}>
+            Reject
           </button>
         )}
       </div>

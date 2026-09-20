@@ -49,10 +49,13 @@ export interface PromoteQueueRow {
   status: PromoteQueueStatus
   sourceType: 'existing_moment' | 'catalog_line'
   sourcePostId: string | null
+  sourceSongId: string | null
   lyricText: string
   songTitle: string
   artistName: string
   artworkUrl: string | null
+  snippetStartSec: number | null
+  snippetEndSec: number | null
   defaultShapeId: MomentShapeId
   defaultThemeId: MomentThemeId
   defaultAtmosphereId: AtmosphereId
