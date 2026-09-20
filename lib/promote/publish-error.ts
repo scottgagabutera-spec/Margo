@@ -19,7 +19,7 @@ export function formatYouTubeApiError(
       const reason = err.errors?.[0]?.reason
       const detail = err.message || err.errors?.[0]?.message || trimmed
       const bits = [
-        `YouTube ${phase} failed`,
+        `YouTube ${phase} failed `,
         `(HTTP ${err.code ?? status}`,
         err.status ? ` ${err.status}` : '',
         reason ? `, ${reason}` : '',
