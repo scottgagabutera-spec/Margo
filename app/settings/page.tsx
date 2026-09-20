@@ -7,6 +7,7 @@ import { useAuthGate } from '@/components/supabase-auth-provider'
 import { BackButton } from '@/components/back-button'
 import { SignInLink } from '@/components/signin-link'
 import { UI_FONT } from '@/lib/fonts'
+import { PromoteSettingsSection } from '@/components/promote/promote-settings-section'
 
 const supabase = createClient()
 
@@ -34,6 +35,7 @@ interface ProfileRow {
   id: string
   username: string
   is_artist: boolean
+  artist_status?: string | null
   is_private: boolean
   who_can_message: WhoCanMessage
   deactivated_at: string | null
@@ -247,7 +249,7 @@ export default function AccountSettingsPage() {
 
       const { data: profileRow } = await supabase
         .from('profiles')
-        .select('id, username, is_artist, is_private, who_can_message, deactivated_at, settings')
+        .select('id, username, is_artist, artist_status, is_private, who_can_message, deactivated_at, settings')
         .eq('id', user!.id)
         .single()
 
@@ -600,6 +602,13 @@ export default function AccountSettingsPage() {
           </div>
         </div>
       </Card>
+
+      {profile.is_artist && profile.artist_status === 'active' && (
+        <Card>
+          <SectionLabel>Connected Accounts &amp; Auto-Promote</SectionLabel>
+          <PromoteSettingsSection />
+        </Card>
+      )}
 
       {/* Artist status */}
       <Card>

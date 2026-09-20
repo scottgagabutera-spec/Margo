@@ -188,9 +188,9 @@ export default function StudioPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <div style={{ maxWidth: '860px', margin: '0 auto', padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px', flexWrap: 'wrap' }}>
           <BackButton fallbackHref="/feed" />
-          <div>
+          <div style={{ flex: 1 }}>
             <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '4px' }}>
               Margo
             </p>
@@ -198,6 +198,25 @@ export default function StudioPage() {
               Studio
             </h1>
           </div>
+          {identity.artistStatus === 'active' && (
+            <Link
+              href="/studio/promote"
+              style={{
+                fontFamily: font,
+                fontSize: '0.65rem',
+                fontWeight: 600,
+                letterSpacing: '0.5px',
+                textTransform: 'uppercase',
+                color: 'var(--gold)',
+                textDecoration: 'none',
+                padding: '10px 14px',
+                borderRadius: '999px',
+                border: '1px solid var(--gold-border)',
+              }}
+            >
+              Promote
+            </Link>
+          )}
         </div>
 
         {!songsLoading && songs.length > 0 && (

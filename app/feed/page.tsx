@@ -65,7 +65,7 @@ function FeedPageInner() {
   const { replays: recentReplays } = useRecentReplays(80, { enabled: feedLive })
   const [ptrBusy, setPtrBusy] = useState(false)
   const { requireAuth } = useAuthGate()
-  const { user } = useIdentity()
+  const { user, identity } = useIdentity()
   const { refetch: refetchNotifications } = useNotifications()
   const { refetch: refetchMessages } = useMessaging()
   const [selectedVibe, setSelectedVibe] = useState('ALL')
@@ -757,6 +757,13 @@ function FeedPageInner() {
         open={!!exportPost}
         onOpenChange={(o) => { if (!o) setExportPost(null) }}
         moment={exportPost ? resolveMargoMomentFromPost(exportPost) : null}
+        enablePromote={
+          !!exportPost
+          && !!user?.id
+          && exportPost.authorUid === user.id
+          && !!identity?.isArtist
+          && identity.artistStatus === 'active'
+        }
       />
     </div>
     </PullToRefresh>

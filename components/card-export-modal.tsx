@@ -19,6 +19,7 @@ interface CardExportModalProps {
   parentLyric?: string
   parentSong?: string
   parentArtist?: string
+  enablePromote?: boolean
 }
 
 export function CardExportModal({
@@ -30,6 +31,7 @@ export function CardExportModal({
   moment,
   lines,
   parentLyric, parentSong, parentArtist,
+  enablePromote = false,
 }: CardExportModalProps) {
   return (
     <MargoSheet
@@ -55,6 +57,7 @@ export function CardExportModal({
         parentSong={parentSong}
         parentArtist={parentArtist}
         layout="modal"
+        enablePromote={enablePromote}
       />
     </MargoSheet>
   )
