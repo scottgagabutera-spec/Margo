@@ -3,9 +3,6 @@ import type { QuantitativeQualityOptions } from 'mediabunny'
 /** Nominal target for the reference square (1080×1080) — crisp on WhatsApp. */
 export const MOMENT_VIDEO_SOCIAL_TARGET_BYTES = 15 * 1024 * 1024
 
-/** Hard ceiling — flex toward this for high-pixel Shorts, still under WhatsApp's ~16 MB cap. */
-export const MOMENT_VIDEO_SOCIAL_MAX_BYTES = 16 * 1024 * 1024 - 192 * 1024
-
 /**
  * AVC quantizer (Mediabunny ≈ FFmpeg CRF). Lower = higher quality.
  * 18–20 keeps gradients/text clean while the bitrate cap controls file size.
@@ -23,9 +20,6 @@ const REFERENCE_PIXELS = MOMENT_VIDEO_REFERENCE_WIDTH * MOMENT_VIDEO_REFERENCE_H
 
 const REFERENCE_MAX_VIDEO_BITRATE = 12_000_000
 const REFERENCE_MIN_VIDEO_BITRATE = 2_000_000
-
-/** High pixel scale vs 1080×1080 — feed/square exports stay below this. */
-const HIGH_PIXEL_SCALE_THRESHOLD = 1.15
 
 /**
  * YouTube-recommended 1080p30 SDR upload bitrate (1080×1920 Shorts has the same pixel count).
