@@ -159,7 +159,12 @@ export async function encodeMargoMomentMp4(
     encodeHasAudio = true
     frameCount = Math.max(1, Math.round(totalDurationSec * MOMENT_VIDEO_FPS))
 
-    const qualityPreset = resolveMomentVideoQualityPreset(totalDurationSec, true)
+    const qualityPreset = resolveMomentVideoQualityPreset({
+      durationSec: totalDurationSec,
+      hasAudio: true,
+      width: canvasW,
+      height: canvasH,
+    })
     const exportAudio = prependSilence(
       truncateAudioBuffer(audioBuffer, audioDurationSec),
       MOMENT_EXPORT_INTRO_HOLD_SEC,
@@ -225,7 +230,12 @@ export async function encodeMargoMomentMp4(
     }
   }
 
-  const qualityPreset = resolveMomentVideoQualityPreset(totalDurationSec, encodeHasAudio)
+  const qualityPreset = resolveMomentVideoQualityPreset({
+    durationSec: totalDurationSec,
+    hasAudio: encodeHasAudio,
+    width: canvasW,
+    height: canvasH,
+  })
   const frameDuration = 1 / MOMENT_VIDEO_FPS
   const output = new Output({
     format: new Mp4OutputFormat({ fastStart: 'in-memory' }),
