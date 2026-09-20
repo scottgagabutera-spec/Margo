@@ -661,6 +661,17 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   z-index: 1;
   mix-blend-mode: soft-light;
 }
+/* Export preview — keep motion behind lyric; no harsh stripe overlay */
+.margo-atmosphere-clip--preview .margo-atm-breath-stretch {
+  opacity: 0.14;
+  mix-blend-mode: soft-light;
+}
+.margo-atmosphere-clip--preview .margo-atm-pulse-edge {
+  mix-blend-mode: soft-light;
+}
+.margo-atmosphere-clip--preview .margo-atm-pulse-bloom {
+  mix-blend-mode: soft-light;
+}
 .margo-atmosphere-clip--preview[data-tone="light"] {
   mix-blend-mode: multiply;
   opacity: 0.92;
@@ -950,13 +961,10 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   }
 }
 
-/* ── Weight: drops across the bottom half, collect as a floor ── */
+/* ── Weight: tears fall from the top, pool at the bottom ── */
 .margo-atm-weight-well {
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  bottom: 0;
+  inset: 0;
   overflow: hidden;
   pointer-events: none;
   container-type: size;
@@ -968,8 +976,8 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   position: absolute;
   left: -8%;
   right: -8%;
-  bottom: -18%;
-  height: 52%;
+  bottom: -12%;
+  height: 38%;
   background: radial-gradient(ellipse at 50% 100%,
     color-mix(in srgb, var(--gold) 28%, transparent) 0%,
     color-mix(in srgb, var(--gold) 12%, transparent) 42%,
@@ -987,7 +995,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   position: absolute;
   width: 11px;
   height: 15px;
-  top: -18px;
+  top: 0;
   transform-origin: top center;
 }
 .margo-atm-drop svg { display: block; width: 100%; height: 100%; }
@@ -1005,30 +1013,34 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 }
 @keyframes margo-atm-drop-fall {
   0% {
-    transform: translateY(0) scale(0.55, 0.35);
+    transform: translateY(-6cqh) scale(0.55, 0.35);
     opacity: 0;
   }
-  6% {
-    opacity: 0.88;
-    transform: translateY(2%) scale(0.72, 0.88);
+  5% {
+    opacity: 0.9;
+    transform: translateY(-2cqh) scale(0.72, 0.88);
   }
-  22% {
-    transform: translateY(18%) scale(0.78, 1.08);
+  20% {
+    transform: translateY(12cqh) scale(0.78, 1.1);
   }
-  48% {
-    transform: translateY(52%) scale(0.84, 1.14);
-    opacity: 0.78;
+  45% {
+    transform: translateY(42cqh) scale(0.84, 1.16);
+    opacity: 0.8;
   }
-  72% {
-    transform: translateY(82%) scale(0.88, 1.06);
-    opacity: 0.55;
+  68% {
+    transform: translateY(68cqh) scale(0.88, 1.08);
+    opacity: 0.58;
   }
-  88% {
-    transform: translateY(104%) scale(1.12, 0.62);
-    opacity: 0.32;
+  84% {
+    transform: translateY(84cqh) scale(1.1, 0.68);
+    opacity: 0.34;
+  }
+  92% {
+    transform: translateY(92cqh) scale(1.22, 0.48);
+    opacity: 0.18;
   }
   100% {
-    transform: translateY(118%) scale(1.28, 0.38);
+    transform: translateY(102cqh) scale(1.32, 0.32);
     opacity: 0;
   }
 }

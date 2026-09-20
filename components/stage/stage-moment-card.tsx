@@ -263,12 +263,23 @@ export function StageMomentCard({
         <div aria-hidden style={fillLayerStyle} />
         {!showAtmosphere ? <div aria-hidden style={highlightLayerStyle} /> : null}
         {showAtmosphere ? (
-          <AtmospherePreviewRoom key={atmosphereId} personality={atmosphereId} />
+          <AtmospherePreviewRoom
+            key={atmosphereId}
+            personality={atmosphereId}
+            tone={theme.markVariant === 'on-light' ? 'light' : 'dark'}
+          />
         ) : null}
         <div style={markStyle} aria-hidden>
           <MargoSymbol size={markSymbolSize} variant={markVariant} />
         </div>
-        <div style={{ position: 'relative', zIndex: 3, height: isShorts ? '100%' : undefined }}>
+        <div
+          style={{
+            position: 'relative',
+            zIndex: 2,
+            height: isShorts ? '100%' : undefined,
+            isolation: showAtmosphere ? 'isolate' : undefined,
+          }}
+        >
           <p
             style={isShorts && layout
               ? {

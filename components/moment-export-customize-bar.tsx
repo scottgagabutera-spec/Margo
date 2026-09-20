@@ -45,19 +45,24 @@ function columnLabelStyle(): CSSProperties {
   }
 }
 
-function captionStyle(): CSSProperties {
+function captionStyle(twoLine = false): CSSProperties {
   return {
     fontFamily: UI_FONT,
     fontSize: '0.58rem',
     fontWeight: 600,
     letterSpacing: '0.2px',
     color: 'var(--text-secondary)',
-    lineHeight: 1.2,
+    lineHeight: 1.25,
     marginTop: '8px',
     textAlign: 'center',
+    width: '100%',
+    minHeight: twoLine ? '2.5em' : undefined,
     overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
+    display: twoLine ? '-webkit-box' : 'block',
+    WebkitLineClamp: twoLine ? 2 : undefined,
+    WebkitBoxOrient: twoLine ? 'vertical' : undefined,
+    textOverflow: twoLine ? undefined : 'ellipsis',
+    whiteSpace: twoLine ? 'normal' : 'nowrap',
   }
 }
 
@@ -188,7 +193,7 @@ export function MomentExportCustomizeBar({
             }}
           />
         </button>
-        <span style={captionStyle()}>{colorMode ? theme.label : 'Tap to use color'}</span>
+        <span style={captionStyle()}>{colorMode ? theme.label : 'Tap for color'}</span>
       </div>
 
       <div style={modeColumnStyle(effectMode)}>
@@ -227,8 +232,8 @@ export function MomentExportCustomizeBar({
             {effectMode ? effectLabel : 'Choose…'}
           </span>
         </button>
-        <span style={captionStyle()}>
-          {effectMode ? effectHint : 'Tap to add motion'}
+        <span style={captionStyle(true)}>
+          {effectMode ? effectHint : 'Tap for motion'}
         </span>
       </div>
 
