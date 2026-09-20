@@ -21,7 +21,8 @@ export type LivingAtmosphereId = (typeof LIVING_ATMOSPHERE_IDS)[number]
 /** Loop durations (seconds) — keep CSS + canvas in sync. */
 export const ATMOSPHERE_TIMING = {
   breath: 8.2,
-  drift: 5.5,
+  drift: 6.4,
+  driftEcho: 8.2,
   pulse: 1.875,
   weightFloor: 11,
 } as const

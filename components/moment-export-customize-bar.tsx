@@ -4,7 +4,6 @@ import type { CSSProperties, Dispatch, SetStateAction } from 'react'
 import { UI_FONT } from '@/lib/fonts'
 import {
   cycleLivingAtmosphere,
-  exportAtmosphereHint,
   exportAtmosphereLabel,
   LIVING_ATMOSPHERE_IDS,
   type AtmosphereId,
@@ -125,7 +124,6 @@ export function MomentExportCustomizeBar({
   const colorMode = exportAtmosphereId === 'still'
   const effectMode = !colorMode
   const effectLabel = exportAtmosphereLabel(exportAtmosphereId)
-  const effectHint = exportAtmosphereHint(exportAtmosphereId)
 
   const tapStyle: CSSProperties = {
     width: '100%',
@@ -232,9 +230,9 @@ export function MomentExportCustomizeBar({
             {effectMode ? effectLabel : 'Choose…'}
           </span>
         </button>
-        <span style={captionStyle(true)}>
-          {effectMode ? effectHint : 'Tap for motion'}
-        </span>
+        {!effectMode ? (
+          <span style={captionStyle()}>Tap for motion</span>
+        ) : null}
       </div>
 
       <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>

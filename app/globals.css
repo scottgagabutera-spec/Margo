@@ -889,72 +889,81 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   76% { opacity: 0.16; transform: scale(0.996); }
 }
 
-/* ── Drift: overlapping currents — always rolling, never parked ── */
+/* ── Drift: full-frame tidal wash + wide edge-to-edge sweeps ── */
 .margo-atm-drift-well {
   position: absolute;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
+  background: linear-gradient(
+    118deg,
+    transparent 0%,
+    color-mix(in srgb, var(--gold) 5%, transparent) 24%,
+    transparent 48%,
+    color-mix(in srgb, var(--gold-warm) 4%, transparent) 72%,
+    transparent 96%
+  );
+  background-size: 220% 100%;
+  background-position: 0% 50%;
+}
+.margo-atm-room.is-live .margo-atm-drift-well {
+  will-change: background-position;
+  animation: margo-atm-drift-tide 9s ease-in-out infinite;
+}
+@keyframes margo-atm-drift-tide {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 .margo-atm-drift-band {
   position: absolute;
-  top: -12%;
-  height: 124%;
-  width: 22%;
-  left: -36%;
+  top: -8%;
+  height: 116%;
+  width: 52%;
+  left: -54%;
   background: linear-gradient(
-    105deg,
+    108deg,
     transparent 0%,
-    transparent 18%,
-    color-mix(in srgb, var(--gold) 6%, transparent) 28%,
-    color-mix(in srgb, var(--gold) 18%, transparent) 46%,
-    color-mix(in srgb, var(--gold-warm) 14%, transparent) 54%,
-    color-mix(in srgb, var(--gold) 5%, transparent) 68%,
-    transparent 82%,
+    transparent 12%,
+    color-mix(in srgb, var(--gold) 8%, transparent) 22%,
+    color-mix(in srgb, var(--gold-warm) 22%, transparent) 42%,
+    color-mix(in srgb, var(--gold) 16%, transparent) 50%,
+    color-mix(in srgb, var(--gold-warm) 18%, transparent) 58%,
+    color-mix(in srgb, var(--gold) 6%, transparent) 72%,
+    transparent 88%,
     transparent 100%
   );
-  transform: skewX(-14deg);
+  transform: skewX(-12deg);
   opacity: 0;
+  filter: blur(0.5px);
 }
 .margo-atm-drift-band--b {
-  top: 18%;
-  height: 88%;
-  width: 18%;
-  opacity: 0.72;
-  filter: blur(1px);
-}
-.margo-atm-drift-band--c {
-  top: 42%;
-  height: 72%;
-  width: 14%;
-  opacity: 0.55;
-  filter: blur(2px);
+  top: 10%;
+  height: 96%;
+  width: 38%;
+  opacity: 0.68;
+  filter: blur(1.5px);
 }
 .margo-atm-room.is-live .margo-atm-drift-band {
-  will-change: transform, opacity;
-  animation: margo-atm-drift-current 5.5s linear infinite;
+  will-change: left, opacity;
+  animation: margo-atm-drift-sweep 6.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 .margo-atm-room.is-live .margo-atm-drift-band--b {
-  animation-duration: 7.2s;
-  animation-delay: -2.8s;
+  animation-duration: 8.2s;
+  animation-delay: -3.1s;
 }
-.margo-atm-room.is-live .margo-atm-drift-band--c {
-  animation-duration: 6.8s;
-  animation-delay: -4.6s;
-}
-@keyframes margo-atm-drift-current {
+@keyframes margo-atm-drift-sweep {
   0% {
-    transform: translateX(-120%) skewX(-14deg);
+    left: -54%;
     opacity: 0;
   }
-  6% {
-    opacity: 0.88;
+  5% {
+    opacity: 0.92;
   }
-  94% {
-    opacity: 0.72;
+  95% {
+    opacity: 0.76;
   }
   100% {
-    transform: translateX(420%) skewX(-14deg);
+    left: 102%;
     opacity: 0;
   }
 }

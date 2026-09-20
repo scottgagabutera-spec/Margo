@@ -54,6 +54,28 @@ function keyframe(entries: Array<[number, number]>, t: number) {
   return entries[entries.length - 1][1]
 }
 
+function drawDriftTide(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  timeSec: number,
+  baseAlpha: number,
+) {
+  const tidePhase = (timeSec % 9) / 9
+  const tideWave = 0.5 - 0.5 * Math.cos(tidePhase * Math.PI * 2)
+  const grad = ctx.createLinearGradient(-w * 0.2, 0, w * 1.2, h)
+  grad.addColorStop(0, `rgba(${GOLD_RGB},0)`)
+  grad.addColorStop(lerp(0.18, 0.34, tideWave), `rgba(${GOLD_RGB},0.05)`)
+  grad.addColorStop(lerp(0.42, 0.58, tideWave), `rgba(${GOLD_RGB},0)`)
+  grad.addColorStop(lerp(0.66, 0.82, tideWave), `rgba(${GOLD_WARM_RGB},0.04)`)
+  grad.addColorStop(1, `rgba(${GOLD_RGB},0)`)
+  ctx.save()
+  ctx.globalAlpha = baseAlpha * 0.85
+  ctx.fillStyle = grad
+  ctx.fillRect(0, 0, w, h)
+  ctx.restore()
+}
+
 function drawDriftBand(
   ctx: CanvasRenderingContext2D,
   w: number,
@@ -64,22 +86,26 @@ function drawDriftBand(
   heightRatio: number,
   baseAlpha: number,
   alphaMul: number,
+  skewDeg = -12,
 ) {
-  const x = lerp(-w * 0.55, w * 1.15, phase)
-  const op = keyframe([[0, 0], [0.06, 0.88], [0.94, 0.72], [1, 0]], phase)
+  const leftRatio = lerp(-0.54, 1.02, phase)
+  const op = keyframe([[0, 0], [0.05, 0.92], [0.95, 0.76], [1, 0]], phase)
   const bw = w * bandW
   const bh = h * heightRatio
+  const x = w * leftRatio
+  const y = h * topRatio
   ctx.save()
   ctx.globalAlpha = baseAlpha * op * alphaMul
-  ctx.translate(x + bw / 2, h * topRatio + bh / 2)
-  ctx.transform(1, 0, Math.tan((-14 * Math.PI) / 180), 1, 0, 0)
+  ctx.translate(x + bw / 2, y + bh / 2)
+  ctx.transform(1, 0, Math.tan((skewDeg * Math.PI) / 180), 1, 0, 0)
   ctx.translate(-bw / 2, -bh / 2)
   const grad = ctx.createLinearGradient(0, 0, bw, 0)
   grad.addColorStop(0, `rgba(${GOLD_RGB},0)`)
-  grad.addColorStop(0.28, `rgba(${GOLD_RGB},0.06)`)
-  grad.addColorStop(0.46, `rgba(${GOLD_RGB},0.18)`)
-  grad.addColorStop(0.54, `rgba(${GOLD_WARM_RGB},0.14)`)
-  grad.addColorStop(0.68, `rgba(${GOLD_RGB},0.05)`)
+  grad.addColorStop(0.22, `rgba(${GOLD_RGB},0.08)`)
+  grad.addColorStop(0.42, `rgba(${GOLD_WARM_RGB},0.22)`)
+  grad.addColorStop(0.5, `rgba(${GOLD_RGB},0.16)`)
+  grad.addColorStop(0.58, `rgba(${GOLD_WARM_RGB},0.18)`)
+  grad.addColorStop(0.72, `rgba(${GOLD_RGB},0.06)`)
   grad.addColorStop(1, `rgba(${GOLD_RGB},0)`)
   ctx.fillStyle = grad
   ctx.fillRect(0, 0, bw, bh)
@@ -131,14 +157,14 @@ export function drawExportAtmosphere(
   }
 
   if (id === 'drift') {
+    drawDriftTide(ctx, w, h, timeSec, alpha)
     const bands = [
-      { duration: ATMOSPHERE_TIMING.drift, delay: 0, bandW: 0.22, top: 0.12, height: 1.24, alpha: 1 },
-      { duration: 7.2, delay: -2.8, bandW: 0.18, top: 0.18, height: 0.88, alpha: 0.72 },
-      { duration: 6.8, delay: -4.6, bandW: 0.14, top: 0.42, height: 0.72, alpha: 0.55 },
+      { duration: ATMOSPHERE_TIMING.drift, delay: 0, bandW: 0.52, top: -0.08, height: 1.16, alpha: 1 },
+      { duration: ATMOSPHERE_TIMING.driftEcho, delay: -3.1, bandW: 0.38, top: 0.1, height: 0.96, alpha: 0.68 },
     ]
     for (const band of bands) {
-      const phase = ((timeSec - band.delay) % band.duration) / band.duration
-      if (phase < 0) continue
+      let phase = ((timeSec - band.delay) % band.duration) / band.duration
+      if (phase < 0) phase += 1
       drawDriftBand(ctx, w, h, phase, band.bandW, band.top, band.height, alpha, band.alpha)
     }
   }
