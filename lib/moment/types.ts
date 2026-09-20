@@ -10,7 +10,7 @@ export type MomentThemeId = 'gold' | 'dark' | 'blush' | 'sage' | 'dusk'
 export type MomentShapeId = 'square' | 'vertical' | 'wide'
 
 /** Publication / lifecycle state for a Moment */
-export type MomentStatus = 'active' | 'private' | 'ephemeral'
+export type MomentStatus = 'active' | 'private' | 'sent' | 'ephemeral'
 
 /**
  * One lyric segment inside a canonical Margo Moment.

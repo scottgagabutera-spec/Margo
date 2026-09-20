@@ -117,6 +117,7 @@ function composeDraftSource(source: string | null | undefined, linkedSongId?: st
 
 function postStatusToMomentStatus(status: string | null | undefined): MomentStatus | null {
   if (status === 'private') return 'private'
+  if (status === 'sent') return 'sent'
   if (status === 'active') return 'active'
   return null
 }

@@ -811,6 +811,7 @@ export default function DiscoverPage() {
             value={search}
             onChange={setSearch}
             placeholder="Search lyrics, songs, artists…"
+            icon="none"
           />
         </div>
       </div>

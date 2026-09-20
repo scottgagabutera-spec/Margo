@@ -105,16 +105,18 @@ export interface LoadedPublicMoment {
   moment: MargoMoment
   senderLabel: string | null
   artworkUrl: string | null
+  /** active = public; sent = DM-only (RLS-gated for participants). */
+  visibility: 'active' | 'sent'
 }
 
-/** Load an active public Moment for recipient page + OG. Returns null when not found or private. */
+/** Load a Moment for /m/[id] — public active or DM-sent (participant RLS). */
 export async function loadPublicMomentById(id: string): Promise<LoadedPublicMoment | null> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('posts')
     .select(MOMENT_POST_SELECT)
     .eq('id', id)
-    .eq('status', 'active')
+    .in('status', ['active', 'sent'])
     .is('parent_post_id', null)
     .maybeSingle()
 
@@ -135,5 +137,7 @@ export async function loadPublicMomentById(id: string): Promise<LoadedPublicMome
     (post.username ? `@${post.username}` : null) ||
     null
 
-  return { moment, senderLabel, artworkUrl }
+  const visibility = (post.status === 'sent' ? 'sent' : 'active') as 'active' | 'sent'
+
+  return { moment, senderLabel, artworkUrl, visibility }
 }

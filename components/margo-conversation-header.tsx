@@ -2,8 +2,7 @@
 
 import Link from 'next/link'
 import { ArrowLeftIcon } from '@/components/icons'
-
-const font = 'var(--font-lora), serif'
+import { UI_FONT } from '@/lib/fonts'
 
 export interface MargoConversationHeaderProps {
   displayName?: string
@@ -13,6 +12,9 @@ export interface MargoConversationHeaderProps {
   compactTop?: boolean
 }
 
+/**
+ * Message thread header — back to inbox + partner identity (avatar left, name beside).
+ */
 export function MargoConversationHeader({
   displayName,
   username,
@@ -20,10 +22,10 @@ export function MargoConversationHeader({
   compactTop = false,
 }: MargoConversationHeaderProps) {
   const profileHref = username ? `/profile/${username}` : undefined
-  const name = displayName ?? ''
+  const name = displayName?.trim() || username || ''
 
   return (
-    <div
+    <header
       style={{
         flexShrink: 0,
         background: 'var(--bg)',
@@ -31,26 +33,27 @@ export function MargoConversationHeader({
         paddingTop: compactTop
           ? 'max(12px, env(safe-area-inset-top, 0px))'
           : '8px',
-        paddingLeft: '16px',
+        paddingLeft: '12px',
         paddingRight: '16px',
         paddingBottom: '12px',
-        display: 'grid',
-        gridTemplateColumns: 'auto 1fr 44px',
+        display: 'flex',
         alignItems: 'center',
-        gap: '8px',
+        gap: '10px',
+        minHeight: 'var(--margo-touch-min)',
       }}
     >
       <Link
         href="/messages"
-        aria-label="Messages"
+        aria-label="Back to Messages"
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '6px',
+          gap: '4px',
+          flexShrink: 0,
           minWidth: 'var(--margo-touch-min)',
           minHeight: 'var(--margo-touch-min)',
-          marginLeft: '-8px',
-          padding: '0 8px',
+          padding: '0 6px',
+          marginLeft: '-4px',
           textDecoration: 'none',
           color: 'var(--text-secondary)',
           boxSizing: 'border-box',
@@ -61,10 +64,10 @@ export function MargoConversationHeader({
         <span
           className="margo-conversation-back-label"
           style={{
-            fontFamily: font,
-            fontSize: '0.75rem',
+            fontFamily: UI_FONT,
+            fontSize: '0.72rem',
             fontWeight: 600,
-            letterSpacing: '1.5px',
+            letterSpacing: '0.06em',
             textTransform: 'uppercase',
           }}
         >
@@ -78,8 +81,8 @@ export function MargoConversationHeader({
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
+            gap: '10px',
+            flex: 1,
             minWidth: 0,
             textDecoration: 'none',
             color: 'inherit',
@@ -88,8 +91,8 @@ export function MargoConversationHeader({
         >
           <div
             style={{
-              width: '32px',
-              height: '32px',
+              width: '34px',
+              height: '34px',
               borderRadius: '50%',
               flexShrink: 0,
               overflow: 'hidden',
@@ -103,34 +106,54 @@ export function MargoConversationHeader({
             {avatarUrl ? (
               <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-              <span style={{ fontFamily: font, fontSize: '0.65rem', fontWeight: 700, color: 'var(--bg)' }}>
+              <span style={{ fontFamily: UI_FONT, fontSize: '0.62rem', fontWeight: 700, color: 'var(--bg)' }}>
                 {name.slice(0, 2).toUpperCase()}
               </span>
             )}
           </div>
-          <span
-            style={{
-              fontFamily: font,
-              fontSize: '0.85rem',
-              color: 'var(--text)',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {name}
-          </span>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <p
+              style={{
+                fontFamily: UI_FONT,
+                fontSize: '0.88rem',
+                fontWeight: 600,
+                color: 'var(--text)',
+                margin: 0,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                lineHeight: 1.25,
+              }}
+            >
+              {name}
+            </p>
+            {username ? (
+              <p
+                style={{
+                  fontFamily: UI_FONT,
+                  fontSize: '0.68rem',
+                  color: 'var(--text-muted)',
+                  margin: '2px 0 0',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  lineHeight: 1.2,
+                }}
+              >
+                @{username}
+              </p>
+            ) : null}
+          </div>
         </Link>
       ) : (
-        <div aria-hidden style={{ minHeight: '32px' }} />
+        <div style={{ flex: 1, minHeight: '34px' }} aria-hidden />
       )}
 
-      <div aria-hidden style={{ width: '44px' }} />
       <style>{`
         @media (min-width: 640px) {
           .margo-conversation-back-label { display: none; }
         }
       `}</style>
-    </div>
+    </header>
   )
 }

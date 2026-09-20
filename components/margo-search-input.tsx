@@ -1,8 +1,8 @@
 'use client'
 
-import { CloseIcon } from '@/components/icons'
-
-const font = 'var(--font-lora), serif'
+import { useId, useState } from 'react'
+import { CloseIcon, SearchIcon } from '@/components/icons'
+import { UI_FONT } from '@/lib/fonts'
 
 interface MargoSearchInputProps {
   value: string
@@ -11,11 +11,18 @@ interface MargoSearchInputProps {
   /** Optional class for focus styles / tests */
   className?: string
   ariaLabel?: string
+  loading?: boolean
+  disabled?: boolean
+  onFocus?: () => void
+  onBlur?: () => void
+  /** Left search icon (compose/landing/lyric-back) vs clear-only pill (feed). */
+  icon?: 'left' | 'none'
+  id?: string
 }
 
 /**
- * Shared pill search field — Discover / Feed / catalog pattern.
- * 44px touch height, CSS variables only (Brand §14 Rule 2, §15 Pattern 2).
+ * Shared pill search field — Feed / Discover / Compose / Stage / Lyric Back.
+ * UI_FONT, CSS variables only (MARGO_BRAND §14–15).
  */
 export function MargoSearchInput({
   value,
@@ -23,33 +30,98 @@ export function MargoSearchInput({
   placeholder,
   className = 'margo-search',
   ariaLabel,
+  loading = false,
+  disabled = false,
+  onFocus,
+  onBlur,
+  icon = 'left',
+  id: idProp,
 }: MargoSearchInputProps) {
+  const autoId = useId()
+  const inputId = idProp ?? autoId
+  const [focused, setFocused] = useState(false)
+  const showLeftIcon = icon === 'left'
+
   return (
     <div style={{ position: 'relative', width: '100%' }}>
+      {showLeftIcon ? (
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute',
+            left: '14px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            pointerEvents: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: loading ? '32px' : '20px',
+            height: '20px',
+            gap: loading ? '3px' : 0,
+          }}
+        >
+          {loading ? (
+            [0, 1, 2].map((i) => (
+              <span
+                key={i}
+                style={{
+                  width: '5px',
+                  height: '5px',
+                  borderRadius: '50%',
+                  background: 'var(--gold)',
+                  animation: 'margo-bounce-dot 1s ease-in-out infinite',
+                  animationDelay: `${i * 140}ms`,
+                }}
+              />
+            ))
+          ) : (
+            <SearchIcon size={16} color={focused ? 'var(--text-muted)' : 'var(--text-disabled)'} />
+          )}
+        </span>
+      ) : null}
       <input
+        id={inputId}
         className={className}
         type="search"
+        enterKeyHint="search"
+        autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
         value={value}
+        disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
+        onFocus={() => {
+          setFocused(true)
+          onFocus?.()
+        }}
+        onBlur={() => {
+          setFocused(false)
+          onBlur?.()
+        }}
         placeholder={placeholder}
         aria-label={ariaLabel || placeholder}
-        enterKeyHint="search"
+        aria-busy={loading}
         style={{
           width: '100%',
           height: 'var(--margo-touch-min)',
-          padding: '0 44px 0 16px',
+          padding: showLeftIcon ? '0 44px 0 40px' : '0 44px 0 16px',
           background: 'var(--surface-2)',
-          border: '1px solid var(--border-hi)',
+          border: `1px solid ${focused ? 'var(--gold-border)' : 'var(--border-hi)'}`,
           borderRadius: '50px',
           color: 'var(--text)',
-          fontFamily: font,
+          fontFamily: UI_FONT,
           fontSize: '0.82rem',
-          boxSizing: 'border-box',
+          fontWeight: 400,
+          letterSpacing: '-0.01em',
+          lineHeight: 1.3,
           outline: 'none',
-          transition: 'border-color 200ms ease',
+          boxSizing: 'border-box',
+          transition: 'border-color 150ms ease',
+          opacity: disabled ? 0.6 : 1,
         }}
       />
-      {value ? (
+      {value && !loading ? (
         <button
           type="button"
           aria-label="Clear search"
@@ -74,6 +146,10 @@ export function MargoSearchInput({
           <CloseIcon size={14} color="var(--text-secondary)" />
         </button>
       ) : null}
+      <style>{`
+        .${className}::placeholder { color: var(--text-muted); }
+        .${className}::-webkit-search-cancel-button { display: none; }
+      `}</style>
     </div>
   )
 }

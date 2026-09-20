@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useCallback, useRef, Suspense, useEffect } from 'react'
-import { SearchIcon } from '@/components/icons'
+import { MargoSearchInput } from '@/components/margo-search-input'
+import { highlightSearchText } from '@/lib/search-highlight'
 import { CardExportModal } from '@/components/card-export-modal'
 import { AuthorMeta } from '@/components/username-tag'
 import { createClient } from '@/lib/supabase/client'
@@ -706,21 +707,13 @@ function LyricBackContent() {
             <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)', color: text, marginBottom: '16px' }}>
               {catalogOnly ? "Find a line from Margo's music" : 'Find your lyric back'}
             </p>
-            <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex' }}><SearchIcon size={15} color="var(--text-disabled)" /></span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={e => handleSearch(e.target.value)}
-                placeholder="Search by lyric, song or artist…"
-                style={{
-                  width: '100%', height: '44px', paddingLeft: '40px', paddingRight: '14px',
-                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: '10px', color: text, fontSize: '0.82rem',
-                  fontFamily: font, outline: 'none', boxSizing: 'border-box',
-                }}
-              />
-            </div>
+            <MargoSearchInput
+              value={searchQuery}
+              onChange={handleSearch}
+              loading={searchLoading}
+              placeholder="Search by lyric, song or artist…"
+              ariaLabel="Search songs for Lyric Back"
+            />
             {catalogOnly && (
               <p style={{ fontFamily: font, fontSize: '0.72rem', color: text3, marginTop: '10px' }}>
                 Catalog only — Margo artists
@@ -747,8 +740,8 @@ function LyricBackContent() {
                       <img src={result.artwork} alt={result.title} style={{ width: '36px', height: '36px', borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }} />
                     )}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontFamily: font, color: text, fontSize: '0.88rem', fontWeight: 600, marginBottom: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.title}</p>
-                      <p style={{ fontFamily: font, color: text3, fontSize: '0.72rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.artist}</p>
+                      <p style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', color: text, fontSize: '0.88rem', fontWeight: 600, marginBottom: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{highlightSearchText(result.title, searchQuery)}</p>
+                      <p style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', color: text3, fontSize: '0.72rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{highlightSearchText(result.artist, searchQuery)}</p>
                     </div>
                   </button>
                 ))}

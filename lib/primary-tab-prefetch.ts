@@ -128,7 +128,7 @@ export async function fetchFeedPosts(): Promise<Post[]> {
     .from('posts')
     .select(POST_SELECT)
     .is('parent_post_id', null)
-    .not('status', 'in', '("hidden","private")')
+    .not('status', 'in', '("hidden","private","sent")')
     .order('created_at', { ascending: false })
     .limit(200)
 

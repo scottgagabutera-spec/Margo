@@ -16,7 +16,7 @@ import { ComposeSendTo } from '@/components/compose-send-to'
 import { ComposeReadyPreview } from '@/components/compose-ready-preview'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { ComposeSearchDropdown } from '@/components/compose-search-dropdown'
-import { StageSearchField } from '@/components/stage/stage-search-field'
+import { MargoSearchInput } from '@/components/margo-search-input'
 import { MomentShareStudio } from '@/components/moment-share-studio'
 import { MargoSheet } from '@/components/margo-sheet'
 import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle, keyboardSafeSecondaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
@@ -965,17 +965,17 @@ function ComposeInner() {
     if (!navigatePrimaryTab('/feed')) router.push('/feed')
   }
 
-  const persistMoment = useCallback(async (status: 'active' | 'private') => {
+  const persistMoment = useCallback(async (status: 'active' | 'private' | 'sent') => {
     if (!identity || !user) {
       setPostError('Still setting things up — try again in a moment.')
       return null
     }
 
     if (postedId) {
-      if (status === 'private') {
+      if (status === 'private' || status === 'sent') {
         const { error } = await supabase
           .from('posts')
-          .update({ status: 'private' })
+          .update({ status })
           .eq('id', postedId)
         if (error) throw error
       }
@@ -1331,15 +1331,18 @@ function ComposeInner() {
               ) : null}
             </div>
             <div style={{ position: 'relative', zIndex: 50 }}>
-              <StageSearchField
+              <MargoSearchInput
                 value={searchQuery}
                 onChange={handleSearchChange}
                 loading={searchLoading}
+                placeholder="Search by lyric, song or artist…"
+                ariaLabel="Search songs"
               />
               <ComposeSearchDropdown
                 open={showResults}
                 loading={searchLoading}
                 results={searchResults}
+                highlightQuery={searchQuery}
                 onSelect={handleSelectSong}
                 onClose={() => setShowResults(false)}
               />
@@ -1640,7 +1643,7 @@ function ComposeInner() {
             setAutoSendPerson(null)
           }
         }}
-        persistPost={() => persistMoment('active')}
+        persistPost={() => persistMoment('sent')}
         lyric={primaryLine.lyric}
         song={primaryLine.song}
         artist={primaryLine.artist}

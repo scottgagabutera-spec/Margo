@@ -611,6 +611,7 @@ function FeedPageInner() {
               value={searchQuery}
               onChange={setSearchQuery}
               placeholder="Search lyrics, songs, artists, @people…"
+              icon="none"
             />
           </div>
 
