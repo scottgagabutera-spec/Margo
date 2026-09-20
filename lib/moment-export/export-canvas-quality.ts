@@ -54,3 +54,24 @@ export function bindStageVideoExportCanvas(
   applyExportCanvasQuality(ctx)
   return ctx
 }
+
+/** Hi-res Shorts render target — layout-native pixels (e.g. 2160×3840). */
+export function bindStageVideoRenderCanvas(
+  canvas: HTMLCanvasElement,
+  layoutWidth: number,
+  layoutHeight: number,
+): CanvasRenderingContext2D {
+  return bindStageVideoExportCanvas(canvas, layoutWidth, layoutHeight)
+}
+
+/** Downscale a supersampled render frame onto the encode canvas (1080×1920). */
+export function downscaleVideoFrameToEncodeCanvas(
+  renderCanvas: HTMLCanvasElement,
+  encodeCtx: CanvasRenderingContext2D,
+  encodeWidth: number,
+  encodeHeight: number,
+): void {
+  encodeCtx.setTransform(1, 0, 0, 1, 0, 0)
+  encodeCtx.clearRect(0, 0, encodeWidth, encodeHeight)
+  encodeCtx.drawImage(renderCanvas, 0, 0, encodeWidth, encodeHeight)
+}
