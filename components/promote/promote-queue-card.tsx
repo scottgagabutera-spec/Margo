@@ -74,45 +74,41 @@ export function PromoteQueueCard({
   )
 
   const listen = useMemo(() => resolveMomentListen(previewMoment), [previewMoment])
-  const canPlayInline = listen.canPlayInline
-  const playbackKey = resolvedSongId || audioUrl || ''
+  const canPlayInline = !!audioUrl && resolvedStart != null && resolvedEnd != null
+  const playbackSongId = resolvedSongId || item.id
   const { playing, buffering } = useSnippetPlaybackUi(
-    canPlayInline ? playbackKey : null,
-    canPlayInline ? previewMoment.lines[0]?.lyric ?? null : null,
+    canPlayInline ? playbackSongId : null,
+    canPlayInline ? item.lyricText : null,
   )
 
   const startPreviewPlayback = useCallback(() => {
     if (!canPlayInline || !audioUrl || resolvedStart == null || resolvedEnd == null) return
     void playSnippet({
-      songId: resolvedSongId || audioUrl,
+      songId: playbackSongId,
       audioUrl,
       title: item.songTitle,
       artist: item.artistName,
       artwork: item.artworkUrl,
-      lineIndex: 0,
+      lineIndex: resolvedStart,
       lineText: item.lyricText,
       startSec: resolvedStart,
       endSec: resolvedEnd,
-      atmosphere: livingAtmosphereOrNull(songAtmosphere),
+      atmosphere: livingAtmosphereOrNull(atmosphereId !== 'still' ? atmosphereId : songAtmosphere),
       source: 'feed',
     })
   }, [
     canPlayInline,
     audioUrl,
-    resolvedSongId,
+    playbackSongId,
     resolvedStart,
     resolvedEnd,
     item.songTitle,
     item.artistName,
     item.artworkUrl,
     item.lyricText,
+    atmosphereId,
     songAtmosphere,
   ])
-
-  useEffect(() => {
-    if (!canPlayInline) return
-    startPreviewPlayback()
-  }, [canPlayInline, startPreviewPlayback])
 
   const saveOverrides = useCallback(async () => {
     const res = await fetch(`/api/promote/queue/${item.id}`, {
@@ -220,7 +216,6 @@ export function PromoteQueueCard({
             playing={playing}
             buffering={buffering}
             onPlay={startPreviewPlayback}
-            hideVibeChrome
             effectOwnsFill
           />
         </MomentExportPreviewFrame>

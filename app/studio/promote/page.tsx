@@ -115,10 +115,12 @@ export default function StudioPromotePage() {
     const item = items.find((i) => i.id === queueId && i.status === 'approved')
     if (!item) return
     autopublishAttempted.current = queueId
-    const audio = item.sourcePostId ? audioByPost[item.sourcePostId] : undefined
+    const audio = item.sourcePostId
+      ? audioByPost[item.sourcePostId]
+      : audioByPost[item.id]
     const moment = buildPromoteQueueMoment(item, {
       songId: audio?.songId ?? item.sourceSongId,
-      audioUrl: audio?.audioUrl,
+      audioUrl: audio?.audioUrl ?? null,
       snippetStart: audio?.snippetStart ?? item.snippetStartSec,
       snippetEnd: audio?.snippetEnd ?? item.snippetEndSec,
     })
@@ -179,13 +181,15 @@ export default function StudioPromotePage() {
           </p>
         ) : (
           items.map((item) => {
-            const audio = item.sourcePostId ? audioByPost[item.sourcePostId] : undefined
+            const audio = item.sourcePostId
+              ? audioByPost[item.sourcePostId]
+              : audioByPost[item.id]
             return (
               <PromoteQueueCard
                 key={item.id}
                 item={item}
                 songId={audio?.songId ?? item.sourceSongId}
-                audioUrl={audio?.audioUrl}
+                audioUrl={audio?.audioUrl ?? null}
                 snippetStart={audio?.snippetStart ?? item.snippetStartSec}
                 snippetEnd={audio?.snippetEnd ?? item.snippetEndSec}
                 onUpdated={() => void loadQueue()}

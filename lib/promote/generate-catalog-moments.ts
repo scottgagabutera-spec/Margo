@@ -1,5 +1,4 @@
 import {
-  assembleCatalogUnitFromRange,
   type CatalogLyricAtom,
 } from '@/lib/catalog-lyric-unit'
 import {
@@ -7,52 +6,29 @@ import {
   windowsOverlap,
   type DedupTierResult,
 } from '@/lib/promote/generate-dedup'
+import { fillMomentsFromEligible, buildMomentFromCandidate } from '@/lib/promote/generate-fill-moments'
 import {
   MOOD_EFFECT_PROMPT_RULES,
   PROMOTE_MOODS,
-  resolveMoodEffect,
-  type PromoteMood,
 } from '@/lib/promote/mood-effect-map'
+import {
+  flattenExcludedLineIndexes,
+  isFillerLineText,
+  resolveModelWindowToEligible,
+} from '@/lib/promote/resolve-generate-window'
+import type {
+  GeneratePromoteMode,
+  GenerateWindowCandidate,
+  ModelGenerateWindow,
+  ResolvedGenerateMoment,
+} from '@/lib/promote/generate-types'
 
-export type GeneratePromoteMode = 'auto' | 'directive'
-
-export interface GenerateWindowCandidate {
-  startLineIndex: number
-  endLineIndex: number
-  lineIndexes: number[]
-  text: string
-}
-
-export interface ModelGenerateWindow {
-  startLineIndex: number
-  endLineIndex: number
-  mood: string
-  reason: string
-}
-
-export interface ResolvedGenerateMoment {
-  startLineIndex: number
-  endLineIndex: number
-  lineIndexes: number[]
-  lyricText: string
-  snippetStartSec: number
-  snippetEndSec: number
-  mood: PromoteMood | null
-  reason: string
-  atmosphereId: string
-  themeId: string
-  selectionScore: number
-  selectionReason: Record<string, unknown>
-}
-
-const FILLER_RE = /^(hmm+|yeah+|oh+|ei+|la+|na+|woo+|ayy*|uh+|mm+)[.!?,]*$/i
-
-function isFillerLine(text: string): boolean {
-  const t = text.trim()
-  if (!t) return true
-  if (t.length <= 2) return true
-  return FILLER_RE.test(t)
-}
+export type {
+  GeneratePromoteMode,
+  GenerateWindowCandidate,
+  ModelGenerateWindow,
+  ResolvedGenerateMoment,
+} from '@/lib/promote/generate-types'
 
 /** All contiguous 1–3 line windows for dedup + model context. */
 export function buildGenerateWindowCandidates(
@@ -64,7 +40,7 @@ export function buildGenerateWindowCandidates(
   for (let i = 0; i < sorted.length; i++) {
     for (let len = 1; len <= 3 && i + len <= sorted.length; len++) {
       const slice = sorted.slice(i, i + len)
-      if (slice.some((a) => isFillerLine(a.text))) continue
+      if (slice.some((a) => isFillerLineText(a.text))) continue
       const joined = slice.map((a) => a.text.trim()).filter(Boolean).join('\n')
       if (!joined.trim()) continue
       out.push({
@@ -79,14 +55,6 @@ export function buildGenerateWindowCandidates(
   return out
 }
 
-function scoreWindow(text: string, reason: string): number {
-  const words = text.trim().split(/\s+/).filter(Boolean).length
-  let score = Math.min(words, 24) / 24
-  if (text.includes('\n')) score += 0.08
-  if (reason.length > 40) score += 0.05
-  return Math.min(1, Math.round(score * 100) / 100)
-}
-
 async function callGeneratePicker(params: {
   songTitle: string
   artistName: string
@@ -96,33 +64,49 @@ async function callGeneratePicker(params: {
   numberedLines: string
   eligibleSummary: string
   dedupMeta: DedupTierResult
+  forbiddenLineIndexes: number[]
 }): Promise<ModelGenerateWindow[]> {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error('OpenAI not configured')
   }
 
+  const directiveBlock = params.mode === 'directive' && params.directive
+    ? `Artist directive (natural language — interpret intent broadly, do NOT require formal mood words):
+"${params.directive}"
+Read this as what the artist wants to say or do (congratulate someone, diss a rival, confess love, flex success, etc.).
+Find lines whose meaning matches that intent. Then assign the closest mood tag from the list for visual styling.`
+    : null
+
   const system = `You pick promotable lyric Moments for Margo YouTube Shorts.
-Moods (one per window, from this list only): ${PROMOTE_MOODS.join(', ')}.
+
+Mood tags (assign one per window AFTER you choose lines — for visual styling only):
+${PROMOTE_MOODS.join(', ')}
 ${MOOD_EFFECT_PROMPT_RULES}
 
 Rules:
-- Return exactly ${params.count} window(s).
-- Each window is 1–3 contiguous lines (inclusive indexes).
+- Return exactly ${params.count} window(s) in JSON.
+- Each window is 1–3 contiguous lines using the numbered line indexes shown in brackets (e.g. [12] means startLineIndex 12).
 - Prefer hooky, quotable, emotionally clear lines — skip filler/interjections.
 - Windows in one response must not share any line index.
-- Choose only from eligible windows listed below (same indexes).
+- Pick ONLY from the eligible windows list (exact startLineIndex/endLineIndex pairs).
+- Do not reuse any line index listed under forbidden indexes.
 - Reply with valid JSON only: {"windows":[{"startLineIndex":0,"endLineIndex":1,"mood":"HOPE","reason":"..."}]}`
+
+  const forbiddenBlock = params.forbiddenLineIndexes.length
+    ? `Forbidden line indexes (do not use any window containing these): ${params.forbiddenLineIndexes.join(', ')}`
+    : null
 
   const userParts = [
     `Song: "${params.songTitle}" by ${params.artistName}`,
     `Mode: ${params.mode}`,
-    params.directive ? `Artist directive: ${params.directive}` : null,
-    `Pick ${params.count} window(s). Dedup tier: ${params.dedupMeta.tier}.`,
+    directiveBlock,
+    `Pick exactly ${params.count} non-overlapping window(s). Dedup tier: ${params.dedupMeta.tier}.`,
+    forbiddenBlock,
     '',
-    'Full lyrics (numbered):',
+    'Full lyrics (numbered by line index):',
     params.numberedLines,
     '',
-    'Eligible windows (pick from these indexes only):',
+    'Eligible windows — use these exact startLineIndex/endLineIndex pairs only:',
     params.eligibleSummary,
   ].filter(Boolean)
 
@@ -134,8 +118,8 @@ Rules:
     },
     body: JSON.stringify({
       model: 'gpt-4o-mini',
-      temperature: 0.45,
-      max_tokens: 900,
+      temperature: params.mode === 'directive' ? 0.55 : 0.45,
+      max_tokens: params.count >= 3 ? 1200 : 900,
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: system },
@@ -167,6 +151,45 @@ Rules:
   return parsed.windows
 }
 
+function resolveWindowsFromModel(params: {
+  modelWindows: ModelGenerateWindow[]
+  count: number
+  songLines: CatalogLyricAtom[]
+  eligible: GenerateWindowCandidate[]
+  mode: GeneratePromoteMode
+  directive?: string
+  dedupMeta: DedupTierResult
+}): ResolvedGenerateMoment[] {
+  const resolved: ResolvedGenerateMoment[] = []
+
+  for (const pick of params.modelWindows) {
+    if (resolved.length >= params.count) break
+
+    const candidate = resolveModelWindowToEligible(pick, params.songLines, params.eligible)
+    if (!candidate) continue
+    if (resolved.some((r) => windowsOverlap(r.lineIndexes, candidate.lineIndexes))) continue
+
+    const moment = buildMomentFromCandidate({
+      candidate,
+      songLines: params.songLines,
+      mood: null,
+      modelMood: pick.mood,
+      reason: String(pick.reason || '').trim(),
+      mode: params.mode,
+      directive: params.directive,
+      dedupMeta: {
+        tier: params.dedupMeta.tier,
+        excludedRanges: params.dedupMeta.excludedRanges,
+        poolSizeAfterFilter: params.dedupMeta.poolSizeAfterFilter,
+      },
+      unmappedMood: false,
+    })
+    if (moment) resolved.push(moment)
+  }
+
+  return resolved
+}
+
 export async function generateCatalogMoments(params: {
   songTitle: string
   artistName: string
@@ -191,6 +214,10 @@ export async function generateCatalogMoments(params: {
     params.usedQueueRows,
   )
 
+  if (eligible.length === 0) {
+    throw new Error('No lyric windows remain after dedup cooldown.')
+  }
+
   const numberedLines = params.songLines
     .slice()
     .sort((a, b) => a.lineIndex - b.lineIndex)
@@ -198,72 +225,59 @@ export async function generateCatalogMoments(params: {
     .join('\n')
 
   const eligibleSummary = eligible
-    .map((w) => `[${w.startLineIndex}-${w.endLineIndex}] ${w.text.replace(/\n/g, ' / ')}`)
+    .map((w) => `startLineIndex=${w.startLineIndex}, endLineIndex=${w.endLineIndex}: ${w.text.replace(/\n/g, ' / ')}`)
     .join('\n')
 
-  const modelWindows = await callGeneratePicker({
-    songTitle: params.songTitle,
-    artistName: params.artistName,
+  const forbiddenLineIndexes = flattenExcludedLineIndexes(dedupMeta.excludedRanges)
+
+  let modelWindows: ModelGenerateWindow[] = []
+  try {
+    modelWindows = await callGeneratePicker({
+      songTitle: params.songTitle,
+      artistName: params.artistName,
+      count,
+      mode: params.mode,
+      directive: params.directive,
+      numberedLines,
+      eligibleSummary,
+      dedupMeta,
+      forbiddenLineIndexes,
+    })
+  } catch {
+    modelWindows = []
+  }
+
+  let resolved = resolveWindowsFromModel({
+    modelWindows,
     count,
+    songLines: params.songLines,
+    eligible,
     mode: params.mode,
     directive: params.directive,
-    numberedLines,
-    eligibleSummary,
     dedupMeta,
   })
 
-  const eligibleByKey = new Map(
-    eligible.map((w) => [`${w.startLineIndex}:${w.endLineIndex}`, w]),
-  )
-
-  const resolved: ResolvedGenerateMoment[] = []
-  for (const pick of modelWindows) {
-    if (resolved.length >= count) break
-    const start = Number(pick.startLineIndex)
-    const end = Number(pick.endLineIndex)
-    if (!Number.isFinite(start) || !Number.isFinite(end)) continue
-    if (end - start + 1 < 1 || end - start + 1 > 3) continue
-
-    const key = `${start}:${end}`
-    const candidate = eligibleByKey.get(key)
-    if (!candidate) continue
-    if (resolved.some((r) => windowsOverlap(r.lineIndexes, candidate.lineIndexes))) continue
-
-    const unit = assembleCatalogUnitFromRange(params.songLines, start, end)
-    if (!unit) continue
-
-    const mapped = resolveMoodEffect(pick.mood)
-    const selectionScore = scoreWindow(unit.text, pick.reason || '')
-    resolved.push({
-      startLineIndex: start,
-      endLineIndex: end,
-      lineIndexes: unit.lineIndexes,
-      lyricText: unit.text,
-      snippetStartSec: unit.startSec,
-      snippetEndSec: unit.endSec,
-      mood: mapped.mood,
-      reason: String(pick.reason || '').trim(),
-      atmosphereId: mapped.atmosphereId,
-      themeId: mapped.themeId,
-      selectionScore,
-      selectionReason: {
-        mode: params.mode,
-        directive: params.directive?.trim() || null,
-        mood: mapped.mood,
-        modelMood: pick.mood,
-        model: 'gpt-4o-mini',
-        reason: pick.reason,
-        dedupTier: dedupMeta.tier,
-        excludedRanges: dedupMeta.excludedRanges,
-        poolSizeAfterFilter: dedupMeta.poolSizeAfterFilter,
-        unmappedMood: mapped.unmappedMood,
-        reusedRange: dedupMeta.tier === 'reuse',
-      },
+  if (resolved.length < count) {
+    resolved = fillMomentsFromEligible({
+      eligible,
+      alreadyResolved: resolved,
+      count,
+      songLines: params.songLines,
+      mode: params.mode,
+      directive: params.directive,
+      dedupMeta,
+      reasonPrefix: resolved.length === 0
+        ? 'Server picked from eligible pool after model windows did not resolve.'
+        : 'Server filled remaining slots from eligible pool.',
     })
   }
 
   if (resolved.length === 0) {
-    throw new Error('Could not resolve any valid windows from the model response.')
+    throw new Error('No promotable lyric windows remain for this song.')
+  }
+
+  if (resolved.length < count && eligible.length < count) {
+    // Partial success is expected when the song has fewer non-overlapping windows than requested.
   }
 
   return { moments: resolved, dedupMeta }
