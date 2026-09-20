@@ -521,6 +521,7 @@ export function MomentShareStudio({
           )}
           <MomentExportPreviewFrame shapeId={shapeId}>
           <StageMomentCard
+            key={`export-${exportAtmosphereId}-${shapeId}`}
             lyric={previewLine.lyric}
             songTitle={previewLine.songTitle}
             artistName={previewLine.artistName}
@@ -535,7 +536,7 @@ export function MomentShareStudio({
           />
           </MomentExportPreviewFrame>
           <MomentVibeRow
-            key={`${exportAtmosphereId}-${shapeId}`}
+            key={`vibe-${shapeId}`}
             vibeLabel={exportVibeLabel}
             vibeOptions={MOMENT_VIBE_PICKER_OPTIONS}
             onVibeSelect={setExportVibeLabel}

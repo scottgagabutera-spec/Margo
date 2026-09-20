@@ -910,6 +910,7 @@ export function StageLanding() {
               <>
                 <MomentExportPreviewFrame shapeId={shapeId}>
                 <StageMomentCard
+                  key={`export-${exportAtmosphereId}-${shapeId}`}
                   lyric={lyric}
                   songTitle={songName}
                   artistName={artistName}
@@ -928,7 +929,7 @@ export function StageLanding() {
                 />
                 </MomentExportPreviewFrame>
                 <MomentVibeRow
-                  key={`${exportAtmosphereId}-${shapeId}`}
+                  key={`vibe-${shapeId}`}
                   vibeLabel={vibeLabel}
                   suggestedVibeLabel={suggestedVibeLabel}
                   vibeOptions={STAGE_VIBE_OPTIONS}
