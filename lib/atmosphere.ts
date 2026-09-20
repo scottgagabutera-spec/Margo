@@ -27,26 +27,26 @@ export const ATMOSPHERE_TIMING = {
 } as const
 
 export const ATMOSPHERE_OPTIONS: { id: AtmosphereId; label: string; hint: string }[] = [
-  { id: 'still', label: 'None', hint: 'No motion — color only.' },
+  { id: 'still', label: 'None', hint: 'Color only. No motion.' },
   {
     id: 'breath',
     label: 'Slow Rise',
-    hint: 'The card gently swells in and out, like a deep breath.',
+    hint: 'The card gently swells in and out.',
   },
   {
     id: 'drift',
     label: 'Rolling Wave',
-    hint: 'Waves keep rolling across — never stops moving forward.',
+    hint: 'Waves roll across the card, one after another.',
   },
   {
     id: 'pulse',
     label: 'On the Beat',
-    hint: 'Rhythmic hits locked to the groove — bass, dembow, reggaeton energy.',
+    hint: 'Rhythmic hits like bass on a reggaeton track.',
   },
   {
     id: 'weight',
     label: 'Falling Tears',
-    hint: 'Golden drops fall, stretch, and pool at the bottom.',
+    hint: 'Golden drops fall and pool at the bottom.',
   },
 ]
 

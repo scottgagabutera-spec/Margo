@@ -1,11 +1,12 @@
 'use client'
 
-import type { CSSProperties } from 'react'
+import type { CSSProperties, Dispatch, SetStateAction } from 'react'
 import { UI_FONT } from '@/lib/fonts'
 import {
   cycleLivingAtmosphere,
   exportAtmosphereHint,
   exportAtmosphereLabel,
+  LIVING_ATMOSPHERE_IDS,
   type AtmosphereId,
 } from '@/lib/atmosphere'
 import {
@@ -24,7 +25,7 @@ interface MomentExportCustomizeBarProps {
   cardThemeId: StageCardThemeId
   onThemeChange: (id: StageCardThemeId) => void
   exportAtmosphereId: AtmosphereId
-  onExportAtmosphereChange: (id: AtmosphereId) => void
+  onExportAtmosphereChange: Dispatch<SetStateAction<AtmosphereId>>
   shapeId: MomentShapeId
   onShapeChange: (id: MomentShapeId) => void
   style?: CSSProperties
@@ -207,11 +208,10 @@ export function MomentExportCustomizeBar({
           }
           aria-pressed={effectMode}
           onClick={() => {
-            if (colorMode) {
-              onExportAtmosphereChange('breath')
-              return
-            }
-            onExportAtmosphereChange(cycleLivingAtmosphere(exportAtmosphereId))
+            onExportAtmosphereChange((prev) => {
+              if (prev === 'still') return LIVING_ATMOSPHERE_IDS[0]
+              return cycleLivingAtmosphere(prev)
+            })
           }}
           style={tapStyle}
         >
