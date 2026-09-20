@@ -3,12 +3,10 @@
 import { useEffect, useRef } from 'react'
 
 export type MomentVideoReadyMode = 'save' | 'share'
-export type MomentMediaReadyFormat = 'video' | 'gif'
 
 interface MomentVideoReadySheetProps {
   open: boolean
   mode: MomentVideoReadyMode
-  format?: MomentMediaReadyFormat
   previewUrl: string | null
   filename: string
   /** Silent visual-loop export — no audio in file. */
@@ -23,7 +21,6 @@ const font = 'var(--font-lora), serif'
 export function MomentVideoReadySheet({
   open,
   mode,
-  format = 'video',
   previewUrl,
   filename,
   silent = false,
@@ -34,32 +31,29 @@ export function MomentVideoReadySheet({
   const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
-    if (!open || !previewUrl || format !== 'video' || !videoRef.current) return
+    if (!open || !previewUrl || !videoRef.current) return
     const video = videoRef.current
     video.load()
     void video.play().catch(() => {})
-  }, [open, previewUrl, format])
+  }, [open, previewUrl])
 
   if (!open || !previewUrl) return null
 
-  const mediaLabel = format === 'gif' ? 'GIF' : 'video'
   const title = mode === 'save' ? 'Your Moment is ready' : 'Preview your Moment'
   const primaryLabel = mode === 'save'
-    ? (busy ? 'Saving…' : `Save ${mediaLabel}`)
-    : (busy ? 'Sharing…' : `Share ${mediaLabel}`)
+    ? (busy ? 'Saving…' : 'Save video')
+    : (busy ? 'Sharing…' : 'Share video')
   const hint = mode === 'save'
-    ? `Tap Save ${mediaLabel} to download to your device.`
-    : format === 'gif'
-      ? 'Preview, then share when it feels right.'
-      : silent
-        ? 'Visual loop only — no audio. Share when it feels right.'
-        : 'Listen, then share when it feels right.'
+    ? 'Tap Save video to download to your device.'
+    : silent
+      ? 'Visual loop only — no audio. Share when it feels right.'
+      : 'Listen, then share when it feels right.'
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={mode === 'save' ? `Save Moment ${mediaLabel}` : `Share Moment ${mediaLabel}`}
+      aria-label={mode === 'save' ? 'Save Moment video' : 'Share Moment video'}
       style={{
         position: 'fixed',
         inset: 0,
@@ -121,31 +115,18 @@ export function MomentVideoReadySheet({
             Visual loop · No audio
           </p>
         ) : null}
-        {format === 'gif' ? (
-          <img
-            src={previewUrl}
-            alt="Moment GIF preview"
-            style={{
-              width: '100%',
-              borderRadius: '12px',
-              display: 'block',
-              background: '#07060A',
-            }}
-          />
-        ) : (
-          <video
-            ref={videoRef}
-            src={previewUrl}
-            controls
-            playsInline
-            style={{
-              width: '100%',
-              borderRadius: '12px',
-              display: 'block',
-              background: '#07060A',
-            }}
-          />
-        )}
+        <video
+          ref={videoRef}
+          src={previewUrl}
+          controls
+          playsInline
+          style={{
+            width: '100%',
+            borderRadius: '12px',
+            display: 'block',
+            background: '#07060A',
+          }}
+        />
         <p style={{
           margin: 0,
           fontFamily: font,

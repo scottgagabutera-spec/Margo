@@ -11,7 +11,7 @@ export function applyExportCanvasQuality(ctx: CanvasRenderingContext2D): void {
 }
 
 /**
- * Supersampling scale for video/GIF — never exceed encoder dimension limits.
+ * Supersampling scale for video — never exceed encoder dimension limits.
  * Shorts at 1920px logical × 3 would hit 5760px and fail H.264 encode.
  */
 export function stageVideoExportScale(layoutWidth: number, layoutHeight: number): number {
@@ -38,7 +38,7 @@ export function bindStageExportCanvas(
 }
 
 /**
- * Bind a canvas for MP4/GIF frame encode. Uses 1:1 logical pixels because
+ * Bind a canvas for MP4 frame encode. Uses 1:1 logical pixels because
  * renderMomentFrame resets the context transform each frame.
  */
 export function bindStageVideoExportCanvas(

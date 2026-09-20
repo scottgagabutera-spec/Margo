@@ -11,7 +11,7 @@ import { momentHasPlayableSnippet } from '@/lib/moment-export/timeline/build-mom
 export const VISUAL_LOOP_MIN_SEC = 8
 export const VISUAL_LOOP_MAX_SEC = 15
 
-/** Shown on enabled video/GIF rows for silent visual-loop exports. */
+/** Shown on enabled video rows for silent visual-loop exports. */
 export const MOMENT_VISUAL_LOOP_LABEL = 'Visual loop · No audio'
 
 function effectLoopDurationSec(id: LivingAtmosphereId): number {
@@ -50,8 +50,4 @@ export function momentUsesVisualLoopExport(moment: MargoMoment): boolean {
 
 export function canEncodeMomentVideo(moment: MargoMoment): boolean {
   return momentHasPlayableSnippet(moment) || momentUsesVisualLoopExport(moment)
-}
-
-export function canEncodeMomentGif(moment: MargoMoment): boolean {
-  return canEncodeMomentVideo(moment)
 }
