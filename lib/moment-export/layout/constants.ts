@@ -18,6 +18,9 @@ export const STAGE_CARD_REF_WIDTH = 400
 /** Default PNG export width — height is content-driven. */
 export const STAGE_CARD_EXPORT_WIDTH = 1080
 
+/** Supersampling for PNG / frame export (1080 logical → 1080×scale px). */
+export const STAGE_CARD_EXPORT_SCALE = 3
+
 export const STAGE_CARD_LAYOUT_REF = {
   padding: { top: 20, right: 52, bottom: 18, left: 20 },
   borderRadius: 16,

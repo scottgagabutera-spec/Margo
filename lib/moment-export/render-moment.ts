@@ -8,6 +8,7 @@ import type { NormalizedMomentLine } from '@/lib/moment/types'
 import {
   buildCanvasTextMeasure,
   resolveStageCardLayout,
+  STAGE_CARD_EXPORT_SCALE,
   STAGE_CARD_EXPORT_WIDTH,
 } from '@/lib/moment-export/layout'
 import { renderStageCardFrame } from '@/lib/moment-export/render-stage-card-frame'
@@ -871,7 +872,7 @@ async function renderStageMomentCardToCanvas(
   options: RenderMomentOptions,
 ): Promise<void> {
   const shape = SHAPES.find((s) => s.id === (options.shapeId || 'square')) || SHAPES[0]
-  const SCALE = options.scale ?? 2
+  const SCALE = options.scale ?? STAGE_CARD_EXPORT_SCALE
   const line = options.lines[0]
   if (!line) return
 
@@ -905,24 +906,16 @@ async function renderStageMomentCardToCanvas(
   if (isShorts) {
     const canvasW = layout.outputWidth
     const canvasH = layout.outputHeight
-    canvas.width = canvasW * SCALE
-    canvas.height = canvasH * SCALE
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    ctx.setTransform(1, 0, 0, 1, 0, 0)
-    ctx.scale(SCALE, SCALE)
+    const { bindStageExportCanvas } = await import('@/lib/moment-export/export-canvas-quality')
+    const ctx = bindStageExportCanvas(canvas, canvasW, canvasH, SCALE)
     renderStageCardFrame(ctx, layout, frameAssets)
     return
   }
 
   const W = layout.outputWidth
   const H = layout.outputHeight
-  canvas.width = W * SCALE
-  canvas.height = H * SCALE
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return
-  ctx.setTransform(1, 0, 0, 1, 0, 0)
-  ctx.scale(SCALE, SCALE)
+  const { bindStageExportCanvas } = await import('@/lib/moment-export/export-canvas-quality')
+  const ctx = bindStageExportCanvas(canvas, W, H, SCALE)
   renderStageCardFrame(ctx, layout, frameAssets)
 }
 
@@ -938,13 +931,9 @@ export async function renderMomentToCanvas(
   const theme = THEMES.find((t) => t.id === (options.themeId || 'gold')) || THEMES[0]
   const shape = SHAPES.find((s) => s.id === (options.shapeId || 'square')) || SHAPES[0]
   const { w, h } = shape
-  const SCALE = options.scale ?? 2
-  canvas.width = w * SCALE
-  canvas.height = h * SCALE
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return
-  ctx.setTransform(1, 0, 0, 1, 0, 0)
-  ctx.scale(SCALE, SCALE)
+  const SCALE = options.scale ?? STAGE_CARD_EXPORT_SCALE
+  const { bindStageExportCanvas } = await import('@/lib/moment-export/export-canvas-quality')
+  const ctx = bindStageExportCanvas(canvas, w, h, SCALE)
   const seedKey = options.seedKey || options.lines.map((l) => l.lyric + '|' + l.songTitle).join('~') || 'moment'
   const composition = composeMoment(options.vibeLabel, options.lines, seedKey)
   await drawMomentPoster(ctx, w, h, options.lines, theme, options.vibeLabel, seedKey, composition)

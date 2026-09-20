@@ -1,5 +1,12 @@
+import { parseAtmosphere } from '@/lib/atmosphere'
 import type { MargoMoment } from '@/lib/moment/types'
-import { buildMomentTimeline, momentHasPlayableSnippet } from '@/lib/moment-export/timeline/build-moment-timeline'
+import { bindStageVideoExportCanvas } from '@/lib/moment-export/export-canvas-quality'
+import {
+  canEncodeMomentVideo,
+  momentUsesVisualLoopExport,
+  resolveVisualLoopDurationSec,
+} from '@/lib/moment-export/visual-loop-export'
+import { buildMomentTimeline } from '@/lib/moment-export/timeline/build-moment-timeline'
 import {
   buildCanvasTextMeasure,
   resolveStageCardLayout,
@@ -44,6 +51,8 @@ export interface EncodeMomentResult {
   audioCodec: string
   width: number
   height: number
+  /** True when export is a silent visual loop (no audio track). */
+  silent?: boolean
 }
 
 export async function encodeMargoMomentMp4(
@@ -51,15 +60,15 @@ export async function encodeMargoMomentMp4(
   onProgress?: (p: EncodeMomentProgress) => void,
   signal?: AbortSignal,
 ): Promise<EncodeMomentResult> {
-  if (!momentHasPlayableSnippet(moment)) {
+  if (!canEncodeMomentVideo(moment)) {
     throw new Error('This Moment needs a playable audio snippet for video export')
   }
 
   const line = moment.lines[0]
   const t0 = performance.now()
+  const visualLoop = momentUsesVisualLoopExport(moment)
 
   onProgress?.({ phase: 'prepare' })
-  await ensureAacEncoderRegistered()
 
   const {
     Output,
@@ -75,8 +84,17 @@ export async function encodeMargoMomentMp4(
   const videoCodec = await getFirstEncodableVideoCodec(['avc'])
   if (!videoCodec) throw new Error('H.264 video encoding is not available')
 
-  const audioCodec = await getFirstEncodableAudioCodec(['aac'])
-  if (!audioCodec) throw new Error('AAC audio encoding is not available')
+  if (!visualLoop) {
+    await ensureAacEncoderRegistered()
+  }
+
+  type AudioCodecName = NonNullable<Awaited<ReturnType<typeof getFirstEncodableAudioCodec>>>
+  let audioCodecName: AudioCodecName | 'none' = 'none'
+  if (!visualLoop) {
+    const audioCodec = await getFirstEncodableAudioCodec(['aac'])
+    if (!audioCodec) throw new Error('AAC audio encoding is not available')
+    audioCodecName = audioCodec
+  }
 
   await waitForExportFonts()
   const geistFamily = resolveGeistFontFamily()
@@ -99,40 +117,112 @@ export async function encodeMargoMomentMp4(
     format: isVertical ? 'shorts' : 'feed',
   }, measure, geistFamily)
 
-  onProgress?.({ phase: 'audio' })
-  const [artworkImage, audioBuffer] = await Promise.all([
-    loadMomentArtwork(line.artworkUrl),
-    fetchAndDecodeAudioSnippet(
-      line.audioUrl!,
-      line.snippetStart!,
-      line.snippetEnd!,
-      signal,
-    ),
-  ])
-  const audioDurationSec = Math.min(audioBuffer.duration, MOMENT_VIDEO_MAX_DURATION_SEC)
-  const exportTimeline = buildMomentTimeline(moment, audioDurationSec)
-  const posterRenderSec = completedCardRenderTimeSec(exportTimeline)
   const exportLayout = layout.outputHeight % 2 === 0
     ? layout
     : { ...layout, outputHeight: layout.outputHeight + 1 }
 
-  const exportAudio = prependSilence(
-    truncateAudioBuffer(audioBuffer, audioDurationSec),
-    MOMENT_EXPORT_INTRO_HOLD_SEC,
-  )
-  const totalDurationSec = exportTotalDurationSec(audioDurationSec)
-
-  const frameCount = Math.max(1, Math.round(totalDurationSec * MOMENT_VIDEO_FPS))
-  const frameDuration = 1 / MOMENT_VIDEO_FPS
   const canvasW = exportLayout.outputWidth
   const canvasH = exportLayout.outputHeight
-
   const canvas = document.createElement('canvas')
-  canvas.width = canvasW
-  canvas.height = canvasH
-  const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('Canvas is not available')
+  const ctx = bindStageVideoExportCanvas(canvas, canvasW, canvasH)
 
+  let totalDurationSec: number
+  let frameCount: number
+  let exportTimeline: ReturnType<typeof buildMomentTimeline>
+  let posterRenderSec: number
+  let artworkImage: Awaited<ReturnType<typeof loadMomentArtwork>>
+
+  if (visualLoop) {
+    const loopDurationSec = resolveVisualLoopDurationSec(parseAtmosphere(moment.exportAtmosphereId ?? null))
+    exportTimeline = buildMomentTimeline(moment, loopDurationSec)
+    posterRenderSec = completedCardRenderTimeSec(exportTimeline)
+    totalDurationSec = loopDurationSec
+    frameCount = Math.max(1, Math.round(totalDurationSec * MOMENT_VIDEO_FPS))
+    artworkImage = await loadMomentArtwork(line.artworkUrl)
+  } else {
+    onProgress?.({ phase: 'audio' })
+    const [art, audioBuffer] = await Promise.all([
+      loadMomentArtwork(line.artworkUrl),
+      fetchAndDecodeAudioSnippet(
+        line.audioUrl!,
+        line.snippetStart!,
+        line.snippetEnd!,
+        signal,
+      ),
+    ])
+    artworkImage = art
+    const audioDurationSec = Math.min(audioBuffer.duration, MOMENT_VIDEO_MAX_DURATION_SEC)
+    exportTimeline = buildMomentTimeline(moment, audioDurationSec)
+    posterRenderSec = completedCardRenderTimeSec(exportTimeline)
+    totalDurationSec = exportTotalDurationSec(audioDurationSec)
+    frameCount = Math.max(1, Math.round(totalDurationSec * MOMENT_VIDEO_FPS))
+
+    const exportAudio = prependSilence(
+      truncateAudioBuffer(audioBuffer, audioDurationSec),
+      MOMENT_EXPORT_INTRO_HOLD_SEC,
+    )
+
+    const frameDuration = 1 / MOMENT_VIDEO_FPS
+    const output = new Output({
+      format: new Mp4OutputFormat({ fastStart: 'in-memory' }),
+      target: new BufferTarget(),
+    })
+
+    const videoSource = new CanvasSource(canvas, {
+      codec: videoCodec,
+      quality: new Quality({ bitrate: MOMENT_VIDEO_BITRATE }),
+    })
+    const audioSource = new AudioBufferSource({
+      codec: audioCodecName as AudioCodecName,
+      quality: new Quality({ bitrate: MOMENT_VIDEO_AUDIO_BITRATE }),
+    })
+
+    output.addVideoTrack(videoSource, { frameRate: MOMENT_VIDEO_FPS })
+    output.addAudioTrack(audioSource)
+    await output.start()
+
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+    await audioSource.add(exportAudio)
+
+    onProgress?.({ phase: 'frames', frame: 0, frameCount })
+    const assets = { artworkImage }
+
+    for (let frame = 0; frame < frameCount; frame++) {
+      if (signal?.aborted) {
+        await output.cancel()
+        throw new DOMException('Aborted', 'AbortError')
+      }
+      const timeSec = frame / MOMENT_VIDEO_FPS
+      const renderTimeSec = resolveExportRenderTimeSec(frame, MOMENT_VIDEO_FPS, posterRenderSec)
+      renderMomentFrame(ctx, exportLayout, exportTimeline, assets, renderTimeSec, moment.exportAtmosphereId)
+      await videoSource.add(timeSec, frameDuration)
+      if (frame % 30 === 0) {
+        onProgress?.({ phase: 'frames', frame, frameCount })
+      }
+    }
+
+    onProgress?.({ phase: 'finalize' })
+    await output.finalize()
+
+    const buffer = output.target.buffer
+    if (!buffer) throw new Error('Video export failed')
+
+    const blob = new Blob([buffer], { type: 'video/mp4' })
+    return {
+      blob,
+      durationSec: totalDurationSec,
+      frameCount,
+      fileSizeBytes: blob.size,
+      encodeMs: performance.now() - t0,
+      videoCodec,
+      audioCodec: audioCodecName,
+      width: canvas.width,
+      height: canvas.height,
+      silent: false,
+    }
+  }
+
+  const frameDuration = 1 / MOMENT_VIDEO_FPS
   const output = new Output({
     format: new Mp4OutputFormat({ fastStart: 'in-memory' }),
     target: new BufferTarget(),
@@ -142,18 +232,11 @@ export async function encodeMargoMomentMp4(
     codec: videoCodec,
     quality: new Quality({ bitrate: MOMENT_VIDEO_BITRATE }),
   })
-  const audioSource = new AudioBufferSource({
-    codec: audioCodec,
-    quality: new Quality({ bitrate: MOMENT_VIDEO_AUDIO_BITRATE }),
-  })
 
   output.addVideoTrack(videoSource, { frameRate: MOMENT_VIDEO_FPS })
-  output.addAudioTrack(audioSource)
   await output.start()
 
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
-
-  await audioSource.add(exportAudio)
 
   onProgress?.({ phase: 'frames', frame: 0, frameCount })
   const assets = { artworkImage }
@@ -163,10 +246,18 @@ export async function encodeMargoMomentMp4(
       await output.cancel()
       throw new DOMException('Aborted', 'AbortError')
     }
-    const timeSec = frame / MOMENT_VIDEO_FPS
-    const renderTimeSec = resolveExportRenderTimeSec(frame, MOMENT_VIDEO_FPS, posterRenderSec)
-    renderMomentFrame(ctx, exportLayout, exportTimeline, assets, renderTimeSec, moment.exportAtmosphereId)
-    await videoSource.add(timeSec, frameDuration)
+    const clockSec = frame / MOMENT_VIDEO_FPS
+    const contentSec = Math.min(clockSec, posterRenderSec)
+    renderMomentFrame(
+      ctx,
+      exportLayout,
+      exportTimeline,
+      assets,
+      contentSec,
+      moment.exportAtmosphereId,
+      { atmosphereTimeSec: clockSec },
+    )
+    await videoSource.add(clockSec, frameDuration)
     if (frame % 30 === 0) {
       onProgress?.({ phase: 'frames', frame, frameCount })
     }
@@ -186,8 +277,9 @@ export async function encodeMargoMomentMp4(
     fileSizeBytes: blob.size,
     encodeMs: performance.now() - t0,
     videoCodec,
-    audioCodec,
-    width: canvasW,
-    height: canvasH,
+    audioCodec: 'none',
+    width: canvas.width,
+    height: canvas.height,
+    silent: true,
   }
 }

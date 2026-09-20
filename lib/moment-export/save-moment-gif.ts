@@ -1,5 +1,5 @@
 import type { MargoMoment } from '@/lib/moment/types'
-import { momentHasPlayableSnippet } from '@/lib/moment-export/timeline/build-moment-timeline'
+import { canEncodeMomentVideo } from '@/lib/moment-export/visual-loop-export'
 import {
   getCachedMomentGif,
   setCachedMomentGif,
@@ -28,7 +28,7 @@ export async function getOrCreateMomentGifFile(
   onProgress?: (message: string) => void,
   signal?: AbortSignal,
 ): Promise<MomentGifFileResult | null> {
-  if (typeof document === 'undefined' || !momentHasPlayableSnippet(moment)) return null
+  if (typeof document === 'undefined' || !canEncodeMomentVideo(moment)) return null
 
   const cached = getCachedMomentGif(moment)
   if (cached) {
