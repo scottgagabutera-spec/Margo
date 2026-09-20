@@ -30,6 +30,22 @@ import {
 
 const PALETTE_FORMAT = 'rgb565'
 
+/** Video encode yields via async WebCodecs; GIF is sync — yield so UI can paint %. */
+function yieldToMain(): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 0)
+  })
+}
+
+async function reportGifFrameProgress(
+  onProgress: ((p: EncodeMomentGifProgress) => void) | undefined,
+  frame: number,
+  frameCount: number,
+): Promise<void> {
+  onProgress?.({ phase: 'frames', frame, frameCount })
+  await yieldToMain()
+}
+
 export interface EncodeMomentGifProgress {
   phase: 'prepare' | 'frames' | 'finalize'
   frame?: number
@@ -164,7 +180,7 @@ export async function encodeMargoMomentGif(
   const globalPalette = quantize(concatRgba(samples), 256, { format: PALETTE_FORMAT })
 
   const gif = GIFEncoder()
-  onProgress?.({ phase: 'frames', frame: 0, frameCount })
+  await reportGifFrameProgress(onProgress, 0, frameCount)
 
   for (let frame = 0; frame < frameCount; frame++) {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
@@ -187,12 +203,13 @@ export async function encodeMargoMomentGif(
     const rgba = ctx.getImageData(0, 0, pixelW, pixelH).data
     const index = applyPalette(rgba, globalPalette, { format: PALETTE_FORMAT })
     gif.writeFrame(index, pixelW, pixelH, { palette: globalPalette, delay: delayMs })
-    if (frame % MOMENT_GIF_FPS === 0) {
-      onProgress?.({ phase: 'frames', frame, frameCount })
+    if (frame % MOMENT_GIF_FPS === 0 || frame === frameCount - 1) {
+      await reportGifFrameProgress(onProgress, frame, frameCount)
     }
   }
 
   onProgress?.({ phase: 'finalize' })
+  await yieldToMain()
   gif.finish()
   const bytes = gif.bytes()
   const blob = new Blob([bytes], { type: 'image/gif' })
