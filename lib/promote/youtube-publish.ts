@@ -1,3 +1,5 @@
+import { formatYouTubeApiError } from '@/lib/promote/publish-error'
+
 export interface YouTubeUploadInput {
   accessToken: string
   videoBytes: Buffer
@@ -52,7 +54,7 @@ export async function uploadVideoToYouTube({
 
   if (!initRes.ok) {
     const text = await initRes.text()
-    throw new Error(`YouTube resumable init failed: ${text}`)
+    throw new Error(formatYouTubeApiError(initRes.status, text, 'resumable init'))
   }
 
   const uploadUrl = initRes.headers.get('location')
@@ -69,7 +71,7 @@ export async function uploadVideoToYouTube({
 
   if (!uploadRes.ok) {
     const text = await uploadRes.text()
-    throw new Error(`YouTube video upload failed: ${text}`)
+    throw new Error(formatYouTubeApiError(uploadRes.status, text, 'video upload'))
   }
 
   const json = await uploadRes.json() as { id?: string }

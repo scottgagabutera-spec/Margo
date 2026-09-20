@@ -262,13 +262,27 @@ export function PromoteQueueCard({
       )}
 
       {youtubeTarget?.errorMessage && (
-        <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--danger, #e55)', marginTop: '8px' }}>
+        <p style={{
+          fontFamily: font,
+          fontSize: '0.8rem',
+          color: 'var(--danger, #e55)',
+          marginTop: '8px',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+        }}>
           {youtubeTarget.errorMessage}
         </p>
       )}
 
       {error && (
-        <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--danger, #e55)', marginTop: '8px' }}>{error}</p>
+        <p style={{
+          fontFamily: font,
+          fontSize: '0.8rem',
+          color: 'var(--danger, #e55)',
+          marginTop: '8px',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+        }}>{error}</p>
       )}
 
       {busy && (

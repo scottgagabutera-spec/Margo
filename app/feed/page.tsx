@@ -551,6 +551,13 @@ function FeedPageInner() {
     return () => window.removeEventListener('margo:primary-tab-reselect', onReselect)
   }, [feedLive, pendingCount, flushPending])
 
+  const exportMoment = useMemo(
+    () => (exportPost ? resolveMargoMomentFromPost(exportPost) : null),
+    // Feed rebuilds `exportPost` on every parent render. Key on the opened post id only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [exportPost?.id],
+  )
+
   return (
     <PullToRefresh
       onRefreshingChange={setPtrBusy}
@@ -756,7 +763,7 @@ function FeedPageInner() {
       <CardExportModal
         open={!!exportPost}
         onOpenChange={(o) => { if (!o) setExportPost(null) }}
-        moment={exportPost ? resolveMargoMomentFromPost(exportPost) : null}
+        moment={exportMoment}
         enablePromote={
           !!exportPost
           && !!user?.id
