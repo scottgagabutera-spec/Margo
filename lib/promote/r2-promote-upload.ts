@@ -1,32 +1,29 @@
 import {
+  GetObjectCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import { GetObjectCommand } from '@aws-sdk/client-s3'
+import {
+  r2AccessKeyId,
+  r2BucketName,
+  r2S3Endpoint,
+  r2SecretAccessKey,
+  r2SignedUrlExpirySec,
+} from '@/lib/r2/config'
 
-const DEFAULT_EXPIRY_SEC = 3600
-
-function requireEnv(name: string): string {
-  const value = process.env[name]
-  if (!value) throw new Error(`${name} is not configured`)
-  return value
-}
+/** Prefix alongside catalog audio (Margo/audio/*) and artwork (Margo/artwork/*). */
+export const PROMOTE_OBJECT_PREFIX = 'Margo/promote'
 
 function r2Client(): S3Client {
-  const accountId = requireEnv('R2_ACCOUNT_ID')
   return new S3Client({
     region: 'auto',
-    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    endpoint: r2S3Endpoint(),
     credentials: {
-      accessKeyId: requireEnv('R2_ACCESS_KEY_ID'),
-      secretAccessKey: requireEnv('R2_SECRET_ACCESS_KEY'),
+      accessKeyId: r2AccessKeyId(),
+      secretAccessKey: r2SecretAccessKey(),
     },
   })
-}
-
-function promoteBucket(): string {
-  return process.env.R2_PROMOTE_BUCKET || process.env.R2_BUCKET_NAME || 'margo-promote'
 }
 
 /** Upload rendered MP4 to R2 under Margo/promote/{profileId}/{queueId}.mp4 */
@@ -35,10 +32,10 @@ export async function uploadPromoteVideo(
   queueId: string,
   videoBytes: Buffer,
 ): Promise<{ objectKey: string; byteSize: number }> {
-  const objectKey = `Margo/promote/${profileId}/${queueId}.mp4`
+  const objectKey = `${PROMOTE_OBJECT_PREFIX}/${profileId}/${queueId}.mp4`
   const client = r2Client()
   await client.send(new PutObjectCommand({
-    Bucket: promoteBucket(),
+    Bucket: r2BucketName(),
     Key: objectKey,
     Body: videoBytes,
     ContentType: 'video/mp4',
@@ -47,15 +44,15 @@ export async function uploadPromoteVideo(
   return { objectKey, byteSize: videoBytes.length }
 }
 
-/** Short-lived signed HTTPS URL for platform upload APIs (YouTube pulls from client upload path). */
+/** Short-lived signed HTTPS URL for platform upload APIs. */
 export async function signedPromoteVideoUrl(
   objectKey: string,
-  expiresInSec = Number(process.env.R2_PROMOTE_SIGNED_URL_EXPIRY_SEC || DEFAULT_EXPIRY_SEC),
+  expiresInSec = r2SignedUrlExpirySec(),
 ): Promise<string> {
   const client = r2Client()
   return getSignedUrl(
     client,
-    new GetObjectCommand({ Bucket: promoteBucket(), Key: objectKey }),
+    new GetObjectCommand({ Bucket: r2BucketName(), Key: objectKey }),
     { expiresIn: expiresInSec },
   )
 }
