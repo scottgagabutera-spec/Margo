@@ -4,6 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronRightIcon } from '@/components/icons'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
+import { playSnippet } from '@/lib/audio-engine'
+import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
+import { useSongAtmosphere } from '@/hooks/useSongAtmosphere'
+import { livingAtmosphereOrNull } from '@/lib/atmosphere'
 import { MomentExportCustomizeBar } from '@/components/moment-export-customize-bar'
 import { MomentVibeRow } from '@/components/moment-vibe-row'
 import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
@@ -30,6 +34,7 @@ import {
   buildMargoMomentFromExportProps,
   canShareImageFiles,
   MOMENT_VIBE_PICKER_OPTIONS,
+  resolveMomentListen,
 } from '@/lib/moment'
 import {
   prepareMargoMomentVideoShare,
@@ -166,6 +171,7 @@ export function MomentShareStudio({
         songTitle: previewLine.songTitle,
         artistName: previewLine.artistName,
         artworkUrl: previewLine.artworkUrl ?? null,
+        songId: baseMoment.lines[previewIndex]?.songId ?? null,
         audioUrl: baseMoment.lines[previewIndex]?.audioUrl ?? null,
         snippetStart: baseMoment.lines[previewIndex]?.snippetStart ?? null,
         snippetEnd: baseMoment.lines[previewIndex]?.snippetEnd ?? null,
@@ -181,6 +187,51 @@ export function MomentShareStudio({
   const hasSnippet = exportMoment ? momentHasPlayableSnippet(exportMoment) : false
   const hasVisualLoopExport = exportMoment ? momentUsesVisualLoopExport(exportMoment) : false
   const canClipExport = hasSnippet || hasVisualLoopExport
+
+  const listen = useMemo(
+    () => (exportMoment && !isDualCard ? resolveMomentListen(exportMoment) : null),
+    [exportMoment, isDualCard],
+  )
+  const canPlayInline = listen?.canPlayInline ?? false
+  const playbackKey = listen?.songId || listen?.audioUrl || ''
+  const previewLyric = exportMoment?.lines[0]?.lyric ?? null
+  const { playing, buffering } = useSnippetPlaybackUi(
+    canPlayInline ? playbackKey : null,
+    canPlayInline ? previewLyric : null,
+  )
+  const songAtmosphere = useSongAtmosphere(canPlayInline ? listen?.songId : null)
+
+  const startPreviewPlayback = useCallback(() => {
+    if (!canPlayInline || !listen?.audioUrl || listen.snippetStart == null || listen.snippetEnd == null) return
+    const line = exportMoment?.lines[0]
+    if (!line) return
+    void playSnippet({
+      songId: listen.songId || listen.audioUrl,
+      audioUrl: listen.audioUrl,
+      title: line.songTitle,
+      artist: line.artistName,
+      artwork: line.artworkUrl,
+      lineIndex: 0,
+      lineText: line.lyric,
+      startSec: listen.snippetStart,
+      endSec: listen.snippetEnd,
+      atmosphere: livingAtmosphereOrNull(songAtmosphere),
+      source: 'feed',
+    })
+  }, [
+    canPlayInline,
+    listen?.audioUrl,
+    listen?.songId,
+    listen?.snippetStart,
+    listen?.snippetEnd,
+    exportMoment?.lines,
+    songAtmosphere,
+  ])
+
+  useEffect(() => {
+    if (!canPlayInline) return
+    startPreviewPlayback()
+  }, [canPlayInline, startPreviewPlayback])
 
   const persistExportPrefs = useCallback(() => {
     if (!resolvedPostId) return
@@ -499,7 +550,10 @@ export function MomentShareStudio({
             shapeId={shapeId}
             hideVibeChrome
             effectOwnsFill
-            canPlay={false}
+            canPlay={canPlayInline}
+            playing={playing}
+            buffering={buffering}
+            onPlay={startPreviewPlayback}
           />
           </MomentExportPreviewFrame>
           <MomentVibeRow

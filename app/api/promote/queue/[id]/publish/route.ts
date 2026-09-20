@@ -1,11 +1,82 @@
 import { NextResponse } from 'next/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { getPromoteAdmin } from '@/lib/promote/admin-client'
 import { requirePromoteSession } from '@/lib/promote/api-auth'
-import { getValidYouTubeAccessToken } from '@/lib/promote/connections'
 import { cleanupPromoteStagingVideoIfComplete } from '@/lib/promote/cleanup-staging'
+import { getValidYouTubeAccessToken } from '@/lib/promote/connections'
 import { signedPromoteVideoUrl, uploadPromoteVideo } from '@/lib/promote/r2-promote-upload'
 import { resolveQueueVisualPrefs } from '@/lib/promote/types'
 import { uploadVideoToYouTube } from '@/lib/promote/youtube-publish'
+
+export const runtime = 'nodejs'
+export const maxDuration = 60
+
+const STAGING_BUCKET = 'song-audio'
+
+function expectedStagingPath(userId: string, queueId: string): string {
+  return `${userId}/promote/${queueId}.mp4`
+}
+
+async function readPublishVideoBuffer(
+  request: Request,
+  admin: SupabaseClient,
+  userId: string,
+  queueId: string,
+): Promise<{ buffer: Buffer } | { error: string; status: number }> {
+  const contentType = request.headers.get('content-type') || ''
+
+  if (contentType.includes('application/json')) {
+    let body: { storagePath?: unknown }
+    try {
+      body = await request.json()
+    } catch {
+      return { error: 'Invalid JSON body — expected { storagePath }', status: 400 }
+    }
+    const storagePath = typeof body.storagePath === 'string' ? body.storagePath.trim() : ''
+    const expected = expectedStagingPath(userId, queueId)
+    if (storagePath !== expected) {
+      return {
+        error: `storagePath must be exactly ${expected}`,
+        status: 400,
+      }
+    }
+    const { data, error } = await admin.storage.from(STAGING_BUCKET).download(storagePath)
+    if (error || !data) {
+      return {
+        error: `Could not read staged video from storage: ${error?.message || 'not found'}`,
+        status: 400,
+      }
+    }
+    const buffer = Buffer.from(await data.arrayBuffer())
+    if (buffer.length === 0) {
+      return { error: 'Staged video is empty (0 bytes)', status: 400 }
+    }
+    const { error: removeErr } = await admin.storage.from(STAGING_BUCKET).remove([storagePath])
+    if (removeErr) {
+      console.error('[promote/publish] staging cleanup failed', removeErr)
+    }
+    return { buffer }
+  }
+
+  let form: FormData
+  try {
+    form = await request.formData()
+  } catch (err) {
+    return {
+      error: `Could not read upload body: ${err instanceof Error ? err.message : 'parse failed'}`,
+      status: 400,
+    }
+  }
+  const video = form.get('video')
+  if (!(video instanceof Blob)) {
+    return { error: 'video file is required (or JSON { storagePath })', status: 400 }
+  }
+  const buffer = Buffer.from(await video.arrayBuffer())
+  if (buffer.length === 0) {
+    return { error: 'Uploaded video is empty (0 bytes)', status: 400 }
+  }
+  return { buffer }
+}
 
 export async function POST(
   request: Request,
@@ -18,13 +89,11 @@ export async function POST(
   const admin = getPromoteAdmin()
   if (!admin) return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
 
-  const form = await request.formData()
-  const video = form.get('video')
-  if (!(video instanceof Blob)) {
-    return NextResponse.json({ error: 'video file is required' }, { status: 400 })
+  const videoResult = await readPublishVideoBuffer(request, admin, session.userId, queueId)
+  if ('error' in videoResult) {
+    return NextResponse.json({ error: videoResult.error }, { status: videoResult.status })
   }
-
-  const videoBuffer = Buffer.from(await video.arrayBuffer())
+  const videoBuffer = videoResult.buffer
 
   const { data: queue, error: queueErr } = await admin
     .from('promote_queue')
@@ -67,9 +136,10 @@ export async function POST(
       })
       .eq('id', queueId)
   } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to store rendered video'
     console.error('[promote/publish] R2 upload failed', err)
     await admin.from('promote_queue').update({ status: 'failed' }).eq('id', queueId)
-    return NextResponse.json({ error: 'Failed to store rendered video' }, { status: 500 })
+    return NextResponse.json({ error: `Failed to store rendered video: ${message}` }, { status: 500 })
   }
 
   const { data: connection, error: connErr } = await admin
@@ -165,6 +235,10 @@ export async function POST(
       .from('promote_queue_targets')
       .update({ status: 'failed', error_message: message })
       .eq('id', youtubeTarget.id)
+    await admin
+      .from('artist_social_connections')
+      .update({ last_error: message })
+      .eq('id', connection.id)
     await admin.from('promote_queue').update({ status: 'failed' }).eq('id', queueId)
     await cleanupPromoteStagingVideoIfComplete(admin, queueId, objectKey)
     return NextResponse.json({ error: message }, { status: 502 })
