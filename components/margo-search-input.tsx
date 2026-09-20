@@ -22,6 +22,9 @@ interface MargoSearchInputProps {
   id?: string
 }
 
+/** Must exceed ComposeSearchDropdown scrim (54) and listbox (55). */
+const SEARCH_ABOVE_OVERLAY_Z = 56
+
 /**
  * Shared pill search field — Feed / Discover / Compose / Stage / Lyric Back.
  * UI_FONT, CSS variables only (MARGO_BRAND §14–15).
@@ -46,7 +49,7 @@ export function MargoSearchInput({
   const showLeftIcon = icon === 'left'
 
   return (
-    <div style={{ position: 'relative', width: '100%', zIndex: stackAboveOverlay ? 1 : undefined }}>
+    <div style={{ position: 'relative', width: '100%', zIndex: stackAboveOverlay ? SEARCH_ABOVE_OVERLAY_Z : undefined }}>
       {showLeftIcon ? (
         <span
           aria-hidden

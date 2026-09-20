@@ -981,25 +981,6 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
     color-mix(in srgb, var(--gold) 12%, transparent) 42%,
     transparent 74%);
 }
-.margo-atm-weight-eyes {
-  position: absolute;
-  top: 10%;
-  left: 50%;
-  width: 56px;
-  height: 14px;
-  transform: translateX(-50%);
-  color: color-mix(in srgb, var(--gold) 72%, var(--text));
-  opacity: 0.42;
-  pointer-events: none;
-}
-.margo-atm-weight-eyes svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-.margo-atmosphere-clip--preview[data-tone="dark"] .margo-atm-weight-eyes {
-  opacity: 0.55;
-}
 .margo-atm-room.is-live .margo-atm-weight-floor {
   will-change: transform, opacity;
   animation: margo-atm-weight-floor 11s cubic-bezier(0.45, 0, 0.55, 1) infinite;
@@ -1077,7 +1058,6 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   .margo-atm-pulse-bloom,
   .margo-atm-drift-band,
   .margo-atm-weight-floor,
-  .margo-atm-weight-eyes,
   .margo-atm-drop,
   .margo-atm-room.is-live .margo-atm-breath-wash,
   .margo-atm-room.is-live .margo-atm-breath-stretch,
@@ -1087,7 +1067,6 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   .margo-atm-room.is-live .margo-atm-pulse-bloom,
   .margo-atm-room.is-live .margo-atm-drift-band,
   .margo-atm-room.is-live .margo-atm-weight-floor,
-  .margo-atm-room.is-live .margo-atm-weight-eyes,
   .margo-atm-room.is-live .margo-atm-drop {
     animation: none !important;
   }
