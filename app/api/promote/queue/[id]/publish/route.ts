@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getPromoteAdmin } from '@/lib/promote/admin-client'
 import { requirePromoteSession } from '@/lib/promote/api-auth'
 import { getValidYouTubeAccessToken } from '@/lib/promote/connections'
+import { cleanupPromoteStagingVideoIfComplete } from '@/lib/promote/cleanup-staging'
 import { signedPromoteVideoUrl, uploadPromoteVideo } from '@/lib/promote/r2-promote-upload'
 import { resolveQueueVisualPrefs } from '@/lib/promote/types'
 import { uploadVideoToYouTube } from '@/lib/promote/youtube-publish'
@@ -79,7 +80,15 @@ export async function POST(
     .maybeSingle()
 
   if (connErr || !connection) {
+    await admin
+      .from('promote_queue_targets')
+      .update({
+        status: 'failed',
+        error_message: 'YouTube not connected',
+      })
+      .eq('id', youtubeTarget.id)
     await admin.from('promote_queue').update({ status: 'failed' }).eq('id', queueId)
+    await cleanupPromoteStagingVideoIfComplete(admin, queueId, objectKey)
     return NextResponse.json({ error: 'YouTube not connected' }, { status: 400 })
   }
 
@@ -140,6 +149,8 @@ export async function POST(
       })
       .eq('id', queueId)
 
+    await cleanupPromoteStagingVideoIfComplete(admin, queueId, objectKey)
+
     return NextResponse.json({
       ok: true,
       videoId: result.videoId,
@@ -155,6 +166,7 @@ export async function POST(
       .update({ status: 'failed', error_message: message })
       .eq('id', youtubeTarget.id)
     await admin.from('promote_queue').update({ status: 'failed' }).eq('id', queueId)
+    await cleanupPromoteStagingVideoIfComplete(admin, queueId, objectKey)
     return NextResponse.json({ error: message }, { status: 502 })
   }
 }
