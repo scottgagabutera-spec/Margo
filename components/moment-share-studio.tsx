@@ -521,7 +521,6 @@ export function MomentShareStudio({
           )}
           <MomentExportPreviewFrame shapeId={shapeId}>
           <StageMomentCard
-            key={`export-${exportAtmosphereId}-${shapeId}`}
             lyric={previewLine.lyric}
             songTitle={previewLine.songTitle}
             artistName={previewLine.artistName}

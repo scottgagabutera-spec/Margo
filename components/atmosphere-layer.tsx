@@ -199,6 +199,9 @@ function AtmosphereRoom({
             </defs>
           </svg>
           <div className="margo-atm-weight-floor" />
+          <div className="margo-atm-weight-eyes" aria-hidden>
+            <WeightEyesSvg />
+          </div>
           {WEIGHT_DROPS.map((d, i) => (
             <span
               key={i}
@@ -260,6 +263,17 @@ function WeightDropSvg({ fillId }: { fillId: string }) {
       <ellipse className="margo-atm-drop-shade" cx="7.6" cy="10.4" rx="3.3" ry="4.4" />
       <ellipse cx="7" cy="9" rx="3.1" ry="4.2" fill={`url(#${fillId})`} />
       <ellipse className="margo-atm-drop-shine" cx="5.7" cy="6.8" rx="1.15" ry="1.45" />
+    </svg>
+  )
+}
+
+function WeightEyesSvg() {
+  return (
+    <svg viewBox="0 0 56 14" aria-hidden>
+      <ellipse cx="18" cy="7" rx="7.5" ry="4.5" fill="none" stroke="currentColor" strokeWidth="1.2" />
+      <ellipse cx="38" cy="7" rx="7.5" ry="4.5" fill="none" stroke="currentColor" strokeWidth="1.2" />
+      <circle cx="18" cy="7.5" r="1.6" fill="currentColor" opacity="0.55" />
+      <circle cx="38" cy="7.5" r="1.6" fill="currentColor" opacity="0.55" />
     </svg>
   )
 }

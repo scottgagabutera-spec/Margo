@@ -812,13 +812,14 @@ export function StageLanding() {
       )}
 
       {!selectedSong ? (
-        <div style={{ position: 'relative', zIndex: 50 }}>
+        <div style={{ position: 'relative', zIndex: showResults ? 60 : 50 }}>
           <MargoSearchInput
             value={searchQuery}
             onChange={handleSearchChange}
             loading={searchLoading}
             placeholder="Search by lyric, song or artist…"
             ariaLabel="Search songs on Stage"
+            stackAboveOverlay={showResults}
           />
           <ComposeSearchDropdown
             variant="stage"
@@ -910,7 +911,6 @@ export function StageLanding() {
               <>
                 <MomentExportPreviewFrame shapeId={shapeId}>
                 <StageMomentCard
-                  key={`export-${exportAtmosphereId}-${shapeId}`}
                   lyric={lyric}
                   songTitle={songName}
                   artistName={artistName}

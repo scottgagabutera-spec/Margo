@@ -277,7 +277,6 @@ export function StageMomentCard({
             position: 'relative',
             zIndex: 2,
             height: isShorts ? '100%' : undefined,
-            isolation: showAtmosphere ? 'isolate' : undefined,
           }}
         >
           <p
