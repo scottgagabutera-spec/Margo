@@ -45,6 +45,9 @@ export interface PostLikeForMoment {
   youtubeUrlFromSong?: string | null
   /** Direct external listen URL stored on post (Apple trackViewUrl, etc.) */
   externalListenUrl?: string | null
+  exportShapeId?: MomentShapeId | null
+  exportThemeId?: MomentThemeId | null
+  exportAtmosphereId?: AtmosphereId | null
 }
 
 export interface ComposeLineDraftLike {
@@ -231,9 +234,9 @@ export function resolveMargoMomentFromPost(
     emotion: post.emotion ?? null,
     author: options.author ?? author,
     postId: options.postId ?? post.id ?? null,
-    themeId: options.themeId ?? DEFAULT_MOMENT_THEME_ID,
-    shapeId: options.shapeId ?? DEFAULT_MOMENT_SHAPE_ID,
-    exportAtmosphereId: options.exportAtmosphereId,
+    themeId: options.themeId ?? post.exportThemeId ?? DEFAULT_MOMENT_THEME_ID,
+    shapeId: options.shapeId ?? post.exportShapeId ?? DEFAULT_MOMENT_SHAPE_ID,
+    exportAtmosphereId: options.exportAtmosphereId ?? post.exportAtmosphereId ?? undefined,
     seedKey,
     status: options.status ?? postStatusToMomentStatus(post.status),
   }

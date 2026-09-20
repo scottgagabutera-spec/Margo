@@ -27,6 +27,9 @@ const MOMENT_POST_SELECT = `
   snippet_start_sec,
   snippet_end_sec,
   external_listen_url,
+  export_shape_id,
+  export_theme_id,
+  export_atmosphere_id,
   profiles:author_profile_id ( username, avatar_url, display_name ),
   songs:song_id (
     audio_url,
@@ -97,6 +100,9 @@ function mapRowToPostLike(row: Record<string, unknown>): PostLikeForMoment {
     spotifyUrl: (songRecord?.spotify_url as string) ?? null,
     youtubeUrlFromSong: (songRecord?.youtube_url as string) ?? null,
     externalListenUrl: (row.external_listen_url as string) ?? null,
+    exportShapeId: (row.export_shape_id as PostLikeForMoment['exportShapeId']) ?? null,
+    exportThemeId: (row.export_theme_id as PostLikeForMoment['exportThemeId']) ?? null,
+    exportAtmosphereId: (row.export_atmosphere_id as PostLikeForMoment['exportAtmosphereId']) ?? null,
     lines: mapPostLinesRows(row.post_lines as Parameters<typeof mapPostLinesRows>[0]),
   }
 }

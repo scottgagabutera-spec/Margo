@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { ChevronRightIcon } from '@/components/icons'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { MomentExportCustomizeBar } from '@/components/moment-export-customize-bar'
@@ -51,6 +52,7 @@ import {
   toastMomentShareFailed,
   toastMomentVideoSaved,
 } from '@/lib/moment-export/moment-export-toasts'
+import { savePostExportPrefsClient } from '@/lib/promote/client-export-prefs'
 
 interface MomentShareStudioProps {
   moment?: MargoMoment | null
@@ -70,6 +72,8 @@ interface MomentShareStudioProps {
   onShareMenuOpen?: () => void
   onShared?: () => void
   onExported?: () => void
+  /** Active verified artist viewing their own persisted Moment */
+  enablePromote?: boolean
 }
 
 export function MomentShareStudio({
@@ -89,7 +93,9 @@ export function MomentShareStudio({
   onShareMenuOpen,
   onShared,
   onExported,
+  enablePromote = false,
 }: MomentShareStudioProps) {
+  const router = useRouter()
   const [cardThemeId, setCardThemeId] = useState<StageCardThemeId>('gold')
   const [exportAtmosphereId, setExportAtmosphereId] = useState<AtmosphereId>('still')
   const [shapeId, setShapeId] = useState<MomentShapeId>('square')
@@ -176,12 +182,24 @@ export function MomentShareStudio({
   const hasVisualLoopExport = exportMoment ? momentUsesVisualLoopExport(exportMoment) : false
   const canClipExport = hasSnippet || hasVisualLoopExport
 
+  const persistExportPrefs = useCallback(() => {
+    if (!resolvedPostId) return
+    savePostExportPrefsClient({
+      postId: resolvedPostId,
+      exportShapeId: shapeId,
+      exportThemeId: cardThemeId,
+      exportAtmosphereId,
+    })
+  }, [resolvedPostId, shapeId, cardThemeId, exportAtmosphereId])
+
   useEffect(() => {
     setExportVibeLabel(momentProp?.vibeLabel ?? vibeLabel ?? null)
     const tid = momentProp?.themeId
     const stageTheme: StageCardThemeId =
       tid === 'blush' || tid === 'sage' || tid === 'dusk' || tid === 'gold' ? tid : 'gold'
     setCardThemeId(stageTheme)
+    if (momentProp?.shapeId) setShapeId(momentProp.shapeId)
+    if (momentProp?.exportAtmosphereId) setExportAtmosphereId(momentProp.exportAtmosphereId)
     setCanShareImg(canShareImageFiles())
     setCanShareVid(canShareVideoFiles())
     let cancelled = false
@@ -191,7 +209,7 @@ export function MomentShareStudio({
       if (cap.reason) setVideoUnavailableHint(cap.reason)
     })
     return () => { cancelled = true }
-  }, [momentProp?.vibeLabel, momentProp?.themeId, vibeLabel])
+  }, [momentProp?.vibeLabel, momentProp?.themeId, momentProp?.shapeId, momentProp?.exportAtmosphereId, vibeLabel])
 
   useEffect(() => () => {
     videoAbortRef.current?.abort()
@@ -233,7 +251,8 @@ export function MomentShareStudio({
     setExportBusy(true)
     try {
       await saveMargoMomentImage(exportMoment)
-      void recordCardExport({ postId: resolvedPostId, theme: cardThemeId, shape: 'square' })
+      persistExportPrefs()
+      void recordCardExport({ postId: resolvedPostId, theme: cardThemeId, shape: shapeId })
       toastMomentImageSaved()
       onExported?.()
     } catch {
@@ -241,7 +260,7 @@ export function MomentShareStudio({
     } finally {
       setExportBusy(false)
     }
-  }, [isDualCard, renderDualCanvas, song, parentSong, exportMoment, resolvedPostId, cardThemeId, onExported])
+  }, [isDualCard, renderDualCanvas, song, parentSong, exportMoment, resolvedPostId, cardThemeId, shapeId, persistExportPrefs, onExported])
 
   const shareImage = useCallback(async () => {
     setShareBusy(true)
@@ -362,6 +381,7 @@ export function MomentShareStudio({
       try {
         const result = await triggerFileDownload(file)
         if (result !== 'failed') {
+          persistExportPrefs()
           toastMomentVideoSaved(result)
           setMediaReadySheet(null)
           onExported?.()
@@ -386,7 +406,30 @@ export function MomentShareStudio({
     } finally {
       setShareBusy(false)
     }
-  }, [mediaReadySheet, onExported, onShared])
+  }, [mediaReadySheet, onExported, onShared, persistExportPrefs])
+
+  const [promoteBusy, setPromoteBusy] = useState(false)
+  const promoteToYouTube = useCallback(async () => {
+    if (!resolvedPostId || !enablePromote) return
+    persistExportPrefs()
+    setPromoteBusy(true)
+    try {
+      const res = await fetch('/api/promote/queue', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: resolvedPostId }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || 'Could not queue Moment')
+      const suffix = body.initialStatus === 'approved' ? `?autopublish=${body.queueId}` : ''
+      router.push(`/studio/promote${suffix}`)
+    } catch (err) {
+      toastMomentExportFailed('video', err instanceof Error ? err.message : undefined)
+    } finally {
+      setPromoteBusy(false)
+    }
+  }, [resolvedPostId, enablePromote, persistExportPrefs, router])
 
   const saveItems: MomentActionMenuItem[] = isDualCard
     ? buildMomentExportActionItems({ onExportImage: saveImage, showFormats: false })
@@ -473,6 +516,36 @@ export function MomentShareStudio({
             shapeId={shapeId}
             onShapeChange={setShapeId}
           />
+          {enablePromote && resolvedPostId && !isDualCard && (
+            <button
+              type="button"
+              disabled={promoteBusy || shapeId !== 'vertical'}
+              onClick={() => { void promoteToYouTube() }}
+              style={{
+                width: '100%',
+                marginTop: '12px',
+                padding: '12px 16px',
+                borderRadius: '999px',
+                border: '1px solid var(--gold-border)',
+                background: 'var(--gold-faint)',
+                color: 'var(--gold)',
+                fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
+                fontSize: '0.72rem',
+                fontWeight: 600,
+                letterSpacing: '0.5px',
+                textTransform: 'uppercase',
+                cursor: promoteBusy || shapeId !== 'vertical' ? 'not-allowed' : 'pointer',
+                opacity: shapeId !== 'vertical' ? 0.55 : 1,
+              }}
+            >
+              {promoteBusy ? 'Queuing…' : 'Promote to YouTube'}
+            </button>
+          )}
+          {enablePromote && shapeId !== 'vertical' && (
+            <p style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center' }}>
+              Switch to Shorts (9:16) to promote on YouTube.
+            </p>
+          )}
         </>
       ) : null}
     </>
