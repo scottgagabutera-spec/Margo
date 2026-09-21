@@ -16,7 +16,7 @@ import { useAuthGate } from '@/components/supabase-auth-provider'
 import { PostCard } from '@/components/post-card'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { BackButton } from '@/components/back-button'
-import { ComposeReadyPreview } from '@/components/compose-ready-preview'
+import { ComposeReadyPreview, type ComposeReadyLineDraft } from '@/components/compose-ready-preview'
 import { MomentShareStudio } from '@/components/moment-share-studio'
 import { MargoSheet } from '@/components/margo-sheet'
 import { useRouter } from 'next/navigation'
@@ -640,6 +640,28 @@ function LyricBackContent() {
     externalListenUrl: selectedSong?.externalListenUrl ?? null,
   }], [lyric, songName, artistName, linkedSongId, selectedSong, snippetStart, snippetEnd])
 
+  const parentDrafts = useMemo<ComposeReadyLineDraft[]>(() => {
+    if (!respondingTo) return []
+    const lines = resolveMomentLines(respondingTo)
+    const fallbackSong = respondingTo.knowledge?.song || ''
+    const fallbackArtist = respondingTo.knowledge?.artist || ''
+    const mapped = lines.map((line) => ({
+      lyric: line.text || '',
+      songName: (line.songTitle || fallbackSong).trim(),
+      artistName: (line.artistName || fallbackArtist).trim(),
+      linkedSongId: line.songId ?? respondingTo.songId ?? null,
+      linkedAudioUrl: line.audioUrl ?? respondingTo.audioUrl ?? null,
+      artwork: line.artworkUrl ?? respondingTo.knowledge?.artwork ?? null,
+      snippetStart: line.snippetStart ?? respondingTo.snippetStart ?? null,
+      snippetEnd: line.snippetEnd ?? respondingTo.snippetEnd ?? null,
+      source: (line.songId || respondingTo.songId) ? 'margo' : null,
+      externalListenUrl: respondingTo.youtubeMeta?.youtubeUrl ?? null,
+    }))
+    return mapped.filter((d) => d.lyric.trim() && d.songName.trim() && d.artistName.trim())
+  }, [respondingTo])
+
+  const showConversation = step === 4 && parentDrafts.length > 0
+
   const exportMoment = useMemo(() => resolveMargoMomentFromComposeDrafts(readyDrafts, {
     vibeLabel: selectedVibe ? VIBE_LABELS[selectedVibe] : null,
     emotion: selectedVibe ? selectedVibe.toLowerCase() : null,
@@ -672,8 +694,9 @@ function LyricBackContent() {
           <BackButton fallbackHref={respondingToId ? `/post/${respondingToId}` : '/feed'} />
         </div>
 
-        {/* ── Responding To — tier-1 style, gold accent ─────── */}
+        {/* ── Responding To — hidden on the Stage conversation ─ */}
         <div style={{
+          display: showConversation ? 'none' : 'block',
           background: 'rgba(232,197,71,0.04)',
           border: '1px solid rgba(232,197,71,0.22)',
           borderRadius: '20px', padding: '20px',
@@ -1025,6 +1048,18 @@ function LyricBackContent() {
               suggestedVibeLabel={suggestedVibe ? VIBE_LABELS[suggestedVibe] : null}
               emotionLoading={emotionLoading}
               onVibeSelect={handleVibeLabelSelect}
+              inReplyTo={parentDrafts.length > 0 ? {
+                drafts: parentDrafts,
+                vibeLabel: parentVibeLabel,
+                byline: respondingTo ? (
+                  <AuthorMeta
+                    authorUid={respondingTo.authorUid}
+                    fallbackName={respondingTo.username}
+                    size="compact"
+                    handlePrefix="by "
+                  />
+                ) : null,
+              } : null}
             />
             <div
               style={{
