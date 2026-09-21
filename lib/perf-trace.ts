@@ -15,15 +15,6 @@ export function perfRequested(request?: Request): boolean {
   }
 }
 
-export function clientPerfEnabled(): boolean {
-  if (typeof window === 'undefined') return false
-  try {
-    return new URLSearchParams(window.location.search).get('perf') === '1'
-  } catch {
-    return false
-  }
-}
-
 export function nowMs(): number {
   return typeof performance !== 'undefined' && typeof performance.now === 'function'
     ? performance.now()

@@ -41,10 +41,6 @@ export function toastMomentShared(): void {
   quietToast('Shared')
 }
 
-export function toastMomentLinkCopied(): void {
-  quietToast('Copied')
-}
-
 export function toastMomentExportFailed(kind: 'image' | 'video', detail?: string): void {
   if (kind === 'video' && detail?.includes('audio')) {
     toast.error("Couldn't load audio for this Moment. Try again in a moment.")

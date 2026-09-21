@@ -626,35 +626,6 @@ function drawRoundedRectPath(
   ctx.closePath()
 }
 
-/**
- * Stage Moment card — uses shared resolveStageCardLayout + renderStageCardFrame.
- * Content-hugging height at STAGE_CARD_EXPORT_WIDTH (not a square poster).
- */
-export async function measureStageMomentCardHeight(
-  lines: NormalizedLine[],
-  vibeLabel: string | null | undefined,
-  width = STAGE_CARD_EXPORT_WIDTH,
-): Promise<number> {
-  if (typeof document === 'undefined') return Math.round(width * 0.72)
-  await waitForFonts()
-  const canvas = document.createElement('canvas')
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return Math.round(width * 0.72)
-  const line = lines[0]
-  if (!line) return Math.round(width * 0.72)
-  const geist = resolveGeistFontFamily()
-  const layout = resolveStageCardLayout({
-    lyric: line.lyric,
-    songTitle: line.songTitle,
-    artistName: line.artistName,
-    artworkUrl: line.artworkUrl,
-    vibeLabel,
-    outputWidthPx: width,
-    includeVibePill: !!vibeLabel,
-  }, buildCanvasTextMeasure(ctx), geist)
-  return layout.outputHeight
-}
-
 async function renderStageMomentCardToCanvas(
   canvas: HTMLCanvasElement,
   options: RenderMomentOptions,
