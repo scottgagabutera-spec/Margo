@@ -189,25 +189,53 @@ export default function EditProfilePage() {
   }
 
   return (
-    <main style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
-      <div style={{ position: 'fixed', top: '20%', left: '20%', width: '320px', height: '320px', background: 'var(--gold-glow)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
-
-      <div style={{ paddingTop: 'calc(var(--nav-height, 72px) + 8px)', paddingBottom: 'var(--margo-page-padding-bottom)', paddingLeft: '24px', paddingRight: '24px' }}>
+    <main style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+      <div style={{ paddingTop: 'calc(var(--nav-height, 72px) + 8px)', paddingBottom: 'var(--margo-page-padding-bottom)', paddingLeft: '20px', paddingRight: '20px' }}>
         <div style={{ maxWidth: '560px', margin: '0 auto' }}>
-          <h1 style={{
-            fontFamily: font,
-            fontSize: TYPE.label,
-            fontWeight: 700,
-            letterSpacing: '0.16em',
-            textTransform: 'uppercase',
-            color: 'var(--text-muted)',
-            margin: '0 0 20px',
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+            minHeight: 'var(--margo-touch-min)',
+            margin: '0 0 12px',
           }}>
-            Edit profile
-          </h1>
+            <h1 style={{
+              fontFamily: font,
+              fontSize: TYPE.label,
+              fontWeight: 700,
+              letterSpacing: '0.16em',
+              textTransform: 'uppercase',
+              color: 'var(--text-muted)',
+              margin: 0,
+            }}>
+              Edit profile
+            </h1>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              style={{
+                minHeight: 'var(--margo-touch-min)',
+                padding: '0 4px',
+                background: 'none',
+                border: 'none',
+                cursor: saving ? 'not-allowed' : 'pointer',
+                fontFamily: font,
+                fontSize: TYPE.label,
+                fontWeight: 700,
+                letterSpacing: '0.16em',
+                textTransform: 'uppercase',
+                color: 'var(--gold)',
+                opacity: saving ? 0.7 : 1,
+              }}
+            >
+              {saving ? 'Saving' : 'Save'}
+            </button>
+          </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
               <AvatarUpload
                 currentAvatarUrl={avatarUrl ?? identity.avatarUrl ?? null}
                 displayName={displayName || identity.displayName || ''}
@@ -227,7 +255,7 @@ export default function EditProfilePage() {
             </div>
 
             <div>
-              <label style={labelStyle}>Display Name</label>
+              <label style={labelStyle}>Name</label>
               <input
                 type="text"
                 value={displayName}
@@ -256,51 +284,40 @@ export default function EditProfilePage() {
                 value={bio}
                 onChange={e => setBio(e.target.value.slice(0, 160))}
                 rows={3}
-                placeholder="Tell people what Margo means to you..."
                 style={{ ...inputStyle, height: 'auto', padding: '14px 16px', resize: 'none', lineHeight: 1.5 }}
               />
-              <p style={{
-                fontFamily: font, fontSize: TYPE.label, color: 'var(--text-muted)',
-                textAlign: 'right', marginTop: '6px',
-              }}>
-                {bio.length}/160
-              </p>
             </div>
 
-            {identity.isArtist && (
-              <div>
-                <label style={labelStyle}>Social &amp; streaming</label>
-                {(['social', 'streaming', 'hub'] as const).map((group) => (
-                  <div key={group} style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: group === 'hub' ? 0 : '16px' }}>
-                    {ARTIST_LINK_FIELDS.filter((f) => f.group === group).map((field) => (
-                      <div key={field.key}>
-                        <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>{field.label}</label>
-                        <input
-                          type="text"
-                          value={artistLinkDraft[field.key] || ''}
-                          onChange={(e) => setArtistLinkDraft((prev) => ({ ...prev, [field.key]: e.target.value }))}
-                          placeholder={field.placeholder}
-                          style={inputStyle}
-                          autoComplete="off"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ))}
+            {identity.isArtist && ARTIST_LINK_FIELDS.map((field) => (
+              <div key={field.key}>
+                <label style={labelStyle}>{field.label}</label>
+                <input
+                  type="text"
+                  value={artistLinkDraft[field.key] || ''}
+                  onChange={(e) => setArtistLinkDraft((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                  style={inputStyle}
+                  autoComplete="off"
+                />
               </div>
-            )}
+            ))}
 
-            <div style={{ background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '16px', padding: '20px' }}>
-              <label style={{ ...labelStyle, marginBottom: '8px' }}>Signature lyric</label>
+            <div>
+              <label style={labelStyle}>Signature</label>
               <textarea
                 value={lyric}
                 onChange={e => setLyric(e.target.value.slice(0, 140))}
                 rows={2}
-                placeholder="The lyric that says it best..."
                 style={{
-                  width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none',
-                  fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--gold)',
-                  lineHeight: 1.5, marginBottom: '16px', boxSizing: 'border-box',
+                  ...inputStyle,
+                  height: 'auto',
+                  padding: '14px 16px',
+                  resize: 'none',
+                  fontFamily: lyricFont,
+                  fontStyle: 'italic',
+                  fontSize: TYPE.lyric,
+                  color: 'var(--gold)',
+                  lineHeight: 1.5,
+                  marginBottom: '12px',
                 }}
               />
               <SignatureSongPicker
@@ -319,11 +336,11 @@ export default function EditProfilePage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
                   <input
                     type="text" value={song} onChange={e => { setSong(e.target.value); setCatalogSongId(null) }} placeholder="Song"
-                    style={{ ...inputStyle, background: 'var(--surface)', height: '44px' }}
+                    style={inputStyle}
                   />
                   <input
                     type="text" value={artist} onChange={e => { setArtist(e.target.value); setCatalogSongId(null) }} placeholder="Artist"
-                    style={{ ...inputStyle, background: 'var(--surface)', height: '44px' }}
+                    style={inputStyle}
                   />
                 </div>
               )}
@@ -331,16 +348,22 @@ export default function EditProfilePage() {
 
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '18px 20px',
+              minHeight: 'var(--margo-touch-min)',
             }}>
-              <div>
-                <p style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text)' }}>Private</p>
-              </div>
+              <p style={{
+                fontFamily: font,
+                fontSize: TYPE.label,
+                fontWeight: 700,
+                letterSpacing: '0.16em',
+                textTransform: 'uppercase',
+                color: 'var(--text-muted)',
+                margin: 0,
+              }}>Private</p>
               <button
                 type="button"
                 role="switch"
                 aria-checked={isPrivate}
-                aria-label="Toggle private profile"
+                aria-label="Private"
                 onClick={() => setIsPrivateLocal(v => !v)}
                 style={{
                   position: 'relative', width: '52px', height: 'var(--margo-touch-min)',
@@ -364,32 +387,6 @@ export default function EditProfilePage() {
             {error && (
               <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', textAlign: 'center' }}>{error}</p>
             )}
-
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '8px' }}>
-              <button
-                onClick={() => router.push(`/profile/${identity.username}`)}
-                style={{
-                  minHeight: 'var(--margo-touch-min)', padding: '0 24px',
-                  display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                  background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border-hi)',
-                  borderRadius: '50px', fontFamily: font, fontWeight: 600, fontSize: TYPE.label,
-                  letterSpacing: '1.2px', textTransform: 'uppercase', cursor: 'pointer',
-                }}
-              >Cancel</button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                style={{
-                  minHeight: 'var(--margo-touch-min)', padding: '0 32px',
-                  display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                  background: 'var(--gold)', color: 'var(--bg)', border: 'none',
-                  borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: TYPE.label,
-                  letterSpacing: '1.2px', textTransform: 'uppercase', cursor: saving ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 6px 28px var(--gold-glow)', opacity: saving ? 0.7 : 1,
-                  transition: 'opacity 150ms ease',
-                }}
-              >{saving ? 'Saving' : 'Save'}</button>
-            </div>
           </div>
         </div>
       </div>

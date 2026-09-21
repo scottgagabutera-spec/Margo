@@ -168,17 +168,6 @@ export function SignatureSongPicker({
 
   return (
     <div>
-      <p style={{
-        fontFamily: font,
-        fontSize: TYPE.label,
-        fontWeight: 700,
-        letterSpacing: '0.16em',
-        textTransform: 'uppercase',
-        color: 'var(--text-muted)',
-        margin: '0 0 8px',
-      }}>
-        Song on Margo
-      </p>
       {selectedLabel ? (
         <>
         <div style={{
@@ -269,8 +258,8 @@ export function SignatureSongPicker({
           <MargoSearchInput
             value={query}
             onChange={setQuery}
-            placeholder="Search Margo songs"
-            ariaLabel="Search Margo catalog for a signature song"
+            placeholder="Search songs"
+            ariaLabel="Search songs"
             loading={loading}
           />
           {hits.length > 0 && (

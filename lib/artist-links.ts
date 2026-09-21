@@ -19,19 +19,17 @@ export type ArtistLinkKey =
 export const ARTIST_LINK_FIELDS: {
   key: ArtistLinkKey
   label: string
-  group: 'social' | 'streaming' | 'hub'
-  placeholder: string
 }[] = [
-  { key: 'instagram', label: 'Instagram', group: 'social', placeholder: 'instagram.com/you or @you' },
-  { key: 'tiktok', label: 'TikTok', group: 'social', placeholder: 'tiktok.com/@you or @you' },
-  { key: 'youtube', label: 'YouTube', group: 'social', placeholder: 'youtube.com/@you or @you' },
-  { key: 'x', label: 'X', group: 'social', placeholder: 'x.com/you or @you' },
-  { key: 'spotify', label: 'Spotify', group: 'streaming', placeholder: 'open.spotify.com/artist/…' },
-  { key: 'appleMusic', label: 'Apple Music', group: 'streaming', placeholder: 'music.apple.com/artist/…' },
-  { key: 'soundcloud', label: 'SoundCloud', group: 'streaming', placeholder: 'soundcloud.com/you' },
-  { key: 'audiomack', label: 'Audiomack', group: 'streaming', placeholder: 'audiomack.com/you' },
-  { key: 'boomplay', label: 'Boomplay', group: 'streaming', placeholder: 'boomplay.com/artists/…' },
-  { key: 'linktree', label: 'Linktree', group: 'hub', placeholder: 'linktr.ee/you or @you' },
+  { key: 'instagram', label: 'Instagram' },
+  { key: 'tiktok', label: 'TikTok' },
+  { key: 'youtube', label: 'YouTube' },
+  { key: 'x', label: 'X' },
+  { key: 'spotify', label: 'Spotify' },
+  { key: 'appleMusic', label: 'Apple Music' },
+  { key: 'soundcloud', label: 'SoundCloud' },
+  { key: 'audiomack', label: 'Audiomack' },
+  { key: 'boomplay', label: 'Boomplay' },
+  { key: 'linktree', label: 'Linktree' },
 ]
 
 const HANDLE_HOST: Partial<Record<ArtistLinkKey, (h: string) => string>> = {

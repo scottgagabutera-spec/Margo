@@ -1,19 +1,22 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import { ArrowLeftIcon } from '@/components/icons'
+import { canPopInAppHistory } from '@/components/nav-back'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { UI_FONT } from '@/lib/fonts'
 
 /**
- * In-app back for depth routes. Chrome Back is a prefetched Link to the
- * logical parent so the tap is immediate — not router.back() waiting on RSC.
+ * In-app back for depth routes. Chrome Back pops history immediately when
+ * this tab actually has somewhere to go — restoring the previous page from
+ * cache instead of remounting the parent. The Link href is only the
+ * no-history fallback (new tab / first entry).
  * Return true from `onBack` to handle the press in-page without leaving.
  */
 export function BackButton({
   fallbackHref,
   label = 'Back',
   onBack,
-  preferHistory = false,
+  preferHistory,
   variant = 'page',
 }: {
   fallbackHref?: string
@@ -48,10 +51,20 @@ export function BackButton({
     return (
       <PendingNavLink
         href={dest}
+        prefetch
         indicator="subtle"
         aria-label={label}
         onClick={(event) => {
-          if (onBack?.() === true) event.preventDefault()
+          if (onBack?.() === true) {
+            event.preventDefault()
+            return
+          }
+          // Default chrome Back pops when possible. Opt out with preferHistory={false}
+          // (Studio always returns to profile / You, not the previous screen).
+          if (preferHistory !== false && canPopInAppHistory()) {
+            event.preventDefault()
+            window.history.back()
+          }
         }}
         style={chromeStyle}
       >

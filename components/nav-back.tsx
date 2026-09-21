@@ -1,6 +1,45 @@
 'use client'
 
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
+
+/** Client-side pushes in this tab. 0 on a fresh load / new tab. */
+let inAppDepth = 0
+
+export function canPopInAppHistory() {
+  return inAppDepth > 0
+}
+
+function NavHistoryTracker() {
+  const pathname = usePathname()
+  const prev = useRef<string | null>(null)
+  const popped = useRef(false)
+
+  useEffect(() => {
+    const onPop = () => {
+      popped.current = true
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  useEffect(() => {
+    if (prev.current == null) {
+      prev.current = pathname
+      return
+    }
+    if (prev.current === pathname) return
+    if (popped.current) {
+      popped.current = false
+      inAppDepth = Math.max(0, inAppDepth - 1)
+    } else {
+      inAppDepth += 1
+    }
+    prev.current = pathname
+  }, [pathname])
+
+  return null
+}
 
 export type NavBackConfig = {
   fallbackHref?: string
@@ -68,6 +107,7 @@ export function NavBackProvider({ children }: { children: React.ReactNode }) {
   const [override, setOverride] = useState<NavBackConfig | null>(null)
   return (
     <NavBackOverrideContext.Provider value={{ override, setOverride }}>
+      <NavHistoryTracker />
       {children}
     </NavBackOverrideContext.Provider>
   )
