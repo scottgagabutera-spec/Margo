@@ -14,10 +14,9 @@ import {
   SignupConsentIntro,
   TermsCompletionIntro,
 } from '@/components/signup-legal-notice'
-import { UI_FONT } from '@/lib/fonts'
+import { TYPE, UI_FONT } from '@/lib/fonts'
 import { LoadingRing } from '@/components/loading-ring'
 
-const lora = 'var(--font-lora), serif'
 const ui = UI_FONT
 
 export type AuthMode = 'signup' | 'signin'
@@ -62,7 +61,7 @@ function friendlyError(e: { message?: string }): string {
 const fieldLabelStyle: React.CSSProperties = {
   display: 'block',
   fontFamily: ui,
-  fontSize: '0.6rem',
+  fontSize: TYPE.label,
   color: 'var(--text-muted)',
   textTransform: 'uppercase',
   letterSpacing: '1.5px',
@@ -124,7 +123,7 @@ function AuthTextField({
           borderRadius: '12px',
           color: 'var(--text)',
           fontFamily: ui,
-          fontSize: '0.95rem',
+          fontSize: TYPE.body,
           letterSpacing: '-0.01em',
           outline: 'none',
           boxSizing: 'border-box',
@@ -149,7 +148,7 @@ const oauthBtnBase: React.CSSProperties = {
   gap: '8px',
   borderRadius: '12px',
   fontFamily: ui,
-  fontSize: '0.8rem',
+  fontSize: TYPE.secondary,
   fontWeight: 500,
   cursor: 'pointer',
   boxSizing: 'border-box',
@@ -166,7 +165,7 @@ const primaryBtnStyle: React.CSSProperties = {
   borderRadius: '50px',
   fontFamily: ui,
   fontWeight: 600,
-  fontSize: '0.78rem',
+  fontSize: TYPE.meta,
   letterSpacing: '0.2px',
 }
 
@@ -217,10 +216,10 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
     <div style={{ width: '100%' }}>
       <header style={{ marginBottom: '28px', textAlign: 'center' }}>
         <h1 style={{
-          fontFamily: lora,
-          fontSize: '1.55rem',
+          fontFamily: ui,
+          fontSize: TYPE.pageTitle,
           color: 'var(--text)',
-          fontWeight: 400,
+          fontWeight: 600,
           margin: '0 0 14px',
         }}>
           Finish creating your account
@@ -242,7 +241,7 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
           {(error || externalError) === CONSENT_REQUIRED_MESSAGE
             ? <ConsentRequiredAlert message={CONSENT_REQUIRED_MESSAGE} />
             : (
-              <p role="alert" style={{ fontFamily: ui, fontSize: '0.78rem', color: '#ff7070', margin: 0, lineHeight: 1.45 }}>
+              <p role="alert" style={{ fontFamily: ui, fontSize: TYPE.secondary, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.45 }}>
                 {error || externalError}
               </p>
             )}
@@ -375,17 +374,17 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
       <div style={{ width: '100%' }}>
         <header style={{ marginBottom: '22px', textAlign: 'center' }}>
           <h1 style={{
-            fontFamily: lora,
-            fontSize: '1.55rem',
+            fontFamily: ui,
+            fontSize: TYPE.pageTitle,
             color: 'var(--text)',
-            fontWeight: 400,
+            fontWeight: 600,
             margin: '0 0 14px',
           }}>
             Check your email to confirm your account
           </h1>
           <p style={{
             fontFamily: ui,
-            fontSize: '0.88rem',
+            fontSize: TYPE.secondary,
             lineHeight: 1.5,
             color: 'var(--text-secondary)',
             margin: 0,
@@ -421,8 +420,8 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
     return (
       <p role="alert" style={{
         fontFamily: ui,
-        fontSize: '0.78rem',
-        color: '#ff7070',
+        fontSize: TYPE.meta,
+        color: 'var(--text-secondary)',
         margin: 0,
         lineHeight: 1.45,
       }}>
@@ -435,10 +434,10 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
     <div style={{ width: '100%' }}>
       <header style={{ marginBottom: isSignup ? '18px' : '28px', textAlign: 'center' }}>
         <h1 style={{
-          fontFamily: lora,
-          fontSize: '1.55rem',
+          fontFamily: ui,
+          fontSize: TYPE.pageTitle,
           color: 'var(--text)',
-          fontWeight: 400,
+          fontWeight: 600,
           margin: 0,
         }}>
           {isSignup ? 'Create your account' : 'Sign in'}
@@ -518,7 +517,7 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '0 0 20px' }}>
         <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.07)' }} />
-        <span style={{ fontFamily: ui, fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>or email</span>
+        <span style={{ fontFamily: ui, fontSize: TYPE.label, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.16em' }}>or email</span>
         <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.07)' }} />
       </div>
 
@@ -568,7 +567,7 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
       </div>
 
       {onSwitchMode ? (
-        <p style={{ textAlign: 'center', marginTop: '22px', fontFamily: ui, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+        <p style={{ textAlign: 'center', marginTop: '22px', fontFamily: ui, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
           {isSignup ? 'Already have an account? ' : 'New to Margo? '}
           <button
             type="button"
@@ -579,7 +578,7 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
               color: 'var(--gold)',
               cursor: 'pointer',
               fontFamily: ui,
-              fontSize: '0.78rem',
+              fontSize: TYPE.meta,
               textDecoration: 'underline',
               padding: 0,
             }}

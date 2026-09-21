@@ -1089,3 +1089,19 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   }
 }
 
+/* Stories dock (mobile) replaces the top-of-feed tray. Desktop keeps the tray. */
+@media (max-width: 639px) {
+  .margo-stories-dock {
+    display: flex !important;
+    flex-direction: column;
+  }
+  .margo-story-ring-tray {
+    display: none !important;
+  }
+}
+@media (min-width: 640px) {
+  .margo-stories-dock {
+    display: none !important;
+  }
+}
+

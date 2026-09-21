@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { createClient, signOutBrowser } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { SignInLink } from '@/components/signin-link'
-import { UI_FONT } from '@/lib/fonts'
+import { TYPE, UI_FONT } from '@/lib/fonts'
 import { PromoteSettingsSection } from '@/components/promote/promote-settings-section'
 
 const supabase = createClient()
@@ -36,6 +36,7 @@ interface ProfileRow {
   is_artist: boolean
   artist_status?: string | null
   is_private: boolean
+  follow_lists_private: boolean
   who_can_message: WhoCanMessage
   deactivated_at: string | null
   settings: { notifications?: Partial<NotificationPrefs> } | null
@@ -51,7 +52,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     <div
       style={{
         fontFamily: font,
-        fontSize: '0.6rem',
+        fontSize: TYPE.label,
         fontWeight: 700,
         letterSpacing: '2px',
         textTransform: 'uppercase',
@@ -131,7 +132,7 @@ function Toggle({
             width: 20,
             height: 20,
             borderRadius: '50%',
-            background: checked ? 'var(--bg)' : 'var(--text-2)',
+            background: checked ? 'var(--bg)' : 'var(--text-secondary)',
             transform: 'translateZ(0)',
             transition: 'left 150ms ease',
           }}
@@ -194,7 +195,7 @@ function TierTwoButton({
       style={{
         fontFamily: font,
         fontWeight: 600,
-        fontSize: '0.6rem',
+        fontSize: TYPE.label,
         textTransform: 'uppercase',
         letterSpacing: '1px',
         padding: '11px 16px',
@@ -202,7 +203,7 @@ function TierTwoButton({
         minHeight: 44,
         border: '1px solid var(--border)',
         background: 'var(--surface-2)',
-        color: 'var(--text-2)',
+        color: 'var(--text-secondary)',
         cursor: disabled ? 'default' : 'pointer',
         opacity: disabled ? 0.5 : 1,
       }}
@@ -248,7 +249,7 @@ export default function AccountSettingsPage() {
 
       const { data: profileRow } = await supabase
         .from('profiles')
-        .select('id, username, is_artist, artist_status, is_private, who_can_message, deactivated_at, settings')
+        .select('id, username, is_artist, artist_status, is_private, follow_lists_private, who_can_message, deactivated_at, settings')
         .eq('id', user!.id)
         .single()
 
@@ -331,7 +332,7 @@ export default function AccountSettingsPage() {
     setProfile({ ...profile, settings: nextSettings })
   }
 
-  async function savePrivacy(patch: Partial<Pick<ProfileRow, 'is_private' | 'who_can_message'>>) {
+  async function savePrivacy(patch: Partial<Pick<ProfileRow, 'is_private' | 'who_can_message' | 'follow_lists_private'>>) {
     if (!userId || !profile) return
     const prev = profile
     setSavingSection('privacy')
@@ -411,7 +412,7 @@ export default function AccountSettingsPage() {
             borderRadius: '50px',
             color: 'var(--text-secondary)',
             fontFamily: font,
-            fontSize: '0.6rem',
+            fontSize: TYPE.label,
             letterSpacing: '1px',
             textTransform: 'uppercase',
             textDecoration: 'none',
@@ -451,7 +452,7 @@ export default function AccountSettingsPage() {
         Account Settings
       </h1>
       {saveError ? (
-        <p style={{ fontFamily: font, fontSize: '0.85rem', color: '#ff6060', margin: '-16px 0 24px' }} role="alert">
+        <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', margin: '-16px 0 24px' }} role="alert">
           {saveError}
         </p>
       ) : null}
@@ -459,7 +460,7 @@ export default function AccountSettingsPage() {
       {/* Profile */}
       <Card>
         <SectionLabel>Profile</SectionLabel>
-        <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-2)', marginBottom: '16px' }}>
+        <p style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text-secondary)', marginBottom: '16px' }}>
           Bio, signature lyric, and photo live on your profile edit page.
         </p>
         <Link href="/profile/edit">
@@ -480,7 +481,7 @@ export default function AccountSettingsPage() {
               style={{
                 width: '100%',
                 fontFamily: font,
-                fontSize: '0.95rem',
+                fontSize: TYPE.body,
                 padding: '12px 16px',
                 borderRadius: 12,
                 border: '1px solid var(--border)',
@@ -495,14 +496,14 @@ export default function AccountSettingsPage() {
                 Update Password
               </TierOneButton>
               {passwordStatus && (
-                <span style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-2)' }}>
+                <span style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
                   {passwordStatus}
                 </span>
               )}
             </div>
           </>
         ) : (
-          <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-2)' }}>
+          <p style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text-secondary)' }}>
             You signed in with Google or Discord, so there is no Margo password to change. Manage
             your password with that provider instead.
           </p>
@@ -528,7 +529,7 @@ export default function AccountSettingsPage() {
               borderBottom: '1px solid var(--border)',
             }}
           >
-            <span style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text)' }}>
+            <span style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text)' }}>
               {row.label}
             </span>
             <Toggle
@@ -553,10 +554,10 @@ export default function AccountSettingsPage() {
           }}
         >
           <div>
-            <div style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text)' }}>
+            <div style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text)' }}>
               Private account
             </div>
-            <div style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+            <div style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
               Only accepted followers can see your lyrics
             </div>
           </div>
@@ -567,8 +568,32 @@ export default function AccountSettingsPage() {
           />
         </div>
 
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '10px 0',
+            borderBottom: '1px solid var(--border)',
+          }}
+        >
+          <div>
+            <div style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text)' }}>
+              Private follower lists
+            </div>
+            <div style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
+              Only you can see who follows you and who you follow
+            </div>
+          </div>
+          <Toggle
+            checked={!!profile.follow_lists_private}
+            label="Private follower lists"
+            onChange={(v) => savePrivacy({ follow_lists_private: v })}
+          />
+        </div>
+
         <div style={{ padding: '16px 0 4px' }}>
-          <div style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text)', marginBottom: 10 }}>
+          <div style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text)', marginBottom: 10 }}>
             Who can message you
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -578,7 +603,7 @@ export default function AccountSettingsPage() {
                 onClick={() => savePrivacy({ who_can_message: option })}
                 style={{
                   fontFamily: font,
-                  fontSize: '0.6rem',
+                  fontSize: TYPE.label,
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: '1px',
@@ -587,7 +612,7 @@ export default function AccountSettingsPage() {
                   borderRadius: 50,
                   border: `1px solid ${profile.who_can_message === option ? 'var(--gold-border)' : 'rgba(255,255,255,0.10)'}`,
                   background: profile.who_can_message === option ? 'var(--gold-faint)' : 'rgba(255,255,255,0.05)',
-                  color: profile.who_can_message === option ? 'var(--gold)' : 'var(--text-2)',
+                  color: profile.who_can_message === option ? 'var(--gold)' : 'var(--text-secondary)',
                   cursor: 'pointer',
                 }}
               >
@@ -609,17 +634,17 @@ export default function AccountSettingsPage() {
       <Card>
         <SectionLabel>Artist Status</SectionLabel>
         {profile.is_artist ? (
-          <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--gold)' }}>
+          <p style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--gold)' }}>
             You are a Verified Artist.
           </p>
         ) : application ? (
-          <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-2)' }}>
+          <p style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text-secondary)' }}>
             Your artist application is{' '}
             <span style={{ color: 'var(--text)', fontWeight: 600 }}>{application.status}</span>.
           </p>
         ) : (
           <>
-            <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-2)', marginBottom: 16 }}>
+            <p style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text-secondary)', marginBottom: 16 }}>
               You have not applied as an artist yet.
             </p>
             <Link href="/apply-artist">
@@ -634,10 +659,10 @@ export default function AccountSettingsPage() {
         <SectionLabel>Account</SectionLabel>
 
         <div style={{ marginBottom: 24 }}>
-          <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text)', marginBottom: 4 }}>
+          <p style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text)', marginBottom: 4 }}>
             {profile.deactivated_at ? 'Your account is hidden' : 'Hide your account'}
           </p>
-          <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 16 }}>
+          <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', marginBottom: 16 }}>
             {profile.deactivated_at
               ? 'Your profile is not visible to others. Bring it back anytime.'
               : 'Your profile becomes invisible to everyone but you. Reversible anytime.'}
@@ -648,10 +673,10 @@ export default function AccountSettingsPage() {
         </div>
 
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: 24 }}>
-          <p style={{ fontFamily: font, fontSize: '0.9rem', color: '#ff6060', marginBottom: 4 }}>
+          <p style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text-secondary)', marginBottom: 4 }}>
             Delete your account
           </p>
-          <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 16 }}>
+          <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', marginBottom: 16 }}>
             This permanently removes your profile, messages, and follows. It cannot be undone.
           </p>
           <input
@@ -661,7 +686,7 @@ export default function AccountSettingsPage() {
             style={{
               width: '100%',
               fontFamily: font,
-              fontSize: '0.95rem',
+              fontSize: TYPE.body,
               padding: '12px 16px',
               borderRadius: 12,
               border: '1px solid var(--border)',
@@ -675,7 +700,7 @@ export default function AccountSettingsPage() {
             {deleting ? 'Deleting.' : 'Delete My Account'}
           </TierOneButton>
           {deleteError && (
-            <p style={{ fontFamily: font, fontSize: '0.8rem', color: '#ff6060', marginTop: 12 }}>
+            <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', marginTop: 12 }}>
               {deleteError}
             </p>
           )}

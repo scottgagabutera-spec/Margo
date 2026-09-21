@@ -16,8 +16,11 @@ export interface WarmProfileRow {
   signatureLyric: string | null
   signatureSong: string | null
   signatureArtist: string | null
+  signatureSongId: string | null
   isPrivate: boolean
+  followListsPrivate: boolean
   artistLinks: ArtistApplicationLinks
+  coverUrl: string | null
 }
 
 export interface WarmProfileBundle {
@@ -42,8 +45,11 @@ function mapRow(data: Record<string, unknown>): WarmProfileRow {
     signatureLyric: (data.signature_lyric as string | null) ?? null,
     signatureSong: (data.signature_song as string | null) ?? null,
     signatureArtist: (data.signature_artist as string | null) ?? null,
+    signatureSongId: (data.signature_song_id as string | null) ?? null,
     isPrivate: !!data.is_private,
+    followListsPrivate: !!data.follow_lists_private,
     artistLinks: (links && typeof links === 'object' ? links : {}) as ArtistApplicationLinks,
+    coverUrl: (data.cover_url as string | null) ?? null,
   }
 }
 
@@ -56,7 +62,7 @@ export function peekProfileCache(username: string): WarmProfileBundle | null {
 export async function fetchProfileBundle(username: string): Promise<WarmProfileBundle | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, display_name, is_artist, artist_status, bio, avatar_url, signature_lyric, signature_song, signature_artist, is_private, artist_links')
+    .select('id, username, display_name, is_artist, artist_status, bio, avatar_url, cover_url, signature_lyric, signature_song, signature_artist, signature_song_id, is_private, follow_lists_private, artist_links')
     .eq('username', username)
     .maybeSingle()
 

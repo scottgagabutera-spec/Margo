@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState, useRef } from 'react'
+import { useEffect, useMemo, useState, useRef, type ChangeEvent } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, signOutBrowser } from '@/lib/supabase/client'
@@ -16,14 +16,19 @@ import { SongPreviewSheet, type SongPreviewSeed } from '@/components/song-previe
 import { PostCard } from '@/components/post-card'
 import { CardExportModal } from '@/components/card-export-modal'
 import { resolveMargoMomentFromPost } from '@/lib/moment'
-import { MoreIcon } from '@/components/icons'
+import { MoreIcon, EditIcon, ImagePlusIcon } from '@/components/icons'
 import type { Post } from '@/hooks/usePosts'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
-import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
+import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { ProfileArtistLinks } from '@/components/profile-artist-links'
 import { ProfileImageLightbox } from '@/components/profile-image-lightbox'
 import { peekProfileCache, warmProfile, type WarmProfileRow } from '@/lib/profile-warm'
 import { resolvePublicArtistCredit } from '@/lib/artist-identity'
+import { uploadProfileCover } from '@/components/cover-upload'
+import { PendingNavLink } from '@/components/pending-nav-link'
+import { PlayPauseIcon } from '@/components/play-pause-icon'
+import { playFull, togglePlayPause } from '@/lib/audio-engine'
+import { useIsBuffering, useIsPlaying } from '@/hooks/useAudioEngine'
 
 const supabase = createClient()
 
@@ -37,8 +42,126 @@ const lyricFont = LYRIC_FONT
 const DISCOGRAPHY_PREVIEW_COUNT = 8
 
 const sectionLabelStyle: React.CSSProperties = {
-  fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)',
-  textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '8px',
+  fontFamily: font, fontSize: TYPE.label, fontWeight: 700, color: 'var(--text-muted)',
+  textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: '8px',
+}
+
+const emptyLyricStyle: React.CSSProperties = {
+  fontFamily: lyricFont,
+  fontStyle: 'italic',
+  fontSize: TYPE.lyric,
+  color: 'var(--text-secondary)',
+  lineHeight: 1.5,
+}
+
+const profileStatStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minWidth: '64px',
+  minHeight: 'var(--margo-touch-min)',
+  padding: '4px 12px',
+  textDecoration: 'none',
+  boxSizing: 'border-box',
+  textAlign: 'center',
+}
+
+function ProfileStat({
+  href,
+  count,
+  label,
+  showDivider,
+}: {
+  href?: string
+  count: number | string | null
+  label: string
+  showDivider?: boolean
+}) {
+  const display = typeof count === 'number' ? count.toLocaleString() : (count ?? '—')
+  const style: React.CSSProperties = {
+    ...profileStatStyle,
+    borderRight: showDivider ? '1px solid var(--border)' : 'none',
+  }
+  const inner = (
+    <>
+      <span style={{
+        fontFamily: font,
+        fontSize: TYPE.secondary,
+        fontWeight: 600,
+        color: 'var(--text)',
+        lineHeight: 1,
+        letterSpacing: '-0.02em',
+        fontVariantNumeric: 'tabular-nums',
+      }}>
+        {display}
+      </span>
+      <span style={{
+        fontFamily: font,
+        fontSize: TYPE.label,
+        fontWeight: 600,
+        letterSpacing: '0.14em',
+        textTransform: 'uppercase',
+        color: 'var(--text-muted)',
+        marginTop: '3px',
+      }}>
+        {label}
+      </span>
+    </>
+  )
+  if (href) {
+    return (
+      <PendingNavLink href={href} indicator="overlay" ringSize={22} style={style}>
+        {inner}
+      </PendingNavLink>
+    )
+  }
+  return <span style={style}>{inner}</span>
+}
+
+function SignaturePlayButton({
+  track,
+}: {
+  track: { id: string; title: string; artist: string; artwork: string | null; audioUrl: string }
+}) {
+  const playing = useIsPlaying(track.id)
+  const buffering = useIsBuffering(track.id)
+  return (
+    <button
+      type="button"
+      aria-label={playing ? 'Pause signature song' : 'Play signature song'}
+      onClick={() => {
+        if (playing) {
+          togglePlayPause()
+          return
+        }
+        void playFull({
+          songId: track.id,
+          audioUrl: track.audioUrl,
+          title: track.title,
+          artist: track.artist,
+          artwork: track.artwork,
+          autoplay: true,
+          source: 'feed-tier1',
+        })
+      }}
+      style={{
+        width: 'var(--margo-touch-min)',
+        height: 'var(--margo-touch-min)',
+        borderRadius: '50%',
+        border: '1px solid var(--gold-border)',
+        background: 'var(--gold-faint)',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 0,
+        cursor: 'pointer',
+        flexShrink: 0,
+      }}
+    >
+      <PlayPauseIcon playing={playing} buffering={buffering} size={16} color="var(--gold)" />
+    </button>
+  )
 }
 
 type ProfileData = WarmProfileRow
@@ -59,7 +182,7 @@ type ProfileContentTab = 'lyrics' | 'replays' | 'backs' | 'private'
 export default function ProfilePage({ username: usernameProp }: { username?: string } = {}) {
   const params = useParams<{ username: string }>()
   const router = useRouter()
-  const { user, identity } = useIdentity()
+  const { user, identity, syncCoverUrl } = useIdentity()
   const { application } = useArtistApplication()
   const { isTabActive } = usePrimaryTab()
   const username = (usernameProp || (typeof params.username === 'string' ? params.username : '')).trim()
@@ -79,6 +202,9 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
   const [followStatus, setFollowStatus] = useState<FollowStatus>(null)
   const [followBusy, setFollowBusy] = useState(false)
   const [avatarLightboxOpen, setAvatarLightboxOpen] = useState(false)
+  const [coverLightboxOpen, setCoverLightboxOpen] = useState(false)
+  const [coverBusy, setCoverBusy] = useState(false)
+  const coverInputRef = useRef<HTMLInputElement>(null)
   const [previewSong, setPreviewSong] = useState<SongPreviewSeed | null>(null)
 
   // ── Discography — public, live-only catalog for this profile, if
@@ -89,6 +215,13 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
   const [artistSongs, setArtistSongs] = useState<ArtistSongRow[]>([])
   const [artistSongsLoading, setArtistSongsLoading] = useState(false)
   const [artistStats, setArtistStats] = useState({ totalPlays: 0, totalResonates: 0 })
+  const [signatureTrack, setSignatureTrack] = useState<{
+    id: string
+    title: string
+    artist: string
+    artwork: string | null
+    audioUrl: string
+  } | null>(null)
 
   useEffect(() => {
     if (!username) return
@@ -183,6 +316,35 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
       })
     return () => { active = false }
   }, [profile?.id, profile?.isArtist])
+
+  useEffect(() => {
+    const id = profile?.signatureSongId
+    if (!id) {
+      setSignatureTrack(null)
+      return
+    }
+    let active = true
+    void supabase
+      .from('songs')
+      .select('id, title, artist_display_name, artwork_url, audio_url')
+      .eq('id', id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!active) return
+        if (!data?.audio_url) {
+          setSignatureTrack(null)
+          return
+        }
+        setSignatureTrack({
+          id: data.id,
+          title: data.title,
+          artist: data.artist_display_name,
+          artwork: data.artwork_url,
+          audioUrl: data.audio_url,
+        })
+      })
+    return () => { active = false }
+  }, [profile?.signatureSongId])
 
   const isOwnProfile = !!identity && !!profile && identity.username === profile.username
 
@@ -354,6 +516,25 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
     followStatus === 'pending' ? 'Requested' :
     'Follow'
 
+  const coverUrl = profile?.coverUrl ?? null
+  const hasCover = !!coverUrl
+
+  async function handleCoverFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !user || !profile) return
+    setCoverBusy(true)
+    try {
+      const url = await uploadProfileCover(user.id, file)
+      setProfile({ ...profile, coverUrl: url })
+      syncCoverUrl(url)
+    } catch (err) {
+      console.error('Cover upload failed:', err)
+    } finally {
+      setCoverBusy(false)
+      if (coverInputRef.current) coverInputRef.current.value = ''
+    }
+  }
+
   return (
     <main style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
       <style>{`
@@ -370,7 +551,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
       )}
 
       {!loading && notFound && (
-        <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-secondary)', textAlign: 'center', fontSize: '0.95rem', paddingTop: 'calc(var(--nav-height, 72px) + 88px)' }}>
+        <p style={{ ...emptyLyricStyle, textAlign: 'center', paddingTop: 'calc(var(--nav-height, 72px) + 88px)' }}>
           No one here by that name.
         </p>
       )}
@@ -383,10 +564,10 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
           <div style={{
             border: '1px solid var(--border)', borderRadius: '16px', padding: '24px',
           }}>
-            <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: '4px' }}>
+            <p style={{ ...emptyLyricStyle, marginBottom: '4px' }}>
               This account is private.
             </p>
-            <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', margin: 0 }}>
+            <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', margin: 0 }}>
               Only people they accept can see their profile.
             </p>
           </div>
@@ -395,14 +576,100 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
 
       {!loading && profile && (
         <div>
-          <div style={{
-            height: '160px', width: '100%',
-            marginTop: 'var(--nav-height, 72px)',
-            background: 'linear-gradient(135deg, rgba(232,197,71,0.14), rgba(122,127,214,0.08) 60%, var(--bg))',
-          }} />
+          {hasCover ? (
+            <div style={{
+              position: 'relative',
+              width: '100%',
+              height: '148px',
+              marginTop: 'var(--nav-height, 72px)',
+              background: 'var(--surface-2)',
+              overflow: 'hidden',
+            }}>
+              <button
+                type="button"
+                onClick={() => setCoverLightboxOpen(true)}
+                aria-label={`View ${profile.displayName}'s cover photo`}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  height: '100%',
+                  padding: 0,
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  WebkitTapHighlightColor: 'transparent',
+                }}
+              >
+                <img
+                  src={coverUrl}
+                  alt=""
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                />
+              </button>
+              {isOwnProfile && (
+                <button
+                  type="button"
+                  onClick={() => coverInputRef.current?.click()}
+                  disabled={coverBusy}
+                  aria-label="Change cover photo"
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    bottom: '12px',
+                    width: 'var(--margo-touch-min)',
+                    height: 'var(--margo-touch-min)',
+                    borderRadius: '50%',
+                    background: 'var(--margo-bar)',
+                    border: '1px solid var(--border-hi)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: coverBusy ? 'not-allowed' : 'pointer',
+                    padding: 0,
+                    WebkitTapHighlightColor: 'transparent',
+                  }}
+                >
+                  <EditIcon size={16} color="var(--text-secondary)" />
+                </button>
+              )}
+            </div>
+          ) : isOwnProfile ? (
+            <button
+              type="button"
+              onClick={() => coverInputRef.current?.click()}
+              disabled={coverBusy}
+              aria-label="Add cover photo"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '100%',
+                minHeight: '100px',
+                marginTop: 'var(--nav-height, 72px)',
+                padding: 0,
+                border: 'none',
+                borderBottom: '1px dashed var(--gold-border)',
+                background: 'var(--surface)',
+                cursor: coverBusy ? 'not-allowed' : 'pointer',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              <ImagePlusIcon size={28} color="var(--gold)" />
+            </button>
+          ) : (
+            <div style={{ height: 'var(--nav-height, 72px)' }} />
+          )}
+
+          <input
+            ref={coverInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleCoverFile}
+            style={{ display: 'none' }}
+          />
 
           <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0 24px var(--margo-page-padding-bottom)' }}>
-            <div style={{ marginTop: '-44px', marginBottom: '20px' }}>
+            <div style={{ marginTop: hasCover || isOwnProfile ? '-44px' : '20px', marginBottom: '20px' }}>
               {profile.avatarUrl ? (
                 <button
                   type="button"
@@ -424,7 +691,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                   display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                   border: '4px solid var(--bg)', boxSizing: 'border-box',
                 }}>
-                  <span style={{ fontFamily: font, fontSize: '1.4rem', fontWeight: 700, color: 'var(--bg)' }}>
+                  <span style={{ fontFamily: font, fontSize: TYPE.displayName, fontWeight: 600, color: 'var(--bg)' }}>
                     {(profile.displayName || '??').slice(0, 2).toUpperCase()}
                   </span>
                 </div>
@@ -434,19 +701,19 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap', marginBottom: '12px' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <h1 style={{ fontFamily: font, fontSize: '1.25rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>
+                  <h1 style={{ fontFamily: font, fontSize: TYPE.displayName, fontWeight: 600, color: 'var(--text)', margin: 0 }}>
                     {profile.displayName}
                   </h1>
                   {profile.isPrivate && (
                     <span style={{
-                      fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
-                      letterSpacing: '1px', textTransform: 'uppercase', padding: '3px 8px',
+                      fontFamily: font, fontSize: TYPE.label, fontWeight: 700,
+                      letterSpacing: '0.16em', textTransform: 'uppercase', padding: '3px 8px',
                       borderRadius: '50px', background: 'var(--surface-2)',
                       border: '1px solid var(--border)', color: 'var(--text-muted)',
                     }}>Private</span>
                   )}
                 </div>
-                <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text-secondary)', margin: 0 }}>
+                <p style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-secondary)', margin: 0 }}>
                   @{profile.username}
                 </p>
               </div>
@@ -460,7 +727,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                       display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
                       background: 'var(--surface-2)', color: 'var(--text-secondary)',
                       border: '1px solid var(--border)', borderRadius: '50px',
-                      fontFamily: font, fontWeight: 600, fontSize: '0.6rem',
+                      fontFamily: font, fontWeight: 600, fontSize: TYPE.label,
                       letterSpacing: '1.5px', textTransform: 'uppercase',
                       textDecoration: 'none', cursor: 'pointer',
                       whiteSpace: 'nowrap', flexShrink: 0,
@@ -498,8 +765,8 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                           style={{
                             display: 'flex', alignItems: 'center',
                             minHeight: 'var(--margo-touch-min)',
-                            fontFamily: font, fontSize: '0.8rem',
-                            textDecoration: 'none', color: 'rgba(255,255,255,0.75)',
+                            fontFamily: font, fontSize: TYPE.secondary,
+                            textDecoration: 'none', color: 'var(--text-secondary)',
                             padding: '0 12px', borderRadius: '6px', boxSizing: 'border-box',
                           }}
                         >Account Settings</Link>
@@ -510,8 +777,8 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                             style={{
                               display: 'flex', alignItems: 'center',
                               minHeight: 'var(--margo-touch-min)',
-                              fontFamily: font, fontSize: '0.8rem',
-                              textDecoration: 'none', color: 'rgba(255,255,255,0.75)',
+                              fontFamily: font, fontSize: TYPE.secondary,
+                              textDecoration: 'none', color: 'var(--text-secondary)',
                               padding: '0 12px', borderRadius: '6px', boxSizing: 'border-box',
                             }}
                           >Studio</Link>
@@ -523,8 +790,8 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                             style={{
                               display: 'flex', alignItems: 'center',
                               minHeight: 'var(--margo-touch-min)',
-                              fontFamily: font, fontSize: '0.8rem',
-                              textDecoration: 'none', color: 'rgba(255,255,255,0.75)',
+                              fontFamily: font, fontSize: TYPE.secondary,
+                              textDecoration: 'none', color: 'var(--text-secondary)',
                               padding: '0 12px', borderRadius: '6px', boxSizing: 'border-box',
                             }}
                           >{applyLabel}</Link>
@@ -536,9 +803,9 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                           style={{
                             display: 'flex', alignItems: 'center', width: '100%', textAlign: 'left',
                             minHeight: 'var(--margo-touch-min)',
-                            fontFamily: font, fontSize: '0.8rem',
+                            fontFamily: font, fontSize: TYPE.secondary,
                             background: 'none', border: 'none', cursor: 'pointer',
-                            color: 'rgba(255,255,255,0.5)',
+                            color: 'var(--text-muted)',
                             padding: '0 12px', borderRadius: '6px', boxSizing: 'border-box',
                           }}
                         >Sign Out</button>
@@ -555,9 +822,9 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                     style={{
                       minHeight: 'var(--margo-touch-min)', padding: '0 22px',
                       display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                      background: 'transparent', color: 'var(--text-2)',
+                      background: 'transparent', color: 'var(--text-secondary)',
                       border: '1px solid var(--border)', borderRadius: '50px',
-                      fontFamily: font, fontWeight: 700, fontSize: '0.6rem',
+                      fontFamily: font, fontWeight: 700, fontSize: TYPE.label,
                       letterSpacing: '1.2px', textTransform: 'uppercase',
                       textDecoration: 'none', cursor: 'pointer',
                     }}
@@ -570,9 +837,9 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                       minHeight: 'var(--margo-touch-min)', padding: '0 26px',
                       display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
                       background: followStatus ? 'transparent' : 'var(--gold)',
-                      color: followStatus ? 'var(--text-2)' : 'var(--bg)',
+                      color: followStatus ? 'var(--text-secondary)' : 'var(--bg)',
                       border: followStatus ? '1px solid var(--border)' : 'none',
-                      borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: '0.6rem',
+                      borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: TYPE.label,
                       letterSpacing: '1.2px', textTransform: 'uppercase',
                       cursor: followBusy ? 'not-allowed' : 'pointer',
                       opacity: followBusy ? 0.7 : 1,
@@ -590,35 +857,45 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 the same visual weight as followers/following, instead of
                 the full catalog being dumped inline further down. Only
                 shown for artists. */}
-            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginBottom: '20px' }}>
-              <span style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-2)' }}>
-                <strong style={{ color: 'var(--text)' }}>{followerCount ?? '—'}</strong> followers
-              </span>
-              <span style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-2)' }}>
-                <strong style={{ color: 'var(--text)' }}>{followingCount ?? '—'}</strong> following
-              </span>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'stretch',
+              marginBottom: '16px',
+            }}>
+              <ProfileStat
+                href={(isOwnProfile || !profile.followListsPrivate) ? `/profile/${profile.username}/followers` : undefined}
+                count={followerCount}
+                label="followers"
+                showDivider
+              />
+              <ProfileStat
+                href={(isOwnProfile || !profile.followListsPrivate) ? `/profile/${profile.username}/following` : undefined}
+                count={followingCount}
+                label="following"
+                showDivider={!!profile.isArtist}
+              />
               {profile.isArtist && (
-                <Link
+                <ProfileStat
                   href={`/profile/${profile.username}/songs`}
-                  style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-2)', textDecoration: 'none' }}
-                >
-                  <strong style={{ color: 'var(--text)' }}>{artistSongsLoading ? '—' : artistSongs.length}</strong> songs
-                </Link>
+                  count={artistSongsLoading ? '—' : artistSongs.length}
+                  label="songs"
+                />
               )}
             </div>
 
             <div style={{ marginBottom: '24px' }}>
               <p style={sectionLabelStyle}>Bio</p>
               {profile.bio ? (
-                <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-2)', lineHeight: 1.6 }}>
+                <p style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                   {profile.bio}
                 </p>
               ) : isOwnProfile ? (
-                <Link href="/profile/edit" style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic', textDecoration: 'none' }}>
-                  Add a bio →
+                <Link href="/profile/edit" style={{ ...emptyLyricStyle, textDecoration: 'none' }}>
+                  Add a bio
                 </Link>
               ) : (
-                <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                <p style={emptyLyricStyle}>
                   No bio yet.
                 </p>
               )}
@@ -629,27 +906,35 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
             )}
 
             <div style={{
-              background: 'rgba(232,197,71,0.04)', border: '1px solid rgba(232,197,71,0.22)',
+              background: 'var(--gold-faint)', border: '1px solid var(--gold-border)',
               borderRadius: '20px', padding: '24px', textAlign: 'left', marginBottom: '28px',
             }}>
-              <p style={sectionLabelStyle}>Signature Lyric</p>
+              <p style={sectionLabelStyle}>Signature lyric</p>
               {profile.signatureLyric ? (
                 <>
-                  <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: '1.1rem', color: 'var(--gold)', lineHeight: 1.5, marginBottom: '8px' }}>
+                  <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--gold)', lineHeight: 1.5, marginBottom: '8px' }}>
                     &ldquo;{profile.signatureLyric}&rdquo;
                   </p>
-                  {(profile.signatureSong || profile.signatureArtist) && (
-                    <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                      {profile.signatureSong}{profile.signatureSong && profile.signatureArtist ? ' · ' : ''}{profile.signatureArtist}
-                    </p>
+                  {(profile.signatureSong || profile.signatureArtist || signatureTrack) && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      {signatureTrack ? <SignaturePlayButton track={signatureTrack} /> : null}
+                      <p style={{
+                        fontFamily: font,
+                        fontSize: TYPE.meta,
+                        color: 'var(--text-secondary)',
+                        margin: 0,
+                      }}>
+                        {profile.signatureSong}{profile.signatureSong && profile.signatureArtist ? ' · ' : ''}{profile.signatureArtist}
+                      </p>
+                    </div>
                   )}
                 </>
               ) : isOwnProfile ? (
-                <Link href="/profile/edit" style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic', textDecoration: 'none' }}>
-                  Add the lyric that says it best →
+                <Link href="/profile/edit" style={{ ...emptyLyricStyle, textDecoration: 'none' }}>
+                  Add the lyric that says it best
                 </Link>
               ) : (
-                <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                <p style={emptyLyricStyle}>
                   Hasn&rsquo;t picked one yet.
                 </p>
               )}
@@ -668,7 +953,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                   <div>
                     <p style={{ ...sectionLabelStyle, marginBottom: '2px' }}>Discography</p>
                     {artistSongs.length > 0 && (
-                      <p style={{ fontFamily: font, fontSize: '0.62rem', color: 'var(--text-muted)', margin: 0 }}>
+                      <p style={{ fontFamily: font, fontSize: TYPE.label, color: 'var(--text-muted)', margin: 0 }}>
                         {artistStats.totalPlays.toLocaleString()} plays · {artistStats.totalResonates.toLocaleString()} resonates
                       </p>
                     )}
@@ -677,22 +962,22 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                     <Link
                       href={`/profile/${profile.username}/songs`}
                       style={{
-                        fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
-                        letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--gold)',
+                        fontFamily: font, fontSize: TYPE.label, fontWeight: 700,
+                        letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--gold)',
                         textDecoration: 'none', flexShrink: 0, whiteSpace: 'nowrap',
                       }}
-                    >View all →</Link>
+                    >View all</Link>
                   )}
                 </div>
 
                 {artistSongsLoading ? (
                   <div className="discog-row">
                     {Array(4).fill(null).map((_, i) => (
-                      <div key={i} style={{ flexShrink: 0, width: '130px', aspectRatio: '1', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }} />
+                      <div key={i} style={{ flexShrink: 0, width: '130px', aspectRatio: '1', borderRadius: '12px', background: 'var(--surface-2)', border: '1px solid var(--border)' }} />
                     ))}
                   </div>
                 ) : artistSongs.length === 0 ? (
-                  <p style={{ fontFamily: font, fontSize: '0.85rem', fontStyle: 'italic', color: 'var(--text-secondary)' }}>
+                  <p style={emptyLyricStyle}>
                     {isOwnProfile ? (
                       <>Nothing live yet — head to <Link href="/studio" style={{ color: 'var(--gold)' }}>Studio</Link> to publish your first song.</>
                     ) : (
@@ -750,8 +1035,8 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                       onClick={() => setContentTab(tab.id)}
                       style={{
                         flex: 1, minHeight: 'var(--margo-touch-min)',
-                        fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
-                        letterSpacing: '1px', textTransform: 'uppercase',
+                        fontFamily: font, fontSize: TYPE.label, fontWeight: 700,
+                        letterSpacing: '0.16em', textTransform: 'uppercase',
                         color: active ? 'var(--gold)' : 'var(--text-muted)',
                         background: 'transparent', border: 'none',
                         borderBottom: active ? '2px solid var(--gold)' : '2px solid transparent',
@@ -770,21 +1055,21 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                   border: '1px solid var(--border)', borderRadius: '16px', padding: '24px',
                   textAlign: 'center',
                 }}>
-                  <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: '4px' }}>
+                  <p style={{ ...emptyLyricStyle, marginBottom: '4px' }}>
                     This account is private.
                   </p>
-                  <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
                     Follow {profile.displayName} to see their lyrics.
                   </p>
                 </div>
               ) : contentTab === 'lyrics' ? (
                 ownPosts.length === 0 ? (
                   isOwnProfile ? (
-                    <Link href="/compose" style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic', textDecoration: 'none' }}>
-                      Share your first lyric →
+                    <Link href="/compose" style={{ ...emptyLyricStyle, textDecoration: 'none' }}>
+                      Share your first lyric
                     </Link>
                   ) : (
-                    <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                    <p style={emptyLyricStyle}>
                       Hasn&rsquo;t shared a lyric yet.
                     </p>
                   )
@@ -806,11 +1091,11 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 )
               ) : contentTab === 'replays' ? (
                 replaysLoading ? (
-                  <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                  <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-muted)' }}>
                     Loading replays…
                   </p>
                 ) : profileReplays.length === 0 ? (
-                  <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                  <p style={emptyLyricStyle}>
                     {isOwnProfile ? 'No replays yet — tap Replay on a lyric in the feed.' : 'No replays yet.'}
                   </p>
                 ) : (
@@ -820,7 +1105,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                         {item.quoteText ? (
                           <p style={{
                             margin: '0 4px 2px', paddingTop: '10px',
-                            fontFamily: font, fontSize: '0.82rem',
+                            fontFamily: font, fontSize: TYPE.secondary,
                             color: 'var(--text-secondary)', lineHeight: 1.4,
                           }}>
                             {item.quoteText}
@@ -841,7 +1126,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 )
               ) : contentTab === 'private' ? (
                 privatePosts.length === 0 ? (
-                  <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                  <p style={emptyLyricStyle}>
                     Nothing private yet — use Keep Private when you compose.
                   </p>
                 ) : (
@@ -861,11 +1146,11 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                   </div>
                 )
               ) : backsLoading ? (
-                <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-muted)' }}>
                   Loading lyric backs…
                 </p>
               ) : lyricBacks.length === 0 ? (
-                <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                <p style={emptyLyricStyle}>
                   {isOwnProfile ? 'No lyric backs yet.' : 'No lyric backs yet.'}
                 </p>
               ) : (
@@ -899,6 +1184,14 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
           onClose={() => setAvatarLightboxOpen(false)}
           src={profile.avatarUrl}
           alt={profile.displayName || profile.username}
+        />
+      ) : null}
+      {profile?.coverUrl ? (
+        <ProfileImageLightbox
+          open={coverLightboxOpen}
+          onClose={() => setCoverLightboxOpen(false)}
+          src={profile.coverUrl}
+          alt={`${profile.displayName || profile.username} cover photo`}
         />
       ) : null}
       {previewSong ? (

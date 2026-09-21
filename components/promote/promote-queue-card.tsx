@@ -11,7 +11,7 @@ import {
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { MomentExportCustomizeBar } from '@/components/moment-export-customize-bar'
 import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
-import { UI_FONT } from '@/lib/fonts'
+import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { playSnippet } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
 import { useSongAtmosphere } from '@/hooks/useSongAtmosphere'
@@ -25,6 +25,7 @@ import type { MomentShapeId } from '@/lib/moment/types'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 
 const font = UI_FONT
+const lyricFont = LYRIC_FONT
 
 function asStageTheme(id: string | null | undefined): StageCardThemeId {
   if (id === 'blush' || id === 'sage' || id === 'dusk' || id === 'gold') return id
@@ -41,7 +42,7 @@ interface PromoteQueueCardProps {
   songId?: string | null
   snippetStart?: number | null
   snippetEnd?: number | null
-  onUpdated: (options?: PromoteQueueUpdateOptions) => void
+  onUpdated: (options?: PromoteQueueUpdateOptions) => void | Promise<void>
   onPublishAbortRegister?: (abort: () => void) => () => void
 }
 
@@ -58,6 +59,7 @@ export function PromoteQueueCard({
   const [error, setError] = useState<string | null>(null)
   const [confirmPublish, setConfirmPublish] = useState(false)
   const [publishResult, setPublishResult] = useState<{ videoUrl: string; videoId: string } | null>(null)
+  const [localStatus, setLocalStatus] = useState(item.status)
   const [themeId, setThemeId] = useState<StageCardThemeId>(
     asStageTheme(item.overrideThemeId ?? item.defaultThemeId),
   )
@@ -67,6 +69,7 @@ export function PromoteQueueCard({
   const [shapeId] = useState<MomentShapeId>(item.overrideShapeId ?? item.defaultShapeId)
 
   const publishInFlightRef = useRef(false)
+  const actionLockRef = useRef(false)
   const publishAbortRef = useRef<AbortController | null>(null)
   const prefsRef = useRef({ themeId, atmosphereId, shapeId })
 
@@ -85,7 +88,18 @@ export function PromoteQueueCard({
     setConfirmPublish(false)
     setError(null)
     setPublishResult(null)
+    setLocalStatus(item.status)
   }, [item.id])
+
+  useEffect(() => {
+    if (publishInFlightRef.current) return
+    if (publishResult && item.status !== 'published') return
+    setLocalStatus((prev) => {
+      if (prev === 'approved' && item.status === 'pending_review') return prev
+      if (prev === 'published' && item.status !== 'published') return prev
+      return item.status
+    })
+  }, [item.status, publishResult])
 
   useEffect(() => {
     if (item.status !== 'published') return
@@ -221,6 +235,7 @@ export function PromoteQueueCard({
     setError(null)
     setConfirmPublish(false)
 
+    setLocalStatus('publishing')
     try {
       await saveOverrides()
       if (ac.signal.aborted) throw new DOMException('Publish cancelled', 'AbortError')
@@ -236,15 +251,18 @@ export function PromoteQueueCard({
         ac.signal,
       )
       setPublishResult(result)
+      setLocalStatus('published')
       setBusy(null)
-      onUpdated({ silent: true })
+      await onUpdated({ silent: true })
     } catch (err) {
       if ((err as Error)?.name === 'AbortError') {
         setError(null)
         setBusy(null)
+        setLocalStatus('approved')
         return
       }
       setError(err instanceof Error ? err.message : 'Publish failed')
+      setLocalStatus('approved')
       setBusy(null)
     } finally {
       publishInFlightRef.current = false
@@ -253,9 +271,11 @@ export function PromoteQueueCard({
   }, [item.id, saveOverrides, buildMomentForPublish, onUpdated])
 
   async function approve() {
-    if (publishInFlightRef.current || busy) return
+    if (actionLockRef.current || publishInFlightRef.current || busy) return
+    actionLockRef.current = true
     setBusy('Approving…')
     setError(null)
+    setLocalStatus('approved')
     try {
       await saveOverrides()
       const res = await fetch(`/api/promote/queue/${item.id}/approve`, {
@@ -263,35 +283,47 @@ export function PromoteQueueCard({
         credentials: 'include',
       })
       if (!res.ok) throw new Error('Approve failed')
+      actionLockRef.current = false
       setBusy(null)
-      onUpdated({ silent: true })
+      await onUpdated({ silent: true })
     } catch (err) {
+      actionLockRef.current = false
+      if ((err as Error)?.name === 'AbortError') {
+        setBusy(null)
+        return
+      }
       setError(err instanceof Error ? err.message : 'Approve failed')
+      setLocalStatus(item.status)
       setBusy(null)
     }
   }
 
   async function reject() {
-    if (publishInFlightRef.current || busy) return
+    if (actionLockRef.current || publishInFlightRef.current || busy) return
+    actionLockRef.current = true
     cancelPublish()
     setBusy('Rejecting…')
     await fetch(`/api/promote/queue/${item.id}/reject`, { method: 'POST', credentials: 'include' })
+    actionLockRef.current = false
     setBusy(null)
-    onUpdated({ silent: true })
+    void onUpdated({ silent: true })
   }
 
   function requestPublish() {
-    if (publishInFlightRef.current || busy) return
+    if (actionLockRef.current || publishInFlightRef.current || busy) return
     setError(null)
     setConfirmPublish(true)
   }
 
   const youtubeTarget = item.targets.find((t) => t.platform === 'youtube')
   const publishedUrl = publishResult?.videoUrl ?? youtubeTarget?.externalPostUrl ?? null
-  const canEdit = item.status === 'pending_review' || item.status === 'approved'
-  const canPublish = item.status === 'approved' || item.status === 'partial'
-  const canApprove = item.status === 'pending_review'
-  const isPublished = item.status === 'published' || !!publishResult
+  const status = publishResult ? 'published' : localStatus
+  const canEdit = (status === 'pending_review' || status === 'approved') && !busy
+  const canPublish = status === 'approved' || status === 'partial'
+  const canApprove = status === 'pending_review'
+  const isPublished = status === 'published'
+  const isPublishing = status === 'publishing' || !!busy
+  const actionsLocked = !!busy || isPublishing || isPublished
 
   return (
     <div
@@ -303,13 +335,13 @@ export function PromoteQueueCard({
         marginBottom: '20px',
       }}
     >
-      <div style={{ fontFamily: font, fontSize: '0.65rem', letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>
-        {isPublished ? 'published' : item.status.replace('_', ' ')}
+      <div style={{ fontFamily: font, fontSize: TYPE.label, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>
+        {isPublished ? 'published' : status.replace('_', ' ')}
       </div>
-      <div style={{ fontFamily: font, fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+      <div style={{ fontFamily: font, fontSize: TYPE.song, fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>
         {item.songTitle}
       </div>
-      <div style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '12px', whiteSpace: 'pre-line' }}>
+      <div style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--text)', marginBottom: '12px', whiteSpace: 'pre-line', lineHeight: 1.5 }}>
         {item.lyricText}
       </div>
 
@@ -317,9 +349,9 @@ export function PromoteQueueCard({
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
           <span style={{
             fontFamily: font,
-            fontSize: '0.56rem',
+            fontSize: TYPE.label,
             fontWeight: 600,
-            letterSpacing: '0.5px',
+            letterSpacing: '0.16em',
             textTransform: 'uppercase',
             color: 'var(--text-muted)',
           }}>
@@ -334,7 +366,7 @@ export function PromoteQueueCard({
             border: '1px solid var(--gold-border)',
             background: 'var(--gold-faint)',
             fontFamily: font,
-            fontSize: '0.56rem',
+            fontSize: TYPE.label,
             fontWeight: 700,
             letterSpacing: '0.4px',
             textTransform: 'uppercase',
@@ -381,7 +413,7 @@ export function PromoteQueueCard({
       )}
 
       {shapeId !== 'vertical' && (
-        <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--gold)', marginBottom: '12px' }}>
+        <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--gold)', marginBottom: '12px' }}>
           YouTube Shorts require a 9:16 export — re-export this Moment as Shorts before promoting.
         </p>
       )}
@@ -396,9 +428,9 @@ export function PromoteQueueCard({
         }}>
           <p style={{
             fontFamily: font,
-            fontSize: '0.85rem',
+            fontSize: TYPE.secondary,
             fontWeight: 600,
-            color: 'var(--text-primary)',
+            color: 'var(--text)',
             margin: '0 0 8px',
           }}>
             Published to YouTube
@@ -407,7 +439,7 @@ export function PromoteQueueCard({
             href={publishedUrl}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ fontFamily: font, color: 'var(--gold)', fontSize: '0.85rem' }}
+            style={{ fontFamily: font, color: 'var(--gold)', fontSize: TYPE.secondary }}
           >
             View Short on YouTube →
           </a>
@@ -417,8 +449,8 @@ export function PromoteQueueCard({
       {youtubeTarget?.errorMessage && !isPublished && (
         <p style={{
           fontFamily: font,
-          fontSize: '0.8rem',
-          color: 'var(--danger, #e55)',
+          fontSize: TYPE.secondary,
+          color: 'var(--text-secondary)',
           marginTop: '8px',
           whiteSpace: 'pre-wrap',
           wordBreak: 'break-word',
@@ -430,8 +462,8 @@ export function PromoteQueueCard({
       {error && (
         <p style={{
           fontFamily: font,
-          fontSize: '0.8rem',
-          color: 'var(--danger, #e55)',
+          fontSize: TYPE.secondary,
+          color: 'var(--text-secondary)',
           marginTop: '8px',
           whiteSpace: 'pre-wrap',
           wordBreak: 'break-word',
@@ -439,7 +471,7 @@ export function PromoteQueueCard({
       )}
 
       {busy && (
-        <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '8px' }}>{busy}</p>
+        <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', marginTop: '8px' }}>{busy}</p>
       )}
 
       {confirmPublish && (
@@ -452,12 +484,12 @@ export function PromoteQueueCard({
         }}>
           <p style={{
             fontFamily: font,
-            fontSize: '0.85rem',
-            color: 'var(--text-primary)',
+            fontSize: TYPE.body,
+            color: 'var(--text)',
             margin: '0 0 12px',
             lineHeight: 1.45,
           }}>
-            Publish this Short to YouTube now? Your current color and effect choices will be used. This cannot be undone from MARGO.
+            Are you sure you chose the right color and the right effect? This publishes to YouTube now and cannot be undone from Margo.
           </p>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <button
@@ -480,19 +512,19 @@ export function PromoteQueueCard({
         </div>
       )}
 
-      {!confirmPublish && !isPublished && (
+      {!confirmPublish && !isPublished && !isPublishing && (
         <div style={{ display: 'flex', gap: '10px', marginTop: '16px', flexWrap: 'wrap' }}>
           {canApprove && (
             <>
               <button
                 type="button"
                 onClick={() => void approve()}
-                disabled={!!busy || shapeId !== 'vertical'}
+                disabled={actionsLocked || shapeId !== 'vertical'}
                 style={primaryBtn}
               >
                 Approve
               </button>
-              <button type="button" onClick={() => void reject()} disabled={!!busy} style={ghostBtn}>
+              <button type="button" onClick={() => void reject()} disabled={actionsLocked} style={ghostBtn}>
                 Reject
               </button>
             </>
@@ -502,12 +534,12 @@ export function PromoteQueueCard({
               <button
                 type="button"
                 onClick={requestPublish}
-                disabled={!!busy || publishInFlightRef.current}
+                disabled={actionsLocked || publishInFlightRef.current}
                 style={primaryBtn}
               >
                 Publish to YouTube
               </button>
-              <button type="button" onClick={() => void reject()} disabled={!!busy} style={ghostBtn}>
+              <button type="button" onClick={() => void reject()} disabled={actionsLocked} style={ghostBtn}>
                 Reject
               </button>
             </>
@@ -515,10 +547,10 @@ export function PromoteQueueCard({
         </div>
       )}
 
-      {canEdit && item.status === 'approved' && !confirmPublish && !isPublished && (
+      {canEdit && status === 'approved' && !confirmPublish && !isPublished && !isPublishing && (
         <p style={{
           fontFamily: font,
-          fontSize: '0.75rem',
+          fontSize: TYPE.secondary,
           color: 'var(--text-muted)',
           marginTop: '12px',
           lineHeight: 1.4,
@@ -532,8 +564,8 @@ export function PromoteQueueCard({
 
 const primaryBtn: CSSProperties = {
   fontFamily: font,
-  fontSize: '0.72rem',
-  letterSpacing: '0.5px',
+  fontSize: TYPE.label,
+  letterSpacing: '1.2px',
   textTransform: 'uppercase',
   padding: '10px 16px',
   borderRadius: '999px',

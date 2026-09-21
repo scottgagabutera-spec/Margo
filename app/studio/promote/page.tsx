@@ -7,7 +7,7 @@ import { PromoteQueueCard, type PromoteQueueUpdateOptions } from '@/components/p
 import { useRegisterNavBack } from '@/components/nav-back'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
-import { UI_FONT } from '@/lib/fonts'
+import { TYPE, UI_FONT } from '@/lib/fonts'
 import { buildPromoteQueueMoment } from '@/lib/promote/build-queue-moment'
 import { publishQueueMomentVideo } from '@/lib/promote/publish-client'
 import { clearMomentVideoCache } from '@/lib/moment-export/video/moment-video-cache'
@@ -159,9 +159,9 @@ export default function StudioPromotePage() {
     onBack: handleBack,
   })
 
-  if (identityLoading || loading) {
+  if (identityLoading) {
     return (
-      <div style={{ padding: 'calc(var(--nav-height, 72px) + 24px) 24px', fontFamily: font, color: 'var(--text-secondary)' }}>
+      <div style={{ padding: 'calc(var(--nav-height, 72px) + 24px) 24px', fontFamily: font, color: 'var(--text-secondary)', fontSize: TYPE.secondary }}>
         Loading…
       </div>
     )
@@ -170,9 +170,17 @@ export default function StudioPromotePage() {
   if (!user || !isActiveArtist) {
     return (
       <div style={{ padding: 'calc(var(--nav-height, 72px) + 24px) 24px', maxWidth: 560, margin: '0 auto', fontFamily: font }}>
-        <p style={{ color: 'var(--text-secondary)', marginTop: '16px' }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: TYPE.secondary, marginTop: '16px' }}>
           Auto-Promote is available to active verified artists only.
         </p>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div style={{ padding: 'calc(var(--nav-height, 72px) + 24px) 24px', fontFamily: font, color: 'var(--text-secondary)', fontSize: TYPE.secondary }}>
+        Loading…
       </div>
     )
   }
@@ -185,26 +193,26 @@ export default function StudioPromotePage() {
         padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)',
       }}
     >
-      <h1 style={{ fontFamily: font, fontSize: '1.4rem', fontWeight: 600, margin: '0 0 8px' }}>
+      <h1 style={{ fontFamily: font, fontSize: TYPE.pageTitle, fontWeight: 600, margin: '0 0 8px' }}>
         Promotion queue
       </h1>
-      <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-        Review, polish color or effect, approve, then confirm publish to YouTube.
+      <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', marginBottom: '8px' }}>
+        Review color and effect, Approve, then confirm Publish to YouTube.
       </p>
-      <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
+      <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-muted)', marginBottom: '8px' }}>
         Published, rejected, and failed posts clear from this list after 24 hours.
       </p>
-      <Link href="/settings" style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--gold)', textDecoration: 'none' }}>
-        Connected accounts & preferences →
+      <Link href="/settings" style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--gold)', textDecoration: 'none' }}>
+        Connected accounts & preferences
       </Link>
 
       {error && (
-        <p style={{ fontFamily: font, color: 'var(--danger, #e55)', marginTop: '16px' }}>{error}</p>
+        <p style={{ fontFamily: font, color: 'var(--text-secondary)', marginTop: '16px' }}>{error}</p>
       )}
 
       <div style={{ marginTop: '24px' }}>
         {items.length === 0 ? (
-          <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+          <p style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text-secondary)' }}>
             No queued posts. Use &ldquo;Promote to YouTube&rdquo; on one of your Moments to add it here.
           </p>
         ) : (

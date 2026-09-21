@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
-import { UI_FONT } from '@/lib/fonts'
+import { TYPE, UI_FONT } from '@/lib/fonts'
 import type { PromotePublishMode, SocialConnectionPublic } from '@/lib/promote/types'
 
 const font = UI_FONT
@@ -83,29 +83,29 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
   }
 
   if (loading) {
-    return <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Loading connected accounts…</p>
+    return <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>Loading connected accounts…</p>
   }
 
   return (
     <div>
       {message && (
-        <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--gold)', marginBottom: '12px' }}>{message}</p>
+        <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--gold)', marginBottom: '12px' }}>{message}</p>
       )}
 
       <div style={{ marginBottom: '20px' }}>
-        <div style={{ fontFamily: font, fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+        <div style={{ fontFamily: font, fontSize: TYPE.body, fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>
           YouTube
         </div>
         {youtube?.status === 'connected' ? (
-          <div style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+          <div style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
             Connected as {youtube.externalUsername || 'YouTube channel'}
             {youtube.lastError && (
-              <div style={{ color: 'var(--danger, #e55)', marginTop: '6px' }}>{youtube.lastError}</div>
+              <div style={{ color: 'var(--text-secondary)', marginTop: '6px' }}>{youtube.lastError}</div>
             )}
             <div style={{ display: 'flex', gap: '12px', marginTop: '10px', flexWrap: 'wrap' }}>
               <a
                 href="/api/promote/oauth/youtube?returnTo=/settings"
-                style={{ color: 'var(--gold)', fontSize: '0.8rem', textDecoration: 'none' }}
+                style={{ color: 'var(--gold)', fontSize: TYPE.secondary, textDecoration: 'none' }}
               >
                 Reconnect
               </a>
@@ -118,7 +118,7 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
                   border: 'none',
                   color: 'var(--text-muted)',
                   fontFamily: font,
-                  fontSize: '0.8rem',
+                  fontSize: TYPE.secondary,
                   cursor: 'pointer',
                   padding: 0,
                 }}
@@ -129,7 +129,7 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
           </div>
         ) : (
           <div>
-            <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '10px' }}>
+            <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', marginBottom: '10px' }}>
               Connect your YouTube channel to publish Shorts from Margo.
             </p>
             <a
@@ -141,7 +141,7 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
                 border: '1px solid var(--gold-border)',
                 color: 'var(--gold)',
                 fontFamily: font,
-                fontSize: '0.72rem',
+                fontSize: TYPE.label,
                 letterSpacing: '0.5px',
                 textTransform: 'uppercase',
                 textDecoration: 'none',
@@ -150,7 +150,7 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
               Connect YouTube
             </a>
             {youtube?.status === 'expired' && (
-              <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--danger, #e55)', marginTop: '8px' }}>
+              <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', marginTop: '8px' }}>
                 Session expired — reconnect to publish again.
               </p>
             )}
@@ -159,7 +159,7 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
       </div>
 
       <div style={{ marginBottom: '16px' }}>
-        <div style={{ fontFamily: font, fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>
+        <div style={{ fontFamily: font, fontSize: TYPE.body, fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>
           Publishing preference
         </div>
         <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '10px', cursor: 'pointer' }}>
@@ -170,7 +170,7 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
             onChange={() => void savePublishMode('review')}
             disabled={saving}
           />
-          <span style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+          <span style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
             Review each post before it publishes
           </span>
         </label>
@@ -182,7 +182,7 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
             onChange={() => void savePublishMode('auto')}
             disabled={saving}
           />
-          <span style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+          <span style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
             Post automatically using the Moment&apos;s export look
           </span>
         </label>
@@ -192,7 +192,7 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
         href="/studio/promote"
         style={{
           fontFamily: font,
-          fontSize: '0.8rem',
+          fontSize: TYPE.secondary,
           color: 'var(--gold)',
           textDecoration: 'none',
         }}

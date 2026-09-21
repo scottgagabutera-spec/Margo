@@ -16,7 +16,7 @@ import { playSnippet, stop, subscribeAudioEngine } from '@/lib/audio-engine'
 import { livingAtmosphereOrNull } from '@/lib/atmosphere'
 import { useSongAtmosphere } from '@/hooks/useSongAtmosphere'
 import { useAuthorStories, markStorySeen } from '@/hooks/useAuthorStories'
-import { UI_FONT } from '@/lib/fonts'
+import { TYPE, UI_FONT } from '@/lib/fonts'
 import type { MargoMoment } from '@/lib/moment/types'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 import type { AtmosphereId } from '@/lib/atmosphere'
@@ -71,6 +71,7 @@ interface StoryViewerProps {
   onClose: () => void
   authorPreview?: StoryRingAuthor | null
   initialSlides?: StorySlide[]
+  onNextAuthor?: () => boolean
 }
 
 function StorySlideView({
@@ -231,6 +232,7 @@ export function StoryViewer({
   onClose,
   authorPreview = null,
   initialSlides,
+  onNextAuthor,
 }: StoryViewerProps) {
   const { slides, loading, error } = useAuthorStories(authorProfileId, true, initialSlides)
   const [index, setIndex] = useState(0)
@@ -291,11 +293,12 @@ export function StoryViewer({
     const i = indexRef.current
     const len = slidesRef.current.length
     if (len === 0 || i >= len - 1) {
+      if (onNextAuthor?.() === true) return
       requestClose()
       return
     }
     goToIndex(i + 1)
-  }, [goToIndex, requestClose])
+  }, [goToIndex, onNextAuthor, requestClose])
 
   const goPrev = useCallback(() => {
     if (closingRef.current) return
@@ -419,7 +422,7 @@ export function StoryViewer({
               ) : (
                 <span style={{
                   fontFamily: font,
-                  fontSize: '0.72rem',
+                  fontSize: TYPE.meta,
                   fontWeight: 700,
                   color: 'var(--gold)',
                 }}>
@@ -432,7 +435,7 @@ export function StoryViewer({
             <p style={{
               margin: 0,
               fontFamily: font,
-              fontSize: '0.78rem',
+              fontSize: TYPE.song,
               fontWeight: 600,
               letterSpacing: '0.2px',
               color: 'var(--text)',
@@ -446,7 +449,7 @@ export function StoryViewer({
               <p style={{
                 margin: '1px 0 0',
                 fontFamily: font,
-                fontSize: '0.62rem',
+                fontSize: TYPE.label,
                 color: 'var(--text-secondary)',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -484,7 +487,7 @@ export function StoryViewer({
           <p style={{
             margin: 'auto',
             fontFamily: font,
-            fontSize: '0.85rem',
+            fontSize: TYPE.secondary,
             color: 'var(--text-secondary)',
           }}>
             Loading…
@@ -494,7 +497,7 @@ export function StoryViewer({
           <p style={{
             margin: 'auto',
             fontFamily: font,
-            fontSize: '0.85rem',
+            fontSize: TYPE.secondary,
             color: 'var(--text-secondary)',
             padding: '0 24px',
             textAlign: 'center',
@@ -506,7 +509,7 @@ export function StoryViewer({
           <p style={{
             margin: 'auto',
             fontFamily: font,
-            fontSize: '0.85rem',
+            fontSize: TYPE.secondary,
             color: 'var(--text-secondary)',
           }}>
             This Story has expired.
