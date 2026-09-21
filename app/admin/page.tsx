@@ -255,8 +255,8 @@ function LoginForm({
     <div style={{ ...ADMIN_PAGE_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
       <div style={{ width: '100%', maxWidth: '360px' }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '8px' }}>Margo</p>
-          <h1 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.5rem', color: 'var(--text)', fontWeight: 400 }}>Admin</h1>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '8px' }}>Internal</p>
+          <h1 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.5rem', color: 'var(--text)', fontWeight: 400 }}>Platform</h1>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div>
@@ -1514,8 +1514,8 @@ function AdminShell() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
             <BackButton fallbackHref="/feed" />
             <div>
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '4px' }}>Margo</p>
-              <h1 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.25rem', color: 'var(--text)', fontWeight: 400, margin: 0 }}>Admin</h1>
+              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '4px' }}>Internal</p>
+              <h1 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.25rem', color: 'var(--text)', fontWeight: 400, margin: 0 }}>Platform</h1>
             </div>
           </div>
 
@@ -1535,8 +1535,8 @@ function AdminShell() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <BackButton fallbackHref="/feed" />
                 <div>
-                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '2px' }}>Margo</p>
-                  <h1 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.2rem', color: 'var(--text)', fontWeight: 400, margin: 0 }}>Admin</h1>
+                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '2px' }}>Internal</p>
+                  <h1 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.2rem', color: 'var(--text)', fontWeight: 400, margin: 0 }}>Platform</h1>
                 </div>
               </div>
               <button type="button" onClick={handleSignOut} style={S.ghostBtn}>Sign Out</button>

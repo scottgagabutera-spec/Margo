@@ -70,9 +70,11 @@ export function MobileTabBar() {
 
   const isSignedIn = !!user && !user.isAnonymous
   const signinHref = useSigninHref()
-  const ownProfileHref = identity ? `/profile/${identity.username}` : signinHref
-  const youLink = usePrimaryTabLinkProps(ownProfileHref, 'you')
-  const isOnProfile = activeTab === 'you' || (!!identity && isSignedIn && pathname === ownProfileHref)
+  const youHref = identity?.username
+    ? `/profile/${identity.username}`
+    : (isSignedIn ? '#' : signinHref)
+  const youLink = usePrimaryTabLinkProps(youHref, 'you')
+  const isOnProfile = activeTab === 'you' || (!!identity && isSignedIn && pathname === `/profile/${identity.username}`)
   const youAwaitingIdentity = isSignedIn && !identity
 
   const isMusicActive = engineState.mode !== 'idle'
@@ -160,17 +162,13 @@ export function MobileTabBar() {
       <HubTabButton style={tabStyle(false, false)} labelStyle={labelStyle} />
 
       <Link
-        href={isSignedIn && !identity ? '#' : ownProfileHref}
+        href={youHref}
         style={tabStyle(isOnProfile, tabLive('you') || youAwaitingIdentity)}
-        {...(isSignedIn && identity ? youLink : {})}
+        {...(isSignedIn ? youLink : {})}
         onClick={(event) => {
           if (!isSignedIn) {
             persistActivePrimaryScroll()
             persistAuthReturnScroll()
-            return
-          }
-          if (!identity) {
-            event.preventDefault()
             return
           }
           youLink.onClick(event)

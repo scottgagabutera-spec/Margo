@@ -6,12 +6,13 @@ const AUTH_RETURN_SCROLL_MAX_MS = 10 * 60 * 1000
 
 export type AuthModeParam = 'signup' | 'signin'
 
-/** Same-origin path only. Never bounce back onto /signin itself. */
+/** Same-origin path only. Never bounce back onto /signin, OAuth, or /admin. */
 export function sanitizeAuthReturnPath(value: string | null | undefined): string | null {
   const safe = sanitizeOAuthReturnPath(value)
   if (!safe) return null
   const pathOnly = safe.split('?')[0]
   if (pathOnly === '/signin' || pathOnly === '/auth/callback') return null
+  if (pathOnly.startsWith('/auth/')) return null
   return safe
 }
 

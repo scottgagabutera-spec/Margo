@@ -52,10 +52,8 @@ export function buildTabSwipeChain(ownProfileHref: string | null): string[] {
 
 /** Active only on exact allowlisted paths (not /discover/songs, not /signin). */
 export function isTabSwipePath(pathname: string | null, ownProfileHref: string | null): boolean {
-  if (!pathname) return false
-  if (pathname === '/feed' || pathname === '/discover') return true
-  if (ownProfileHref && pathname === ownProfileHref) return true
-  return false
+  const id = resolvePrimaryTabId(pathname, ownProfileHref)
+  return id === 'feed' || id === 'discover' || id === 'you'
 }
 
 function hrefToTabId(href: string, ownProfileHref: string | null): PrimaryTabId | null {

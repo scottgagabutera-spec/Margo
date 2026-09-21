@@ -45,16 +45,28 @@ const SCROLL_STORAGE_KEY = 'margo-primary-tab-scroll'
 const FEED_RESUME_KEY = 'margo-feed-resume'
 const FEED_RESUME_MAX_MS = 12 * 60 * 60 * 1000
 
+function normalizeTabPath(pathname: string | null | undefined): string {
+  if (!pathname) return ''
+  let path = pathname.split('?')[0]
+  try {
+    path = decodeURIComponent(path)
+  } catch {
+    /* keep raw */
+  }
+  if (path.length > 1 && path.endsWith('/')) path = path.slice(0, -1)
+  return path
+}
+
 export function resolvePrimaryTabId(
   pathname: string | null,
   ownProfileHref: string | null
 ): PrimaryTabId | null {
-  if (!pathname) return null
-  const path = pathname.split('?')[0]
+  const path = normalizeTabPath(pathname)
   if (path === '/feed') return 'feed'
   if (path === '/discover') return 'discover'
   if (path === '/compose') return 'compose'
-  if (ownProfileHref && path === ownProfileHref) return 'you'
+  const own = normalizeTabPath(ownProfileHref)
+  if (own && path.toLowerCase() === own.toLowerCase()) return 'you'
   return null
 }
 
@@ -274,7 +286,7 @@ interface PrimaryTabContextValue {
   isTabPending: (id: PrimaryTabId) => boolean
   hasCachedTab: (id: PrimaryTabId) => boolean
   acknowledgePrimaryTab: (id: PrimaryTabId) => void
-  navigatePrimaryTab: (href: string, event?: MouseEvent<HTMLAnchorElement>) => boolean
+  navigatePrimaryTab: (href: string, event?: MouseEvent<HTMLAnchorElement>, tabHint?: PrimaryTabId) => boolean
   beginPeek: (id: PrimaryTabId, dir: PrimaryTabPeekDir) => boolean
   setStripOffset: (px: number) => void
   endPeek: () => void
@@ -307,6 +319,7 @@ export function usePrimaryTabLinkProps(href: string, tabId?: PrimaryTabId) {
   const acked = !!tabId && isTabAcked(tabId)
   const warm = () => warmPrimaryTab(href)
   const pointerSeqRef = useRef(0)
+  const navigatedSeqRef = useRef(0)
   return {
     onPointerEnter: warm,
     onPointerDown: (event: PointerEvent<HTMLAnchorElement>) => {
@@ -316,7 +329,8 @@ export function usePrimaryTabLinkProps(href: string, tabId?: PrimaryTabId) {
       lastTabPointerSeq += 1
       pointerSeqRef.current = lastTabPointerSeq
       acknowledgePrimaryTab(tabId)
-      navigatePrimaryTab(href)
+      const ok = navigatePrimaryTab(href, undefined, tabId)
+      if (ok) navigatedSeqRef.current = pointerSeqRef.current
     },
     onClick: (e: MouseEvent<HTMLAnchorElement>) => {
       if (isModifiedClick(e)) return
@@ -324,11 +338,15 @@ export function usePrimaryTabLinkProps(href: string, tabId?: PrimaryTabId) {
       if (typeof e.nativeEvent.stopImmediatePropagation === 'function') {
         e.nativeEvent.stopImmediatePropagation()
       }
-      // This link already navigated on pointerdown, or a newer tab tap won.
-      if (pointerSeqRef.current !== 0 && pointerSeqRef.current <= lastTabPointerSeq) {
+      // Pointerdown already navigated this tap, or a newer tab tap won.
+      if (
+        pointerSeqRef.current !== 0 &&
+        pointerSeqRef.current <= lastTabPointerSeq &&
+        navigatedSeqRef.current === pointerSeqRef.current
+      ) {
         return
       }
-      navigatePrimaryTab(href, e)
+      navigatePrimaryTab(href, e, tabId)
     },
     'aria-busy': pending || acked || undefined,
   }
@@ -396,6 +414,7 @@ export function PrimaryTabShell({
   const reassertedGenRef = useRef(0)
   const trustRouteRef = useRef(false)
   const ackClearRef = useRef<number | null>(null)
+  const pendingYouRef = useRef(false)
   const activeTab = paintedTab ?? routeTab
 
   const cacheRef = useRef(new Map<PrimaryTabId, ReactNode>())
@@ -460,14 +479,21 @@ export function PrimaryTabShell({
 
     if (routeTab !== null) return
     if (!paintedTabRef.current) return
-    const intentPath = intentHrefRef.current
-    const path = (pathname || '').split('?')[0]
-    if (intentPath && path === intentPath) return
+    const intentPath = normalizeTabPath(intentHrefRef.current)
+    const path = normalizeTabPath(pathname)
+    if (intentPath && path.toLowerCase() === intentPath.toLowerCase()) return
+    if (
+      paintedTabRef.current === 'you' &&
+      path.toLowerCase().startsWith('/profile/')
+    ) {
+      const own = normalizeTabPath(ownProfileHref)
+      if (!own || path.toLowerCase() === own.toLowerCase()) return
+    }
     paintedTabRef.current = null
     intentHrefRef.current = null
     setPaintedTab(null)
     setNavPending(false)
-  }, [routeTab, paintedTab, pathname, router])
+  }, [routeTab, paintedTab, pathname, router, ownProfileHref])
 
   const applyStripTransforms = useCallback(() => {
     const w = typeof window !== 'undefined' ? window.innerWidth : 0
@@ -552,10 +578,10 @@ export function PrimaryTabShell({
     return () => window.clearTimeout(t)
   }, [navPending, paintedTab])
 
-  const navigatePrimaryTab = useCallback((href: string, event?: MouseEvent<HTMLAnchorElement>) => {
+  const navigatePrimaryTab = useCallback((href: string, event?: MouseEvent<HTMLAnchorElement>, tabHint?: PrimaryTabId) => {
     if (event && isModifiedClick(event)) return false
-    const path = href.split('?')[0]
-    const id = resolvePrimaryTabId(path, ownProfileHref)
+    const path = normalizeTabPath(href)
+    const id = resolvePrimaryTabId(path, ownProfileHref) ?? tabHint ?? null
     if (!id) return false
     event?.preventDefault()
     closeHubOverlay()
@@ -580,7 +606,14 @@ export function PrimaryTabShell({
     }
     endPeek()
     intentGenRef.current += 1
-    intentHrefRef.current = path
+    let pushHref: string | null = href
+    if (id === 'you') {
+      pushHref = path.startsWith('/profile/') ? path : (ownProfileHref || null)
+      pendingYouRef.current = !pushHref
+    } else {
+      pendingYouRef.current = false
+    }
+    intentHrefRef.current = pushHref ? normalizeTabPath(pushHref) : null
     paintedTabRef.current = id
     const paint = () => {
       setPaintedTab(id)
@@ -591,9 +624,20 @@ export function PrimaryTabShell({
     } catch {
       paint()
     }
-    router.push(href, { scroll: false })
+    if (id === 'you') {
+      if (pushHref) router.push(pushHref, { scroll: false })
+    } else {
+      router.push(href, { scroll: false })
+    }
     return true
   }, [ownProfileHref, routeTab, router, endPeek, acknowledgePrimaryTab])
+
+  useEffect(() => {
+    if (!ownProfileHref || !pendingYouRef.current) return
+    pendingYouRef.current = false
+    intentHrefRef.current = ownProfileHref
+    router.push(ownProfileHref, { scroll: false })
+  }, [ownProfileHref, router])
 
   useEffect(() => {
     if (!ownProfileHref && cacheRef.current.has('you')) {

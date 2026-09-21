@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { LoadingRing } from '@/components/loading-ring'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useIdentity } from '@/hooks/useIdentity'
+import { sanitizeAuthReturnPath } from '@/lib/auth-return'
 import { UI_FONT } from '@/lib/fonts'
 
 const ui = UI_FONT
@@ -48,9 +49,7 @@ function OAuthCallbackInner() {
           body: JSON.stringify({ code }),
         })
         const body = await res.json().catch(() => ({})) as { redirectTo?: string }
-        const redirectTo = typeof body.redirectTo === 'string' && body.redirectTo.startsWith('/')
-          ? body.redirectTo
-          : '/feed'
+        const redirectTo = sanitizeAuthReturnPath(body.redirectTo) || '/feed'
         await rehydrate()
         await waitUntilReady()
         router.replace(redirectTo)
