@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { assertSongPipelineAccess } from '@/lib/song-pipeline-auth'
-import { resolveWhisperLanguage } from '@/lib/whisper-language'
+import { resolveWhisperLanguage, whisperLanguageName } from '@/lib/whisper-language'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     // Whisper-1 rejects codes it has no token for (Zulu `zu`, Xhosa `xh`, …).
     // Retry once with auto-detect + the language name in the prompt.
     if (!result.ok && resolved.apiLanguage && isLanguageRejected(result.detail)) {
-      const name = resolved.apiLanguage
+      const name = whisperLanguageName(resolved.apiLanguage) || resolved.apiLanguage
       const retryPrompt = [
         `This song is in ${name}. Transcribe the lyrics faithfully.`,
         artistPrompt,
