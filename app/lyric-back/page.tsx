@@ -1026,11 +1026,6 @@ function LyricBackContent() {
               emotionLoading={emotionLoading}
               onVibeSelect={handleVibeLabelSelect}
             />
-            {emotionError && (
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: text2, margin: '8px 0 0', textAlign: 'center' }}>
-                {emotionError}
-              </p>
-            )}
             <div
               style={{
                 display: 'flex',
