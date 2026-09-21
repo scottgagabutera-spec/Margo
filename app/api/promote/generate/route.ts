@@ -24,9 +24,11 @@ export async function POST(request: Request) {
   const songId = body.songId?.trim()
   if (!songId) return NextResponse.json({ error: 'songId is required' }, { status: 400 })
 
-  const count = Math.max(1, Math.min(3, Number(body.count) || 1))
   const mode = body.mode === 'directive' ? 'directive' : 'auto'
   const directive = body.directive?.trim() || ''
+  const count = mode === 'directive'
+    ? Math.max(1, Math.min(3, Number(body.count) || 1))
+    : undefined
 
   if (mode === 'directive' && !directive) {
     return NextResponse.json({ error: 'directive is required in directive mode' }, { status: 400 })
@@ -110,8 +112,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       queueIds,
       count: queueIds.length,
-      requestedCount: count,
       returnedCount: queueIds.length,
+      ...(mode === 'directive' ? { requestedCount: count } : { discoveryMode: 'auto_whole_song' }),
       dedupTier: dedupMeta.tier,
       moments: moments.map((m, i) => ({
         queueId: queueIds[i],

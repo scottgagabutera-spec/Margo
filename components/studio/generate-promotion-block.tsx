@@ -100,30 +100,38 @@ export function GeneratePromotionBlock(props: GeneratePromotionBlockProps) {
     setError(null)
     setSuccess(null)
     try {
+      const body: Record<string, unknown> = {
+        songId: props.songId,
+        mode: mode === 'directive' ? 'directive' : 'auto',
+      }
+      if (mode === 'directive') {
+        body.count = count
+        body.directive = directive.trim()
+      }
+
       const res = await fetch('/api/promote/generate', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          songId: props.songId,
-          count,
-          mode: mode === 'directive' ? 'directive' : 'auto',
-          directive: mode === 'directive' ? directive.trim() : undefined,
-        }),
+        body: JSON.stringify(body),
       })
       const json = await res.json()
       if (!res.ok) {
         setError(json.error || 'Generation failed')
         return
       }
-      const n = json.returnedCount ?? json.count ?? json.queueIds?.length ?? count
-      const requested = json.requestedCount ?? count
-      const partial = n < requested
-      setSuccess(
-        partial
-          ? `${n} of ${requested} Moments queued for review (fewer non-overlapping lines remain).`
-          : `${n} Moment${n === 1 ? '' : 's'} queued for review.`,
-      )
+      const n = json.returnedCount ?? json.count ?? json.queueIds?.length ?? 0
+      if (mode === 'auto') {
+        setSuccess(`${n} Moment${n === 1 ? '' : 's'} queued for review.`)
+      } else {
+        const requested = json.requestedCount ?? count
+        const partial = n < requested
+        setSuccess(
+          partial
+            ? `${n} of ${requested} Moments queued for review (fewer non-overlapping lines remain).`
+            : `${n} Moment${n === 1 ? '' : 's'} queued for review.`,
+        )
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed')
     } finally {
@@ -166,26 +174,10 @@ export function GeneratePromotionBlock(props: GeneratePromotionBlockProps) {
           margin: '8px 0 0',
           lineHeight: 1.5,
         }}>
-          AI picks quotable lyric windows and queues Shorts for your review — nothing posts to the Feed.
+          {mode === 'auto'
+            ? 'Auto scans the whole song and queues every strong shareable moment it finds (1–3 lines each).'
+            : 'AI picks quotable lyric windows and queues Shorts for your review — nothing posts to the Feed.'}
         </p>
-      </div>
-
-      <div style={{ marginBottom: '14px' }}>
-        <label style={labelStyle}>Moments</label>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {([1, 2, 3] as MomentCount[]).map((n) => (
-            <button
-              key={n}
-              type="button"
-              onClick={() => setCount(n)}
-              disabled={busy}
-              style={countButtonStyle(count === n)}
-              aria-pressed={count === n}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
       </div>
 
       <div style={{ marginBottom: '14px' }}>
@@ -219,17 +211,36 @@ export function GeneratePromotionBlock(props: GeneratePromotionBlockProps) {
       </div>
 
       {mode === 'directive' && (
-        <div style={{ marginBottom: '14px' }}>
-          <label style={labelStyle}>What should we look for?</label>
-          <textarea
-            value={directive}
-            onChange={(e) => setDirective(e.target.value)}
-            rows={3}
-            placeholder="e.g. hopeful lines about leaving home, or the pre-chorus hook"
-            style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
-            disabled={busy}
-          />
-        </div>
+        <>
+          <div style={{ marginBottom: '14px' }}>
+            <label style={labelStyle}>Moments</label>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {([1, 2, 3] as MomentCount[]).map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setCount(n)}
+                  disabled={busy}
+                  style={countButtonStyle(count === n)}
+                  aria-pressed={count === n}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{ marginBottom: '14px' }}>
+            <label style={labelStyle}>What should we look for?</label>
+            <textarea
+              value={directive}
+              onChange={(e) => setDirective(e.target.value)}
+              rows={3}
+              placeholder="e.g. hopeful lines about leaving home, or the pre-chorus hook"
+              style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
+              disabled={busy}
+            />
+          </div>
+        </>
       )}
 
       {mode === 'manual' ? (
