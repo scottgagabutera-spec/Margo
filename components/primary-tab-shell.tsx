@@ -302,7 +302,9 @@ export function usePrimaryTabLinkProps(href: string, tabId?: PrimaryTabId) {
     onPointerEnter: warm,
     onPointerDown: (event: PointerEvent<HTMLAnchorElement>) => {
       warm()
-      if (tabId && event.button === 0) acknowledgePrimaryTab(tabId)
+      if (!tabId) return
+      if (event.button !== 0 && event.pointerType === 'mouse') return
+      acknowledgePrimaryTab(tabId)
     },
     onClick: (e: MouseEvent<HTMLAnchorElement>) => {
       navigatePrimaryTab(href, e)
