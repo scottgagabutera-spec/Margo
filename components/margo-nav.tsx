@@ -8,6 +8,7 @@ import { useArtistApplication } from '@/hooks/useArtistApplication'
 import { signOutBrowser } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { HubIconButton, HomeNavLink, LibraryNavLink } from '@/components/hub-menu'
+import { LoadingRing } from '@/components/loading-ring'
 import { usePrimaryTab, usePrimaryTabLinkProps } from '@/components/primary-tab-shell'
 import { hidesAppNav, isMessageThreadPath } from '@/lib/chrome-mode'
 import { PendingNavLink } from '@/components/pending-nav-link'
@@ -64,10 +65,10 @@ const font = 'var(--font-geist-sans), system-ui, sans-serif'
 export function MargoNav() {
   const pathname = usePathname()
   const router = useRouter()
-  const { activeTab } = usePrimaryTab()
-  const feedLink = usePrimaryTabLinkProps('/feed')
-  const discoverLink = usePrimaryTabLinkProps('/discover')
-  const composeLink = usePrimaryTabLinkProps('/compose')
+  const { activeTab, pendingTab, isTabPending } = usePrimaryTab()
+  const feedLink = usePrimaryTabLinkProps('/feed', 'feed')
+  const discoverLink = usePrimaryTabLinkProps('/discover', 'discover')
+  const composeLink = usePrimaryTabLinkProps('/compose', 'compose')
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false)
   const avatarMenuRef = useRef<HTMLDivElement>(null)
   const navElRef = useRef<HTMLElement>(null)
@@ -178,22 +179,29 @@ export function MargoNav() {
 
           <div style={{ display: 'none' }} className="margo-desktop-nav">
             {[
-              { href: '/feed', label: 'Feed', active: isOnFeed, linkProps: feedLink },
-              { href: '/discover', label: 'Discover', active: isOnDiscover, linkProps: discoverLink },
-            ].map(({ href, label, active, linkProps }) => (
+              { href: '/feed', label: 'Feed', active: isOnFeed, pending: isTabPending('feed'), linkProps: feedLink },
+              { href: '/discover', label: 'Discover', active: isOnDiscover, pending: isTabPending('discover'), linkProps: discoverLink },
+            ].map(({ href, label, active, pending, linkProps }) => (
               <Link key={href} href={href} {...linkProps} style={{
                 fontSize: '0.75rem', fontFamily: font,
                 fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase',
                 textDecoration: 'none',
-                color: active ? 'var(--gold)' : 'rgba(255,255,255,0.5)',
+                color: pending || active ? 'var(--gold)' : 'rgba(255,255,255,0.5)',
+                background: pending ? 'var(--gold-faint)' : 'transparent',
                 padding: '0 14px', position: 'relative',
                 minHeight: 'var(--margo-touch-min)',
-                display: 'inline-flex', alignItems: 'center',
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
                 boxSizing: 'border-box',
-                transition: 'color 150ms ease', whiteSpace: 'nowrap',
+                borderRadius: '8px',
+                transition: 'color 80ms var(--ease-out), background 80ms var(--ease-out)',
+                whiteSpace: 'nowrap',
+                WebkitTapHighlightColor: 'transparent',
+                opacity: pendingTab && !pending && !active ? 0.45 : 1,
+                pointerEvents: pendingTab && !pending ? 'none' : 'auto',
               }}>
+                {pending ? <LoadingRing size={14} strokeWidth={1.5} state="spinning" /> : null}
                 {label}
-                {active && (
+                {active && !pending && (
                   <span style={{
                     position: 'absolute', bottom: '2px', left: '50%',
                     transform: 'translateX(-50%)',
@@ -211,11 +219,16 @@ export function MargoNav() {
               background: 'var(--gold)', borderRadius: '50px',
               padding: '0 20px', marginLeft: '8px',
               minHeight: 'var(--margo-touch-min)',
-              display: 'inline-flex', alignItems: 'center',
+              display: 'inline-flex', alignItems: 'center', gap: '8px',
               boxSizing: 'border-box',
               transition: 'all 150ms ease', flexShrink: 0, whiteSpace: 'nowrap',
-              opacity: isOnCompose ? 0.75 : 1,
-            }}>Send a line</Link>
+              opacity: isTabPending('compose') ? 0.9 : isOnCompose ? 0.75 : (pendingTab ? 0.45 : 1),
+              pointerEvents: pendingTab && !isTabPending('compose') ? 'none' : 'auto',
+              WebkitTapHighlightColor: 'transparent',
+            }}>
+              {isTabPending('compose') ? <LoadingRing size={14} strokeWidth={1.5} state="spinning" color="var(--bg)" /> : null}
+              Send a line
+            </Link>
 
             <div style={{ marginLeft: '4px' }}>
               <HubIconButton />

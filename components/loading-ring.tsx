@@ -22,6 +22,8 @@ export interface LoadingRingProps {
   progress?: number
   className?: string
   style?: CSSProperties
+  /** Ring stroke. Default gold. Use ink/bg on gold fills (Compose FAB). */
+  color?: string
 }
 
 /**
@@ -36,6 +38,7 @@ export function LoadingRing({
   progress = 0,
   className,
   style,
+  color = 'var(--gold)',
 }: LoadingRingProps) {
   const p = Math.max(0, Math.min(1, progress))
   const r = (size - strokeWidth) / 2
@@ -100,7 +103,7 @@ export function LoadingRing({
               cy={size / 2}
               r={r}
               fill="none"
-              stroke="var(--gold)"
+              stroke={color}
               strokeWidth={strokeWidth}
               strokeLinecap="round"
               strokeDasharray={`${dash} ${gap}`}

@@ -250,9 +250,11 @@ function isModifiedClick(event: MouseEvent<HTMLAnchorElement>): boolean {
 interface PrimaryTabContextValue {
   activeTab: PrimaryTabId | null
   peekTab: PrimaryTabId | null
+  pendingTab: PrimaryTabId | null
   isOnPrimaryTab: boolean
   /** True for the painted destination (optimistic or committed) — never peek-only. */
   isTabActive: (id: PrimaryTabId) => boolean
+  isTabPending: (id: PrimaryTabId) => boolean
   hasCachedTab: (id: PrimaryTabId) => boolean
   navigatePrimaryTab: (href: string, event?: MouseEvent<HTMLAnchorElement>) => boolean
   beginPeek: (id: PrimaryTabId, dir: PrimaryTabPeekDir) => boolean
@@ -263,7 +265,9 @@ interface PrimaryTabContextValue {
 const PrimaryTabContext = createContext<PrimaryTabContextValue>({
   activeTab: null,
   peekTab: null,
+  pendingTab: null,
   isTabActive: () => false,
+  isTabPending: () => false,
   isOnPrimaryTab: false,
   hasCachedTab: () => false,
   navigatePrimaryTab: () => false,
@@ -277,8 +281,9 @@ export function usePrimaryTab() {
 }
 
 /** Warm + optimistic navigate for primary-tab <Link>s (mobile bar + desktop nav). */
-export function usePrimaryTabLinkProps(href: string) {
-  const { navigatePrimaryTab } = usePrimaryTab()
+export function usePrimaryTabLinkProps(href: string, tabId?: PrimaryTabId) {
+  const { navigatePrimaryTab, isTabPending } = usePrimaryTab()
+  const pending = !!tabId && isTabPending(tabId)
   const warm = () => warmPrimaryTab(href)
   return {
     onPointerEnter: warm,
@@ -286,6 +291,7 @@ export function usePrimaryTabLinkProps(href: string) {
     onClick: (e: MouseEvent<HTMLAnchorElement>) => {
       navigatePrimaryTab(href, e)
     },
+    'aria-busy': pending || undefined,
   }
 }
 
@@ -414,6 +420,8 @@ export function PrimaryTabShell({
     const id = resolvePrimaryTabId(path, ownProfileHref)
     if (!id) return false
     event?.preventDefault()
+    const pending = optimisticTab
+    if (pending && pending !== id) return true
     if (id === 'compose' && href.includes('?')) {
       cacheRef.current.delete('compose')
       setCacheVersion(v => v + 1)
@@ -433,7 +441,7 @@ export function PrimaryTabShell({
       router.push(href)
     })
     return true
-  }, [ownProfileHref, routeTab, router, endPeek])
+  }, [ownProfileHref, routeTab, router, endPeek, optimisticTab])
 
   useEffect(() => {
     if (!ownProfileHref && cacheRef.current.has('you')) {
@@ -580,15 +588,17 @@ export function PrimaryTabShell({
     () => ({
       activeTab,
       peekTab,
+      pendingTab: optimisticTab,
       isOnPrimaryTab: activeTab !== null,
       isTabActive: (id: PrimaryTabId) => activeTab === id,
+      isTabPending: (id: PrimaryTabId) => optimisticTab === id,
       hasCachedTab,
       navigatePrimaryTab,
       beginPeek,
       setStripOffset,
       endPeek,
     }),
-    [activeTab, peekTab, hasCachedTab, navigatePrimaryTab, beginPeek, setStripOffset, endPeek]
+    [activeTab, peekTab, optimisticTab, hasCachedTab, navigatePrimaryTab, beginPeek, setStripOffset, endPeek]
   )
 
   usePrimaryTabSwipeGesture(enableSwipeGesture, ownProfileHref, {
