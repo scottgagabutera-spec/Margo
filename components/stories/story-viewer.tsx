@@ -12,7 +12,7 @@ import { createPortal } from 'react-dom'
 import { CloseIcon } from '@/components/icons'
 import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
-import { playSnippet, stop } from '@/lib/audio-engine'
+import { playSnippet, stop, subscribeAudioEngine } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
 import { livingAtmosphereOrNull } from '@/lib/atmosphere'
 import { useSongAtmosphere } from '@/hooks/useSongAtmosphere'
@@ -39,11 +39,15 @@ interface StoryViewerProps {
 function StorySlideView({
   moment,
   active,
-  onEnded,
+  slideIndex,
+  slideCount,
+  onAdvance,
 }: {
   moment: MargoMoment
   active: boolean
-  onEnded: () => void
+  slideIndex: number
+  slideCount: number
+  onAdvance: () => void
 }) {
   const line = moment.lines[0]
   const songId = line?.songId ?? null
@@ -58,7 +62,9 @@ function StorySlideView({
   )
 
   const advanceTimerRef = useRef<number | null>(null)
-  const startedRef = useRef(false)
+  const advancedRef = useRef(false)
+  const onAdvanceRef = useRef(onAdvance)
+  onAdvanceRef.current = onAdvance
 
   const clearAdvance = useCallback(() => {
     if (advanceTimerRef.current != null) {
@@ -67,12 +73,20 @@ function StorySlideView({
     }
   }, [])
 
+  const finishSlide = useCallback(() => {
+    if (advancedRef.current) return
+    advancedRef.current = true
+    clearAdvance()
+    onAdvanceRef.current()
+  }, [clearAdvance])
+
   const scheduleAdvance = useCallback((delayMs: number) => {
     clearAdvance()
-    advanceTimerRef.current = window.setTimeout(onEnded, delayMs)
-  }, [clearAdvance, onEnded])
+    advanceTimerRef.current = window.setTimeout(finishSlide, delayMs)
+  }, [clearAdvance, finishSlide])
 
-  const startPlayback = useCallback(() => {
+  const startPreviewPlayback = useCallback(() => {
+    advancedRef.current = false
     if (!canPlay || !line?.audioUrl || line.snippetStart == null || line.snippetEnd == null) {
       scheduleAdvance(STORY_HOLD_MS)
       return
@@ -96,27 +110,45 @@ function StorySlideView({
         atmosphereId !== 'still' ? atmosphereId : songAtmosphere,
       ),
       source: 'feed',
+    }).catch(() => {
+      /* Autoplay may be blocked — timer still advances the slide. */
     })
   }, [canPlay, line, playbackKey, atmosphereId, songAtmosphere, scheduleAdvance])
 
+  const slideIdentity = `${moment.postId ?? ''}|${line?.lyric ?? ''}|${line?.snippetStart ?? ''}|${line?.snippetEnd ?? ''}`
+
   useEffect(() => {
     if (!active) {
-      startedRef.current = false
       clearAdvance()
       return
     }
-    if (startedRef.current) return
-    startedRef.current = true
-    startPlayback()
+    startPreviewPlayback()
     return () => {
       clearAdvance()
     }
-  }, [active, startPlayback, clearAdvance])
+  }, [active, slideIdentity, startPreviewPlayback, clearAdvance])
+
+  useEffect(() => {
+    if (!active || !canPlay) return
+    return subscribeAudioEngine((state) => {
+      if (advancedRef.current) return
+      if (state.mode !== 'snippet' || !state.snippet) return
+      if (state.currentTime >= state.snippet.endSec - 0.08) {
+        finishSlide()
+      }
+    })
+  }, [active, canPlay, finishSlide])
 
   useEffect(() => () => {
     clearAdvance()
     if (active) stop()
   }, [active, clearAdvance])
+
+  const poster = moment.author ? {
+    displayName: moment.author.displayName,
+    username: moment.author.username,
+    avatarUrl: moment.author.avatarUrl,
+  } : null
 
   return (
     <div style={{
@@ -152,12 +184,38 @@ function StorySlideView({
             canPlay={canPlay}
             playing={playing}
             buffering={buffering}
-            onPlay={startPlayback}
+            onPlay={startPreviewPlayback}
+            poster={poster}
           />
         </MomentExportPreviewFrame>
       </div>
+      <span style={{
+        position: 'absolute',
+        bottom: 8,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        fontFamily: font,
+        fontSize: '0.55rem',
+        letterSpacing: '0.4px',
+        color: 'var(--text-muted)',
+        pointerEvents: 'none',
+      }}>
+        {slideIndex + 1} / {slideCount}
+      </span>
     </div>
   )
+}
+
+function formatStoryHeader(author: MargoMoment['author']): { primary: string; secondary: string | null } {
+  if (!author) return { primary: 'Story', secondary: null }
+  const username = author.username?.replace(/^@/, '') || null
+  const displayName = author.displayName?.trim() || null
+  if (displayName && username) {
+    return { primary: displayName, secondary: `@${username}` }
+  }
+  if (username) return { primary: `@${username}`, secondary: null }
+  if (displayName) return { primary: displayName, secondary: null }
+  return { primary: 'Story', secondary: null }
 }
 
 export function StoryViewer({ authorProfileId, onClose }: StoryViewerProps) {
@@ -166,10 +224,13 @@ export function StoryViewer({ authorProfileId, onClose }: StoryViewerProps) {
   const seenMarkedRef = useRef<Set<string>>(new Set())
   const mounted = typeof document !== 'undefined'
 
+  const slidesRef = useRef(slides)
+  const indexRef = useRef(index)
+  slidesRef.current = slides
+  indexRef.current = index
+
   const current = slides[index] ?? null
-  const authorLabel = current?.moment.author?.displayName
-    || current?.moment.author?.username
-    || 'Story'
+  const header = formatStoryHeader(current?.moment.author ?? null)
 
   useEffect(() => {
     if (!current) return
@@ -178,14 +239,16 @@ export function StoryViewer({ authorProfileId, onClose }: StoryViewerProps) {
     void markStorySeen(current.story.id)
   }, [current])
 
-  const goNext = useCallback(() => {
+  const advanceStory = useCallback(() => {
     stop()
-    if (index >= slides.length - 1) {
+    const i = indexRef.current
+    const len = slidesRef.current.length
+    if (len === 0 || i >= len - 1) {
       onClose()
       return
     }
-    setIndex((i) => i + 1)
-  }, [index, slides.length, onClose])
+    setIndex(i + 1)
+  }, [onClose])
 
   const goPrev = useCallback(() => {
     stop()
@@ -195,12 +258,12 @@ export function StoryViewer({ authorProfileId, onClose }: StoryViewerProps) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
-      if (e.key === 'ArrowRight') goNext()
+      if (e.key === 'ArrowRight') advanceStory()
       if (e.key === 'ArrowLeft') goPrev()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose, goNext, goPrev])
+  }, [onClose, advanceStory, goPrev])
 
   useEffect(() => {
     document.documentElement.setAttribute('data-margo-story-open', '1')
@@ -266,16 +329,36 @@ export function StoryViewer({ authorProfileId, onClose }: StoryViewerProps) {
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '0 14px 8px',
+        gap: '12px',
       }}>
-        <span style={{
-          fontFamily: font,
-          fontSize: '0.75rem',
-          fontWeight: 600,
-          letterSpacing: '0.4px',
-          color: 'var(--text-primary)',
-        }}>
-          {authorLabel}
-        </span>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <p style={{
+            margin: 0,
+            fontFamily: font,
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            letterSpacing: '0.4px',
+            color: 'var(--text-primary)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}>
+            {header.primary}
+          </p>
+          {header.secondary ? (
+            <p style={{
+              margin: '2px 0 0',
+              fontFamily: font,
+              fontSize: '0.62rem',
+              color: 'var(--text-muted)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}>
+              {header.secondary}
+            </p>
+          ) : null}
+        </div>
         <button
           type="button"
           onClick={onClose}
@@ -291,6 +374,7 @@ export function StoryViewer({ authorProfileId, onClose }: StoryViewerProps) {
             borderRadius: '50%',
             cursor: 'pointer',
             WebkitTapHighlightColor: 'transparent',
+            flexShrink: 0,
           }}
         >
           <CloseIcon size={14} color="var(--text-primary)" />
@@ -335,7 +419,9 @@ export function StoryViewer({ authorProfileId, onClose }: StoryViewerProps) {
             key={current.story.id}
             moment={current.moment}
             active
-            onEnded={goNext}
+            slideIndex={index}
+            slideCount={slides.length}
+            onAdvance={advanceStory}
           />
         )}
 
@@ -359,7 +445,7 @@ export function StoryViewer({ authorProfileId, onClose }: StoryViewerProps) {
         <button
           type="button"
           aria-label="Next Story"
-          onClick={goNext}
+          onClick={advanceStory}
           style={{
             position: 'absolute',
             right: 0,

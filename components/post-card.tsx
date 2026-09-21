@@ -35,6 +35,7 @@ import { useDismissibleLayer } from '@/hooks/useDismissibleLayer'
 import { UsernameTag } from '@/components/username-tag'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { useStoryRingContext } from '@/components/stories/story-ring-context'
+import { StoryAvatarRing } from '@/components/stories/story-avatar-ring'
 import { RelativeTime } from '@/components/relative-time'
 import { useAuthorProfile } from '@/hooks/useAuthorProfile'
 import { createClient } from '@/lib/supabase/client'
@@ -753,54 +754,43 @@ export function PostCard({
               />
             </span>
           ) : null
-          const avatarCore = (
-            <div style={{
-              width: avatarPx, height: avatarPx, borderRadius: '50%', flexShrink: 0,
-              background: avatarUrl
-                ? 'none'
-                : isTier1 ? 'var(--gold)' : 'linear-gradient(135deg, rgba(232,197,71,0.3), rgba(232,197,71,0.1))',
-              border: avatarUrl
-                ? '1px solid rgba(255,255,255,0.08)'
-                : isTier1 ? 'none' : '1px solid rgba(232,197,71,0.2)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              overflow: 'hidden',
-            }}>
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="" onError={() => setAvatarBroken(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <span style={{
-                  fontFamily: UI_FONT,
-                  fontSize: isCompact ? '0.6rem' : '0.7rem',
-                  fontWeight: 700,
-                  color: isTier1 ? 'var(--bg)' : 'var(--gold)',
-                }}>
-                  {post.username ? post.username.charAt(0).toUpperCase() : (isTier1 ? 'M' : 'ML')}
-                </span>
-              )}
-            </div>
-          )
-          const avatarWithStoryRing = storyAuthor ? (
+          const avatarInitial = post.username ? post.username.charAt(0).toUpperCase() : (isTier1 ? 'M' : 'ML')
+          const avatarInner = avatarUrl ? (
+            <img src={avatarUrl} alt="" onError={() => setAvatarBroken(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
             <span style={{
-              borderRadius: '50%',
-              padding: '2px',
-              flexShrink: 0,
-              background: storyAuthor.hasUnseen
-                ? 'linear-gradient(135deg, var(--gold), rgba(232,197,71,0.45))'
-                : 'var(--border-hi)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              fontFamily: UI_FONT,
+              fontSize: isCompact ? '0.6rem' : '0.7rem',
+              fontWeight: 700,
+              color: isTier1 ? 'var(--bg)' : 'var(--gold)',
             }}>
-              <span style={{
-                borderRadius: '50%',
-                overflow: 'hidden',
-                border: '2px solid var(--bg)',
-                display: 'flex',
-              }}>
-                {avatarCore}
-              </span>
+              {avatarInitial}
             </span>
-          ) : avatarCore
+          )
+          const avatarShellStyle: React.CSSProperties = {
+            width: avatarPx,
+            height: avatarPx,
+            borderRadius: '50%',
+            flexShrink: 0,
+            background: avatarUrl
+              ? 'none'
+              : isTier1 ? 'var(--gold)' : 'linear-gradient(135deg, rgba(232,197,71,0.3), rgba(232,197,71,0.1))',
+            border: avatarUrl
+              ? '1px solid rgba(255,255,255,0.08)'
+              : isTier1 ? 'none' : '1px solid rgba(232,197,71,0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
+          }
+          const avatarPxNum = isCompact ? 32 : 40
+          const avatarCore = storyAuthor ? (
+            <StoryAvatarRing size={avatarPxNum} hasUnseen={storyAuthor.hasUnseen}>
+              {avatarInner}
+            </StoryAvatarRing>
+          ) : (
+            <div style={avatarShellStyle}>{avatarInner}</div>
+          )
           const avatarControl = storyAuthor && storyRing && authorProfileId ? (
             <button
               type="button"
@@ -813,6 +803,7 @@ export function PostCard({
                   ? `View ${displayLabel}'s new Story`
                   : `View ${displayLabel}'s Story`
               }
+              title="View Story"
               style={{
                 border: 'none',
                 background: 'none',
@@ -826,9 +817,21 @@ export function PostCard({
                 justifyContent: 'center',
                 minWidth: 'var(--margo-touch-min)',
                 minHeight: 'var(--margo-touch-min)',
+                position: 'relative',
               }}
             >
-              {avatarWithStoryRing}
+              {avatarCore}
+              <span aria-hidden style={{
+                position: 'absolute',
+                right: storyAuthor.hasUnseen ? 2 : 4,
+                bottom: storyAuthor.hasUnseen ? 2 : 4,
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: 'var(--gold)',
+                border: '1.5px solid var(--bg)',
+                boxShadow: '0 0 6px rgba(232,197,71,0.55)',
+              }} />
             </button>
           ) : profileHref ? (
             <PendingNavLink
@@ -877,7 +880,7 @@ export function PostCard({
               {profileHref ? (
                 <PendingNavLink
                   href={profileHref}
-                  indicator="tint"
+                  indicator="subtle"
                   onClick={(e) => e.stopPropagation()}
                   aria-label={`View profile @${profileUsername}`}
                   style={{
@@ -886,7 +889,6 @@ export function PostCard({
                     textDecoration: 'none',
                     color: 'inherit',
                     WebkitTapHighlightColor: 'transparent',
-                    borderRadius: '8px',
                     display: 'block',
                   }}
                 >

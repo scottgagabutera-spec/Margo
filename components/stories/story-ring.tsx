@@ -1,6 +1,7 @@
 'use client'
 
 import type { CSSProperties } from 'react'
+import { StoryAvatarRing } from '@/components/stories/story-avatar-ring'
 import { useStoryRingContext } from '@/components/stories/story-ring-context'
 import { UI_FONT } from '@/lib/fonts'
 import type { StoryRingAuthor } from '@/lib/stories/types'
@@ -19,7 +20,6 @@ function StoryAvatar({
   onClick: () => void
 }) {
   const label = author.isSelf ? 'Your Story' : (author.displayName || author.username)
-  const ringColor = author.hasUnseen ? 'var(--gold)' : 'var(--border-hi)'
 
   return (
     <button
@@ -40,48 +40,20 @@ function StoryAvatar({
         WebkitTapHighlightColor: 'transparent',
       }}
     >
-      <span
-        style={{
-          width: '56px',
-          height: '56px',
-          borderRadius: '50%',
-          padding: '2px',
-          background: author.hasUnseen
-            ? 'linear-gradient(135deg, var(--gold), rgba(232,197,71,0.45))'
-            : ringColor,
-          boxSizing: 'border-box',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <span
-          style={{
-            width: '100%',
-            height: '100%',
-            borderRadius: '50%',
-            overflow: 'hidden',
-            border: '2px solid var(--bg)',
-            background: 'var(--surface-2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          {author.avatarUrl ? (
-            <img
-              src={author.avatarUrl}
-              alt=""
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-            />
-          ) : (
-            <svg width="22" height="22" viewBox="0 0 20 20" fill="none" aria-hidden>
-              <circle cx="10" cy="7" r="3" stroke="var(--text-muted)" strokeWidth="1.5" />
-              <path d="M4 17c0-3 2.7-5 6-5s6 2 6 5" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          )}
-        </span>
-      </span>
+      <StoryAvatarRing size={52} hasUnseen={author.hasUnseen}>
+        {author.avatarUrl ? (
+          <img
+            src={author.avatarUrl}
+            alt=""
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        ) : (
+          <svg width="22" height="22" viewBox="0 0 20 20" fill="none" aria-hidden>
+            <circle cx="10" cy="7" r="3" stroke="var(--text-muted)" strokeWidth="1.5" />
+            <path d="M4 17c0-3 2.7-5 6-5s6 2 6 5" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        )}
+      </StoryAvatarRing>
       <span style={{
         fontFamily: font,
         fontSize: '0.58rem',
