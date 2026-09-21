@@ -14,6 +14,8 @@ export interface ModelGenerateWindow {
   endLineIndex: number
   mood: string
   reason: string
+  /** Model self-rank 1–5; used for ordering only, not server filtering in Auto mode. */
+  strength?: number
 }
 
 export interface ResolvedGenerateMoment {

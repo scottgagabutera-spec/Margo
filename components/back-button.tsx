@@ -8,10 +8,19 @@ const font = 'var(--font-lora), serif'
  * parent (e.g. thread → /messages), not browser history. Device/browser back
  * is unchanged — this button never calls router.back().
  */
-export function BackButton({ fallbackHref, label = 'Back' }: { fallbackHref?: string; label?: string }) {
+export function BackButton({
+  fallbackHref,
+  label = 'Back',
+  onNavigate,
+}: {
+  fallbackHref?: string
+  label?: string
+  onNavigate?: () => void
+}) {
   const router = useRouter()
 
   const handleBack = () => {
+    onNavigate?.()
     if (fallbackHref) {
       router.push(fallbackHref)
     } else {
