@@ -1,6 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { MomentExportCustomizeBar } from '@/components/moment-export-customize-bar'
 import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
@@ -9,9 +16,9 @@ import { playSnippet } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
 import { useSongAtmosphere } from '@/hooks/useSongAtmosphere'
 import { livingAtmosphereOrNull } from '@/lib/atmosphere'
-import { resolveMomentListen } from '@/lib/moment'
 import { buildPromoteQueueMoment } from '@/lib/promote/build-queue-moment'
 import { publishQueueMomentVideo } from '@/lib/promote/publish-client'
+import { clearMomentVideoCache } from '@/lib/moment-export/video/moment-video-cache'
 import type { PromoteQueueRow } from '@/lib/promote/types'
 import type { AtmosphereId } from '@/lib/atmosphere'
 import type { MomentShapeId } from '@/lib/moment/types'
@@ -24,13 +31,18 @@ function asStageTheme(id: string | null | undefined): StageCardThemeId {
   return 'gold'
 }
 
+export interface PromoteQueueUpdateOptions {
+  silent?: boolean
+}
+
 interface PromoteQueueCardProps {
   item: PromoteQueueRow
   audioUrl?: string | null
   songId?: string | null
   snippetStart?: number | null
   snippetEnd?: number | null
-  onUpdated: () => void
+  onUpdated: (options?: PromoteQueueUpdateOptions) => void
+  onPublishAbortRegister?: (abort: () => void) => () => void
 }
 
 export function PromoteQueueCard({
@@ -40,9 +52,12 @@ export function PromoteQueueCard({
   snippetStart,
   snippetEnd,
   onUpdated,
+  onPublishAbortRegister,
 }: PromoteQueueCardProps) {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [confirmPublish, setConfirmPublish] = useState(false)
+  const [publishResult, setPublishResult] = useState<{ videoUrl: string; videoId: string } | null>(null)
   const [themeId, setThemeId] = useState<StageCardThemeId>(
     asStageTheme(item.overrideThemeId ?? item.defaultThemeId),
   )
@@ -51,17 +66,48 @@ export function PromoteQueueCard({
   )
   const [shapeId] = useState<MomentShapeId>(item.overrideShapeId ?? item.defaultShapeId)
 
+  const publishInFlightRef = useRef(false)
+  const publishAbortRef = useRef<AbortController | null>(null)
+  const prefsRef = useRef({ themeId, atmosphereId, shapeId })
+
   const resolvedSongId = songId ?? item.sourceSongId ?? null
   const resolvedStart = snippetStart ?? item.snippetStartSec ?? null
   const resolvedEnd = snippetEnd ?? item.snippetEndSec ?? null
   const songAtmosphere = useSongAtmosphere(resolvedSongId)
 
-  const previewRow = useMemo<PromoteQueueRow>(() => ({
+  useEffect(() => {
+    prefsRef.current = { themeId, atmosphereId, shapeId }
+  }, [themeId, atmosphereId, shapeId])
+
+  useEffect(() => {
+    setThemeId(asStageTheme(item.overrideThemeId ?? item.defaultThemeId))
+    setAtmosphereId(item.overrideAtmosphereId ?? item.defaultAtmosphereId)
+    setConfirmPublish(false)
+    setError(null)
+    setPublishResult(null)
+  }, [item.id])
+
+  useEffect(() => {
+    if (item.status !== 'published') return
+    const youtube = item.targets.find((t) => t.platform === 'youtube')
+    if (youtube?.externalPostUrl && youtube.externalPostId) {
+      setPublishResult({ videoUrl: youtube.externalPostUrl, videoId: youtube.externalPostId })
+    }
+  }, [item.status, item.targets])
+
+  const buildPreviewRow = useCallback((
+    prefs: { themeId: StageCardThemeId; atmosphereId: AtmosphereId; shapeId: MomentShapeId },
+  ): PromoteQueueRow => ({
     ...item,
-    overrideThemeId: themeId,
-    overrideAtmosphereId: atmosphereId,
-    overrideShapeId: shapeId,
-  }), [item, themeId, atmosphereId, shapeId])
+    overrideThemeId: prefs.themeId,
+    overrideAtmosphereId: prefs.atmosphereId,
+    overrideShapeId: prefs.shapeId,
+  }), [item])
+
+  const previewRow = useMemo(
+    () => buildPreviewRow({ themeId, atmosphereId, shapeId }),
+    [buildPreviewRow, themeId, atmosphereId, shapeId],
+  )
 
   const previewMoment = useMemo(
     () => buildPromoteQueueMoment(previewRow, {
@@ -73,7 +119,16 @@ export function PromoteQueueCard({
     [previewRow, resolvedSongId, audioUrl, resolvedStart, resolvedEnd],
   )
 
-  const listen = useMemo(() => resolveMomentListen(previewMoment), [previewMoment])
+  const buildMomentForPublish = useCallback(() => {
+    const prefs = prefsRef.current
+    return buildPromoteQueueMoment(buildPreviewRow(prefs), {
+      songId: resolvedSongId,
+      audioUrl,
+      snippetStart: resolvedStart,
+      snippetEnd: resolvedEnd,
+    })
+  }, [buildPreviewRow, resolvedSongId, audioUrl, resolvedStart, resolvedEnd])
+
   const canPlayInline = !!audioUrl && resolvedStart != null && resolvedEnd != null
   const playbackSongId = resolvedSongId || item.id
   const { playing, buffering } = useSnippetPlaybackUi(
@@ -111,21 +166,22 @@ export function PromoteQueueCard({
   ])
 
   const saveOverrides = useCallback(async () => {
+    const prefs = prefsRef.current
     const res = await fetch(`/api/promote/queue/${item.id}`, {
       method: 'PATCH',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        overrideThemeId: themeId,
-        overrideAtmosphereId: atmosphereId,
-        overrideShapeId: shapeId,
+        overrideThemeId: prefs.themeId,
+        overrideAtmosphereId: prefs.atmosphereId,
+        overrideShapeId: prefs.shapeId,
       }),
     })
     const body = await res.json().catch(() => ({}))
     if (!res.ok) {
       throw new Error(typeof body.error === 'string' ? body.error : 'Could not save changes')
     }
-  }, [item.id, themeId, atmosphereId, shapeId])
+  }, [item.id])
 
   useEffect(() => {
     if (item.status !== 'pending_review' && item.status !== 'approved') return
@@ -135,23 +191,69 @@ export function PromoteQueueCard({
       })
     }, 400)
     return () => window.clearTimeout(timer)
-  }, [item.status, saveOverrides])
+  }, [item.status, themeId, atmosphereId, shapeId, saveOverrides])
+
+  const cancelPublish = useCallback(() => {
+    publishAbortRef.current?.abort()
+    publishAbortRef.current = null
+    publishInFlightRef.current = false
+    setConfirmPublish(false)
+    setBusy(null)
+  }, [])
+
+  useEffect(() => {
+    if (!onPublishAbortRegister) return undefined
+    return onPublishAbortRegister(cancelPublish)
+  }, [onPublishAbortRegister, cancelPublish])
+
+  useEffect(() => () => {
+    publishAbortRef.current?.abort()
+  }, [])
 
   const runPublish = useCallback(async () => {
-    setBusy('Rendering and uploading to YouTube…')
+    if (publishInFlightRef.current) return
+    publishInFlightRef.current = true
+    publishAbortRef.current?.abort()
+    const ac = new AbortController()
+    publishAbortRef.current = ac
+
+    setBusy('Saving your choices…')
     setError(null)
+    setConfirmPublish(false)
+
     try {
       await saveOverrides()
-      await publishQueueMomentVideo(item.id, previewMoment, (msg) => setBusy(msg))
-      onUpdated()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Publish failed')
-    } finally {
+      if (ac.signal.aborted) throw new DOMException('Publish cancelled', 'AbortError')
+
+      clearMomentVideoCache()
+      const moment = buildMomentForPublish()
+
+      setBusy('Rendering and uploading to YouTube…')
+      const result = await publishQueueMomentVideo(
+        item.id,
+        moment,
+        (msg) => setBusy(msg),
+        ac.signal,
+      )
+      setPublishResult(result)
       setBusy(null)
+      onUpdated({ silent: true })
+    } catch (err) {
+      if ((err as Error)?.name === 'AbortError') {
+        setError(null)
+        setBusy(null)
+        return
+      }
+      setError(err instanceof Error ? err.message : 'Publish failed')
+      setBusy(null)
+    } finally {
+      publishInFlightRef.current = false
+      if (publishAbortRef.current === ac) publishAbortRef.current = null
     }
-  }, [item.id, previewMoment, saveOverrides, onUpdated])
+  }, [item.id, saveOverrides, buildMomentForPublish, onUpdated])
 
   async function approve() {
+    if (publishInFlightRef.current || busy) return
     setBusy('Approving…')
     setError(null)
     try {
@@ -161,8 +263,8 @@ export function PromoteQueueCard({
         credentials: 'include',
       })
       if (!res.ok) throw new Error('Approve failed')
-      onUpdated()
-      await runPublish()
+      setBusy(null)
+      onUpdated({ silent: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Approve failed')
       setBusy(null)
@@ -170,16 +272,26 @@ export function PromoteQueueCard({
   }
 
   async function reject() {
+    if (publishInFlightRef.current || busy) return
+    cancelPublish()
     setBusy('Rejecting…')
     await fetch(`/api/promote/queue/${item.id}/reject`, { method: 'POST', credentials: 'include' })
     setBusy(null)
-    onUpdated()
+    onUpdated({ silent: true })
+  }
+
+  function requestPublish() {
+    if (publishInFlightRef.current || busy) return
+    setError(null)
+    setConfirmPublish(true)
   }
 
   const youtubeTarget = item.targets.find((t) => t.platform === 'youtube')
+  const publishedUrl = publishResult?.videoUrl ?? youtubeTarget?.externalPostUrl ?? null
   const canEdit = item.status === 'pending_review' || item.status === 'approved'
   const canPublish = item.status === 'approved' || item.status === 'partial'
   const canApprove = item.status === 'pending_review'
+  const isPublished = item.status === 'published' || !!publishResult
 
   return (
     <div
@@ -192,7 +304,7 @@ export function PromoteQueueCard({
       }}
     >
       <div style={{ fontFamily: font, fontSize: '0.65rem', letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>
-        {item.status.replace('_', ' ')}
+        {isPublished ? 'published' : item.status.replace('_', ' ')}
       </div>
       <div style={{ fontFamily: font, fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
         {item.songTitle}
@@ -256,10 +368,7 @@ export function PromoteQueueCard({
       {canEdit && (
         <MomentExportCustomizeBar
           cardThemeId={themeId}
-          onThemeChange={(id) => {
-            setThemeId(id)
-            setAtmosphereId('still')
-          }}
+          onThemeChange={setThemeId}
           exportAtmosphereId={atmosphereId}
           onExportAtmosphereChange={(next) => {
             const resolved = typeof next === 'function' ? next(atmosphereId) : next
@@ -277,18 +386,35 @@ export function PromoteQueueCard({
         </p>
       )}
 
-      {youtubeTarget?.externalPostUrl && (
-        <a
-          href={youtubeTarget.externalPostUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ fontFamily: font, color: 'var(--gold)', fontSize: '0.85rem' }}
-        >
-          View on YouTube
-        </a>
+      {isPublished && publishedUrl && (
+        <div style={{
+          marginTop: '12px',
+          padding: '14px 16px',
+          borderRadius: '12px',
+          border: '1px solid var(--gold-border)',
+          background: 'var(--gold-faint)',
+        }}>
+          <p style={{
+            fontFamily: font,
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            color: 'var(--text-primary)',
+            margin: '0 0 8px',
+          }}>
+            Published to YouTube
+          </p>
+          <a
+            href={publishedUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontFamily: font, color: 'var(--gold)', fontSize: '0.85rem' }}
+          >
+            View Short on YouTube →
+          </a>
+        </div>
       )}
 
-      {youtubeTarget?.errorMessage && (
+      {youtubeTarget?.errorMessage && !isPublished && (
         <p style={{
           fontFamily: font,
           fontSize: '0.8rem',
@@ -316,33 +442,90 @@ export function PromoteQueueCard({
         <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '8px' }}>{busy}</p>
       )}
 
-      <div style={{ display: 'flex', gap: '10px', marginTop: '16px', flexWrap: 'wrap' }}>
-        {canApprove && (
-          <>
+      {confirmPublish && (
+        <div style={{
+          marginTop: '16px',
+          padding: '14px 16px',
+          borderRadius: '12px',
+          border: '1px solid var(--border-hi)',
+          background: 'var(--surface-2)',
+        }}>
+          <p style={{
+            fontFamily: font,
+            fontSize: '0.85rem',
+            color: 'var(--text-primary)',
+            margin: '0 0 12px',
+            lineHeight: 1.45,
+          }}>
+            Publish this Short to YouTube now? Your current color and effect choices will be used. This cannot be undone from MARGO.
+          </p>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <button
               type="button"
-              onClick={() => void approve()}
+              onClick={() => void runPublish()}
               disabled={!!busy || shapeId !== 'vertical'}
               style={primaryBtn}
             >
-              Approve & publish
+              Confirm publish
             </button>
-            <button type="button" onClick={() => void reject()} disabled={!!busy} style={ghostBtn}>
-              Reject
+            <button
+              type="button"
+              onClick={cancelPublish}
+              disabled={!!busy}
+              style={ghostBtn}
+            >
+              Cancel
             </button>
-          </>
-        )}
-        {canPublish && shapeId === 'vertical' && (
-          <button type="button" onClick={() => void runPublish()} disabled={!!busy} style={primaryBtn}>
-            Publish to YouTube
-          </button>
-        )}
-        {item.status === 'approved' && (
-          <button type="button" onClick={() => void reject()} disabled={!!busy} style={ghostBtn}>
-            Reject
-          </button>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
+
+      {!confirmPublish && !isPublished && (
+        <div style={{ display: 'flex', gap: '10px', marginTop: '16px', flexWrap: 'wrap' }}>
+          {canApprove && (
+            <>
+              <button
+                type="button"
+                onClick={() => void approve()}
+                disabled={!!busy || shapeId !== 'vertical'}
+                style={primaryBtn}
+              >
+                Approve
+              </button>
+              <button type="button" onClick={() => void reject()} disabled={!!busy} style={ghostBtn}>
+                Reject
+              </button>
+            </>
+          )}
+          {canPublish && shapeId === 'vertical' && (
+            <>
+              <button
+                type="button"
+                onClick={requestPublish}
+                disabled={!!busy || publishInFlightRef.current}
+                style={primaryBtn}
+              >
+                Publish to YouTube
+              </button>
+              <button type="button" onClick={() => void reject()} disabled={!!busy} style={ghostBtn}>
+                Reject
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {canEdit && item.status === 'approved' && !confirmPublish && !isPublished && (
+        <p style={{
+          fontFamily: font,
+          fontSize: '0.75rem',
+          color: 'var(--text-muted)',
+          marginTop: '12px',
+          lineHeight: 1.4,
+        }}>
+          Approved — you can still change color or effect above before publishing.
+        </p>
+      )}
     </div>
   )
 }

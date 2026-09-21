@@ -28,8 +28,11 @@ export async function publishQueueMomentVideo(
   queueId: string,
   moment: MargoMoment,
   onProgress?: (message: string) => void,
+  signal?: AbortSignal,
 ): Promise<{ videoUrl: string; videoId: string }> {
-  const rendered = await getOrCreateMomentVideoFile(moment, onProgress)
+  if (signal?.aborted) throw new DOMException('Publish cancelled', 'AbortError')
+
+  const rendered = await getOrCreateMomentVideoFile(moment, onProgress, signal)
   if (!rendered) throw new Error('Video export is not available on this device')
 
   const byteSize = rendered.file.size
@@ -55,6 +58,7 @@ export async function publishQueueMomentVideo(
   }
 
   onProgress?.('Publishing to YouTube…')
+  if (signal?.aborted) throw new DOMException('Publish cancelled', 'AbortError')
 
   let res: Response
   try {
@@ -63,8 +67,10 @@ export async function publishQueueMomentVideo(
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ storagePath }),
+      signal,
     })
   } catch (err) {
+    if ((err as Error)?.name === 'AbortError') throw err
     throw new Error(
       `Publish request never completed: ${err instanceof Error ? err.message : 'network error'}. ` +
       'YouTube was not called.',

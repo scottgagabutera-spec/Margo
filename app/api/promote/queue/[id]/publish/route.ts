@@ -100,17 +100,12 @@ export async function POST(
     .select('*')
     .eq('id', queueId)
     .eq('profile_id', session.userId)
-    .in('status', ['approved', 'publishing', 'partial'])
+    .in('status', ['approved', 'publishing', 'partial', 'published'])
     .maybeSingle()
 
   if (queueErr || !queue) {
     return NextResponse.json({ error: 'Queue item not found or not ready to publish' }, { status: 404 })
   }
-
-  await admin
-    .from('promote_queue')
-    .update({ status: 'publishing', updated_at: new Date().toISOString() })
-    .eq('id', queueId)
 
   const { data: targets } = await admin
     .from('promote_queue_targets')
@@ -121,6 +116,55 @@ export async function POST(
   if (!youtubeTarget || youtubeTarget.status === 'skipped') {
     await admin.from('promote_queue').update({ status: 'failed', updated_at: new Date().toISOString() }).eq('id', queueId)
     return NextResponse.json({ error: 'YouTube target not available — connect YouTube in Settings.' }, { status: 400 })
+  }
+
+  if (
+    youtubeTarget.status === 'published'
+    && youtubeTarget.external_post_id
+    && youtubeTarget.external_post_url
+  ) {
+    return NextResponse.json({
+      ok: true,
+      videoId: youtubeTarget.external_post_id,
+      videoUrl: youtubeTarget.external_post_url,
+      alreadyPublished: true,
+    })
+  }
+
+  const { data: claimed, error: claimErr } = await admin
+    .from('promote_queue')
+    .update({ status: 'publishing', updated_at: new Date().toISOString() })
+    .eq('id', queueId)
+    .eq('profile_id', session.userId)
+    .in('status', ['approved', 'partial'])
+    .select('id')
+    .maybeSingle()
+
+  if (claimErr) {
+    return NextResponse.json({ error: claimErr.message }, { status: 500 })
+  }
+  if (!claimed) {
+    const { data: refreshedTarget } = await admin
+      .from('promote_queue_targets')
+      .select('external_post_id, external_post_url, status')
+      .eq('id', youtubeTarget.id)
+      .maybeSingle()
+    if (
+      refreshedTarget?.status === 'published'
+      && refreshedTarget.external_post_id
+      && refreshedTarget.external_post_url
+    ) {
+      return NextResponse.json({
+        ok: true,
+        videoId: refreshedTarget.external_post_id,
+        videoUrl: refreshedTarget.external_post_url,
+        alreadyPublished: true,
+      })
+    }
+    return NextResponse.json(
+      { error: 'This moment is already being published. Please wait.' },
+      { status: 409 },
+    )
   }
 
   let objectKey: string

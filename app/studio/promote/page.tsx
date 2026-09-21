@@ -1,21 +1,23 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { BackButton } from '@/components/back-button'
-import { PromoteQueueCard } from '@/components/promote/promote-queue-card'
+import { PromoteQueueCard, type PromoteQueueUpdateOptions } from '@/components/promote/promote-queue-card'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 import { UI_FONT } from '@/lib/fonts'
 import { buildPromoteQueueMoment } from '@/lib/promote/build-queue-moment'
 import { publishQueueMomentVideo } from '@/lib/promote/publish-client'
+import { clearMomentVideoCache } from '@/lib/moment-export/video/moment-video-cache'
 import type { PromoteQueueRow } from '@/lib/promote/types'
 
 const font = UI_FONT
 const supabase = createClient()
 
 export default function StudioPromotePage() {
+  const router = useRouter()
   const { user, identity, loading: identityLoading } = useIdentity()
   const [items, setItems] = useState<PromoteQueueRow[]>([])
   const [audioByPost, setAudioByPost] = useState<Record<string, {
@@ -28,23 +30,38 @@ export default function StudioPromotePage() {
   const [error, setError] = useState<string | null>(null)
   const searchParams = useSearchParams()
   const autopublishAttempted = useRef<string | null>(null)
+  const publishAbortHandlers = useRef<Set<() => void>>(new Set())
 
   const isActiveArtist = identity?.isArtist && identity.artistStatus === 'active'
 
-  const loadQueue = useCallback(async () => {
-    setLoading(true)
+  const registerPublishAbort = useCallback((abort: () => void) => {
+    publishAbortHandlers.current.add(abort)
+    return () => {
+      publishAbortHandlers.current.delete(abort)
+    }
+  }, [])
+
+  const cancelPendingPublishes = useCallback(() => {
+    for (const abort of publishAbortHandlers.current) abort()
+    publishAbortHandlers.current.clear()
+  }, [])
+
+  const loadQueue = useCallback(async (options?: PromoteQueueUpdateOptions) => {
+    if (!options?.silent) {
+      setLoading(true)
+    }
     setError(null)
     try {
       const res = await fetch('/api/promote/queue', { credentials: 'include' })
       if (!res.ok) {
         setError('Could not load promotion queue.')
-        setItems([])
+        if (!options?.silent) setItems([])
         return
       }
       const json = await res.json()
       setItems(json.items || [])
     } finally {
-      setLoading(false)
+      if (!options?.silent) setLoading(false)
     }
   }, [])
 
@@ -124,10 +141,20 @@ export default function StudioPromotePage() {
       snippetStart: audio?.snippetStart ?? item.snippetStartSec,
       snippetEnd: audio?.snippetEnd ?? item.snippetEndSec,
     })
+    clearMomentVideoCache()
     void publishQueueMomentVideo(queueId, moment)
-      .then(() => loadQueue())
-      .catch((err) => setError(err instanceof Error ? err.message : 'Auto-publish failed'))
+      .then(() => loadQueue({ silent: true }))
+      .catch((err) => {
+        if ((err as Error)?.name !== 'AbortError') {
+          setError(err instanceof Error ? err.message : 'Auto-publish failed')
+        }
+      })
   }, [searchParams, items, audioByPost, loadQueue])
+
+  const handleBack = useCallback(() => {
+    cancelPendingPublishes()
+    router.push('/studio')
+  }, [cancelPendingPublishes, router])
 
   if (identityLoading || loading) {
     return (
@@ -156,12 +183,12 @@ export default function StudioPromotePage() {
         padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)',
       }}
     >
-      <BackButton fallbackHref="/studio" label="Studio" />
+      <BackButton fallbackHref="/studio" label="Studio" onNavigate={handleBack} />
       <h1 style={{ fontFamily: font, fontSize: '1.4rem', fontWeight: 600, margin: '16px 0 8px' }}>
         Promotion queue
       </h1>
       <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-        Review, polish color or effect, then publish to YouTube.
+        Review, polish color or effect, approve, then confirm publish to YouTube.
       </p>
       <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
         Published, rejected, and failed posts clear from this list after 24 hours.
@@ -192,7 +219,8 @@ export default function StudioPromotePage() {
                 audioUrl={audio?.audioUrl ?? null}
                 snippetStart={audio?.snippetStart ?? item.snippetStartSec}
                 snippetEnd={audio?.snippetEnd ?? item.snippetEndSec}
-                onUpdated={() => void loadQueue()}
+                onUpdated={(options) => void loadQueue(options)}
+                onPublishAbortRegister={registerPublishAbort}
               />
             )
           })
