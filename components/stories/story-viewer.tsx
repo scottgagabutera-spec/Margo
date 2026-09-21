@@ -10,6 +10,7 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import { CloseIcon } from '@/components/icons'
+import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { playSnippet, stop } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
@@ -87,7 +88,7 @@ function StorySlideView({
       title: line.songTitle || '',
       artist: line.artistName || '',
       artwork: line.artworkUrl,
-      lineIndex: line.snippetStart,
+      lineIndex: 0,
       lineText: line.lyric,
       startSec: line.snippetStart,
       endSec: line.snippetEnd,
@@ -126,26 +127,34 @@ function StorySlideView({
       padding: '0 12px',
       boxSizing: 'border-box',
       width: '100%',
-      maxWidth: '420px',
-      margin: '0 auto',
+      minHeight: 0,
+      position: 'relative',
+      zIndex: 1,
+      pointerEvents: 'none',
     }}>
-      <div style={{ width: '100%', maxWidth: 360 }}>
-        <StageMomentCard
-          lyric={line?.lyric || ''}
-          songTitle={line?.songTitle || ''}
-          artistName={line?.artistName || ''}
-          artwork={line?.artworkUrl}
-          vibeLabel={moment.vibeLabel}
-          cardThemeId={themeId}
-          atmosphereId={atmosphereId}
-          shapeId="vertical"
-          hideVibeChrome
-          effectOwnsFill
-          canPlay={canPlay}
-          playing={playing}
-          buffering={buffering}
-          onPlay={startPlayback}
-        />
+      <div style={{
+        width: 'min(100%, 320px, calc((100dvh - 180px) * 9 / 16))',
+        maxHeight: 'calc(100dvh - 180px)',
+        pointerEvents: 'auto',
+      }}>
+        <MomentExportPreviewFrame shapeId="vertical">
+          <StageMomentCard
+            lyric={line?.lyric || ''}
+            songTitle={line?.songTitle || ''}
+            artistName={line?.artistName || ''}
+            artwork={line?.artworkUrl}
+            vibeLabel={moment.vibeLabel}
+            cardThemeId={themeId}
+            atmosphereId={atmosphereId}
+            shapeId="vertical"
+            hideVibeChrome
+            effectOwnsFill
+            canPlay={canPlay}
+            playing={playing}
+            buffering={buffering}
+            onPlay={startPlayback}
+          />
+        </MomentExportPreviewFrame>
       </div>
     </div>
   )
@@ -340,6 +349,7 @@ export function StoryViewer({ authorProfileId, onClose }: StoryViewerProps) {
             top: 0,
             bottom: 0,
             width: '28%',
+            zIndex: 2,
             background: 'transparent',
             border: 'none',
             cursor: 'pointer',
@@ -356,6 +366,7 @@ export function StoryViewer({ authorProfileId, onClose }: StoryViewerProps) {
             top: 0,
             bottom: 0,
             width: '28%',
+            zIndex: 2,
             background: 'transparent',
             border: 'none',
             cursor: 'pointer',

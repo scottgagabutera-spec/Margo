@@ -13,6 +13,7 @@ import { MomentVibeRow } from '@/components/moment-vibe-row'
 import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
 import { MomentActionMenu, type MomentActionMenuItem } from '@/components/moment-action-menu'
 import { MomentOutreachActions } from '@/components/moment-outreach-actions'
+import { MomentExportScrollHint } from '@/components/moment-export-scroll-hint'
 import { recordCardExport } from '@/lib/engagement/card-exports'
 import {
   drawDualCard,
@@ -689,6 +690,7 @@ export function MomentShareStudio({
     return (
       <>
         {mediaReadySheetEl}
+        <MomentExportScrollHint active={shapeId === 'vertical'} />
         <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap }}>
         {openMenu ? (
           <button
