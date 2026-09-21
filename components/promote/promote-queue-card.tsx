@@ -11,7 +11,7 @@ import {
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { MomentExportCustomizeBar } from '@/components/moment-export-customize-bar'
 import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
-import { UI_FONT } from '@/lib/fonts'
+import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { playSnippet } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
 import { useSongAtmosphere } from '@/hooks/useSongAtmosphere'
@@ -25,6 +25,7 @@ import type { MomentShapeId } from '@/lib/moment/types'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 
 const font = UI_FONT
+const lyricFont = LYRIC_FONT
 
 function asStageTheme(id: string | null | undefined): StageCardThemeId {
   if (id === 'blush' || id === 'sage' || id === 'dusk' || id === 'gold') return id
@@ -334,13 +335,13 @@ export function PromoteQueueCard({
         marginBottom: '20px',
       }}
     >
-      <div style={{ fontFamily: font, fontSize: '0.65rem', letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>
+      <div style={{ fontFamily: font, fontSize: '0.6rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>
         {isPublished ? 'published' : status.replace('_', ' ')}
       </div>
-      <div style={{ fontFamily: font, fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+      <div style={{ fontFamily: font, fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>
         {item.songTitle}
       </div>
-      <div style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '12px', whiteSpace: 'pre-line' }}>
+      <div style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: '1.1rem', color: 'var(--text)', marginBottom: '12px', whiteSpace: 'pre-line', lineHeight: 1.5 }}>
         {item.lyricText}
       </div>
 
@@ -348,9 +349,9 @@ export function PromoteQueueCard({
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
           <span style={{
             fontFamily: font,
-            fontSize: '0.56rem',
+            fontSize: '0.6rem',
             fontWeight: 600,
-            letterSpacing: '0.5px',
+            letterSpacing: '1.5px',
             textTransform: 'uppercase',
             color: 'var(--text-muted)',
           }}>
@@ -365,7 +366,7 @@ export function PromoteQueueCard({
             border: '1px solid var(--gold-border)',
             background: 'var(--gold-faint)',
             fontFamily: font,
-            fontSize: '0.56rem',
+            fontSize: '0.6rem',
             fontWeight: 700,
             letterSpacing: '0.4px',
             textTransform: 'uppercase',
@@ -549,7 +550,7 @@ export function PromoteQueueCard({
       {canEdit && status === 'approved' && !confirmPublish && !isPublished && !isPublishing && (
         <p style={{
           fontFamily: font,
-          fontSize: '0.75rem',
+          fontSize: '0.82rem',
           color: 'var(--text-muted)',
           marginTop: '12px',
           lineHeight: 1.4,
@@ -563,8 +564,8 @@ export function PromoteQueueCard({
 
 const primaryBtn: CSSProperties = {
   fontFamily: font,
-  fontSize: '0.72rem',
-  letterSpacing: '0.5px',
+  fontSize: '0.6rem',
+  letterSpacing: '1.2px',
   textTransform: 'uppercase',
   padding: '10px 16px',
   borderRadius: '999px',

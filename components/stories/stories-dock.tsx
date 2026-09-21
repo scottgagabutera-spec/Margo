@@ -101,7 +101,7 @@ export function StoriesDock({ onAddStory }: { onAddStory?: () => void }) {
           <div style={{ padding: '12px 0 8px' }}>
             <p style={{
               fontFamily: font,
-              fontSize: '0.9rem',
+              fontSize: '0.95rem',
               fontStyle: 'italic',
               color: 'var(--text-secondary)',
               margin: '0 0 16px',
@@ -201,7 +201,7 @@ function StoryPickerRow({
           <span style={{
             display: 'block',
             fontFamily: font,
-            fontSize: '0.9rem',
+            fontSize: '0.95rem',
             fontWeight: 600,
             color: 'var(--text)',
             overflow: 'hidden',

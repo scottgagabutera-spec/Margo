@@ -185,7 +185,7 @@ export default function StudioPromotePage() {
         padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)',
       }}
     >
-      <h1 style={{ fontFamily: font, fontSize: '1.4rem', fontWeight: 600, margin: '0 0 8px' }}>
+      <h1 style={{ fontFamily: font, fontSize: '1.5rem', fontWeight: 600, margin: '0 0 8px' }}>
         Promotion queue
       </h1>
       <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>

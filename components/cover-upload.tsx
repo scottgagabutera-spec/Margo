@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
+import { ImagePlusIcon } from '@/components/icons'
 import { UI_FONT } from '@/lib/fonts'
 
 const supabase = createClient()
@@ -68,15 +69,24 @@ export function CoverUpload({
 
   return (
     <div>
-      <div style={{
-        width: '100%',
-        height: '120px',
-        borderRadius: '16px',
-        overflow: 'hidden',
-        border: '1px solid var(--border)',
-        background: previewUrl ? 'var(--surface-2)' : 'var(--surface)',
-        position: 'relative',
-      }}>
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        disabled={uploading}
+        aria-label={previewUrl ? 'Change cover photo' : 'Add cover photo'}
+        style={{
+          display: 'block',
+          width: '100%',
+          height: '120px',
+          padding: 0,
+          borderRadius: '16px',
+          overflow: 'hidden',
+          border: '1px solid var(--border)',
+          background: previewUrl ? 'var(--surface-2)' : 'var(--surface)',
+          position: 'relative',
+          cursor: uploading ? 'not-allowed' : 'pointer',
+        }}
+      >
         {previewUrl ? (
           <img
             src={previewUrl}
@@ -84,50 +94,36 @@ export function CoverUpload({
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
         ) : (
-          <div style={{
+          <span style={{
             height: '100%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontFamily: font,
-            fontSize: '0.8rem',
-            color: 'var(--text-muted)',
           }}>
-            No cover photo yet
-          </div>
+            <ImagePlusIcon size={28} color="var(--gold)" />
+          </span>
         )}
-      </div>
+        <span style={{
+          position: 'absolute',
+          right: '10px',
+          bottom: '10px',
+          width: 'var(--margo-touch-min)',
+          height: 'var(--margo-touch-min)',
+          borderRadius: '50%',
+          background: 'var(--margo-bar)',
+          border: '1px solid var(--border-hi)',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <ImagePlusIcon size={18} color="var(--gold)" />
+        </span>
+      </button>
       {error && (
-        <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--danger, #e55)', marginTop: '8px' }}>
+        <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '8px' }}>
           {error}
         </p>
       )}
-      <button
-        type="button"
-        onClick={() => fileInputRef.current?.click()}
-        disabled={uploading}
-        style={{
-          marginTop: '12px',
-          minHeight: 'var(--margo-touch-min)',
-          padding: '0 20px',
-          display: 'inline-flex',
-          alignItems: 'center',
-          boxSizing: 'border-box',
-          background: 'var(--surface-2)',
-          color: 'var(--text-secondary)',
-          border: '1px solid var(--border)',
-          borderRadius: '50px',
-          fontFamily: font,
-          fontWeight: 600,
-          fontSize: '0.6rem',
-          letterSpacing: '1px',
-          textTransform: 'uppercase',
-          cursor: uploading ? 'not-allowed' : 'pointer',
-          opacity: uploading ? 0.6 : 1,
-        }}
-      >
-        {uploading ? 'Uploading…' : previewUrl ? 'Change Cover' : 'Add Cover'}
-      </button>
       <input
         ref={fileInputRef}
         type="file"
@@ -135,9 +131,6 @@ export function CoverUpload({
         onChange={handleFileSelect}
         style={{ display: 'none' }}
       />
-      <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: '8px' }}>
-        JPG, PNG, or WebP. Max 5MB. Wide photos work best.
-      </p>
     </div>
   )
 }

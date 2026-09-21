@@ -16,7 +16,7 @@ import { SongPreviewSheet, type SongPreviewSeed } from '@/components/song-previe
 import { PostCard } from '@/components/post-card'
 import { CardExportModal } from '@/components/card-export-modal'
 import { resolveMargoMomentFromPost } from '@/lib/moment'
-import { MoreIcon, EditIcon } from '@/components/icons'
+import { MoreIcon, EditIcon, ImagePlusIcon } from '@/components/icons'
 import type { Post } from '@/hooks/usePosts'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
 import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
@@ -26,6 +26,9 @@ import { peekProfileCache, warmProfile, type WarmProfileRow } from '@/lib/profil
 import { resolvePublicArtistCredit } from '@/lib/artist-identity'
 import { uploadProfileCover } from '@/components/cover-upload'
 import { PendingNavLink } from '@/components/pending-nav-link'
+import { PlayPauseIcon } from '@/components/play-pause-icon'
+import { playFull, togglePlayPause } from '@/lib/audio-engine'
+import { useIsBuffering, useIsPlaying } from '@/hooks/useAudioEngine'
 
 const supabase = createClient()
 
@@ -45,14 +48,16 @@ const sectionLabelStyle: React.CSSProperties = {
 
 const profileStatStyle: React.CSSProperties = {
   display: 'flex',
+  flex: 1,
   flexDirection: 'column',
-  alignItems: 'flex-start',
+  alignItems: 'center',
   justifyContent: 'center',
   minWidth: 'var(--margo-touch-min)',
   minHeight: 'var(--margo-touch-min)',
-  padding: '4px 12px 4px 0',
+  padding: '10px 4px',
   textDecoration: 'none',
   boxSizing: 'border-box',
+  textAlign: 'center',
 }
 
 function ProfileStat({
@@ -68,11 +73,11 @@ function ProfileStat({
     <>
       <span style={{
         fontFamily: font,
-        fontSize: '1.15rem',
+        fontSize: '1.25rem',
         fontWeight: 600,
         color: 'var(--text)',
         lineHeight: 1.15,
-        letterSpacing: '-0.02em',
+        fontVariantNumeric: 'tabular-nums',
       }}>
         {count ?? '—'}
       </span>
@@ -80,10 +85,10 @@ function ProfileStat({
         fontFamily: font,
         fontSize: '0.6rem',
         fontWeight: 700,
-        letterSpacing: '1.2px',
+        letterSpacing: '1.5px',
         textTransform: 'uppercase',
-        color: 'var(--text-muted)',
-        marginTop: '4px',
+        color: 'var(--text-secondary)',
+        marginTop: '6px',
       }}>
         {label}
       </span>
@@ -97,6 +102,51 @@ function ProfileStat({
     )
   }
   return <span style={profileStatStyle}>{inner}</span>
+}
+
+function SignaturePlayButton({
+  track,
+}: {
+  track: { id: string; title: string; artist: string; artwork: string | null; audioUrl: string }
+}) {
+  const playing = useIsPlaying(track.id)
+  const buffering = useIsBuffering(track.id)
+  return (
+    <button
+      type="button"
+      aria-label={playing ? 'Pause signature song' : 'Play signature song'}
+      onClick={() => {
+        if (playing) {
+          togglePlayPause()
+          return
+        }
+        void playFull({
+          songId: track.id,
+          audioUrl: track.audioUrl,
+          title: track.title,
+          artist: track.artist,
+          artwork: track.artwork,
+          autoplay: true,
+          source: 'feed-tier1',
+        })
+      }}
+      style={{
+        width: 'var(--margo-touch-min)',
+        height: 'var(--margo-touch-min)',
+        borderRadius: '50%',
+        border: '1px solid var(--gold-border)',
+        background: 'var(--gold-faint)',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 0,
+        cursor: 'pointer',
+        flexShrink: 0,
+      }}
+    >
+      <PlayPauseIcon playing={playing} buffering={buffering} size={16} color="var(--gold)" />
+    </button>
+  )
 }
 
 type ProfileData = WarmProfileRow
@@ -150,6 +200,13 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
   const [artistSongs, setArtistSongs] = useState<ArtistSongRow[]>([])
   const [artistSongsLoading, setArtistSongsLoading] = useState(false)
   const [artistStats, setArtistStats] = useState({ totalPlays: 0, totalResonates: 0 })
+  const [signatureTrack, setSignatureTrack] = useState<{
+    id: string
+    title: string
+    artist: string
+    artwork: string | null
+    audioUrl: string
+  } | null>(null)
 
   useEffect(() => {
     if (!username) return
@@ -244,6 +301,35 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
       })
     return () => { active = false }
   }, [profile?.id, profile?.isArtist])
+
+  useEffect(() => {
+    const id = profile?.signatureSongId
+    if (!id) {
+      setSignatureTrack(null)
+      return
+    }
+    let active = true
+    void supabase
+      .from('songs')
+      .select('id, title, artist_display_name, artwork_url, audio_url')
+      .eq('id', id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!active) return
+        if (!data?.audio_url) {
+          setSignatureTrack(null)
+          return
+        }
+        setSignatureTrack({
+          id: data.id,
+          title: data.title,
+          artist: data.artist_display_name,
+          artwork: data.artwork_url,
+          audioUrl: data.audio_url,
+        })
+      })
+    return () => { active = false }
+  }, [profile?.signatureSongId])
 
   const isOwnProfile = !!identity && !!profile && identity.username === profile.username
 
@@ -543,23 +629,17 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 alignItems: 'center',
                 justifyContent: 'center',
                 width: '100%',
-                minHeight: '72px',
+                minHeight: '88px',
                 marginTop: 'var(--nav-height, 72px)',
                 padding: 0,
                 border: 'none',
                 borderBottom: '1px solid var(--border)',
                 background: 'var(--surface)',
                 cursor: coverBusy ? 'not-allowed' : 'pointer',
-                fontFamily: font,
-                fontSize: '0.6rem',
-                fontWeight: 700,
-                letterSpacing: '1.4px',
-                textTransform: 'uppercase',
-                color: 'var(--text-muted)',
                 WebkitTapHighlightColor: 'transparent',
               }}
             >
-              {coverBusy ? 'Uploading…' : 'Add cover photo'}
+              <ImagePlusIcon size={28} color="var(--gold)" />
             </button>
           ) : (
             <div style={{ height: 'var(--nav-height, 72px)' }} />
@@ -793,7 +873,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
             <div style={{ marginBottom: '24px' }}>
               <p style={sectionLabelStyle}>Bio</p>
               {profile.bio ? (
-                <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-2)', lineHeight: 1.6 }}>
+                <p style={{ fontFamily: font, fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                   {profile.bio}
                 </p>
               ) : isOwnProfile ? (
@@ -812,27 +892,35 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
             )}
 
             <div style={{
-              background: 'rgba(232,197,71,0.04)', border: '1px solid rgba(232,197,71,0.22)',
+              background: 'var(--gold-faint)', border: '1px solid var(--gold-border)',
               borderRadius: '20px', padding: '24px', textAlign: 'left', marginBottom: '28px',
             }}>
-              <p style={sectionLabelStyle}>Signature Lyric</p>
+              <p style={sectionLabelStyle}>Signature lyric</p>
               {profile.signatureLyric ? (
                 <>
                   <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: '1.1rem', color: 'var(--gold)', lineHeight: 1.5, marginBottom: '8px' }}>
                     &ldquo;{profile.signatureLyric}&rdquo;
                   </p>
-                  {(profile.signatureSong || profile.signatureArtist) && (
-                    <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                      {profile.signatureSong}{profile.signatureSong && profile.signatureArtist ? ' · ' : ''}{profile.signatureArtist}
-                    </p>
+                  {(profile.signatureSong || profile.signatureArtist || signatureTrack) && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      {signatureTrack ? <SignaturePlayButton track={signatureTrack} /> : null}
+                      <p style={{
+                        fontFamily: font,
+                        fontSize: '0.7rem',
+                        color: 'var(--text-secondary)',
+                        margin: 0,
+                      }}>
+                        {profile.signatureSong}{profile.signatureSong && profile.signatureArtist ? ' · ' : ''}{profile.signatureArtist}
+                      </p>
+                    </div>
                   )}
                 </>
               ) : isOwnProfile ? (
-                <Link href="/profile/edit" style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic', textDecoration: 'none' }}>
-                  Add the lyric that says it best →
+                <Link href="/profile/edit" style={{ fontFamily: font, fontSize: '0.95rem', color: 'var(--text-secondary)', textDecoration: 'none' }}>
+                  Add the lyric that says it best
                 </Link>
               ) : (
-                <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
                   Hasn&rsquo;t picked one yet.
                 </p>
               )}

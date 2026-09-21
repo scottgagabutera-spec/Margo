@@ -42,6 +42,7 @@ export interface Identity {
   signatureLyric: string | null
   signatureSong: string | null
   signatureArtist: string | null
+  signatureSongId: string | null
   artistLinks: ArtistApplicationLinks
   createdAt: string
 }
@@ -72,6 +73,7 @@ function mapRow(row: any): Identity {
     signatureLyric: row.signature_lyric,
     signatureSong: row.signature_song,
     signatureArtist: row.signature_artist,
+    signatureSongId: row.signature_song_id ?? null,
     artistLinks: sanitizeArtistLinks(row.artist_links),
     createdAt: row.created_at,
   }
@@ -84,7 +86,7 @@ interface IdentityContextValue {
   waitUntilReady: (timeoutMs?: number) => Promise<Identity | null>
   updateDisplayName: (newName: string) => Promise<ActionResult>
   changeUsername: (newUsername: string) => Promise<ActionResult>
-  updateSignatureLyric: (data: { lyric: string; song: string; artist: string }) => Promise<ActionResult>
+  updateSignatureLyric: (data: { lyric: string; song: string; artist: string; songId?: string | null }) => Promise<ActionResult>
   updateBio: (newBio: string) => Promise<ActionResult>
   updateArtistLinks: (links: Record<string, string>) => Promise<ActionResult>
   setPrivate: (isPrivate: boolean) => Promise<ActionResult>
@@ -317,20 +319,24 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
   }, [identityUser])
 
   const updateSignatureLyric = useCallback(async (
-    data: { lyric: string; song: string; artist: string }
+    data: { lyric: string; song: string; artist: string; songId?: string | null }
   ): Promise<ActionResult> => {
     if (!identityUser) return { success: false, error: 'Not signed in.' }
-    const { error } = await supabase.from('profiles').update({
+    const songId = data.songId === undefined ? undefined : (data.songId || null)
+    const patch: Record<string, string | null> = {
       signature_lyric: data.lyric.trim() || null,
       signature_song: data.song.trim() || null,
       signature_artist: data.artist.trim() || null,
-    }).eq('id', identityUser.id)
+    }
+    if (songId !== undefined) patch.signature_song_id = songId
+    const { error } = await supabase.from('profiles').update(patch).eq('id', identityUser.id)
     if (error) return { success: false, error: 'Could not save your signature lyric.' }
     setIdentityState(prev => (prev ? {
       ...prev,
       signatureLyric: data.lyric.trim() || null,
       signatureSong: data.song.trim() || null,
       signatureArtist: data.artist.trim() || null,
+      signatureSongId: songId === undefined ? prev.signatureSongId : songId,
     } : prev))
     return { success: true }
   }, [identityUser])

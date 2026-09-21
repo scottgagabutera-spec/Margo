@@ -4,12 +4,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
+import { UI_FONT } from '@/lib/fonts'
 
 const supabase = createClient()
 
-const font = 'var(--font-lora), serif'
+const font = UI_FONT
 const bg = 'var(--bg)'
-const text2 = 'var(--text-2)'
+const text2 = 'var(--text-secondary)'
 const textMuted = 'var(--text-muted)'
 
 interface AvatarUploadProps {
@@ -93,7 +94,7 @@ export function AvatarUpload({ currentAvatarUrl, displayName, onUploaded }: Avat
           background: showPhoto ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           overflow: 'hidden', position: 'relative',
-          border: '1px solid rgba(255,255,255,0.08)',
+          border: '1px solid var(--border)',
         }}
       >
         {showPhoto ? (
@@ -111,7 +112,7 @@ export function AvatarUpload({ currentAvatarUrl, displayName, onUploaded }: Avat
       </div>
 
       {error && (
-        <p style={{ fontFamily: font, fontSize: '0.82rem', color: '#ff6b6b', textAlign: 'center' }}>
+        <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
           {error}
         </p>
       )}

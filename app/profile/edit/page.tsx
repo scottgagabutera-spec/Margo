@@ -5,7 +5,9 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { AvatarUpload } from '@/components/avatar-upload'
 import { CoverUpload } from '@/components/cover-upload'
+import { SignatureSongPicker } from '@/components/signature-song-picker'
 import { SignInLink } from '@/components/signin-link'
+import { LoadingRing } from '@/components/loading-ring'
 import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { ARTIST_LINK_FIELDS, sanitizeArtistLinks } from '@/lib/artist-links'
 
@@ -24,6 +26,10 @@ const labelStyle: React.CSSProperties = {
   textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '8px', fontWeight: 700,
 }
 
+const helpStyle: React.CSSProperties = {
+  fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '6px',
+}
+
 export default function EditProfilePage() {
   const router = useRouter()
   const {
@@ -40,12 +46,12 @@ export default function EditProfilePage() {
   const [lyric, setLyric] = useState('')
   const [song, setSong] = useState('')
   const [artist, setArtist] = useState('')
+  const [catalogSongId, setCatalogSongId] = useState<string | null>(null)
   const [isPrivate, setIsPrivateLocal] = useState(false)
   const [artistLinkDraft, setArtistLinkDraft] = useState<Record<string, string>>({})
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [saved, setSaved] = useState(false)
 
   // Stay here and open the auth gate so a successful sign-in returns to edit.
   useEffect(() => {
@@ -65,6 +71,7 @@ export default function EditProfilePage() {
       setLyric(identity.signatureLyric || '')
       setSong(identity.signatureSong || '')
       setArtist(identity.signatureArtist || '')
+      setCatalogSongId(identity.signatureSongId ?? null)
       setIsPrivateLocal(identity.isPrivate)
       const seeded: Record<string, string> = {}
       for (const field of ARTIST_LINK_FIELDS) {
@@ -78,7 +85,6 @@ export default function EditProfilePage() {
     if (!identity) return
     setSaving(true)
     setError(null)
-    setSaved(false)
 
     // Only fire the mutations for fields that actually changed — each
     // is a separate Supabase update via useIdentity, no batched endpoint.
@@ -104,9 +110,10 @@ export default function EditProfilePage() {
     if (
       lyric !== (identity.signatureLyric || '') ||
       song !== (identity.signatureSong || '') ||
-      artist !== (identity.signatureArtist || '')
+      artist !== (identity.signatureArtist || '') ||
+      (catalogSongId || null) !== (identity.signatureSongId || null)
     ) {
-      tasks.push(updateSignatureLyric({ lyric, song, artist }))
+      tasks.push(updateSignatureLyric({ lyric, song, artist, songId: catalogSongId }))
     }
     if (isPrivate !== identity.isPrivate) {
       tasks.push(setPrivate(isPrivate))
@@ -121,26 +128,19 @@ export default function EditProfilePage() {
 
     if (tasks.length === 0) {
       setSaving(false)
-      setSaved(true)
       router.push(`/profile/${destinationUsername}`)
       return
     }
 
     const results = await Promise.all(tasks)
     const failed = results.find(r => !r.success)
-    setSaving(false)
     if (failed) {
+      setSaving(false)
       setError(failed.error || 'Something went wrong saving your profile.')
     } else {
-      setSaved(true)
-      // Brief pause so "Profile saved." is actually visible before
-      // navigating away — instant redirect would make the confirmation
-      // flash by unnoticed.
-      setTimeout(() => {
-        router.push(`/profile/${destinationUsername}`)
-      }, 900)
+      router.push(`/profile/${destinationUsername}`)
     }
-  }, [identity, displayName, username, bio, lyric, song, artist, isPrivate, artistLinkDraft, updateDisplayName, changeUsername, updateBio, updateSignatureLyric, setPrivate, updateArtistLinks, router])
+  }, [identity, displayName, username, bio, lyric, song, artist, catalogSongId, isPrivate, artistLinkDraft, updateDisplayName, changeUsername, updateBio, updateSignatureLyric, setPrivate, updateArtistLinks, router])
 
   if (!loading && !user) {
     return (
@@ -194,7 +194,7 @@ export default function EditProfilePage() {
 
   return (
     <main style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
-      <div style={{ position: 'fixed', top: '20%', left: '20%', width: '320px', height: '320px', background: 'rgba(232,197,71,0.05)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'fixed', top: '20%', left: '20%', width: '320px', height: '320px', background: 'var(--gold-glow)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
 
       <div style={{ paddingTop: 'calc(var(--nav-height, 72px) + 24px)', paddingBottom: 'var(--margo-page-padding-bottom)', paddingLeft: '24px', paddingRight: '24px' }}>
         <div style={{ maxWidth: '560px', margin: '0 auto' }}>
@@ -245,7 +245,7 @@ export default function EditProfilePage() {
                   style={{ ...inputStyle, paddingLeft: '30px' }}
                 />
               </div>
-              <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
+              <p style={helpStyle}>
                 Lowercase letters, numbers, and underscores only.
               </p>
             </div>
@@ -259,7 +259,7 @@ export default function EditProfilePage() {
                 placeholder="Tell people what Margo means to you..."
                 style={{ ...inputStyle, height: 'auto', padding: '14px 16px', resize: 'none', lineHeight: 1.5 }}
               />
-              <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '6px', textAlign: 'right' }}>
+              <p style={{ ...helpStyle, color: 'var(--text-muted)', textAlign: 'right' }}>
                 {bio.length}/160
               </p>
             </div>
@@ -267,8 +267,8 @@ export default function EditProfilePage() {
             {identity.isArtist && (
               <div>
                 <label style={labelStyle}>Social &amp; streaming</label>
-                <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '14px', lineHeight: 1.5 }}>
-                  Full URL or @handle. These show on your public profile — they do not replace your artist application.
+                <p style={{ ...helpStyle, marginTop: 0, marginBottom: '14px', lineHeight: 1.5 }}>
+                  Full URL or @handle. These show on your public profile.
                 </p>
                 {(['social', 'streaming', 'hub'] as const).map((group) => (
                   <div key={group} style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: group === 'hub' ? 0 : '16px' }}>
@@ -291,9 +291,9 @@ export default function EditProfilePage() {
             )}
 
             <div style={{ background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '16px', padding: '20px' }}>
-              <label style={{ ...labelStyle, marginBottom: '16px' }}>Signature Lyric</label>
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '-8px', marginBottom: '16px' }}>
-                The line that says it about you — not tied to any post.
+              <label style={{ ...labelStyle, marginBottom: '8px' }}>Signature lyric</label>
+              <p style={{ ...helpStyle, marginTop: 0, marginBottom: '16px' }}>
+                The line that says it about you.
               </p>
               <textarea
                 value={lyric}
@@ -306,16 +306,28 @@ export default function EditProfilePage() {
                   lineHeight: 1.5, marginBottom: '16px', boxSizing: 'border-box',
                 }}
               />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <input
-                  type="text" value={song} onChange={e => setSong(e.target.value)} placeholder="Song"
-                  style={{ ...inputStyle, background: 'var(--surface)', height: '44px' }}
-                />
-                <input
-                  type="text" value={artist} onChange={e => setArtist(e.target.value)} placeholder="Artist"
-                  style={{ ...inputStyle, background: 'var(--surface)', height: '44px' }}
-                />
-              </div>
+              <SignatureSongPicker
+                songTitle={song}
+                artistName={artist}
+                catalogSongId={catalogSongId}
+                onChange={({ song: nextSong, artist: nextArtist, catalogSongId: nextId }) => {
+                  setSong(nextSong)
+                  setArtist(nextArtist)
+                  setCatalogSongId(nextId)
+                }}
+              />
+              {!catalogSongId && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
+                  <input
+                    type="text" value={song} onChange={e => { setSong(e.target.value); setCatalogSongId(null) }} placeholder="Song"
+                    style={{ ...inputStyle, background: 'var(--surface)', height: '44px' }}
+                  />
+                  <input
+                    type="text" value={artist} onChange={e => { setArtist(e.target.value); setCatalogSongId(null) }} placeholder="Artist"
+                    style={{ ...inputStyle, background: 'var(--surface)', height: '44px' }}
+                  />
+                </div>
+              )}
             </div>
 
             <div style={{
@@ -323,8 +335,8 @@ export default function EditProfilePage() {
               background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '18px 20px',
             }}>
               <div>
-                <p style={{ fontFamily: font, fontSize: '1rem', color: 'var(--text)', marginBottom: '4px' }}>Private Profile</p>
-                <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Only approved followers can see your lyrics.</p>
+                <p style={{ fontFamily: font, fontSize: '0.95rem', color: 'var(--text)', marginBottom: '4px' }}>Private profile</p>
+                <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Only approved followers can see your lyrics.</p>
               </div>
               <button
                 type="button"
@@ -352,10 +364,7 @@ export default function EditProfilePage() {
             </div>
 
             {error && (
-              <p style={{ fontFamily: font, fontSize: '0.9rem', color: '#ff6b6b', textAlign: 'center' }}>{error}</p>
-            )}
-            {saved && !error && (
-              <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--gold)', textAlign: 'center' }}>Profile saved.</p>
+              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', textAlign: 'center' }}>{error}</p>
             )}
 
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '8px' }}>
@@ -364,7 +373,7 @@ export default function EditProfilePage() {
                 style={{
                   minHeight: 'var(--margo-touch-min)', padding: '0 24px',
                   display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                  background: 'transparent', color: 'var(--text-2)', border: '1px solid var(--border-hi)',
+                  background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border-hi)',
                   borderRadius: '50px', fontFamily: font, fontWeight: 600, fontSize: '0.6rem',
                   letterSpacing: '1.2px', textTransform: 'uppercase', cursor: 'pointer',
                 }}
@@ -378,14 +387,44 @@ export default function EditProfilePage() {
                   background: 'var(--gold)', color: 'var(--bg)', border: 'none',
                   borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: '0.6rem',
                   letterSpacing: '1.2px', textTransform: 'uppercase', cursor: saving ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 6px 28px rgba(232,197,71,0.28)', opacity: saving ? 0.7 : 1,
+                  boxShadow: '0 6px 28px var(--gold-glow)', opacity: saving ? 0.7 : 1,
                   transition: 'opacity 150ms ease',
                 }}
-              >{saving ? 'Saving…' : 'Save Changes'}</button>
+              >{saving ? 'Saving' : 'Save'}</button>
             </div>
           </div>
         </div>
       </div>
+      {saving && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 80,
+            background: 'var(--margo-scrim)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '16px',
+          }}
+        >
+          <LoadingRing size={44} strokeWidth={2} state="spinning" />
+          <p style={{
+            fontFamily: font,
+            fontSize: '0.6rem',
+            fontWeight: 700,
+            letterSpacing: '1.5px',
+            textTransform: 'uppercase',
+            color: 'var(--gold)',
+            margin: 0,
+          }}>
+            Saving
+          </p>
+        </div>
+      )}
     </main>
   )
 }

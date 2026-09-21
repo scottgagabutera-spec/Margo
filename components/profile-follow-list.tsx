@@ -37,9 +37,6 @@ export function ProfileFollowListPage({
   }, [username, kind])
 
   const title = kind === 'followers' ? 'Followers' : 'Following'
-  const hostName = result && 'displayName' in result
-    ? (result.displayName || result.username || username)
-    : username
   const hostHandle = result && 'username' in result && result.username
     ? result.username
     : username
@@ -51,47 +48,25 @@ export function ProfileFollowListPage({
         margin: '0 auto',
         padding: 'calc(var(--nav-height, 72px) + 16px) 20px var(--margo-page-padding-bottom)',
       }}>
-        <p style={{
-          fontFamily: font,
-          fontSize: '0.6rem',
-          fontWeight: 700,
-          letterSpacing: '1.6px',
-          textTransform: 'uppercase',
-          color: 'var(--gold)',
-          margin: '0 0 8px',
-        }}>
-          {title}
-        </p>
         <h1 style={{
           fontFamily: font,
           fontSize: '1.5rem',
           fontWeight: 600,
           color: 'var(--text)',
-          margin: '0 0 4px',
+          margin: '0 0 6px',
           lineHeight: 1.2,
         }}>
-          {hostName}
+          {title}
         </h1>
         <p style={{
           fontFamily: font,
           fontSize: '0.7rem',
           color: 'var(--text-secondary)',
-          margin: '0 0 8px',
+          margin: '0 0 20px',
         }}>
           @{hostHandle}
+          {result?.ok ? ` · ${result.total}` : ''}
         </p>
-        {result?.ok && (
-          <p style={{
-            fontFamily: font,
-            fontSize: '0.82rem',
-            color: 'var(--text-secondary)',
-            margin: '0 0 20px',
-          }}>
-            {kind === 'followers'
-              ? (result.total === 1 ? '1 person follows them' : `${result.total} people follow them`)
-              : (result.total === 1 ? 'Following 1 person' : `Following ${result.total} people`)}
-          </p>
-        )}
 
         {loading && <NotificationRowSkeletonList count={5} />}
 
@@ -117,7 +92,7 @@ export function ProfileFollowListPage({
           <p style={{
             fontFamily: lyricFont,
             fontStyle: 'italic',
-            fontSize: '1rem',
+            fontSize: '1.1rem',
             color: 'var(--text-secondary)',
             marginTop: '12px',
           }}>
