@@ -117,7 +117,7 @@ Margo is a **lyric-social** product: people post song lyrics tagged with emotion
 - Auto-fire LLM / suggest ranking for every visible Feed card on load.
 - Treat Firebase RTDB as live catalog/feed truth (leftover Firebase only in explicit one-shots such as `app/api/admin/featured/import-rtdb/route.ts`).
 - Revive `/music` as a nav destination (redirects stay; pages removed).
-- Reintroduce the Feed **panel-strip / swipe-row** PostCard experiment from abandoned PR **#85** without a fresh, approved design pass. It was tried (tiles → Stories pages → Discover-width reading measure) and did not ship; do not silently revive it from residual memory or old branches.
+- Reintroduce the Feed **panel-strip / swipe-row** PostCard experiment from abandoned PR **#85** without a fresh, approved design pass. That PR was **not** Instagram-style Stories — it was horizontal swipe panels *inside* feed PostCards (Lyric → Cover → Player → Links). It was closed Aug 2026 after layout/width iterations failed product review. **Margo Stories** (ring + fullscreen in-app viewer) is a separate, approved feature — native lyric Moments with full-quality audio and Atmosphere, 24h TTL, follower audience.
 - Delete or “squash away” applied migration SQL.
 
 ---

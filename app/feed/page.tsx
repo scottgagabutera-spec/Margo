@@ -31,6 +31,7 @@ import { usePrimaryTab, restoreActivePrimaryScroll } from '@/components/primary-
 import { FeedPostSkeletonList } from '@/components/margo-skeletons'
 import { stripHandlePrefix } from '@/lib/artist-identity'
 import { feedRankIds, feedSortScore } from '@/lib/feed-rank'
+import { StoryRing } from '@/components/stories/story-ring'
 
 const supabase = createClient()
 
@@ -621,6 +622,15 @@ function FeedPageInner() {
               icon="none"
             />
           </div>
+
+          {feedLive && (
+            <StoryRing
+              enabled={feedLive}
+              onAddStory={() => {
+                toast('Open a Moment and tap Add to Story in the export sheet.')
+              }}
+            />
+          )}
 
           {hasActiveFilter && (
             <div style={{ display: 'flex', gap: '6px', paddingBottom: '16px' }}>

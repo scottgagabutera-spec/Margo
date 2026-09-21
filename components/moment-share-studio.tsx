@@ -58,6 +58,8 @@ import {
   toastMomentVideoSaved,
 } from '@/lib/moment-export/moment-export-toasts'
 import { savePostExportPrefsClient } from '@/lib/promote/client-export-prefs'
+import { createStoryFromPost } from '@/lib/stories/create-story-client'
+import { toast } from 'sonner'
 
 interface MomentShareStudioProps {
   moment?: MargoMoment | null
@@ -466,6 +468,23 @@ export function MomentShareStudio({
   }, [mediaReadySheet, onExported, onShared, persistExportPrefs])
 
   const [promoteBusy, setPromoteBusy] = useState(false)
+  const [storyBusy, setStoryBusy] = useState(false)
+  const addToStory = useCallback(async () => {
+    if (!resolvedPostId) return
+    persistExportPrefs()
+    setStoryBusy(true)
+    try {
+      const result = await createStoryFromPost(resolvedPostId)
+      if (!result.ok) throw new Error(result.error || 'Could not add to Story')
+      toast.success(result.alreadyActive ? 'Already on your Story' : 'Added to your Story — 24 hours')
+      onExported?.()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not add to Story')
+    } finally {
+      setStoryBusy(false)
+    }
+  }, [resolvedPostId, persistExportPrefs, onExported])
+
   const promoteToYouTube = useCallback(async () => {
     if (!resolvedPostId || !enablePromote) return
     persistExportPrefs()
@@ -605,6 +624,32 @@ export function MomentShareStudio({
             <p style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center' }}>
               Switch to Shorts (9:16) to promote on YouTube.
             </p>
+          )}
+          {resolvedPostId && (
+            <button
+              type="button"
+              onClick={() => { void addToStory() }}
+              disabled={storyBusy || exportBusy || shareBusy}
+              style={{
+                width: '100%',
+                minHeight: 'var(--margo-touch-min)',
+                marginTop: '10px',
+                padding: '12px 16px',
+                borderRadius: '999px',
+                border: '1px solid var(--gold-border)',
+                background: 'var(--gold-faint)',
+                color: 'var(--gold)',
+                fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
+                fontSize: '0.72rem',
+                fontWeight: 600,
+                letterSpacing: '0.5px',
+                textTransform: 'uppercase',
+                cursor: storyBusy ? 'not-allowed' : 'pointer',
+                opacity: storyBusy ? 0.7 : 1,
+              }}
+            >
+              {storyBusy ? 'Adding…' : 'Add to Story'}
+            </button>
           )}
         </>
       ) : null}
