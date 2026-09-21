@@ -26,7 +26,7 @@ import { usePrimaryTab, restoreActivePrimaryScroll } from '@/components/primary-
 import { FeedPostSkeletonList } from '@/components/margo-skeletons'
 import { feedRankIds, feedSortScore } from '@/lib/feed-rank'
 import { StoryRing } from '@/components/stories/story-ring'
-import { StoriesDock } from '@/components/stories/stories-dock'
+import { StoriesDock, useMargoMobileViewport } from '@/components/stories/stories-dock'
 import { StoryFeedAuthorSync, StoryRingProvider } from '@/components/stories/story-ring-context'
 
 const supabase = createClient()
@@ -48,6 +48,7 @@ function FeedPageInner() {
   const highlightParam = searchParams.get('highlight')
   const { isTabActive } = usePrimaryTab()
   const feedLive = isTabActive('feed')
+  const isMobileViewport = useMargoMobileViewport()
   const { posts: livePosts, loading, reload } = usePosts({ enabled: feedLive })
   const {
     items: posts,
@@ -569,7 +570,7 @@ function FeedPageInner() {
       </div>
 
       <main className="margo-feed-column" style={{ position: 'relative', zIndex: 5, padding: '16px 24px var(--margo-page-padding-bottom)' }}>
-        {feedLive && (
+        {feedLive && isMobileViewport === false && (
           <div className="margo-story-ring-tray">
             <StoryRing
               onAddStory={() => {

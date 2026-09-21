@@ -1,11 +1,26 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { StoryAvatarRing } from '@/components/stories/story-avatar-ring'
 import { useStoryRingContext } from '@/components/stories/story-ring-context'
 import { UI_FONT } from '@/lib/fonts'
 import { toast } from 'sonner'
 
 const font = UI_FONT
+const MOBILE_MQ = '(max-width: 639px)'
+
+/** Matches Feed / nav mobile breakpoint (tab bar, 639px). null until mounted. */
+export function useMargoMobileViewport(): boolean | null {
+  const [mobile, setMobile] = useState<boolean | null>(null)
+  useEffect(() => {
+    const mq = window.matchMedia(MOBILE_MQ)
+    const sync = () => setMobile(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+  return mobile
+}
 
 /**
  * Mobile Stories entry — Vercel preview-toolbar size class.
@@ -14,7 +29,8 @@ const font = UI_FONT
  */
 export function StoriesDock({ onAddStory }: { onAddStory?: () => void }) {
   const ctx = useStoryRingContext()
-  if (!ctx?.signedIn) return null
+  const isMobile = useMargoMobileViewport()
+  if (!ctx?.signedIn || isMobile !== true) return null
 
   const { authors, openStory, warmStory } = ctx
   const unseen = authors.find((a) => a.hasUnseen) ?? authors[0] ?? null
@@ -50,7 +66,7 @@ export function StoriesDock({ onAddStory }: { onAddStory?: () => void }) {
         minHeight: 'var(--margo-touch-min)',
         height: 'var(--margo-touch-min)',
         padding: unseen ? '2px 10px 2px 2px' : '0 12px',
-        display: 'none',
+        display: 'inline-flex',
         alignItems: 'center',
         gap: '8px',
         borderRadius: '999px',
