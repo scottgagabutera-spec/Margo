@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { usePost } from '@/hooks/usePost'
+import { usePost, usePostAncestors } from '@/hooks/usePost'
 import { useEchoes } from '@/hooks/useEchoes'
 import { PostCard } from '@/components/post-card'
 import { CardExportModal } from '@/components/card-export-modal'
@@ -45,6 +45,7 @@ export default function PostDetailPage() {
   const params = useParams<{ id: string }>()
   const postId = params.id || null
   const { post, loading } = usePost(postId)
+  const { ancestors } = usePostAncestors(post?.parentPostId)
   const { echoes } = useEchoes(postId)
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
@@ -65,6 +66,17 @@ export default function PostDetailPage() {
       [post.id]: prev[post.id] ?? post.resonates ?? 0,
     }))
   }, [post])
+
+  useEffect(() => {
+    if (ancestors.length === 0) return
+    setResonateCounts(prev => {
+      const next = { ...prev }
+      for (const ancestor of ancestors) {
+        if (next[ancestor.id] == null) next[ancestor.id] = ancestor.resonates ?? 0
+      }
+      return next
+    })
+  }, [ancestors])
 
   const toggleResonate = async (id: string) => {
     if (!requireAuth()) return
@@ -114,7 +126,10 @@ export default function PostDetailPage() {
       maxWidth: '640px', margin: '0 auto',
     }}>
       <div style={{ marginBottom: '16px' }}>
-        <BackButton fallbackHref="/feed" />
+        <BackButton
+          preferHistory={!post?.parentPostId}
+          fallbackHref={post?.parentPostId ? `/post/${post.parentPostId}` : '/feed'}
+        />
       </div>
 
       {loading && (
@@ -131,6 +146,32 @@ export default function PostDetailPage() {
 
       {post && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {ancestors.length > 0 && (
+            <div>
+              <p style={{
+                fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
+                letterSpacing: '1.5px', textTransform: 'uppercase',
+                color: 'var(--text-muted)', marginBottom: '12px',
+              }}>
+                Conversation
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {ancestors.map((ancestor) => (
+                  <PostCard
+                    key={ancestor.id}
+                    variant="compact"
+                    post={ancestor}
+                    resonated={resonated.has(ancestor.id)}
+                    resonateCount={resonateCounts[ancestor.id] ?? ancestor.resonates ?? 0}
+                    echoCount={ancestor.replies ?? 0}
+                    onResonate={toggleResonate}
+                    onExport={handleExport}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
           <PostCard
             post={post}
             resonated={resonated.has(post.id)}

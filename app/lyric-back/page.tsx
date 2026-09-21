@@ -543,7 +543,7 @@ function LyricBackContent() {
       trackEvent('lyric_back_sent', { private: replyStatus === 'private' })
       if (replyStatus === 'private') toastMomentPrivate()
       else toastMomentSent()
-      router.push(parentId ? `/post/${parentId}` : '/feed')
+      router.replace(parentId ? `/post/${parentId}` : '/feed')
 
       const parentAuthorId = respondingTo?.authorUid
       if (parentId && parentAuthorId && parentAuthorId !== authorId && !isPrivate) {
@@ -691,7 +691,14 @@ function LyricBackContent() {
       <div style={{ position: 'relative', zIndex: 5, maxWidth: '720px', margin: '0 auto', padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)' }}>
 
         <div style={{ marginBottom: '16px' }}>
-          <BackButton fallbackHref={respondingToId ? `/post/${respondingToId}` : '/feed'} />
+          <BackButton
+            preferHistory
+            fallbackHref={
+              respondingTo?.parentPostId
+                ? `/post/${respondingTo.parentPostId}`
+                : '/feed'
+            }
+          />
         </div>
 
         {/* ── Responding To — hidden on the Stage conversation ─ */}

@@ -124,7 +124,19 @@ Every line index must be present. Empty array for filler lines.`
     }
 
     // Re-processing support: wipe any existing lines for this song first.
-    // lyric_line_vibes cascade-deletes automatically (FK on delete cascade).
+    // lyric_line_vibes cascade-deletes (ON DELETE CASCADE). Saved playlists
+    // in queue_items.lyric_line_id do not — snapshot line_index, detach, then
+    // rematch after insert so regenerate is not blocked by NO ACTION FKs.
+    const queuedSnippets = await snapshotQueueSnippets(supabase, songId)
+    if (!queuedSnippets.ok) {
+      return NextResponse.json({ error: 'Failed to detach playlist lines', detail: queuedSnippets.error }, { status: 500 })
+    }
+
+    const detachErr = await detachQueueSnippets(supabase, queuedSnippets.lineIds)
+    if (detachErr) {
+      return NextResponse.json({ error: 'Failed to detach playlist lines', detail: detachErr }, { status: 500 })
+    }
+
     const { error: deleteErr } = await supabase
       .from('lyric_lines')
       .delete()
@@ -171,6 +183,11 @@ Every line index must be present. Empty array for filler lines.`
       }
     }
 
+    const rematchErr = await rematchQueueSnippets(supabase, queuedSnippets.snippets, lineIdByIndex)
+    if (rematchErr) {
+      console.error('tag-vibes: playlist rematch failed after lyric rebuild', rematchErr)
+    }
+
     return NextResponse.json({
       songId,
       linesWritten: insertedLines.length,
@@ -179,4 +196,75 @@ Every line index must be present. Empty array for filler lines.`
   } catch (err: any) {
     return NextResponse.json({ error: 'Tag vibes failed', detail: err.message }, { status: 500 })
   }
+}
+
+type AdminClient = ReturnType<typeof getSupabaseAdmin>
+
+type QueuedSnippet = {
+  queue_id: string
+  position: number
+  line_index: number
+}
+
+async function snapshotQueueSnippets(
+  supabase: AdminClient,
+  songId: string,
+): Promise<{ ok: true; snippets: QueuedSnippet[]; lineIds: string[] } | { ok: false; error: string }> {
+  const { data: oldLines, error: oldErr } = await supabase
+    .from('lyric_lines')
+    .select('id, line_index')
+    .eq('song_id', songId)
+  if (oldErr) return { ok: false, error: oldErr.message }
+
+  const lineIds = (oldLines ?? []).map((row) => row.id as string)
+  if (lineIds.length === 0) return { ok: true, snippets: [], lineIds: [] }
+
+  const indexById = new Map((oldLines ?? []).map((row) => [row.id as string, row.line_index as number]))
+  const { data: queued, error: queuedErr } = await supabase
+    .from('queue_items')
+    .select('queue_id, position, lyric_line_id')
+    .in('lyric_line_id', lineIds)
+  if (queuedErr) return { ok: false, error: queuedErr.message }
+
+  const snippets: QueuedSnippet[] = []
+  for (const row of queued ?? []) {
+    const lineIndex = indexById.get(row.lyric_line_id as string)
+    if (lineIndex == null || !row.queue_id) continue
+    snippets.push({
+      queue_id: row.queue_id as string,
+      position: row.position as number,
+      line_index: lineIndex,
+    })
+  }
+  return { ok: true, snippets, lineIds }
+}
+
+async function detachQueueSnippets(
+  supabase: AdminClient,
+  lineIds: string[],
+): Promise<string | null> {
+  if (lineIds.length === 0) return null
+  const { error } = await supabase
+    .from('queue_items')
+    .update({ lyric_line_id: null })
+    .in('lyric_line_id', lineIds)
+  return error?.message ?? null
+}
+
+async function rematchQueueSnippets(
+  supabase: AdminClient,
+  snippets: QueuedSnippet[],
+  lineIdByIndex: Map<number, string>,
+): Promise<string | null> {
+  for (const item of snippets) {
+    const newId = lineIdByIndex.get(item.line_index)
+    if (!newId) continue
+    const { error } = await supabase
+      .from('queue_items')
+      .update({ lyric_line_id: newId })
+      .eq('queue_id', item.queue_id)
+      .eq('position', item.position)
+    if (error) return error.message
+  }
+  return null
 }

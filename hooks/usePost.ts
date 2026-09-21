@@ -24,6 +24,7 @@ const POST_SELECT = `
   legacy_author_label,
   author_profile_id,
   created_at,
+  parent_post_id,
   snippet_start_sec,
   snippet_end_sec,
   profiles:author_profile_id ( username, avatar_url ),
@@ -85,7 +86,55 @@ function mapRow(row: any): Post {
     isAiGenerated: linkedSong?.is_ai_generated ?? false,
     atmosphere: parseAtmosphere(linkedSong?.atmosphere),
     lines: mapPostLinesRows(row.post_lines),
+    parentPostId: row.parent_post_id ?? null,
   }
+}
+
+async function fetchMappedPost(id: string): Promise<Post | null> {
+  const { data, error } = await supabase
+    .from('posts')
+    .select(POST_SELECT)
+    .eq('id', id)
+    .maybeSingle()
+  if (error || !data) return null
+  return mapRow(data)
+}
+
+const ANCESTOR_CAP = 8
+
+/** Walk parent_post_id toward the root Moment (root first). */
+export function usePostAncestors(startParentId: string | null | undefined) {
+  const [ancestors, setAncestors] = useState<Post[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!startParentId) {
+      setAncestors([])
+      setLoading(false)
+      return
+    }
+    let cancelled = false
+    setLoading(true)
+    void (async () => {
+      const chain: Post[] = []
+      let nextId: string | null = startParentId
+      const seen = new Set<string>()
+      while (nextId && chain.length < ANCESTOR_CAP && !seen.has(nextId)) {
+        seen.add(nextId)
+        const parent = await fetchMappedPost(nextId)
+        if (!parent) break
+        chain.unshift(parent)
+        nextId = parent.parentPostId ?? null
+      }
+      if (!cancelled) {
+        setAncestors(chain)
+        setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [startParentId])
+
+  return { ancestors, loading }
 }
 
 export function usePost(postId: string | null) {

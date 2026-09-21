@@ -43,6 +43,8 @@ export interface Post {
    * top-level text/song/snippet (position-0 mirror).
    */
   lines?: PostLine[]
+  /** Immediate parent Lyric Back / Moment. Null on top-level feed posts. */
+  parentPostId?: string | null
 }
 
 export type UsePostsOptions = {
