@@ -65,7 +65,7 @@ const font = 'var(--font-geist-sans), system-ui, sans-serif'
 export function MargoNav() {
   const pathname = usePathname()
   const router = useRouter()
-  const { activeTab, pendingTab, isTabPending } = usePrimaryTab()
+  const { activeTab, pendingTab, isTabPending, isTabAcked } = usePrimaryTab()
   const feedLink = usePrimaryTabLinkProps('/feed', 'feed')
   const discoverLink = usePrimaryTabLinkProps('/discover', 'discover')
   const composeLink = usePrimaryTabLinkProps('/compose', 'compose')
@@ -179,15 +179,15 @@ export function MargoNav() {
 
           <div style={{ display: 'none' }} className="margo-desktop-nav">
             {[
-              { href: '/feed', label: 'Feed', active: isOnFeed, pending: isTabPending('feed'), linkProps: feedLink },
-              { href: '/discover', label: 'Discover', active: isOnDiscover, pending: isTabPending('discover'), linkProps: discoverLink },
-            ].map(({ href, label, active, pending, linkProps }) => (
+              { href: '/feed', label: 'Feed', active: isOnFeed, acked: isTabAcked('feed'), pending: isTabPending('feed'), linkProps: feedLink },
+              { href: '/discover', label: 'Discover', active: isOnDiscover, acked: isTabAcked('discover'), pending: isTabPending('discover'), linkProps: discoverLink },
+            ].map(({ href, label, active, acked, pending, linkProps }) => (
               <Link key={href} href={href} {...linkProps} style={{
                 fontSize: '0.75rem', fontFamily: font,
                 fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase',
                 textDecoration: 'none',
-                color: pending || active ? 'var(--gold)' : 'rgba(255,255,255,0.5)',
-                background: pending ? 'var(--gold-faint)' : 'transparent',
+                color: acked || pending || active ? 'var(--gold)' : 'rgba(255,255,255,0.5)',
+                background: acked || pending ? 'var(--gold-faint)' : 'transparent',
                 padding: '0 14px', position: 'relative',
                 minHeight: 'var(--margo-touch-min)',
                 display: 'inline-flex', alignItems: 'center', gap: '8px',
@@ -196,8 +196,8 @@ export function MargoNav() {
                 transition: 'color 80ms var(--ease-out), background 80ms var(--ease-out)',
                 whiteSpace: 'nowrap',
                 WebkitTapHighlightColor: 'transparent',
-                opacity: pendingTab && !pending && !active ? 0.45 : 1,
-                pointerEvents: pendingTab && !pending ? 'none' : 'auto',
+                opacity: pendingTab && !acked && !pending && !active ? 0.45 : 1,
+                pointerEvents: pendingTab && !acked && !pending && !active ? 'none' : 'auto',
               }}>
                 {pending ? <LoadingRing size={14} strokeWidth={1.5} state="spinning" /> : null}
                 {label}
@@ -222,8 +222,8 @@ export function MargoNav() {
               display: 'inline-flex', alignItems: 'center', gap: '8px',
               boxSizing: 'border-box',
               transition: 'all 150ms ease', flexShrink: 0, whiteSpace: 'nowrap',
-              opacity: isTabPending('compose') ? 0.9 : isOnCompose ? 0.75 : (pendingTab ? 0.45 : 1),
-              pointerEvents: pendingTab && !isTabPending('compose') ? 'none' : 'auto',
+              opacity: isTabPending('compose') || isTabAcked('compose') ? 0.9 : isOnCompose ? 0.75 : (pendingTab ? 0.45 : 1),
+              pointerEvents: pendingTab && !isTabPending('compose') && !isTabAcked('compose') && !isOnCompose ? 'none' : 'auto',
               WebkitTapHighlightColor: 'transparent',
             }}>
               {isTabPending('compose') ? <LoadingRing size={14} strokeWidth={1.5} state="spinning" color="var(--bg)" /> : null}
@@ -246,6 +246,22 @@ export function MargoNav() {
                 boxSizing: 'border-box',
                 transition: 'color 150ms ease', whiteSpace: 'nowrap',
               }}>Sign In</SignInLink>
+            ) : null}
+
+            {isSignedIn && !identity ? (
+              <span
+                aria-hidden
+                style={{
+                  marginLeft: '8px',
+                  width: 'var(--margo-touch-min)',
+                  height: 'var(--margo-touch-min)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <LoadingRing size={22} strokeWidth={1.5} state="spinning" />
+              </span>
             ) : null}
 
             {isSignedIn && identity && ownProfileHref && (

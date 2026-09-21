@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useState } from 'react'
 import { LYRIC_FONT, UI_FONT } from '@/lib/fonts'
 import {
   buildCanvasTextMeasure,
@@ -75,7 +75,7 @@ export function useStageCardLayout(
     return resolveStageCardLayout(input, measure, geist)
   }, [input])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setLayout(resolve())
   }, [resolve])
 

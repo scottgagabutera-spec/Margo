@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { setBrowserAccessToken } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+import { useIdentity } from '@/hooks/useIdentity'
 import {
   CONSENT_REQUIRED_MESSAGE,
   ConsentRequiredAlert,
@@ -171,6 +172,7 @@ const primaryBtnStyle: React.CSSProperties = {
 export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletionFormProps) {
   const router = useRouter()
   const { rehydrate } = useAuthGate()
+  const { waitUntilReady } = useIdentity()
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -198,6 +200,7 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
         throw { message: body.error || 'Something went wrong. Please try again.' }
       }
       await rehydrate()
+      await waitUntilReady()
       toast.success('Welcome to Margo.')
       onSuccess?.() ?? router.push('/feed')
     } catch (e) {
@@ -263,6 +266,7 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
 
 export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthReturnTo }: AuthFormProps) {
   const { rehydrate } = useAuthGate()
+  const { waitUntilReady } = useIdentity()
   const emailId = useId()
   const passwordId = useId()
   const isSignup = mode === 'signup'
@@ -332,6 +336,7 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
       if (body.access_token) {
         setBrowserAccessToken(body.access_token)
         await rehydrate()
+        await waitUntilReady()
         if (isSignup) toast.success('Welcome to Margo.')
         onSuccess?.()
         return

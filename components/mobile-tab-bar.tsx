@@ -24,7 +24,7 @@ const font = 'var(--font-geist-sans), system-ui, sans-serif'
 export function MobileTabBar() {
   const pathname = usePathname()
   const { user, identity } = useIdentity()
-  const { activeTab, pendingTab, isTabPending } = usePrimaryTab()
+  const { activeTab, pendingTab, isTabPending, isTabAcked } = usePrimaryTab()
   const feedLink = usePrimaryTabLinkProps('/feed', 'feed')
   const discoverLink = usePrimaryTabLinkProps('/discover', 'discover')
   const composeLink = usePrimaryTabLinkProps('/compose', 'compose')
@@ -72,22 +72,25 @@ export function MobileTabBar() {
   const signinHref = useSigninHref()
   const ownProfileHref = identity ? `/profile/${identity.username}` : signinHref
   const youLink = usePrimaryTabLinkProps(ownProfileHref, 'you')
-  const isOnProfile = activeTab === 'you' || (isSignedIn && pathname === ownProfileHref)
+  const isOnProfile = activeTab === 'you' || (!!identity && isSignedIn && pathname === ownProfileHref)
+  const youAwaitingIdentity = isSignedIn && !identity
 
   const isMusicActive = engineState.mode !== 'idle'
 
   const tabPending = (id: 'feed' | 'discover' | 'compose' | 'you') => isTabPending(id)
+  const tabAcked = (id: 'feed' | 'discover' | 'compose' | 'you') => isTabAcked(id)
+  const tabLive = (id: 'feed' | 'discover' | 'compose' | 'you') => tabPending(id) || tabAcked(id)
   const tabLocked = !!pendingTab
 
-  const tabStyle = (active: boolean, pending: boolean, locked: boolean): CSSProperties => ({
+  const tabStyle = (active: boolean, live: boolean, locked: boolean): CSSProperties => ({
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
     gap: '2px', textDecoration: 'none',
     minHeight: 'var(--margo-touch-min)',
     justifySelf: 'center',
     position: 'relative',
-    color: pending || active ? 'var(--gold)' : 'var(--text-muted)',
-    opacity: locked && !pending && !active ? 0.45 : 1,
-    pointerEvents: locked && !pending ? 'none' : 'auto',
+    color: live || active ? 'var(--gold)' : 'var(--text-muted)',
+    opacity: locked && !live && !active ? 0.45 : 1,
+    pointerEvents: locked && !live && !active ? 'none' : 'auto',
     WebkitTapHighlightColor: 'transparent',
     transition: 'color 80ms var(--ease-out), opacity 80ms var(--ease-out)',
   })
@@ -110,7 +113,7 @@ export function MobileTabBar() {
       boxShadow: isLanding ? 'none' : '0 -1px 24px rgba(0,0,0,0.35)',
       borderTop: isLanding ? '1px solid var(--border)' : 'none',
     }}>
-      <Link href="/feed" style={tabStyle(isOnFeed, tabPending('feed'), tabLocked)} {...feedLink}>
+      <Link href="/feed" style={tabStyle(isOnFeed, tabLive('feed'), tabLocked)} {...feedLink}>
         {tabPending('feed') ? (
           <LoadingRing size={20} strokeWidth={1.5} state="spinning" />
         ) : (
@@ -119,7 +122,7 @@ export function MobileTabBar() {
         <span style={labelStyle}>Feed</span>
       </Link>
 
-      <Link href="/discover" style={tabStyle(isOnDiscover, tabPending('discover'), tabLocked)} {...discoverLink}>
+      <Link href="/discover" style={tabStyle(isOnDiscover, tabLive('discover'), tabLocked)} {...discoverLink}>
         {tabPending('discover') ? (
           <LoadingRing size={20} strokeWidth={1.5} state="spinning" />
         ) : (
@@ -145,8 +148,8 @@ export function MobileTabBar() {
           width: '46px', height: '46px', borderRadius: '50%',
           background: 'var(--gold)', textDecoration: 'none',
           boxShadow: '0 6px 16px var(--gold-glow), 0 0 0 1px rgba(255,255,255,0.06)',
-          opacity: tabPending('compose') ? 0.85 : isOnCompose ? 0.75 : (tabLocked ? 0.45 : 1),
-          pointerEvents: tabLocked && !tabPending('compose') ? 'none' : 'auto',
+          opacity: tabPending('compose') || tabAcked('compose') ? 0.85 : isOnCompose ? 0.75 : (tabLocked ? 0.45 : 1),
+          pointerEvents: tabLocked && !tabLive('compose') && !isOnCompose ? 'none' : 'auto',
           justifySelf: 'center',
           WebkitTapHighlightColor: 'transparent',
         }}
@@ -161,17 +164,23 @@ export function MobileTabBar() {
       <HubTabButton style={tabStyle(false, false, false)} labelStyle={labelStyle} />
 
       <Link
-        href={ownProfileHref}
-        style={tabStyle(isOnProfile, tabPending('you'), tabLocked)}
-        {...(isSignedIn ? youLink : {})}
-        onClick={() => {
+        href={isSignedIn && !identity ? '#' : ownProfileHref}
+        style={tabStyle(isOnProfile, tabLive('you') || youAwaitingIdentity, tabLocked)}
+        {...(isSignedIn && identity ? youLink : {})}
+        onClick={(event) => {
           if (!isSignedIn) {
             persistActivePrimaryScroll()
             persistAuthReturnScroll()
+            return
           }
+          if (!identity) {
+            event.preventDefault()
+            return
+          }
+          youLink.onClick(event)
         }}
       >
-        {tabPending('you') ? (
+        {tabPending('you') || youAwaitingIdentity ? (
           <LoadingRing size={20} strokeWidth={1.5} state="spinning" />
         ) : isSignedIn && identity?.avatarUrl ? (
           <span style={{

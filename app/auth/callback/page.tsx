@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import MargoLogo from '@/components/MargoLogo'
 import { LoadingRing } from '@/components/loading-ring'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+import { useIdentity } from '@/hooks/useIdentity'
 import { UI_FONT } from '@/lib/fonts'
 
 const ui = UI_FONT
@@ -20,6 +21,7 @@ function OAuthCallbackInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { rehydrate } = useAuthGate()
+  const { waitUntilReady } = useIdentity()
   const startedRef = useRef(false)
   const [status, setStatus] = useState('Signing you in…')
   const [error, setError] = useState<string | null>(null)
@@ -55,13 +57,15 @@ function OAuthCallbackInner() {
           ? body.redirectTo
           : '/feed'
         await rehydrate()
+        setStatus('Opening Margo…')
+        await waitUntilReady()
         router.replace(redirectTo)
       } catch {
         setError('Sign-in was interrupted. Please try again.')
         setStatus('Could not finish sign-in')
       }
     })()
-  }, [rehydrate, router, searchParams])
+  }, [rehydrate, router, searchParams, waitUntilReady])
 
   return (
     <div style={{
