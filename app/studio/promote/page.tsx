@@ -159,9 +159,9 @@ export default function StudioPromotePage() {
     onBack: handleBack,
   })
 
-  if (identityLoading || loading) {
+  if (identityLoading) {
     return (
-      <div style={{ padding: 'calc(var(--nav-height, 72px) + 24px) 24px', fontFamily: font, color: 'var(--text-secondary)' }}>
+      <div style={{ padding: 'calc(var(--nav-height, 72px) + 24px) 24px', fontFamily: font, color: 'var(--text-secondary)', fontSize: TYPE.secondary }}>
         Loading…
       </div>
     )
@@ -170,9 +170,17 @@ export default function StudioPromotePage() {
   if (!user || !isActiveArtist) {
     return (
       <div style={{ padding: 'calc(var(--nav-height, 72px) + 24px) 24px', maxWidth: 560, margin: '0 auto', fontFamily: font }}>
-        <p style={{ color: 'var(--text-secondary)', marginTop: '16px' }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: TYPE.secondary, marginTop: '16px' }}>
           Auto-Promote is available to active verified artists only.
         </p>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div style={{ padding: 'calc(var(--nav-height, 72px) + 24px) 24px', fontFamily: font, color: 'var(--text-secondary)', fontSize: TYPE.secondary }}>
+        Loading…
       </div>
     )
   }
