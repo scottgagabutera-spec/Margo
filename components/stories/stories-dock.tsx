@@ -1,8 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { MargoSheet } from '@/components/margo-sheet'
-import { MusicNoteIcon } from '@/components/icons'
+import { CloseIcon, MenuIcon, MusicNoteIcon } from '@/components/icons'
 import { StoryAvatarRing } from '@/components/stories/story-avatar-ring'
 import { useStoryRingContext } from '@/components/stories/story-ring-context'
 import { TYPE, UI_FONT } from '@/lib/fonts'
@@ -10,6 +9,9 @@ import type { StoryRingAuthor } from '@/lib/stories/types'
 
 const font = UI_FONT
 const MOBILE_MQ = '(max-width: 639px)'
+/** Vercel sleeping toolbar: 32px circle. Hit area stays 44px. */
+const TOOLBAR_VISUAL = 32
+const TOOLBAR_HIT = 44
 
 /** Matches Feed / nav mobile breakpoint (tab bar, 639px). null until mounted. */
 export function useMargoMobileViewport(): boolean | null {
@@ -25,13 +27,23 @@ export function useMargoMobileViewport(): boolean | null {
 }
 
 /**
- * Mobile Stories entry — Vercel-toolbar size class: 44px circle, bottom-center,
- * icon only. Tap opens a picker sheet; a person opens the Stories v1 viewer.
+ * Mobile Stories entry — Vercel preview toolbar: 32px hamburger circle,
+ * bottom-right above the tab bar. One person opens immediately; many
+ * magnify into an avatar stack. No sheet/modal.
  */
 export function StoriesDock({ onAddStory }: { onAddStory?: () => void }) {
   const ctx = useStoryRingContext()
   const isMobile = useMargoMobileViewport()
-  const [pickerOpen, setPickerOpen] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+
+  useEffect(() => {
+    if (!expanded) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setExpanded(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [expanded])
 
   if (!ctx?.signedIn || isMobile !== true) return null
 
@@ -40,184 +52,216 @@ export function StoriesDock({ onAddStory }: { onAddStory?: () => void }) {
   const hasUnseen = authors.some((a) => a.hasUnseen)
 
   const openPerson = (profileId: string) => {
+    setExpanded(false)
     openStory(profileId)
+  }
+
+  const handleDockClick = () => {
+    if (expanded) {
+      setExpanded(false)
+      return
+    }
+    if (authors.length === 1) {
+      openPerson(authors[0].profileId)
+      return
+    }
+    if (authors.length === 0) {
+      onAddStory?.()
+      return
+    }
+    setExpanded(true)
   }
 
   return (
     <>
-      <button
-        type="button"
+      {expanded ? (
+        <button
+          type="button"
+          aria-label="Close Stories"
+          onClick={() => setExpanded(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 69,
+            border: 'none',
+            padding: 0,
+            margin: 0,
+            background: 'transparent',
+            cursor: 'default',
+          }}
+        />
+      ) : null}
+
+      <div
         className="margo-stories-dock"
-        onClick={() => setPickerOpen(true)}
-        onPointerDown={() => {
-          if (unseen) warmStory(unseen.profileId)
-        }}
-        aria-label={hasUnseen ? 'Open new Stories' : 'Open Stories'}
         style={{
           position: 'fixed',
           zIndex: 70,
-          left: '50%',
-          transform: 'translateX(-50%)',
+          right: '12px',
           bottom: 'calc(var(--margo-page-bottom) + 12px)',
-          width: 'var(--margo-touch-min)',
-          height: 'var(--margo-touch-min)',
-          minWidth: 'var(--margo-touch-min)',
-          minHeight: 'var(--margo-touch-min)',
-          padding: 0,
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: '50%',
-          border: '1px solid var(--gold-border)',
-          background: 'var(--margo-bar)',
-          boxShadow: '0 8px 24px color-mix(in srgb, var(--bg) 55%, transparent)',
-          cursor: 'pointer',
-          WebkitTapHighlightColor: 'transparent',
-          boxSizing: 'border-box',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end',
+          gap: '8px',
+          pointerEvents: 'none',
         }}
       >
-        <StoryAvatarRing size={28} hasUnseen={hasUnseen}>
-          {unseen?.avatarUrl ? (
-            <img
-              src={unseen.avatarUrl}
-              alt=""
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-            />
-          ) : (
-            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden>
-              <circle cx="10" cy="7" r="3" stroke="var(--gold)" strokeWidth="1.5" />
-              <path d="M4 17c0-3 2.7-5 6-5s6 2 6 5" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          )}
-        </StoryAvatarRing>
-      </button>
-
-      <MargoSheet
-        open={pickerOpen}
-        onOpenChange={setPickerOpen}
-        title="Stories"
-        heightMode="auto"
-      >
-        {authors.length === 0 ? (
-          <div style={{ padding: '12px 0 8px' }}>
-            <p style={{
-              fontFamily: font,
-              fontSize: TYPE.body,
-              fontStyle: 'italic',
-              color: 'var(--text-secondary)',
-              margin: '0 0 16px',
-            }}>
-              No Stories yet.
-            </p>
-            {onAddStory ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setPickerOpen(false)
-                  onAddStory()
-                }}
-                style={{
-                  minHeight: 'var(--margo-touch-min)',
-                  padding: '0 18px',
-                  borderRadius: '50px',
-                  border: '1px solid var(--gold-border)',
-                  background: 'var(--gold-faint)',
-                  color: 'var(--gold)',
-                  fontFamily: font,
-                  fontSize: TYPE.label,
-                  fontWeight: 700,
-                  letterSpacing: '1.2px',
-                  textTransform: 'uppercase',
-                  cursor: 'pointer',
-                }}
-              >
-                How to add
-              </button>
-            ) : null}
-          </div>
-        ) : (
-          <ul style={{ listStyle: 'none', margin: 0, padding: '4px 0 0' }}>
-            {authors.map((author) => (
-              <StoryPickerRow
+        {expanded && authors.length > 0 ? (
+          <div
+            role="list"
+            aria-label="Stories"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-end',
+              gap: '8px',
+              maxHeight: 'min(52dvh, 360px)',
+              overflowY: 'auto',
+              overscrollBehavior: 'contain',
+              pointerEvents: 'auto',
+              paddingRight: `${(TOOLBAR_HIT - TOOLBAR_VISUAL) / 2}px`,
+            }}
+          >
+            {authors.map((author, index) => (
+              <ExpandedStoryChip
                 key={author.profileId}
                 author={author}
+                delayMs={index * 28}
                 onWarm={() => warmStory(author.profileId)}
                 onOpen={() => openPerson(author.profileId)}
               />
             ))}
-          </ul>
-        )}
-      </MargoSheet>
+            <style>{`
+              @keyframes margo-story-magnify {
+                from { transform: translateY(10px) scale(0.72); opacity: 0; }
+                to { transform: none; opacity: 1; }
+              }
+            `}</style>
+          </div>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={handleDockClick}
+          onPointerDown={() => {
+            if (unseen) warmStory(unseen.profileId)
+          }}
+          aria-label={expanded ? 'Close Stories' : hasUnseen ? 'Open new Stories' : 'Open Stories'}
+          aria-expanded={expanded}
+          style={{
+            width: TOOLBAR_HIT,
+            height: TOOLBAR_HIT,
+            minWidth: TOOLBAR_HIT,
+            minHeight: TOOLBAR_HIT,
+            padding: 0,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: 'none',
+            background: 'none',
+            cursor: 'pointer',
+            WebkitTapHighlightColor: 'transparent',
+            pointerEvents: 'auto',
+            boxSizing: 'border-box',
+          }}
+        >
+          <span
+            style={{
+              position: 'relative',
+              width: TOOLBAR_VISUAL,
+              height: TOOLBAR_VISUAL,
+              borderRadius: '50%',
+              border: '1px solid var(--border-hi)',
+              background: 'var(--margo-bar)',
+              boxShadow: '0 8px 24px color-mix(in srgb, var(--bg) 55%, transparent)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {expanded ? (
+              <CloseIcon size={14} color="var(--text)" />
+            ) : (
+              <MenuIcon size={14} color="var(--text)" />
+            )}
+            {!expanded && hasUnseen ? (
+              <span
+                aria-hidden
+                style={{
+                  position: 'absolute',
+                  top: '3px',
+                  right: '3px',
+                  width: '7px',
+                  height: '7px',
+                  borderRadius: '50%',
+                  background: 'var(--gold)',
+                  border: '1px solid var(--bg)',
+                }}
+              />
+            ) : null}
+          </span>
+        </button>
+      </div>
     </>
   )
 }
 
-function StoryPickerRow({
+function ExpandedStoryChip({
   author,
+  delayMs,
   onOpen,
   onWarm,
 }: {
   author: StoryRingAuthor
+  delayMs: number
   onOpen: () => void
   onWarm: () => void
 }) {
   const label = author.isSelf ? 'Your Story' : (author.displayName || author.username)
   return (
-    <li>
-      <button
-        type="button"
-        onClick={onOpen}
-        onPointerDown={onWarm}
-        aria-label={author.hasUnseen ? `View ${label}'s new Story` : `View ${label}'s Story`}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          width: '100%',
-          minHeight: 'var(--margo-touch-min)',
-          padding: '10px 0',
-          background: 'none',
-          border: 'none',
-          borderBottom: '1px solid var(--border)',
-          cursor: 'pointer',
-          textAlign: 'left',
-          WebkitTapHighlightColor: 'transparent',
-        }}
-      >
-        <StoryAvatarRing size={44} hasUnseen={author.hasUnseen}>
-          {author.avatarUrl ? (
-            <img
-              src={author.avatarUrl}
-              alt=""
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-            />
-          ) : (
-            <MusicNoteIcon size={18} color="var(--gold)" />
-          )}
-        </StoryAvatarRing>
-        <span style={{ minWidth: 0, flex: 1 }}>
-          <span style={{
-            display: 'block',
-            fontFamily: font,
-            fontSize: TYPE.song,
-            fontWeight: 600,
-            color: 'var(--text)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}>
-            {label}
-          </span>
-          <span style={{
-            display: 'block',
-            fontFamily: font,
-            fontSize: TYPE.meta,
-            color: author.hasUnseen ? 'var(--gold)' : 'var(--text-secondary)',
-          }}>
-            {author.hasUnseen ? 'New' : author.isSelf ? 'Your Story' : `@${author.username}`}
-          </span>
-        </span>
-      </button>
-    </li>
+    <button
+      type="button"
+      role="listitem"
+      onClick={onOpen}
+      onPointerDown={onWarm}
+      aria-label={author.hasUnseen ? `View ${label}'s new Story` : `View ${label}'s Story`}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: 0,
+        border: 'none',
+        background: 'none',
+        cursor: 'pointer',
+        WebkitTapHighlightColor: 'transparent',
+        animation: `margo-story-magnify 180ms ease-out ${delayMs}ms both`,
+      }}
+    >
+      <span style={{
+        fontFamily: font,
+        fontSize: TYPE.label,
+        fontWeight: 600,
+        letterSpacing: '0.04em',
+        color: 'var(--text)',
+        maxWidth: '120px',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        textAlign: 'right',
+      }}>
+        {label}
+      </span>
+      <StoryAvatarRing size={32} hasUnseen={author.hasUnseen}>
+        {author.avatarUrl ? (
+          <img
+            src={author.avatarUrl}
+            alt=""
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        ) : (
+          <MusicNoteIcon size={14} color="var(--gold)" />
+        )}
+      </StoryAvatarRing>
+    </button>
   )
 }

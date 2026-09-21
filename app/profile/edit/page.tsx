@@ -293,7 +293,7 @@ export default function EditProfilePage() {
             <div style={{ background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '16px', padding: '20px' }}>
               <label style={{ ...labelStyle, marginBottom: '8px' }}>Signature lyric</label>
               <p style={{ ...helpStyle, marginTop: 0, marginBottom: '16px' }}>
-                The line that says it about you. Attach a song from Margo so it can play on your profile.
+                The line that says it about you. Search a Margo song, then pick the lyric part.
               </p>
               <textarea
                 value={lyric}
@@ -310,11 +310,13 @@ export default function EditProfilePage() {
                 songTitle={song}
                 artistName={artist}
                 catalogSongId={catalogSongId}
+                currentLyric={lyric}
                 onChange={({ song: nextSong, artist: nextArtist, catalogSongId: nextId }) => {
                   setSong(nextSong)
                   setArtist(nextArtist)
                   setCatalogSongId(nextId)
                 }}
+                onLyricPick={(text) => setLyric(text)}
               />
               {!catalogSongId && (
                 <div style={{ marginTop: '16px' }}>

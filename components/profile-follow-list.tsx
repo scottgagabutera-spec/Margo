@@ -46,60 +46,45 @@ export function ProfileFollowListPage({
       <div style={{
         maxWidth: '560px',
         margin: '0 auto',
-        padding: 'calc(var(--nav-height, 72px) + 16px) 20px var(--margo-page-padding-bottom)',
+        padding: 'calc(var(--nav-height, 72px) + 8px) 20px var(--margo-page-padding-bottom)',
       }}>
-        <h1 style={{
-          fontFamily: font,
-          fontSize: TYPE.pageTitle,
-          fontWeight: 600,
-          color: 'var(--text)',
-          margin: '0 0 6px',
-          lineHeight: 1.2,
-          textAlign: 'center',
-        }}>
-          {title}
-        </h1>
-        {result?.ok ? (
-          <p style={{
-            fontFamily: font,
-            fontSize: TYPE.displayName,
-            fontWeight: 600,
-            letterSpacing: '-0.03em',
-            fontVariantNumeric: 'tabular-nums',
-            color: 'var(--text)',
-            textAlign: 'center',
-            margin: '0 0 4px',
-            lineHeight: 1,
-          }}>
-            {result.total.toLocaleString()}
-          </p>
-        ) : null}
         <p style={{
           fontFamily: font,
-          fontSize: TYPE.meta,
-          color: 'var(--text-secondary)',
-          margin: '0 0 20px',
-          textAlign: 'center',
+          fontSize: TYPE.label,
+          fontWeight: 700,
+          letterSpacing: '0.16em',
+          textTransform: 'uppercase',
+          color: 'var(--text-muted)',
+          margin: '0 0 12px',
         }}>
-          @{hostHandle}
+          {title}
+          <span style={{
+            fontWeight: 400,
+            letterSpacing: 0,
+            textTransform: 'none',
+            color: 'var(--text-secondary)',
+            marginLeft: '8px',
+          }}>
+            @{hostHandle}
+          </span>
         </p>
 
         {loading && <NotificationRowSkeletonList count={5} />}
 
         {!loading && result && !result.ok && result.error === 'not_found' && (
-          <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--text-secondary)' }}>
+          <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
             No one here by that name.
           </p>
         )}
 
         {!loading && result && !result.ok && result.error === 'private_profile' && (
-          <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--text-secondary)' }}>
+          <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
             This account is private.
           </p>
         )}
 
         {!loading && result && !result.ok && result.error === 'lists_private' && (
-          <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--text-secondary)' }}>
+          <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
             They keep this list private.
           </p>
         )}
@@ -108,9 +93,8 @@ export function ProfileFollowListPage({
           <p style={{
             fontFamily: lyricFont,
             fontStyle: 'italic',
-            fontSize: TYPE.lyric,
+            fontSize: TYPE.secondary,
             color: 'var(--text-secondary)',
-            marginTop: '12px',
           }}>
             {kind === 'followers' ? 'No one here yet.' : 'Not following anyone yet.'}
           </p>
@@ -121,7 +105,6 @@ export function ProfileFollowListPage({
             listStyle: 'none',
             margin: 0,
             padding: 0,
-            borderTop: '1px solid var(--border)',
           }}>
             {result.items.map((person) => (
               <FollowRow key={person.id} person={person} />
@@ -140,13 +123,13 @@ function FollowRow({ person }: { person: FollowListPerson }) {
       <PendingNavLink
         href={`/profile/${person.username}`}
         indicator="overlay"
-        ringSize={24}
+        ringSize={22}
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '14px',
-          minHeight: '64px',
-          padding: '10px 4px',
+          gap: '12px',
+          minHeight: '52px',
+          padding: '6px 0',
           textDecoration: 'none',
           color: 'inherit',
           borderBottom: '1px solid var(--border)',
@@ -154,8 +137,8 @@ function FollowRow({ person }: { person: FollowListPerson }) {
         }}
       >
         <span style={{
-          width: '48px',
-          height: '48px',
+          width: '36px',
+          height: '36px',
           borderRadius: '50%',
           overflow: 'hidden',
           flexShrink: 0,
@@ -175,7 +158,7 @@ function FollowRow({ person }: { person: FollowListPerson }) {
           ) : (
             <span style={{
               fontFamily: font,
-              fontSize: TYPE.secondary,
+              fontSize: TYPE.label,
               fontWeight: 700,
               color: 'var(--bg)',
             }}>
@@ -189,7 +172,7 @@ function FollowRow({ person }: { person: FollowListPerson }) {
             alignItems: 'center',
             gap: '6px',
             fontFamily: font,
-            fontSize: TYPE.song,
+            fontSize: TYPE.secondary,
             fontWeight: 600,
             color: 'var(--text)',
           }}>
@@ -200,14 +183,14 @@ function FollowRow({ person }: { person: FollowListPerson }) {
             }}>
               {name}
             </span>
-            <ArtistBadge isArtist={person.isArtist} artistStatus={null} size={12} />
+            <ArtistBadge isArtist={person.isArtist} artistStatus={null} size={11} />
           </span>
           <span style={{
             display: 'block',
             fontFamily: font,
             fontSize: TYPE.meta,
             color: 'var(--text-secondary)',
-            marginTop: '2px',
+            marginTop: '1px',
           }}>
             @{person.username}
           </span>

@@ -59,9 +59,9 @@ const profileStatStyle: React.CSSProperties = {
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
-  minWidth: '96px',
+  minWidth: '64px',
   minHeight: 'var(--margo-touch-min)',
-  padding: '8px 20px',
+  padding: '4px 12px',
   textDecoration: 'none',
   boxSizing: 'border-box',
   textAlign: 'center',
@@ -87,11 +87,11 @@ function ProfileStat({
     <>
       <span style={{
         fontFamily: font,
-        fontSize: TYPE.displayName,
+        fontSize: TYPE.secondary,
         fontWeight: 600,
         color: 'var(--text)',
         lineHeight: 1,
-        letterSpacing: '-0.03em',
+        letterSpacing: '-0.02em',
         fontVariantNumeric: 'tabular-nums',
       }}>
         {display}
@@ -100,10 +100,10 @@ function ProfileStat({
         fontFamily: font,
         fontSize: TYPE.label,
         fontWeight: 600,
-        letterSpacing: '0.16em',
+        letterSpacing: '0.14em',
         textTransform: 'uppercase',
         color: 'var(--text-muted)',
-        marginTop: '8px',
+        marginTop: '3px',
       }}>
         {label}
       </span>
@@ -861,10 +861,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'stretch',
-              marginBottom: '24px',
-              borderTop: '1px solid var(--border)',
-              borderBottom: '1px solid var(--border)',
-              padding: '10px 0',
+              marginBottom: '16px',
             }}>
               <ProfileStat
                 href={(isOwnProfile || !profile.followListsPrivate) ? `/profile/${profile.username}/followers` : undefined}
