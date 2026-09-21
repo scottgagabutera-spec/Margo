@@ -3,24 +3,40 @@ import { useRouter } from 'next/navigation'
 
 const font = 'var(--font-lora), serif'
 
+function historyCanGoBack(): boolean {
+  if (typeof window === 'undefined') return false
+  const idx = (window.history.state as { idx?: number } | null)?.idx
+  if (typeof idx === 'number') return idx > 0
+  return false
+}
+
 /**
- * In-app back for depth routes. When `fallbackHref` is set it is the logical
- * parent (e.g. thread → /messages), not browser history. Device/browser back
- * is unchanged — this button never calls router.back().
+ * In-app back for depth routes. `fallbackHref` is the logical parent when
+ * there is no in-app history (deep link, notification). Device/browser back
+ * is unchanged.
+ *
+ * `preferHistory` pops the in-app stack (compose cancel) instead of pushing
+ * a new page — that extra push was stacking Lyric Back → post thread → feed.
  */
 export function BackButton({
   fallbackHref,
   label = 'Back',
   onNavigate,
+  preferHistory = false,
 }: {
   fallbackHref?: string
   label?: string
   onNavigate?: () => void
+  preferHistory?: boolean
 }) {
   const router = useRouter()
 
   const handleBack = () => {
     onNavigate?.()
+    if (preferHistory && historyCanGoBack()) {
+      router.back()
+      return
+    }
     if (fallbackHref) {
       router.push(fallbackHref)
     } else {

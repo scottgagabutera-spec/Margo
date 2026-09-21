@@ -155,6 +155,28 @@ const STAGE_LABEL: Record<Stage, string> = {
   error: '',
 }
 
+const ARTWORK_MAX_BYTES = 5 * 1024 * 1024
+const AUDIO_MAX_BYTES = 25 * 1024 * 1024
+
+function pipelineErrorMessage(data: { error?: string; detail?: unknown } | null, fallback: string): string {
+  const detail = data?.detail
+  let extra = ''
+  if (typeof detail === 'string' && detail.trim()) extra = detail.trim()
+  else if (detail && typeof detail === 'object' && 'message' in detail) {
+    const message = (detail as { message?: unknown }).message
+    if (typeof message === 'string' && message.trim()) extra = message.trim()
+  }
+  const base = (typeof data?.error === 'string' && data.error.trim()) ? data.error.trim() : fallback
+  if (extra && extra !== base) return `${base} (${extra})`
+  return base
+}
+
+function artworkFileError(file: File): string | null {
+  if (!file.type.startsWith('image/')) return 'Please choose an image for the poster (JPG, PNG, or WebP).'
+  if (file.size > ARTWORK_MAX_BYTES) return 'Poster image must be 5 MB or smaller.'
+  return null
+}
+
 export function SongUploadForm({ artistDisplayName, artistUsername = null, onComplete, onCancel, songId = null }: SongUploadFormProps) {
   const { user, identity } = useIdentity()
   const canGeneratePromote = identity?.isArtist && identity.artistStatus === 'active'
@@ -252,6 +274,16 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
   }, [songId, artistDisplayName])
 
   const handleArtworkChange = (file: File | null) => {
+    if (file) {
+      const msg = artworkFileError(file)
+      if (msg) {
+        setError(msg)
+        setStage('error')
+        return
+      }
+      setError('')
+      if (stage === 'error') setStage('idle')
+    }
     setArtworkFile(file)
     if (artworkPreview?.startsWith('blob:')) URL.revokeObjectURL(artworkPreview)
     setArtworkPreview(file ? URL.createObjectURL(file) : existingArtworkUrl)
@@ -262,24 +294,47 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
     setDragOver(false)
     if (busy) return
     const file = e.dataTransfer.files?.[0]
-    if (file && file.type.startsWith('image/')) handleArtworkChange(file)
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      setError('Please drop an image file (JPG, PNG, or WebP).')
+      setStage('error')
+      return
+    }
+    handleArtworkChange(file)
   }
 
-  const runLyricsPipeline = async (songId: string, audioUrl: string) => {
+  const reloadLyricLines = async (id: string) => {
+    const { data: lines, error: linesErr } = await supabase
+      .from('lyric_lines')
+      .select('line_index, text, start_sec, end_sec')
+      .eq('song_id', id)
+      .order('line_index', { ascending: true })
+    if (linesErr) throw new Error(linesErr.message)
+    const loaded = (lines || []) as LoadedLine[]
+    setOriginalLines(loaded)
+    setLyricsDraft(loaded.map((l) => l.text).join('\n'))
+    setSongStatus('live')
+  }
+
+  const runLyricsPipeline = async (
+    targetSongId: string,
+    audioUrl: string,
+    opts?: { closeOnDone?: boolean },
+  ) => {
     setStage('transcribing')
     const whisperRes = await fetch('/api/whisper', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         audioUrl,
-        songId,
+        songId: targetSongId,
         language: whisperLang === 'auto' ? undefined : whisperLang,
         prompt: lyricsHint.trim() || undefined,
       }),
     })
-    const whisperData = await whisperRes.json()
+    const whisperData = await whisperRes.json().catch(() => ({}))
     if (!whisperRes.ok || !whisperData.srt) {
-      throw new Error(whisperData.error || 'Could not transcribe audio. Try again.')
+      throw new Error(pipelineErrorMessage(whisperData, 'Could not transcribe audio. Try again.'))
     }
 
     setStage('tagging')
@@ -293,22 +348,26 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
           displayName: artistDisplayName,
           username: artistUsername,
         }),
-        songId,
+        songId: targetSongId,
       }),
     })
-    const tagData = await tagRes.json()
+    const tagData = await tagRes.json().catch(() => ({}))
     if (!tagRes.ok) {
-      throw new Error(tagData.error || 'Could not tag lyric vibes. Try again.')
+      throw new Error(pipelineErrorMessage(tagData, 'Could not tag lyric vibes. Try again.'))
     }
 
     setStage('publishing')
     const { error: publishErr } = await supabase
       .from('songs')
       .update({ status: 'live' })
-      .eq('id', songId)
+      .eq('id', targetSongId)
     if (publishErr) throw new Error('Song processed but could not go live. Try publishing again.')
 
     setStage('done')
+    if (opts?.closeOnDone === false) {
+      await reloadLyricLines(targetSongId)
+      return
+    }
     setTimeout(onComplete, 900)
   }
 
@@ -316,26 +375,81 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
     if (!pendingSongId || !pendingAudioUrl) return
     setError('')
     try {
-      await runLyricsPipeline(pendingSongId, pendingAudioUrl)
+      await runLyricsPipeline(pendingSongId, pendingAudioUrl, { closeOnDone: !isEdit })
     } catch (e: any) {
       setError(e.message || 'Something went wrong.')
       setStage('error')
     }
   }
 
+  const handleRegenerateLyrics = async () => {
+    if (!songId) return
+    const uid = user?.id
+    if (!uid) { setError('Not signed in.'); setStage('error'); return }
+    setError('')
+    try {
+      let audioUrl = existingAudioUrl
+      if (audioFile) {
+        if (audioFile.size > AUDIO_MAX_BYTES) {
+          setError('Audio must be 25 MB or smaller so lyrics can be read.')
+          setStage('error')
+          return
+        }
+        setStage('uploading-audio')
+        const audioExt = extFromFile(audioFile)
+        const audioPath = `${uid}/${songId}.${audioExt}`
+        const { error: audioUploadErr } = await supabase.storage
+          .from('song-audio')
+          .upload(audioPath, audioFile, { contentType: audioFile.type || undefined, upsert: true })
+        if (audioUploadErr) throw new Error('Could not upload audio: ' + audioUploadErr.message)
+        const { data: audioPublic } = supabase.storage.from('song-audio').getPublicUrl(audioPath)
+        audioUrl = audioPublic.publicUrl
+        setExistingAudioUrl(audioUrl)
+      }
+      if (!audioUrl) {
+        setError('This song has no audio to read lyrics from.')
+        setStage('error')
+        return
+      }
+      setPendingSongId(songId)
+      setPendingAudioUrl(audioUrl)
+      const { error: processingErr } = await supabase
+        .from('songs')
+        .update({ status: 'processing' })
+        .eq('id', songId)
+        .eq('owner_profile_id', uid)
+      if (processingErr) throw new Error('Could not start lyric generation: ' + processingErr.message)
+      setSongStatus('processing')
+      await runLyricsPipeline(songId, audioUrl, { closeOnDone: false })
+    } catch (e: any) {
+      setError(e.message || 'Could not regenerate lyrics.')
+      setStage('error')
+    }
+  }
+
   const handleSubmit = async () => {
     setError('')
-    if (!title.trim()) { setError('Add a title.'); return }
+    if (!title.trim()) { setError('Add a title.'); setStage('error'); return }
 
     try {
       const uid = user?.id
-      if (!uid) { setError('Not signed in.'); return }
+      if (!uid) { setError('Not signed in.'); setStage('error'); return }
 
       if (isEdit && songId) {
         const lyricTexts = lyricsDraft.split('\n').map((l) => l.trim()).filter((l) => l.length > 0)
-        if (originalLines.length > 0 && lyricTexts.length === 0) {
+        if (originalLines.length > 0 && lyricTexts.length === 0 && !audioFile) {
           setError('Lyrics cannot be empty.')
+          setStage('error')
           return
+        }
+        if (audioFile && audioFile.size > AUDIO_MAX_BYTES) {
+          setError('Audio must be 25 MB or smaller so lyrics can be read.')
+          setStage('error')
+          return
+        }
+        if (artworkFile) {
+          const artErr = artworkFileError(artworkFile)
+          if (artErr) { setError(artErr); setStage('error'); return }
         }
 
         let audioUrl = existingAudioUrl
@@ -351,6 +465,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
           if (audioUploadErr) throw new Error('Could not upload audio: ' + audioUploadErr.message)
           const { data: audioPublic } = supabase.storage.from('song-audio').getPublicUrl(audioPath)
           audioUrl = audioPublic.publicUrl
+          setExistingAudioUrl(audioUrl)
         }
 
         if (artworkFile) {
@@ -360,13 +475,14 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
           const { error: artworkUploadErr } = await supabase.storage
             .from('song-artwork')
             .upload(artworkPath, artworkFile, { contentType: artworkFile.type || undefined, upsert: true })
-          if (artworkUploadErr) throw new Error('Could not upload artwork: ' + artworkUploadErr.message)
+          if (artworkUploadErr) throw new Error('Could not upload poster: ' + artworkUploadErr.message)
           const { data: artworkPublic } = supabase.storage.from('song-artwork').getPublicUrl(artworkPath)
           artworkUrl = artworkPublic.publicUrl
+          setExistingArtworkUrl(artworkUrl)
         }
 
         setStage('saving-song')
-        const { error: updateErr } = await supabase
+        const { data: updatedRows, error: updateErr } = await supabase
           .from('songs')
           .update({
             title: title.trim(),
@@ -389,7 +505,18 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
           })
           .eq('id', songId)
           .eq('owner_profile_id', uid)
+          .select('id')
         if (updateErr) throw new Error('Could not save song: ' + updateErr.message)
+        if (!updatedRows?.length) throw new Error('Could not save song. Refresh and try again.')
+
+        if (audioFile && audioUrl) {
+          setPendingSongId(songId)
+          setPendingAudioUrl(audioUrl)
+          await supabase.from('songs').update({ status: 'processing' }).eq('id', songId).eq('owner_profile_id', uid)
+          setSongStatus('processing')
+          await runLyricsPipeline(songId, audioUrl, { closeOnDone: false })
+          return
+        }
 
         if (lyricTexts.length > 0) {
           let lastEnd = 0
@@ -429,33 +556,42 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
         return
       }
 
-      if (!audioFile) { setError('Add an audio file.'); return }
-      if (!artworkFile) { setError('Artwork is required.'); return }
+      if (!audioFile) { setError('Add an audio file.'); setStage('error'); return }
+      if (!artworkFile) { setError('Artwork is required. Tap the poster to add a cover.'); setStage('error'); return }
+      if (audioFile.size > AUDIO_MAX_BYTES) {
+        setError('Audio must be 25 MB or smaller so lyrics can be read.')
+        setStage('error')
+        return
+      }
+      const artErr = artworkFileError(artworkFile)
+      if (artErr) { setError(artErr); setStage('error'); return }
 
-      const newSongId = crypto.randomUUID()
+      const newSongId = pendingSongId || crypto.randomUUID()
+      setPendingSongId(newSongId)
 
       setStage('uploading-audio')
       const audioExt = extFromFile(audioFile)
       const audioPath = `${uid}/${newSongId}.${audioExt}`
       const { error: audioUploadErr } = await supabase.storage
         .from('song-audio')
-        .upload(audioPath, audioFile, { contentType: audioFile.type || undefined })
+        .upload(audioPath, audioFile, { contentType: audioFile.type || undefined, upsert: true })
       if (audioUploadErr) throw new Error('Could not upload audio: ' + audioUploadErr.message)
       const { data: audioPublic } = supabase.storage.from('song-audio').getPublicUrl(audioPath)
       const audioUrl = audioPublic.publicUrl
+      setPendingAudioUrl(audioUrl)
 
       setStage('uploading-artwork')
       const artworkExt = extFromFile(artworkFile)
       const artworkPath = `${uid}/${newSongId}.${artworkExt}`
       const { error: artworkUploadErr } = await supabase.storage
         .from('song-artwork')
-        .upload(artworkPath, artworkFile, { contentType: artworkFile.type || undefined })
-      if (artworkUploadErr) throw new Error('Could not upload artwork: ' + artworkUploadErr.message)
+        .upload(artworkPath, artworkFile, { contentType: artworkFile.type || undefined, upsert: true })
+      if (artworkUploadErr) throw new Error('Could not upload poster: ' + artworkUploadErr.message)
       const { data: artworkPublic } = supabase.storage.from('song-artwork').getPublicUrl(artworkPath)
       const artworkUrl = artworkPublic.publicUrl
 
       setStage('saving-song')
-      const { error: insertErr } = await supabase.from('songs').insert({
+      const { error: insertErr } = await supabase.from('songs').upsert({
         id: newSongId,
         owner_profile_id: uid,
         title: title.trim(),
@@ -475,11 +611,8 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
         boomplay_url: boomplayUrl.trim() || null,
         is_ai_generated: isAiGenerated,
         ...(atmosphere === 'still' ? {} : { atmosphere: toAtmosphereColumn(atmosphere) }),
-      })
+      }, { onConflict: 'id' })
       if (insertErr) throw new Error('Could not save song: ' + insertErr.message)
-
-      setPendingSongId(newSongId)
-      setPendingAudioUrl(audioUrl)
 
       await runLyricsPipeline(newSongId, audioUrl)
     } catch (e: any) {
@@ -510,7 +643,10 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
           <input
             ref={artworkInputRef}
             type="file" accept="image/*"
-            onChange={e => handleArtworkChange(e.target.files?.[0] || null)}
+            onChange={e => {
+              handleArtworkChange(e.target.files?.[0] || null)
+              e.target.value = ''
+            }}
             style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
             disabled={busy}
           />
@@ -544,7 +680,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
                   Add Artwork
                 </span>
                 <span style={{ fontFamily: font, fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-                  {isEdit ? 'Optional · drag &amp; drop or tap' : 'Required · drag &amp; drop or tap'}
+                  {isEdit ? 'Optional · drag and drop or tap' : 'Required · drag and drop or tap'}
                 </span>
               </div>
             )}
@@ -615,7 +751,17 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
               {audioFile ? 'Change Audio' : isEdit ? 'Replace Audio' : 'Choose Audio File'}
               <input
                 type="file" accept="audio/*"
-                onChange={e => setAudioFile(e.target.files?.[0] || null)}
+                onChange={e => {
+                  const next = e.target.files?.[0] || null
+                  if (next && next.size > AUDIO_MAX_BYTES) {
+                    setError('Audio must be 25 MB or smaller so lyrics can be read.')
+                    setStage('error')
+                    e.target.value = ''
+                    return
+                  }
+                  setAudioFile(next)
+                  e.target.value = ''
+                }}
                 style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
                 disabled={busy}
               />
@@ -752,23 +898,12 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
             disabled={busy}
           />
           <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '8px', lineHeight: 1.5 }}>
-            Editing a line keeps its id. New lines append; removed trailing lines are dropped.
+            Editing a line keeps its timing. New lines append; removed trailing lines are dropped.
+            Replacing audio or regenerating lyrics rebuilds this list from Whisper.
           </p>
         </div>
       )}
 
-      {isEdit && canGeneratePromote && songId && songStatus === 'live' && originalLines.length > 0 && (
-        <GeneratePromotionBlock
-          songId={songId}
-          songTitle={title}
-          artistName={artistName}
-          audioUrl={existingAudioUrl}
-          artworkUrl={existingArtworkUrl}
-          lineCount={originalLines.length}
-        />
-      )}
-
-      {!isEdit && (
       <div style={{
         marginBottom: '20px', padding: '16px',
         background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '12px',
@@ -818,9 +953,46 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
           </div>
         </div>
         <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '10px', lineHeight: 1.5 }}>
-          Whisper AI reads the audio and tags every line with a vibe automatically once you publish.
+          {isEdit
+            ? 'Whisper reads the audio already on this song. You do not need to upload it again.'
+            : 'Whisper AI reads the audio and tags every line with a vibe automatically once you publish.'}
         </p>
+        {isEdit && (existingAudioUrl || audioFile) && (
+          <button
+            type="button"
+            onClick={() => { void handleRegenerateLyrics() }}
+            disabled={busy}
+            style={{
+              marginTop: '12px',
+              minHeight: '44px',
+              padding: '0 16px',
+              background: 'transparent',
+              color: 'var(--gold)',
+              border: '1px solid var(--gold-border)',
+              borderRadius: '50px',
+              fontFamily: font,
+              fontWeight: 700,
+              fontSize: '0.7rem',
+              letterSpacing: '1.5px',
+              textTransform: 'uppercase',
+              cursor: busy ? 'default' : 'pointer',
+              opacity: busy ? 0.6 : 1,
+            }}
+          >
+            {songStatus === 'processing' ? 'Resume lyric generation' : 'Regenerate lyrics'}
+          </button>
+        )}
       </div>
+
+      {isEdit && canGeneratePromote && songId && songStatus === 'live' && originalLines.length > 0 && (
+        <GeneratePromotionBlock
+          songId={songId}
+          songTitle={title}
+          artistName={artistName}
+          audioUrl={existingAudioUrl}
+          artworkUrl={existingArtworkUrl}
+          lineCount={originalLines.length}
+        />
       )}
 
       <button
@@ -883,7 +1055,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
           color: stage === 'error' || (error && stage === 'idle') ? 'rgba(255,96,96,0.9)' : stage === 'done' ? 'rgba(74,222,128,0.9)' : 'var(--text-2)',
           marginBottom: '16px',
         }}>
-          {stage === 'error' || (error && stage === 'idle') ? error : isEdit && stage === 'done' ? 'Saved.' : STAGE_LABEL[stage]}
+          {stage === 'error' || (error && stage === 'idle') ? error : isEdit && stage === 'done' ? 'Saved. Lyrics are live.' : STAGE_LABEL[stage]}
         </p>
       )}
 
