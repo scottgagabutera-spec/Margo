@@ -71,6 +71,7 @@ interface StoryViewerProps {
   onClose: () => void
   authorPreview?: StoryRingAuthor | null
   initialSlides?: StorySlide[]
+  onNextAuthor?: () => boolean
 }
 
 function StorySlideView({
@@ -231,6 +232,7 @@ export function StoryViewer({
   onClose,
   authorPreview = null,
   initialSlides,
+  onNextAuthor,
 }: StoryViewerProps) {
   const { slides, loading, error } = useAuthorStories(authorProfileId, true, initialSlides)
   const [index, setIndex] = useState(0)
@@ -291,11 +293,12 @@ export function StoryViewer({
     const i = indexRef.current
     const len = slidesRef.current.length
     if (len === 0 || i >= len - 1) {
+      if (onNextAuthor?.() === true) return
       requestClose()
       return
     }
     goToIndex(i + 1)
-  }, [goToIndex, requestClose])
+  }, [goToIndex, onNextAuthor, requestClose])
 
   const goPrev = useCallback(() => {
     if (closingRef.current) return

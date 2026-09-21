@@ -49,7 +49,7 @@ export function navBackForPath(pathname: string | null | undefined): NavBackConf
   }
 
   const parts = p.split('/').filter(Boolean)
-  if (parts[0] === 'profile' && parts[1] && parts[2] === 'songs') {
+  if (parts[0] === 'profile' && parts[1] && parts[2]) {
     return { fallbackHref: `/profile/${parts[1]}` }
   }
   if (parts[0] === 'profile' && parts[1] && !parts[2]) {

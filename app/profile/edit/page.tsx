@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { AvatarUpload } from '@/components/avatar-upload'
+import { CoverUpload } from '@/components/cover-upload'
 import { SignInLink } from '@/components/signin-link'
 import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { ARTIST_LINK_FIELDS, sanitizeArtistLinks } from '@/lib/artist-links'
@@ -28,7 +29,7 @@ export default function EditProfilePage() {
   const {
     user, identity, loading,
     updateDisplayName, changeUsername, updateBio, updateSignatureLyric, setPrivate,
-    updateArtistLinks, syncAvatarUrl,
+    updateArtistLinks, syncAvatarUrl, syncCoverUrl,
   } = useIdentity()
   const { requireAuth } = useAuthGate()
 
@@ -211,6 +212,14 @@ export default function EditProfilePage() {
                   setAvatarUrl(url)
                   syncAvatarUrl(url)
                 }}
+              />
+            </div>
+
+            <div>
+              <label style={labelStyle}>Cover photo</label>
+              <CoverUpload
+                currentCoverUrl={identity.coverUrl ?? null}
+                onUploaded={(url) => syncCoverUrl(url)}
               />
             </div>
 

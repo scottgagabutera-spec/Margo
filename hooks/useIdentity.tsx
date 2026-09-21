@@ -35,8 +35,10 @@ export interface Identity {
   // Studio access and the public ArtistBadge both key off this.
   artistStatus: ArtistStatus
   isPrivate: boolean
+  followListsPrivate: boolean
   bio: string | null
   avatarUrl: string | null
+  coverUrl: string | null
   signatureLyric: string | null
   signatureSong: string | null
   signatureArtist: string | null
@@ -63,8 +65,10 @@ function mapRow(row: any): Identity {
     isArtist: row.is_artist,
     artistStatus: row.artist_status ?? null,
     isPrivate: row.is_private,
+    followListsPrivate: !!row.follow_lists_private,
     bio: row.bio,
     avatarUrl: row.avatar_url,
+    coverUrl: row.cover_url ?? null,
     signatureLyric: row.signature_lyric,
     signatureSong: row.signature_song,
     signatureArtist: row.signature_artist,
@@ -84,7 +88,9 @@ interface IdentityContextValue {
   updateBio: (newBio: string) => Promise<ActionResult>
   updateArtistLinks: (links: Record<string, string>) => Promise<ActionResult>
   setPrivate: (isPrivate: boolean) => Promise<ActionResult>
+  setFollowListsPrivate: (hidden: boolean) => Promise<ActionResult>
   syncAvatarUrl: (url: string) => void
+  syncCoverUrl: (url: string) => void
   refreshIdentity: () => Promise<void>
 }
 
@@ -355,8 +361,20 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
     return { success: true }
   }, [identityUser])
 
+  const setFollowListsPrivate = useCallback(async (hidden: boolean): Promise<ActionResult> => {
+    if (!identityUser) return { success: false, error: 'Not signed in.' }
+    const { error } = await supabase.from('profiles').update({ follow_lists_private: hidden }).eq('id', identityUser.id)
+    if (error) return { success: false, error: 'Could not update list privacy.' }
+    setIdentityState(prev => (prev ? { ...prev, followListsPrivate: hidden } : prev))
+    return { success: true }
+  }, [identityUser])
+
   const syncAvatarUrl = useCallback((url: string) => {
     setIdentityState(prev => (prev ? { ...prev, avatarUrl: url } : prev))
+  }, [])
+
+  const syncCoverUrl = useCallback((url: string) => {
+    setIdentityState(prev => (prev ? { ...prev, coverUrl: url } : prev))
   }, [])
 
   /**
@@ -395,7 +413,9 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
         updateBio,
         updateArtistLinks,
         setPrivate,
+        setFollowListsPrivate,
         syncAvatarUrl,
+        syncCoverUrl,
         refreshIdentity,
       }}
     >

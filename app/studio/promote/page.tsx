@@ -189,7 +189,7 @@ export default function StudioPromotePage() {
         Promotion queue
       </h1>
       <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-        Review, polish color or effect, approve, then confirm publish to YouTube.
+        Review, polish color or effect, then Approve to publish to YouTube.
       </p>
       <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
         Published, rejected, and failed posts clear from this list after 24 hours.

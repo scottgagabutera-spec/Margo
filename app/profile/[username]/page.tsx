@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState, useRef } from 'react'
+import { useEffect, useMemo, useState, useRef, type ChangeEvent } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, signOutBrowser } from '@/lib/supabase/client'
@@ -16,7 +16,7 @@ import { SongPreviewSheet, type SongPreviewSeed } from '@/components/song-previe
 import { PostCard } from '@/components/post-card'
 import { CardExportModal } from '@/components/card-export-modal'
 import { resolveMargoMomentFromPost } from '@/lib/moment'
-import { MoreIcon } from '@/components/icons'
+import { MoreIcon, EditIcon } from '@/components/icons'
 import type { Post } from '@/hooks/usePosts'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
 import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
@@ -24,6 +24,7 @@ import { ProfileArtistLinks } from '@/components/profile-artist-links'
 import { ProfileImageLightbox } from '@/components/profile-image-lightbox'
 import { peekProfileCache, warmProfile, type WarmProfileRow } from '@/lib/profile-warm'
 import { resolvePublicArtistCredit } from '@/lib/artist-identity'
+import { uploadProfileCover } from '@/components/cover-upload'
 
 const supabase = createClient()
 
@@ -39,6 +40,37 @@ const DISCOGRAPHY_PREVIEW_COUNT = 8
 const sectionLabelStyle: React.CSSProperties = {
   fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)',
   textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '8px',
+}
+
+const profileStatStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  minHeight: 'var(--margo-touch-min)',
+  fontFamily: font,
+  fontSize: '0.85rem',
+  color: 'var(--text-secondary)',
+  textDecoration: 'none',
+}
+
+function ProfileStat({
+  href,
+  count,
+  label,
+}: {
+  href?: string
+  count: number | string | null
+  label: string
+}) {
+  const inner = (
+    <>
+      <strong style={{ color: 'var(--text)' }}>{count ?? '—'}</strong>
+      &nbsp;{label}
+    </>
+  )
+  if (href) {
+    return <Link href={href} style={profileStatStyle}>{inner}</Link>
+  }
+  return <span style={profileStatStyle}>{inner}</span>
 }
 
 type ProfileData = WarmProfileRow
@@ -59,7 +91,7 @@ type ProfileContentTab = 'lyrics' | 'replays' | 'backs' | 'private'
 export default function ProfilePage({ username: usernameProp }: { username?: string } = {}) {
   const params = useParams<{ username: string }>()
   const router = useRouter()
-  const { user, identity } = useIdentity()
+  const { user, identity, syncCoverUrl } = useIdentity()
   const { application } = useArtistApplication()
   const { isTabActive } = usePrimaryTab()
   const username = (usernameProp || (typeof params.username === 'string' ? params.username : '')).trim()
@@ -79,6 +111,9 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
   const [followStatus, setFollowStatus] = useState<FollowStatus>(null)
   const [followBusy, setFollowBusy] = useState(false)
   const [avatarLightboxOpen, setAvatarLightboxOpen] = useState(false)
+  const [coverLightboxOpen, setCoverLightboxOpen] = useState(false)
+  const [coverBusy, setCoverBusy] = useState(false)
+  const coverInputRef = useRef<HTMLInputElement>(null)
   const [previewSong, setPreviewSong] = useState<SongPreviewSeed | null>(null)
 
   // ── Discography — public, live-only catalog for this profile, if
@@ -354,6 +389,25 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
     followStatus === 'pending' ? 'Requested' :
     'Follow'
 
+  const coverUrl = profile?.coverUrl ?? null
+  const hasCover = !!coverUrl
+
+  async function handleCoverFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !user || !profile) return
+    setCoverBusy(true)
+    try {
+      const url = await uploadProfileCover(user.id, file)
+      setProfile({ ...profile, coverUrl: url })
+      syncCoverUrl(url)
+    } catch (err) {
+      console.error('Cover upload failed:', err)
+    } finally {
+      setCoverBusy(false)
+      if (coverInputRef.current) coverInputRef.current.value = ''
+    }
+  }
+
   return (
     <main style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
       <style>{`
@@ -395,14 +449,106 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
 
       {!loading && profile && (
         <div>
-          <div style={{
-            height: '160px', width: '100%',
-            marginTop: 'var(--nav-height, 72px)',
-            background: 'linear-gradient(135deg, rgba(232,197,71,0.14), rgba(122,127,214,0.08) 60%, var(--bg))',
-          }} />
+          {hasCover ? (
+            <div style={{
+              position: 'relative',
+              width: '100%',
+              height: '148px',
+              marginTop: 'var(--nav-height, 72px)',
+              background: 'var(--surface-2)',
+              overflow: 'hidden',
+            }}>
+              <button
+                type="button"
+                onClick={() => setCoverLightboxOpen(true)}
+                aria-label={`View ${profile.displayName}'s cover photo`}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  height: '100%',
+                  padding: 0,
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  WebkitTapHighlightColor: 'transparent',
+                }}
+              >
+                <img
+                  src={coverUrl}
+                  alt=""
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                />
+              </button>
+              {isOwnProfile && (
+                <button
+                  type="button"
+                  onClick={() => coverInputRef.current?.click()}
+                  disabled={coverBusy}
+                  aria-label="Change cover photo"
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    bottom: '12px',
+                    width: 'var(--margo-touch-min)',
+                    height: 'var(--margo-touch-min)',
+                    borderRadius: '50%',
+                    background: 'var(--margo-bar)',
+                    border: '1px solid var(--border-hi)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: coverBusy ? 'not-allowed' : 'pointer',
+                    padding: 0,
+                    WebkitTapHighlightColor: 'transparent',
+                  }}
+                >
+                  <EditIcon size={16} color="var(--text-secondary)" />
+                </button>
+              )}
+            </div>
+          ) : isOwnProfile ? (
+            <button
+              type="button"
+              onClick={() => coverInputRef.current?.click()}
+              disabled={coverBusy}
+              aria-label="Add cover photo"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '100%',
+                minHeight: '72px',
+                marginTop: 'var(--nav-height, 72px)',
+                padding: 0,
+                border: 'none',
+                borderBottom: '1px solid var(--border)',
+                background: 'var(--surface)',
+                cursor: coverBusy ? 'not-allowed' : 'pointer',
+                fontFamily: font,
+                fontSize: '0.6rem',
+                fontWeight: 700,
+                letterSpacing: '1.4px',
+                textTransform: 'uppercase',
+                color: 'var(--text-muted)',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              {coverBusy ? 'Uploading…' : 'Add cover photo'}
+            </button>
+          ) : (
+            <div style={{ height: 'var(--nav-height, 72px)' }} />
+          )}
+
+          <input
+            ref={coverInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleCoverFile}
+            style={{ display: 'none' }}
+          />
 
           <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0 24px var(--margo-page-padding-bottom)' }}>
-            <div style={{ marginTop: '-44px', marginBottom: '20px' }}>
+            <div style={{ marginTop: hasCover || isOwnProfile ? '-44px' : '20px', marginBottom: '20px' }}>
               {profile.avatarUrl ? (
                 <button
                   type="button"
@@ -590,20 +736,23 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 the same visual weight as followers/following, instead of
                 the full catalog being dumped inline further down. Only
                 shown for artists. */}
-            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginBottom: '20px' }}>
-              <span style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-2)' }}>
-                <strong style={{ color: 'var(--text)' }}>{followerCount ?? '—'}</strong> followers
-              </span>
-              <span style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-2)' }}>
-                <strong style={{ color: 'var(--text)' }}>{followingCount ?? '—'}</strong> following
-              </span>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+              <ProfileStat
+                href={(isOwnProfile || !profile.followListsPrivate) ? `/profile/${profile.username}/followers` : undefined}
+                count={followerCount}
+                label="followers"
+              />
+              <ProfileStat
+                href={(isOwnProfile || !profile.followListsPrivate) ? `/profile/${profile.username}/following` : undefined}
+                count={followingCount}
+                label="following"
+              />
               {profile.isArtist && (
-                <Link
+                <ProfileStat
                   href={`/profile/${profile.username}/songs`}
-                  style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-2)', textDecoration: 'none' }}
-                >
-                  <strong style={{ color: 'var(--text)' }}>{artistSongsLoading ? '—' : artistSongs.length}</strong> songs
-                </Link>
+                  count={artistSongsLoading ? '—' : artistSongs.length}
+                  label="songs"
+                />
               )}
             </div>
 
@@ -899,6 +1048,14 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
           onClose={() => setAvatarLightboxOpen(false)}
           src={profile.avatarUrl}
           alt={profile.displayName || profile.username}
+        />
+      ) : null}
+      {profile?.coverUrl ? (
+        <ProfileImageLightbox
+          open={coverLightboxOpen}
+          onClose={() => setCoverLightboxOpen(false)}
+          src={profile.coverUrl}
+          alt={`${profile.displayName || profile.username} cover photo`}
         />
       ) : null}
       {previewSong ? (

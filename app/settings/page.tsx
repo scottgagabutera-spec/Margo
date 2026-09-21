@@ -36,6 +36,7 @@ interface ProfileRow {
   is_artist: boolean
   artist_status?: string | null
   is_private: boolean
+  follow_lists_private: boolean
   who_can_message: WhoCanMessage
   deactivated_at: string | null
   settings: { notifications?: Partial<NotificationPrefs> } | null
@@ -248,7 +249,7 @@ export default function AccountSettingsPage() {
 
       const { data: profileRow } = await supabase
         .from('profiles')
-        .select('id, username, is_artist, artist_status, is_private, who_can_message, deactivated_at, settings')
+        .select('id, username, is_artist, artist_status, is_private, follow_lists_private, who_can_message, deactivated_at, settings')
         .eq('id', user!.id)
         .single()
 
@@ -331,7 +332,7 @@ export default function AccountSettingsPage() {
     setProfile({ ...profile, settings: nextSettings })
   }
 
-  async function savePrivacy(patch: Partial<Pick<ProfileRow, 'is_private' | 'who_can_message'>>) {
+  async function savePrivacy(patch: Partial<Pick<ProfileRow, 'is_private' | 'who_can_message' | 'follow_lists_private'>>) {
     if (!userId || !profile) return
     const prev = profile
     setSavingSection('privacy')
@@ -564,6 +565,30 @@ export default function AccountSettingsPage() {
             checked={profile.is_private}
             label="Private account"
             onChange={(v) => savePrivacy({ is_private: v })}
+          />
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '10px 0',
+            borderBottom: '1px solid var(--border)',
+          }}
+        >
+          <div>
+            <div style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text)' }}>
+              Private follower lists
+            </div>
+            <div style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+              Only you can see who follows you and who you follow
+            </div>
+          </div>
+          <Toggle
+            checked={!!profile.follow_lists_private}
+            label="Private follower lists"
+            onChange={(v) => savePrivacy({ follow_lists_private: v })}
           />
         </div>
 

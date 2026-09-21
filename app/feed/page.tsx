@@ -26,6 +26,7 @@ import { usePrimaryTab, restoreActivePrimaryScroll } from '@/components/primary-
 import { FeedPostSkeletonList } from '@/components/margo-skeletons'
 import { feedRankIds, feedSortScore } from '@/lib/feed-rank'
 import { StoryRing } from '@/components/stories/story-ring'
+import { StoriesDock } from '@/components/stories/stories-dock'
 import { StoryFeedAuthorSync, StoryRingProvider } from '@/components/stories/story-ring-context'
 
 const supabase = createClient()
@@ -569,11 +570,13 @@ function FeedPageInner() {
 
       <main className="margo-feed-column" style={{ position: 'relative', zIndex: 5, padding: '16px 24px var(--margo-page-padding-bottom)' }}>
         {feedLive && (
-          <StoryRing
-            onAddStory={() => {
-              toast('Open a Moment and tap Add to Story in the export sheet.')
-            }}
-          />
+          <div className="margo-story-ring-tray">
+            <StoryRing
+              onAddStory={() => {
+                toast('Open a Moment and tap Add to Story in the export sheet.')
+              }}
+            />
+          </div>
         )}
 
         {hasActiveFilter && (
@@ -699,6 +702,13 @@ function FeedPageInner() {
       />
     </div>
     </PullToRefresh>
+      {feedLive && (
+        <StoriesDock
+          onAddStory={() => {
+            toast('Open a Moment and tap Add to Story in the export sheet.')
+          }}
+        />
+      )}
     </StoryRingProvider>
   )
 }

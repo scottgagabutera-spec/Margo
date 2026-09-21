@@ -41,7 +41,7 @@ interface PromoteQueueCardProps {
   songId?: string | null
   snippetStart?: number | null
   snippetEnd?: number | null
-  onUpdated: (options?: PromoteQueueUpdateOptions) => void
+  onUpdated: (options?: PromoteQueueUpdateOptions) => void | Promise<void>
   onPublishAbortRegister?: (abort: () => void) => () => void
 }
 
@@ -58,6 +58,7 @@ export function PromoteQueueCard({
   const [error, setError] = useState<string | null>(null)
   const [confirmPublish, setConfirmPublish] = useState(false)
   const [publishResult, setPublishResult] = useState<{ videoUrl: string; videoId: string } | null>(null)
+  const [localStatus, setLocalStatus] = useState(item.status)
   const [themeId, setThemeId] = useState<StageCardThemeId>(
     asStageTheme(item.overrideThemeId ?? item.defaultThemeId),
   )
@@ -67,6 +68,7 @@ export function PromoteQueueCard({
   const [shapeId] = useState<MomentShapeId>(item.overrideShapeId ?? item.defaultShapeId)
 
   const publishInFlightRef = useRef(false)
+  const actionLockRef = useRef(false)
   const publishAbortRef = useRef<AbortController | null>(null)
   const prefsRef = useRef({ themeId, atmosphereId, shapeId })
 
@@ -85,7 +87,14 @@ export function PromoteQueueCard({
     setConfirmPublish(false)
     setError(null)
     setPublishResult(null)
+    setLocalStatus(item.status)
   }, [item.id])
+
+  useEffect(() => {
+    if (publishInFlightRef.current) return
+    if (publishResult && item.status !== 'published') return
+    setLocalStatus(item.status)
+  }, [item.status, publishResult])
 
   useEffect(() => {
     if (item.status !== 'published') return
@@ -221,6 +230,7 @@ export function PromoteQueueCard({
     setError(null)
     setConfirmPublish(false)
 
+    setLocalStatus('publishing')
     try {
       await saveOverrides()
       if (ac.signal.aborted) throw new DOMException('Publish cancelled', 'AbortError')
@@ -236,15 +246,18 @@ export function PromoteQueueCard({
         ac.signal,
       )
       setPublishResult(result)
+      setLocalStatus('published')
       setBusy(null)
-      onUpdated({ silent: true })
+      await onUpdated({ silent: true })
     } catch (err) {
       if ((err as Error)?.name === 'AbortError') {
         setError(null)
         setBusy(null)
+        setLocalStatus('approved')
         return
       }
       setError(err instanceof Error ? err.message : 'Publish failed')
+      setLocalStatus('approved')
       setBusy(null)
     } finally {
       publishInFlightRef.current = false
@@ -253,9 +266,11 @@ export function PromoteQueueCard({
   }, [item.id, saveOverrides, buildMomentForPublish, onUpdated])
 
   async function approve() {
-    if (publishInFlightRef.current || busy) return
+    if (actionLockRef.current || publishInFlightRef.current || busy) return
+    actionLockRef.current = true
     setBusy('Approving…')
     setError(null)
+    setLocalStatus('approved')
     try {
       await saveOverrides()
       const res = await fetch(`/api/promote/queue/${item.id}/approve`, {
@@ -263,35 +278,46 @@ export function PromoteQueueCard({
         credentials: 'include',
       })
       if (!res.ok) throw new Error('Approve failed')
-      setBusy(null)
-      onUpdated({ silent: true })
+      actionLockRef.current = false
+      await runPublish()
     } catch (err) {
+      actionLockRef.current = false
+      if ((err as Error)?.name === 'AbortError') {
+        setBusy(null)
+        return
+      }
       setError(err instanceof Error ? err.message : 'Approve failed')
+      setLocalStatus(item.status)
       setBusy(null)
     }
   }
 
   async function reject() {
-    if (publishInFlightRef.current || busy) return
+    if (actionLockRef.current || publishInFlightRef.current || busy) return
+    actionLockRef.current = true
     cancelPublish()
     setBusy('Rejecting…')
     await fetch(`/api/promote/queue/${item.id}/reject`, { method: 'POST', credentials: 'include' })
+    actionLockRef.current = false
     setBusy(null)
-    onUpdated({ silent: true })
+    void onUpdated({ silent: true })
   }
 
   function requestPublish() {
-    if (publishInFlightRef.current || busy) return
+    if (actionLockRef.current || publishInFlightRef.current || busy) return
     setError(null)
     setConfirmPublish(true)
   }
 
   const youtubeTarget = item.targets.find((t) => t.platform === 'youtube')
   const publishedUrl = publishResult?.videoUrl ?? youtubeTarget?.externalPostUrl ?? null
-  const canEdit = item.status === 'pending_review' || item.status === 'approved'
-  const canPublish = item.status === 'approved' || item.status === 'partial'
-  const canApprove = item.status === 'pending_review'
-  const isPublished = item.status === 'published' || !!publishResult
+  const status = publishResult ? 'published' : localStatus
+  const canEdit = (status === 'pending_review' || status === 'approved') && !busy
+  const canPublish = status === 'approved' || status === 'partial'
+  const canApprove = status === 'pending_review'
+  const isPublished = status === 'published'
+  const isPublishing = status === 'publishing' || !!busy
+  const actionsLocked = !!busy || isPublishing || isPublished
 
   return (
     <div
@@ -304,7 +330,7 @@ export function PromoteQueueCard({
       }}
     >
       <div style={{ fontFamily: font, fontSize: '0.65rem', letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>
-        {isPublished ? 'published' : item.status.replace('_', ' ')}
+        {isPublished ? 'published' : status.replace('_', ' ')}
       </div>
       <div style={{ fontFamily: font, fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
         {item.songTitle}
@@ -480,19 +506,19 @@ export function PromoteQueueCard({
         </div>
       )}
 
-      {!confirmPublish && !isPublished && (
+      {!confirmPublish && !isPublished && !isPublishing && (
         <div style={{ display: 'flex', gap: '10px', marginTop: '16px', flexWrap: 'wrap' }}>
           {canApprove && (
             <>
               <button
                 type="button"
                 onClick={() => void approve()}
-                disabled={!!busy || shapeId !== 'vertical'}
+                disabled={actionsLocked || shapeId !== 'vertical'}
                 style={primaryBtn}
               >
                 Approve
               </button>
-              <button type="button" onClick={() => void reject()} disabled={!!busy} style={ghostBtn}>
+              <button type="button" onClick={() => void reject()} disabled={actionsLocked} style={ghostBtn}>
                 Reject
               </button>
             </>
@@ -502,12 +528,12 @@ export function PromoteQueueCard({
               <button
                 type="button"
                 onClick={requestPublish}
-                disabled={!!busy || publishInFlightRef.current}
+                disabled={actionsLocked || publishInFlightRef.current}
                 style={primaryBtn}
               >
                 Publish to YouTube
               </button>
-              <button type="button" onClick={() => void reject()} disabled={!!busy} style={ghostBtn}>
+              <button type="button" onClick={() => void reject()} disabled={actionsLocked} style={ghostBtn}>
                 Reject
               </button>
             </>
@@ -515,7 +541,7 @@ export function PromoteQueueCard({
         </div>
       )}
 
-      {canEdit && item.status === 'approved' && !confirmPublish && !isPublished && (
+      {canEdit && status === 'approved' && !confirmPublish && !isPublished && !isPublishing && (
         <p style={{
           fontFamily: font,
           fontSize: '0.75rem',

@@ -207,6 +207,30 @@ export function StoryRingProvider({
     void reload()
   }, [reload])
 
+  const openNextAuthor = useCallback((fromProfileId: string): boolean => {
+    const ids = authors.map((a) => a.profileId)
+    const i = ids.indexOf(fromProfileId)
+    const nextId = i >= 0 ? ids[i + 1] : undefined
+    if (!nextId) return false
+    const cached = cacheRef.current.get(nextId)
+    if (cached && cached.length > 0) {
+      setViewerSlides(cached)
+      setViewerAuthorId(nextId)
+      return true
+    }
+    void ensureSlides(nextId).then((slides) => {
+      if (slides.length === 0) {
+        closeViewer()
+        return
+      }
+      setViewerSlides(slides)
+      setViewerAuthorId(nextId)
+    }).catch(() => {
+      closeViewer()
+    })
+    return true
+  }, [authors, ensureSlides, closeViewer])
+
   const value = useMemo<StoryRingContextValue>(() => ({
     authors,
     loading,
@@ -236,10 +260,12 @@ export function StoryRingProvider({
       {children}
       {viewerAuthorId && viewerSlides.length > 0 && (
         <StoryViewer
+          key={viewerAuthorId}
           authorProfileId={viewerAuthorId}
           authorPreview={viewerAuthor}
           initialSlides={viewerSlides}
           onClose={closeViewer}
+          onNextAuthor={() => openNextAuthor(viewerAuthorId)}
         />
       )}
     </StoryRingContext.Provider>
