@@ -321,7 +321,19 @@ interface PrimaryTabShellProps {
   chrome?: ReactNode
 }
 
-const paneStyle = (painted: boolean, isCommittedActive: boolean): CSSProperties => ({
+/** Hub overlay listens for this so it closes in the same turn as a tab paint. */
+export const MARGO_CLOSE_HUB_EVENT = 'margo:close-hub'
+
+function closeHubOverlay() {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new Event(MARGO_CLOSE_HUB_EVENT))
+}
+
+const paneStyle = (
+  painted: boolean,
+  isCommittedActive: boolean,
+  show: boolean,
+): CSSProperties => ({
   position: 'fixed',
   inset: 0,
   overflowY: 'auto',
@@ -330,8 +342,15 @@ const paneStyle = (painted: boolean, isCommittedActive: boolean): CSSProperties 
   overflowAnchor: 'none',
   boxSizing: 'border-box',
   touchAction: 'pan-y',
+  background: 'var(--bg)',
   pointerEvents: isCommittedActive ? 'auto' : 'none',
   zIndex: isCommittedActive ? 2 : painted ? 1 : 0,
+  // Hide the pane element itself. Activity mode="hidden" is not enough:
+  // these nodes are position:fixed, and WebKit can still paint them through
+  // a hidden ancestor. Never unhide every cached pane just because we
+  // entered a primary surface — that is what flashed Feed under You.
+  visibility: show ? 'visible' : 'hidden',
+  opacity: show ? 1 : 0,
 })
 
 export function PrimaryTabShell({
@@ -464,6 +483,7 @@ export function PrimaryTabShell({
     const id = resolvePrimaryTabId(path, ownProfileHref)
     if (!id) return false
     event?.preventDefault()
+    closeHubOverlay()
     const pending = optimisticTab
     if (pending && pending !== id) return true
     acknowledgePrimaryTab(id)
@@ -654,6 +674,7 @@ export function PrimaryTabShell({
     endPeek,
     hasCachedTab,
     prepareTab: (id) => {
+      closeHubOverlay()
       setOptimisticTab(id)
     },
   })
@@ -669,6 +690,7 @@ export function PrimaryTabShell({
         const isCommittedActive = activeTab === id
         const isPeek = peekTab === id
         const painted = isCommittedActive || isPeek
+        const show = painted && onPrimarySurface
         return (
           <Activity key={id} mode={painted ? 'visible' : 'hidden'}>
             <div
@@ -678,11 +700,10 @@ export function PrimaryTabShell({
               data-margo-primary-tab={id}
               data-margo-primary-tab-active={isCommittedActive ? '1' : '0'}
               data-margo-primary-tab-peek={isPeek ? '1' : '0'}
+              data-margo-primary-tab-shown={show ? '1' : '0'}
+              hidden={!show}
               aria-hidden={!isCommittedActive}
-              style={{
-                ...paneStyle(painted, isCommittedActive),
-                visibility: onPrimarySurface ? undefined : 'hidden',
-              }}
+              style={paneStyle(painted, isCommittedActive, show)}
             >
               {node}
             </div>
@@ -693,7 +714,7 @@ export function PrimaryTabShell({
       {showSkeleton && activeTab && (
         <div
           data-margo-primary-tab-skeleton={activeTab}
-          style={paneStyle(true, true)}
+          style={paneStyle(true, true, true)}
         >
           <PrimaryTabPaneSkeleton tab={activeTab} />
         </div>
