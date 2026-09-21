@@ -3,21 +3,14 @@
 /**
  * CatalogGrid — the shared "browse everything" layout.
  *
- * Owns: sticky search bar, optional sort pills, optional extra filter row
- * (e.g. vibe chips), an optional topContent slot for page-specific header
- * content (e.g. an artist's avatar/name/back-button on a discography
- * subpage), loading skeleton, empty state, and the responsive card grid
- * itself.
- *
- * Does NOT own: what the cards look like, or how items are sorted/fetched
- * — that's the page's job. This keeps Songs, Artists, and per-artist
- * discography pages from each rebuilding the same frame, while staying
- * free to render completely different card designs and header content
- * inside it.
+ * Owns: compact list filter, optional sort pills, optional extra filter row,
+ * optional topContent, loading skeleton, empty state, and the card grid.
+ * Global search lives in the top-nav Search icon (/search). This field only
+ * filters the list currently on screen (Spotify playlist / Apple Music library).
  */
 
 import React, { useMemo, useState } from 'react'
-import { CloseIcon } from '@/components/icons'
+import { MargoSearchInput } from '@/components/margo-search-input'
 
 export interface CatalogSortOption {
   value: string
@@ -29,7 +22,6 @@ interface CatalogGridProps<T> {
   loading?: boolean
   getKey: (item: T) => string
   // Combined searchable text for an item (e.g. `${title} ${artist}`).
-  // CatalogGrid does the actual filtering so pages don't each reimplement it.
   getSearchText: (item: T) => string
   renderCard: (item: T) => React.ReactNode
   searchPlaceholder?: string
@@ -38,12 +30,8 @@ interface CatalogGridProps<T> {
   onSortChange?: (value: string) => void
   // Extra filter UI rendered below the sort pills — e.g. vibe chips.
   extraFilters?: React.ReactNode
-  // Page-specific header content rendered above the search bar, inside
-  // the same sticky/nav-offset container — e.g. a back button plus an
-  // artist's avatar/name/badge on a per-artist discography page. Kept
-  // inside CatalogGrid's own wrapper (rather than the page rendering it
-  // as a separate sibling above CatalogGrid) so the nav-height offset
-  // and sticky behavior stay correct without doubling up padding.
+  // Page-specific header (artist identity on a discography). Nav Back is
+  // in the fixed chrome — do not put a second Back here.
   topContent?: React.ReactNode
   emptyMessage?: string
   // Grid column minimum width in px — 160 fits Song-style square cards,
@@ -79,43 +67,22 @@ export function CatalogGrid<T>({
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingTop: 'var(--nav-height, 72px)' }}>
       <style>{`
-        .catalog-search:focus { border-color: rgba(232,197,71,0.4) !important; outline: none; }
         .catalog-sort-pill { transition: all 150ms ease; }
         .catalog-sort-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
         .catalog-sort-row::-webkit-scrollbar { display: none; }
       `}</style>
 
-      {/* Sticky search + sort — same top offset pattern used on Discover,
-          so this page doesn't drift under the fixed nav on load. */}
-      <div style={{ position: 'sticky', top: 'var(--nav-height, 72px)', zIndex: 30, background: 'var(--bg)', padding: 'clamp(20px, 5vw, 40px) 16px 16px' }}>
+      <div style={{ position: 'sticky', top: 'var(--nav-height, 72px)', zIndex: 30, background: 'var(--bg)', padding: '12px 16px 12px' }}>
         <div style={{ maxWidth: '72rem', margin: '0 auto' }}>
           {topContent}
 
-          <div style={{ position: 'relative', marginBottom: sortOptions?.length || extraFilters ? '14px' : 0 }}>
-            <input
-              className="catalog-search"
-              type="text"
+          <div style={{ marginBottom: sortOptions?.length || extraFilters ? '12px' : 0 }}>
+            <MargoSearchInput
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={setSearch}
               placeholder={searchPlaceholder}
-              style={{
-                width: '100%', height: '44px', padding: '0 40px 0 16px',
-                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '50px', color: 'var(--text)', fontFamily: 'var(--font-lora), serif',
-                fontSize: '0.82rem', boxSizing: 'border-box', transition: 'border-color 200ms ease',
-              }}
+              className="catalog-search"
             />
-            {search && (
-              <button
-                aria-label="Clear search"
-                onClick={() => setSearch('')}
-                style={{
-                  position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)',
-                  width: '38px', height: '38px', borderRadius: '50%', background: 'none', border: 'none',
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
-              ><CloseIcon size={14} color="var(--text-secondary)" /></button>
-            )}
           </div>
 
           {sortOptions && sortOptions.length > 0 && (

@@ -13,6 +13,8 @@ import { usePrimaryTab, usePrimaryTabLinkProps } from '@/components/primary-tab-
 import { hidesAppNav, isMessageThreadPath } from '@/lib/chrome-mode'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { SignInLink } from '@/components/signin-link'
+import { BackButton } from '@/components/back-button'
+import { navBackForPath, useNavBackOverride } from '@/components/nav-back'
 
 const font = 'var(--font-geist-sans), system-ui, sans-serif'
 
@@ -76,6 +78,9 @@ export function MargoNav() {
   const { user, identity } = useIdentity()
   const { rehydrate } = useAuthGate()
   const { application } = useArtistApplication()
+  const navBackOverride = useNavBackOverride()
+  const pathBack = navBackForPath(pathname)
+  const navBack = activeTab === 'you' ? null : (navBackOverride ?? pathBack)
 
   const isOnFeed = activeTab === 'feed' || (!activeTab && pathname === '/feed')
   // Full lockup (mark + MARGO) only on Feed home. Landing has its own lockup.
@@ -169,9 +174,19 @@ export function MargoNav() {
         display: 'flex', alignItems: 'center',
         justifyContent: 'space-between',
       }}>
-        <Link href="/" aria-label="Margo — expression home" style={{ textDecoration: 'none', flexShrink: 0 }}>
-          <MargoLogo tier="symbol" size={28} wordmark={showWordmark} rings />
-        </Link>
+        {navBack ? (
+          <BackButton
+            variant="chrome"
+            fallbackHref={navBack.fallbackHref}
+            preferHistory={navBack.preferHistory}
+            onBack={navBack.onBack}
+            label={navBack.label || 'Back'}
+          />
+        ) : (
+          <Link href="/" aria-label="Margo — expression home" style={{ textDecoration: 'none', flexShrink: 0 }}>
+            <MargoLogo tier="symbol" size={28} wordmark={showWordmark} rings />
+          </Link>
+        )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <SearchNavLink />

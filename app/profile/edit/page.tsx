@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { AvatarUpload } from '@/components/avatar-upload'
-import { BackButton } from '@/components/back-button'
 import { SignInLink } from '@/components/signin-link'
 import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { ARTIST_LINK_FIELDS, sanitizeArtistLinks } from '@/lib/artist-links'
@@ -198,9 +197,6 @@ export default function EditProfilePage() {
 
       <div style={{ paddingTop: 'calc(var(--nav-height, 72px) + 24px)', paddingBottom: 'var(--margo-page-padding-bottom)', paddingLeft: '24px', paddingRight: '24px' }}>
         <div style={{ maxWidth: '560px', margin: '0 auto' }}>
-          <div style={{ marginBottom: '16px' }}>
-            <BackButton fallbackHref={`/profile/${identity.username}`} />
-          </div>
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <h1 style={{ fontFamily: font, fontSize: '1.5rem', fontWeight: 600, color: 'var(--gold)', marginBottom: '8px' }}>Edit Profile</h1>
             <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>How you show up on Margo</p>

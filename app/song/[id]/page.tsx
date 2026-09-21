@@ -407,7 +407,7 @@ export default function SongPage() {
       {/* Header — immersive Mode B: shell chrome is hidden; this is the only top exit */}
       <header style={{ position: 'fixed', top: '8px', left: 0, right: 0, zIndex: 40, padding: '16px 24px' }}>
         <div style={{ maxWidth: '56rem', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <BackButton fallbackHref="/discover" />
+          <BackButton variant="chrome" fallbackHref="/discover" />
           <div style={{ textAlign: 'center', minWidth: 0, flex: 1, padding: '0 8px' }}>
             <SongMeta
               title={song?.title}

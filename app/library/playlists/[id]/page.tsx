@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { SignInLink } from '@/components/signin-link'
-import { BackButton } from '@/components/back-button'
 import { PlaylistLyricRow } from '@/components/playlist-lyric-row'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useIdentity } from '@/hooks/useIdentity'
@@ -107,10 +106,6 @@ export default function LibraryPlaylistPage() {
         margin: '0 auto',
         padding: 'calc(var(--nav-height, 72px) + 24px) 20px var(--margo-page-padding-bottom)',
       }}>
-        <div style={{ marginBottom: '16px' }}>
-          <BackButton fallbackHref="/library" />
-        </div>
-
         {identityLoading || loading ? (
           <p style={{ fontFamily: UI_FONT, color: 'var(--text-muted)' }}>Loading…</p>
         ) : !user || user.isAnonymous ? (

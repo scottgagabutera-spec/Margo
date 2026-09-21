@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 import { SongUploadForm } from '@/components/studio/song-upload-form'
-import { BackButton } from '@/components/back-button'
+import { useRegisterNavBack } from '@/components/nav-back'
 import { UI_FONT } from '@/lib/fonts'
 
 const supabase = createClient()
@@ -114,6 +114,16 @@ export default function StudioPage() {
   const totalPlays = Object.values(stats).reduce((sum, s) => sum + (s.plays || 0), 0)
   const totalResonates = Object.values(stats).reduce((sum, s) => sum + (s.resonate_count || 0), 0)
 
+  useRegisterNavBack({
+    preferHistory: false,
+    fallbackHref: identity?.username ? `/profile/${identity.username}` : '/you',
+    onBack: showUpload ? () => {
+      setShowUpload(false)
+      setEditingSongId(null)
+      return true
+    } : undefined,
+  })
+
   if (identityLoading) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -189,15 +199,6 @@ export default function StudioPage() {
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <div style={{ maxWidth: '860px', margin: '0 auto', padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px', flexWrap: 'wrap' }}>
-          <BackButton
-            preferHistory={false}
-            fallbackHref={identity.username ? `/profile/${identity.username}` : '/feed'}
-            onBack={showUpload ? () => {
-              setShowUpload(false)
-              setEditingSongId(null)
-              return true
-            } : undefined}
-          />
           <div style={{ flex: 1 }}>
             <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '4px' }}>
               Margo

@@ -8,6 +8,7 @@ import { MiniPlayer } from '@/components/mini-player'
 import { MargoNav } from '@/components/margo-nav'
 import { MobileTabBar } from '@/components/mobile-tab-bar'
 import { HubProvider } from '@/components/hub-menu'
+import { NavBackProvider } from '@/components/nav-back'
 import { ChromeModePublisher } from '@/components/chrome-mode'
 import { AuthReturnRestorer } from '@/components/auth-return-restorer'
 import { TabSwipeProvider } from '@/hooks/useTabSwipe'
@@ -178,6 +179,7 @@ export default function RootLayout({
               <NotificationsProvider>
                 <MessagingProvider>
                   <HubProvider>
+                  <NavBackProvider>
                   <ChromeModePublisher />
                   <Suspense fallback={null}>
                     <AuthReturnRestorer />
@@ -192,6 +194,7 @@ export default function RootLayout({
                   >
                     {children}
                   </TabSwipeProvider>
+                  </NavBackProvider>
                   </HubProvider>
                 </MessagingProvider>
               </NotificationsProvider>

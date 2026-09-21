@@ -6,7 +6,6 @@ import { useSongs } from '@/hooks/useSongs'
 import { CatalogGrid } from '@/components/catalog-grid'
 import { createClient } from '@/lib/supabase/client'
 import { ArtistBadge, type ArtistStatus } from '@/components/artist-badge'
-import { BackButton } from '@/components/back-button'
 
 const supabase = createClient()
 
@@ -112,7 +111,6 @@ export default function ArtistsCatalogPage() {
       emptyMessage="No artists yet — check back soon."
       minCardWidth={110}
       skeletonCount={12}
-      topContent={<BackButton fallbackHref="/discover" />}
       renderCard={artist => {
         const key = (artist.displayName || artist.username || '').trim().toLowerCase()
         const songCount = songCountByName.get(key) || 0

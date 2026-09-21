@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CatalogGrid } from '@/components/catalog-grid'
-import { BackButton } from '@/components/back-button'
 import { DiscoverVibeFilterRow } from '@/components/discover-vibe-filter-row'
 import { LyricMomentCard } from '@/components/lyric-moment-card'
 import { useLyricMoments } from '@/hooks/useLyricMoments'
@@ -64,7 +63,6 @@ export default function LyricMomentsCatalogPage() {
       extraFilters={<DiscoverVibeFilterRow selected={vibe} onSelect={setVibe} />}
       emptyMessage={vibe === 'ALL' ? 'No lyric moments yet.' : `No lines tagged for ${vibe} yet.`}
       minCardWidth={240}
-      topContent={<BackButton fallbackHref="/discover" />}
       renderCard={moment => {
         const key = momentPlayingKey(moment)
         return (

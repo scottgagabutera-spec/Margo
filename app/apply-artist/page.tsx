@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useArtistApplication } from '@/hooks/useArtistApplication'
 import { ArtistApplicationForm } from '@/components/artist-application-form'
-import { BackButton } from '@/components/back-button'
 import { SignInLink } from '@/components/signin-link'
 import { buildSigninHref } from '@/lib/auth-return'
 
@@ -61,15 +60,11 @@ export default function ApplyArtistPage() {
   }
 
   const status = application?.status ?? 'none'
-  const ownProfileHref = `/profile/${identity.username}`
 
   if (identity.isArtist) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
         <div style={{ maxWidth: '420px', margin: '0 auto', padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)', textAlign: 'center' }}>
-          <div style={{ marginBottom: '24px', textAlign: 'left' }}>
-            <BackButton fallbackHref={ownProfileHref} />
-          </div>
           <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '8px' }}>
             Margo
           </p>
@@ -104,9 +99,6 @@ export default function ApplyArtistPage() {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
         <div style={{ maxWidth: '420px', margin: '0 auto', padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)', textAlign: 'center' }}>
-          <div style={{ marginBottom: '24px', textAlign: 'left' }}>
-            <BackButton fallbackHref={ownProfileHref} />
-          </div>
           <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '8px' }}>
             Margo
           </p>
@@ -124,9 +116,6 @@ export default function ApplyArtistPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <div style={{ maxWidth: '640px', margin: '0 auto', padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)' }}>
-        <div style={{ marginBottom: '24px' }}>
-          <BackButton fallbackHref={ownProfileHref} />
-        </div>
         {status === 'rejected' && (
           <p style={{
             fontFamily: font, fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)',

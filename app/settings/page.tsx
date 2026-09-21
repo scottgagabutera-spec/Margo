@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { createClient, signOutBrowser } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
-import { BackButton } from '@/components/back-button'
 import { SignInLink } from '@/components/signin-link'
 import { UI_FONT } from '@/lib/fonts'
 import { PromoteSettingsSection } from '@/components/promote/promote-settings-section'
@@ -440,10 +439,6 @@ export default function AccountSettingsPage() {
         padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)',
       }}
     >
-      <div style={{ marginBottom: '24px' }}>
-        <BackButton fallbackHref={`/profile/${profile.username}`} label="Back" />
-      </div>
-
       <h1
         style={{
           fontFamily: font,

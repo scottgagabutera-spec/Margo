@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useLibraryShelves } from '@/hooks/useLibraryShelves'
-import { BackButton } from '@/components/back-button'
 import { SongCatalogCard, type SongCardData } from '@/components/song-catalog-card'
 import { SongPreviewSheet, type SongPreviewSeed } from '@/components/song-preview-sheet'
 import { useAuthGate } from '@/components/supabase-auth-provider'
@@ -173,10 +172,6 @@ export default function LibraryPage() {
         margin: '0 auto',
         padding: 'calc(var(--nav-height, 72px) + 24px) 20px var(--margo-page-padding-bottom)',
       }}>
-        <div style={{ marginBottom: '16px' }}>
-          <BackButton fallbackHref="/discover" />
-        </div>
-
         <h1 style={{
           fontFamily: LYRIC_FONT,
           fontStyle: 'italic',

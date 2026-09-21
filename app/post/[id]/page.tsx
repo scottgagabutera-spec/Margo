@@ -12,7 +12,7 @@ import type { Echo } from '@/hooks/useEchoes'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useIdentity } from '@/hooks/useIdentity'
 import { createClient } from '@/lib/supabase/client'
-import { BackButton } from '@/components/back-button'
+import { useRegisterNavBack } from '@/components/nav-back'
 
 const supabase = createClient()
 
@@ -119,18 +119,17 @@ export default function PostDetailPage() {
     setExportPost(p)
   }
 
+  useRegisterNavBack({
+    preferHistory: !post?.parentPostId,
+    fallbackHref: post?.parentPostId ? `/post/${post.parentPostId}` : '/feed',
+  })
+
   return (
     <main style={{
       minHeight: '100vh', background: 'var(--bg)',
       padding: 'calc(var(--nav-height, 72px) + 24px) 20px var(--margo-page-padding-bottom)',
       maxWidth: '640px', margin: '0 auto',
     }}>
-      <div style={{ marginBottom: '16px' }}>
-        <BackButton
-          preferHistory={!post?.parentPostId}
-          fallbackHref={post?.parentPostId ? `/post/${post.parentPostId}` : '/feed'}
-        />
-      </div>
 
       {loading && (
         <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-muted)' }}>

@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { CatalogGrid } from '@/components/catalog-grid'
-import { BackButton } from '@/components/back-button'
 import { DiscoverVibeFilterRow } from '@/components/discover-vibe-filter-row'
 import { ResonanceCard } from '@/components/resonance-card'
 import { usePosts, type Post } from '@/hooks/usePosts'
@@ -63,7 +62,6 @@ export default function ResonanceCatalogPage() {
       extraFilters={<DiscoverVibeFilterRow selected={vibe} onSelect={setVibe} />}
       emptyMessage={vibe === 'ALL' ? 'No song posts yet.' : `No Resonance posts tagged ${vibe} yet.`}
       minCardWidth={240}
-      topContent={<BackButton fallbackHref="/discover" />}
       renderCard={post => (
         <ResonanceCard
           post={post}

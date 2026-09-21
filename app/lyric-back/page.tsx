@@ -15,7 +15,7 @@ import { usePost } from '@/hooks/usePost'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { PostCard } from '@/components/post-card'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
-import { BackButton } from '@/components/back-button'
+import { useRegisterNavBack } from '@/components/nav-back'
 import { ComposeReadyPreview, type ComposeReadyLineDraft } from '@/components/compose-ready-preview'
 import { MomentShareStudio } from '@/components/moment-share-studio'
 import { MargoSheet } from '@/components/margo-sheet'
@@ -174,6 +174,10 @@ function LyricBackContent() {
   // in handlePost below.
   const respondingToId = echoId || postId
   const { post: respondingTo } = usePost(respondingToId)
+  useRegisterNavBack({
+    preferHistory: true,
+    fallbackHref: respondingTo?.parentPostId ? `/post/${respondingTo.parentPostId}` : '/feed',
+  })
   // List Lyric Backs on the post being replied to (works for arbitrary depth).
   // Was useEchoes(postId): broke nesting when legacy ?echoId= was present —
   // PostCard now uses ?postId={replyId}, so respondingToId===postId in that path.
@@ -689,17 +693,6 @@ function LyricBackContent() {
       </div>
 
       <div style={{ position: 'relative', zIndex: 5, maxWidth: '720px', margin: '0 auto', padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)' }}>
-
-        <div style={{ marginBottom: '16px' }}>
-          <BackButton
-            preferHistory
-            fallbackHref={
-              respondingTo?.parentPostId
-                ? `/post/${respondingTo.parentPostId}`
-                : '/feed'
-            }
-          />
-        </div>
 
         {/* ── Responding To — hidden on the Stage conversation ─ */}
         <div style={{

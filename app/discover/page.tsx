@@ -6,7 +6,6 @@ import { PendingNavLink } from '@/components/pending-nav-link'
 import Image from 'next/image'
 import { useSongs, Song } from '@/hooks/useSongs'
 import { useLyricMoments } from '@/hooks/useLyricMoments'
-import type { LyricMomentRow } from '@/hooks/useLyricMoments'
 import { useIsPlaying, useIsBuffering } from '@/hooks/useAudioEngine'
 import { useWarmAudioUrlOnVisible } from '@/hooks/useWarmAudioUrl'
 import { usePosts } from '@/hooks/usePosts'
@@ -29,7 +28,6 @@ import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useNotifications } from '@/hooks/useNotifications'
 import { useMessaging } from '@/hooks/useMessaging'
 import { createClient } from '@/lib/supabase/client'
-import { MargoSearchInput } from '@/components/margo-search-input'
 import { PullToRefresh } from '@/components/pull-to-refresh'
 import { NewItemsPill } from '@/components/new-items-pill'
 import { useNewItemsBuffer } from '@/hooks/useNewItemsBuffer'
@@ -459,95 +457,6 @@ function ArtistsSection() {
   )
 }
 
-// ── Search results ───────────────────────────────────────────────────
-// Client-side interim search across song title/artist AND lyric line
-// text. This is a stopgap for real Postgres full-text/trigram search
-// (flagged in the redesign doc as a separate backend pass) — functional
-// now, but should be swapped for a server query once that ships.
-// Matching-lyric links now point at /song/[id]?t=<startSec> — the
-// song page can read the optional t= query param to seek to that
-// line on load. id and audio URL no longer travel through the URL.
-function SearchResults({
-  query,
-  songs,
-  moments,
-  onPreviewSong,
-}: {
-  query: string
-  songs: Song[]
-  moments: LyricMomentRow[]
-  onPreviewSong: (song: Song) => void
-}) {
-  const q = query.toLowerCase().trim()
-
-  const matchedSongs = useMemo(
-    () => songs.filter(s => s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q)),
-    [songs, q]
-  )
-
-  const matchedLines = useMemo(() => {
-    const results: { songId: string; songTitle: string; artist: string; line: string; start: number }[] = []
-    moments.forEach(m => {
-      if (m.text.toLowerCase().includes(q)) {
-        results.push({
-          songId: m.songId,
-          songTitle: m.songTitle,
-          artist: m.artist,
-          line: m.text,
-          start: m.startSec,
-        })
-      }
-    })
-    return results.slice(0, 20)
-  }, [moments, q])
-
-  if (matchedSongs.length === 0 && matchedLines.length === 0) {
-    return (
-      <div style={{ padding: '48px 0', textAlign: 'center' }}>
-        <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-          Nothing found for &ldquo;{query}&rdquo;
-        </p>
-      </div>
-    )
-  }
-
-  return (
-    <div style={{ paddingBottom: '32px' }}>
-      {matchedLines.length > 0 && (
-        <section style={{ marginBottom: '32px' }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '14px' }}>Matching lyrics</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {matchedLines.map((m, i) => (
-              <PendingNavLink key={i} href={`/song/${m.songId}?t=${Math.floor(m.start)}`} style={{ textDecoration: 'none', borderRadius: '12px' }}>
-                <div style={{ padding: '14px 18px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px' }}>
-                  <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.9rem', color: 'var(--text)', marginBottom: '6px' }}>&ldquo;{m.line}&rdquo;</p>
-                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase' }}>{m.songTitle} · {m.artist}</p>
-                </div>
-              </PendingNavLink>
-            ))}
-          </div>
-        </section>
-      )}
-      {matchedSongs.length > 0 && (
-        <section>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '14px' }}>Songs & artists</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px' }}>
-            {matchedSongs.map(song => (
-              <div key={song.id} style={{ cursor: 'pointer' }} onClick={() => onPreviewSong(song)}>
-                <div style={{ position: 'relative', aspectRatio: '1', borderRadius: '10px', overflow: 'hidden', marginBottom: '8px' }}>
-                  {song.artwork ? <Image src={song.artwork} alt={song.title} fill style={{ objectFit: 'cover' }} sizes="140px" /> : <div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.04)' }} />}
-                </div>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{song.title}</p>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.68rem', color: 'var(--text-secondary)', margin: 0 }}>{song.artist}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-    </div>
-  )
-}
-
 // ── Main Page ────────────────────────────────────────────────────────
 export default function DiscoverPage() {
   const { isTabActive } = usePrimaryTab()
@@ -567,7 +476,6 @@ export default function DiscoverPage() {
   } = useNewItemsBuffer(livePosts)
   const [ptrBusy, setPtrBusy] = useState(false)
   const [preview, setPreview] = useState<Song | null>(null)
-  const [search, setSearch] = useState('')
 
 
   // ── Shared vibe filter — replaces the old permanent ALL/CHILL/HOPE/...
@@ -703,8 +611,6 @@ export default function DiscoverPage() {
   }, [takeover.open, takeoverMoment])
 
 
-  const isSearching = search.trim().length > 0
-
   return (
     <PullToRefresh
       onRefreshingChange={setPtrBusy}
@@ -735,7 +641,6 @@ export default function DiscoverPage() {
         @media (hover: hover) and (pointer: fine) {
           .moment-card:hover { border-color: rgba(232,197,71,0.2) !important; background: rgba(255,255,255,0.04) !important; }
         }
-        .music-search:focus { border-color: rgba(232,197,71,0.4) !important; outline: none; }
       `}</style>
 
       {preview && (
@@ -799,27 +704,8 @@ export default function DiscoverPage() {
         </div>
       )}
 
-      {/* Sticky unified search — the only page-wide sticky element now.
-          top now reads the same measured nav height as the page's own
-          paddingTop above, instead of a hardcoded 56px guess that
-          undershot the real fixed-nav height and let this bar (and the
-          "Lyric Moments" title / vibe-filter chip below it) drift
-          under the nav on load. */}
-      <div style={{ position: 'sticky', top: 'var(--nav-height, 72px)', zIndex: 30, background: 'var(--bg)', padding: 'clamp(20px, 5vw, 40px) 16px 16px' }}>
-        <div style={{ maxWidth: '72rem', margin: '0 auto' }}>
-          <MargoSearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder="Search lyrics, songs, artists…"
-            icon="none"
-          />
-        </div>
-      </div>
-
-      <div style={{ padding: '0 16px 32px', width: '100%', maxWidth: '72rem', margin: '0 auto', boxSizing: 'border-box' }}>
-        {isSearching ? (
-          <SearchResults query={search} songs={songs} moments={momentRows} onPreviewSong={setPreview} />
-        ) : loading ? (
+      <div style={{ padding: '16px 16px 32px', width: '100%', maxWidth: '72rem', margin: '0 auto', boxSizing: 'border-box' }}>
+        {loading ? (
           <DiscoverPageSkeleton />
         ) : (
           <>

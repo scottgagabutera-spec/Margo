@@ -7,7 +7,6 @@ import { CatalogGrid, CatalogSortOption } from '@/components/catalog-grid'
 import { SongCatalogCard, type SongCardData } from '@/components/song-catalog-card'
 import { SongPreviewSheet, type SongPreviewSeed } from '@/components/song-preview-sheet'
 import { ArtistBadge, type ArtistStatus } from '@/components/artist-badge'
-import { BackButton } from '@/components/back-button'
 import { resolvePublicArtistCredit } from '@/lib/artist-identity'
 
 const supabase = createClient()
@@ -124,8 +123,7 @@ export default function ArtistDiscographyPage() {
       emptyMessage="Nothing live yet."
       minCardWidth={150}
       topContent={
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '18px' }}>
-          <BackButton fallbackHref={artist ? `/profile/${artist.username}` : '/discover'} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '12px' }}>
           {artist && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
               <div style={{

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { MargoSearchInput } from '@/components/margo-search-input'
-import { BackButton } from '@/components/back-button'
 import type { MargoSearchResponse } from '@/lib/meilisearch/types'
 
 const DEBOUNCE_MS = 150
@@ -111,16 +110,8 @@ export default function SearchPage() {
   return (
     <div style={{
       maxWidth: '640px', margin: '0 auto',
-      padding: 'calc(var(--nav-height, 72px) + 20px) 16px var(--margo-page-padding-bottom)',
+      padding: 'calc(var(--nav-height, 72px) + 16px) 16px var(--margo-page-padding-bottom)',
     }}>
-      <div style={{ marginBottom: '12px' }}>
-        <BackButton fallbackHref="/feed" />
-      </div>
-      <h1 style={{
-        fontFamily: 'var(--font-lora), serif', fontSize: '1.25rem', fontWeight: 600,
-        color: 'var(--text)', marginBottom: '16px',
-      }}>Search Margo</h1>
-
       <MargoSearchInput
         value={query}
         onChange={setQuery}

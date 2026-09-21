@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { BackButton } from '@/components/back-button'
 import { PromoteQueueCard, type PromoteQueueUpdateOptions } from '@/components/promote/promote-queue-card'
+import { useRegisterNavBack } from '@/components/nav-back'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 import { UI_FONT } from '@/lib/fonts'
@@ -154,6 +154,11 @@ export default function StudioPromotePage() {
     cancelPendingPublishes()
   }, [cancelPendingPublishes])
 
+  useRegisterNavBack({
+    fallbackHref: '/studio',
+    onBack: handleBack,
+  })
+
   if (identityLoading || loading) {
     return (
       <div style={{ padding: 'calc(var(--nav-height, 72px) + 24px) 24px', fontFamily: font, color: 'var(--text-secondary)' }}>
@@ -165,7 +170,6 @@ export default function StudioPromotePage() {
   if (!user || !isActiveArtist) {
     return (
       <div style={{ padding: 'calc(var(--nav-height, 72px) + 24px) 24px', maxWidth: 560, margin: '0 auto', fontFamily: font }}>
-        <BackButton fallbackHref="/studio" label="Studio" />
         <p style={{ color: 'var(--text-secondary)', marginTop: '16px' }}>
           Auto-Promote is available to active verified artists only.
         </p>
@@ -181,8 +185,7 @@ export default function StudioPromotePage() {
         padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)',
       }}
     >
-      <BackButton fallbackHref="/studio" label="Studio" onBack={handleBack} />
-      <h1 style={{ fontFamily: font, fontSize: '1.4rem', fontWeight: 600, margin: '16px 0 8px' }}>
+      <h1 style={{ fontFamily: font, fontSize: '1.4rem', fontWeight: 600, margin: '0 0 8px' }}>
         Promotion queue
       </h1>
       <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
