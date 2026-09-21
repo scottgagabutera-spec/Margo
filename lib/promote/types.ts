@@ -63,6 +63,7 @@ export interface PromoteQueueRow {
   overrideThemeId: MomentThemeId | null
   overrideAtmosphereId: AtmosphereId | null
   renderedVideoUrl: string | null
+  selectionReason: Record<string, unknown> | null
   reviewedAt: string | null
   createdAt: string
   targets: PromoteQueueTargetRow[]

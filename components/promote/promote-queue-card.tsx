@@ -74,45 +74,41 @@ export function PromoteQueueCard({
   )
 
   const listen = useMemo(() => resolveMomentListen(previewMoment), [previewMoment])
-  const canPlayInline = listen.canPlayInline
-  const playbackKey = resolvedSongId || audioUrl || ''
+  const canPlayInline = !!audioUrl && resolvedStart != null && resolvedEnd != null
+  const playbackSongId = resolvedSongId || item.id
   const { playing, buffering } = useSnippetPlaybackUi(
-    canPlayInline ? playbackKey : null,
-    canPlayInline ? previewMoment.lines[0]?.lyric ?? null : null,
+    canPlayInline ? playbackSongId : null,
+    canPlayInline ? item.lyricText : null,
   )
 
   const startPreviewPlayback = useCallback(() => {
     if (!canPlayInline || !audioUrl || resolvedStart == null || resolvedEnd == null) return
     void playSnippet({
-      songId: resolvedSongId || audioUrl,
+      songId: playbackSongId,
       audioUrl,
       title: item.songTitle,
       artist: item.artistName,
       artwork: item.artworkUrl,
-      lineIndex: 0,
+      lineIndex: resolvedStart,
       lineText: item.lyricText,
       startSec: resolvedStart,
       endSec: resolvedEnd,
-      atmosphere: livingAtmosphereOrNull(songAtmosphere),
+      atmosphere: livingAtmosphereOrNull(atmosphereId !== 'still' ? atmosphereId : songAtmosphere),
       source: 'feed',
     })
   }, [
     canPlayInline,
     audioUrl,
-    resolvedSongId,
+    playbackSongId,
     resolvedStart,
     resolvedEnd,
     item.songTitle,
     item.artistName,
     item.artworkUrl,
     item.lyricText,
+    atmosphereId,
     songAtmosphere,
   ])
-
-  useEffect(() => {
-    if (!canPlayInline) return
-    startPreviewPlayback()
-  }, [canPlayInline, startPreviewPlayback])
 
   const saveOverrides = useCallback(async () => {
     const res = await fetch(`/api/promote/queue/${item.id}`, {
@@ -201,9 +197,41 @@ export function PromoteQueueCard({
       <div style={{ fontFamily: font, fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
         {item.songTitle}
       </div>
-      <div style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px', whiteSpace: 'pre-line' }}>
+      <div style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '12px', whiteSpace: 'pre-line' }}>
         {item.lyricText}
       </div>
+
+      {previewMoment.vibeLabel && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+          <span style={{
+            fontFamily: font,
+            fontSize: '0.56rem',
+            fontWeight: 600,
+            letterSpacing: '0.5px',
+            textTransform: 'uppercase',
+            color: 'var(--text-muted)',
+          }}>
+            Mood
+          </span>
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            minHeight: '22px',
+            padding: '0 10px',
+            borderRadius: '50px',
+            border: '1px solid var(--gold-border)',
+            background: 'var(--gold-faint)',
+            fontFamily: font,
+            fontSize: '0.56rem',
+            fontWeight: 700,
+            letterSpacing: '0.4px',
+            textTransform: 'uppercase',
+            color: 'var(--gold)',
+          }}>
+            {previewMoment.vibeLabel}
+          </span>
+        </div>
+      )}
 
       <div style={{ maxWidth: 280, margin: '0 auto 16px' }}>
         <MomentExportPreviewFrame shapeId={shapeId}>
@@ -220,7 +248,6 @@ export function PromoteQueueCard({
             playing={playing}
             buffering={buffering}
             onPlay={startPreviewPlayback}
-            hideVibeChrome
             effectOwnsFill
           />
         </MomentExportPreviewFrame>

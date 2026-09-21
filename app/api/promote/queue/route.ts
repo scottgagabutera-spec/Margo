@@ -31,6 +31,7 @@ function mapQueue(row: Record<string, unknown>, targets: Record<string, unknown>
     overrideThemeId: (row.override_theme_id as PromoteQueueRow['overrideThemeId']) ?? null,
     overrideAtmosphereId: (row.override_atmosphere_id as PromoteQueueRow['overrideAtmosphereId']) ?? null,
     renderedVideoUrl: (row.rendered_video_url as string | null) ?? null,
+    selectionReason: (row.selection_reason as Record<string, unknown> | null) ?? null,
     reviewedAt: (row.reviewed_at as string | null) ?? null,
     createdAt: String(row.created_at),
     targets: targets.map((t) => ({

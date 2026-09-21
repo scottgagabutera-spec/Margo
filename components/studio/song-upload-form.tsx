@@ -9,6 +9,7 @@ import {
   toAtmosphereColumn,
   type AtmosphereId,
 } from '@/lib/atmosphere'
+import { GeneratePromotionBlock } from '@/components/studio/generate-promotion-block'
 
 const supabase = createClient()
 
@@ -155,7 +156,8 @@ const STAGE_LABEL: Record<Stage, string> = {
 }
 
 export function SongUploadForm({ artistDisplayName, artistUsername = null, onComplete, onCancel, songId = null }: SongUploadFormProps) {
-  const { user } = useIdentity()
+  const { user, identity } = useIdentity()
+  const canGeneratePromote = identity?.isArtist && identity.artistStatus === 'active'
   const isEdit = !!songId
   const [title, setTitle] = useState('')
   const [artistName, setArtistName] = useState(artistDisplayName)
@@ -169,6 +171,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
   const [existingArtworkUrl, setExistingArtworkUrl] = useState<string | null>(null)
   const [lyricsDraft, setLyricsDraft] = useState('')
   const [originalLines, setOriginalLines] = useState<LoadedLine[]>([])
+  const [songStatus, setSongStatus] = useState<string | null>(null)
   const [loadBusy, setLoadBusy] = useState(isEdit)
   const [dragOver, setDragOver] = useState(false)
   const artworkInputRef = useRef<HTMLInputElement>(null)
@@ -199,7 +202,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
       setError('')
       const { data: song, error: songErr } = await supabase
         .from('songs')
-        .select('id, title, artist_display_name, description, artwork_url, audio_url, is_ai_generated, atmosphere, youtube_url, spotify_url, apple_music_url, soundcloud_url, audiomack_url, boomplay_url')
+        .select('id, title, artist_display_name, description, artwork_url, audio_url, is_ai_generated, atmosphere, status, youtube_url, spotify_url, apple_music_url, soundcloud_url, audiomack_url, boomplay_url')
         .eq('id', songId)
         .single()
       if (cancelled) return
@@ -214,6 +217,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
       setDescription(song.description || '')
       setIsAiGenerated(song.is_ai_generated ?? false)
       setAtmosphere(parseAtmosphere(song.atmosphere))
+      setSongStatus(song.status || null)
       setExistingArtworkUrl(song.artwork_url)
       setExistingAudioUrl(song.audio_url)
       setArtworkPreview(song.artwork_url)
@@ -751,6 +755,17 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
             Editing a line keeps its id. New lines append; removed trailing lines are dropped.
           </p>
         </div>
+      )}
+
+      {isEdit && canGeneratePromote && songId && songStatus === 'live' && originalLines.length > 0 && (
+        <GeneratePromotionBlock
+          songId={songId}
+          songTitle={title}
+          artistName={artistName}
+          audioUrl={existingAudioUrl}
+          artworkUrl={existingArtworkUrl}
+          lineCount={originalLines.length}
+        />
       )}
 
       {!isEdit && (

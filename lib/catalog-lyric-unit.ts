@@ -115,6 +115,34 @@ function selectWindowAtoms(
  *
  * Returns `null` if `centerLineIndex` is not in `songLines`.
  */
+/**
+ * Assemble one contiguous unit from explicit inclusive line indexes.
+ * Uses the same join/timing rules as {@link buildCatalogLyricUnits}.
+ */
+export function assembleCatalogUnitFromRange(
+  songLines: CatalogLyricAtom[],
+  startLineIndex: number,
+  endLineIndex: number,
+): CatalogLyricUnit | null {
+  if (!Number.isFinite(startLineIndex) || !Number.isFinite(endLineIndex)) return null
+  if (endLineIndex < startLineIndex) return null
+
+  const byIndex = new Map<number, CatalogLyricAtom>()
+  for (const line of songLines) {
+    byIndex.set(line.lineIndex, line)
+  }
+
+  const atoms: CatalogLyricAtom[] = []
+  for (let i = startLineIndex; i <= endLineIndex; i++) {
+    const atom = byIndex.get(i)
+    if (!atom) return null
+    atoms.push(atom)
+  }
+
+  const center = Math.floor((startLineIndex + endLineIndex) / 2)
+  return unitFromAtoms(atoms, center)
+}
+
 export function buildCatalogLyricUnits(
   songLines: CatalogLyricAtom[],
   centerLineIndex: number,
