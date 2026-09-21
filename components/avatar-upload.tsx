@@ -11,7 +11,6 @@ const supabase = createClient()
 const font = UI_FONT
 const bg = 'var(--bg)'
 const text2 = 'var(--text-secondary)'
-const textMuted = 'var(--text-muted)'
 
 interface AvatarUploadProps {
   currentAvatarUrl: string | null
@@ -142,10 +141,6 @@ export function AvatarUpload({ currentAvatarUrl, displayName, onUploaded }: Avat
         onChange={handleFileSelect}
         style={{ display: 'none' }}
       />
-
-      <p style={{ fontFamily: font, fontSize: TYPE.label, color: textMuted, textAlign: 'center' }}>
-        JPG, PNG, or WebP. Max 5MB.
-      </p>
     </div>
   )
 }

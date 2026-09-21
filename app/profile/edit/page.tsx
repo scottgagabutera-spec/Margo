@@ -26,10 +26,6 @@ const labelStyle: React.CSSProperties = {
   textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: '8px', fontWeight: 700,
 }
 
-const helpStyle: React.CSSProperties = {
-  fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', marginTop: '6px',
-}
-
 export default function EditProfilePage() {
   const router = useRouter()
   const {
@@ -196,14 +192,21 @@ export default function EditProfilePage() {
     <main style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
       <div style={{ position: 'fixed', top: '20%', left: '20%', width: '320px', height: '320px', background: 'var(--gold-glow)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
 
-      <div style={{ paddingTop: 'calc(var(--nav-height, 72px) + 24px)', paddingBottom: 'var(--margo-page-padding-bottom)', paddingLeft: '24px', paddingRight: '24px' }}>
+      <div style={{ paddingTop: 'calc(var(--nav-height, 72px) + 8px)', paddingBottom: 'var(--margo-page-padding-bottom)', paddingLeft: '24px', paddingRight: '24px' }}>
         <div style={{ maxWidth: '560px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-            <h1 style={{ fontFamily: font, fontSize: TYPE.pageTitle, fontWeight: 600, color: 'var(--gold)', marginBottom: '8px' }}>Edit Profile</h1>
-            <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>How you show up on Margo</p>
-          </div>
+          <h1 style={{
+            fontFamily: font,
+            fontSize: TYPE.label,
+            fontWeight: 700,
+            letterSpacing: '0.16em',
+            textTransform: 'uppercase',
+            color: 'var(--text-muted)',
+            margin: '0 0 20px',
+          }}>
+            Edit profile
+          </h1>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4px' }}>
               <AvatarUpload
                 currentAvatarUrl={avatarUrl ?? identity.avatarUrl ?? null}
@@ -245,9 +248,6 @@ export default function EditProfilePage() {
                   style={{ ...inputStyle, paddingLeft: '30px' }}
                 />
               </div>
-              <p style={helpStyle}>
-                Lowercase letters, numbers, and underscores only.
-              </p>
             </div>
 
             <div>
@@ -259,7 +259,10 @@ export default function EditProfilePage() {
                 placeholder="Tell people what Margo means to you..."
                 style={{ ...inputStyle, height: 'auto', padding: '14px 16px', resize: 'none', lineHeight: 1.5 }}
               />
-              <p style={{ ...helpStyle, color: 'var(--text-muted)', textAlign: 'right' }}>
+              <p style={{
+                fontFamily: font, fontSize: TYPE.label, color: 'var(--text-muted)',
+                textAlign: 'right', marginTop: '6px',
+              }}>
                 {bio.length}/160
               </p>
             </div>
@@ -267,9 +270,6 @@ export default function EditProfilePage() {
             {identity.isArtist && (
               <div>
                 <label style={labelStyle}>Social &amp; streaming</label>
-                <p style={{ ...helpStyle, marginTop: 0, marginBottom: '14px', lineHeight: 1.5 }}>
-                  Full URL or @handle. These show on your public profile.
-                </p>
                 {(['social', 'streaming', 'hub'] as const).map((group) => (
                   <div key={group} style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: group === 'hub' ? 0 : '16px' }}>
                     {ARTIST_LINK_FIELDS.filter((f) => f.group === group).map((field) => (
@@ -292,9 +292,6 @@ export default function EditProfilePage() {
 
             <div style={{ background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '16px', padding: '20px' }}>
               <label style={{ ...labelStyle, marginBottom: '8px' }}>Signature lyric</label>
-              <p style={{ ...helpStyle, marginTop: 0, marginBottom: '16px' }}>
-                The line that says it about you. Search a Margo song, then pick the lyric part.
-              </p>
               <textarea
                 value={lyric}
                 onChange={e => setLyric(e.target.value.slice(0, 140))}
@@ -319,18 +316,15 @@ export default function EditProfilePage() {
                 onLyricPick={(text) => setLyric(text)}
               />
               {!catalogSongId && (
-                <div style={{ marginTop: '16px' }}>
-                  <p style={{ ...labelStyle, color: 'var(--text-secondary)' }}>Not on Margo yet</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <input
-                      type="text" value={song} onChange={e => { setSong(e.target.value); setCatalogSongId(null) }} placeholder="Song"
-                      style={{ ...inputStyle, background: 'var(--surface)', height: '44px' }}
-                    />
-                    <input
-                      type="text" value={artist} onChange={e => { setArtist(e.target.value); setCatalogSongId(null) }} placeholder="Artist"
-                      style={{ ...inputStyle, background: 'var(--surface)', height: '44px' }}
-                    />
-                  </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
+                  <input
+                    type="text" value={song} onChange={e => { setSong(e.target.value); setCatalogSongId(null) }} placeholder="Song"
+                    style={{ ...inputStyle, background: 'var(--surface)', height: '44px' }}
+                  />
+                  <input
+                    type="text" value={artist} onChange={e => { setArtist(e.target.value); setCatalogSongId(null) }} placeholder="Artist"
+                    style={{ ...inputStyle, background: 'var(--surface)', height: '44px' }}
+                  />
                 </div>
               )}
             </div>
@@ -340,8 +334,7 @@ export default function EditProfilePage() {
               background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '18px 20px',
             }}>
               <div>
-                <p style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text)', marginBottom: '4px' }}>Private profile</p>
-                <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>Only approved followers can see your lyrics.</p>
+                <p style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text)' }}>Private</p>
               </div>
               <button
                 type="button"

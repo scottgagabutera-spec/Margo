@@ -1,30 +1,19 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import { ArrowLeftIcon } from '@/components/icons'
+import { PendingNavLink } from '@/components/pending-nav-link'
 import { UI_FONT } from '@/lib/fonts'
 
-function historyCanGoBack(): boolean {
-  if (typeof window === 'undefined') return false
-  const idx = (window.history.state as { idx?: number } | null)?.idx
-  if (typeof idx === 'number') return idx > 0
-  return false
-}
-
 /**
- * In-app back for depth routes. `fallbackHref` is the logical parent when
- * there is no in-app history (deep link, notification). Device/browser back
- * is unchanged.
- *
- * `chrome` lives in the fixed nav (icon only). `page` is the labeled control
- * for surfaces without app nav (karaoke, sign-in, admin).
- *
+ * In-app back for depth routes. Chrome Back is a prefetched Link to the
+ * logical parent so the tap is immediate — not router.back() waiting on RSC.
  * Return true from `onBack` to handle the press in-page without leaving.
  */
 export function BackButton({
   fallbackHref,
   label = 'Back',
   onBack,
-  preferHistory = true,
+  preferHistory = false,
   variant = 'page',
 }: {
   fallbackHref?: string
@@ -34,21 +23,51 @@ export function BackButton({
   variant?: 'page' | 'chrome'
 }) {
   const router = useRouter()
+  const dest = fallbackHref || '/feed'
+  const isChrome = variant === 'chrome'
+
+  const chromeStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 'var(--margo-touch-min)',
+    minHeight: 'var(--margo-touch-min)',
+    width: 'var(--margo-touch-min)',
+    height: 'var(--margo-touch-min)',
+    padding: 0,
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    boxSizing: 'border-box',
+    flexShrink: 0,
+    WebkitTapHighlightColor: 'transparent',
+    textDecoration: 'none',
+  }
+
+  if (isChrome) {
+    return (
+      <PendingNavLink
+        href={dest}
+        indicator="subtle"
+        aria-label={label}
+        onClick={(event) => {
+          if (onBack?.() === true) event.preventDefault()
+        }}
+        style={chromeStyle}
+      >
+        <ArrowLeftIcon size={20} color="var(--text-secondary)" />
+      </PendingNavLink>
+    )
+  }
 
   const handleBack = () => {
     if (onBack?.() === true) return
-    if (preferHistory && historyCanGoBack()) {
+    if (preferHistory && typeof window !== 'undefined' && window.history.length > 1) {
       router.back()
       return
     }
-    if (fallbackHref) {
-      router.push(fallbackHref)
-    } else {
-      router.push('/feed')
-    }
+    router.push(dest)
   }
-
-  const isChrome = variant === 'chrome'
 
   return (
     <button
@@ -58,14 +77,12 @@ export function BackButton({
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        justifyContent: isChrome ? 'center' : 'flex-start',
-        gap: isChrome ? 0 : '8px',
+        justifyContent: 'flex-start',
+        gap: '8px',
         minWidth: 'var(--margo-touch-min)',
         minHeight: 'var(--margo-touch-min)',
-        width: isChrome ? 'var(--margo-touch-min)' : undefined,
-        height: isChrome ? 'var(--margo-touch-min)' : undefined,
-        padding: isChrome ? 0 : '0 12px',
-        marginLeft: isChrome ? 0 : '-12px',
+        padding: '0 12px',
+        marginLeft: '-12px',
         background: 'none',
         border: 'none',
         cursor: 'pointer',
@@ -74,19 +91,17 @@ export function BackButton({
         WebkitTapHighlightColor: 'transparent',
       }}
     >
-      <ArrowLeftIcon size={isChrome ? 20 : 16} color="var(--text-2)" />
-      {isChrome ? null : (
-        <span style={{
-          fontFamily: UI_FONT,
-          fontSize: '0.75rem',
-          fontWeight: 600,
-          letterSpacing: '1.5px',
-          textTransform: 'uppercase',
-          color: 'var(--text-2)',
-        }}>
-          {label}
-        </span>
-      )}
+      <ArrowLeftIcon size={16} color="var(--text-secondary)" />
+      <span style={{
+        fontFamily: UI_FONT,
+        fontSize: '0.75rem',
+        fontWeight: 600,
+        letterSpacing: '1.5px',
+        textTransform: 'uppercase',
+        color: 'var(--text-secondary)',
+      }}>
+        {label}
+      </span>
     </button>
   )
 }

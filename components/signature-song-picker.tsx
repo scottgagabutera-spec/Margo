@@ -239,47 +239,30 @@ export function SignatureSongPicker({
             Loading lyrics…
           </p>
         ) : lines.length > 0 ? (
-          <div>
-            <p style={{
-              fontFamily: font,
-              fontSize: TYPE.label,
-              fontWeight: 700,
-              letterSpacing: '0.16em',
-              textTransform: 'uppercase',
-              color: 'var(--text-muted)',
-              margin: '0 0 8px',
-            }}>
-              Pick a line
-            </p>
-            <div style={{
-              maxHeight: '220px',
-              overflowY: 'auto',
-              overscrollBehavior: 'contain',
-              border: '1px solid var(--border)',
-              borderRadius: '12px',
-              background: 'var(--surface)',
-            }}>
-              {lines.map((line, index) => (
-                <SignatureLineRow
-                  key={line.lineIndex}
-                  line={line}
-                  selected={(currentLyric || '').trim() === line.text.trim()}
-                  isLast={index === lines.length - 1}
-                  songTitle={selected?.title || songTitle}
-                  artistName={selected?.artist || artistName}
-                  audioUrl={selected?.audioUrl || null}
-                  songId={selected?.id || catalogSongId}
-                  artwork={selected?.artwork || null}
-                  onPick={() => onLyricPick?.(line.text.slice(0, 140))}
-                />
-              ))}
-            </div>
+          <div style={{
+            maxHeight: '220px',
+            overflowY: 'auto',
+            overscrollBehavior: 'contain',
+            border: '1px solid var(--border)',
+            borderRadius: '12px',
+            background: 'var(--surface)',
+          }}>
+            {lines.map((line, index) => (
+              <SignatureLineRow
+                key={line.lineIndex}
+                line={line}
+                selected={(currentLyric || '').trim() === line.text.trim()}
+                isLast={index === lines.length - 1}
+                songTitle={selected?.title || songTitle}
+                artistName={selected?.artist || artistName}
+                audioUrl={selected?.audioUrl || null}
+                songId={selected?.id || catalogSongId}
+                artwork={selected?.artwork || null}
+                onPick={() => onLyricPick?.(line.text.slice(0, 140))}
+              />
+            ))}
           </div>
-        ) : (
-          <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.secondary, color: 'var(--text-secondary)', margin: 0 }}>
-            No synced lyrics yet — type the line above.
-          </p>
-        )}
+        ) : null}
         </>
       ) : (
         <>
