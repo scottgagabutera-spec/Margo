@@ -13,7 +13,7 @@ export function buildPromoteQueueMoment(
   },
 ): MargoMoment {
   const prefs = resolveQueueVisualPrefs(row)
-  const moodRaw = row.selectionReason?.mood
+  const moodRaw = row.selectionReason?.mood ?? row.selectionReason?.modelMood
   const vibeLabel = typeof moodRaw === 'string'
     ? emotionToVibeLabel(moodRaw)
     : null

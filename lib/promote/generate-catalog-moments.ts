@@ -3,10 +3,13 @@ import {
 } from '@/lib/catalog-lyric-unit'
 import {
   applyGenerateDedupTiers,
-  windowsOverlap,
   type DedupTierResult,
 } from '@/lib/promote/generate-dedup'
-import { fillMomentsFromEligible, buildMomentFromCandidate } from '@/lib/promote/generate-fill-moments'
+import {
+  buildMomentFromCandidate,
+  fillMomentsFromEligible,
+  pickNonOverlappingWindows,
+} from '@/lib/promote/generate-fill-moments'
 import {
   MOOD_EFFECT_PROMPT_RULES,
   PROMOTE_MOODS,
@@ -41,6 +44,16 @@ export function buildGenerateWindowCandidates(
     for (let len = 1; len <= 3 && i + len <= sorted.length; len++) {
       const slice = sorted.slice(i, i + len)
       if (slice.some((a) => isFillerLineText(a.text))) continue
+      if (slice.length > 1) {
+        let contiguous = true
+        for (let j = 1; j < slice.length; j++) {
+          if (slice[j].lineIndex !== slice[j - 1].lineIndex + 1) {
+            contiguous = false
+            break
+          }
+        }
+        if (!contiguous) continue
+      }
       const joined = slice.map((a) => a.text.trim()).filter(Boolean).join('\n')
       if (!joined.trim()) continue
       out.push({
@@ -151,45 +164,6 @@ Rules:
   return parsed.windows
 }
 
-function resolveWindowsFromModel(params: {
-  modelWindows: ModelGenerateWindow[]
-  count: number
-  songLines: CatalogLyricAtom[]
-  eligible: GenerateWindowCandidate[]
-  mode: GeneratePromoteMode
-  directive?: string
-  dedupMeta: DedupTierResult
-}): ResolvedGenerateMoment[] {
-  const resolved: ResolvedGenerateMoment[] = []
-
-  for (const pick of params.modelWindows) {
-    if (resolved.length >= params.count) break
-
-    const candidate = resolveModelWindowToEligible(pick, params.songLines, params.eligible)
-    if (!candidate) continue
-    if (resolved.some((r) => windowsOverlap(r.lineIndexes, candidate.lineIndexes))) continue
-
-    const moment = buildMomentFromCandidate({
-      candidate,
-      songLines: params.songLines,
-      mood: null,
-      modelMood: pick.mood,
-      reason: String(pick.reason || '').trim(),
-      mode: params.mode,
-      directive: params.directive,
-      dedupMeta: {
-        tier: params.dedupMeta.tier,
-        excludedRanges: params.dedupMeta.excludedRanges,
-        poolSizeAfterFilter: params.dedupMeta.poolSizeAfterFilter,
-      },
-      unmappedMood: false,
-    })
-    if (moment) resolved.push(moment)
-  }
-
-  return resolved
-}
-
 export async function generateCatalogMoments(params: {
   songTitle: string
   artistName: string
@@ -230,6 +204,11 @@ export async function generateCatalogMoments(params: {
 
   const forbiddenLineIndexes = flattenExcludedLineIndexes(dedupMeta.excludedRanges)
 
+  const serverWindows = pickNonOverlappingWindows(eligible, count)
+  if (serverWindows.length === 0) {
+    throw new Error('No promotable lyric windows remain for this song.')
+  }
+
   let modelWindows: ModelGenerateWindow[] = []
   try {
     modelWindows = await callGeneratePicker({
@@ -247,18 +226,44 @@ export async function generateCatalogMoments(params: {
     modelWindows = []
   }
 
-  let resolved = resolveWindowsFromModel({
-    modelWindows,
-    count,
-    songLines: params.songLines,
-    eligible,
-    mode: params.mode,
-    directive: params.directive,
-    dedupMeta,
-  })
+  const modelByKey = new Map<string, ModelGenerateWindow>()
+  for (const pick of modelWindows) {
+    const candidate = resolveModelWindowToEligible(pick, params.songLines, eligible)
+    if (!candidate) continue
+    modelByKey.set(`${candidate.startLineIndex}:${candidate.endLineIndex}`, pick)
+  }
+
+  const resolved: ResolvedGenerateMoment[] = []
+  for (const candidate of serverWindows) {
+    const key = `${candidate.startLineIndex}:${candidate.endLineIndex}`
+    const modelPick = modelByKey.get(key)
+    const moment = buildMomentFromCandidate({
+      candidate,
+      songLines: params.songLines,
+      mood: null,
+      modelMood: modelPick?.mood || 'HOPE',
+      reason: modelPick?.reason?.trim() || 'Selected for promotion.',
+      mode: params.mode,
+      directive: params.directive,
+      dedupMeta: {
+        tier: dedupMeta.tier,
+        excludedRanges: dedupMeta.excludedRanges,
+        poolSizeAfterFilter: dedupMeta.poolSizeAfterFilter,
+      },
+      unmappedMood: !modelPick?.mood,
+    })
+    if (moment) {
+      if (modelPick) {
+        moment.selectionReason.pickedByModel = true
+      } else {
+        moment.selectionReason.pickedByServer = true
+      }
+      resolved.push(moment)
+    }
+  }
 
   if (resolved.length < count) {
-    resolved = fillMomentsFromEligible({
+    const topped = fillMomentsFromEligible({
       eligible,
       alreadyResolved: resolved,
       count,
@@ -266,19 +271,10 @@ export async function generateCatalogMoments(params: {
       mode: params.mode,
       directive: params.directive,
       dedupMeta,
-      reasonPrefix: resolved.length === 0
-        ? 'Server picked from eligible pool after model windows did not resolve.'
-        : 'Server filled remaining slots from eligible pool.',
+      reasonPrefix: 'Server filled remaining slots from eligible pool.',
     })
+    return { moments: topped, dedupMeta }
   }
 
-  if (resolved.length === 0) {
-    throw new Error('No promotable lyric windows remain for this song.')
-  }
-
-  if (resolved.length < count && eligible.length < count) {
-    // Partial success is expected when the song has fewer non-overlapping windows than requested.
-  }
-
-  return { moments: resolved, dedupMeta }
+  return { moments: resolved.slice(0, count), dedupMeta }
 }

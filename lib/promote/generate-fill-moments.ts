@@ -14,6 +14,38 @@ function scoreCandidate(text: string): number {
   return Math.min(words, 24)
 }
 
+/** Greedy non-overlapping pick — spread singles when count > 1 for reliable multi-moment batches. */
+export function pickNonOverlappingWindows(
+  eligible: GenerateWindowCandidate[],
+  count: number,
+): GenerateWindowCandidate[] {
+  if (count <= 0 || eligible.length === 0) return []
+
+  const picked: GenerateWindowCandidate[] = []
+
+  if (count > 1) {
+    const singles = eligible
+      .filter((w) => w.lineIndexes.length === 1)
+      .sort((a, b) => a.startLineIndex - b.startLineIndex)
+    for (const s of singles) {
+      if (picked.length >= count) break
+      if (picked.some((p) => windowsOverlap(p.lineIndexes, s.lineIndexes))) continue
+      picked.push(s)
+    }
+  }
+
+  const sorted = [...eligible].sort(
+    (a, b) => scoreCandidate(b.text) - scoreCandidate(a.text),
+  )
+  for (const c of sorted) {
+    if (picked.length >= count) break
+    if (picked.some((p) => windowsOverlap(p.lineIndexes, c.lineIndexes))) continue
+    picked.push(c)
+  }
+
+  return picked.slice(0, count)
+}
+
 export function fillMomentsFromEligible(params: {
   eligible: GenerateWindowCandidate[]
   alreadyResolved: ResolvedGenerateMoment[]

@@ -116,8 +116,14 @@ export function GeneratePromotionBlock(props: GeneratePromotionBlockProps) {
         setError(json.error || 'Generation failed')
         return
       }
-      const n = json.count || json.queueIds?.length || count
-      setSuccess(`${n} Moment${n === 1 ? '' : 's'} queued for review.`)
+      const n = json.returnedCount ?? json.count ?? json.queueIds?.length ?? count
+      const requested = json.requestedCount ?? count
+      const partial = n < requested
+      setSuccess(
+        partial
+          ? `${n} of ${requested} Moments queued for review (fewer non-overlapping lines remain).`
+          : `${n} Moment${n === 1 ? '' : 's'} queued for review.`,
+      )
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed')
     } finally {

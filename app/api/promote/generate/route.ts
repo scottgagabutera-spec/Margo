@@ -110,6 +110,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       queueIds,
       count: queueIds.length,
+      requestedCount: count,
+      returnedCount: queueIds.length,
       dedupTier: dedupMeta.tier,
       moments: moments.map((m, i) => ({
         queueId: queueIds[i],

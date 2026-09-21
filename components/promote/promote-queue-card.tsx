@@ -197,9 +197,41 @@ export function PromoteQueueCard({
       <div style={{ fontFamily: font, fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
         {item.songTitle}
       </div>
-      <div style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px', whiteSpace: 'pre-line' }}>
+      <div style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '12px', whiteSpace: 'pre-line' }}>
         {item.lyricText}
       </div>
+
+      {previewMoment.vibeLabel && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+          <span style={{
+            fontFamily: font,
+            fontSize: '0.56rem',
+            fontWeight: 600,
+            letterSpacing: '0.5px',
+            textTransform: 'uppercase',
+            color: 'var(--text-muted)',
+          }}>
+            Mood
+          </span>
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            minHeight: '22px',
+            padding: '0 10px',
+            borderRadius: '50px',
+            border: '1px solid var(--gold-border)',
+            background: 'var(--gold-faint)',
+            fontFamily: font,
+            fontSize: '0.56rem',
+            fontWeight: 700,
+            letterSpacing: '0.4px',
+            textTransform: 'uppercase',
+            color: 'var(--gold)',
+          }}>
+            {previewMoment.vibeLabel}
+          </span>
+        </div>
+      )}
 
       <div style={{ maxWidth: 280, margin: '0 auto 16px' }}>
         <MomentExportPreviewFrame shapeId={shapeId}>
