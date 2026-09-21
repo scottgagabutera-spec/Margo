@@ -64,6 +64,8 @@ export type {
 } from '@/lib/moment/listen'
 export {
   resolveMomentListen,
+  resolveExternalListenUrl,
+  externalListenAriaLabel,
   appleMusicSearchUrl,
 } from '@/lib/moment/listen'
 

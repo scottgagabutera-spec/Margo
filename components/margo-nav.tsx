@@ -65,7 +65,7 @@ const font = 'var(--font-geist-sans), system-ui, sans-serif'
 export function MargoNav() {
   const pathname = usePathname()
   const router = useRouter()
-  const { activeTab, pendingTab, isTabPending, isTabAcked } = usePrimaryTab()
+  const { activeTab, isTabPending, isTabAcked } = usePrimaryTab()
   const feedLink = usePrimaryTabLinkProps('/feed', 'feed')
   const discoverLink = usePrimaryTabLinkProps('/discover', 'discover')
   const composeLink = usePrimaryTabLinkProps('/compose', 'compose')
@@ -196,8 +196,6 @@ export function MargoNav() {
                 transition: 'color 80ms var(--ease-out), background 80ms var(--ease-out)',
                 whiteSpace: 'nowrap',
                 WebkitTapHighlightColor: 'transparent',
-                opacity: pendingTab && !acked && !pending && !active ? 0.45 : 1,
-                pointerEvents: pendingTab && !acked && !pending && !active ? 'none' : 'auto',
               }}>
                 {pending ? <LoadingRing size={14} strokeWidth={1.5} state="spinning" /> : null}
                 {label}
@@ -222,8 +220,7 @@ export function MargoNav() {
               display: 'inline-flex', alignItems: 'center', gap: '8px',
               boxSizing: 'border-box',
               transition: 'all 150ms ease', flexShrink: 0, whiteSpace: 'nowrap',
-              opacity: isTabPending('compose') || isTabAcked('compose') ? 0.9 : isOnCompose ? 0.75 : (pendingTab ? 0.45 : 1),
-              pointerEvents: pendingTab && !isTabPending('compose') && !isTabAcked('compose') && !isOnCompose ? 'none' : 'auto',
+              opacity: isTabPending('compose') || isTabAcked('compose') ? 0.9 : isOnCompose ? 0.75 : 1,
               WebkitTapHighlightColor: 'transparent',
             }}>
               {isTabPending('compose') ? <LoadingRing size={14} strokeWidth={1.5} state="spinning" color="var(--bg)" /> : null}
