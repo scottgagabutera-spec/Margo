@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, useState } from 'react'
+import { useId, useState, useEffect, useRef } from 'react'
 import { CloseIcon, SearchIcon } from '@/components/icons'
 import { UI_FONT } from '@/lib/fonts'
 
@@ -20,6 +20,7 @@ interface MargoSearchInputProps {
   /** Keep typed text above dropdown scrims (Stage / Compose search). */
   stackAboveOverlay?: boolean
   id?: string
+  autoFocus?: boolean
 }
 
 /** Must exceed ComposeSearchDropdown scrim (54) and listbox (55). */
@@ -42,11 +43,18 @@ export function MargoSearchInput({
   icon = 'left',
   stackAboveOverlay = false,
   id: idProp,
+  autoFocus = false,
 }: MargoSearchInputProps) {
   const autoId = useId()
   const inputId = idProp ?? autoId
   const [focused, setFocused] = useState(false)
+  const inputRef = useRef<HTMLInputElement | null>(null)
   const showLeftIcon = icon === 'left'
+
+  useEffect(() => {
+    if (!autoFocus) return
+    inputRef.current?.focus()
+  }, [autoFocus])
 
   return (
     <div style={{ position: 'relative', width: '100%', zIndex: stackAboveOverlay ? SEARCH_ABOVE_OVERLAY_Z : undefined }}>
@@ -88,12 +96,14 @@ export function MargoSearchInput({
       ) : null}
       <input
         id={inputId}
+        ref={inputRef}
         className={className}
         type="search"
         enterKeyHint="search"
         autoComplete="off"
         autoCorrect="off"
         spellCheck={false}
+        autoFocus={autoFocus}
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}

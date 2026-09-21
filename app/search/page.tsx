@@ -126,6 +126,7 @@ export default function SearchPage() {
         onChange={setQuery}
         placeholder="Users, lyrics, artists…"
         ariaLabel="Search Margo"
+        autoFocus
       />
 
       {loading && debounced.length >= 2 && (
