@@ -254,19 +254,7 @@ export function StageMomentCard({
       }
 
   const markSymbolSize = layout?.mark.symbolSize ?? 22
-  const watermarkSymbolSize = Math.max(14, Math.round(markSymbolSize * 0.68))
-  const resolvedMarkStyle: CSSProperties = brandWatermark
-    ? {
-        ...markStyle,
-        width: watermarkSymbolSize,
-        height: watermarkSymbolSize,
-        borderRadius: 0,
-        background: 'transparent',
-        border: 'none',
-        boxShadow: 'none',
-        opacity: 0.34,
-      }
-    : markStyle
+  const watermarkPad = layout?.padding ?? { left: 16, bottom: 16, right: 16, top: 16 }
   const metaSongSize = layout?.meta?.song?.style.fontSize
   const metaArtistSize = layout?.meta?.artist?.style.fontSize
   const artSize = layout?.artwork?.width ?? (isShorts ? 56 : 48)
@@ -285,16 +273,27 @@ export function StageMomentCard({
             tone={theme.markVariant === 'on-light' ? 'light' : 'dark'}
           />
         ) : null}
-        <div
-          style={resolvedMarkStyle}
-          aria-hidden
-          title={brandWatermark ? 'From Margo' : undefined}
-        >
-          <MargoSymbol
-            size={brandWatermark ? watermarkSymbolSize : markSymbolSize}
-            variant={markVariant}
-          />
-        </div>
+        {brandWatermark ? (
+          <div
+            aria-hidden
+            title="From Margo"
+            style={{
+              position: 'absolute',
+              left: watermarkPad.left,
+              bottom: watermarkPad.bottom,
+              zIndex: 3,
+              opacity: 0.18,
+              pointerEvents: 'none',
+              lineHeight: 0,
+            }}
+          >
+            <MargoSymbol size={18} variant={markVariant} />
+          </div>
+        ) : (
+          <div style={markStyle} aria-hidden>
+            <MargoSymbol size={markSymbolSize} variant={markVariant} />
+          </div>
+        )}
         <div
           style={{
             position: 'relative',
