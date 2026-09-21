@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, useState } from 'react'
+import { useId, useState, useEffect, useRef } from 'react'
 import { CloseIcon, SearchIcon } from '@/components/icons'
 import { UI_FONT } from '@/lib/fonts'
 
@@ -48,7 +48,13 @@ export function MargoSearchInput({
   const autoId = useId()
   const inputId = idProp ?? autoId
   const [focused, setFocused] = useState(false)
+  const inputRef = useRef<HTMLInputElement | null>(null)
   const showLeftIcon = icon === 'left'
+
+  useEffect(() => {
+    if (!autoFocus) return
+    inputRef.current?.focus()
+  }, [autoFocus])
 
   return (
     <div style={{ position: 'relative', width: '100%', zIndex: stackAboveOverlay ? SEARCH_ABOVE_OVERLAY_Z : undefined }}>
@@ -90,6 +96,7 @@ export function MargoSearchInput({
       ) : null}
       <input
         id={inputId}
+        ref={inputRef}
         className={className}
         type="search"
         enterKeyHint="search"
