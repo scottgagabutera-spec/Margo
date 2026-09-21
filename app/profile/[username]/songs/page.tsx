@@ -8,10 +8,12 @@ import { SongCatalogCard, type SongCardData } from '@/components/song-catalog-ca
 import { SongPreviewSheet, type SongPreviewSeed } from '@/components/song-preview-sheet'
 import { ArtistBadge, type ArtistStatus } from '@/components/artist-badge'
 import { resolvePublicArtistCredit } from '@/lib/artist-identity'
+import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 
 const supabase = createClient()
 
-const font = 'var(--font-lora), serif'
+const font = UI_FONT
+const lyricFont = LYRIC_FONT
 
 interface ArtistSongRow {
   id: string
@@ -104,7 +106,7 @@ export default function ArtistDiscographyPage() {
   if (notFound) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-secondary)' }}>No discography here.</p>
+        <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--text-secondary)' }}>No discography here.</p>
       </div>
     )
   }
@@ -134,19 +136,19 @@ export default function ArtistDiscographyPage() {
                 {artist.avatarUrl ? (
                   <img src={artist.avatarUrl} alt={artist.displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
-                  <span style={{ fontFamily: font, fontSize: '0.85rem', fontWeight: 700, color: 'var(--bg)' }}>
+                  <span style={{ fontFamily: font, fontSize: TYPE.secondary, fontWeight: 700, color: 'var(--bg)' }}>
                     {artist.displayName.slice(0, 2).toUpperCase()}
                   </span>
                 )}
               </div>
               <div style={{ minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <p style={{ fontFamily: font, fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0 }}>
+                  <p style={{ fontFamily: font, fontSize: TYPE.song, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0 }}>
                     {artist.displayName}
                   </p>
                   <ArtistBadge isArtist={artist.isArtist} artistStatus={artist.artistStatus} size={13} />
                 </div>
-                <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)', letterSpacing: '0.5px', textTransform: 'uppercase', margin: 0 }}>
+                <p style={{ fontFamily: font, fontSize: TYPE.label, color: 'var(--text-muted)', letterSpacing: '0.16em', textTransform: 'uppercase', margin: 0 }}>
                   Discography
                 </p>
               </div>

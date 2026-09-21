@@ -11,6 +11,7 @@ import { HubProvider } from '@/components/hub-menu'
 import { NavBackProvider } from '@/components/nav-back'
 import { ChromeModePublisher } from '@/components/chrome-mode'
 import { AuthReturnRestorer } from '@/components/auth-return-restorer'
+import { AuthGateHost } from '@/components/auth-gate-host'
 import { TabSwipeProvider } from '@/hooks/useTabSwipe'
 import { Toaster } from '@/components/ui/sonner'
 import type { Metadata, Viewport } from 'next'
@@ -194,6 +195,7 @@ export default function RootLayout({
                   >
                     {children}
                   </TabSwipeProvider>
+                  <AuthGateHost />
                   </NavBackProvider>
                   </HubProvider>
                 </MessagingProvider>

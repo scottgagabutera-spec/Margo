@@ -11,7 +11,6 @@ import {
   subscribeAuthBroadcast,
 } from '@/lib/supabase/auth-broadcast'
 import type { User } from '@supabase/supabase-js'
-import { AuthGateModal } from '@/components/auth-gate-modal'
 import { AuthGateErrorHandler } from '@/components/auth-gate-error-handler'
 import { LegalConsentEnforcer } from '@/components/legal-consent-enforcer'
 import { disarmComposePendingAction } from '@/lib/moment-draft'
@@ -58,6 +57,8 @@ interface AuthGateContextValue {
   authGateExternalError: string | null
   /** Open auth gate with an error after OAuth failure on a product page. */
   openAuthGateWithError: (message: string, returnTo: string) => void
+  /** Close or reopen the auth gate (used by AuthGateHost inside IdentityProvider). */
+  setAuthGateOpen: (open: boolean) => void
   /** Re-read httpOnly session → memory access token (after login/logout). */
   rehydrate: (opts?: RehydrateOptions) => Promise<void>
 }
@@ -328,14 +329,10 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
       authReturnTo,
       authGateExternalError,
       openAuthGateWithError,
+      setAuthGateOpen: handleGateOpenChange,
       rehydrate,
     }}>
       {children}
-      <AuthGateModal
-        open={gateOpen}
-        onOpenChange={handleGateOpenChange}
-        externalError={authGateExternalError}
-      />
       <Suspense fallback={null}>
         <AuthGateErrorHandler />
         <LegalConsentEnforcer />

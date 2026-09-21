@@ -4,7 +4,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
-import { UI_FONT } from '@/lib/fonts'
+import { TYPE, UI_FONT } from '@/lib/fonts'
 
 const supabase = createClient()
 
@@ -105,14 +105,14 @@ export function AvatarUpload({ currentAvatarUrl, displayName, onUploaded }: Avat
             onError={() => setImgFailed(true)}
           />
         ) : (
-          <span style={{ fontFamily: font, fontSize: '1.6rem', fontWeight: 700, color: bg }}>
+          <span style={{ fontFamily: font, fontSize: TYPE.displayName, fontWeight: 600, color: bg }}>
             {initials}
           </span>
         )}
       </div>
 
       {error && (
-        <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
+        <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', textAlign: 'center' }}>
           {error}
         </p>
       )}
@@ -127,7 +127,7 @@ export function AvatarUpload({ currentAvatarUrl, displayName, onUploaded }: Avat
           background: 'var(--surface-2)', color: text2,
           border: '1px solid var(--border)',
           borderRadius: '50px', fontFamily: font, fontWeight: 600,
-          fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase',
+          fontSize: TYPE.label, letterSpacing: '0.16em', textTransform: 'uppercase',
           cursor: uploading ? 'not-allowed' : 'pointer',
           opacity: uploading ? 0.6 : 1,
         }}
@@ -143,7 +143,7 @@ export function AvatarUpload({ currentAvatarUrl, displayName, onUploaded }: Avat
         style={{ display: 'none' }}
       />
 
-      <p style={{ fontFamily: font, fontSize: '0.6rem', color: textMuted, textAlign: 'center' }}>
+      <p style={{ fontFamily: font, fontSize: TYPE.label, color: textMuted, textAlign: 'center' }}>
         JPG, PNG, or WebP. Max 5MB.
       </p>
     </div>

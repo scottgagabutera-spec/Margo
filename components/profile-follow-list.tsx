@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { ArtistBadge } from '@/components/artist-badge'
 import { NotificationRowSkeletonList } from '@/components/margo-skeletons'
-import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
+import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import {
   fetchProfileFollowList,
   type FollowListKind,
@@ -50,40 +50,56 @@ export function ProfileFollowListPage({
       }}>
         <h1 style={{
           fontFamily: font,
-          fontSize: '1.5rem',
+          fontSize: TYPE.pageTitle,
           fontWeight: 600,
           color: 'var(--text)',
           margin: '0 0 6px',
           lineHeight: 1.2,
+          textAlign: 'center',
         }}>
           {title}
         </h1>
+        {result?.ok ? (
+          <p style={{
+            fontFamily: font,
+            fontSize: TYPE.displayName,
+            fontWeight: 600,
+            letterSpacing: '-0.03em',
+            fontVariantNumeric: 'tabular-nums',
+            color: 'var(--text)',
+            textAlign: 'center',
+            margin: '0 0 4px',
+            lineHeight: 1,
+          }}>
+            {result.total.toLocaleString()}
+          </p>
+        ) : null}
         <p style={{
           fontFamily: font,
-          fontSize: '0.7rem',
+          fontSize: TYPE.meta,
           color: 'var(--text-secondary)',
           margin: '0 0 20px',
+          textAlign: 'center',
         }}>
           @{hostHandle}
-          {result?.ok ? ` · ${result.total}` : ''}
         </p>
 
         {loading && <NotificationRowSkeletonList count={5} />}
 
         {!loading && result && !result.ok && result.error === 'not_found' && (
-          <p style={{ fontFamily: lyricFont, fontStyle: 'italic', color: 'var(--text-secondary)' }}>
+          <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--text-secondary)' }}>
             No one here by that name.
           </p>
         )}
 
         {!loading && result && !result.ok && result.error === 'private_profile' && (
-          <p style={{ fontFamily: lyricFont, fontStyle: 'italic', color: 'var(--text-secondary)' }}>
+          <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--text-secondary)' }}>
             This account is private.
           </p>
         )}
 
         {!loading && result && !result.ok && result.error === 'lists_private' && (
-          <p style={{ fontFamily: lyricFont, fontStyle: 'italic', color: 'var(--text-secondary)' }}>
+          <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--text-secondary)' }}>
             They keep this list private.
           </p>
         )}
@@ -92,7 +108,7 @@ export function ProfileFollowListPage({
           <p style={{
             fontFamily: lyricFont,
             fontStyle: 'italic',
-            fontSize: '1.1rem',
+            fontSize: TYPE.lyric,
             color: 'var(--text-secondary)',
             marginTop: '12px',
           }}>
@@ -159,7 +175,7 @@ function FollowRow({ person }: { person: FollowListPerson }) {
           ) : (
             <span style={{
               fontFamily: font,
-              fontSize: '0.85rem',
+              fontSize: TYPE.secondary,
               fontWeight: 700,
               color: 'var(--bg)',
             }}>
@@ -173,7 +189,7 @@ function FollowRow({ person }: { person: FollowListPerson }) {
             alignItems: 'center',
             gap: '6px',
             fontFamily: font,
-            fontSize: '0.95rem',
+            fontSize: TYPE.song,
             fontWeight: 600,
             color: 'var(--text)',
           }}>
@@ -189,7 +205,7 @@ function FollowRow({ person }: { person: FollowListPerson }) {
           <span style={{
             display: 'block',
             fontFamily: font,
-            fontSize: '0.7rem',
+            fontSize: TYPE.meta,
             color: 'var(--text-secondary)',
             marginTop: '2px',
           }}>

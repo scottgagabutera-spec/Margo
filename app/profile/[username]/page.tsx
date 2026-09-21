@@ -19,7 +19,7 @@ import { resolveMargoMomentFromPost } from '@/lib/moment'
 import { MoreIcon, EditIcon, ImagePlusIcon } from '@/components/icons'
 import type { Post } from '@/hooks/usePosts'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
-import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
+import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { ProfileArtistLinks } from '@/components/profile-artist-links'
 import { ProfileImageLightbox } from '@/components/profile-image-lightbox'
 import { peekProfileCache, warmProfile, type WarmProfileRow } from '@/lib/profile-warm'
@@ -42,19 +42,26 @@ const lyricFont = LYRIC_FONT
 const DISCOGRAPHY_PREVIEW_COUNT = 8
 
 const sectionLabelStyle: React.CSSProperties = {
-  fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)',
-  textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '8px',
+  fontFamily: font, fontSize: TYPE.label, fontWeight: 700, color: 'var(--text-muted)',
+  textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: '8px',
+}
+
+const emptyLyricStyle: React.CSSProperties = {
+  fontFamily: lyricFont,
+  fontStyle: 'italic',
+  fontSize: TYPE.lyric,
+  color: 'var(--text-secondary)',
+  lineHeight: 1.5,
 }
 
 const profileStatStyle: React.CSSProperties = {
   display: 'flex',
-  flex: 1,
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
-  minWidth: 'var(--margo-touch-min)',
+  minWidth: '96px',
   minHeight: 'var(--margo-touch-min)',
-  padding: '10px 4px',
+  padding: '8px 20px',
   textDecoration: 'none',
   boxSizing: 'border-box',
   textAlign: 'center',
@@ -64,31 +71,39 @@ function ProfileStat({
   href,
   count,
   label,
+  showDivider,
 }: {
   href?: string
   count: number | string | null
   label: string
+  showDivider?: boolean
 }) {
+  const display = typeof count === 'number' ? count.toLocaleString() : (count ?? '—')
+  const style: React.CSSProperties = {
+    ...profileStatStyle,
+    borderRight: showDivider ? '1px solid var(--border)' : 'none',
+  }
   const inner = (
     <>
       <span style={{
         fontFamily: font,
-        fontSize: '1.25rem',
+        fontSize: TYPE.displayName,
         fontWeight: 600,
         color: 'var(--text)',
-        lineHeight: 1.15,
+        lineHeight: 1,
+        letterSpacing: '-0.03em',
         fontVariantNumeric: 'tabular-nums',
       }}>
-        {count ?? '—'}
+        {display}
       </span>
       <span style={{
         fontFamily: font,
-        fontSize: '0.6rem',
-        fontWeight: 700,
-        letterSpacing: '1.5px',
+        fontSize: TYPE.label,
+        fontWeight: 600,
+        letterSpacing: '0.16em',
         textTransform: 'uppercase',
-        color: 'var(--text-secondary)',
-        marginTop: '6px',
+        color: 'var(--text-muted)',
+        marginTop: '8px',
       }}>
         {label}
       </span>
@@ -96,12 +111,12 @@ function ProfileStat({
   )
   if (href) {
     return (
-      <PendingNavLink href={href} indicator="overlay" ringSize={22} style={profileStatStyle}>
+      <PendingNavLink href={href} indicator="overlay" ringSize={22} style={style}>
         {inner}
       </PendingNavLink>
     )
   }
-  return <span style={profileStatStyle}>{inner}</span>
+  return <span style={style}>{inner}</span>
 }
 
 function SignaturePlayButton({
@@ -536,7 +551,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
       )}
 
       {!loading && notFound && (
-        <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-secondary)', textAlign: 'center', fontSize: '0.95rem', paddingTop: 'calc(var(--nav-height, 72px) + 88px)' }}>
+        <p style={{ ...emptyLyricStyle, textAlign: 'center', paddingTop: 'calc(var(--nav-height, 72px) + 88px)' }}>
           No one here by that name.
         </p>
       )}
@@ -549,10 +564,10 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
           <div style={{
             border: '1px solid var(--border)', borderRadius: '16px', padding: '24px',
           }}>
-            <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: '4px' }}>
+            <p style={{ ...emptyLyricStyle, marginBottom: '4px' }}>
               This account is private.
             </p>
-            <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', margin: 0 }}>
+            <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', margin: 0 }}>
               Only people they accept can see their profile.
             </p>
           </div>
@@ -629,11 +644,11 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 alignItems: 'center',
                 justifyContent: 'center',
                 width: '100%',
-                minHeight: '88px',
+                minHeight: '100px',
                 marginTop: 'var(--nav-height, 72px)',
                 padding: 0,
                 border: 'none',
-                borderBottom: '1px solid var(--border)',
+                borderBottom: '1px dashed var(--gold-border)',
                 background: 'var(--surface)',
                 cursor: coverBusy ? 'not-allowed' : 'pointer',
                 WebkitTapHighlightColor: 'transparent',
@@ -676,7 +691,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                   display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                   border: '4px solid var(--bg)', boxSizing: 'border-box',
                 }}>
-                  <span style={{ fontFamily: font, fontSize: '1.4rem', fontWeight: 700, color: 'var(--bg)' }}>
+                  <span style={{ fontFamily: font, fontSize: TYPE.displayName, fontWeight: 600, color: 'var(--bg)' }}>
                     {(profile.displayName || '??').slice(0, 2).toUpperCase()}
                   </span>
                 </div>
@@ -686,19 +701,19 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap', marginBottom: '12px' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <h1 style={{ fontFamily: font, fontSize: '1.25rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>
+                  <h1 style={{ fontFamily: font, fontSize: TYPE.displayName, fontWeight: 600, color: 'var(--text)', margin: 0 }}>
                     {profile.displayName}
                   </h1>
                   {profile.isPrivate && (
                     <span style={{
-                      fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
-                      letterSpacing: '1px', textTransform: 'uppercase', padding: '3px 8px',
+                      fontFamily: font, fontSize: TYPE.label, fontWeight: 700,
+                      letterSpacing: '0.16em', textTransform: 'uppercase', padding: '3px 8px',
                       borderRadius: '50px', background: 'var(--surface-2)',
                       border: '1px solid var(--border)', color: 'var(--text-muted)',
                     }}>Private</span>
                   )}
                 </div>
-                <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text-secondary)', margin: 0 }}>
+                <p style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-secondary)', margin: 0 }}>
                   @{profile.username}
                 </p>
               </div>
@@ -712,7 +727,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                       display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
                       background: 'var(--surface-2)', color: 'var(--text-secondary)',
                       border: '1px solid var(--border)', borderRadius: '50px',
-                      fontFamily: font, fontWeight: 600, fontSize: '0.6rem',
+                      fontFamily: font, fontWeight: 600, fontSize: TYPE.label,
                       letterSpacing: '1.5px', textTransform: 'uppercase',
                       textDecoration: 'none', cursor: 'pointer',
                       whiteSpace: 'nowrap', flexShrink: 0,
@@ -750,8 +765,8 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                           style={{
                             display: 'flex', alignItems: 'center',
                             minHeight: 'var(--margo-touch-min)',
-                            fontFamily: font, fontSize: '0.8rem',
-                            textDecoration: 'none', color: 'rgba(255,255,255,0.75)',
+                            fontFamily: font, fontSize: TYPE.secondary,
+                            textDecoration: 'none', color: 'var(--text-secondary)',
                             padding: '0 12px', borderRadius: '6px', boxSizing: 'border-box',
                           }}
                         >Account Settings</Link>
@@ -762,8 +777,8 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                             style={{
                               display: 'flex', alignItems: 'center',
                               minHeight: 'var(--margo-touch-min)',
-                              fontFamily: font, fontSize: '0.8rem',
-                              textDecoration: 'none', color: 'rgba(255,255,255,0.75)',
+                              fontFamily: font, fontSize: TYPE.secondary,
+                              textDecoration: 'none', color: 'var(--text-secondary)',
                               padding: '0 12px', borderRadius: '6px', boxSizing: 'border-box',
                             }}
                           >Studio</Link>
@@ -775,8 +790,8 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                             style={{
                               display: 'flex', alignItems: 'center',
                               minHeight: 'var(--margo-touch-min)',
-                              fontFamily: font, fontSize: '0.8rem',
-                              textDecoration: 'none', color: 'rgba(255,255,255,0.75)',
+                              fontFamily: font, fontSize: TYPE.secondary,
+                              textDecoration: 'none', color: 'var(--text-secondary)',
                               padding: '0 12px', borderRadius: '6px', boxSizing: 'border-box',
                             }}
                           >{applyLabel}</Link>
@@ -788,9 +803,9 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                           style={{
                             display: 'flex', alignItems: 'center', width: '100%', textAlign: 'left',
                             minHeight: 'var(--margo-touch-min)',
-                            fontFamily: font, fontSize: '0.8rem',
+                            fontFamily: font, fontSize: TYPE.secondary,
                             background: 'none', border: 'none', cursor: 'pointer',
-                            color: 'rgba(255,255,255,0.5)',
+                            color: 'var(--text-muted)',
                             padding: '0 12px', borderRadius: '6px', boxSizing: 'border-box',
                           }}
                         >Sign Out</button>
@@ -807,9 +822,9 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                     style={{
                       minHeight: 'var(--margo-touch-min)', padding: '0 22px',
                       display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                      background: 'transparent', color: 'var(--text-2)',
+                      background: 'transparent', color: 'var(--text-secondary)',
                       border: '1px solid var(--border)', borderRadius: '50px',
-                      fontFamily: font, fontWeight: 700, fontSize: '0.6rem',
+                      fontFamily: font, fontWeight: 700, fontSize: TYPE.label,
                       letterSpacing: '1.2px', textTransform: 'uppercase',
                       textDecoration: 'none', cursor: 'pointer',
                     }}
@@ -822,9 +837,9 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                       minHeight: 'var(--margo-touch-min)', padding: '0 26px',
                       display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
                       background: followStatus ? 'transparent' : 'var(--gold)',
-                      color: followStatus ? 'var(--text-2)' : 'var(--bg)',
+                      color: followStatus ? 'var(--text-secondary)' : 'var(--bg)',
                       border: followStatus ? '1px solid var(--border)' : 'none',
-                      borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: '0.6rem',
+                      borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: TYPE.label,
                       letterSpacing: '1.2px', textTransform: 'uppercase',
                       cursor: followBusy ? 'not-allowed' : 'pointer',
                       opacity: followBusy ? 0.7 : 1,
@@ -844,22 +859,24 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 shown for artists. */}
             <div style={{
               display: 'flex',
+              justifyContent: 'center',
               alignItems: 'stretch',
-              gap: '4px',
               marginBottom: '24px',
               borderTop: '1px solid var(--border)',
               borderBottom: '1px solid var(--border)',
-              padding: '6px 0',
+              padding: '10px 0',
             }}>
               <ProfileStat
                 href={(isOwnProfile || !profile.followListsPrivate) ? `/profile/${profile.username}/followers` : undefined}
                 count={followerCount}
                 label="followers"
+                showDivider
               />
               <ProfileStat
                 href={(isOwnProfile || !profile.followListsPrivate) ? `/profile/${profile.username}/following` : undefined}
                 count={followingCount}
                 label="following"
+                showDivider={!!profile.isArtist}
               />
               {profile.isArtist && (
                 <ProfileStat
@@ -873,15 +890,15 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
             <div style={{ marginBottom: '24px' }}>
               <p style={sectionLabelStyle}>Bio</p>
               {profile.bio ? (
-                <p style={{ fontFamily: font, fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                <p style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                   {profile.bio}
                 </p>
               ) : isOwnProfile ? (
-                <Link href="/profile/edit" style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic', textDecoration: 'none' }}>
-                  Add a bio →
+                <Link href="/profile/edit" style={{ ...emptyLyricStyle, textDecoration: 'none' }}>
+                  Add a bio
                 </Link>
               ) : (
-                <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                <p style={emptyLyricStyle}>
                   No bio yet.
                 </p>
               )}
@@ -898,7 +915,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
               <p style={sectionLabelStyle}>Signature lyric</p>
               {profile.signatureLyric ? (
                 <>
-                  <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: '1.1rem', color: 'var(--gold)', lineHeight: 1.5, marginBottom: '8px' }}>
+                  <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--gold)', lineHeight: 1.5, marginBottom: '8px' }}>
                     &ldquo;{profile.signatureLyric}&rdquo;
                   </p>
                   {(profile.signatureSong || profile.signatureArtist || signatureTrack) && (
@@ -906,7 +923,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                       {signatureTrack ? <SignaturePlayButton track={signatureTrack} /> : null}
                       <p style={{
                         fontFamily: font,
-                        fontSize: '0.7rem',
+                        fontSize: TYPE.meta,
                         color: 'var(--text-secondary)',
                         margin: 0,
                       }}>
@@ -916,11 +933,11 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                   )}
                 </>
               ) : isOwnProfile ? (
-                <Link href="/profile/edit" style={{ fontFamily: font, fontSize: '0.95rem', color: 'var(--text-secondary)', textDecoration: 'none' }}>
+                <Link href="/profile/edit" style={{ ...emptyLyricStyle, textDecoration: 'none' }}>
                   Add the lyric that says it best
                 </Link>
               ) : (
-                <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
+                <p style={emptyLyricStyle}>
                   Hasn&rsquo;t picked one yet.
                 </p>
               )}
@@ -939,7 +956,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                   <div>
                     <p style={{ ...sectionLabelStyle, marginBottom: '2px' }}>Discography</p>
                     {artistSongs.length > 0 && (
-                      <p style={{ fontFamily: font, fontSize: '0.62rem', color: 'var(--text-muted)', margin: 0 }}>
+                      <p style={{ fontFamily: font, fontSize: TYPE.label, color: 'var(--text-muted)', margin: 0 }}>
                         {artistStats.totalPlays.toLocaleString()} plays · {artistStats.totalResonates.toLocaleString()} resonates
                       </p>
                     )}
@@ -948,22 +965,22 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                     <Link
                       href={`/profile/${profile.username}/songs`}
                       style={{
-                        fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
-                        letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--gold)',
+                        fontFamily: font, fontSize: TYPE.label, fontWeight: 700,
+                        letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--gold)',
                         textDecoration: 'none', flexShrink: 0, whiteSpace: 'nowrap',
                       }}
-                    >View all →</Link>
+                    >View all</Link>
                   )}
                 </div>
 
                 {artistSongsLoading ? (
                   <div className="discog-row">
                     {Array(4).fill(null).map((_, i) => (
-                      <div key={i} style={{ flexShrink: 0, width: '130px', aspectRatio: '1', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }} />
+                      <div key={i} style={{ flexShrink: 0, width: '130px', aspectRatio: '1', borderRadius: '12px', background: 'var(--surface-2)', border: '1px solid var(--border)' }} />
                     ))}
                   </div>
                 ) : artistSongs.length === 0 ? (
-                  <p style={{ fontFamily: font, fontSize: '0.85rem', fontStyle: 'italic', color: 'var(--text-secondary)' }}>
+                  <p style={emptyLyricStyle}>
                     {isOwnProfile ? (
                       <>Nothing live yet — head to <Link href="/studio" style={{ color: 'var(--gold)' }}>Studio</Link> to publish your first song.</>
                     ) : (
@@ -1021,8 +1038,8 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                       onClick={() => setContentTab(tab.id)}
                       style={{
                         flex: 1, minHeight: 'var(--margo-touch-min)',
-                        fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
-                        letterSpacing: '1px', textTransform: 'uppercase',
+                        fontFamily: font, fontSize: TYPE.label, fontWeight: 700,
+                        letterSpacing: '0.16em', textTransform: 'uppercase',
                         color: active ? 'var(--gold)' : 'var(--text-muted)',
                         background: 'transparent', border: 'none',
                         borderBottom: active ? '2px solid var(--gold)' : '2px solid transparent',
@@ -1041,21 +1058,21 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                   border: '1px solid var(--border)', borderRadius: '16px', padding: '24px',
                   textAlign: 'center',
                 }}>
-                  <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: '4px' }}>
+                  <p style={{ ...emptyLyricStyle, marginBottom: '4px' }}>
                     This account is private.
                   </p>
-                  <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
                     Follow {profile.displayName} to see their lyrics.
                   </p>
                 </div>
               ) : contentTab === 'lyrics' ? (
                 ownPosts.length === 0 ? (
                   isOwnProfile ? (
-                    <Link href="/compose" style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic', textDecoration: 'none' }}>
-                      Share your first lyric →
+                    <Link href="/compose" style={{ ...emptyLyricStyle, textDecoration: 'none' }}>
+                      Share your first lyric
                     </Link>
                   ) : (
-                    <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                    <p style={emptyLyricStyle}>
                       Hasn&rsquo;t shared a lyric yet.
                     </p>
                   )
@@ -1077,11 +1094,11 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 )
               ) : contentTab === 'replays' ? (
                 replaysLoading ? (
-                  <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                  <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-muted)' }}>
                     Loading replays…
                   </p>
                 ) : profileReplays.length === 0 ? (
-                  <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                  <p style={emptyLyricStyle}>
                     {isOwnProfile ? 'No replays yet — tap Replay on a lyric in the feed.' : 'No replays yet.'}
                   </p>
                 ) : (
@@ -1091,7 +1108,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                         {item.quoteText ? (
                           <p style={{
                             margin: '0 4px 2px', paddingTop: '10px',
-                            fontFamily: font, fontSize: '0.82rem',
+                            fontFamily: font, fontSize: TYPE.secondary,
                             color: 'var(--text-secondary)', lineHeight: 1.4,
                           }}>
                             {item.quoteText}
@@ -1112,7 +1129,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 )
               ) : contentTab === 'private' ? (
                 privatePosts.length === 0 ? (
-                  <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                  <p style={emptyLyricStyle}>
                     Nothing private yet — use Keep Private when you compose.
                   </p>
                 ) : (
@@ -1132,11 +1149,11 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                   </div>
                 )
               ) : backsLoading ? (
-                <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-muted)' }}>
                   Loading lyric backs…
                 </p>
               ) : lyricBacks.length === 0 ? (
-                <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                <p style={emptyLyricStyle}>
                   {isOwnProfile ? 'No lyric backs yet.' : 'No lyric backs yet.'}
                 </p>
               ) : (

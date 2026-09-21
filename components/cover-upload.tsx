@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 import { ImagePlusIcon } from '@/components/icons'
-import { UI_FONT } from '@/lib/fonts'
+import { TYPE, UI_FONT } from '@/lib/fonts'
 
 const supabase = createClient()
 const font = UI_FONT
@@ -120,7 +120,7 @@ export function CoverUpload({
         </span>
       </button>
       {error && (
-        <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '8px' }}>
+        <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', marginTop: '8px' }}>
           {error}
         </p>
       )}

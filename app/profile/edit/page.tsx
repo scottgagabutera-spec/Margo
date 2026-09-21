@@ -8,7 +8,7 @@ import { CoverUpload } from '@/components/cover-upload'
 import { SignatureSongPicker } from '@/components/signature-song-picker'
 import { SignInLink } from '@/components/signin-link'
 import { LoadingRing } from '@/components/loading-ring'
-import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
+import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { ARTIST_LINK_FIELDS, sanitizeArtistLinks } from '@/lib/artist-links'
 
 const font = UI_FONT
@@ -18,16 +18,16 @@ const inputStyle: React.CSSProperties = {
   width: '100%', height: '44px', padding: '0 14px',
   background: 'var(--gold-faint)', border: '1px solid var(--border)',
   borderRadius: '12px', color: 'var(--text)', fontFamily: font,
-  fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box',
+  fontSize: TYPE.body, outline: 'none', boxSizing: 'border-box',
 }
 
 const labelStyle: React.CSSProperties = {
-  display: 'block', fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)',
-  textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '8px', fontWeight: 700,
+  display: 'block', fontFamily: font, fontSize: TYPE.label, color: 'var(--text-muted)',
+  textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: '8px', fontWeight: 700,
 }
 
 const helpStyle: React.CSSProperties = {
-  fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '6px',
+  fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', marginTop: '6px',
 }
 
 export default function EditProfilePage() {
@@ -127,7 +127,6 @@ export default function EditProfilePage() {
     }
 
     if (tasks.length === 0) {
-      setSaving(false)
       router.push(`/profile/${destinationUsername}`)
       return
     }
@@ -154,6 +153,7 @@ export default function EditProfilePage() {
           <p style={{
             fontFamily: lyricFont,
             fontStyle: 'italic',
+            fontSize: TYPE.lyric,
             color: 'var(--text-secondary)',
             marginBottom: '16px',
           }}>
@@ -167,7 +167,7 @@ export default function EditProfilePage() {
               borderRadius: '50px',
               color: 'var(--text-secondary)',
               fontFamily: font,
-              fontSize: '0.6rem',
+              fontSize: TYPE.label,
               letterSpacing: '1px',
               textTransform: 'uppercase',
               textDecoration: 'none',
@@ -199,8 +199,8 @@ export default function EditProfilePage() {
       <div style={{ paddingTop: 'calc(var(--nav-height, 72px) + 24px)', paddingBottom: 'var(--margo-page-padding-bottom)', paddingLeft: '24px', paddingRight: '24px' }}>
         <div style={{ maxWidth: '560px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-            <h1 style={{ fontFamily: font, fontSize: '1.5rem', fontWeight: 600, color: 'var(--gold)', marginBottom: '8px' }}>Edit Profile</h1>
-            <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>How you show up on Margo</p>
+            <h1 style={{ fontFamily: font, fontSize: TYPE.pageTitle, fontWeight: 600, color: 'var(--gold)', marginBottom: '8px' }}>Edit Profile</h1>
+            <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>How you show up on Margo</p>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
@@ -216,7 +216,7 @@ export default function EditProfilePage() {
             </div>
 
             <div>
-              <label style={labelStyle}>Cover photo</label>
+              <label style={labelStyle}>Cover</label>
               <CoverUpload
                 currentCoverUrl={identity.coverUrl ?? null}
                 onUploaded={(url) => syncCoverUrl(url)}
@@ -237,7 +237,7 @@ export default function EditProfilePage() {
             <div>
               <label style={labelStyle}>Username</label>
               <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontFamily: font, color: 'var(--text-secondary)', fontSize: '1rem' }}>@</span>
+                <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontFamily: font, color: 'var(--text-secondary)', fontSize: TYPE.body }}>@</span>
                 <input
                   type="text"
                   value={username}
@@ -293,7 +293,7 @@ export default function EditProfilePage() {
             <div style={{ background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '16px', padding: '20px' }}>
               <label style={{ ...labelStyle, marginBottom: '8px' }}>Signature lyric</label>
               <p style={{ ...helpStyle, marginTop: 0, marginBottom: '16px' }}>
-                The line that says it about you.
+                The line that says it about you. Attach a song from Margo so it can play on your profile.
               </p>
               <textarea
                 value={lyric}
@@ -302,7 +302,7 @@ export default function EditProfilePage() {
                 placeholder="The lyric that says it best..."
                 style={{
                   width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none',
-                  fontFamily: lyricFont, fontStyle: 'italic', fontSize: '1.1rem', color: 'var(--gold)',
+                  fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--gold)',
                   lineHeight: 1.5, marginBottom: '16px', boxSizing: 'border-box',
                 }}
               />
@@ -317,15 +317,18 @@ export default function EditProfilePage() {
                 }}
               />
               {!catalogSongId && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
-                  <input
-                    type="text" value={song} onChange={e => { setSong(e.target.value); setCatalogSongId(null) }} placeholder="Song"
-                    style={{ ...inputStyle, background: 'var(--surface)', height: '44px' }}
-                  />
-                  <input
-                    type="text" value={artist} onChange={e => { setArtist(e.target.value); setCatalogSongId(null) }} placeholder="Artist"
-                    style={{ ...inputStyle, background: 'var(--surface)', height: '44px' }}
-                  />
+                <div style={{ marginTop: '16px' }}>
+                  <p style={{ ...labelStyle, color: 'var(--text-secondary)' }}>Not on Margo yet</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <input
+                      type="text" value={song} onChange={e => { setSong(e.target.value); setCatalogSongId(null) }} placeholder="Song"
+                      style={{ ...inputStyle, background: 'var(--surface)', height: '44px' }}
+                    />
+                    <input
+                      type="text" value={artist} onChange={e => { setArtist(e.target.value); setCatalogSongId(null) }} placeholder="Artist"
+                      style={{ ...inputStyle, background: 'var(--surface)', height: '44px' }}
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -335,8 +338,8 @@ export default function EditProfilePage() {
               background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '18px 20px',
             }}>
               <div>
-                <p style={{ fontFamily: font, fontSize: '0.95rem', color: 'var(--text)', marginBottom: '4px' }}>Private profile</p>
-                <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Only approved followers can see your lyrics.</p>
+                <p style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text)', marginBottom: '4px' }}>Private profile</p>
+                <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>Only approved followers can see your lyrics.</p>
               </div>
               <button
                 type="button"
@@ -364,7 +367,7 @@ export default function EditProfilePage() {
             </div>
 
             {error && (
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', textAlign: 'center' }}>{error}</p>
+              <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', textAlign: 'center' }}>{error}</p>
             )}
 
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '8px' }}>
@@ -374,7 +377,7 @@ export default function EditProfilePage() {
                   minHeight: 'var(--margo-touch-min)', padding: '0 24px',
                   display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
                   background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border-hi)',
-                  borderRadius: '50px', fontFamily: font, fontWeight: 600, fontSize: '0.6rem',
+                  borderRadius: '50px', fontFamily: font, fontWeight: 600, fontSize: TYPE.label,
                   letterSpacing: '1.2px', textTransform: 'uppercase', cursor: 'pointer',
                 }}
               >Cancel</button>
@@ -385,7 +388,7 @@ export default function EditProfilePage() {
                   minHeight: 'var(--margo-touch-min)', padding: '0 32px',
                   display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
                   background: 'var(--gold)', color: 'var(--bg)', border: 'none',
-                  borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: '0.6rem',
+                  borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: TYPE.label,
                   letterSpacing: '1.2px', textTransform: 'uppercase', cursor: saving ? 'not-allowed' : 'pointer',
                   boxShadow: '0 6px 28px var(--gold-glow)', opacity: saving ? 0.7 : 1,
                   transition: 'opacity 150ms ease',
@@ -414,7 +417,7 @@ export default function EditProfilePage() {
           <LoadingRing size={44} strokeWidth={2} state="spinning" />
           <p style={{
             fontFamily: font,
-            fontSize: '0.6rem',
+            fontSize: TYPE.label,
             fontWeight: 700,
             letterSpacing: '1.5px',
             textTransform: 'uppercase',

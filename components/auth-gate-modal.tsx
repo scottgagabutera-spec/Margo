@@ -1,9 +1,11 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { AuthForm } from '@/components/auth-form'
+import { CloseIcon } from '@/components/icons'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+import { TYPE, UI_FONT } from '@/lib/fonts'
 
-const font = 'var(--font-lora), serif'
+const font = UI_FONT
 
 interface AuthGateModalProps {
   open: boolean
@@ -59,9 +61,7 @@ export function AuthGateModal({ open, onOpenChange, externalError }: AuthGateMod
             transform: 'translate(6px, -6px)',
           }}
         >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M1 1L13 13M13 1L1 13" stroke="var(--text-secondary)" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
+          <CloseIcon size={14} color="var(--text-secondary)" />
         </button>
 
         <AuthForm
@@ -79,7 +79,7 @@ export function AuthGateModal({ open, onOpenChange, externalError }: AuthGateMod
             display: 'block', width: '100%', textAlign: 'center',
             marginTop: '20px', padding: '8px', minHeight: '44px',
             background: 'none', border: 'none', cursor: 'pointer',
-            fontFamily: font, fontSize: '0.78rem', color: 'var(--text-secondary)',
+            fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)',
           }}
         >
           Maybe later

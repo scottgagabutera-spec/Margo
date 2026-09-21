@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { MargoSheet } from '@/components/margo-sheet'
+import { MusicNoteIcon } from '@/components/icons'
 import { StoryAvatarRing } from '@/components/stories/story-avatar-ring'
 import { useStoryRingContext } from '@/components/stories/story-ring-context'
-import { UI_FONT } from '@/lib/fonts'
+import { TYPE, UI_FONT } from '@/lib/fonts'
 import type { StoryRingAuthor } from '@/lib/stories/types'
 
 const font = UI_FONT
@@ -101,7 +102,7 @@ export function StoriesDock({ onAddStory }: { onAddStory?: () => void }) {
           <div style={{ padding: '12px 0 8px' }}>
             <p style={{
               fontFamily: font,
-              fontSize: '0.95rem',
+              fontSize: TYPE.body,
               fontStyle: 'italic',
               color: 'var(--text-secondary)',
               margin: '0 0 16px',
@@ -123,7 +124,7 @@ export function StoriesDock({ onAddStory }: { onAddStory?: () => void }) {
                   background: 'var(--gold-faint)',
                   color: 'var(--gold)',
                   fontFamily: font,
-                  fontSize: '0.6rem',
+                  fontSize: TYPE.label,
                   fontWeight: 700,
                   letterSpacing: '1.2px',
                   textTransform: 'uppercase',
@@ -191,17 +192,14 @@ function StoryPickerRow({
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
           ) : (
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
-              <circle cx="10" cy="7" r="3" stroke="var(--gold)" strokeWidth="1.5" />
-              <path d="M4 17c0-3 2.7-5 6-5s6 2 6 5" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
+            <MusicNoteIcon size={18} color="var(--gold)" />
           )}
         </StoryAvatarRing>
         <span style={{ minWidth: 0, flex: 1 }}>
           <span style={{
             display: 'block',
             fontFamily: font,
-            fontSize: '0.95rem',
+            fontSize: TYPE.song,
             fontWeight: 600,
             color: 'var(--text)',
             overflow: 'hidden',
@@ -213,7 +211,7 @@ function StoryPickerRow({
           <span style={{
             display: 'block',
             fontFamily: font,
-            fontSize: '0.7rem',
+            fontSize: TYPE.meta,
             color: author.hasUnseen ? 'var(--gold)' : 'var(--text-secondary)',
           }}>
             {author.hasUnseen ? 'New' : author.isSelf ? 'Your Story' : `@${author.username}`}
