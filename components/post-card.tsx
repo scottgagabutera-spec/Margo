@@ -34,6 +34,7 @@ import { persistActivePrimaryScroll } from '@/components/primary-tab-shell'
 import { useDismissibleLayer } from '@/hooks/useDismissibleLayer'
 import { UsernameTag } from '@/components/username-tag'
 import { PendingNavLink } from '@/components/pending-nav-link'
+import { useStoryRingContext } from '@/components/stories/story-ring-context'
 import { RelativeTime } from '@/components/relative-time'
 import { useAuthorProfile } from '@/hooks/useAuthorProfile'
 import { createClient } from '@/lib/supabase/client'
@@ -526,6 +527,7 @@ export function PostCard({
   const router = useRouter()
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
+  const storyRing = useStoryRingContext()
   const authorProfile = useAuthorProfile(post.authorUid || null)
   const viewedRef = useRef(false)
   const emotion = normalizeEmotion(post.emotion || '').toLowerCase()
@@ -730,6 +732,11 @@ export function PostCard({
         {(() => {
           const profileUsername = (authorProfile?.username || post.username || '').replace(/^@/, '')
           const profileHref = profileUsername ? `/profile/${profileUsername}` : null
+          const authorProfileId = post.authorUid || null
+          const storyAuthor = authorProfileId && storyRing?.hasActiveStory(authorProfileId)
+            ? storyRing.getStoryAuthor(authorProfileId)
+            : null
+          const displayLabel = storyAuthor?.displayName || authorProfile?.displayName || post.username || 'profile'
           const timeNode = post.timestamp != null ? (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ color: 'var(--text-muted)', fontSize: isCompact ? '0.58rem' : '0.6rem' }} aria-hidden>·</span>
@@ -746,7 +753,7 @@ export function PostCard({
               />
             </span>
           ) : null
-          const avatar = (
+          const avatarCore = (
             <div style={{
               width: avatarPx, height: avatarPx, borderRadius: '50%', flexShrink: 0,
               background: avatarUrl
@@ -772,40 +779,122 @@ export function PostCard({
               )}
             </div>
           )
-          const identityInner = (
-            <>
-              {avatar}
-              <div style={{ minWidth: 0 }}>
-                <UsernameTag
-                  authorUid={post.authorUid || null}
-                  fallbackName={post.username}
-                  linkProfile={false}
-                  layout="stacked"
-                  size={isCompact ? 'compact' : 'default'}
-                  metaAfterHandle={timeNode}
-                />
-              </div>
-            </>
-          )
-          return profileHref ? (
+          const avatarWithStoryRing = storyAuthor ? (
+            <span style={{
+              borderRadius: '50%',
+              padding: '2px',
+              flexShrink: 0,
+              background: storyAuthor.hasUnseen
+                ? 'linear-gradient(135deg, var(--gold), rgba(232,197,71,0.45))'
+                : 'var(--border-hi)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <span style={{
+                borderRadius: '50%',
+                overflow: 'hidden',
+                border: '2px solid var(--bg)',
+                display: 'flex',
+              }}>
+                {avatarCore}
+              </span>
+            </span>
+          ) : avatarCore
+          const avatarControl = storyAuthor && storyRing && authorProfileId ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                storyRing.openStory(authorProfileId)
+              }}
+              aria-label={
+                storyAuthor.hasUnseen
+                  ? `View ${displayLabel}'s new Story`
+                  : `View ${displayLabel}'s Story`
+              }
+              style={{
+                border: 'none',
+                background: 'none',
+                padding: 0,
+                margin: 0,
+                cursor: 'pointer',
+                flexShrink: 0,
+                WebkitTapHighlightColor: 'transparent',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: 'var(--margo-touch-min)',
+                minHeight: 'var(--margo-touch-min)',
+              }}
+            >
+              {avatarWithStoryRing}
+            </button>
+          ) : profileHref ? (
             <PendingNavLink
               href={profileHref}
               indicator="tint"
               onClick={(e) => e.stopPropagation()}
               aria-label={`View profile @${profileUsername}`}
               style={{
-                display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1,
-                textDecoration: 'none', color: 'inherit',
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: 'var(--margo-touch-min)',
                 minHeight: 'var(--margo-touch-min)',
                 WebkitTapHighlightColor: 'transparent',
-                borderRadius: '8px',
+                borderRadius: '50%',
               }}
             >
-              {identityInner}
+              {avatarCore}
             </PendingNavLink>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
-              {identityInner}
+            avatarCore
+          )
+          const nameBlock = (
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <UsernameTag
+                authorUid={post.authorUid || null}
+                fallbackName={post.username}
+                linkProfile={false}
+                layout="stacked"
+                size={isCompact ? 'compact' : 'default'}
+                metaAfterHandle={timeNode}
+              />
+            </div>
+          )
+          return (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              minWidth: 0,
+              flex: 1,
+              minHeight: 'var(--margo-touch-min)',
+            }}>
+              {avatarControl}
+              {profileHref ? (
+                <PendingNavLink
+                  href={profileHref}
+                  indicator="tint"
+                  onClick={(e) => e.stopPropagation()}
+                  aria-label={`View profile @${profileUsername}`}
+                  style={{
+                    minWidth: 0,
+                    flex: 1,
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    WebkitTapHighlightColor: 'transparent',
+                    borderRadius: '8px',
+                    display: 'block',
+                  }}
+                >
+                  {nameBlock}
+                </PendingNavLink>
+              ) : (
+                nameBlock
+              )}
             </div>
           )
         })()}

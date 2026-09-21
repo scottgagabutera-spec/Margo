@@ -1,15 +1,13 @@
 'use client'
 
-import { useCallback, useState, type CSSProperties } from 'react'
-import { useStoryRing } from '@/hooks/useStoryRing'
-import { StoryViewer } from '@/components/stories/story-viewer'
+import type { CSSProperties } from 'react'
+import { useStoryRingContext } from '@/components/stories/story-ring-context'
 import { UI_FONT } from '@/lib/fonts'
 import type { StoryRingAuthor } from '@/lib/stories/types'
 
 const font = UI_FONT
 
 interface StoryRingProps {
-  enabled?: boolean
   onAddStory?: () => void
 }
 
@@ -152,20 +150,10 @@ function AddStoryChip({ onClick }: { onClick: () => void }) {
   )
 }
 
-export function StoryRing({ enabled = true, onAddStory }: StoryRingProps) {
-  const { authors, loading, signedIn, reload } = useStoryRing({ enabled })
-  const [viewerAuthorId, setViewerAuthorId] = useState<string | null>(null)
-
-  const openViewer = useCallback((authorId: string) => {
-    setViewerAuthorId(authorId)
-  }, [])
-
-  const closeViewer = useCallback(() => {
-    setViewerAuthorId(null)
-    void reload()
-  }, [reload])
-
-  if (!signedIn) return null
+export function StoryRing({ onAddStory }: StoryRingProps) {
+  const ctx = useStoryRingContext()
+  if (!ctx?.signedIn) return null
+  const { authors, loading, openStory } = ctx
   if (!loading && authors.length === 0 && !onAddStory) return null
 
   const scrollerStyle: CSSProperties = {
@@ -178,27 +166,18 @@ export function StoryRing({ enabled = true, onAddStory }: StoryRingProps) {
   }
 
   return (
-    <>
-      <div style={scrollerStyle} className="margo-story-ring">
-        {onAddStory && <AddStoryChip onClick={onAddStory} />}
-        {authors.map((author) => (
-          <StoryAvatar
-            key={author.profileId}
-            author={author}
-            onClick={() => openViewer(author.profileId)}
-          />
-        ))}
-        <style>{`
-          .margo-story-ring::-webkit-scrollbar { display: none; }
-        `}</style>
-      </div>
-
-      {viewerAuthorId && (
-        <StoryViewer
-          authorProfileId={viewerAuthorId}
-          onClose={closeViewer}
+    <div style={scrollerStyle} className="margo-story-ring">
+      {onAddStory && <AddStoryChip onClick={onAddStory} />}
+      {authors.map((author) => (
+        <StoryAvatar
+          key={author.profileId}
+          author={author}
+          onClick={() => openStory(author.profileId)}
         />
-      )}
-    </>
+      ))}
+      <style>{`
+        .margo-story-ring::-webkit-scrollbar { display: none; }
+      `}</style>
+    </div>
   )
 }
