@@ -46,16 +46,14 @@ function isExcludedTarget(target: EventTarget | null): boolean {
 /** Ordered swipe chain — Compose and /signin are never included. Notifications live in Hub. */
 export function buildTabSwipeChain(ownProfileHref: string | null): string[] {
   const tabs = ['/feed', '/discover']
-  if (ownProfileHref) tabs.push(ownProfileHref)
+  if (ownProfileHref) tabs.push('/you')
   return tabs
 }
 
 /** Active only on exact allowlisted paths (not /discover/songs, not /signin). */
 export function isTabSwipePath(pathname: string | null, ownProfileHref: string | null): boolean {
-  if (!pathname) return false
-  if (pathname === '/feed' || pathname === '/discover') return true
-  if (ownProfileHref && pathname === ownProfileHref) return true
-  return false
+  const id = resolvePrimaryTabId(pathname, ownProfileHref)
+  return id === 'feed' || id === 'discover' || id === 'you'
 }
 
 function hrefToTabId(href: string, ownProfileHref: string | null): PrimaryTabId | null {

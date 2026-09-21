@@ -436,6 +436,10 @@ export function warmPrimaryTab(href: string): void {
     void warmFeedPosts()
     return
   }
+  if (href === '/you') {
+    void warmFeedPosts()
+    return
+  }
   const profileMatch = href.match(/^\/profile\/([^/?#]+)$/)
   if (profileMatch) {
     void warmProfile(decodeURIComponent(profileMatch[1]))

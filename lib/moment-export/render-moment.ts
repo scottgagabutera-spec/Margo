@@ -1,4 +1,4 @@
-import type { AtmosphereId } from '@/lib/atmosphere'
+import { parseAtmosphere, type AtmosphereId } from '@/lib/atmosphere'
 import type { PostLine } from '@/lib/post-lines'
 import {
   composeMoment,
@@ -13,6 +13,8 @@ import {
 } from '@/lib/moment-export/layout'
 import { renderStageCardFrame } from '@/lib/moment-export/render-stage-card-frame'
 import { loadMomentArtwork } from '@/lib/moment-export/video/load-artwork'
+import { drawExportAtmosphere } from '@/lib/moment-export/draw-export-atmosphere'
+import { resolveExportPaintTheme } from '@/lib/moment/stage-theme'
 
 export { STAGE_CARD_EXPORT_WIDTH }
 
@@ -590,68 +592,69 @@ export async function drawMomentPoster(
   ctx.globalAlpha = 1
 }
 
-/* ─── Draw dual-card — chat bubble layout ─────────────────────
- * Lyric Back's reply card. Composition/colors intentionally untouched
- * in this pass — only the logo draw call was updated to the corrected
- * Symbol-only, canonical-color implementation (same bug, same fix). */
+/* ─── Draw dual-card — Lyric Back conversation ─────────────────
+ * Same paint rules as Stage / poster cards: resolveExportPaintTheme
+ * (Color on Still, dark room when a living Effect is on), quiet
+ * bottom-left Margo Symbol, Geist meta + Lora lyric, contrast-safe
+ * bubbles. Live preview and PNG share this function. */
 export async function drawDualCard(
   ctx: CanvasRenderingContext2D,
   W: number, H: number,
   parentLyric: string, parentSong: string, parentArtist: string,
   replyLyric: string, replySong: string, replyArtist: string,
-  theme: ExportTheme,
+  options?: {
+    themeId?: string | null
+    exportAtmosphereId?: AtmosphereId | null
+    atmosphereTimeSec?: number
+  },
 ) {
   await waitForFonts()
+  const geist = resolveGeistFontFamily()
+  const paint = resolveExportPaintTheme(options?.themeId, options?.exportAtmosphereId)
+  const light = paint.markVariant === 'on-light'
+  const atmosphereId = parseAtmosphere(options?.exportAtmosphereId ?? null)
 
-  const themeColor = theme.accent
-  const themeBg = theme.bg
-  const isLight = theme.light
-
-  // Background
-  const bgGrad = ctx.createRadialGradient(W * 0.5, H * 0.4, 0, W * 0.5, H * 0.4, W * 0.9)
-  bgGrad.addColorStop(0, isLight ? '#f5f1e8' : '#16131F')
-  bgGrad.addColorStop(1, themeBg)
-  ctx.fillStyle = bgGrad
+  ctx.fillStyle = paint.bg
   ctx.fillRect(0, 0, W, H)
 
-  // Vignette
-  const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.2, W / 2, H / 2, H * 0.9)
-  vig.addColorStop(0, 'rgba(0,0,0,0)')
-  vig.addColorStop(1, 'rgba(0,0,0,0.28)')
-  ctx.fillStyle = vig
-  ctx.fillRect(0, 0, W, H)
-
-  // Margo Symbol — top left, Symbol only (no wordmark), background-aware
-  const logoBase = Math.min(W, H)
-  const markSize = Math.round(logoBase * 0.028)
-  const logoPad = Math.round(logoBase * 0.052)
-  ctx.globalAlpha = 0.28
-  drawMargoSymbol(ctx, logoPad, logoPad, markSize, isLight ? 'on-light' : 'on-dark')
-  ctx.globalAlpha = 1
-
-  // Layout
-  const topPad    = logoPad + markSize + Math.round(logoBase * 0.05)
-  const bottomPad = Math.round(H * 0.09)
-  const footerY   = H - bottomPad
-  const hPad      = Math.round(W * 0.07)  // horizontal padding from edges
-  const bubbleW   = Math.round(W * 0.74)  // bubble max width
-  const lFS       = Math.round(logoBase * (H > W ? 0.048 : 0.038))
-  const metaFS    = Math.round(logoBase * 0.019)
-  const lineH     = lFS * 1.42
-  const bubblePadH = Math.round(lFS * 0.7)
-  const bubblePadV = Math.round(lFS * 0.6)
-  const radius     = Math.round(lFS * 0.55)
-  const tailSize   = Math.round(lFS * 0.35)
-
-  // ── Helper: measure bubble height ──
-  function bubbleContentH(lyric: string): number {
-    ctx.font = `italic ${lFS}px Lora, serif`
-    const lines = wrapText(ctx, lyric, bubbleW - bubblePadH * 2)
-    const lyricH = lines.length * lineH
-    return bubblePadV * 2 + lyricH + metaFS * 2.2 + 16
+  if (light) {
+    const highlight = ctx.createLinearGradient(0, 0, 0, H * 0.28)
+    highlight.addColorStop(0, 'rgba(255,255,255,0.22)')
+    highlight.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = highlight
+    ctx.fillRect(0, 0, W, H)
   }
 
-  // ── Helper: draw rounded rect ──
+  drawExportAtmosphere(ctx, W, H, atmosphereId, options?.atmosphereTimeSec ?? 0, 0, 1)
+
+  ctx.strokeStyle = paint.border
+  ctx.lineWidth = 1
+  ctx.strokeRect(0.5, 0.5, W - 1, H - 1)
+
+  const minDim = Math.min(W, H)
+  const markSize = Math.round(minDim * 0.036)
+  const logoPad = Math.round(minDim * 0.052)
+  const bottomBandH = logoPad + markSize + Math.round(minDim * 0.05)
+
+  const topPad = Math.round(minDim * 0.07)
+  const footerY = H - Math.round(bottomBandH * 0.42)
+  const hPad = Math.round(W * 0.07)
+  const bubbleW = Math.round(W * 0.74)
+  const lFS = Math.round(minDim * (H > W ? 0.042 : 0.036))
+  const metaFS = Math.round(minDim * 0.018)
+  const lineH = lFS * 1.42
+  const bubblePadH = Math.round(lFS * 0.7)
+  const bubblePadV = Math.round(lFS * 0.6)
+  const radius = Math.round(lFS * 0.55)
+  const tailSize = Math.round(lFS * 0.35)
+  const textW = bubbleW - bubblePadH * 2
+
+  function bubbleContentH(lyric: string): number {
+    ctx.font = `italic ${lFS}px Lora, serif`
+    const lines = wrapText(ctx, lyric, textW)
+    return bubblePadV * 2 + lines.length * lineH + metaFS * 2.2 + 16
+  }
+
   function roundRect(x: number, y: number, w: number, h: number, r: number) {
     ctx.beginPath()
     ctx.moveTo(x + r, y)
@@ -666,47 +669,36 @@ export async function drawDualCard(
     ctx.closePath()
   }
 
-  // ── Helper: draw bubble ──
   function drawBubble(
     lyric: string, song: string, artist: string,
     y: number, isLeft: boolean,
-    bgCol: string, lyricCol: string, metaCol: string, metaSubCol: string
+    bgCol: string, lyricCol: string, metaCol: string, metaSubCol: string,
+    ruleCol: string,
   ): number {
     const x = isLeft ? hPad : W - hPad - bubbleW
     ctx.font = `italic ${lFS}px Lora, serif`
-    const lines = wrapText(ctx, lyric, bubbleW - bubblePadH * 2)
+    const lines = wrapText(ctx, lyric, textW)
     const lyricBlockH = lines.length * lineH
     const bH = bubblePadV * 2 + lyricBlockH + metaFS * 2.2 + 16
 
-    // Shadow
     ctx.save()
-    ctx.shadowColor = 'rgba(0,0,0,0.25)'
-    ctx.shadowBlur  = 24
+    ctx.shadowColor = light ? 'rgba(7,6,10,0.18)' : 'rgba(0,0,0,0.35)'
+    ctx.shadowBlur = 24
     ctx.shadowOffsetY = 6
-
-    // Bubble background
     ctx.fillStyle = bgCol
     roundRect(x, y, bubbleW, bH, radius)
     ctx.fill()
     ctx.restore()
 
-    // Tail — small triangle at bottom of bubble
     const tailX = isLeft ? x + Math.round(bubbleW * 0.12) : x + bubbleW - Math.round(bubbleW * 0.12)
     ctx.fillStyle = bgCol
     ctx.beginPath()
-    if (isLeft) {
-      ctx.moveTo(tailX - tailSize, y + bH)
-      ctx.lineTo(tailX + tailSize, y + bH)
-      ctx.lineTo(tailX, y + bH + tailSize)
-    } else {
-      ctx.moveTo(tailX - tailSize, y + bH)
-      ctx.lineTo(tailX + tailSize, y + bH)
-      ctx.lineTo(tailX, y + bH + tailSize)
-    }
+    ctx.moveTo(tailX - tailSize, y + bH)
+    ctx.lineTo(tailX + tailSize, y + bH)
+    ctx.lineTo(tailX, y + bH + tailSize)
     ctx.closePath()
     ctx.fill()
 
-    // Lyric text
     ctx.fillStyle = lyricCol
     ctx.font = `italic ${lFS}px Lora, serif`
     ctx.textAlign = 'left'
@@ -717,68 +709,63 @@ export async function drawDualCard(
       ty += lineH
     }
 
-    // Divider rule inside bubble
     const ruleY = y + bubblePadV + lyricBlockH + 10
-    ctx.strokeStyle = isLeft ? 'rgba(0,0,0,0.15)' : `${themeColor}40`
+    ctx.strokeStyle = ruleCol
     ctx.lineWidth = 1
     ctx.beginPath()
     ctx.moveTo(x + bubblePadH, ruleY)
     ctx.lineTo(x + bubbleW - bubblePadH, ruleY)
     ctx.stroke()
 
-    // Song name
     ctx.fillStyle = metaCol
-    ctx.font = `700 ${metaFS}px Lora, serif`
+    ctx.font = `700 ${metaFS}px ${geist}`
     ctx.textAlign = 'left'
     ctx.textBaseline = 'middle'
-    ctx.fillText((song || '').toUpperCase(), x + bubblePadH, ruleY + 14 + metaFS * 0.5)
+    ctx.fillText(truncateToWidth(ctx, (song || '').toUpperCase(), textW), x + bubblePadH, ruleY + 14 + metaFS * 0.5)
 
-    // Artist name
     ctx.fillStyle = metaSubCol
-    ctx.font = `400 ${Math.round(metaFS * 0.85)}px Lora, serif`
-    ctx.fillText(artist || '', x + bubblePadH, ruleY + 14 + metaFS * 1.6)
+    ctx.font = `400 ${Math.round(metaFS * 0.85)}px ${geist}`
+    ctx.fillText(truncateToWidth(ctx, artist || '', textW), x + bubblePadH, ruleY + 14 + metaFS * 1.6)
 
     return bH
   }
 
-  // ── Measure total content height to centre vertically ──
-  const gap = Math.round(H * 0.06)
+  const gap = Math.round(H * 0.05)
   const b1H = bubbleContentH(parentLyric)
   const b2H = bubbleContentH(replyLyric)
   const totalContent = b1H + tailSize + gap + b2H + tailSize
-  const startY = topPad + Math.max(0, (footerY - 24 - topPad - totalContent) / 2)
+  const startY = topPad + Math.max(0, (H - bottomBandH - topPad - totalContent) / 2)
 
-  // Bubble 1 — parent lyric, LEFT aligned, gold bubble dark text
-  const goldBubbleBg   = themeColor
-  const goldLyricCol   = isLight ? '#1a1a1a' : '#07060A'
-  const goldMetaCol    = isLight ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.75)'
-  const goldMetaSubCol = isLight ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.5)'
-  drawBubble(parentLyric, parentSong, parentArtist, startY, true,
-    goldBubbleBg, goldLyricCol, goldMetaCol, goldMetaSubCol)
+  // Original line: solid contrasting fill (never ink-on-ink).
+  // Light card → ink bubble + gold/cream text. Dark/effect room → gold bubble + ink text.
+  const parentBg = light ? paint.ink : MARGO_GOLD
+  const parentLyricCol = light ? paint.bg : MARGO_INK
+  const parentMetaCol = light ? 'rgba(232,197,71,0.82)' : 'rgba(7,6,10,0.72)'
+  const parentMetaSub = light ? 'rgba(232,197,71,0.58)' : 'rgba(7,6,10,0.5)'
+  const parentRule = light ? 'rgba(232,197,71,0.28)' : 'rgba(7,6,10,0.18)'
+  drawBubble(
+    parentLyric, parentSong, parentArtist, startY, true,
+    parentBg, parentLyricCol, parentMetaCol, parentMetaSub, parentRule,
+  )
 
-  // Bubble 2 — reply lyric, RIGHT aligned, dark bubble light text
-  const darkBubbleBg   = isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.07)'
-  const darkLyricCol   = isLight ? '#1a1a1a' : '#F4F1ED'
-  const darkMetaCol    = isLight ? '#1a1a1a' : '#F4F1ED'
-  const darkMetaSubCol = isLight ? 'rgba(0,0,0,0.5)' : '#9A98A4'
+  // Reply: translucent panel on the card so Color/Effect shows through.
+  const replyBg = light ? 'rgba(7,6,10,0.08)' : 'rgba(255,255,255,0.10)'
+  const replyRule = light ? 'rgba(7,6,10,0.16)' : 'rgba(255,255,255,0.16)'
   const b2Y = startY + b1H + tailSize + gap
-  drawBubble(replyLyric, replySong, replyArtist, b2Y, false,
-    darkBubbleBg, darkLyricCol, darkMetaCol, darkMetaSubCol)
+  drawBubble(
+    replyLyric, replySong, replyArtist, b2Y, false,
+    replyBg, paint.ink, paint.ink, paint.inkMuted, replyRule,
+  )
 
-  // Footer
-  ctx.strokeStyle = `${themeColor}18`
-  ctx.lineWidth = 1
-  ctx.beginPath()
-  ctx.moveTo(hPad, footerY - 20)
-  ctx.lineTo(W - hPad, footerY - 20)
-  ctx.stroke()
-
-  const wmFS = Math.round(logoBase * 0.019)
-  ctx.font = `400 ${wmFS}px Lora, serif`
-  ctx.fillStyle = `${themeColor}99`
+  ctx.font = `400 ${Math.round(minDim * 0.018)}px ${geist}`
+  ctx.fillStyle = paint.inkMuted
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText('trymargo.com', W / 2, footerY)
+
+  ctx.globalAlpha = 0.18
+  drawMargoSymbol(ctx, logoPad, H - logoPad - markSize, markSize, paint.markVariant)
+  ctx.globalAlpha = 1
 }
 
 /* ─── Download helper — shared by the combined export and both

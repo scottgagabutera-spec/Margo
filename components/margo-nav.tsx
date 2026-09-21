@@ -65,10 +65,11 @@ const font = 'var(--font-geist-sans), system-ui, sans-serif'
 export function MargoNav() {
   const pathname = usePathname()
   const router = useRouter()
-  const { activeTab, pendingTab, isTabPending, isTabAcked } = usePrimaryTab()
+  const { activeTab, isTabPending, isTabAcked } = usePrimaryTab()
   const feedLink = usePrimaryTabLinkProps('/feed', 'feed')
   const discoverLink = usePrimaryTabLinkProps('/discover', 'discover')
   const composeLink = usePrimaryTabLinkProps('/compose', 'compose')
+  const youLink = usePrimaryTabLinkProps('/you', 'you')
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false)
   const avatarMenuRef = useRef<HTMLDivElement>(null)
   const navElRef = useRef<HTMLElement>(null)
@@ -103,7 +104,7 @@ export function MargoNav() {
     applicationStatus === 'rejected' ? 'Reapply as Artist' :
     'Apply as an Artist'
 
-  const ownProfileHref = identity ? `/profile/${identity.username}` : null
+  const ownProfileHref = identity ? `/you` : null
 
   const handleSignOut = async () => {
     setAvatarMenuOpen(false)
@@ -196,8 +197,6 @@ export function MargoNav() {
                 transition: 'color 80ms var(--ease-out), background 80ms var(--ease-out)',
                 whiteSpace: 'nowrap',
                 WebkitTapHighlightColor: 'transparent',
-                opacity: pendingTab && !acked && !pending && !active ? 0.45 : 1,
-                pointerEvents: pendingTab && !acked && !pending && !active ? 'none' : 'auto',
               }}>
                 {pending ? <LoadingRing size={14} strokeWidth={1.5} state="spinning" /> : null}
                 {label}
@@ -222,8 +221,7 @@ export function MargoNav() {
               display: 'inline-flex', alignItems: 'center', gap: '8px',
               boxSizing: 'border-box',
               transition: 'all 150ms ease', flexShrink: 0, whiteSpace: 'nowrap',
-              opacity: isTabPending('compose') || isTabAcked('compose') ? 0.9 : isOnCompose ? 0.75 : (pendingTab ? 0.45 : 1),
-              pointerEvents: pendingTab && !isTabPending('compose') && !isTabAcked('compose') && !isOnCompose ? 'none' : 'auto',
+              opacity: isTabPending('compose') || isTabAcked('compose') ? 0.9 : isOnCompose ? 0.75 : 1,
               WebkitTapHighlightColor: 'transparent',
             }}>
               {isTabPending('compose') ? <LoadingRing size={14} strokeWidth={1.5} state="spinning" color="var(--bg)" /> : null}
@@ -311,12 +309,17 @@ export function MargoNav() {
                         key={href}
                         href={href}
                         indicator="tint"
+                        {...(href === '/you' ? youLink : {})}
+                        onClick={(event) => {
+                          setAvatarMenuOpen(false)
+                          if (href === '/you') youLink.onClick(event)
+                        }}
                         style={{
                           display: 'flex', alignItems: 'center',
                           minHeight: 'var(--margo-touch-min)',
                           fontFamily: font, fontSize: '0.8rem',
                           textDecoration: 'none',
-                          color: pathname === href ? 'var(--gold)' : 'rgba(255,255,255,0.75)',
+                          color: pathname === href || (href === '/you' && activeTab === 'you') ? 'var(--gold)' : 'rgba(255,255,255,0.75)',
                           padding: '0 12px', borderRadius: '6px',
                           boxSizing: 'border-box',
                           transition: 'background 120ms ease, color 120ms ease',

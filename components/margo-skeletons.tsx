@@ -181,7 +181,12 @@ export function ProfilePageSkeleton() {
       </div>
       <div style={bone({ height: 10, width: '88%', borderRadius: 4, border: 'none', marginBottom: 8 }, 160)} />
       <div style={bone({ height: 10, width: '70%', borderRadius: 4, border: 'none', marginBottom: 28 }, 180)} />
-      <FeedPostSkeletonList count={3} />
+      <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+        {['48%', '28%', '22%'].map((w, i) => (
+          <div key={w} style={bone({ height: 12, width: w, borderRadius: 4, border: 'none' }, 200 + i * 40)} />
+        ))}
+      </div>
+      <div style={bone({ height: 72, width: '100%', borderRadius: 12 }, 280)} />
     </div>
   )
 }

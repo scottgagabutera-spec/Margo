@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import {
@@ -48,6 +47,10 @@ import { PostCardSuggestedReply } from '@/components/post-card-suggested-reply'
 import { SongMeta } from '@/components/song-meta'
 import { AtmosphereLayer } from '@/components/atmosphere-layer'
 import { livingAtmosphereOrNull } from '@/lib/atmosphere'
+import {
+  resolveExternalListenUrl,
+  externalListenAriaLabel,
+} from '@/lib/moment/listen'
 import {
   fallbackSnippetWindow,
   matchLyricWindowFromLines,
@@ -229,6 +232,38 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
   )
 }
 
+const listenControlStyle: React.CSSProperties = {
+  width: 'var(--margo-touch-min)',
+  height: 'var(--margo-touch-min)',
+  borderRadius: '50%',
+  flexShrink: 0,
+  background: 'var(--gold-faint)',
+  border: '1px solid var(--gold-border)',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginTop: '4px',
+  padding: 0,
+  boxSizing: 'border-box',
+  textDecoration: 'none',
+}
+
+function ExternalListenButton({ href, label }: { href: string; label: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      data-no-card-nav
+      aria-label={label}
+      onClick={(e) => e.stopPropagation()}
+      style={listenControlStyle}
+    >
+      <ShareIcon size={14} color="var(--gold)" />
+    </a>
+  )
+}
+
 function PostMomentBody({
   post,
   isCompact,
@@ -238,21 +273,25 @@ function PostMomentBody({
 }) {
   const lines = resolveMomentLines(post)
   const multi = lines.length > 1
-  const externalListenHref = post.youtubeMeta?.youtubeUrl
-    || ((post.knowledge?.song || post.knowledge?.artist)
-      ? `https://music.apple.com/search?term=${encodeURIComponent(`${post.knowledge?.song || ''} ${post.knowledge?.artist || ''}`.trim())}`
-      : null)
-  const externalListenLabel = post.youtubeMeta?.youtubeUrl ? 'Watch on YouTube' : 'Open in Apple Music'
 
   return (
     <div style={{ marginBottom: multi ? '8px' : '12px' }}>
       {lines.map((line, i) => {
-        const hasCatalogAudio = !!(line.songId && line.audioUrl)
+        const hasCatalogAudio =
+          line.source !== 'external' && !!(line.songId && line.audioUrl)
         const hasMeta = !!(line.songTitle || line.artistName)
         const showBesideLyric = isCompact && !!(line.artworkUrl || post.knowledge?.artwork) && !hasCatalogAudio
         const metaArtwork = line.artworkUrl || post.knowledge?.artwork || null
         const metaYoutubeThumb = !metaArtwork ? post.youtubeMeta?.thumbnail : undefined
         const showMetaArtwork = !!(metaArtwork || metaYoutubeThumb) && (hasCatalogAudio || !isCompact)
+        const externalHref = hasCatalogAudio
+          ? null
+          : resolveExternalListenUrl({
+              songTitle: line.songTitle || post.knowledge?.song,
+              artistName: line.artistName || post.knowledge?.artist,
+              youtubeUrl: post.youtubeMeta?.youtubeUrl,
+            })
+        const externalLabel = externalHref ? externalListenAriaLabel(externalHref) : ''
         return (
           <div key={line.id || `line-${line.position}-${i}`}>
             {multi && i > 0 ? (
@@ -293,6 +332,8 @@ function PostMomentBody({
                   snippetEnd={line.snippetEnd}
                   atmosphere={line.atmosphere}
                 />
+              ) : externalHref ? (
+                <ExternalListenButton href={externalHref} label={externalLabel} />
               ) : showBesideLyric ? (
                 <PostThumbnail
                   artwork={line.artworkUrl || post.knowledge?.artwork}
@@ -340,31 +381,6 @@ function PostMomentBody({
                   titleStyle={{ fontSize: '0.82rem' }}
                   artistStyle={{ fontSize: '0.7rem' }}
                 />
-                {!hasCatalogAudio && externalListenHref && i === lines.length - 1 ? (
-                  <Link
-                    href={externalListenHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    data-no-card-nav
-                    aria-label={externalListenLabel}
-                    onClick={(e) => e.stopPropagation()}
-                    style={{
-                      width: 'var(--margo-touch-min)',
-                      height: 'var(--margo-touch-min)',
-                      borderRadius: '50%',
-                      flexShrink: 0,
-                      marginLeft: 'auto',
-                      background: 'rgba(232,197,71,0.08)',
-                      border: '1px solid rgba(232,197,71,0.22)',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      textDecoration: 'none',
-                    }}
-                  >
-                    <ShareIcon size={14} color="var(--gold)" />
-                  </Link>
-                ) : null}
               </div>
             ) : null}
           </div>

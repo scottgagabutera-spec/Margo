@@ -35,6 +35,33 @@ export function appleMusicSearchUrl(song: string, artist: string): string {
   return 'https://music.apple.com/search?term=' + encodeURIComponent(term)
 }
 
+/** Outbound listen URL for a song that is not playable on Margo. */
+export function resolveExternalListenUrl(input: {
+  songTitle?: string | null
+  artistName?: string | null
+  appleMusicUrl?: string | null
+  spotifyUrl?: string | null
+  youtubeUrl?: string | null
+  itunesTrackUrl?: string | null
+}): string | null {
+  const title = (input.songTitle || '').trim()
+  const artist = (input.artistName || '').trim()
+  return (
+    trimUrl(input.appleMusicUrl) ||
+    trimUrl(input.spotifyUrl) ||
+    trimUrl(input.youtubeUrl) ||
+    trimUrl(input.itunesTrackUrl) ||
+    (title || artist ? appleMusicSearchUrl(title, artist) : null)
+  )
+}
+
+export function externalListenAriaLabel(url: string): string {
+  if (url.includes('youtu')) return 'Watch on YouTube'
+  if (url.includes('spotify.com')) return 'Listen on Spotify'
+  if (url.includes('music.apple.com') || url.includes('itunes.apple.com')) return 'Open in Apple Music'
+  return 'Listen on the original platform'
+}
+
 function lineListenContext(line: MargoMomentLine): MomentListenContext {
   return {
     appleMusicUrl: line.appleMusicUrl,
@@ -64,14 +91,14 @@ function resolveExternalUrl(
     ...lineListenContext(line),
   }
 
-  return (
-    trimUrl(merged.appleMusicUrl) ||
-    trimUrl(merged.spotifyUrl) ||
-    trimUrl(merged.youtubeUrlFromSong) ||
-    trimUrl(merged.youtubeUrl) ||
-    trimUrl(merged.itunesTrackUrl) ||
-    appleMusicSearchUrl(line.songTitle, line.artistName)
-  )
+  return resolveExternalListenUrl({
+    songTitle: line.songTitle,
+    artistName: line.artistName,
+    appleMusicUrl: merged.appleMusicUrl,
+    spotifyUrl: merged.spotifyUrl,
+    youtubeUrl: merged.youtubeUrlFromSong || merged.youtubeUrl,
+    itunesTrackUrl: merged.itunesTrackUrl,
+  }) || appleMusicSearchUrl(line.songTitle, line.artistName)
 }
 
 /**

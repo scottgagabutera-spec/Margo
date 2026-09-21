@@ -56,19 +56,20 @@ type FollowStatus = null | 'pending' | 'accepted'
 
 type ProfileContentTab = 'lyrics' | 'replays' | 'backs' | 'private'
 
-export default function ProfilePage() {
+export default function ProfilePage({ username: usernameProp }: { username?: string } = {}) {
   const params = useParams<{ username: string }>()
   const router = useRouter()
   const { user, identity } = useIdentity()
   const { application } = useArtistApplication()
   const { isTabActive } = usePrimaryTab()
+  const username = (usernameProp || (typeof params.username === 'string' ? params.username : '')).trim()
   // Own profile is a keepalive "you" pane — pause posts Realtime while hidden.
   // Other profiles are full navigations (enabled stays true).
   const isOwnKeepaliveProfile =
-    !!identity?.username && params.username === identity.username
+    !!identity?.username && username.toLowerCase() === identity.username.toLowerCase()
   const postsLive = !isOwnKeepaliveProfile || isTabActive('you')
   const { posts } = usePosts({ enabled: postsLive })
-  const cached = typeof params.username === 'string' ? peekProfileCache(params.username) : null
+  const cached = username ? peekProfileCache(username) : null
   const [profile, setProfile] = useState<ProfileData | null>(cached?.profile ?? null)
   const [loading, setLoading] = useState(!cached)
   const [notFound, setNotFound] = useState(false)
@@ -90,8 +91,8 @@ export default function ProfilePage() {
   const [artistStats, setArtistStats] = useState({ totalPlays: 0, totalResonates: 0 })
 
   useEffect(() => {
+    if (!username) return
     let active = true
-    const username = params.username
     const cachedNow = peekProfileCache(username)
     if (cachedNow) {
       setProfile(cachedNow.profile)
@@ -131,8 +132,7 @@ export default function ProfilePage() {
       setLoading(false)
     })
     return () => { active = false }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- do not wipe on identity-only updates
-  }, [params.username])
+  }, [username])
 
   useEffect(() => {
     if (!profile?.isArtist) {

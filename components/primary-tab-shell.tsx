@@ -3,7 +3,6 @@
 import {
   Activity,
   createContext,
-  startTransition,
   useCallback,
   useContext,
   useEffect,
@@ -16,24 +15,27 @@ import {
   type ReactNode,
   type CSSProperties,
 } from 'react'
+import { flushSync } from 'react-dom'
 import { usePathname, useRouter } from 'next/navigation'
 import { usePrimaryTabSwipeGesture } from '@/hooks/usePrimaryTabSwipeGesture'
 import { PrimaryTabPaneSkeleton } from '@/components/margo-skeletons'
 import { warmPrimaryTab } from '@/lib/primary-tab-prefetch'
 
 /**
- * Phase 1 / 1.5 / 2.0 / optimistic tap — primary-tab keepalive + Activity + swipe strip.
+ * Primary-tab keepalive + Activity + swipe strip.
  *
- * Each pane (feed | discover | compose | you) is its own overflow container.
- * Visited panes stay mounted; inactive panes use <Activity mode="hidden">
- * so Effects tear down while React state is preserved.
+ * Paint is owned by the last user/swipe intent (`paintedTab`), not by
+ * `usePathname()`. Next.js can commit older in-flight router.push calls
+ * out of order; those must not change which pane is visible. Pathname is
+ * confirmation (stop the in-flight spinner) and is followed only on
+ * popstate or when leaving the primary-tab surface.
  *
  * Tab taps: if the pane is cached, paint it immediately and router.push in
- * the background. Do not wait for RSC. Uncached destinations show a skeleton
- * until the route commits, then seed the cache (never from a loading fallback).
+ * the background. Uncached destinations show a skeleton until the matching
+ * route commits, then seed the cache (never from a stale fallback).
  *
- * Peek still does not flip isTabActive (Realtime stays off until the painted
- * destination is the active tab, including optimistic).
+ * Peek does not flip isTabActive (Realtime stays off until the painted
+ * destination is the active tab).
  */
 
 export type PrimaryTabId = 'feed' | 'discover' | 'compose' | 'you'
@@ -43,16 +45,29 @@ const SCROLL_STORAGE_KEY = 'margo-primary-tab-scroll'
 const FEED_RESUME_KEY = 'margo-feed-resume'
 const FEED_RESUME_MAX_MS = 12 * 60 * 60 * 1000
 
+function normalizeTabPath(pathname: string | null | undefined): string {
+  if (!pathname) return ''
+  let path = pathname.split('?')[0]
+  try {
+    path = decodeURIComponent(path)
+  } catch {
+    /* keep raw */
+  }
+  if (path.length > 1 && path.endsWith('/')) path = path.slice(0, -1)
+  return path
+}
+
 export function resolvePrimaryTabId(
   pathname: string | null,
   ownProfileHref: string | null
 ): PrimaryTabId | null {
-  if (!pathname) return null
-  const path = pathname.split('?')[0]
+  const path = normalizeTabPath(pathname)
   if (path === '/feed') return 'feed'
   if (path === '/discover') return 'discover'
   if (path === '/compose') return 'compose'
-  if (ownProfileHref && path === ownProfileHref) return 'you'
+  if (path === '/you') return 'you'
+  const own = normalizeTabPath(ownProfileHref)
+  if (own && own !== '/you' && path.toLowerCase() === own.toLowerCase()) return 'you'
   return null
 }
 
@@ -253,6 +268,12 @@ const TAB_ACK_MS = 160
 /** Spinner only if the destination is still in-flight after this delay. */
 const TAB_RING_DELAY_MS = 90
 
+/**
+ * Last pointerdown on any primary-tab link. A delayed click from an earlier
+ * tap must not router.push after a newer tap has already painted.
+ */
+let lastTabPointerSeq = 0
+
 interface PrimaryTabContextValue {
   activeTab: PrimaryTabId | null
   peekTab: PrimaryTabId | null
@@ -266,7 +287,7 @@ interface PrimaryTabContextValue {
   isTabPending: (id: PrimaryTabId) => boolean
   hasCachedTab: (id: PrimaryTabId) => boolean
   acknowledgePrimaryTab: (id: PrimaryTabId) => void
-  navigatePrimaryTab: (href: string, event?: MouseEvent<HTMLAnchorElement>) => boolean
+  navigatePrimaryTab: (href: string, event?: MouseEvent<HTMLAnchorElement>, tabHint?: PrimaryTabId) => boolean
   beginPeek: (id: PrimaryTabId, dir: PrimaryTabPeekDir) => boolean
   setStripOffset: (px: number) => void
   endPeek: () => void
@@ -298,16 +319,35 @@ export function usePrimaryTabLinkProps(href: string, tabId?: PrimaryTabId) {
   const pending = !!tabId && isTabPending(tabId)
   const acked = !!tabId && isTabAcked(tabId)
   const warm = () => warmPrimaryTab(href)
+  const pointerSeqRef = useRef(0)
+  const navigatedSeqRef = useRef(0)
   return {
     onPointerEnter: warm,
     onPointerDown: (event: PointerEvent<HTMLAnchorElement>) => {
       warm()
       if (!tabId) return
       if (event.button !== 0 && event.pointerType === 'mouse') return
+      lastTabPointerSeq += 1
+      pointerSeqRef.current = lastTabPointerSeq
       acknowledgePrimaryTab(tabId)
+      const ok = navigatePrimaryTab(href, undefined, tabId)
+      if (ok) navigatedSeqRef.current = pointerSeqRef.current
     },
     onClick: (e: MouseEvent<HTMLAnchorElement>) => {
-      navigatePrimaryTab(href, e)
+      if (isModifiedClick(e)) return
+      e.preventDefault()
+      if (typeof e.nativeEvent.stopImmediatePropagation === 'function') {
+        e.nativeEvent.stopImmediatePropagation()
+      }
+      // Pointerdown already navigated this tap, or a newer tab tap won.
+      if (
+        pointerSeqRef.current !== 0 &&
+        pointerSeqRef.current <= lastTabPointerSeq &&
+        navigatedSeqRef.current === pointerSeqRef.current
+      ) {
+        return
+      }
+      navigatePrimaryTab(href, e, tabId)
     },
     'aria-busy': pending || acked || undefined,
   }
@@ -319,9 +359,23 @@ interface PrimaryTabShellProps {
   enableSwipeGesture?: boolean
   /** Nav / tab bar — must sit inside this provider for optimistic clicks. */
   chrome?: ReactNode
+  /** Pre-mount the You pane so the first tap is a cache hit, like Feed. */
+  youPane?: ReactNode
 }
 
-const paneStyle = (painted: boolean, isCommittedActive: boolean): CSSProperties => ({
+/** Hub overlay listens for this so it closes in the same turn as a tab paint. */
+export const MARGO_CLOSE_HUB_EVENT = 'margo:close-hub'
+
+function closeHubOverlay() {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new Event(MARGO_CLOSE_HUB_EVENT))
+}
+
+const paneStyle = (
+  painted: boolean,
+  isCommittedActive: boolean,
+  show: boolean,
+): CSSProperties => ({
   position: 'fixed',
   inset: 0,
   overflowY: 'auto',
@@ -330,8 +384,15 @@ const paneStyle = (painted: boolean, isCommittedActive: boolean): CSSProperties 
   overflowAnchor: 'none',
   boxSizing: 'border-box',
   touchAction: 'pan-y',
+  background: 'var(--bg)',
   pointerEvents: isCommittedActive ? 'auto' : 'none',
   zIndex: isCommittedActive ? 2 : painted ? 1 : 0,
+  // Hide the pane element itself. Activity mode="hidden" is not enough:
+  // these nodes are position:fixed, and WebKit can still paint them through
+  // a hidden ancestor. Never unhide every cached pane just because we
+  // entered a primary surface — that is what flashed Feed under You.
+  visibility: show ? 'visible' : 'hidden',
+  opacity: show ? 1 : 0,
 })
 
 export function PrimaryTabShell({
@@ -339,17 +400,25 @@ export function PrimaryTabShell({
   ownProfileHref,
   enableSwipeGesture = false,
   chrome,
+  youPane,
 }: PrimaryTabShellProps) {
   const pathname = usePathname()
   const router = useRouter()
   const routeTab = resolvePrimaryTabId(pathname, ownProfileHref)
-  const [optimisticTab, setOptimisticTab] = useState<PrimaryTabId | null>(null)
+  // Last user/swipe intent. This is the paint source — never fall back to a
+  // stale usePathname() after a later tap. Cleared only on popstate or when
+  // leaving the primary-tab surface (post, settings, sign-in, …).
+  const [paintedTab, setPaintedTab] = useState<PrimaryTabId | null>(null)
+  const [navPending, setNavPending] = useState(false)
   const [ackedTab, setAckedTab] = useState<PrimaryTabId | null>(null)
   const [ringTab, setRingTab] = useState<PrimaryTabId | null>(null)
-  const optimisticTabRef = useRef<PrimaryTabId | null>(null)
+  const paintedTabRef = useRef<PrimaryTabId | null>(null)
+  const intentHrefRef = useRef<string | null>(null)
+  const intentGenRef = useRef(0)
+  const reassertedGenRef = useRef(0)
+  const trustRouteRef = useRef(false)
   const ackClearRef = useRef<number | null>(null)
-  const activeTab = optimisticTab ?? routeTab
-  optimisticTabRef.current = optimisticTab
+  const activeTab = paintedTab ?? routeTab
 
   const cacheRef = useRef(new Map<PrimaryTabId, ReactNode>())
   const paneElsRef = useRef(new Map<PrimaryTabId, HTMLElement | null>())
@@ -362,18 +431,78 @@ export function PrimaryTabShell({
   const [peekTab, setPeekTabState] = useState<PrimaryTabId | null>(null)
 
   activeTabRef.current = activeTab
+  paintedTabRef.current = paintedTab
 
-  // Seed cache only after the App Router has committed this tab, so we never
-  // freeze a loading fallback as the keepalive tree.
-  if (routeTab && !cacheRef.current.has(routeTab)) {
+  // Seed cache only after the App Router has committed the painted tab, so we
+  // never freeze a loading fallback — or children from a stale in-flight route.
+  if (
+    routeTab &&
+    (!paintedTab || paintedTab === routeTab) &&
+    !cacheRef.current.has(routeTab)
+  ) {
     cacheRef.current.set(routeTab, children)
   }
 
-  useLayoutEffect(() => {
-    if (optimisticTab && routeTab === optimisticTab) {
-      setOptimisticTab(null)
+  // Seed You before the first tap so the pane is already in the keepalive
+  // cache — same instant paint as Feed/Discover after they have been visited.
+  if (youPane && ownProfileHref && !cacheRef.current.has('you')) {
+    cacheRef.current.set('you', youPane)
+  }
+
+  useEffect(() => {
+    const onPop = () => {
+      trustRouteRef.current = true
+      intentHrefRef.current = null
+      intentGenRef.current += 1
     }
-  }, [routeTab, optimisticTab])
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  useLayoutEffect(() => {
+    if (trustRouteRef.current) {
+      trustRouteRef.current = false
+      paintedTabRef.current = routeTab
+      intentHrefRef.current = null
+      setPaintedTab(routeTab)
+      setNavPending(false)
+      return
+    }
+
+    if (paintedTab && routeTab === paintedTab) {
+      intentHrefRef.current = null
+      setNavPending(false)
+      return
+    }
+
+    if (paintedTab && routeTab && routeTab !== paintedTab) {
+      // Late commit of an older router.push (Feed → Discover → You, then /feed
+      // resolves). Keep painting the last tap; re-assert the intent once.
+      const intent = intentHrefRef.current
+      if (intent && reassertedGenRef.current !== intentGenRef.current) {
+        reassertedGenRef.current = intentGenRef.current
+        router.replace(intent)
+      }
+      return
+    }
+
+    if (routeTab !== null) return
+    if (!paintedTabRef.current) return
+    const intentPath = normalizeTabPath(intentHrefRef.current)
+    const path = normalizeTabPath(pathname)
+    if (intentPath && path.toLowerCase() === intentPath.toLowerCase()) return
+    if (
+      paintedTabRef.current === 'you' &&
+      path.toLowerCase().startsWith('/profile/')
+    ) {
+      const own = normalizeTabPath(ownProfileHref)
+      if (!own || path.toLowerCase() === own.toLowerCase()) return
+    }
+    paintedTabRef.current = null
+    intentHrefRef.current = null
+    setPaintedTab(null)
+    setNavPending(false)
+  }, [routeTab, paintedTab, pathname, router, ownProfileHref])
 
   const applyStripTransforms = useCallback(() => {
     const w = typeof window !== 'undefined' ? window.innerWidth : 0
@@ -447,31 +576,35 @@ export function PrimaryTabShell({
   }, [])
 
   useEffect(() => {
-    if (!optimisticTab) {
+    if (!navPending || !paintedTab) {
       setRingTab(null)
       return
     }
-    const id = optimisticTab
+    const id = paintedTab
     const t = window.setTimeout(() => {
-      if (optimisticTabRef.current === id) setRingTab(id)
+      if (paintedTabRef.current === id) setRingTab(id)
     }, TAB_RING_DELAY_MS)
     return () => window.clearTimeout(t)
-  }, [optimisticTab])
+  }, [navPending, paintedTab])
 
-  const navigatePrimaryTab = useCallback((href: string, event?: MouseEvent<HTMLAnchorElement>) => {
+  const navigatePrimaryTab = useCallback((href: string, event?: MouseEvent<HTMLAnchorElement>, tabHint?: PrimaryTabId) => {
     if (event && isModifiedClick(event)) return false
-    const path = href.split('?')[0]
-    const id = resolvePrimaryTabId(path, ownProfileHref)
+    const path = normalizeTabPath(href)
+    const id = resolvePrimaryTabId(path, ownProfileHref) ?? tabHint ?? null
     if (!id) return false
     event?.preventDefault()
-    const pending = optimisticTab
-    if (pending && pending !== id) return true
+    closeHubOverlay()
     acknowledgePrimaryTab(id)
     if (id === 'compose' && href.includes('?')) {
       cacheRef.current.delete('compose')
       setCacheVersion(v => v + 1)
     }
-    if (id === activeTabRef.current && routeTab === id && !href.includes('?')) {
+    // Reselect only when this tab is already painted and committed.
+    if (
+      id === routeTab &&
+      !href.includes('?') &&
+      (paintedTabRef.current == null || paintedTabRef.current === id)
+    ) {
       const y = readActiveScrollTop()
       if (y > 24) {
         scrollActiveTo(0, 'smooth')
@@ -481,12 +614,28 @@ export function PrimaryTabShell({
       return true
     }
     endPeek()
-    setOptimisticTab(id)
-    startTransition(() => {
-      router.push(href)
-    })
+    intentGenRef.current += 1
+    let pushHref: string | null = href
+    if (id === 'you') {
+      // Static /you is the tab destination — never wait on /profile/[username].
+      if (path === '/you' || path === '#' || !path) pushHref = '/you'
+      else if (path.startsWith('/profile/')) pushHref = path
+      else pushHref = '/you'
+    }
+    intentHrefRef.current = pushHref ? normalizeTabPath(pushHref) : null
+    paintedTabRef.current = id
+    const paint = () => {
+      setPaintedTab(id)
+      setNavPending(true)
+    }
+    try {
+      flushSync(paint)
+    } catch {
+      paint()
+    }
+    if (pushHref) router.push(pushHref, { scroll: false })
     return true
-  }, [ownProfileHref, routeTab, router, endPeek, optimisticTab, acknowledgePrimaryTab])
+  }, [ownProfileHref, routeTab, router, endPeek, acknowledgePrimaryTab])
 
   useEffect(() => {
     if (!ownProfileHref && cacheRef.current.has('you')) {
@@ -633,7 +782,7 @@ export function PrimaryTabShell({
     () => ({
       activeTab,
       peekTab,
-      pendingTab: optimisticTab,
+      pendingTab: navPending ? paintedTab : null,
       isOnPrimaryTab: activeTab !== null,
       isTabActive: (id: PrimaryTabId) => activeTab === id,
       isTabAcked: (id: PrimaryTabId) => ackedTab === id,
@@ -645,7 +794,7 @@ export function PrimaryTabShell({
       setStripOffset,
       endPeek,
     }),
-    [activeTab, peekTab, optimisticTab, ackedTab, ringTab, hasCachedTab, acknowledgePrimaryTab, navigatePrimaryTab, beginPeek, setStripOffset, endPeek]
+    [activeTab, peekTab, paintedTab, navPending, ackedTab, ringTab, hasCachedTab, acknowledgePrimaryTab, navigatePrimaryTab, beginPeek, setStripOffset, endPeek]
   )
 
   usePrimaryTabSwipeGesture(enableSwipeGesture, ownProfileHref, {
@@ -654,21 +803,36 @@ export function PrimaryTabShell({
     endPeek,
     hasCachedTab,
     prepareTab: (id) => {
-      setOptimisticTab(id)
+      closeHubOverlay()
+      endPeek()
+      intentGenRef.current += 1
+      intentHrefRef.current =
+        id === 'you' ? '/you' : '/' + id
+      paintedTabRef.current = id
+      const paint = () => {
+        setPaintedTab(id)
+        setNavPending(true)
+      }
+      try {
+        flushSync(paint)
+      } catch {
+        paint()
+      }
     },
   })
 
   const cached = [...cacheRef.current.entries()]
   const showSkeleton = !!activeTab && !cacheRef.current.has(activeTab)
-  const onPrimarySurface = routeTab !== null || optimisticTab !== null
+  const onPrimarySurface = routeTab !== null || paintedTab !== null
 
   return (
     <PrimaryTabContext.Provider value={ctx}>
       {chrome}
       {cached.map(([id, node]) => {
         const isCommittedActive = activeTab === id
-        const isPeek = peekTab === id
+        const isPeek = peekTab === id && !navPending
         const painted = isCommittedActive || isPeek
+        const show = painted && onPrimarySurface
         return (
           <Activity key={id} mode={painted ? 'visible' : 'hidden'}>
             <div
@@ -678,11 +842,10 @@ export function PrimaryTabShell({
               data-margo-primary-tab={id}
               data-margo-primary-tab-active={isCommittedActive ? '1' : '0'}
               data-margo-primary-tab-peek={isPeek ? '1' : '0'}
+              data-margo-primary-tab-shown={show ? '1' : '0'}
+              hidden={!show}
               aria-hidden={!isCommittedActive}
-              style={{
-                ...paneStyle(painted, isCommittedActive),
-                visibility: onPrimarySurface ? undefined : 'hidden',
-              }}
+              style={paneStyle(painted, isCommittedActive, show)}
             >
               {node}
             </div>
@@ -693,7 +856,7 @@ export function PrimaryTabShell({
       {showSkeleton && activeTab && (
         <div
           data-margo-primary-tab-skeleton={activeTab}
-          style={paneStyle(true, true)}
+          style={paneStyle(true, true, true)}
         >
           <PrimaryTabPaneSkeleton tab={activeTab} />
         </div>

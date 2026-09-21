@@ -16,7 +16,7 @@ import {
 import { createPortal } from 'react-dom'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useHubSurfaces } from '@/hooks/useHubSurfaces'
-import { readActiveScrollTop } from '@/components/primary-tab-shell'
+import { MARGO_CLOSE_HUB_EVENT, persistActivePrimaryScroll, readActiveScrollTop } from '@/components/primary-tab-shell'
 import { BellIcon, HubGridIcon, LibraryIcon, MessagesIcon, HomeIcon, SearchIcon } from '@/components/icons'
 import { LoadingRing } from '@/components/loading-ring'
 import { PendingNavLink } from '@/components/pending-nav-link'
@@ -25,7 +25,6 @@ import type { HubSurface, HubSurfaceId } from '@/lib/hub/surfaces'
 import { MargoSymbol } from '@/components/margo-symbol'
 import { SignInLink } from '@/components/signin-link'
 import { buildSigninHref, persistAuthReturnScroll } from '@/lib/auth-return'
-import { persistActivePrimaryScroll } from '@/components/primary-tab-shell'
 
 /** UI chrome — MARGO_BRAND §3 Geist Sans */
 const font = UI_FONT
@@ -407,12 +406,23 @@ export function HubProvider({ children }: { children: ReactNode }) {
   }, [pathname])
 
   useEffect(() => {
+    const onPrimaryTab = () => close()
+    window.addEventListener(MARGO_CLOSE_HUB_EVENT, onPrimaryTab)
+    return () => window.removeEventListener(MARGO_CLOSE_HUB_EVENT, onPrimaryTab)
+  }, [close])
+
+  useEffect(() => {
     if (!open) return
     const onPointer = (e: MouseEvent | TouchEvent) => {
       if (pendingHrefRef.current) return
       const target = e.target
       if (!(target instanceof Element)) return
       if (target.closest('[data-margo-hub-root]')) return
+      // Tab-bar / desktop nav taps must not dismiss Hub on touchstart —
+      // that uncovers Feed (or whatever pane was under the sheet) before
+      // optimistic You/Discover paint. PrimaryTabShell closes Hub in the
+      // same click that paints the destination.
+      if (target.closest('.margo-mobile-tabbar, .margo-nav')) return
       close()
     }
     document.addEventListener('mousedown', onPointer)

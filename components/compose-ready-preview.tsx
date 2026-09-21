@@ -1,12 +1,13 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { ChevronRightIcon } from '@/components/icons'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { playOrToggleSnippet } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
 import { useSongAtmosphere } from '@/hooks/useSongAtmosphere'
 import { livingAtmosphereOrNull } from '@/lib/atmosphere'
+import { UI_FONT } from '@/lib/fonts'
 import {
   MOMENT_VIBE_PICKER_OPTIONS,
   resolveMargoMomentFromComposeDrafts,
@@ -26,29 +27,44 @@ export type ComposeReadyLineDraft = {
   externalListenUrl: string | null
 }
 
+export type ComposeReadyReplyTo = {
+  drafts: ComposeReadyLineDraft[]
+  vibeLabel?: string | null
+  byline?: ReactNode
+}
+
 type Props = {
   drafts: ComposeReadyLineDraft[]
   vibeLabel: string | null
   suggestedVibeLabel?: string | null
   emotionLoading?: boolean
   onVibeSelect?: (label: string) => void
+  /** Parent Moment — Lyric Back conversation (main, then reply). */
+  inReplyTo?: ComposeReadyReplyTo | null
 }
 
-export function ComposeReadyPreview({
+function validDraftsOf(drafts: ComposeReadyLineDraft[]) {
+  return drafts.filter((d) => d.lyric.trim() && d.songName.trim() && d.artistName.trim())
+}
+
+function ReadyStageCard({
   drafts,
   vibeLabel,
   suggestedVibeLabel,
   emotionLoading = false,
   onVibeSelect,
-}: Props) {
+}: {
+  drafts: ComposeReadyLineDraft[]
+  vibeLabel: string | null
+  suggestedVibeLabel?: string | null
+  emotionLoading?: boolean
+  onVibeSelect?: (label: string) => void
+}) {
   const [lineIndex, setLineIndex] = useState(0)
 
-  const validDrafts = useMemo(
-    () => drafts.filter((d) => d.lyric.trim() && d.songName.trim() && d.artistName.trim()),
-    [drafts],
-  )
+  const validDrafts = useMemo(() => validDraftsOf(drafts), [drafts])
   const isMulti = validDrafts.length > 1
-  const previewIndex = isMulti ? lineIndex : 0
+  const previewIndex = isMulti ? lineIndex % validDrafts.length : 0
   const draft = validDrafts[previewIndex]
   const songAtmosphere = useSongAtmosphere(draft?.linkedSongId)
 
@@ -67,7 +83,10 @@ export function ComposeReadyPreview({
         source: draft.source,
       }],
     )
-    return resolveMomentListen(moment)
+    return resolveMomentListen(moment, {
+      itunesTrackUrl: draft.externalListenUrl,
+      youtubeUrl: draft.externalListenUrl,
+    })
   }, [draft])
 
   const canPlayInline = listen?.canPlayInline ?? false
@@ -108,7 +127,7 @@ export function ComposeReadyPreview({
             </span>
           </button>
           <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.62rem', color: 'var(--text-muted)' }}>
-            Line {lineIndex + 1} of {validDrafts.length}
+            Line {previewIndex + 1} of {validDrafts.length}
           </span>
           <button
             type="button"
@@ -127,7 +146,7 @@ export function ComposeReadyPreview({
         artwork={draft.artwork}
         vibeLabel={emotionLoading && !vibeLabel ? 'Finding…' : vibeLabel}
         suggestedVibeLabel={suggestedVibeLabel}
-        vibeOptions={MOMENT_VIBE_PICKER_OPTIONS}
+        vibeOptions={onVibeSelect ? MOMENT_VIBE_PICKER_OPTIONS : []}
         onVibeSelect={onVibeSelect}
         atmosphereId={songAtmosphere}
         canPlay={canPlayInline}
@@ -140,13 +159,68 @@ export function ComposeReadyPreview({
   )
 }
 
+export function ComposeReadyPreview({
+  drafts,
+  vibeLabel,
+  suggestedVibeLabel,
+  emotionLoading = false,
+  onVibeSelect,
+  inReplyTo,
+}: Props) {
+  const parentDrafts = inReplyTo ? validDraftsOf(inReplyTo.drafts) : []
+  const showConversation = parentDrafts.length > 0
+
+  return (
+    <div>
+      {showConversation ? (
+        <div>
+          {inReplyTo?.byline ? (
+            <div style={{ marginBottom: '10px' }}>{inReplyTo.byline}</div>
+          ) : null}
+          <ReadyStageCard
+            drafts={parentDrafts}
+            vibeLabel={inReplyTo?.vibeLabel ?? null}
+          />
+          <div
+            aria-hidden
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              margin: '16px 0',
+            }}
+          >
+            <span style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+            <span style={{
+              fontFamily: UI_FONT,
+              fontSize: '0.56rem',
+              fontWeight: 700,
+              letterSpacing: '1.5px',
+              textTransform: 'uppercase',
+              color: 'var(--gold)',
+            }}>Lyric Back</span>
+            <span style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+          </div>
+        </div>
+      ) : null}
+      <ReadyStageCard
+        drafts={drafts}
+        vibeLabel={vibeLabel}
+        suggestedVibeLabel={suggestedVibeLabel}
+        emotionLoading={emotionLoading}
+        onVibeSelect={onVibeSelect}
+      />
+    </div>
+  )
+}
+
 const navBtnStyle: React.CSSProperties = {
   width: '32px',
   height: '32px',
   borderRadius: '50%',
   flexShrink: 0,
-  background: 'rgba(255,255,255,0.05)',
-  border: '1px solid rgba(255,255,255,0.1)',
+  background: 'var(--surface-2)',
+  border: '1px solid var(--border)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',

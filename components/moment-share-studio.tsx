@@ -7,7 +7,7 @@ import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { playSnippet } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
 import { useSongAtmosphere } from '@/hooks/useSongAtmosphere'
-import { livingAtmosphereOrNull } from '@/lib/atmosphere'
+import { isLivingAtmosphere, livingAtmosphereOrNull } from '@/lib/atmosphere'
 import { MomentExportCustomizeBar } from '@/components/moment-export-customize-bar'
 import { MomentVibeRow } from '@/components/moment-vibe-row'
 import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
@@ -18,7 +18,7 @@ import { recordCardExport } from '@/lib/engagement/card-exports'
 import {
   drawDualCard,
   normalizeLine,
-  THEMES,
+  SHAPES,
   type MomentLineInput,
   type NormalizedLine,
 } from '@/lib/moment-export/render-moment'
@@ -128,7 +128,6 @@ export function MomentShareStudio({
   const videoAbortRef = useRef<AbortController | null>(null)
 
   const isDualCard = !!(parentLyric && parentSong && parentArtist)
-  const activeTheme = THEMES[0]
   const resolvedPostId = momentProp?.postId ?? postId
 
   const lineSource = momentProp
@@ -281,8 +280,9 @@ export function MomentShareStudio({
   const renderDualCanvas = useCallback(async () => {
     const canvas = canvasRef.current
     if (!canvas || !isDualCard) return
-    const w = 1080
-    const h = 1080
+    const shape = SHAPES.find((s) => s.id === shapeId) || SHAPES[0]
+    const w = shape.w
+    const h = shape.h
     const SCALE = 2
     canvas.width = w * SCALE
     canvas.height = h * SCALE
@@ -294,9 +294,18 @@ export function MomentShareStudio({
       ctx, w, h,
       parentLyric!, parentSong!, parentArtist!,
       lyric, song, artist,
-      activeTheme,
+      {
+        themeId: cardThemeId,
+        exportAtmosphereId,
+        atmosphereTimeSec: isLivingAtmosphere(exportAtmosphereId) ? 1.2 : 0,
+      },
     )
-  }, [isDualCard, parentLyric, parentSong, parentArtist, lyric, song, artist, activeTheme])
+  }, [isDualCard, parentLyric, parentSong, parentArtist, lyric, song, artist, cardThemeId, exportAtmosphereId, shapeId])
+
+  useEffect(() => {
+    if (!isDualCard) return
+    void renderDualCanvas()
+  }, [isDualCard, renderDualCanvas])
 
   const saveImage = useCallback(async () => {
     if (isDualCard) {
@@ -306,8 +315,10 @@ export function MomentShareStudio({
       const slugReply = slugify(song, 'Lyric')
       const slugParent = slugify(parentSong || '', 'Lyric')
       await downloadCanvas(canvas, `MARGO_${slugParent}_LyricBack_${slugReply}.png`)
-      void recordCardExport({ postId: resolvedPostId, theme: 'gold', shape: 'square' })
+      persistExportPrefs()
+      void recordCardExport({ postId: resolvedPostId, theme: cardThemeId, shape: shapeId })
       toastMomentImageSaved()
+      onExported?.()
       return
     }
     if (!exportMoment) return
@@ -537,9 +548,33 @@ export function MomentShareStudio({
   const cardSection = (
     <>
       {isDualCard ? (
-        <div style={{ borderRadius: '12px', overflow: 'hidden', background: '#07060A' }}>
-          <canvas ref={canvasRef} style={{ width: '100%', aspectRatio: '1 / 1', display: 'block' }} />
-        </div>
+        <>
+          <MomentExportPreviewFrame shapeId={shapeId}>
+            <div style={{
+              borderRadius: shapeId === 'vertical' ? 0 : '12px',
+              overflow: 'hidden',
+              background: 'var(--surface)',
+            }}>
+              <canvas
+                ref={canvasRef}
+                style={{
+                  width: '100%',
+                  height: 'auto',
+                  display: 'block',
+                  aspectRatio: shapeId === 'vertical' ? '9 / 16' : shapeId === 'wide' ? '16 / 9' : '1 / 1',
+                }}
+              />
+            </div>
+          </MomentExportPreviewFrame>
+          <MomentExportCustomizeBar
+            cardThemeId={cardThemeId}
+            onThemeChange={setCardThemeId}
+            exportAtmosphereId={exportAtmosphereId}
+            onExportAtmosphereChange={setExportAtmosphereId}
+            shapeId={shapeId}
+            onShapeChange={setShapeId}
+          />
+        </>
       ) : previewLine ? (
         <>
           {isMulti && (
