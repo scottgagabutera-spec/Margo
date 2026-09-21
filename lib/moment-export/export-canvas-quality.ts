@@ -2,22 +2,9 @@ import { STAGE_CARD_EXPORT_SCALE } from '@/lib/moment-export/layout/constants'
 
 export { STAGE_CARD_EXPORT_SCALE }
 
-/** H.264 encoders (WebCodecs) typically cap at 4096px per side. */
-export const VIDEO_ENCODER_MAX_DIMENSION = 4096
-
 export function applyExportCanvasQuality(ctx: CanvasRenderingContext2D): void {
   ctx.imageSmoothingEnabled = true
   ctx.imageSmoothingQuality = 'high'
-}
-
-/**
- * Supersampling scale for video — never exceed encoder dimension limits.
- * Shorts at 1920px logical × 3 would hit 5760px and fail H.264 encode.
- */
-export function stageVideoExportScale(layoutWidth: number, layoutHeight: number): number {
-  const logicalMax = Math.max(layoutWidth, layoutHeight)
-  const cap = Math.floor(VIDEO_ENCODER_MAX_DIMENSION / logicalMax)
-  return Math.min(STAGE_CARD_EXPORT_SCALE, Math.max(1, cap))
 }
 
 /** Bind a canvas for stage-card PNG export at logical layout size × supersampling scale. */

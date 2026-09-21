@@ -1,7 +1,3 @@
-import { STAGE_CARD_EXPORT_WIDTH } from '@/lib/moment-export/layout/constants'
-
-/** Video matches PNG stage card width — height is content-driven. */
-export const MOMENT_VIDEO_WIDTH = STAGE_CARD_EXPORT_WIDTH
 export const MOMENT_VIDEO_FPS = 30
 /** Align with audio-engine SNIPPET_MAX_DURATION_SEC — full snippet, not a short clip cap. */
 export const MOMENT_VIDEO_MAX_DURATION_SEC = 30

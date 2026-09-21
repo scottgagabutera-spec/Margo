@@ -237,17 +237,6 @@ export function getPreloadReadyState(audioUrl: string): number {
 }
 
 /**
- * Get the buffered pool audio element for a URL, if available.
- * Engine uses this to promote a warmed element into the active A/B slot.
- */
-export function getPoolAudio(audioUrl: string): HTMLAudioElement | null {
-  const slot = findSlot(audioUrl)
-  if (!slot) return null
-  slot.lastUsed = Date.now()
-  return slot.audio
-}
-
-/**
  * Hand the pool element for this URL to the main engine — even if it is
  * still buffering. Reusing the in-flight download avoids a second GET of
  * the same MP3 (the old readyState>=2 gate started a competing load).
@@ -298,34 +287,4 @@ export function recycleElementToPool(el: HTMLAudioElement): void {
   slot.url = ''
   slot.lastUsed = 0
   slot.startSec = 0
-}
-
-/**
- * Remove a URL from the pool (e.g. after src transfer to main audio).
- * Frees the slot for the next warmPreloadUrl call.
- */
-export function releaseFromPool(audioUrl: string): void {
-  const idx = _pool.findIndex(s => s.url === audioUrl)
-  if (idx === -1) return
-  const slot = _pool[idx]
-  slot.audio.pause()
-  slot.audio.removeAttribute('src')
-  slot.url = ''
-  slot.lastUsed = 0
-  slot.startSec = 0
-  // Keep the audio element in the pool for reuse — don't remove from DOM
-}
-
-/**
- * Clear the cache — used in tests or hard reset.
- */
-export function clearPreloadCache(): void {
-  _urlCache.clear()
-  for (const slot of _pool) {
-    slot.audio.pause()
-    slot.audio.removeAttribute('src')
-    slot.url = ''
-    slot.lastUsed = 0
-    slot.startSec = 0
-  }
 }

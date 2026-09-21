@@ -23,14 +23,12 @@ function historyCanGoBack(): boolean {
 export function BackButton({
   fallbackHref,
   label = 'Back',
-  onNavigate,
   onBack,
   preferHistory = true,
   variant = 'page',
 }: {
   fallbackHref?: string
   label?: string
-  onNavigate?: () => void
   onBack?: () => boolean | void
   preferHistory?: boolean
   variant?: 'page' | 'chrome'
@@ -39,7 +37,6 @@ export function BackButton({
 
   const handleBack = () => {
     if (onBack?.() === true) return
-    onNavigate?.()
     if (preferHistory && historyCanGoBack()) {
       router.back()
       return

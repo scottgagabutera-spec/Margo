@@ -45,14 +45,6 @@ export async function getOrCreateMomentVideoFile(
   return { file: entry.file, previewUrl: entry.previewUrl, fromCache: false }
 }
 
-export async function downloadMargoMomentVideo(
-  moment: MargoMoment,
-  onProgress?: (message: string) => void,
-  signal?: AbortSignal,
-): Promise<MomentVideoFileResult | null> {
-  return getOrCreateMomentVideoFile(moment, onProgress, signal)
-}
-
 /** Returns preview URL for share sheet — caller shows playable preview before sharing. */
 export async function prepareMargoMomentVideoShare(
   moment: MargoMoment,

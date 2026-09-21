@@ -82,21 +82,6 @@ export function useStageCardLayout(
 }
 
 /** React inline styles derived from resolved layout (preview at measured width). */
-export function stageCardShellStyle(layout: ResolvedStageCardLayout): React.CSSProperties {
-  const theme = layout.theme
-  const light = layout.background.onLight
-  return {
-    position: 'relative',
-    textAlign: 'left',
-    borderRadius: layout.borderRadius,
-    padding: `${layout.padding.top}px ${layout.padding.right}px ${layout.padding.bottom}px ${layout.padding.left}px`,
-    background: `linear-gradient(180deg, rgba(255,255,255,${layout.background.highlightTopOpacity}) 0%, transparent ${layout.background.highlightHeightFraction * 100}%), ${layout.background.base}`,
-    border: `1px solid ${layout.background.border}`,
-    boxSizing: 'border-box',
-    minHeight: layout.outputHeight,
-  }
-}
-
 export function stageCardLyricStyle(layout: ResolvedStageCardLayout): React.CSSProperties {
   return {
     fontFamily: LYRIC_FONT,

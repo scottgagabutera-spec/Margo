@@ -126,16 +126,6 @@ function similarity(a: string, b: string): number {
   return Math.min(1, editSimilarity + containmentBoost)
 }
 
-export function clampWindow(
-  startSec: number,
-  endSec: number,
-  fallbackDuration = FALLBACK_SNIPPET_SEC,
-): { startSec: number; endSec: number } {
-  const start = Math.max(0, startSec)
-  const end = endSec > start ? endSec : start + fallbackDuration
-  return { startSec: start, endSec: end }
-}
-
 export function fallbackSnippetWindow(): { startSec: number; endSec: number } {
   return { startSec: 0, endSec: FALLBACK_SNIPPET_SEC }
 }

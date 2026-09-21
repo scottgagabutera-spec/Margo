@@ -3,7 +3,7 @@
  * Studio also offers Zulu, Xhosa, Kinyarwanda, and Igbo — those have no Whisper
  * token, so the API must auto-detect and carry the name in `prompt`.
  */
-export const WHISPER_LANGUAGE_CODES = new Set([
+const WHISPER_LANGUAGE_CODES = new Set([
   'en', 'zh', 'de', 'es', 'ru', 'ko', 'fr', 'ja', 'pt', 'tr', 'pl', 'ca', 'nl',
   'ar', 'sv', 'it', 'id', 'hi', 'fi', 'vi', 'he', 'uk', 'el', 'ms', 'cs', 'ro',
   'da', 'hu', 'ta', 'no', 'th', 'ur', 'hr', 'bg', 'lt', 'la', 'mi', 'ml', 'cy',
