@@ -33,6 +33,18 @@ export function XIcon({ size = DEFAULT_ICON_SIZE, color = DEFAULT_ICON_COLOR }: 
   )
 }
 
+export function FacebookIcon({ size = DEFAULT_ICON_SIZE, color = DEFAULT_ICON_COLOR }: MargoIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M14 8.5h2.5L17 5h-3v3.5H12V5H9v3.5H6v3h3V19h3v-7.5h2.5L15.5 8.5H14Z"
+        fill={color}
+      />
+      <rect x="3" y="3" width="18" height="18" rx="4" stroke={color} strokeWidth="1.5" />
+    </svg>
+  )
+}
+
 export function YouTubeIcon({ size = DEFAULT_ICON_SIZE, color = DEFAULT_ICON_COLOR }: MargoIconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>

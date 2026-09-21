@@ -26,6 +26,7 @@ export { ReplayIcon } from './replay-icon'
 export { SearchIcon } from './search-icon'
 export { ShareIcon } from './share-icon'
 export {
+  FacebookIcon,
   InstagramIcon,
   TikTokIcon,
   XIcon,

@@ -51,6 +51,8 @@ interface StageMomentCardProps {
    */
   effectOwnsFill?: boolean
   style?: CSSProperties
+  /** Story viewer: quiet Margo brand watermark in the mark corner (no poster attribution on-card). */
+  brandWatermark?: boolean
 }
 
 const playControlStyle: CSSProperties = {
@@ -125,6 +127,7 @@ export function StageMomentCard({
   hideVibeChrome = false,
   effectOwnsFill = false,
   style,
+  brandWatermark = false,
 }: StageMomentCardProps) {
   const [vibePickerOpen, setVibePickerOpen] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -251,6 +254,7 @@ export function StageMomentCard({
       }
 
   const markSymbolSize = layout?.mark.symbolSize ?? 22
+  const watermarkPad = layout?.padding ?? { left: 16, bottom: 16, right: 16, top: 16 }
   const metaSongSize = layout?.meta?.song?.style.fontSize
   const metaArtistSize = layout?.meta?.artist?.style.fontSize
   const artSize = layout?.artwork?.width ?? (isShorts ? 56 : 48)
@@ -269,9 +273,27 @@ export function StageMomentCard({
             tone={theme.markVariant === 'on-light' ? 'light' : 'dark'}
           />
         ) : null}
-        <div style={markStyle} aria-hidden>
-          <MargoSymbol size={markSymbolSize} variant={markVariant} />
-        </div>
+        {brandWatermark ? (
+          <div
+            aria-hidden
+            title="From Margo"
+            style={{
+              position: 'absolute',
+              left: watermarkPad.left,
+              bottom: watermarkPad.bottom,
+              zIndex: 3,
+              opacity: 0.18,
+              pointerEvents: 'none',
+              lineHeight: 0,
+            }}
+          >
+            <MargoSymbol size={18} variant={markVariant} />
+          </div>
+        ) : (
+          <div style={markStyle} aria-hidden>
+            <MargoSymbol size={markSymbolSize} variant={markVariant} />
+          </div>
+        )}
         <div
           style={{
             position: 'relative',

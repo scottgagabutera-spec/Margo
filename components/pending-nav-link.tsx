@@ -6,8 +6,8 @@ import { useEffect, useRef, useState, type ComponentProps } from 'react'
 import { LoadingRing } from '@/components/loading-ring'
 
 type PendingNavLinkProps = ComponentProps<typeof Link> & {
-  /** overlay = gold wash + spinner (tiles/rows). tint = gold fill, no spinner (chips). */
-  indicator?: 'overlay' | 'tint'
+  /** overlay = gold wash + spinner (tiles/rows). tint = gold fill, no spinner (chips). subtle = opacity only (inline text). */
+  indicator?: 'overlay' | 'tint' | 'subtle'
   ringSize?: number
 }
 
@@ -26,6 +26,7 @@ export function PendingNavLink({
 }: PendingNavLinkProps) {
   const pathname = usePathname()
   const [pending, setPending] = useState(false)
+  const [pressed, setPressed] = useState(false)
   const pendingRef = useRef(false)
 
   useEffect(() => {
@@ -40,6 +41,12 @@ export function PendingNavLink({
       href={href}
       {...rest}
       aria-busy={pending}
+      onPointerDown={(e) => {
+        if (indicator === 'subtle') setPressed(true)
+      }}
+      onPointerUp={() => setPressed(false)}
+      onPointerLeave={() => setPressed(false)}
+      onPointerCancel={() => setPressed(false)}
       onClick={(e) => {
         onClick?.(e)
         if (e.defaultPrevented) return
@@ -49,6 +56,7 @@ export function PendingNavLink({
         }
         pendingRef.current = true
         setPending(true)
+        if (indicator === 'subtle') setPressed(false)
       }}
       style={{
         position: 'relative',
@@ -56,6 +64,8 @@ export function PendingNavLink({
         ...(pending && indicator === 'tint'
           ? { background: 'var(--gold-faint)', color: 'var(--gold)' }
           : {}),
+        ...(indicator === 'subtle' && pressed ? { opacity: 0.68 } : {}),
+        ...(indicator === 'subtle' ? { WebkitTapHighlightColor: 'transparent' } : {}),
         transition:
           'background 80ms var(--ease-out), color 80ms var(--ease-out), opacity 80ms var(--ease-out)',
       }}

@@ -7,6 +7,8 @@ interface MomentExportPreviewFrameProps {
   shapeId: MomentShapeId
   children: ReactNode
   style?: CSSProperties
+  /** When false, drop the preview chrome (border) — used by the Story viewer. */
+  framed?: boolean
 }
 
 /**
@@ -17,6 +19,7 @@ export function MomentExportPreviewFrame({
   shapeId,
   children,
   style,
+  framed = true,
 }: MomentExportPreviewFrameProps) {
   if (shapeId !== 'vertical') {
     return <div style={style}>{children}</div>
@@ -36,7 +39,7 @@ export function MomentExportPreviewFrame({
         style={{
           width: 'min(100%, 320px)',
           aspectRatio: '9 / 16',
-          border: '1px solid var(--border-hi)',
+          border: framed ? '1px solid var(--border-hi)' : 'none',
           borderRadius: '18px',
           overflow: 'hidden',
           boxSizing: 'border-box',

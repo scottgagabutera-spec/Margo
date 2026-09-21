@@ -349,7 +349,9 @@ That is Margo. Two people, two songs, one feeling. Live at [trymargo.com](https:
 - LinkedIn company: “Communicate Through Song Lyrics.”
 - Site title: “Talk, Listen & Share Through Song Lyrics.”
 
-**What Margo is not:** not a Spotify clone, not Genius with a feed, not Instagram Stories for lyrics. Those are where the behavior currently leaks. Margo is the home for it.
+**What Margo is not:** not a Spotify clone, not Genius with a feed, not a photo-first status app. Margo is the home for lyric-native social expression.
+
+**How Margo differs where it matters:** we are **social and streaming at once** (they are not both). Content is **song lyrics with playable audio**, not photos or camera rolls. When Moments leave the platform as compressed exports, quality drops — **Stories keep sharing inside Margo** so people experience full snippet audio, Atmosphere effects, and native playback first. Familiar formats (Stories, cards, DMs) are fair game when they fit lyric Moments; we build them **ours**, not feature-for-feature copies.
 
 ---
 

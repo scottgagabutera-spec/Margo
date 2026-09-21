@@ -34,6 +34,8 @@ import { persistActivePrimaryScroll } from '@/components/primary-tab-shell'
 import { useDismissibleLayer } from '@/hooks/useDismissibleLayer'
 import { UsernameTag } from '@/components/username-tag'
 import { PendingNavLink } from '@/components/pending-nav-link'
+import { useStoryRingContext } from '@/components/stories/story-ring-context'
+import { StoryAvatarRing } from '@/components/stories/story-avatar-ring'
 import { RelativeTime } from '@/components/relative-time'
 import { useAuthorProfile } from '@/hooks/useAuthorProfile'
 import { createClient } from '@/lib/supabase/client'
@@ -526,6 +528,7 @@ export function PostCard({
   const router = useRouter()
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
+  const storyRing = useStoryRingContext()
   const authorProfile = useAuthorProfile(post.authorUid || null)
   const viewedRef = useRef(false)
   const emotion = normalizeEmotion(post.emotion || '').toLowerCase()
@@ -730,6 +733,11 @@ export function PostCard({
         {(() => {
           const profileUsername = (authorProfile?.username || post.username || '').replace(/^@/, '')
           const profileHref = profileUsername ? `/profile/${profileUsername}` : null
+          const authorProfileId = post.authorUid || null
+          const storyAuthor = authorProfileId && storyRing?.hasActiveStory(authorProfileId)
+            ? storyRing.getStoryAuthor(authorProfileId)
+            : null
+          const displayLabel = storyAuthor?.displayName || authorProfile?.displayName || post.username || 'profile'
           const timeNode = post.timestamp != null ? (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ color: 'var(--text-muted)', fontSize: isCompact ? '0.58rem' : '0.6rem' }} aria-hidden>·</span>
@@ -746,66 +754,150 @@ export function PostCard({
               />
             </span>
           ) : null
-          const avatar = (
-            <div style={{
-              width: avatarPx, height: avatarPx, borderRadius: '50%', flexShrink: 0,
-              background: avatarUrl
-                ? 'none'
-                : isTier1 ? 'var(--gold)' : 'linear-gradient(135deg, rgba(232,197,71,0.3), rgba(232,197,71,0.1))',
-              border: avatarUrl
-                ? '1px solid rgba(255,255,255,0.08)'
-                : isTier1 ? 'none' : '1px solid rgba(232,197,71,0.2)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              overflow: 'hidden',
+          const avatarInitial = post.username ? post.username.charAt(0).toUpperCase() : (isTier1 ? 'M' : 'ML')
+          const avatarInner = avatarUrl ? (
+            <img src={avatarUrl} alt="" onError={() => setAvatarBroken(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <span style={{
+              fontFamily: UI_FONT,
+              fontSize: isCompact ? '0.6rem' : '0.7rem',
+              fontWeight: 700,
+              color: isTier1 ? 'var(--bg)' : 'var(--gold)',
             }}>
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="" onError={() => setAvatarBroken(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <span style={{
-                  fontFamily: UI_FONT,
-                  fontSize: isCompact ? '0.6rem' : '0.7rem',
-                  fontWeight: 700,
-                  color: isTier1 ? 'var(--bg)' : 'var(--gold)',
-                }}>
-                  {post.username ? post.username.charAt(0).toUpperCase() : (isTier1 ? 'M' : 'ML')}
-                </span>
-              )}
-            </div>
+              {avatarInitial}
+            </span>
           )
-          const identityInner = (
-            <>
-              {avatar}
-              <div style={{ minWidth: 0 }}>
-                <UsernameTag
-                  authorUid={post.authorUid || null}
-                  fallbackName={post.username}
-                  linkProfile={false}
-                  layout="stacked"
-                  size={isCompact ? 'compact' : 'default'}
-                  metaAfterHandle={timeNode}
-                />
-              </div>
-            </>
+          const avatarShellStyle: React.CSSProperties = {
+            width: avatarPx,
+            height: avatarPx,
+            borderRadius: '50%',
+            flexShrink: 0,
+            background: avatarUrl
+              ? 'none'
+              : isTier1 ? 'var(--gold)' : 'linear-gradient(135deg, rgba(232,197,71,0.3), rgba(232,197,71,0.1))',
+            border: avatarUrl
+              ? '1px solid rgba(255,255,255,0.08)'
+              : isTier1 ? 'none' : '1px solid rgba(232,197,71,0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
+          }
+          const avatarPxNum = isCompact ? 32 : 40
+          const avatarCore = storyAuthor ? (
+            <StoryAvatarRing size={avatarPxNum} hasUnseen={storyAuthor.hasUnseen}>
+              {avatarInner}
+            </StoryAvatarRing>
+          ) : (
+            <div style={avatarShellStyle}>{avatarInner}</div>
           )
-          return profileHref ? (
+          const avatarControl = storyAuthor && storyRing && authorProfileId ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                storyRing.openStory(authorProfileId)
+              }}
+              onPointerDown={() => storyRing.warmStory(authorProfileId)}
+              aria-label={
+                storyAuthor.hasUnseen
+                  ? `View ${displayLabel}'s new Story`
+                  : `View ${displayLabel}'s Story`
+              }
+              title="View Story"
+              style={{
+                border: 'none',
+                background: 'none',
+                padding: 0,
+                margin: 0,
+                cursor: 'pointer',
+                flexShrink: 0,
+                WebkitTapHighlightColor: 'transparent',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: 'var(--margo-touch-min)',
+                minHeight: 'var(--margo-touch-min)',
+                position: 'relative',
+              }}
+            >
+              {avatarCore}
+              <span aria-hidden style={{
+                position: 'absolute',
+                right: storyAuthor.hasUnseen ? 2 : 4,
+                bottom: storyAuthor.hasUnseen ? 2 : 4,
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: 'var(--gold)',
+                border: '1.5px solid var(--bg)',
+                boxShadow: '0 0 6px rgba(232,197,71,0.55)',
+              }} />
+            </button>
+          ) : profileHref ? (
             <PendingNavLink
               href={profileHref}
               indicator="tint"
               onClick={(e) => e.stopPropagation()}
               aria-label={`View profile @${profileUsername}`}
               style={{
-                display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1,
-                textDecoration: 'none', color: 'inherit',
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: 'var(--margo-touch-min)',
                 minHeight: 'var(--margo-touch-min)',
                 WebkitTapHighlightColor: 'transparent',
-                borderRadius: '8px',
+                borderRadius: '50%',
               }}
             >
-              {identityInner}
+              {avatarCore}
             </PendingNavLink>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
-              {identityInner}
+            avatarCore
+          )
+          const nameBlock = (
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <UsernameTag
+                authorUid={post.authorUid || null}
+                fallbackName={post.username}
+                linkProfile={false}
+                layout="stacked"
+                size={isCompact ? 'compact' : 'default'}
+                metaAfterHandle={timeNode}
+              />
+            </div>
+          )
+          return (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              minWidth: 0,
+              flex: 1,
+              minHeight: 'var(--margo-touch-min)',
+            }}>
+              {avatarControl}
+              {profileHref ? (
+                <PendingNavLink
+                  href={profileHref}
+                  indicator="subtle"
+                  onClick={(e) => e.stopPropagation()}
+                  aria-label={`View profile @${profileUsername}`}
+                  style={{
+                    minWidth: 0,
+                    flex: 1,
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    WebkitTapHighlightColor: 'transparent',
+                    display: 'block',
+                  }}
+                >
+                  {nameBlock}
+                </PendingNavLink>
+              ) : (
+                nameBlock
+              )}
             </div>
           )
         })()}
