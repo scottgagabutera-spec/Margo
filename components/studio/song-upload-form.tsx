@@ -162,13 +162,35 @@ function pipelineErrorMessage(data: { error?: string; detail?: unknown } | null,
   const detail = data?.detail
   let extra = ''
   if (typeof detail === 'string' && detail.trim()) extra = detail.trim()
-  else if (detail && typeof detail === 'object' && 'message' in detail) {
-    const message = (detail as { message?: unknown }).message
-    if (typeof message === 'string' && message.trim()) extra = message.trim()
+  else if (detail && typeof detail === 'object') {
+    const rec = detail as Record<string, unknown>
+    if (typeof rec.message === 'string' && rec.message.trim()) extra = rec.message.trim()
+    else if (rec.error && typeof rec.error === 'object') {
+      const nested = rec.error as Record<string, unknown>
+      if (typeof nested.message === 'string' && nested.message.trim()) extra = nested.message.trim()
+    }
   }
   const base = (typeof data?.error === 'string' && data.error.trim()) ? data.error.trim() : fallback
   if (extra && extra !== base) return `${base} (${extra})`
   return base
+}
+
+async function readApiPayload(res: Response): Promise<{ error?: string; detail?: unknown; srt?: string }> {
+  const text = await res.text()
+  if (!text) {
+    if (res.status === 504 || res.status === 524) {
+      return { error: 'Lyric reading took too long. Try again — the song is still here.' }
+    }
+    return { error: `Request failed (${res.status})` }
+  }
+  try {
+    return JSON.parse(text) as { error?: string; detail?: unknown; srt?: string }
+  } catch {
+    if (res.status === 504 || res.status === 524) {
+      return { error: 'Lyric reading took too long. Try again — the song is still here.' }
+    }
+    return { error: `Request failed (${res.status})` }
+  }
 }
 
 function artworkFileError(file: File): string | null {
@@ -211,6 +233,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
 
   const [stage, setStage] = useState<Stage>('idle')
   const [error, setError] = useState('')
+  const [statusNote, setStatusNote] = useState('')
   const [pendingSongId, setPendingSongId] = useState<string | null>(null)
   const [pendingAudioUrl, setPendingAudioUrl] = useState<string | null>(null)
 
@@ -332,7 +355,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
         prompt: lyricsHint.trim() || undefined,
       }),
     })
-    const whisperData = await whisperRes.json().catch(() => ({}))
+    const whisperData = await readApiPayload(whisperRes)
     if (!whisperRes.ok || !whisperData.srt) {
       throw new Error(pipelineErrorMessage(whisperData, 'Could not transcribe audio. Try again.'))
     }
@@ -351,7 +374,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
         songId: targetSongId,
       }),
     })
-    const tagData = await tagRes.json().catch(() => ({}))
+    const tagData = await readApiPayload(tagRes)
     if (!tagRes.ok) {
       throw new Error(pipelineErrorMessage(tagData, 'Could not tag lyric vibes. Try again.'))
     }
@@ -363,17 +386,20 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
       .eq('id', targetSongId)
     if (publishErr) throw new Error('Song processed but could not go live. Try publishing again.')
 
-    setStage('done')
     if (opts?.closeOnDone === false) {
       await reloadLyricLines(targetSongId)
+      setStatusNote('Lyrics generated. Change any word, then save.')
+      setStage('idle')
       return
     }
+    setStage('done')
     setTimeout(onComplete, 900)
   }
 
   const handleRetry = async () => {
     if (!pendingSongId || !pendingAudioUrl) return
     setError('')
+    setStatusNote('')
     try {
       await runLyricsPipeline(pendingSongId, pendingAudioUrl, { closeOnDone: !isEdit })
     } catch (e: any) {
@@ -387,6 +413,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
     const uid = user?.id
     if (!uid) { setError('Not signed in.'); setStage('error'); return }
     setError('')
+    setStatusNote('')
     try {
       let audioUrl = existingAudioUrl
       if (audioFile) {
@@ -429,6 +456,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
 
   const handleSubmit = async () => {
     setError('')
+    setStatusNote('')
     if (!title.trim()) { setError('Add a title.'); setStage('error'); return }
 
     try {
@@ -551,6 +579,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
           if (trimErr) throw new Error('Could not trim extra lyric lines: ' + trimErr.message)
         }
 
+        setStatusNote('Saved.')
         setStage('done')
         setTimeout(onComplete, 900)
         return
@@ -954,7 +983,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
         </div>
         <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '10px', lineHeight: 1.5 }}>
           {isEdit
-            ? 'Whisper reads the audio already on this song. You do not need to upload it again.'
+            ? 'Whisper reads the audio already on this song. You do not need to upload it again. Zulu, Xhosa, Kinyarwanda, and Igbo have no Whisper language code — Margo auto-detects them and uses your lyric hint.'
             : 'Whisper AI reads the audio and tags every line with a vibe automatically once you publish.'}
         </p>
         {isEdit && (existingAudioUrl || audioFile) && (
@@ -1047,15 +1076,25 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
         </p>
       )}
 
-      {(stage !== 'idle' || error) && (
+      {(stage !== 'idle' || error || statusNote) && (
         <p style={{
           fontFamily: font, fontSize: '0.82rem',
           /* NOTE: no lib/tokens/emotions.ts available — inline rgba stand-in
              for success/error states until that module exists. */
-          color: stage === 'error' || (error && stage === 'idle') ? 'rgba(255,96,96,0.9)' : stage === 'done' ? 'rgba(74,222,128,0.9)' : 'var(--text-2)',
+          color: stage === 'error' || (error && stage === 'idle')
+            ? 'rgba(255,96,96,0.9)'
+            : stage === 'done' || (statusNote && stage === 'idle')
+              ? 'var(--gold)'
+              : 'var(--text-2)',
           marginBottom: '16px',
         }}>
-          {stage === 'error' || (error && stage === 'idle') ? error : isEdit && stage === 'done' ? 'Saved. Lyrics are live.' : STAGE_LABEL[stage]}
+          {stage === 'error' || (error && stage === 'idle')
+            ? error
+            : stage === 'done'
+              ? (statusNote || (isEdit ? 'Saved.' : STAGE_LABEL.done))
+              : statusNote && stage === 'idle'
+                ? statusNote
+                : STAGE_LABEL[stage]}
         </p>
       )}
 
@@ -1075,14 +1114,14 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
         ) : (
           <button
             onClick={handleSubmit}
-            disabled={busy || stage === 'done'}
+            disabled={busy || (isEdit && stage === 'done')}
             style={{
               minHeight: '48px', padding: '14px 24px',
               background: 'var(--gold)', color: 'var(--bg)', border: 'none',
               borderRadius: '50px', fontFamily: font,
               fontWeight: 700, fontSize: '0.7rem', letterSpacing: '1.5px',
               textTransform: 'uppercase', cursor: busy ? 'default' : 'pointer',
-              opacity: busy ? 0.6 : 1,
+              opacity: busy || (isEdit && stage === 'done') ? 0.6 : 1,
             }}
           >
             {busy ? (isEdit ? 'Saving…' : 'Publishing…') : isEdit ? 'Save Changes' : 'Publish Song'}

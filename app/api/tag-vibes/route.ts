@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { assertSongPipelineAccess } from '@/lib/song-pipeline-auth'
 
+export const runtime = 'nodejs'
+export const maxDuration = 120
+
 const VIBES = ['CHILL', 'HOPE', 'HEALING', 'GRATEFUL', 'SPIRITUAL', 'NOSTALGIA', 'JOY', 'LOVE', 'HYPE', 'PROUD']
 
 interface ParsedLine {

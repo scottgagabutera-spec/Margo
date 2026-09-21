@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { BackButton } from '@/components/back-button'
 import { PromoteQueueCard, type PromoteQueueUpdateOptions } from '@/components/promote/promote-queue-card'
@@ -17,7 +17,6 @@ const font = UI_FONT
 const supabase = createClient()
 
 export default function StudioPromotePage() {
-  const router = useRouter()
   const { user, identity, loading: identityLoading } = useIdentity()
   const [items, setItems] = useState<PromoteQueueRow[]>([])
   const [audioByPost, setAudioByPost] = useState<Record<string, {
@@ -153,8 +152,7 @@ export default function StudioPromotePage() {
 
   const handleBack = useCallback(() => {
     cancelPendingPublishes()
-    router.push('/studio')
-  }, [cancelPendingPublishes, router])
+  }, [cancelPendingPublishes])
 
   if (identityLoading || loading) {
     return (
@@ -183,7 +181,7 @@ export default function StudioPromotePage() {
         padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)',
       }}
     >
-      <BackButton fallbackHref="/studio" label="Studio" onNavigate={handleBack} />
+      <BackButton fallbackHref="/studio" label="Studio" onBack={handleBack} />
       <h1 style={{ fontFamily: font, fontSize: '1.4rem', fontWeight: 600, margin: '16px 0 8px' }}>
         Promotion queue
       </h1>

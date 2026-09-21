@@ -15,23 +15,29 @@ function historyCanGoBack(): boolean {
  * there is no in-app history (deep link, notification). Device/browser back
  * is unchanged.
  *
- * `preferHistory` pops the in-app stack (compose cancel) instead of pushing
- * a new page — that extra push was stacking Lyric Back → post thread → feed.
+ * History is the default: Back follows the previous step. Pass
+ * `preferHistory={false}` to always use `fallbackHref` (Studio → profile).
+ *
+ * Return true from `onBack` to handle the press in-page (Studio song edit →
+ * song list) without leaving the route.
  */
 export function BackButton({
   fallbackHref,
   label = 'Back',
   onNavigate,
-  preferHistory = false,
+  onBack,
+  preferHistory = true,
 }: {
   fallbackHref?: string
   label?: string
   onNavigate?: () => void
+  onBack?: () => boolean | void
   preferHistory?: boolean
 }) {
   const router = useRouter()
 
   const handleBack = () => {
+    if (onBack?.() === true) return
     onNavigate?.()
     if (preferHistory && historyCanGoBack()) {
       router.back()

@@ -189,13 +189,21 @@ export default function StudioPage() {
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <div style={{ maxWidth: '860px', margin: '0 auto', padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px', flexWrap: 'wrap' }}>
-          <BackButton fallbackHref="/feed" />
+          <BackButton
+            preferHistory={false}
+            fallbackHref={identity.username ? `/profile/${identity.username}` : '/feed'}
+            onBack={showUpload ? () => {
+              setShowUpload(false)
+              setEditingSongId(null)
+              return true
+            } : undefined}
+          />
           <div style={{ flex: 1 }}>
             <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '4px' }}>
               Margo
             </p>
             <h1 style={{ fontFamily: font, fontSize: '1.5rem', color: 'var(--text)', fontWeight: 400 }}>
-              Studio
+              {showUpload ? (editingSongId ? 'Edit song' : 'Upload') : 'Studio'}
             </h1>
           </div>
           {identity.artistStatus === 'active' && (
@@ -219,7 +227,7 @@ export default function StudioPage() {
           )}
         </div>
 
-        {!songsLoading && songs.length > 0 && (
+        {!songsLoading && songs.length > 0 && !showUpload && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '32px' }}>
             {[
               ['Songs', songs.length],
