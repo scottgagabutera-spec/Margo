@@ -798,6 +798,7 @@ export function PostCard({
                 e.stopPropagation()
                 storyRing.openStory(authorProfileId)
               }}
+              onPointerDown={() => storyRing.warmStory(authorProfileId)}
               aria-label={
                 storyAuthor.hasUnseen
                   ? `View ${displayLabel}'s new Story`

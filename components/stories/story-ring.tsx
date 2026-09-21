@@ -15,9 +15,11 @@ interface StoryRingProps {
 function StoryAvatar({
   author,
   onClick,
+  onWarm,
 }: {
   author: StoryRingAuthor
   onClick: () => void
+  onWarm: () => void
 }) {
   const label = author.isSelf ? 'Your Story' : (author.displayName || author.username)
 
@@ -25,6 +27,7 @@ function StoryAvatar({
     <button
       type="button"
       onClick={onClick}
+      onPointerDown={onWarm}
       aria-label={author.hasUnseen ? `View ${label}'s new Story` : `View ${label}'s Story`}
       style={{
         display: 'flex',
@@ -125,7 +128,7 @@ function AddStoryChip({ onClick }: { onClick: () => void }) {
 export function StoryRing({ onAddStory }: StoryRingProps) {
   const ctx = useStoryRingContext()
   if (!ctx?.signedIn) return null
-  const { authors, loading, openStory } = ctx
+  const { authors, loading, openStory, warmStory } = ctx
   if (!loading && authors.length === 0 && !onAddStory) return null
 
   const scrollerStyle: CSSProperties = {
@@ -145,6 +148,7 @@ export function StoryRing({ onAddStory }: StoryRingProps) {
           key={author.profileId}
           author={author}
           onClick={() => openStory(author.profileId)}
+          onWarm={() => warmStory(author.profileId)}
         />
       ))}
       <style>{`

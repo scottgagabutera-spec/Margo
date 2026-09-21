@@ -1,3 +1,5 @@
+import type { MargoMoment } from '@/lib/moment/types'
+
 export interface StoryRow {
   id: string
   authorProfileId: string
@@ -14,6 +16,11 @@ export interface StoryRingAuthor {
   hasUnseen: boolean
   latestStoryAt: string
   isSelf: boolean
+}
+
+export interface StorySlide {
+  story: StoryRow
+  moment: MargoMoment
 }
 
 export const STORY_TTL_MS = 24 * 60 * 60 * 1000

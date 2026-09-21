@@ -15,11 +15,12 @@ import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { playSnippet, stop, subscribeAudioEngine } from '@/lib/audio-engine'
 import { livingAtmosphereOrNull } from '@/lib/atmosphere'
 import { useSongAtmosphere } from '@/hooks/useSongAtmosphere'
-import { useAuthorStories, markStorySeen, type StorySlide } from '@/hooks/useAuthorStories'
+import { useAuthorStories, markStorySeen } from '@/hooks/useAuthorStories'
 import { UI_FONT } from '@/lib/fonts'
 import type { MargoMoment } from '@/lib/moment/types'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 import type { AtmosphereId } from '@/lib/atmosphere'
+import type { StoryRingAuthor, StorySlide } from '@/lib/stories/types'
 
 const font = UI_FONT
 const STORY_HOLD_MS = 4500
@@ -44,7 +45,19 @@ function slideHoldMs(moment: MargoMoment): number {
   return STORY_HOLD_MS
 }
 
-function resolveStoryAuthor(slides: StorySlide[], fallback: MargoMoment['author']): MargoMoment['author'] {
+function resolveStoryAuthor(
+  slides: StorySlide[],
+  preview: StoryRingAuthor | null,
+  fallback: MargoMoment['author'],
+): MargoMoment['author'] {
+  if (preview) {
+    return {
+      profileId: preview.profileId,
+      username: preview.username,
+      displayName: preview.displayName,
+      avatarUrl: preview.avatarUrl,
+    }
+  }
   for (const slide of slides) {
     if (slide.moment.author?.displayName || slide.moment.author?.username) {
       return slide.moment.author
@@ -56,6 +69,8 @@ function resolveStoryAuthor(slides: StorySlide[], fallback: MargoMoment['author'
 interface StoryViewerProps {
   authorProfileId: string
   onClose: () => void
+  authorPreview?: StoryRingAuthor | null
+  initialSlides?: StorySlide[]
 }
 
 function StorySlideView({
@@ -204,8 +219,13 @@ function formatStoryHeader(author: MargoMoment['author']): { primary: string; se
   return { primary: 'Story', secondary: null }
 }
 
-export function StoryViewer({ authorProfileId, onClose }: StoryViewerProps) {
-  const { slides, loading, error } = useAuthorStories(authorProfileId, true)
+export function StoryViewer({
+  authorProfileId,
+  onClose,
+  authorPreview = null,
+  initialSlides,
+}: StoryViewerProps) {
+  const { slides, loading, error } = useAuthorStories(authorProfileId, true, initialSlides)
   const [index, setIndex] = useState(0)
   const [outgoingIndex, setOutgoingIndex] = useState<number | null>(null)
   const [closing, setClosing] = useState(false)
@@ -220,8 +240,8 @@ export function StoryViewer({ authorProfileId, onClose }: StoryViewerProps) {
   slidesRef.current = slides
   indexRef.current = index
 
-  const current = slides[index] ?? null
-  const storyAuthor = resolveStoryAuthor(slides, current?.moment.author ?? null)
+  const current = slides[index] ?? initialSlides?.[index] ?? null
+  const storyAuthor = resolveStoryAuthor(slides, authorPreview, current?.moment.author ?? null)
   const header = formatStoryHeader(storyAuthor)
   const authorInitial = (storyAuthor?.displayName || storyAuthor?.username || '?').trim().charAt(0).toUpperCase()
   const holdMs = current ? slideHoldMs(current.moment) : STORY_HOLD_MS
@@ -453,7 +473,7 @@ export function StoryViewer({ authorProfileId, onClose }: StoryViewerProps) {
       </div>
 
       <div style={{ flex: 1, display: 'flex', position: 'relative', minHeight: 0 }}>
-        {loading && (
+        {loading && slides.length === 0 && (
           <p style={{
             margin: 'auto',
             fontFamily: font,
@@ -463,7 +483,7 @@ export function StoryViewer({ authorProfileId, onClose }: StoryViewerProps) {
             Loading…
           </p>
         )}
-        {!loading && error && (
+        {!loading && error && slides.length === 0 && (
           <p style={{
             margin: 'auto',
             fontFamily: font,
@@ -485,7 +505,7 @@ export function StoryViewer({ authorProfileId, onClose }: StoryViewerProps) {
             This Story has expired.
           </p>
         )}
-        {!loading && slides.length > 0 && visibleIndexes.map((slideIndex) => {
+        {slides.length > 0 && visibleIndexes.map((slideIndex) => {
           const slide = slides[slideIndex]
           if (!slide) return null
           const isActive = slideIndex === index

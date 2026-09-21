@@ -32,7 +32,7 @@ import { FeedPostSkeletonList } from '@/components/margo-skeletons'
 import { stripHandlePrefix } from '@/lib/artist-identity'
 import { feedRankIds, feedSortScore } from '@/lib/feed-rank'
 import { StoryRing } from '@/components/stories/story-ring'
-import { StoryRingProvider } from '@/components/stories/story-ring-context'
+import { StoryFeedAuthorSync, StoryRingProvider } from '@/components/stories/story-ring-context'
 
 const supabase = createClient()
 
@@ -560,8 +560,14 @@ function FeedPageInner() {
     [exportPost?.id],
   )
 
+  const feedAuthorIds = useMemo(
+    () => Array.from(new Set(posts.map((p) => p.authorUid).filter((id): id is string => !!id))),
+    [posts],
+  )
+
   return (
     <StoryRingProvider enabled={feedLive}>
+    <StoryFeedAuthorSync authorIds={feedAuthorIds} />
     <PullToRefresh
       onRefreshingChange={setPtrBusy}
       onRefresh={async () => {
