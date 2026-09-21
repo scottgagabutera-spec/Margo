@@ -9,7 +9,6 @@ import {
   type ResolvedStageCardLayout,
   type StageCardLayoutInput,
 } from '@/lib/moment-export/layout'
-import { getStageCardTheme } from '@/lib/moment/stage-theme'
 
 export interface UseStageCardLayoutArgs {
   lyric: string
@@ -146,8 +145,4 @@ export function lyricDisplayText(layout: ResolvedStageCardLayout): string {
     ? layout.lyric.lines.map((line) => line.text)
     : layout.lyric.displayLines
   return rows.join('\n')
-}
-
-export function getStageCardThemeFromLayout(layout: ResolvedStageCardLayout) {
-  return getStageCardTheme(layout.theme.id)
 }

@@ -16,9 +16,6 @@ interface CardExportModalProps {
   vibeLabel?: string | null
   moment?: MargoMoment | null
   lines?: MomentLineInput[]
-  parentLyric?: string
-  parentSong?: string
-  parentArtist?: string
   enablePromote?: boolean
 }
 
@@ -30,7 +27,6 @@ export function CardExportModal({
   vibeLabel,
   moment,
   lines,
-  parentLyric, parentSong, parentArtist,
   enablePromote = false,
 }: CardExportModalProps) {
   return (
@@ -53,9 +49,6 @@ export function CardExportModal({
         artwork={artwork}
         postId={postId}
         vibeLabel={vibeLabel}
-        parentLyric={parentLyric}
-        parentSong={parentSong}
-        parentArtist={parentArtist}
         layout="modal"
         enablePromote={enablePromote}
       />

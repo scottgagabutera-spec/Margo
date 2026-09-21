@@ -6,8 +6,6 @@ import {
 
 export interface BuildMomentExportActionItemsInput {
   onExportImage: () => void
-  /** When false, only Image (e.g. lyric-back dual card). */
-  showFormats?: boolean
   hasPlayableSnippet?: boolean
   hasVisualLoopExport?: boolean
   canExportVideo?: boolean
@@ -18,7 +16,6 @@ export interface BuildMomentExportActionItemsInput {
 /** Export ▾ submenu: Image / Video / PDF — shared by Stage + Card modal. */
 export function buildMomentExportActionItems({
   onExportImage,
-  showFormats = true,
   hasPlayableSnippet = false,
   hasVisualLoopExport = false,
   canExportVideo = false,
@@ -28,7 +25,6 @@ export function buildMomentExportActionItems({
   const items: MomentActionMenuItem[] = [
     { id: 'png', label: 'Image', onClick: onExportImage },
   ]
-  if (!showFormats) return items
 
   const canClipExport = hasPlayableSnippet || hasVisualLoopExport
   const videoEnabled = canClipExport && canExportVideo

@@ -42,8 +42,3 @@ export function hidesAppNav(pathname: string | null | undefined): boolean {
 export function hidesTabBar(pathname: string | null | undefined): boolean {
   return chromeModeForPath(pathname) === 'immersive' || isAuthPath(pathname) || isAdminPath(pathname)
 }
-
-/** @deprecated Prefer hidesAppNav / hidesTabBar — kept for call-site migration. */
-export function hidesAppShell(pathname: string | null | undefined): boolean {
-  return hidesAppNav(pathname) && hidesTabBar(pathname)
-}
