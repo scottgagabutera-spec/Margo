@@ -80,7 +80,7 @@ export function PendingNavLink({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'var(--gold-faint)',
+            background: 'color-mix(in srgb, var(--gold) 16%, var(--bg))',
             pointerEvents: 'none',
             borderRadius: 'inherit',
             zIndex: 3,

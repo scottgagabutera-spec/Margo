@@ -853,7 +853,8 @@ export function PostCard({
           ) : profileHref ? (
             <PendingNavLink
               href={profileHref}
-              indicator="tint"
+              indicator="overlay"
+              ringSize={20}
               onClick={(e) => e.stopPropagation()}
               aria-label={`View profile @${profileUsername}`}
               style={{
@@ -897,7 +898,8 @@ export function PostCard({
               {profileHref ? (
                 <PendingNavLink
                   href={profileHref}
-                  indicator="subtle"
+                  indicator="overlay"
+                  ringSize={22}
                   onClick={(e) => e.stopPropagation()}
                   aria-label={`View profile @${profileUsername}`}
                   style={{
@@ -907,6 +909,7 @@ export function PostCard({
                     color: 'inherit',
                     WebkitTapHighlightColor: 'transparent',
                     display: 'block',
+                    borderRadius: '8px',
                   }}
                 >
                   {nameBlock}

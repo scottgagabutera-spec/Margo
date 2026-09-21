@@ -93,7 +93,11 @@ export function PromoteQueueCard({
   useEffect(() => {
     if (publishInFlightRef.current) return
     if (publishResult && item.status !== 'published') return
-    setLocalStatus(item.status)
+    setLocalStatus((prev) => {
+      if (prev === 'approved' && item.status === 'pending_review') return prev
+      if (prev === 'published' && item.status !== 'published') return prev
+      return item.status
+    })
   }, [item.status, publishResult])
 
   useEffect(() => {
@@ -279,7 +283,8 @@ export function PromoteQueueCard({
       })
       if (!res.ok) throw new Error('Approve failed')
       actionLockRef.current = false
-      await runPublish()
+      setBusy(null)
+      await onUpdated({ silent: true })
     } catch (err) {
       actionLockRef.current = false
       if ((err as Error)?.name === 'AbortError') {
@@ -483,7 +488,7 @@ export function PromoteQueueCard({
             margin: '0 0 12px',
             lineHeight: 1.45,
           }}>
-            Publish this Short to YouTube now? Your current color and effect choices will be used. This cannot be undone from MARGO.
+            Are you sure you chose the right color and the right effect? This publishes to YouTube now and cannot be undone from Margo.
           </p>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <button

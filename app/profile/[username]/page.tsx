@@ -25,6 +25,7 @@ import { ProfileImageLightbox } from '@/components/profile-image-lightbox'
 import { peekProfileCache, warmProfile, type WarmProfileRow } from '@/lib/profile-warm'
 import { resolvePublicArtistCredit } from '@/lib/artist-identity'
 import { uploadProfileCover } from '@/components/cover-upload'
+import { PendingNavLink } from '@/components/pending-nav-link'
 
 const supabase = createClient()
 
@@ -43,13 +44,15 @@ const sectionLabelStyle: React.CSSProperties = {
 }
 
 const profileStatStyle: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'flex-start',
+  justifyContent: 'center',
+  minWidth: 'var(--margo-touch-min)',
   minHeight: 'var(--margo-touch-min)',
-  fontFamily: font,
-  fontSize: '0.85rem',
-  color: 'var(--text-secondary)',
+  padding: '4px 12px 4px 0',
   textDecoration: 'none',
+  boxSizing: 'border-box',
 }
 
 function ProfileStat({
@@ -63,12 +66,35 @@ function ProfileStat({
 }) {
   const inner = (
     <>
-      <strong style={{ color: 'var(--text)' }}>{count ?? '—'}</strong>
-      &nbsp;{label}
+      <span style={{
+        fontFamily: font,
+        fontSize: '1.15rem',
+        fontWeight: 600,
+        color: 'var(--text)',
+        lineHeight: 1.15,
+        letterSpacing: '-0.02em',
+      }}>
+        {count ?? '—'}
+      </span>
+      <span style={{
+        fontFamily: font,
+        fontSize: '0.6rem',
+        fontWeight: 700,
+        letterSpacing: '1.2px',
+        textTransform: 'uppercase',
+        color: 'var(--text-muted)',
+        marginTop: '4px',
+      }}>
+        {label}
+      </span>
     </>
   )
   if (href) {
-    return <Link href={href} style={profileStatStyle}>{inner}</Link>
+    return (
+      <PendingNavLink href={href} indicator="overlay" ringSize={22} style={profileStatStyle}>
+        {inner}
+      </PendingNavLink>
+    )
   }
   return <span style={profileStatStyle}>{inner}</span>
 }
@@ -736,7 +762,15 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 the same visual weight as followers/following, instead of
                 the full catalog being dumped inline further down. Only
                 shown for artists. */}
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'stretch',
+              gap: '4px',
+              marginBottom: '24px',
+              borderTop: '1px solid var(--border)',
+              borderBottom: '1px solid var(--border)',
+              padding: '6px 0',
+            }}>
               <ProfileStat
                 href={(isOwnProfile || !profile.followListsPrivate) ? `/profile/${profile.username}/followers` : undefined}
                 count={followerCount}
