@@ -144,12 +144,6 @@ function StorySlideView({
     if (active) stop()
   }, [active, clearAdvance])
 
-  const poster = moment.author ? {
-    displayName: moment.author.displayName,
-    username: moment.author.username,
-    avatarUrl: moment.author.avatarUrl,
-  } : null
-
   return (
     <div style={{
       flex: 1,
@@ -185,7 +179,7 @@ function StorySlideView({
             playing={playing}
             buffering={buffering}
             onPlay={startPreviewPlayback}
-            poster={poster}
+            brandWatermark
           />
         </MomentExportPreviewFrame>
       </div>
@@ -230,7 +224,9 @@ export function StoryViewer({ authorProfileId, onClose }: StoryViewerProps) {
   indexRef.current = index
 
   const current = slides[index] ?? null
-  const header = formatStoryHeader(current?.moment.author ?? null)
+  const storyAuthor = current?.moment.author ?? null
+  const header = formatStoryHeader(storyAuthor)
+  const authorInitial = (storyAuthor?.displayName || storyAuthor?.username || '?').trim().charAt(0).toUpperCase()
 
   useEffect(() => {
     if (!current) return
@@ -331,33 +327,72 @@ export function StoryViewer({ authorProfileId, onClose }: StoryViewerProps) {
         padding: '0 14px 8px',
         gap: '12px',
       }}>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <p style={{
-            margin: 0,
-            fontFamily: font,
-            fontSize: '0.75rem',
-            fontWeight: 600,
-            letterSpacing: '0.4px',
-            color: 'var(--text-primary)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}>
-            {header.primary}
-          </p>
-          {header.secondary ? (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          minWidth: 0,
+          flex: 1,
+        }}>
+          {storyAuthor ? (
+            <span style={{
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              flexShrink: 0,
+              overflow: 'hidden',
+              border: '1px solid rgba(255,255,255,0.12)',
+              background: 'var(--surface-2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              {storyAuthor.avatarUrl ? (
+                <img
+                  src={storyAuthor.avatarUrl}
+                  alt=""
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                />
+              ) : (
+                <span style={{
+                  fontFamily: font,
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  color: 'var(--gold)',
+                }}>
+                  {authorInitial}
+                </span>
+              )}
+            </span>
+          ) : null}
+          <div style={{ minWidth: 0, flex: 1 }}>
             <p style={{
-              margin: '2px 0 0',
+              margin: 0,
               fontFamily: font,
-              fontSize: '0.62rem',
-              color: 'var(--text-muted)',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              letterSpacing: '0.4px',
+              color: 'var(--text-primary)',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
             }}>
-              {header.secondary}
+              {header.primary}
             </p>
-          ) : null}
+            {header.secondary ? (
+              <p style={{
+                margin: '2px 0 0',
+                fontFamily: font,
+                fontSize: '0.62rem',
+                color: 'var(--text-muted)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}>
+                {header.secondary}
+              </p>
+            ) : null}
+          </div>
         </div>
         <button
           type="button"

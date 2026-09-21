@@ -51,12 +51,8 @@ interface StageMomentCardProps {
    */
   effectOwnsFill?: boolean
   style?: CSSProperties
-  /** Story viewer: show poster avatar in the mark corner + on-card attribution. */
-  poster?: {
-    displayName?: string | null
-    username?: string | null
-    avatarUrl?: string | null
-  } | null
+  /** Story viewer: quiet Margo brand watermark in the mark corner (no poster attribution on-card). */
+  brandWatermark?: boolean
 }
 
 const playControlStyle: CSSProperties = {
@@ -131,7 +127,7 @@ export function StageMomentCard({
   hideVibeChrome = false,
   effectOwnsFill = false,
   style,
-  poster = null,
+  brandWatermark = false,
 }: StageMomentCardProps) {
   const [vibePickerOpen, setVibePickerOpen] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -258,9 +254,18 @@ export function StageMomentCard({
       }
 
   const markSymbolSize = layout?.mark.symbolSize ?? 22
-  const posterInitial = (poster?.displayName || poster?.username || '?').trim().charAt(0).toUpperCase()
-  const posterMarkStyle: CSSProperties = poster
-    ? { ...markStyle, overflow: 'hidden', padding: 0, background: 'var(--surface-2)' }
+  const watermarkSymbolSize = Math.max(14, Math.round(markSymbolSize * 0.68))
+  const resolvedMarkStyle: CSSProperties = brandWatermark
+    ? {
+        ...markStyle,
+        width: watermarkSymbolSize,
+        height: watermarkSymbolSize,
+        borderRadius: 0,
+        background: 'transparent',
+        border: 'none',
+        boxShadow: 'none',
+        opacity: 0.34,
+      }
     : markStyle
   const metaSongSize = layout?.meta?.song?.style.fontSize
   const metaArtistSize = layout?.meta?.artist?.style.fontSize
@@ -281,95 +286,15 @@ export function StageMomentCard({
           />
         ) : null}
         <div
-          style={posterMarkStyle}
-          aria-hidden={!poster}
-          aria-label={poster ? `Posted by ${poster.displayName || poster.username || 'artist'}` : undefined}
+          style={resolvedMarkStyle}
+          aria-hidden
+          title={brandWatermark ? 'From Margo' : undefined}
         >
-          {poster ? (
-            poster.avatarUrl ? (
-              <img
-                src={poster.avatarUrl}
-                alt=""
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-              />
-            ) : (
-              <span style={{
-                fontFamily: UI_FONT,
-                fontSize: Math.max(10, markSymbolSize * 0.42),
-                fontWeight: 700,
-                color: 'var(--gold)',
-              }}>
-                {posterInitial}
-              </span>
-            )
-          ) : (
-            <MargoSymbol size={markSymbolSize} variant={markVariant} />
-          )}
+          <MargoSymbol
+            size={brandWatermark ? watermarkSymbolSize : markSymbolSize}
+            variant={markVariant}
+          />
         </div>
-        {poster && isShorts ? (
-          <div style={{
-            position: 'absolute',
-            top: layout ? layout.mark.container.y + layout.mark.container.height + 8 : 52,
-            left: layout?.padding.left ?? 16,
-            zIndex: 5,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            maxWidth: `calc(100% - ${(layout?.padding.left ?? 16) + (layout?.padding.right ?? 16)}px)`,
-            pointerEvents: 'none',
-          }}>
-            <span style={{
-              width: 28,
-              height: 28,
-              borderRadius: '50%',
-              overflow: 'hidden',
-              flexShrink: 0,
-              border: '1px solid rgba(255,255,255,0.16)',
-              background: 'var(--surface-2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              {poster.avatarUrl ? (
-                <img src={poster.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <span style={{
-                  fontFamily: UI_FONT,
-                  fontSize: '0.62rem',
-                  fontWeight: 700,
-                  color: 'var(--gold)',
-                }}>
-                  {posterInitial}
-                </span>
-              )}
-            </span>
-            <span style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1px' }}>
-              <span style={{
-                fontFamily: UI_FONT,
-                fontSize: '0.68rem',
-                fontWeight: 600,
-                color: theme.ink,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}>
-                {poster.displayName || poster.username || 'Artist'}
-              </span>
-              {poster.username ? (
-                <span style={{
-                  fontFamily: UI_FONT,
-                  fontSize: '0.58rem',
-                  color: theme.inkMuted,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}>
-                  @{poster.username.replace(/^@/, '')}
-                </span>
-              ) : null}
-            </span>
-          </div>
-        ) : null}
         <div
           style={{
             position: 'relative',
