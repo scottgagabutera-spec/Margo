@@ -17,7 +17,7 @@ import { createPortal } from 'react-dom'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useHubSurfaces } from '@/hooks/useHubSurfaces'
 import { readActiveScrollTop } from '@/components/primary-tab-shell'
-import { BellIcon, HubGridIcon, LibraryIcon, MessagesIcon, HomeIcon } from '@/components/icons'
+import { BellIcon, HubGridIcon, LibraryIcon, MessagesIcon, HomeIcon, SearchIcon } from '@/components/icons'
 import { LoadingRing } from '@/components/loading-ring'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { UI_FONT } from '@/lib/fonts'
@@ -556,6 +556,34 @@ export function HomeNavLink() {
       }}
     >
       <HomeIcon
+        size={20}
+        color={active ? 'var(--gold)' : 'rgba(255,255,255,0.5)'}
+      />
+    </PendingNavLink>
+  )
+}
+
+export function SearchNavLink() {
+  const pathname = usePathname()
+  const active = pathname === '/search'
+  return (
+    <PendingNavLink
+      href="/search"
+      aria-label="Search"
+      ringSize={18}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: TOUCH,
+        height: TOUCH,
+        position: 'relative',
+        boxSizing: 'border-box',
+        flexShrink: 0,
+        borderRadius: '8px',
+      }}
+    >
+      <SearchIcon
         size={20}
         color={active ? 'var(--gold)' : 'rgba(255,255,255,0.5)'}
       />

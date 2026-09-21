@@ -20,6 +20,7 @@ interface MargoSearchInputProps {
   /** Keep typed text above dropdown scrims (Stage / Compose search). */
   stackAboveOverlay?: boolean
   id?: string
+  autoFocus?: boolean
 }
 
 /** Must exceed ComposeSearchDropdown scrim (54) and listbox (55). */
@@ -42,6 +43,7 @@ export function MargoSearchInput({
   icon = 'left',
   stackAboveOverlay = false,
   id: idProp,
+  autoFocus = false,
 }: MargoSearchInputProps) {
   const autoId = useId()
   const inputId = idProp ?? autoId
@@ -94,6 +96,7 @@ export function MargoSearchInput({
         autoComplete="off"
         autoCorrect="off"
         spellCheck={false}
+        autoFocus={autoFocus}
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}

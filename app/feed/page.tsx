@@ -7,29 +7,23 @@ import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
 import { CardExportModal } from '@/components/card-export-modal'
 import { resolveMargoMomentFromPost } from '@/lib/moment'
-import { resolveMomentLines } from '@/lib/post-lines'
 import { isNotificationAllowed } from '@/lib/notification-prefs'
 import Link from 'next/link'
-import { PendingNavLink } from '@/components/pending-nav-link'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useNotifications } from '@/hooks/useNotifications'
 import { useMessaging } from '@/hooks/useMessaging'
-import { MargoSearchInput } from '@/components/margo-search-input'
 import { PullToRefresh } from '@/components/pull-to-refresh'
 import { FeedNewMomentsPill } from '@/components/feed-new-moments-pill'
 import { ContentUpdatesBar } from '@/components/content-updates-bar'
 import { useNewItemsBuffer } from '@/hooks/useNewItemsBuffer'
 import { useContentUpdates } from '@/hooks/useContentUpdates'
-import { searchProfiles, type ProfileSearchHit } from '@/lib/search-profiles'
-import { ArtistBadge } from '@/components/artist-badge'
 import { PostCard, normalizeEmotion } from '@/components/post-card'
 import { ReplayAttribution } from '@/components/replay-attribution'
 import { useRecentReplays } from '@/hooks/useRecentReplays'
 import { usePrimaryTab, restoreActivePrimaryScroll } from '@/components/primary-tab-shell'
 import { FeedPostSkeletonList } from '@/components/margo-skeletons'
-import { stripHandlePrefix } from '@/lib/artist-identity'
 import { feedRankIds, feedSortScore } from '@/lib/feed-rank'
 import { StoryRing } from '@/components/stories/story-ring'
 import { StoryFeedAuthorSync, StoryRingProvider } from '@/components/stories/story-ring-context'
@@ -72,8 +66,6 @@ function FeedPageInner() {
   const { refetch: refetchMessages } = useMessaging()
   const [selectedVibe, setSelectedVibe] = useState('ALL')
   const [selectedSort, setSelectedSort] = useState('NEW')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [people, setPeople] = useState<ProfileSearchHit[]>([])
   const [resonated, setResonated] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set()
     try {
@@ -227,31 +219,9 @@ function FeedPageInner() {
     [posts, postStats],
   )
 
-  useEffect(() => {
-    const q = stripHandlePrefix(searchQuery)
-    if (q.length < 2) { setPeople([]); return }
-    const t = setTimeout(async () => {
-      const hits = await searchProfiles(supabase, q)
-      setPeople(hits)
-    }, 300)
-    return () => clearTimeout(t)
-  }, [searchQuery])
-
   const matchesFeedFilters = (p: Post) => {
     const norm = normalizeEmotion(p.emotion || '')
-    const matchesVibe = selectedVibe === 'ALL' || norm === selectedVibe
-    if (!searchQuery.trim()) return matchesVibe
-    const q = stripHandlePrefix(searchQuery).toLowerCase()
-    const momentHaystack = resolveMomentLines(p).map((l) => l.text).join(' ').toLowerCase()
-    const handle = stripHandlePrefix(p.username || '').toLowerCase()
-    return matchesVibe && (
-      momentHaystack.includes(q) ||
-      (p.knowledge?.song || '').toLowerCase().includes(q) ||
-      (p.knowledge?.artist || '').toLowerCase().includes(q) ||
-      (p.emotion || '').toLowerCase().includes(q) ||
-      handle.includes(q) ||
-      (p.authorDisplayName || '').toLowerCase().includes(q)
-    )
+    return selectedVibe === 'ALL' || norm === selectedVibe
   }
 
   type FeedItem =
@@ -300,7 +270,7 @@ function FeedPageInner() {
     }
     return merged
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [posts, recentReplays, selectedVibe, selectedSort, searchQuery, postStats])
+  }, [posts, recentReplays, selectedVibe, selectedSort, postStats])
 
   const notifyResonate = async (post: Post) => {
     if (!user?.id) return
@@ -581,19 +551,7 @@ function FeedPageInner() {
     >
     <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative', paddingTop: 'var(--nav-height, 72px)' }}>
       {!ptrBusy && feedLive && pendingCount > 0 && (
-        <div style={{
-          position: 'sticky',
-          top: 'calc(var(--nav-height, 72px) + 88px)',
-          zIndex: 25,
-          maxWidth: 'var(--margo-feed-max-width)',
-          margin: '0 auto',
-          padding: '0 24px 8px',
-          pointerEvents: 'none',
-        }}>
-          <div style={{ pointerEvents: 'auto', display: 'flex', justifyContent: 'center' }}>
-            <FeedNewMomentsPill count={pendingCount} onReveal={flushPending} variant="inline" />
-          </div>
-        </div>
+        <FeedNewMomentsPill count={pendingCount} onReveal={flushPending} variant="fixed" />
       )}
       {!ptrBusy && feedLive && (songCount > 0 || artistCount > 0) && (
         <ContentUpdatesBar
@@ -609,70 +567,48 @@ function FeedPageInner() {
         <div style={{ position: 'absolute', bottom: '-160px', right: '-160px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.03)', borderRadius: '50%', filter: 'blur(80px)' }} />
       </div>
 
-      {/* Sticky header — search only now. The old permanent vibe-pill row
-          and New/Trending/Top tab row are gone; those filters are now
-          triggered from tags that live ON the posts themselves (see
-          EarnedTag and the vibe label button in PostCard), and only
-          show up here as a dismissible chip once one is active.
+      <main className="margo-feed-column" style={{ position: 'relative', zIndex: 5, padding: '16px 24px var(--margo-page-padding-bottom)' }}>
+        {feedLive && (
+          <StoryRing
+            onAddStory={() => {
+              toast('Open a Moment and tap Add to Story in the export sheet.')
+            }}
+          />
+        )}
 
-          top: var(--nav-height) — was a hardcoded 56px guess, which
-          undershot the real fixed-nav height and let this sticky bar
-          (and by extension the feed content below it) drift under the
-          nav. Now reads the same measured value MargoNav publishes,
-          so this can't drift out of sync again. */}
-      <div style={{ position: 'sticky', top: 'var(--nav-height, 72px)', zIndex: 30, background: 'var(--bg)', padding: 'clamp(20px, 5vw, 56px) 24px 0' }}>
-        <div className="margo-feed-column">
-          <div style={{ paddingBottom: hasActiveFilter ? '10px' : '20px' }}>
-            <MargoSearchInput
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Search lyrics, songs, artists, @people…"
-              icon="none"
-            />
+        {hasActiveFilter && (
+          <div style={{ display: 'flex', gap: '6px', padding: '4px 0 16px' }}>
+            {selectedVibe !== 'ALL' && (
+              <button
+                type="button"
+                onClick={() => setSelectedVibe('ALL')}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  minHeight: 'var(--margo-touch-min)',
+                  padding: '4px 10px', borderRadius: '50px',
+                  background: 'var(--gold)', border: 'none', cursor: 'pointer',
+                  fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.55rem', fontWeight: 700,
+                  letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--bg)',
+                }}
+              >Filtering: {selectedVibe} <CloseIcon size={10} color="var(--bg)" /></button>
+            )}
+            {selectedSort !== 'NEW' && (
+              <button
+                type="button"
+                onClick={() => setSelectedSort('NEW')}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  minHeight: 'var(--margo-touch-min)',
+                  padding: '4px 10px', borderRadius: '50px',
+                  background: 'transparent', border: '1px solid var(--gold-border)', cursor: 'pointer',
+                  fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.55rem', fontWeight: 700,
+                  letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--gold)',
+                }}
+              >{selectedSort} <CloseIcon size={10} color="var(--gold)" /></button>
+            )}
           </div>
+        )}
 
-          {feedLive && (
-            <StoryRing
-              onAddStory={() => {
-                toast('Open a Moment and tap Add to Story in the export sheet.')
-              }}
-            />
-          )}
-
-          {hasActiveFilter && (
-            <div style={{ display: 'flex', gap: '6px', paddingBottom: '16px' }}>
-              {selectedVibe !== 'ALL' && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedVibe('ALL')}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '6px',
-                    padding: '4px 10px', borderRadius: '50px',
-                    background: 'var(--gold)', border: 'none', cursor: 'pointer',
-                    fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.55rem', fontWeight: 700,
-                    letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--bg)',
-                  }}
-                >Filtering: {selectedVibe} <CloseIcon size={10} color="var(--bg)" /></button>
-              )}
-              {selectedSort !== 'NEW' && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedSort('NEW')}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '6px',
-                    padding: '4px 10px', borderRadius: '50px',
-                    background: 'transparent', border: '1px solid var(--gold-border)', cursor: 'pointer',
-                    fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.55rem', fontWeight: 700,
-                    letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--gold)',
-                  }}
-                >{selectedSort} <CloseIcon size={10} color="var(--gold)" /></button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <main className="margo-feed-column" style={{ position: 'relative', zIndex: 5, padding: '32px 24px var(--margo-page-padding-bottom)' }}>
         {sharedLabel && (
           <p style={{
             fontFamily: 'var(--font-lora), serif',
@@ -687,10 +623,10 @@ function FeedPageInner() {
         )}
         {showFeedSkeleton && <FeedPostSkeletonList count={4} />}
 
-        {listReady && feedItems.length === 0 && !(searchQuery.trim() && people.length > 0) && (
+        {listReady && feedItems.length === 0 && (
           <div style={{ textAlign: 'center', padding: '64px 0' }}>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '1rem', marginBottom: '16px' }}>
-              {searchQuery ? `No lyrics found for "${searchQuery}"` : `No ${selectedVibe === 'ALL' ? '' : selectedVibe.toLowerCase()} lyrics yet`}
+              {`No ${selectedVibe === 'ALL' ? '' : selectedVibe.toLowerCase()} lyrics yet`}
             </p>
             <Link href="/compose" style={{
               padding: '10px 24px', border: '1px solid var(--border)',
@@ -698,34 +634,6 @@ function FeedPageInner() {
               fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
               letterSpacing: '1px', textTransform: 'uppercase', textDecoration: 'none',
             }}>Be the first</Link>
-          </div>
-        )}
-
-        {searchQuery.trim() && people.length > 0 && (
-          <div style={{ marginBottom: '28px' }}>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: '12px' }}>People</p>
-            {people.map(p => (
-              <PendingNavLink key={p.id} href={`/profile/${p.username}`} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', textDecoration: 'none', borderBottom: '1px solid var(--border)', minHeight: 'var(--margo-touch-min)' }}>
-                <div style={{
-                  width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
-                  background: p.avatarUrl ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  {p.avatarUrl ? (
-                    <img src={p.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', fontWeight: 700, color: 'var(--bg)' }}>
-                      {(p.displayName || p.username || '??').slice(0, 2).toUpperCase()}
-                    </span>
-                  )}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ color: 'var(--text)', fontFamily: 'var(--font-lora), serif', fontSize: '0.9rem', margin: 0 }}>{p.displayName}</p>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', margin: 0 }}>@{p.username}</p>
-                </div>
-                {p.isArtist && <ArtistBadge isArtist artistStatus={p.artistStatus} size={12} />}
-              </PendingNavLink>
-            ))}
           </div>
         )}
 
