@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useCallback, useRef, Suspense, useEffect } from 'react'
+import { useState, useCallback, useRef, Suspense, useEffect, useMemo } from 'react'
 import { MargoSearchInput } from '@/components/margo-search-input'
 import { highlightSearchText } from '@/lib/search-highlight'
-import { CardExportModal } from '@/components/card-export-modal'
+import { CardIcon, MusicNoteIcon } from '@/components/icons'
 import { AuthorMeta } from '@/components/username-tag'
 import { createClient } from '@/lib/supabase/client'
 import { matchLyricLine } from '@/lib/lyric-match'
@@ -16,14 +16,15 @@ import { useAuthGate } from '@/components/supabase-auth-provider'
 import { PostCard } from '@/components/post-card'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { BackButton } from '@/components/back-button'
-import { ComposeLyricCard, composeLyricTextStyle } from '@/components/compose-lyric-card'
-import { SongMeta } from '@/components/song-meta'
-import { VibeTag } from '@/components/vibe-tag'
+import { ComposeReadyPreview } from '@/components/compose-ready-preview'
+import { MomentShareStudio } from '@/components/moment-share-studio'
+import { MargoSheet } from '@/components/margo-sheet'
 import { useRouter } from 'next/navigation'
 import { toastMomentPrivate, toastMomentSent } from '@/lib/moment-export/moment-export-toasts'
 import { resolveMomentLines } from '@/lib/post-lines'
 import { isNotificationAllowed } from '@/lib/notification-prefs'
 import { trackEvent } from '@/lib/analytics/track'
+import { resolveMargoMomentFromComposeDrafts, resolveMargoMomentFromPost, vibeLabelToEmotion } from '@/lib/moment'
 import type { Post } from '@/hooks/usePosts'
 import type { Echo } from '@/hooks/useEchoes'
 
@@ -38,6 +39,7 @@ interface SearchResult {
   artwork: string
   source: Source
   audioUrl?: string | null
+  externalListenUrl?: string | null
 }
 
 type Vibe =
@@ -91,6 +93,30 @@ const vibeBtnStyle: React.CSSProperties = {
   cursor: 'pointer',
   transition: 'all 150ms ease',
   position: 'relative',
+}
+
+const composeToolBtnStyle: React.CSSProperties = {
+  flex: '1 1 0',
+  minWidth: 0,
+  minHeight: 'var(--margo-touch-min)',
+  padding: '6px 4px',
+  display: 'inline-flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '4px',
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  color: 'var(--text-secondary)',
+  WebkitTapHighlightColor: 'transparent',
+}
+
+const composeToolLabelStyle: React.CSSProperties = {
+  fontFamily: font,
+  fontSize: '0.56rem',
+  fontWeight: 600,
+  letterSpacing: '0.4px',
 }
 
 function normalizeEmotion(e: string) {
@@ -177,7 +203,8 @@ function LyricBackContent() {
   const [postError, setPostError] = useState<string | null>(null)
   const [resonated, setResonated] = useState<Set<string>>(new Set())
   const [resonateCounts, setResonateCounts] = useState<Record<string, number>>({})
-  const [showCard, setShowCard] = useState(false)
+  const [showExportStudio, setShowExportStudio] = useState(false)
+  const [listExportPost, setListExportPost] = useState<Post | null>(null)
   // Real FK lookup against Supabase songs, mirroring compose/page.tsx —
   // closes the pre-existing gap where lyric-back never linked a song at
   // all, meaning its posts could never be Tier1 / never get a snippet
@@ -188,10 +215,6 @@ function LyricBackContent() {
   const [margoLines, setMargoLines] = useState<ComposeLyricLine[]>([])
   const [linesLoading, setLinesLoading] = useState(false)
   const [linePickComplete, setLinePickComplete] = useState(false)
-  const [cardData, setCardData] = useState<{
-    lyric: string; song: string; artist: string; artwork?: string | null; id: string;
-    parentLyric?: string; parentSong?: string; parentArtist?: string;
-  } | null>(null)
   const emotionAbortRef = useRef<AbortController | null>(null)
   const prefillAppliedRef = useRef(false)
 
@@ -323,12 +346,15 @@ function LyricBackContent() {
         const externalMapped: SearchResult[] = (geniusRes.results || []).map((r: any) => {
           const rawSource = String(r.source || '').toLowerCase()
           const source: Source = (rawSource === 'itunes' || rawSource === 'apple') ? 'apple' : 'genius'
+          const trackViewUrl = typeof r.trackViewUrl === 'string' ? r.trackViewUrl : null
+          const geniusUrl = typeof r.geniusUrl === 'string' ? r.geniusUrl : null
           return {
             id: String(r.id || r.song),
             title: r.song,
             artist: r.artist,
             artwork: r.artwork || '',
             source,
+            externalListenUrl: trackViewUrl || geniusUrl || null,
           }
         }).filter((r: SearchResult) => !margoKeys.has(songMatchKey(r.title, r.artist)))
 
@@ -371,8 +397,8 @@ function LyricBackContent() {
     setStep(2)
   }, [enterCatalogSong])
 
-  const handleLyricComplete = useCallback(async () => {
-    if (lyric.trim().length === 0) return
+  const fetchEmotionForLyric = useCallback(async (text: string) => {
+    if (!text.trim()) return
     if (emotionAbortRef.current) emotionAbortRef.current.abort()
     const controller = new AbortController()
     emotionAbortRef.current = controller
@@ -380,7 +406,6 @@ function LyricBackContent() {
     setEmotionError(null)
     setSelectedVibe(null)
     setSuggestedVibe(null)
-    setStep(3)
 
     const parentVibe = parseVibeFromString(respondingTo?.emotion)
     if (parentVibe) {
@@ -392,7 +417,7 @@ function LyricBackContent() {
       const res = await fetch('/api/emotion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lyric }),
+        body: JSON.stringify({ lyric: text }),
         signal: controller.signal,
       })
       const data = await res.json()
@@ -414,7 +439,17 @@ function LyricBackContent() {
     } finally {
       setEmotionLoading(false)
     }
-  }, [lyric, respondingTo?.emotion])
+  }, [respondingTo?.emotion])
+
+  const enterReadyPreview = useCallback((text: string) => {
+    if (!text.trim()) return
+    setStep(4)
+    void fetchEmotionForLyric(text)
+  }, [fetchEmotionForLyric])
+
+  const handleLyricComplete = useCallback(() => {
+    enterReadyPreview(lyric)
+  }, [enterReadyPreview, lyric])
 
   const handleVibeSelect = useCallback((vibe: Vibe) => {
     setSelectedVibe(vibe)
@@ -592,6 +627,36 @@ function LyricBackContent() {
   const respondingToLines = respondingTo ? resolveMomentLines(respondingTo) : []
   const respondingToMulti = respondingToLines.length > 1
 
+  const readyDrafts = useMemo(() => [{
+    lyric,
+    songName,
+    artistName,
+    linkedSongId,
+    linkedAudioUrl: selectedSong?.audioUrl ?? null,
+    artwork: selectedSong?.artwork ?? null,
+    snippetStart,
+    snippetEnd,
+    source: selectedSong?.source || null,
+    externalListenUrl: selectedSong?.externalListenUrl ?? null,
+  }], [lyric, songName, artistName, linkedSongId, selectedSong, snippetStart, snippetEnd])
+
+  const exportMoment = useMemo(() => resolveMargoMomentFromComposeDrafts(readyDrafts, {
+    vibeLabel: selectedVibe ? VIBE_LABELS[selectedVibe] : null,
+    emotion: selectedVibe ? selectedVibe.toLowerCase() : null,
+  }), [readyDrafts, selectedVibe])
+
+  const studioMoment = useMemo(
+    () => (listExportPost ? resolveMargoMomentFromPost(listExportPost) : exportMoment),
+    [listExportPost, exportMoment],
+  )
+
+  const handleVibeLabelSelect = useCallback((label: string) => {
+    const emotion = vibeLabelToEmotion(label)
+    if (!emotion) return
+    const key = emotion.toUpperCase() as Vibe
+    if (VIBES.includes(key)) setSelectedVibe(key)
+  }, [])
+
   return (
     <main style={{ minHeight: '100vh', background: bg, position: 'relative' }}>
 
@@ -758,17 +823,21 @@ function LyricBackContent() {
                 songTitle={songName}
                 artistName={artistName}
                 onPick={(line) => {
+                  const text = (line.text || '').slice(0, 140)
                   setSnippetStart(line.startSec)
                   setSnippetEnd(line.endSec)
-                  setLyric((line.text || '').slice(0, 140))
+                  setLyric(text)
                   setLinePickComplete(true)
+                  enterReadyPreview(text)
                 }}
                 onPickParagraph={(picked) => {
                   const joined = picked.map((l) => l.text.trim()).filter(Boolean).join('\n')
+                  const text = joined.slice(0, 280)
                   setSnippetStart(picked[0].startSec)
                   setSnippetEnd(picked[picked.length - 1].endSec)
-                  setLyric(joined.slice(0, 280))
+                  setLyric(text)
                   setLinePickComplete(true)
+                  enterReadyPreview(text)
                 }}
                 onSkip={() => {
                   setSnippetStart(null)
@@ -945,24 +1014,61 @@ function LyricBackContent() {
             `}</style>
           </div>
 
-          {/* Step 4 */}
+          {/* Step 4 — same Moment card as compose landing */}
           <div style={{ display: step === 4 ? 'block' : 'none' }}>
-            <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)', color: text, marginBottom: '14px' }}>
+            <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)', color: text, marginBottom: '16px' }}>
               Ready to send it back?
             </p>
-            <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 2.5vw, 1.5rem)', color: text, lineHeight: 1.5, marginBottom: '8px' }}>&ldquo;{lyric}&rdquo;</p>
-            <p style={{ fontFamily: font, fontSize: '0.6rem', color: text3, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '16px' }}>
-              {songName} · {artistName}
-            </p>
-            {selectedVibe && (
-              <span style={{
-                display: 'inline-block', marginBottom: '20px',
-                fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
-                letterSpacing: '1px', textTransform: 'uppercase', padding: '4px 10px',
-                borderRadius: '50px', background: 'rgba(255,255,255,0.04)',
-                color: EMOTION_COLORS[normalizeEmotion(selectedVibe).toLowerCase()] || text3,
-              }}>{VIBE_LABELS[selectedVibe]}</span>
+            <ComposeReadyPreview
+              drafts={readyDrafts}
+              vibeLabel={selectedVibe ? VIBE_LABELS[selectedVibe] : null}
+              suggestedVibeLabel={suggestedVibe ? VIBE_LABELS[suggestedVibe] : null}
+              emotionLoading={emotionLoading}
+              onVibeSelect={handleVibeLabelSelect}
+            />
+            {emotionError && (
+              <p style={{ fontFamily: font, fontSize: '0.82rem', color: text2, margin: '8px 0 0', textAlign: 'center' }}>
+                {emotionError}
+              </p>
             )}
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'nowrap',
+                alignItems: 'stretch',
+                width: '100%',
+                margin: '12px 0 20px',
+                borderTop: '1px solid var(--border)',
+                paddingTop: '2px',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setListExportPost(null)
+                  setShowExportStudio(true)
+                }}
+                aria-label="Export"
+                style={composeToolBtnStyle}
+              >
+                <CardIcon size={16} color="currentColor" />
+                <span style={composeToolLabelStyle}>Export</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setStep(1)
+                  setLinePickComplete(false)
+                  setMargoLines([])
+                  setShowResults(false)
+                }}
+                aria-label="Change song"
+                style={composeToolBtnStyle}
+              >
+                <MusicNoteIcon size={16} color="currentColor" />
+                <span style={composeToolLabelStyle}>Change song</span>
+              </button>
+            </div>
             <div style={{ display: 'flex', gap: '10px' }}>
               <button
                 type="button"
@@ -1029,19 +1135,8 @@ function LyricBackContent() {
                   onResonate={toggleResonate}
                   onExport={(p) => {
                     if (!requireAuth()) return
-                    setCardData({
-                      lyric: p.text || '',
-                      song: p.knowledge?.song || '',
-                      artist: p.knowledge?.artist || '',
-                      artwork: p.knowledge?.artwork || selectedSong?.artwork || null,
-                      id: p.id,
-                      parentLyric: respondingTo
-                        ? resolveMomentLines(respondingTo).map((l) => l.text).join('  /  ')
-                        : undefined,
-                      parentSong: respondingTo?.knowledge?.song,
-                      parentArtist: respondingTo?.knowledge?.artist,
-                    })
-                    setShowCard(true)
+                    setListExportPost(p)
+                    setShowExportStudio(true)
                   }}
                 />
               )
@@ -1051,20 +1146,19 @@ function LyricBackContent() {
 
       </div>
 
-      {showCard && (
-        <CardExportModal
-          open={showCard}
-          onOpenChange={setShowCard}
-          lyric={cardData?.lyric || ''}
-          song={cardData?.song || ''}
-          artist={cardData?.artist || ''}
-          artwork={cardData?.artwork || null}
-          postId={cardData?.id}
-          parentLyric={cardData?.parentLyric}
-          parentSong={cardData?.parentSong}
-          parentArtist={cardData?.parentArtist}
-        />
-      )}
+      <MargoSheet
+        open={showExportStudio}
+        onOpenChange={(open) => {
+          setShowExportStudio(open)
+          if (!open) setListExportPost(null)
+        }}
+        title="Export your Moment"
+        zIndex={200}
+        heightMode="auto"
+        bottomInset="tabbar-tight"
+      >
+        <MomentShareStudio moment={studioMoment} compact layout="modal" />
+      </MargoSheet>
     </main>
   )
 }

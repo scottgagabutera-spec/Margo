@@ -70,12 +70,10 @@ export function MobileTabBar() {
 
   const isSignedIn = !!user && !user.isAnonymous
   const signinHref = useSigninHref()
-  const youHref = identity?.username
-    ? `/profile/${identity.username}`
-    : (isSignedIn ? '#' : signinHref)
+  const youHref = isSignedIn ? '/you' : signinHref
   const youLink = usePrimaryTabLinkProps(youHref, 'you')
   const isOnProfile = activeTab === 'you' || (!!identity && isSignedIn && pathname === `/profile/${identity.username}`)
-  const youAwaitingIdentity = isSignedIn && !identity
+  const youAwaitingIdentity = isSignedIn && !identity && activeTab !== 'you'
 
   const isMusicActive = engineState.mode !== 'idle'
 

@@ -1,8 +1,12 @@
 'use client'
 
-import { type ReactNode } from 'react'
+import { type ReactNode, useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { useIdentity } from '@/hooks/useIdentity'
 import { PrimaryTabShell } from '@/components/primary-tab-shell'
+import { YouTabPage } from '@/components/you-tab-page'
+import { warmPrimaryTab } from '@/lib/primary-tab-prefetch'
+import { warmProfile } from '@/lib/profile-warm'
 
 export {
   TAB_SWIPE_EXCLUDE_SELECTOR,
@@ -28,14 +32,29 @@ export function TabSwipeProvider({
   chrome?: ReactNode
 }) {
   const { user, identity } = useIdentity()
+  const router = useRouter()
 
   const isSignedIn = !!user && !user.isAnonymous
-  const ownProfileHref =
-    isSignedIn && identity?.username ? `/profile/${identity.username}` : null
+  const ownProfileHref = isSignedIn
+    ? (identity?.username ? `/profile/${identity.username}` : '/you')
+    : null
+  const youPane = useMemo(() => (isSignedIn ? <YouTabPage /> : null), [isSignedIn])
+
+  useEffect(() => {
+    if (!isSignedIn) return
+    router.prefetch('/you')
+    warmPrimaryTab('/you')
+    if (identity?.username) void warmProfile(identity.username)
+  }, [isSignedIn, identity?.username, router])
 
   return (
     <div className="margo-tab-swipe-viewport">
-      <PrimaryTabShell ownProfileHref={ownProfileHref} enableSwipeGesture chrome={chrome}>
+      <PrimaryTabShell
+        ownProfileHref={ownProfileHref}
+        enableSwipeGesture
+        chrome={chrome}
+        youPane={youPane}
+      >
         {children}
       </PrimaryTabShell>
     </div>

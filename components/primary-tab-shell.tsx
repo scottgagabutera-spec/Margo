@@ -65,8 +65,9 @@ export function resolvePrimaryTabId(
   if (path === '/feed') return 'feed'
   if (path === '/discover') return 'discover'
   if (path === '/compose') return 'compose'
+  if (path === '/you') return 'you'
   const own = normalizeTabPath(ownProfileHref)
-  if (own && path.toLowerCase() === own.toLowerCase()) return 'you'
+  if (own && own !== '/you' && path.toLowerCase() === own.toLowerCase()) return 'you'
   return null
 }
 
@@ -358,6 +359,8 @@ interface PrimaryTabShellProps {
   enableSwipeGesture?: boolean
   /** Nav / tab bar — must sit inside this provider for optimistic clicks. */
   chrome?: ReactNode
+  /** Pre-mount the You pane so the first tap is a cache hit, like Feed. */
+  youPane?: ReactNode
 }
 
 /** Hub overlay listens for this so it closes in the same turn as a tab paint. */
@@ -397,6 +400,7 @@ export function PrimaryTabShell({
   ownProfileHref,
   enableSwipeGesture = false,
   chrome,
+  youPane,
 }: PrimaryTabShellProps) {
   const pathname = usePathname()
   const router = useRouter()
@@ -414,7 +418,6 @@ export function PrimaryTabShell({
   const reassertedGenRef = useRef(0)
   const trustRouteRef = useRef(false)
   const ackClearRef = useRef<number | null>(null)
-  const pendingYouRef = useRef(false)
   const activeTab = paintedTab ?? routeTab
 
   const cacheRef = useRef(new Map<PrimaryTabId, ReactNode>())
@@ -438,6 +441,12 @@ export function PrimaryTabShell({
     !cacheRef.current.has(routeTab)
   ) {
     cacheRef.current.set(routeTab, children)
+  }
+
+  // Seed You before the first tap so the pane is already in the keepalive
+  // cache — same instant paint as Feed/Discover after they have been visited.
+  if (youPane && ownProfileHref && !cacheRef.current.has('you')) {
+    cacheRef.current.set('you', youPane)
   }
 
   useEffect(() => {
@@ -608,10 +617,10 @@ export function PrimaryTabShell({
     intentGenRef.current += 1
     let pushHref: string | null = href
     if (id === 'you') {
-      pushHref = path.startsWith('/profile/') ? path : (ownProfileHref || null)
-      pendingYouRef.current = !pushHref
-    } else {
-      pendingYouRef.current = false
+      // Static /you is the tab destination — never wait on /profile/[username].
+      if (path === '/you' || path === '#' || !path) pushHref = '/you'
+      else if (path.startsWith('/profile/')) pushHref = path
+      else pushHref = '/you'
     }
     intentHrefRef.current = pushHref ? normalizeTabPath(pushHref) : null
     paintedTabRef.current = id
@@ -624,20 +633,9 @@ export function PrimaryTabShell({
     } catch {
       paint()
     }
-    if (id === 'you') {
-      if (pushHref) router.push(pushHref, { scroll: false })
-    } else {
-      router.push(href, { scroll: false })
-    }
+    if (pushHref) router.push(pushHref, { scroll: false })
     return true
   }, [ownProfileHref, routeTab, router, endPeek, acknowledgePrimaryTab])
-
-  useEffect(() => {
-    if (!ownProfileHref || !pendingYouRef.current) return
-    pendingYouRef.current = false
-    intentHrefRef.current = ownProfileHref
-    router.push(ownProfileHref, { scroll: false })
-  }, [ownProfileHref, router])
 
   useEffect(() => {
     if (!ownProfileHref && cacheRef.current.has('you')) {
@@ -809,7 +807,7 @@ export function PrimaryTabShell({
       endPeek()
       intentGenRef.current += 1
       intentHrefRef.current =
-        id === 'you' ? (ownProfileHref || '/signin') : '/' + id
+        id === 'you' ? '/you' : '/' + id
       paintedTabRef.current = id
       const paint = () => {
         setPaintedTab(id)

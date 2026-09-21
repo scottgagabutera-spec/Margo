@@ -69,6 +69,7 @@ export function MargoNav() {
   const feedLink = usePrimaryTabLinkProps('/feed', 'feed')
   const discoverLink = usePrimaryTabLinkProps('/discover', 'discover')
   const composeLink = usePrimaryTabLinkProps('/compose', 'compose')
+  const youLink = usePrimaryTabLinkProps('/you', 'you')
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false)
   const avatarMenuRef = useRef<HTMLDivElement>(null)
   const navElRef = useRef<HTMLElement>(null)
@@ -103,7 +104,7 @@ export function MargoNav() {
     applicationStatus === 'rejected' ? 'Reapply as Artist' :
     'Apply as an Artist'
 
-  const ownProfileHref = identity ? `/profile/${identity.username}` : null
+  const ownProfileHref = identity ? `/you` : null
 
   const handleSignOut = async () => {
     setAvatarMenuOpen(false)
@@ -308,12 +309,17 @@ export function MargoNav() {
                         key={href}
                         href={href}
                         indicator="tint"
+                        {...(href === '/you' ? youLink : {})}
+                        onClick={(event) => {
+                          setAvatarMenuOpen(false)
+                          if (href === '/you') youLink.onClick(event)
+                        }}
                         style={{
                           display: 'flex', alignItems: 'center',
                           minHeight: 'var(--margo-touch-min)',
                           fontFamily: font, fontSize: '0.8rem',
                           textDecoration: 'none',
-                          color: pathname === href ? 'var(--gold)' : 'rgba(255,255,255,0.75)',
+                          color: pathname === href || (href === '/you' && activeTab === 'you') ? 'var(--gold)' : 'rgba(255,255,255,0.75)',
                           padding: '0 12px', borderRadius: '6px',
                           boxSizing: 'border-box',
                           transition: 'background 120ms ease, color 120ms ease',
