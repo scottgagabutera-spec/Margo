@@ -28,7 +28,7 @@ const OAUTH_COOKIE_OPTS = {
  * Auth core — server-initiated OAuth PKCE start.
  * Generates the code verifier server-side, sets it as an httpOnly cookie
  * on the provider redirect, then sends the browser to Google/Discord.
- * Callback: app/auth/callback/route.ts
+ * Callback: app/auth/callback/page.tsx → POST /api/auth/oauth/complete
  */
 export async function GET(
   request: NextRequest,

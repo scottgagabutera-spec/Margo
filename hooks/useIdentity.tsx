@@ -1,5 +1,5 @@
 'use client'
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 import { useAuthGate } from '@/components/supabase-auth-provider'
@@ -7,6 +7,8 @@ import { touchLastSeen } from '@/lib/engagement/last-seen'
 import { sanitizeArtistLinks } from '@/lib/artist-links'
 import { mergeLegalConsentIntoSettings, legalConsentFromUserMetadata } from '@/lib/legal/consent'
 import type { ArtistApplicationLinks } from '@/lib/artist-music-group'
+import { warmProfile } from '@/lib/profile-warm'
+import { warmFeedPosts } from '@/lib/primary-tab-prefetch'
 
 const supabase = createClient()
 
@@ -75,6 +77,7 @@ interface IdentityContextValue {
   user: IdentityUser | null
   identity: Identity | null
   loading: boolean
+  waitUntilReady: (timeoutMs?: number) => Promise<Identity | null>
   updateDisplayName: (newName: string) => Promise<ActionResult>
   changeUsername: (newUsername: string) => Promise<ActionResult>
   updateSignatureLyric: (data: { lyric: string; song: string; artist: string }) => Promise<ActionResult>
@@ -134,7 +137,7 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
   const [identity, setIdentityState] = useState<Identity | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
 
-  const ensureProfile = useCallback(async (su: SupabaseUser) => {
+  const ensureProfile = useCallback(async (su: SupabaseUser): Promise<Identity | null> => {
     const { data: existing } = await supabase
       .from('profiles')
       .select('*')
@@ -142,8 +145,9 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
       .maybeSingle()
 
     if (existing) {
-      setIdentityState(mapRow(existing))
-      return
+      const mapped = mapRow(existing)
+      setIdentityState(mapped)
+      return mapped
     }
 
     const meta = su.user_metadata || {}
@@ -171,45 +175,91 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
         .single()
 
       if (data) {
-        setIdentityState(mapRow(data))
-        return
+        const mapped = mapRow(data)
+        setIdentityState(mapped)
+        return mapped
       }
       if (error?.code === '23505') {
         username = generateUsername()
         continue
       }
       console.error('Failed to create profile:', error)
-      return
+      return null
     }
+    return null
+  }, [])
+
+  const identityRef = useRef(identity)
+  const profileLoadingRef = useRef(profileLoading)
+  const readyWaitersRef = useRef<Array<(row: Identity | null) => void>>([])
+  identityRef.current = identity
+  profileLoadingRef.current = profileLoading
+
+  const flushReadyWaiters = useCallback((row: Identity | null) => {
+    const waiters = readyWaitersRef.current
+    readyWaitersRef.current = []
+    for (const waiter of waiters) waiter(row)
+  }, [])
+
+  const waitUntilReady = useCallback((timeoutMs = 5000) => {
+    if (identityRef.current && !profileLoadingRef.current) {
+      return Promise.resolve(identityRef.current)
+    }
+    return new Promise<Identity | null>((resolve) => {
+      let settled = false
+      const finish = (row: Identity | null) => {
+        if (settled) return
+        settled = true
+        resolve(row)
+      }
+      readyWaitersRef.current.push(finish)
+      window.setTimeout(() => {
+        readyWaitersRef.current = readyWaitersRef.current.filter((w) => w !== finish)
+        finish(identityRef.current)
+      }, timeoutMs)
+    })
   }, [])
 
   useEffect(() => {
     if (authLoading) return
 
     let active = true
+    if (supabaseUser) setProfileLoading(true)
 
     async function sync() {
       if (supabaseUser) {
         setIdentityUser({
-          uid: supabaseUser!.id,
-          id: supabaseUser!.id,
-          email: supabaseUser!.email ?? null,
-          isAnonymous: supabaseUser!.is_anonymous ?? false,
+          uid: supabaseUser.id,
+          id: supabaseUser.id,
+          email: supabaseUser.email ?? null,
+          isAnonymous: supabaseUser.is_anonymous ?? false,
         })
-        await ensureProfile(supabaseUser!)
-      } else {
-        setIdentityUser(null)
-        setIdentityState(null)
+        const row = await ensureProfile(supabaseUser)
+        if (row) {
+          void warmProfile(row.username)
+          void warmFeedPosts()
+        }
+        if (active) {
+          setProfileLoading(false)
+          flushReadyWaiters(row)
+        }
+        return
       }
-      if (active) setProfileLoading(false)
+
+      setIdentityUser(null)
+      setIdentityState(null)
+      if (active) {
+        setProfileLoading(false)
+        flushReadyWaiters(null)
+      }
     }
 
-    sync()
+    void sync()
 
     return () => {
       active = false
     }
-  }, [supabaseUser, authLoading, ensureProfile])
+  }, [supabaseUser, authLoading, ensureProfile, flushReadyWaiters])
 
   // Heartbeat last_seen_at after profile is ensured; also on focus / visible.
   useEffect(() => {
@@ -338,6 +388,7 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
         user: identityUser,
         identity,
         loading: authLoading || profileLoading,
+        waitUntilReady,
         updateDisplayName,
         changeUsername,
         updateSignatureLyric,

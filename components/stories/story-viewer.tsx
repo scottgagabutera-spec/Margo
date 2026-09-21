@@ -140,18 +140,25 @@ function StorySlideView({
     })
   }, [canPlay, line, playbackKey, atmosphereId, songAtmosphere, scheduleAdvance, moment])
 
+  const startPreviewPlaybackRef = useRef(startPreviewPlayback)
+  startPreviewPlaybackRef.current = startPreviewPlayback
+
   const slideIdentity = `${moment.postId ?? ''}|${line?.lyric ?? ''}|${line?.snippetStart ?? ''}|${line?.snippetEnd ?? ''}`
+  const startedForRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!active) {
       clearAdvance()
+      startedForRef.current = null
       return
     }
-    startPreviewPlayback()
+    if (startedForRef.current === slideIdentity) return
+    startedForRef.current = slideIdentity
+    startPreviewPlaybackRef.current()
     return () => {
       clearAdvance()
     }
-  }, [active, slideIdentity, startPreviewPlayback, clearAdvance])
+  }, [active, slideIdentity, clearAdvance])
 
   useEffect(() => {
     if (!active || !canPlay) return

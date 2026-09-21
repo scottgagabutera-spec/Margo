@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { ComposeLyricCard } from '@/components/compose-lyric-card'
 import { MargoSymbol } from '@/components/margo-symbol'
@@ -151,15 +151,19 @@ export function StageMomentCard({
     exportAtmosphereId: effectOwnsFill ? atmosphereId : 'still',
   }, cardWidth)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = cardRef.current
-    if (!el || typeof ResizeObserver === 'undefined') return
+    if (!el) return
+    const publish = (w: number) => {
+      if (w && w > 0) setCardWidth(w)
+    }
+    publish(el.getBoundingClientRect().width)
+    if (typeof ResizeObserver === 'undefined') return
     const ro = new ResizeObserver((entries) => {
       const w = entries[0]?.contentRect.width
-      if (w && w > 0) setCardWidth(w)
+      if (w && w > 0) publish(w)
     })
     ro.observe(el)
-    setCardWidth(el.getBoundingClientRect().width)
     return () => ro.disconnect()
   }, [])
 
@@ -299,18 +303,25 @@ export function StageMomentCard({
             position: 'relative',
             zIndex: 2,
             height: isShorts ? '100%' : undefined,
+            visibility: isShorts && !layout ? 'hidden' : undefined,
           }}
         >
           <p
-            style={isShorts && layout
-              ? {
-                  ...lyricStyle,
-                  position: 'absolute',
-                  left: layout.lyric.x,
-                  top: layout.lyric.y,
-                  width: layout.lyric.maxWidth,
-                  margin: 0,
-                }
+            style={isShorts
+              ? (layout
+                ? {
+                    ...lyricStyle,
+                    position: 'absolute',
+                    left: layout.lyric.x,
+                    top: layout.lyric.y,
+                    width: layout.lyric.maxWidth,
+                    margin: 0,
+                  }
+                : {
+                    ...lyricStyle,
+                    opacity: 0,
+                    margin: 0,
+                  })
               : lyricStyle}
           >
             {layout && layout.lyric.lines.length > 0

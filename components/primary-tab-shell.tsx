@@ -12,6 +12,7 @@ import {
   useRef,
   useState,
   type MouseEvent,
+  type PointerEvent,
   type ReactNode,
   type CSSProperties,
 } from 'react'
@@ -247,13 +248,24 @@ function isModifiedClick(event: MouseEvent<HTMLAnchorElement>): boolean {
   return event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0
 }
 
+/** Gold flash so a tap always paints, even when the route commit is instant. */
+const TAB_ACK_MS = 160
+/** Spinner only if the destination is still in-flight after this delay. */
+const TAB_RING_DELAY_MS = 90
+
 interface PrimaryTabContextValue {
   activeTab: PrimaryTabId | null
   peekTab: PrimaryTabId | null
+  pendingTab: PrimaryTabId | null
   isOnPrimaryTab: boolean
   /** True for the painted destination (optimistic or committed) — never peek-only. */
   isTabActive: (id: PrimaryTabId) => boolean
+  /** True while the tap is acknowledged (gold), including instant cached switches. */
+  isTabAcked: (id: PrimaryTabId) => boolean
+  /** True while in-flight long enough to show a spinner — not a 1-frame flicker. */
+  isTabPending: (id: PrimaryTabId) => boolean
   hasCachedTab: (id: PrimaryTabId) => boolean
+  acknowledgePrimaryTab: (id: PrimaryTabId) => void
   navigatePrimaryTab: (href: string, event?: MouseEvent<HTMLAnchorElement>) => boolean
   beginPeek: (id: PrimaryTabId, dir: PrimaryTabPeekDir) => boolean
   setStripOffset: (px: number) => void
@@ -263,9 +275,13 @@ interface PrimaryTabContextValue {
 const PrimaryTabContext = createContext<PrimaryTabContextValue>({
   activeTab: null,
   peekTab: null,
+  pendingTab: null,
   isTabActive: () => false,
+  isTabAcked: () => false,
+  isTabPending: () => false,
   isOnPrimaryTab: false,
   hasCachedTab: () => false,
+  acknowledgePrimaryTab: () => {},
   navigatePrimaryTab: () => false,
   beginPeek: () => false,
   setStripOffset: () => {},
@@ -277,15 +293,23 @@ export function usePrimaryTab() {
 }
 
 /** Warm + optimistic navigate for primary-tab <Link>s (mobile bar + desktop nav). */
-export function usePrimaryTabLinkProps(href: string) {
-  const { navigatePrimaryTab } = usePrimaryTab()
+export function usePrimaryTabLinkProps(href: string, tabId?: PrimaryTabId) {
+  const { navigatePrimaryTab, acknowledgePrimaryTab, isTabPending, isTabAcked } = usePrimaryTab()
+  const pending = !!tabId && isTabPending(tabId)
+  const acked = !!tabId && isTabAcked(tabId)
   const warm = () => warmPrimaryTab(href)
   return {
     onPointerEnter: warm,
-    onPointerDown: warm,
+    onPointerDown: (event: PointerEvent<HTMLAnchorElement>) => {
+      warm()
+      if (!tabId) return
+      if (event.button !== 0 && event.pointerType === 'mouse') return
+      acknowledgePrimaryTab(tabId)
+    },
     onClick: (e: MouseEvent<HTMLAnchorElement>) => {
       navigatePrimaryTab(href, e)
     },
+    'aria-busy': pending || acked || undefined,
   }
 }
 
@@ -320,7 +344,12 @@ export function PrimaryTabShell({
   const router = useRouter()
   const routeTab = resolvePrimaryTabId(pathname, ownProfileHref)
   const [optimisticTab, setOptimisticTab] = useState<PrimaryTabId | null>(null)
+  const [ackedTab, setAckedTab] = useState<PrimaryTabId | null>(null)
+  const [ringTab, setRingTab] = useState<PrimaryTabId | null>(null)
+  const optimisticTabRef = useRef<PrimaryTabId | null>(null)
+  const ackClearRef = useRef<number | null>(null)
   const activeTab = optimisticTab ?? routeTab
+  optimisticTabRef.current = optimisticTab
 
   const cacheRef = useRef(new Map<PrimaryTabId, ReactNode>())
   const paneElsRef = useRef(new Map<PrimaryTabId, HTMLElement | null>())
@@ -408,12 +437,36 @@ export function PrimaryTabShell({
 
   const hasCachedTab = useCallback((id: PrimaryTabId) => cacheRef.current.has(id), [])
 
+  const acknowledgePrimaryTab = useCallback((id: PrimaryTabId) => {
+    setAckedTab(id)
+    if (ackClearRef.current != null) window.clearTimeout(ackClearRef.current)
+    ackClearRef.current = window.setTimeout(() => {
+      setAckedTab((curr) => (curr === id ? null : curr))
+      ackClearRef.current = null
+    }, TAB_ACK_MS)
+  }, [])
+
+  useEffect(() => {
+    if (!optimisticTab) {
+      setRingTab(null)
+      return
+    }
+    const id = optimisticTab
+    const t = window.setTimeout(() => {
+      if (optimisticTabRef.current === id) setRingTab(id)
+    }, TAB_RING_DELAY_MS)
+    return () => window.clearTimeout(t)
+  }, [optimisticTab])
+
   const navigatePrimaryTab = useCallback((href: string, event?: MouseEvent<HTMLAnchorElement>) => {
     if (event && isModifiedClick(event)) return false
     const path = href.split('?')[0]
     const id = resolvePrimaryTabId(path, ownProfileHref)
     if (!id) return false
     event?.preventDefault()
+    const pending = optimisticTab
+    if (pending && pending !== id) return true
+    acknowledgePrimaryTab(id)
     if (id === 'compose' && href.includes('?')) {
       cacheRef.current.delete('compose')
       setCacheVersion(v => v + 1)
@@ -433,7 +486,7 @@ export function PrimaryTabShell({
       router.push(href)
     })
     return true
-  }, [ownProfileHref, routeTab, router, endPeek])
+  }, [ownProfileHref, routeTab, router, endPeek, optimisticTab, acknowledgePrimaryTab])
 
   useEffect(() => {
     if (!ownProfileHref && cacheRef.current.has('you')) {
@@ -580,15 +633,19 @@ export function PrimaryTabShell({
     () => ({
       activeTab,
       peekTab,
+      pendingTab: optimisticTab,
       isOnPrimaryTab: activeTab !== null,
       isTabActive: (id: PrimaryTabId) => activeTab === id,
+      isTabAcked: (id: PrimaryTabId) => ackedTab === id,
+      isTabPending: (id: PrimaryTabId) => ringTab === id,
       hasCachedTab,
+      acknowledgePrimaryTab,
       navigatePrimaryTab,
       beginPeek,
       setStripOffset,
       endPeek,
     }),
-    [activeTab, peekTab, hasCachedTab, navigatePrimaryTab, beginPeek, setStripOffset, endPeek]
+    [activeTab, peekTab, optimisticTab, ackedTab, ringTab, hasCachedTab, acknowledgePrimaryTab, navigatePrimaryTab, beginPeek, setStripOffset, endPeek]
   )
 
   usePrimaryTabSwipeGesture(enableSwipeGesture, ownProfileHref, {

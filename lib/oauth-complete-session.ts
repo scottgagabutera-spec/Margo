@@ -6,44 +6,74 @@ import {
   OAUTH_INTENT_COOKIE,
   OAUTH_TERMS_PENDING_COOKIE,
 } from '@/lib/legal/oauth-intent'
-import { buildOAuthErrorRedirectResponse } from '@/lib/oauth-error-redirect'
+import { buildOAuthErrorRedirectUrl } from '@/lib/oauth-error-redirect'
 import {
   OAUTH_RETURN_COOKIE,
   sanitizeOAuthReturnPath,
 } from '@/lib/oauth-return'
 
+type CookieToSet = {
+  name: string
+  value: string
+  options: Parameters<NextResponse['cookies']['set']>[2]
+}
+
+function applyOAuthCookies(
+  response: NextResponse,
+  pendingCookies: CookieToSet[],
+  pendingHeaders: [string, string][],
+) {
+  response.cookies.set(OAUTH_TERMS_PENDING_COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 })
+  response.cookies.set(OAUTH_INTENT_COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 })
+  response.cookies.set(OAUTH_RETURN_COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 })
+  pendingCookies.forEach(({ name, value, options }) => {
+    response.cookies.set(name, value, options)
+  })
+  pendingHeaders.forEach(([key, value]) => {
+    response.headers.set(key, value)
+  })
+}
+
+function toAppPath(origin: string, absoluteOrPath: string): string {
+  if (absoluteOrPath.startsWith(origin)) {
+    const rest = absoluteOrPath.slice(origin.length)
+    return rest.startsWith('/') ? rest : `/${rest}`
+  }
+  return absoluteOrPath.startsWith('/') ? absoluteOrPath : `/${absoluteOrPath}`
+}
+
 /**
- * OAuth PKCE callback (Google / Discord).
- * Exchanges ?code= for a session using the httpOnly PKCE verifier cookie
- * set by GET /api/auth/oauth/[provider], then writes session cookies on
- * the redirect. Browser rehydrate via GET /api/auth/me.
+ * Exchange an OAuth PKCE code for a session using the httpOnly verifier cookie.
+ * Returns a JSON NextResponse with `{ redirectTo }` and session Set-Cookie headers.
  */
-export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url)
-  const code = searchParams.get('code')
+export async function completeOAuthCodeExchange(
+  request: NextRequest,
+  code: string | null,
+): Promise<NextResponse> {
+  const origin = new URL(request.url).origin
   const oauthReturn = sanitizeOAuthReturnPath(
     request.cookies.get(OAUTH_RETURN_COOKIE)?.value,
   )
   const oauthIntent = request.cookies.get(OAUTH_INTENT_COOKIE)?.value
+  const errorRedirect = buildOAuthErrorRedirectUrl(
+    origin,
+    oauthReturn,
+    'auth',
+    oauthIntent === 'signup' ? { mode: 'signup' } : undefined,
+  )
+
+  const json = (redirectTo: string, cookies?: CookieToSet[], headers?: [string, string][]) => {
+    const response = NextResponse.json({ redirectTo })
+    if (cookies && headers) applyOAuthCookies(response, cookies, headers)
+    return response
+  }
 
   if (!code) {
-    return NextResponse.redirect(
-      buildOAuthErrorRedirectResponse(
-        origin,
-        oauthReturn,
-        'auth',
-        oauthIntent === 'signup' ? { mode: 'signup' } : undefined,
-      ),
-    )
+    return json(errorRedirect)
   }
 
   const termsPending = request.cookies.get(OAUTH_TERMS_PENDING_COOKIE)?.value === '1'
-
-  const pendingCookies: {
-    name: string
-    value: string
-    options: Parameters<NextResponse['cookies']['set']>[2]
-  }[] = []
+  const pendingCookies: CookieToSet[] = []
   const pendingHeaders: [string, string][] = []
 
   const supabase = createServerClient(
@@ -70,14 +100,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabase.auth.exchangeCodeForSession(code)
   if (error) {
     console.error('exchangeCodeForSession failed:', error.message)
-    return NextResponse.redirect(
-      buildOAuthErrorRedirectResponse(
-        origin,
-        oauthReturn,
-        'auth',
-        oauthIntent === 'signup' ? { mode: 'signup' } : undefined,
-      ),
-    )
+    return json(errorRedirect)
   }
 
   let user = data.user
@@ -97,23 +120,12 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  let redirectTarget = oauthReturn ? `${origin}${oauthReturn}` : `${origin}/feed`
+  let redirectTarget = oauthReturn || '/feed'
   if (user && userNeedsTermsAcceptance(user)) {
     const params = new URLSearchParams({ step: 'terms' })
     if (oauthReturn) params.set('returnTo', oauthReturn)
-    redirectTarget = `${origin}/signin?${params.toString()}`
+    redirectTarget = `/signin?${params.toString()}`
   }
 
-  const response = NextResponse.redirect(redirectTarget)
-  response.cookies.set(OAUTH_TERMS_PENDING_COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 })
-  response.cookies.set(OAUTH_INTENT_COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 })
-  response.cookies.set(OAUTH_RETURN_COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 })
-  pendingCookies.forEach(({ name, value, options }) => {
-    response.cookies.set(name, value, options)
-  })
-  pendingHeaders.forEach(([key, value]) => {
-    response.headers.set(key, value)
-  })
-
-  return response
+  return json(toAppPath(origin, redirectTarget), pendingCookies, pendingHeaders)
 }

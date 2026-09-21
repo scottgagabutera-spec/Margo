@@ -21,7 +21,8 @@ export function isMessageThreadPath(pathname: string | null | undefined): boolea
 }
 
 function isAuthPath(pathname: string | null | undefined): boolean {
-  return pathname === '/signin'
+  if (!pathname) return false
+  return pathname === '/signin' || pathname.startsWith('/auth/callback')
 }
 
 /** Hide fixed MargoNav (marketing uses landing nav; immersive is chrome-free). */
