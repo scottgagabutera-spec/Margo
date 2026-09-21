@@ -12,6 +12,7 @@ import { MomentExportCustomizeBar } from '@/components/moment-export-customize-b
 import { MomentVibeRow } from '@/components/moment-vibe-row'
 import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
 import { MomentActionMenu, type MomentActionMenuItem } from '@/components/moment-action-menu'
+import { MomentOutreachActions } from '@/components/moment-outreach-actions'
 import { recordCardExport } from '@/lib/engagement/card-exports'
 import {
   drawDualCard,
@@ -219,6 +220,8 @@ export function MomentShareStudio({
       endSec: listen.snippetEnd,
       atmosphere: livingAtmosphereOrNull(songAtmosphere),
       source: 'feed',
+    }).catch(() => {
+      /* Preview autoplay is best-effort — tap play on the card if blocked. */
     })
   }, [
     canPlayInline,
@@ -595,69 +598,25 @@ export function MomentShareStudio({
             shapeId={shapeId}
             onShapeChange={setShapeId}
           />
-          {enablePromote && resolvedPostId && !isDualCard && (
-            <button
-              type="button"
-              disabled={promoteBusy || shapeId !== 'vertical'}
-              onClick={() => { void promoteToYouTube() }}
-              style={{
-                width: '100%',
-                marginTop: '12px',
-                padding: '12px 16px',
-                borderRadius: '999px',
-                border: '1px solid var(--gold-border)',
-                background: 'var(--gold-faint)',
-                color: 'var(--gold)',
-                fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
-                fontSize: '0.72rem',
-                fontWeight: 600,
-                letterSpacing: '0.5px',
-                textTransform: 'uppercase',
-                cursor: promoteBusy || shapeId !== 'vertical' ? 'not-allowed' : 'pointer',
-                opacity: shapeId !== 'vertical' ? 0.55 : 1,
-              }}
-            >
-              {promoteBusy ? 'Queuing…' : 'Promote to YouTube'}
-            </button>
-          )}
-          {enablePromote && shapeId !== 'vertical' && (
-            <p style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center' }}>
-              Switch to Shorts (9:16) to promote on YouTube.
-            </p>
-          )}
-          {resolvedPostId && (
-            <button
-              type="button"
-              onClick={() => { void addToStory() }}
-              disabled={storyBusy || exportBusy || shareBusy}
-              style={{
-                width: '100%',
-                minHeight: 'var(--margo-touch-min)',
-                marginTop: '10px',
-                padding: '12px 16px',
-                borderRadius: '999px',
-                border: '1px solid var(--gold-border)',
-                background: 'var(--gold-faint)',
-                color: 'var(--gold)',
-                fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
-                fontSize: '0.72rem',
-                fontWeight: 600,
-                letterSpacing: '0.5px',
-                textTransform: 'uppercase',
-                cursor: storyBusy ? 'not-allowed' : 'pointer',
-                opacity: storyBusy ? 0.7 : 1,
-              }}
-            >
-              {storyBusy ? 'Adding…' : 'Add to Story'}
-            </button>
-          )}
         </>
       ) : null}
     </>
   )
 
+  const outreachSection = !isDualCard && (!!resolvedPostId || enablePromote) ? (
+    <MomentOutreachActions
+      showStory={!!resolvedPostId}
+      storyBusy={storyBusy || exportBusy || shareBusy}
+      onAddToStory={() => { void addToStory() }}
+      showPromote={enablePromote}
+      promoteBusy={promoteBusy}
+      promoteRequiresVertical={shapeId !== 'vertical'}
+      onPromoteYouTube={() => { void promoteToYouTube() }}
+    />
+  ) : null
+
   const actionRow = (
-    <div style={{ position: 'relative', flexShrink: 0 }}>
+    <div style={{ position: 'relative', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <div style={{
         display: 'flex',
         flexDirection: 'row',
@@ -691,6 +650,7 @@ export function MomentShareStudio({
           menuZIndex={isModal ? modalMenuZIndex : undefined}
         />
       </div>
+      {outreachSection}
     </div>
   )
 
