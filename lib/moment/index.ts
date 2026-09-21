@@ -20,7 +20,7 @@ export {
 } from '@/lib/moment/stage-theme'
 
 export type { MomentComposition, MomentArchetype, MomentMotif, Composition } from '@/lib/moment/compose'
-export { composeMoment, hashMomentSeed } from '@/lib/moment/compose'
+export { composeMoment } from '@/lib/moment/compose'
 
 export {
   normalizeEmotionKey,
@@ -44,19 +44,11 @@ export {
   resolveMargoMomentFromPost,
   resolveMargoMomentFromComposeDrafts,
   resolveMargoMomentFromStage,
-  resolveMomentComposition,
   buildMomentSeedKey,
   buildMargoMomentFromExportProps,
-  margoMomentLineToNormalized,
-  margoMomentToNormalizedLines,
   margoMomentToPostLines,
 } from '@/lib/moment/resolve'
 
-export type {
-  LyricBackShareInput,
-  NativeSharePayload,
-  NativeShareResult,
-} from '@/lib/moment/share'
 export type {
   MomentListenContext,
   MomentListenResolution,
@@ -70,17 +62,5 @@ export {
 } from '@/lib/moment/listen'
 
 export {
-  MARGO_SITE_ORIGIN,
-  getMomentShareUrl,
-  buildMomentShareText,
-  buildMomentLinkCta,
-  buildLyricBackShareText,
-  buildNativeSharePayload,
-  buildLyricBackNativeSharePayload,
-  canNativeShare,
   canShareImageFiles,
-  isMomentRecipientShareable,
-  shareMomentNative,
-  copyMomentShareText,
-  copyMomentShareLink,
 } from '@/lib/moment/share'

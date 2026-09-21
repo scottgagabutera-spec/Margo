@@ -62,8 +62,7 @@ export interface MargoMoment {
   seedKey: string
   status?: MomentStatus | null
   /**
-   * Serializable composition decision — archetype + motif.
-   * When omitted, resolveMomentComposition() derives it from lines + vibe + seed.
+   * Serializable composition decision — archetype + motif for poster export.
    */
   composition?: MomentComposition | null
   /** Resolved listen destination — set when loading/sharing, not stored in DB */

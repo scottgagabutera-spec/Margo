@@ -1,6 +1,5 @@
 import { resolveMomentLines, type PostLine, type PostLineSource } from '@/lib/post-lines'
 import type { AtmosphereId } from '@/lib/atmosphere'
-import { composeMoment } from '@/lib/moment/compose'
 import { emotionToVibeLabel } from '@/lib/moment/vibe'
 import { resolveMomentListen } from '@/lib/moment/listen'
 import type {
@@ -10,13 +9,11 @@ import type {
   MomentShapeId,
   MomentStatus,
   MomentThemeId,
-  NormalizedMomentLine,
 } from '@/lib/moment/types'
 import {
   DEFAULT_MOMENT_SHAPE_ID,
   DEFAULT_MOMENT_THEME_ID,
 } from '@/lib/moment/types'
-import type { MomentComposition } from '@/lib/moment/compose'
 
 export interface PostLikeForMoment {
   id?: string
@@ -171,31 +168,6 @@ export function buildMargoMomentFromExportProps(input: ExportPropsMomentInput): 
     shapeId: input.shapeId ?? DEFAULT_MOMENT_SHAPE_ID,
     seedKey,
   }
-}
-
-export function margoMomentLineToNormalized(line: MargoMomentLine): NormalizedMomentLine {
-  return {
-    lyric: line.lyric,
-    songTitle: line.songTitle,
-    artistName: line.artistName,
-    artworkUrl: line.artworkUrl ?? null,
-  }
-}
-
-export function margoMomentToNormalizedLines(moment: MargoMoment): NormalizedMomentLine[] {
-  return moment.lines
-    .filter((l) => l.lyric.trim().length > 0)
-    .map(margoMomentLineToNormalized)
-}
-
-/** Derive or return cached serializable composition for a Moment. */
-export function resolveMomentComposition(moment: MargoMoment): MomentComposition {
-  if (moment.composition) return moment.composition
-  return composeMoment(
-    moment.vibeLabel,
-    margoMomentToNormalizedLines(moment),
-    moment.seedKey,
-  )
 }
 
 export function resolveMargoMomentFromPost(

@@ -1,4 +1,4 @@
-import { MARGO_SITE_ORIGIN } from '@/lib/moment/share'
+import { MARGO_SITE_ORIGIN } from '@/lib/moment/site-origin'
 
 export function getSongShareUrl(songId: string): string {
   return `${MARGO_SITE_ORIGIN}/song/${songId}`

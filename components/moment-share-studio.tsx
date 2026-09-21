@@ -7,7 +7,7 @@ import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { playSnippet } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
 import { useSongAtmosphere } from '@/hooks/useSongAtmosphere'
-import { isLivingAtmosphere, livingAtmosphereOrNull } from '@/lib/atmosphere'
+import { livingAtmosphereOrNull } from '@/lib/atmosphere'
 import { MomentExportCustomizeBar } from '@/components/moment-export-customize-bar'
 import { MomentVibeRow } from '@/components/moment-vibe-row'
 import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
@@ -16,17 +16,13 @@ import { MomentOutreachActions } from '@/components/moment-outreach-actions'
 import { MomentExportScrollHint } from '@/components/moment-export-scroll-hint'
 import { recordCardExport } from '@/lib/engagement/card-exports'
 import {
-  drawDualCard,
   normalizeLine,
-  SHAPES,
   type MomentLineInput,
   type NormalizedLine,
 } from '@/lib/moment-export/render-moment'
 import {
-  downloadCanvas,
   saveMargoMomentImage,
   shareMargoMomentImage,
-  slugify,
 } from '@/lib/moment-export/save-moment-image'
 import type { MargoMoment } from '@/lib/moment/types'
 import type { AtmosphereId } from '@/lib/atmosphere'
@@ -72,9 +68,6 @@ interface MomentShareStudioProps {
   artwork?: string | null
   postId?: string
   vibeLabel?: string | null
-  parentLyric?: string
-  parentSong?: string
-  parentArtist?: string
   compact?: boolean
   /** modal = feed / compose export sheet: preview then actions; menus portal downward */
   layout?: 'default' | 'modal'
@@ -94,9 +87,6 @@ export function MomentShareStudio({
   artwork = null,
   postId,
   vibeLabel,
-  parentLyric,
-  parentSong,
-  parentArtist,
   compact = false,
   layout = 'default',
   onShareMenuOpen,
@@ -124,10 +114,8 @@ export function MomentShareStudio({
     silent?: boolean
   } | null>(null)
   const [openMenu, setOpenMenu] = useState<'save' | 'share' | null>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
   const videoAbortRef = useRef<AbortController | null>(null)
 
-  const isDualCard = !!(parentLyric && parentSong && parentArtist)
   const resolvedPostId = momentProp?.postId ?? postId
 
   const lineSource = momentProp
@@ -151,7 +139,7 @@ export function MomentShareStudio({
     return []
   }, [lineSource, lyric, song, artist, artwork])
 
-  const isMulti = !isDualCard && momentLines.length > 1
+  const isMulti = momentLines.length > 1
   const previewIndex = isMulti ? lineIndex : 0
   const previewLine = momentLines[previewIndex]
 
@@ -166,7 +154,7 @@ export function MomentShareStudio({
   }, [momentProp, momentLines, resolvedPostId, exportVibeLabel, vibeLabel])
 
   const exportMoment = useMemo<MargoMoment | null>(() => {
-    if (!baseMoment || !previewLine || isDualCard) return baseMoment
+    if (!baseMoment || !previewLine) return baseMoment
     return {
       ...baseMoment,
       lines: [{
@@ -185,15 +173,15 @@ export function MomentShareStudio({
       vibeLabel: exportVibeLabel ?? baseMoment.vibeLabel ?? vibeLabel ?? null,
       seedKey: resolvedPostId ? `${resolvedPostId}:line${previewIndex}` : baseMoment.seedKey,
     }
-  }, [baseMoment, previewLine, isDualCard, cardThemeId, shapeId, exportAtmosphereId, exportVibeLabel, vibeLabel, resolvedPostId, previewIndex])
+  }, [baseMoment, previewLine, cardThemeId, shapeId, exportAtmosphereId, exportVibeLabel, vibeLabel, resolvedPostId, previewIndex])
 
   const hasSnippet = exportMoment ? momentHasPlayableSnippet(exportMoment) : false
   const hasVisualLoopExport = exportMoment ? momentUsesVisualLoopExport(exportMoment) : false
   const canClipExport = hasSnippet || hasVisualLoopExport
 
   const listen = useMemo(
-    () => (exportMoment && !isDualCard ? resolveMomentListen(exportMoment) : null),
-    [exportMoment, isDualCard],
+    () => (exportMoment ? resolveMomentListen(exportMoment) : null),
+    [exportMoment],
   )
   const canPlayInline = listen?.canPlayInline ?? false
   const playbackKey = listen?.songId || listen?.audioUrl || ''
@@ -277,50 +265,7 @@ export function MomentShareStudio({
     videoAbortRef.current?.abort()
   }, [])
 
-  const renderDualCanvas = useCallback(async () => {
-    const canvas = canvasRef.current
-    if (!canvas || !isDualCard) return
-    const shape = SHAPES.find((s) => s.id === shapeId) || SHAPES[0]
-    const w = shape.w
-    const h = shape.h
-    const SCALE = 2
-    canvas.width = w * SCALE
-    canvas.height = h * SCALE
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    ctx.setTransform(1, 0, 0, 1, 0, 0)
-    ctx.scale(SCALE, SCALE)
-    await drawDualCard(
-      ctx, w, h,
-      parentLyric!, parentSong!, parentArtist!,
-      lyric, song, artist,
-      {
-        themeId: cardThemeId,
-        exportAtmosphereId,
-        atmosphereTimeSec: isLivingAtmosphere(exportAtmosphereId) ? 1.2 : 0,
-      },
-    )
-  }, [isDualCard, parentLyric, parentSong, parentArtist, lyric, song, artist, cardThemeId, exportAtmosphereId, shapeId])
-
-  useEffect(() => {
-    if (!isDualCard) return
-    void renderDualCanvas()
-  }, [isDualCard, renderDualCanvas])
-
   const saveImage = useCallback(async () => {
-    if (isDualCard) {
-      await renderDualCanvas()
-      const canvas = canvasRef.current
-      if (!canvas) return
-      const slugReply = slugify(song, 'Lyric')
-      const slugParent = slugify(parentSong || '', 'Lyric')
-      await downloadCanvas(canvas, `MARGO_${slugParent}_LyricBack_${slugReply}.png`)
-      persistExportPrefs()
-      void recordCardExport({ postId: resolvedPostId, theme: cardThemeId, shape: shapeId })
-      toastMomentImageSaved()
-      onExported?.()
-      return
-    }
     if (!exportMoment) return
     setExportBusy(true)
     try {
@@ -334,50 +279,11 @@ export function MomentShareStudio({
     } finally {
       setExportBusy(false)
     }
-  }, [isDualCard, renderDualCanvas, song, parentSong, exportMoment, resolvedPostId, cardThemeId, shapeId, persistExportPrefs, onExported])
+  }, [exportMoment, resolvedPostId, cardThemeId, shapeId, persistExportPrefs, onExported])
 
   const shareImage = useCallback(async () => {
     setShareBusy(true)
     try {
-      if (isDualCard) {
-        await renderDualCanvas()
-        const canvas = canvasRef.current
-        if (!canvas || typeof navigator === 'undefined' || !navigator.share) {
-          toastMomentShareFailed()
-          return
-        }
-        const blob = await new Promise<Blob | null>((resolve) => {
-          canvas.toBlob((b) => resolve(b), 'image/png')
-        })
-        if (!blob) {
-          toastMomentShareFailed()
-          return
-        }
-        const file = new File(
-          [blob],
-          `MARGO_${slugify(parentSong || '', 'Lyric')}_LyricBack_${slugify(song, 'Lyric')}.png`,
-          { type: 'image/png' },
-        )
-        if (typeof navigator.canShare === 'function') {
-          try {
-            if (!navigator.canShare({ files: [file] })) {
-              toastMomentShareFailed()
-              return
-            }
-          } catch {
-            toastMomentShareFailed()
-            return
-          }
-        }
-        try {
-          await navigator.share({ files: [file], title: 'MARGO' })
-          toastMomentShared()
-          onShared?.()
-        } catch (err) {
-          if ((err as Error)?.name !== 'AbortError') toastMomentShareFailed()
-        }
-        return
-      }
       if (!exportMoment) return
       const result = await shareMargoMomentImage(exportMoment)
       if (result === 'shared') {
@@ -389,10 +295,10 @@ export function MomentShareStudio({
     } finally {
       setShareBusy(false)
     }
-  }, [isDualCard, renderDualCanvas, parentSong, song, exportMoment, onShared])
+  }, [exportMoment, onShared])
 
   const prepareVideo = useCallback(async () => {
-    if (!exportMoment || isDualCard || !canExportVideo || !canClipExport) return null
+    if (!exportMoment || !canExportVideo || !canClipExport) return null
     videoAbortRef.current?.abort()
     const ac = new AbortController()
     videoAbortRef.current = ac
@@ -413,7 +319,7 @@ export function MomentShareStudio({
       setVideoProgress(null)
       if (videoAbortRef.current === ac) videoAbortRef.current = null
     }
-  }, [exportMoment, isDualCard, canExportVideo, canClipExport])
+  }, [exportMoment, canExportVideo, canClipExport])
 
   const saveVideo = useCallback(async () => {
     setExportBusy(true)
@@ -522,20 +428,18 @@ export function MomentShareStudio({
     }
   }, [resolvedPostId, enablePromote, persistExportPrefs, router])
 
-  const saveItems: MomentActionMenuItem[] = isDualCard
-    ? buildMomentExportActionItems({ onExportImage: saveImage, showFormats: false })
-    : buildMomentExportActionItems({
-      onExportImage: saveImage,
-      hasPlayableSnippet: hasSnippet,
-      hasVisualLoopExport,
-      canExportVideo,
-      videoUnavailableHint,
-      onExportVideo: () => { void saveVideo() },
-    })
+  const saveItems: MomentActionMenuItem[] = buildMomentExportActionItems({
+    onExportImage: saveImage,
+    hasPlayableSnippet: hasSnippet,
+    hasVisualLoopExport,
+    canExportVideo,
+    videoUnavailableHint,
+    onExportVideo: () => { void saveVideo() },
+  })
 
   const shareItems: MomentActionMenuItem[] = buildMomentShareActionItems({
     canShareImage: canShareImg,
-    canShareVideo: !isDualCard && canShareVid && canExportVideo && canClipExport,
+    canShareVideo: canShareVid && canExportVideo && canClipExport,
     onShareImage: () => { void shareImage() },
     onShareVideo: () => { void shareVideo() },
   })
@@ -547,35 +451,7 @@ export function MomentShareStudio({
 
   const cardSection = (
     <>
-      {isDualCard ? (
-        <>
-          <MomentExportPreviewFrame shapeId={shapeId}>
-            <div style={{
-              borderRadius: shapeId === 'vertical' ? 0 : '12px',
-              overflow: 'hidden',
-              background: 'var(--surface)',
-            }}>
-              <canvas
-                ref={canvasRef}
-                style={{
-                  width: '100%',
-                  height: 'auto',
-                  display: 'block',
-                  aspectRatio: shapeId === 'vertical' ? '9 / 16' : shapeId === 'wide' ? '16 / 9' : '1 / 1',
-                }}
-              />
-            </div>
-          </MomentExportPreviewFrame>
-          <MomentExportCustomizeBar
-            cardThemeId={cardThemeId}
-            onThemeChange={setCardThemeId}
-            exportAtmosphereId={exportAtmosphereId}
-            onExportAtmosphereChange={setExportAtmosphereId}
-            shapeId={shapeId}
-            onShapeChange={setShapeId}
-          />
-        </>
-      ) : previewLine ? (
+      {previewLine ? (
         <>
           {isMulti && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -639,7 +515,7 @@ export function MomentShareStudio({
     </>
   )
 
-  const outreachSection = !isDualCard && (!!resolvedPostId || enablePromote) ? (
+  const outreachSection = (!!resolvedPostId || enablePromote) ? (
     <MomentOutreachActions
       showStory={!!resolvedPostId}
       storyBusy={storyBusy || exportBusy || shareBusy}

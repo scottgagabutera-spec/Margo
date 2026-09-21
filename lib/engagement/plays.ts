@@ -60,11 +60,3 @@ export async function recordQualifiedPlay(songId: string): Promise<void> {
     console.error('[recordQualifiedPlay] unexpected error:', e)
   }
 }
-
-/**
- * Unused — AudioEngine never records snippet plays.
- * Kept as a no-op stub so old imports (if any) stay harmless; delete in a later cleanup.
- */
-export async function recordSnippetPlay(_songId: string): Promise<void> {
-  return
-}

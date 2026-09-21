@@ -73,13 +73,6 @@ export function livingAtmosphereOrNull(raw: string | null | undefined): Atmosphe
   return toAtmosphereColumn(parseAtmosphere(raw))
 }
 
-/** @deprecated Prefer cycleLivingAtmosphere for export Effect control. */
-export function cycleExportAtmosphere(id: AtmosphereId): AtmosphereId {
-  const idx = ATMOSPHERE_IDS.indexOf(id)
-  const next = ATMOSPHERE_IDS[(idx + 1) % ATMOSPHERE_IDS.length]
-  return next ?? 'still'
-}
-
 /** Export Effect column — cycles living personalities only (never lands on Still). */
 export function cycleLivingAtmosphere(id: AtmosphereId): LivingAtmosphereId {
   if (!isLivingAtmosphere(id)) return LIVING_ATMOSPHERE_IDS[0]
@@ -90,8 +83,4 @@ export function cycleLivingAtmosphere(id: AtmosphereId): LivingAtmosphereId {
 export function exportAtmosphereLabel(id: AtmosphereId): string {
   if (id === 'still') return 'None'
   return ATMOSPHERE_OPTIONS.find((o) => o.id === id)?.label ?? 'None'
-}
-
-export function exportAtmosphereHint(id: AtmosphereId): string {
-  return ATMOSPHERE_OPTIONS.find((o) => o.id === id)?.hint ?? ''
 }
