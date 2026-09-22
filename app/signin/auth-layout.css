@@ -7,14 +7,16 @@
   max-width: 1080px;
   margin: 0 auto;
   box-sizing: border-box;
+  min-height: 100%;
   padding:
-    max(16px, env(safe-area-inset-top))
-    max(16px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-top))
+    max(24px, env(safe-area-inset-right))
     max(40px, env(safe-area-inset-bottom))
-    max(16px, env(safe-area-inset-left));
-  gap: clamp(20px, 4vw, 36px);
-  align-items: start;
+    max(24px, env(safe-area-inset-left));
+  gap: clamp(12px, 2vh, 24px);
+  align-items: stretch;
   grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
   grid-template-areas:
     "toolbar"
     "main";
@@ -45,16 +47,40 @@
 .margo-auth-layout__main {
   grid-area: main;
   width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
   min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Extra space above/below the form when the viewport is tall; never
+   collapse below a floor, so a long Create-account stack still has
+   breathing room instead of sitting flush under the toolbar. */
+.margo-auth-layout__main::before,
+.margo-auth-layout__main::after {
+  content: '';
+  flex: 1 1 auto;
+}
+
+.margo-auth-layout__main::before {
+  min-height: clamp(28px, 8vh, 88px);
+}
+
+.margo-auth-layout__main::after {
+  min-height: clamp(32px, 10vh, 96px);
 }
 
 @media (min-width: 901px) {
   .margo-auth-layout {
     grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+    grid-template-rows: auto 1fr;
     grid-template-areas:
       "toolbar toolbar"
       "brand main";
-    padding-top: max(24px, env(safe-area-inset-top));
+    padding-top: max(28px, env(safe-area-inset-top));
+    min-height: 100dvh;
   }
 
   .margo-auth-layout__brand {
@@ -63,5 +89,10 @@
     flex-direction: column;
     justify-content: center;
     padding-right: clamp(16px, 4vw, 40px);
+  }
+
+  .margo-auth-layout__main {
+    max-width: none;
+    margin: 0;
   }
 }

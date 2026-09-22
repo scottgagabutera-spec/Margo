@@ -78,7 +78,7 @@ function SigninPageInner() {
         {showModeTabs ? (
           <div className="margo-auth-layout__toolbar">
             <div className="margo-auth-layout__back">
-              <BackButton preferHistory={false} fallbackHref={returnTo || '/'} />
+              <BackButton variant="chrome" preferHistory={false} fallbackHref={returnTo || '/'} />
             </div>
             <div className="margo-auth-layout__tabs">
               <AuthModeTabs mode={mode} onChange={setMode} />

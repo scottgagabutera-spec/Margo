@@ -940,7 +940,7 @@ function LyricBackContent() {
                 onClick={() => setStep(2)}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
-                  fontFamily: font, fontSize: '0.82rem', color: text3,
+                  fontFamily: font, fontSize: '0.82rem', color: 'var(--gold)',
                   letterSpacing: '0.5px', marginBottom: '16px', padding: '0 12px',
                   minHeight: 'var(--margo-touch-min)', display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
                 }}

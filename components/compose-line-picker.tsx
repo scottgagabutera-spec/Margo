@@ -402,7 +402,7 @@ export function ComposeLinePicker({
           background: 'none', border: 'none', cursor: 'pointer',
           fontFamily: isStage ? UI_FONT : lyricFont,
           fontSize: '0.82rem',
-          color: 'var(--text-secondary)', letterSpacing: '0.3px',
+          color: 'var(--gold)', letterSpacing: '0.3px',
           marginBottom: isStage ? '20px' : '32px',
           padding: '0 4px', minHeight: 'var(--margo-touch-min)',
           display: 'inline-flex', alignItems: 'center', gap: '6px', boxSizing: 'border-box',

@@ -9,6 +9,7 @@ export type SearchScopeId =
   | 'artists'
   | 'resonance'
   | 'library'
+  | 'playlist'
   | 'hub'
   | 'people'
 
@@ -68,7 +69,13 @@ const SCOPES: Record<SearchScopeId, SearchScope> = {
   },
   library: {
     id: 'library',
-    placeholder: 'Search songs…',
+    placeholder: 'Search your library…',
+    types: ['catalog_line', 'artist'],
+    backHref: '/library',
+  },
+  playlist: {
+    id: 'playlist',
+    placeholder: 'Search this playlist…',
     types: ['catalog_line', 'artist'],
     backHref: '/library',
   },
@@ -102,11 +109,12 @@ export function searchScopeForPath(pathname: string | null | undefined): SearchS
 
   if (p === '/hub') return SCOPES.hub
   if (p === '/feed') return SCOPES.feed
-  if (p === '/discover') return SCOPES.discover
+  if (p === '/discover' || p === '/music') return SCOPES.discover
   if (p === '/discover/moments') return SCOPES.moments
   if (p === '/discover/songs') return SCOPES.songs
   if (p === '/discover/resonance') return SCOPES.resonance
   if (p === '/artists') return SCOPES.artists
+  if (p.startsWith('/library/playlists/')) return SCOPES.playlist
   if (p === '/library' || p.startsWith('/library/')) return SCOPES.library
   if (p === '/messages' || p.startsWith('/messages/') || p === '/notifications') return SCOPES.people
   if (p === '/studio' || p.startsWith('/studio/')) return SCOPES.songs
