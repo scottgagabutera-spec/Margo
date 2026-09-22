@@ -8,6 +8,7 @@ type ConnectionRow = {
   profile_id: string
   platform: PromotePlatform
   status: string
+  publish_adapter?: string
   external_account_id: string | null
   external_username: string | null
   access_token_enc: string
@@ -24,6 +25,7 @@ export function mapConnectionPublic(row: ConnectionRow): SocialConnectionPublic 
     id: row.id,
     platform: row.platform,
     status: row.status as SocialConnectionPublic['status'],
+    publishAdapter: row.publish_adapter === 'buffer' ? 'buffer' : 'direct',
     externalAccountId: row.external_account_id,
     externalUsername: row.external_username,
     connectedAt: row.connected_at,

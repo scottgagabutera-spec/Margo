@@ -11,6 +11,7 @@
  */
 
 const DEFAULT_SIGNED_URL_EXPIRY_SEC = 3600
+const DEFAULT_PUBLIC_MEDIA_HOST = 'audio.trymargo.com'
 
 function firstEnv(...names: string[]): string | undefined {
   for (const name of names) {
@@ -52,4 +53,9 @@ export function r2SignedUrlExpirySec(): number {
 
 export function r2S3Endpoint(): string {
   return `https://${r2AccountId()}.r2.cloudflarestorage.com`
+}
+
+/** Public CDN host for stable promote MP4 URLs (same bucket as catalog audio). */
+export function r2PublicMediaHost(): string {
+  return firstEnv('MARGO_MEDIA_PUBLIC_HOST', 'R2_PUBLIC_MEDIA_HOST') || DEFAULT_PUBLIC_MEDIA_HOST
 }

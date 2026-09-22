@@ -3,6 +3,8 @@ import type { MomentShapeId, MomentThemeId } from '@/lib/moment/types'
 
 export type PromotePlatform = 'youtube' | 'tiktok' | 'instagram' | 'facebook' | 'x'
 
+export type PublishAdapterKind = 'direct' | 'buffer'
+
 export type PromotePublishMode = 'auto' | 'review'
 
 export type PromoteCadence = 'daily' | 'weekly' | 'manual'
@@ -36,10 +38,26 @@ export interface SocialConnectionPublic {
   id: string
   platform: PromotePlatform
   status: SocialConnectionStatus
+  publishAdapter: PublishAdapterKind
   externalAccountId: string | null
   externalUsername: string | null
   connectedAt: string
   lastPublishAt: string | null
+  lastError: string | null
+}
+
+export interface BufferConnectionPublic {
+  status: SocialConnectionStatus
+  organizationId: string | null
+  channels: Array<{
+    id: string
+    service: string
+    name: string
+    displayName: string | null
+    platform: PromotePlatform | null
+  }>
+  channelsSyncedAt: string | null
+  connectedAt: string | null
   lastError: string | null
 }
 
@@ -72,6 +90,7 @@ export interface PromoteQueueRow {
 export interface PromoteQueueTargetRow {
   id: string
   platform: PromotePlatform
+  publishAdapter: PublishAdapterKind
   status: PromoteTargetStatus
   externalPostId: string | null
   externalPostUrl: string | null

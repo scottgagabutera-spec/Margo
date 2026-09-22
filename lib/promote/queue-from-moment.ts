@@ -1,10 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import {
-  buildPromoteQueueTargetRows,
-  fetchArtistSocialConnections,
-} from '@/lib/promote/build-queue-targets'
 import { exportPrefsFromPostRow } from '@/lib/promote/export-prefs'
-import { validateSelectedPlatforms } from '@/lib/promote/platforms'
+import {
+  buildPromoteQueueTargetRowsWithAdapters,
+  loadArtistPublishContext,
+  validateArtistSelectedPlatforms,
+} from '@/lib/promote/publish-readiness'
 import {
   fetchPublishedPlatformsForPost,
   latestPublishByPlatform,
@@ -58,7 +58,7 @@ export async function createPromoteQueueFromMoment(
   }
 
   const prefs = exportPrefsFromPostRow(post as MomentPostRow)
-  const validation = validateSelectedPlatforms(prefs.exportShapeId, platforms)
+  const validation = await validateArtistSelectedPlatforms(admin, profileId, prefs.exportShapeId, platforms)
   if (!validation.ok) throw new Error(validation.error)
 
   const publishRecords = await fetchPublishedPlatformsForPost(admin, profileId, postId)
@@ -100,8 +100,13 @@ export async function createPromoteQueueFromMoment(
 
   if (queueErr || !queue) throw queueErr || new Error('Failed to create promote queue row')
 
-  const connections = await fetchArtistSocialConnections(admin, profileId)
-  const targetRows = buildPromoteQueueTargetRows(queue.id as string, platforms, connections)
+  const { connections, bufferConnection } = await loadArtistPublishContext(admin, profileId)
+  const targetRows = buildPromoteQueueTargetRowsWithAdapters(
+    queue.id as string,
+    platforms,
+    connections,
+    bufferConnection,
+  )
   if (targetRows.length === 0) {
     throw new Error('No valid platforms selected — connect an account in Settings first.')
   }

@@ -8,6 +8,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import {
   r2AccessKeyId,
   r2BucketName,
+  r2PublicMediaHost,
   r2S3Endpoint,
   r2SecretAccessKey,
   r2SignedUrlExpirySec,
@@ -36,7 +37,7 @@ export async function uploadPromoteVideo(
   profileId: string,
   queueId: string,
   videoBytes: Buffer,
-): Promise<{ objectKey: string; byteSize: number }> {
+): Promise<{ objectKey: string; byteSize: number; publicUrl: string }> {
   const objectKey = promoteVideoObjectKey(profileId, queueId)
   const client = r2Client()
   await client.send(new PutObjectCommand({
@@ -44,9 +45,23 @@ export async function uploadPromoteVideo(
     Key: objectKey,
     Body: videoBytes,
     ContentType: 'video/mp4',
-    CacheControl: 'private, max-age=3600',
+    // Public via audio.trymargo.com — stable until cleanup deletes the object.
+    CacheControl: 'public, max-age=86400',
   }))
-  return { objectKey, byteSize: videoBytes.length }
+  return {
+    objectKey,
+    byteSize: videoBytes.length,
+    publicUrl: publicPromoteVideoUrl(objectKey),
+  }
+}
+
+/**
+ * Stable public HTTPS URL for platform fetch (Buffer, future direct APIs).
+ * Requires Margo/promote/* publicly readable on the R2 custom domain.
+ */
+export function publicPromoteVideoUrl(objectKey: string): string {
+  const normalized = objectKey.replace(/^\/+/, '')
+  return `https://${r2PublicMediaHost()}/${normalized}`
 }
 
 /** Delete a staged promote MP4. Throws on R2 errors (caller logs). */
@@ -58,7 +73,7 @@ export async function deletePromoteVideo(objectKey: string): Promise<void> {
   }))
 }
 
-/** Short-lived signed HTTPS URL for platform upload APIs. */
+/** Short-lived signed URL — legacy/internal only; do not pass to Buffer. */
 export async function signedPromoteVideoUrl(
   objectKey: string,
   expiresInSec = r2SignedUrlExpirySec(),

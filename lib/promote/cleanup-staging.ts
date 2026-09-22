@@ -22,7 +22,7 @@ export async function cleanupPromoteStagingVideoIfComplete(
 ): Promise<boolean> {
   const { data: targets, error } = await admin
     .from('promote_queue_targets')
-    .select('status')
+    .select('status, publish_adapter')
     .eq('queue_id', queueId)
 
   if (error) {
@@ -30,9 +30,16 @@ export async function cleanupPromoteStagingVideoIfComplete(
     return false
   }
 
-  const statuses = (targets || []).map((row) => row.status as string)
+  const rows = targets || []
+  const statuses = rows.map((row) => row.status as string)
   if (!allPromoteTargetsFinal(statuses)) {
     console.info('[promote/cleanup] skip — targets not all final', { queueId, statuses })
+    return false
+  }
+
+  const hasBufferTarget = rows.some((row) => row.publish_adapter === 'buffer')
+  if (hasBufferTarget) {
+    console.info('[promote/cleanup] skip — Buffer targets need stable public URL until post is sent', { queueId })
     return false
   }
 

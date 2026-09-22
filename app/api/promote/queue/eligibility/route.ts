@@ -1,14 +1,18 @@
 import { NextResponse } from 'next/server'
 import { getPromoteAdmin } from '@/lib/promote/admin-client'
 import { requirePromoteSession } from '@/lib/promote/api-auth'
-import { fetchArtistSocialConnections } from '@/lib/promote/build-queue-targets'
+import { bufferServiceToPlatform } from '@/lib/promote/buffer/service-map'
 import {
   platformSupportsShape,
-  PROMOTE_PLATFORM_DEFS,
   shapeRequirementHint,
 } from '@/lib/promote/platforms'
 import { fetchPublishedPlatformsForPost, latestPublishByPlatform } from '@/lib/promote/publish-history'
+import {
+  isPlatformPublishReady,
+  loadArtistPublishContext,
+} from '@/lib/promote/publish-readiness'
 import type { MomentShapeId } from '@/lib/moment/types'
+import { PROMOTE_PLATFORM_DEFS } from '@/lib/promote/types'
 
 export async function GET(request: Request) {
   const session = await requirePromoteSession()
@@ -28,34 +32,44 @@ export async function GET(request: Request) {
   const admin = getPromoteAdmin()
   if (!admin) return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
 
-  const [connections, publishRecords] = await Promise.all([
-    fetchArtistSocialConnections(admin, session.userId),
+  const [publishContext, publishRecords] = await Promise.all([
+    loadArtistPublishContext(admin, session.userId),
     fetchPublishedPlatformsForPost(admin, session.userId, postId),
   ])
 
+  const { connections, bufferConnection } = publishContext
   const publishedByPlatform = latestPublishByPlatform(publishRecords)
   const connectionByPlatform = new Map(connections.map((c) => [c.platform, c]))
+
+  const bufferChannelPlatforms = new Set(
+    (bufferConnection?.channels ?? [])
+      .map((ch) => bufferServiceToPlatform(ch.service))
+      .filter(Boolean),
+  )
 
   const platforms = PROMOTE_PLATFORM_DEFS.map((def) => {
     const connection = connectionByPlatform.get(def.id)
     const published = publishedByPlatform.get(def.id)
     const supportsShape = platformSupportsShape(def.id, shapeId)
-    const connected = connection?.status === 'connected'
+    const publishReady = isPlatformPublishReady(def.id, connections, bufferConnection, shapeId)
+    const viaBuffer = connection?.publish_adapter === 'buffer'
+      || (bufferChannelPlatforms.has(def.id) && !def.live)
 
     let state: 'selectable' | 'wrong_shape' | 'not_connected' | 'coming_soon' | 'already_published'
-    if (!def.live) state = 'coming_soon'
-    else if (!supportsShape) state = 'wrong_shape'
-    else if (!connected) state = 'not_connected'
+    if (!supportsShape) state = 'wrong_shape'
+    else if (!publishReady && !def.live && !viaBuffer) state = 'coming_soon'
+    else if (!publishReady) state = 'not_connected'
     else if (published) state = 'already_published'
     else state = 'selectable'
 
     return {
       id: def.id,
       label: def.label,
-      live: def.live,
+      live: def.live || viaBuffer,
+      publishAdapter: viaBuffer ? 'buffer' as const : (connection?.publish_adapter === 'buffer' ? 'buffer' as const : 'direct' as const),
       state,
       shapeHint: shapeRequirementHint(def.id, shapeId),
-      connected,
+      connected: publishReady,
       publishedAt: published?.publishedAt ?? null,
       externalPostUrl: published?.externalPostUrl ?? null,
     }
@@ -69,5 +83,6 @@ export async function GET(request: Request) {
     shapeId,
     platforms,
     defaultSelected,
+    bufferConnected: bufferConnection?.status === 'connected',
   })
 }

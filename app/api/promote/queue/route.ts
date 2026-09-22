@@ -40,6 +40,7 @@ function mapQueue(row: Record<string, unknown>, targets: Record<string, unknown>
     targets: targets.map((t) => ({
       id: String(t.id),
       platform: t.platform as PromoteQueueTargetRow['platform'],
+      publishAdapter: t.publish_adapter === 'buffer' ? 'buffer' : 'direct',
       status: t.status as PromoteQueueTargetRow['status'],
       externalPostId: (t.external_post_id as string | null) ?? null,
       externalPostUrl: (t.external_post_url as string | null) ?? null,
