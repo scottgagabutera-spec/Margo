@@ -1,11 +1,21 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { MargoSearchInput } from '@/components/margo-search-input'
+import { useRegisterNavBack } from '@/components/nav-back'
 import type { MargoSearchResponse } from '@/lib/meilisearch/types'
+import {
+  getSearchScope,
+  safeSearchFromPath,
+  sectionVisible,
+} from '@/lib/search-scope'
+import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 
 const DEBOUNCE_MS = 150
+const font = UI_FONT
+const lyricFont = LYRIC_FONT
 
 function HitSection({
   title,
@@ -20,8 +30,8 @@ function HitSection({
   return (
     <section style={{ marginBottom: '28px' }}>
       <p style={{
-        fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700,
-        color: 'var(--text-muted)', letterSpacing: '2px', textTransform: 'uppercase',
+        fontFamily: font, fontSize: TYPE.label, fontWeight: 700,
+        color: 'var(--text-muted)', letterSpacing: '0.16em', textTransform: 'uppercase',
         marginBottom: '12px',
       }}>{title}</p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>{children}</div>
@@ -33,25 +43,30 @@ function ResultCard({
   href,
   primary,
   secondary,
+  lyric,
 }: {
   href: string
   primary: string
   secondary?: string
+  lyric?: boolean
 }) {
   return (
     <Link href={href} style={{ textDecoration: 'none' }}>
       <div style={{
         padding: '14px 16px', borderRadius: '12px',
-        background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)',
+        background: 'var(--surface)', border: '1px solid var(--border)',
       }}>
         <p style={{
-          fontFamily: 'var(--font-lora), serif', fontStyle: 'italic',
-          fontSize: '0.9rem', color: 'var(--text)', margin: 0, lineHeight: 1.45,
+          fontFamily: lyric ? lyricFont : font,
+          fontStyle: lyric ? 'italic' : 'normal',
+          fontSize: lyric ? TYPE.lyric : TYPE.song,
+          fontWeight: lyric ? 400 : 600,
+          color: 'var(--text)', margin: 0, lineHeight: 1.45,
         }}>{primary}</p>
         {secondary ? (
           <p style={{
-            fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem',
-            color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase',
+            fontFamily: font, fontSize: TYPE.meta,
+            color: 'var(--text-muted)', letterSpacing: '0.04em',
             margin: '6px 0 0',
           }}>{secondary}</p>
         ) : null}
@@ -60,7 +75,13 @@ function ResultCard({
   )
 }
 
-export default function SearchPage() {
+function SearchPageInner() {
+  const params = useSearchParams()
+  const scope = useMemo(() => getSearchScope(params.get('scope')), [params])
+  const from = safeSearchFromPath(params.get('from')) || scope.backHref
+
+  useRegisterNavBack({ fallbackHref: from })
+
   const [query, setQuery] = useState('')
   const [debounced, setDebounced] = useState('')
   const [data, setData] = useState<MargoSearchResponse | null>(null)
@@ -84,7 +105,7 @@ export default function SearchPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`)
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&scope=${encodeURIComponent(scope.id)}`)
       const json = (await res.json()) as MargoSearchResponse & { error?: string }
       if (id !== reqId.current) return
       if (!res.ok) throw new Error(json.error || `Search failed (${res.status})`)
@@ -96,16 +117,26 @@ export default function SearchPage() {
     } finally {
       if (id === reqId.current) setLoading(false)
     }
-  }, [])
+  }, [scope.id])
 
   useEffect(() => {
     void runSearch(debounced)
   }, [debounced, runSearch])
 
   const results = data?.results
+  const showPeople = sectionVisible(scope, 'user')
+  const showLyrics = sectionVisible(scope, 'lyric')
+  const showArtists = sectionVisible(scope, 'artist')
+  const showLines = sectionVisible(scope, 'catalog_line')
+
   const hasResults = results && (
-    results.users.length + results.lyrics.length + results.artists.length + results.catalogLines.length > 0
+    (showPeople ? results.users.length : 0) +
+    (showLyrics ? results.lyrics.length : 0) +
+    (showArtists ? results.artists.length : 0) +
+    (showLines ? results.catalogLines.length : 0) > 0
   )
+
+  const lineTitle = scope.id === 'songs' ? 'Songs' : 'Lyric moments'
 
   return (
     <div style={{
@@ -115,82 +146,94 @@ export default function SearchPage() {
       <MargoSearchInput
         value={query}
         onChange={setQuery}
-        placeholder="Users, lyrics, artists…"
-        ariaLabel="Search Margo"
+        placeholder={scope.placeholder}
+        ariaLabel={scope.placeholder}
         autoFocus
       />
 
       {loading && debounced.length >= 2 && (
-        <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-muted)', marginTop: '20px' }}>
+        <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-muted)', marginTop: '20px', fontSize: TYPE.secondary }}>
           Searching…
         </p>
       )}
 
       {error && (
-        <p style={{ fontFamily: 'var(--font-lora), serif', color: 'var(--destructive)', marginTop: '20px' }}>
+        <p style={{ fontFamily: font, color: 'var(--text-secondary)', marginTop: '20px', fontSize: TYPE.secondary }}>
           {error}
         </p>
       )}
 
       {!loading && debounced.length >= 2 && !error && !hasResults && (
-        <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-muted)', marginTop: '20px' }}>
+        <p style={{ fontFamily: lyricFont, fontStyle: 'italic', color: 'var(--text-muted)', marginTop: '20px', fontSize: TYPE.secondary }}>
           Nothing found for &ldquo;{debounced}&rdquo;
         </p>
       )}
 
       {results && (
         <div style={{ marginTop: '24px' }}>
-          <HitSection title="People" empty={results.users.length === 0}>
-            {results.users.map(hit => (
-              <ResultCard
-                key={hit.id}
-                href={`/profile/${hit.username}`}
-                primary={hit.title || hit.username || ''}
-                secondary={hit.subtitle}
-              />
-            ))}
-          </HitSection>
+          {showPeople ? (
+            <HitSection title="People" empty={results.users.length === 0}>
+              {results.users.map(hit => (
+                <ResultCard
+                  key={hit.id}
+                  href={`/profile/${hit.username}`}
+                  primary={hit.title || hit.username || ''}
+                  secondary={hit.subtitle}
+                />
+              ))}
+            </HitSection>
+          ) : null}
 
-          <HitSection title="Posted lyrics" empty={results.lyrics.length === 0}>
-            {results.lyrics.map(hit => (
-              <ResultCard
-                key={hit.id}
-                href={hit.postId ? `/post/${hit.postId}` : '/feed'}
-                primary={hit.text || hit.title || ''}
-                secondary={[hit.subtitle, hit.username ? `@${hit.username}` : ''].filter(Boolean).join(' · ')}
-              />
-            ))}
-          </HitSection>
+          {showLyrics ? (
+            <HitSection title="Posted lyrics" empty={results.lyrics.length === 0}>
+              {results.lyrics.map(hit => (
+                <ResultCard
+                  key={hit.id}
+                  href={hit.postId ? `/post/${hit.postId}` : '/feed'}
+                  primary={hit.text || hit.title || ''}
+                  secondary={[hit.subtitle, hit.username ? `@${hit.username}` : ''].filter(Boolean).join(' · ')}
+                  lyric
+                />
+              ))}
+            </HitSection>
+          ) : null}
 
-          <HitSection title="Artists" empty={results.artists.length === 0}>
-            {results.artists.map(hit => (
-              <ResultCard
-                key={hit.id}
-                href={`/profile/${hit.username}`}
-                primary={hit.title || hit.username || ''}
-                secondary="Artist"
-              />
-            ))}
-          </HitSection>
+          {showArtists ? (
+            <HitSection title="Artists" empty={results.artists.length === 0}>
+              {results.artists.map(hit => (
+                <ResultCard
+                  key={hit.id}
+                  href={`/profile/${hit.username}`}
+                  primary={hit.title || hit.username || ''}
+                  secondary="Artist"
+                />
+              ))}
+            </HitSection>
+          ) : null}
 
-          <HitSection title="Catalog lines" empty={results.catalogLines.length === 0}>
-            {results.catalogLines.map(hit => (
-              <ResultCard
-                key={hit.id}
-                href={hit.songId ? `/song/${hit.songId}` : '/discover'}
-                primary={hit.text || hit.title || ''}
-                secondary={hit.subtitle}
-              />
-            ))}
-          </HitSection>
-
-          {data?.processingTimeMs != null && hasResults && (
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-muted)', marginTop: '8px' }}>
-              {data.processingTimeMs}ms
-            </p>
-          )}
+          {showLines ? (
+            <HitSection title={lineTitle} empty={results.catalogLines.length === 0}>
+              {results.catalogLines.map(hit => (
+                <ResultCard
+                  key={hit.id}
+                  href={hit.songId ? `/song/${hit.songId}` : '/discover'}
+                  primary={hit.text || hit.title || ''}
+                  secondary={hit.subtitle}
+                  lyric
+                />
+              ))}
+            </HitSection>
+          ) : null}
         </div>
       )}
     </div>
+  )
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={null}>
+      <SearchPageInner />
+    </Suspense>
   )
 }

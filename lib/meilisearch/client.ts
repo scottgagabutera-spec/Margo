@@ -95,16 +95,21 @@ export async function deleteMargoDocuments(ids: string[]): Promise<void> {
 export async function searchMargoIndex(
   query: string,
   limitPerType = 8,
+  types?: string[],
 ): Promise<{
   hits: Array<Record<string, unknown>>
   processingTimeMs: number
 }> {
+  const typeFilter = types && types.length > 0 && types.length < 4
+    ? types.map((t) => `type = "${t}"`).join(' OR ')
+    : undefined
   const res = await meiliFetch(`/indexes/${INDEX_UID}/search`, {
     method: 'POST',
     admin: false,
     body: JSON.stringify({
       q: query,
-      limit: limitPerType * 4,
+      limit: limitPerType * Math.max(1, types?.length || 4),
+      ...(typeFilter ? { filter: typeFilter } : {}),
       attributesToHighlight: ['text', 'title', 'subtitle', 'username'],
       highlightPreTag: '<mark>',
       highlightPostTag: '</mark>',

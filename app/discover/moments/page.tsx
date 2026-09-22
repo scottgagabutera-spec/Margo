@@ -58,8 +58,6 @@ export default function LyricMomentsCatalogPage() {
       items={filtered}
       loading={loading}
       getKey={m => `${m.songId}_${m.lineId}_${m.start}_${m.end}`}
-      getSearchText={m => `${m.line} ${m.songTitle} ${m.artist}`}
-      searchPlaceholder="Search lines, songs, artists…"
       extraFilters={<DiscoverVibeFilterRow selected={vibe} onSelect={setVibe} />}
       emptyMessage={vibe === 'ALL' ? 'No lyric moments yet.' : `No lines tagged for ${vibe} yet.`}
       minCardWidth={240}

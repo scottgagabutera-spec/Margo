@@ -25,6 +25,7 @@ import type { HubSurface, HubSurfaceId } from '@/lib/hub/surfaces'
 import { MargoSymbol } from '@/components/margo-symbol'
 import { SignInLink } from '@/components/signin-link'
 import { buildSigninHref, persistAuthReturnScroll } from '@/lib/auth-return'
+import { searchHrefForPath, searchScopeForPath } from '@/lib/search-scope'
 
 /** UI chrome — MARGO_BRAND §3 Geist Sans */
 const font = UI_FONT
@@ -575,11 +576,14 @@ export function HomeNavLink() {
 
 export function SearchNavLink() {
   const pathname = usePathname()
+  const { open } = useHub()
+  const href = searchHrefForPath(pathname, open ? '/hub' : null)
+  const scope = searchScopeForPath(open ? '/hub' : pathname)
   const active = pathname === '/search'
   return (
     <PendingNavLink
-      href="/search"
-      aria-label="Search"
+      href={href}
+      aria-label={scope.placeholder}
       ringSize={18}
       style={{
         display: 'flex',

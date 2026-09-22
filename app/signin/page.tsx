@@ -9,6 +9,7 @@ import { BackButton } from '@/components/back-button'
 import MargoLogo from '@/components/MargoLogo'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { AUTH_RETURN_QUERY, sanitizeAuthReturnPath } from '@/lib/auth-return'
+import Link from 'next/link'
 import './auth-layout.css'
 
 const lora = 'var(--font-lora), serif'
@@ -125,6 +126,25 @@ function SigninPageInner() {
               onSuccess={finishAuth}
             />
           )}
+          <p style={{
+            marginTop: '20px',
+            textAlign: 'center',
+          }}>
+            <Link
+              href="/help/account"
+              style={{
+                fontFamily: ui,
+                fontSize: '0.68rem',
+                fontWeight: 700,
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                color: 'var(--text-muted)',
+                textDecoration: 'none',
+              }}
+            >
+              Help
+            </Link>
+          </p>
         </main>
       </div>
     </div>

@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { searchMargoIndex } from '@/lib/meilisearch/client'
 import { categorizeHits } from '@/lib/meilisearch/documents'
 import type { MargoSearchResponse } from '@/lib/meilisearch/types'
+import { getSearchScope } from '@/lib/search-scope'
 
 export async function GET(request: NextRequest) {
   const q = (request.nextUrl.searchParams.get('q') || '').trim()
+  const scope = getSearchScope(request.nextUrl.searchParams.get('scope'))
   if (q.length < 2) {
     return NextResponse.json({
       query: q,
@@ -14,7 +16,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const { hits, processingTimeMs } = await searchMargoIndex(q, 8)
+    const { hits, processingTimeMs } = await searchMargoIndex(q, 8, scope.types)
     const results = categorizeHits(hits, 8)
     return NextResponse.json({
       query: q,

@@ -83,7 +83,7 @@ export function navBackForPath(pathname: string | null | undefined): NavBackConf
   if (p.startsWith('/discover/') || p === '/artists') return { fallbackHref: '/discover' }
   if (p.startsWith('/post/')) return { fallbackHref: '/feed' }
   if (p === '/lyric-back') return { fallbackHref: '/feed' }
-  if (p === '/about' || p === '/contact' || p === '/privacy' || p === '/terms' || p === '/dmca') {
+  if (p === '/about' || p === '/contact' || p === '/privacy' || p === '/terms' || p === '/dmca' || p === '/help' || p.startsWith('/help/') || p === '/faq') {
     return { fallbackHref: '/' }
   }
 

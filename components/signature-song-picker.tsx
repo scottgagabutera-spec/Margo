@@ -6,7 +6,8 @@ import { CloseIcon } from '@/components/icons'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { createClient } from '@/lib/supabase/client'
 import { searchMargoSongs, type MargoSongHit } from '@/lib/search-margo-songs'
-import { playFull, playSnippet, togglePlayPause } from '@/lib/audio-engine'
+import { playOrToggleSnippet, playFull, togglePlayPause } from '@/lib/audio-engine'
+import { matchLyricWindowFromLines } from '@/lib/lyric-match'
 import { useIsBuffering, useIsPlaying, useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
 import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import type { ComposeLyricLine } from '@/components/compose-line-picker'
@@ -17,18 +18,36 @@ const supabase = createClient()
 
 function CatalogPlayButton({
   track,
+  snippet,
 }: {
   track: { id: string; title: string; artist: string; artwork: string | null; audioUrl: string }
+  snippet?: { lineIndex: number; lineText: string; startSec: number; endSec: number } | null
 }) {
   const playing = useIsPlaying(track.id)
   const buffering = useIsBuffering(track.id)
+  const hasSnippet = !!snippet && snippet.endSec > snippet.startSec
   return (
     <button
       type="button"
-      aria-label={playing ? 'Pause song' : 'Play song'}
+      aria-label={playing ? 'Pause' : hasSnippet ? 'Play this line' : 'Play song'}
       onClick={() => {
         if (playing) {
           togglePlayPause()
+          return
+        }
+        if (hasSnippet && snippet) {
+          playOrToggleSnippet({
+            songId: track.id,
+            audioUrl: track.audioUrl,
+            title: track.title,
+            artist: track.artist,
+            artwork: track.artwork,
+            lineIndex: snippet.lineIndex,
+            lineText: snippet.lineText,
+            startSec: snippet.startSec,
+            endSec: snippet.endSec,
+            source: 'feed',
+          })
           return
         }
         void playFull({
@@ -166,6 +185,23 @@ export function SignatureSongPicker({
     ? [selected?.title || songTitle, selected?.artist || artistName].filter(Boolean).join(' · ')
     : null
 
+  const pickedSnippet = currentLyric && lines.length > 0
+    ? matchLyricWindowFromLines(lines.map((l) => ({
+      line_index: l.lineIndex,
+      text: l.text,
+      start_sec: l.startSec,
+      end_sec: l.endSec,
+    })), currentLyric)
+    : null
+  const snippet = pickedSnippet && pickedSnippet.endSec > pickedSnippet.startSec
+    ? {
+      lineIndex: pickedSnippet.lineId,
+      lineText: pickedSnippet.lineText,
+      startSec: pickedSnippet.startSec,
+      endSec: pickedSnippet.endSec,
+    }
+    : null
+
   return (
     <div>
       {selectedLabel ? (
@@ -190,6 +226,7 @@ export function SignatureSongPicker({
                 artwork: selected.artwork || null,
                 audioUrl: selected.audioUrl,
               }}
+              snippet={snippet}
             />
           ) : null}
           <span style={{
@@ -375,8 +412,8 @@ function SignatureLineRow({
     <button
       type="button"
       onClick={() => {
-        if (audioUrl && songId) {
-          void playSnippet({
+        if (audioUrl && songId && line.endSec > line.startSec) {
+          playOrToggleSnippet({
             songId,
             audioUrl,
             title: songTitle,
