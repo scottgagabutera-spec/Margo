@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
       types: scope.types,
       limitPerType: 8,
       playlistId: scope.id === 'playlist' ? playlistId : null,
+      restrictToPlaylist: scope.id === 'playlist',
       libraryUserId: scope.id === 'library' ? auth.user?.id ?? null : null,
       restrictToLibrary: scope.id === 'library',
       lyricsRequireSong: !!scope.lyricsRequireSong,

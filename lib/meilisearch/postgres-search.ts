@@ -56,6 +56,7 @@ export type SearchPostgresOptions = {
   playlistId?: string | null
   libraryUserId?: string | null
   restrictToLibrary?: boolean
+  restrictToPlaylist?: boolean
   lyricsRequireSong?: boolean
 }
 
@@ -148,6 +149,7 @@ export async function searchPostgresFallback(
       playlistId: opts.playlistId,
       libraryUserId: opts.libraryUserId,
       restrictToLibrary: !!opts.restrictToLibrary,
+      restrictToPlaylist: !!opts.restrictToPlaylist,
     })
   }
 
@@ -199,9 +201,11 @@ async function searchSongs(
     playlistId?: string | null
     libraryUserId?: string | null
     restrictToLibrary?: boolean
+    restrictToPlaylist?: boolean
   },
 ): Promise<MargoSearchHit[]> {
-  if (opts.playlistId) {
+  if (opts.restrictToPlaylist) {
+    if (!opts.playlistId) return []
     return searchPlaylistSongs(supabase, opts.playlistId, opts.qLower, opts.limitPerType)
   }
   if (opts.restrictToLibrary) {
