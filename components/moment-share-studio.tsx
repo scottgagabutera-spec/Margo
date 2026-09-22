@@ -56,6 +56,7 @@ import {
   toastMomentVideoSaved,
 } from '@/lib/moment-export/moment-export-toasts'
 import { savePostExportPrefsClient } from '@/lib/promote/client-export-prefs'
+import type { PromotePlatform } from '@/lib/promote/types'
 import { createStoryFromPost } from '@/lib/stories/create-story-client'
 import { toast } from 'sonner'
 
@@ -406,8 +407,11 @@ export function MomentShareStudio({
     }
   }, [resolvedPostId, persistExportPrefs, onExported])
 
-  const promoteToPlatforms = useCallback(async () => {
-    if (!resolvedPostId || !enablePromote) return
+  const promoteToPlatforms = useCallback(async (
+    platforms: PromotePlatform[],
+    confirmRepublish: boolean,
+  ) => {
+    if (!resolvedPostId || !enablePromote || platforms.length === 0) return
     persistExportPrefs()
     setPromoteBusy(true)
     try {
@@ -415,7 +419,11 @@ export function MomentShareStudio({
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ postId: resolvedPostId }),
+        body: JSON.stringify({
+          postId: resolvedPostId,
+          platforms,
+          confirmRepublish,
+        }),
       })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(body.error || 'Could not queue Moment')
@@ -522,9 +530,11 @@ export function MomentShareStudio({
       onAddToStory={() => { void addToStory() }}
       showPromote={enablePromote}
       promoteBusy={promoteBusy}
-      promoteRequiresVertical={shapeId !== 'vertical'}
+      postId={resolvedPostId || ''}
       shapeId={shapeId}
-      onPromote={() => { void promoteToPlatforms() }}
+      onPromote={(platforms, confirmRepublish) => {
+        void promoteToPlatforms(platforms, confirmRepublish)
+      }}
     />
   ) : null
 

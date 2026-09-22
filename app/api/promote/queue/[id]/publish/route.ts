@@ -162,8 +162,7 @@ export async function POST(
     .maybeSingle()
 
   if (claimErr) {
-    return NextResponse.json({ error: claimErr.message }, { status: 500 }
-    )
+    return NextResponse.json({ error: claimErr.message }, { status: 500 })
   }
   if (!claimed) {
     const { data: refreshedTargets } = await admin

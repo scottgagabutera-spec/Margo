@@ -12,6 +12,7 @@ import {
 } from '@/components/icons'
 import { TYPE, UI_FONT } from '@/lib/fonts'
 import { PROMOTE_PLATFORM_DEFS } from '@/lib/promote/platforms'
+import { getPlatformSetupGuide } from '@/lib/promote/platform-setup-guide'
 import type { PromotePlatform, PromotePublishMode, SocialConnectionPublic } from '@/lib/promote/types'
 import type { ComponentType } from 'react'
 
@@ -118,10 +119,9 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
         marginBottom: '20px',
         lineHeight: 1.45,
       }}>
-        Connect your social accounts once — when you promote a Moment, Margo publishes to every connected platform.
-        {liveCount > connectedCount && (
-          <> YouTube is live today; TikTok, Instagram, Facebook, and X are coming soon.</>
-        )}
+        Connect accounts here, then choose which platforms each export goes to from the export sheet.
+        YouTube is live today; TikTok, Instagram, Facebook, and X are coming soon.
+        LinkedIn is not in this release — tell us if you want it prioritized.
       </p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '24px' }}>
@@ -159,10 +159,34 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
                 )}
               </div>
 
+              {(() => {
+                const guide = getPlatformSetupGuide(platform.id)
+                return (
+                  <p style={{
+                    fontFamily: font,
+                    fontSize: TYPE.secondary,
+                    color: 'var(--text-muted)',
+                    margin: '0 0 8px',
+                    lineHeight: 1.45,
+                  }}>
+                    {guide.margoStatus}
+                  </p>
+                )
+              })()}
+
               {!platform.live ? (
-                <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-muted)', margin: 0 }}>
-                  Will publish Shorts from Margo when available.
-                </p>
+                <ul style={{
+                  fontFamily: font,
+                  fontSize: TYPE.secondary,
+                  color: 'var(--text-muted)',
+                  margin: '0 0 8px',
+                  paddingLeft: '18px',
+                  lineHeight: 1.45,
+                }}>
+                  {getPlatformSetupGuide(platform.id).artistSteps.map((step) => (
+                    <li key={step}>{step}</li>
+                  ))}
+                </ul>
               ) : connected ? (
                 <div style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
                   Connected as {connection?.externalUsername || `${platform.label} account`}
@@ -257,7 +281,7 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
             disabled={saving}
           />
           <span style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
-            Post automatically to all connected platforms using the Moment&apos;s export look
+            Post automatically to the platforms you select using the Moment&apos;s export look
           </span>
         </label>
       </div>

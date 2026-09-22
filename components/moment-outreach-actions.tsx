@@ -1,16 +1,8 @@
 'use client'
 
-import type { ComponentType, CSSProperties } from 'react'
-import {
-  FacebookIcon,
-  InstagramIcon,
-  TikTokIcon,
-  XIcon,
-  YouTubeIcon,
-  type MargoIconProps,
-} from '@/components/icons'
+import type { CSSProperties } from 'react'
+import { PromotePlatformPicker } from '@/components/promote/promote-platform-picker'
 import { UI_FONT } from '@/lib/fonts'
-import { promoteDestinationSummary, promotePlatformsForUi } from '@/lib/promote/platforms'
 import type { PromotePlatform } from '@/lib/promote/types'
 import type { MomentShapeId } from '@/lib/moment/types'
 
@@ -24,23 +16,6 @@ const sectionLabelStyle: CSSProperties = {
   letterSpacing: '1px',
   textTransform: 'uppercase',
   color: 'var(--text-muted)',
-}
-
-const hintStyle: CSSProperties = {
-  margin: '8px 0 0',
-  fontFamily: font,
-  fontSize: '0.68rem',
-  color: 'var(--text-muted)',
-  lineHeight: 1.35,
-  textAlign: 'left',
-}
-
-const PLATFORM_ICONS: Record<PromotePlatform, ComponentType<MargoIconProps>> = {
-  youtube: YouTubeIcon,
-  tiktok: TikTokIcon,
-  instagram: InstagramIcon,
-  facebook: FacebookIcon,
-  x: XIcon,
 }
 
 interface OutreachChipProps {
@@ -118,66 +93,15 @@ function OutreachChip({
   )
 }
 
-interface PlatformBadgeProps {
-  label: string
-  Icon: ComponentType<MargoIconProps>
-  live: boolean
-}
-
-function PlatformBadge({ label, Icon, live }: PlatformBadgeProps) {
-  const color = live ? 'var(--gold)' : 'var(--text-muted)'
-  return (
-    <div
-      aria-hidden
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '4px',
-        minWidth: '56px',
-        padding: '6px 8px',
-        borderRadius: '10px',
-        border: live ? '1px solid var(--gold-border)' : '1px solid var(--border)',
-        background: live ? 'var(--gold-faint)' : 'rgba(255,255,255,0.02)',
-        opacity: live ? 1 : 0.55,
-        flexShrink: 0,
-      }}
-    >
-      <Icon size={16} color={color} />
-      <span style={{
-        fontFamily: font,
-        fontSize: '0.5rem',
-        fontWeight: 600,
-        color,
-        lineHeight: 1.2,
-        textAlign: 'center',
-      }}>
-        {label}
-      </span>
-      {!live && (
-        <span style={{
-          fontFamily: font,
-          fontSize: '0.48rem',
-          color: 'var(--text-muted)',
-          lineHeight: 1.1,
-        }}>
-          Soon
-        </span>
-      )}
-    </div>
-  )
-}
-
 interface MomentOutreachActionsProps {
   showStory: boolean
   storyBusy: boolean
   onAddToStory: () => void
   showPromote: boolean
   promoteBusy: boolean
-  promoteRequiresVertical: boolean
+  postId: string
   shapeId: MomentShapeId
-  onPromote: () => void
+  onPromote: (platforms: PromotePlatform[], confirmRepublish: boolean) => void | Promise<void>
 }
 
 export function MomentOutreachActions({
@@ -186,7 +110,7 @@ export function MomentOutreachActions({
   onAddToStory,
   showPromote,
   promoteBusy,
-  promoteRequiresVertical,
+  postId,
   shapeId,
   onPromote,
 }: MomentOutreachActionsProps) {
@@ -199,10 +123,6 @@ export function MomentOutreachActions({
     paddingBottom: '2px',
     WebkitOverflowScrolling: 'touch',
   }
-
-  const platformDefs = promotePlatformsForUi(shapeId)
-  const destinationSummary = promoteDestinationSummary(shapeId)
-  const canPromote = !promoteRequiresVertical
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -228,45 +148,15 @@ export function MomentOutreachActions({
         </div>
       )}
 
-      {showPromote && (
+      {showPromote && postId && (
         <div>
           <p style={sectionLabelStyle}>Promote</p>
-          <div style={scrollerStyle} className="margo-promote-platforms">
-            <OutreachChip
-              label="All platforms"
-              ariaLabel="Promote to all connected platforms"
-              icon={(
-                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
-                  <path d="M4 10h12M11 5l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              )}
-              onClick={onPromote}
-              disabled={!canPromote}
-              busy={promoteBusy}
-              active={canPromote}
-            />
-            {platformDefs.map((platform) => {
-              const Icon = PLATFORM_ICONS[platform.id]
-              return (
-                <PlatformBadge
-                  key={platform.id}
-                  label={platform.label}
-                  Icon={Icon}
-                  live={platform.live}
-                />
-              )
-            })}
-          </div>
-          {promoteRequiresVertical ? (
-            <p style={hintStyle}>
-              Switch to Shorts (9:16) to promote across platforms.
-            </p>
-          ) : (
-            <p style={hintStyle}>{destinationSummary}</p>
-          )}
-          <style>{`
-            .margo-promote-platforms::-webkit-scrollbar { display: none; }
-          `}</style>
+          <PromotePlatformPicker
+            postId={postId}
+            shapeId={shapeId}
+            busy={promoteBusy}
+            onQueue={onPromote}
+          />
         </div>
       )}
     </div>

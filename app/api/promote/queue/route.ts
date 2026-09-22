@@ -6,9 +6,12 @@ import { createPromoteQueueFromMoment } from '@/lib/promote/queue-from-moment'
 import {
   isPromoteQueueItemVisible,
   PROMOTE_RESOLVED_RETENTION_MS,
+  type PromotePlatform,
   type PromoteQueueRow,
   type PromoteQueueTargetRow,
 } from '@/lib/promote/types'
+
+const VALID_PLATFORMS = new Set<PromotePlatform>(['youtube', 'tiktok', 'instagram', 'facebook', 'x'])
 
 function mapQueue(row: Record<string, unknown>, targets: Record<string, unknown>[]): PromoteQueueRow {
   return {
@@ -102,7 +105,7 @@ export async function POST(request: Request) {
   const session = await requirePromoteSession()
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  let body: { postId?: string }
+  let body: { postId?: string; platforms?: unknown; confirmRepublish?: unknown }
   try {
     body = await request.json()
   } catch {
@@ -112,6 +115,15 @@ export async function POST(request: Request) {
   if (!body.postId) {
     return NextResponse.json({ error: 'postId is required' }, { status: 400 })
   }
+
+  const platforms = Array.isArray(body.platforms)
+    ? body.platforms.filter((p): p is PromotePlatform => typeof p === 'string' && VALID_PLATFORMS.has(p as PromotePlatform))
+    : []
+  if (platforms.length === 0) {
+    return NextResponse.json({ error: 'Select at least one platform.' }, { status: 400 })
+  }
+
+  const confirmRepublish = body.confirmRepublish === true
 
   const admin = getPromoteAdmin()
   if (!admin) return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
@@ -125,14 +137,26 @@ export async function POST(request: Request) {
   const publishMode = settings?.publish_mode === 'auto' ? 'auto' : 'review'
 
   try {
-    const result = await createPromoteQueueFromMoment(
-      admin,
-      session.userId,
-      body.postId,
+    const result = await createPromoteQueueFromMoment(admin, {
+      profileId: session.userId,
+      postId: body.postId,
       publishMode,
-    )
+      platforms,
+      confirmRepublish,
+    })
     return NextResponse.json(result)
   } catch (err) {
+    if (
+      err instanceof Error
+      && 'code' in err
+      && (err as Error & { code?: string }).code === 'REPUBLISH_CONFIRM_REQUIRED'
+    ) {
+      return NextResponse.json({
+        error: err.message,
+        needsConfirm: true,
+        republishPlatforms: (err as Error & { republishPlatforms?: string[] }).republishPlatforms || [],
+      }, { status: 409 })
+    }
     const message = err instanceof Error ? err.message : 'Failed to queue Moment'
     return NextResponse.json({ error: message }, { status: 400 })
   }

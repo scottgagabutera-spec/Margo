@@ -4,8 +4,12 @@ import {
   fetchArtistSocialConnections,
 } from '@/lib/promote/build-queue-targets'
 import { exportPrefsFromPostRow } from '@/lib/promote/export-prefs'
-import { livePlatformsForShape } from '@/lib/promote/platforms'
-import type { PromotePublishMode } from '@/lib/promote/types'
+import { validateSelectedPlatforms } from '@/lib/promote/platforms'
+import {
+  fetchPublishedPlatformsForPost,
+  latestPublishByPlatform,
+} from '@/lib/promote/publish-history'
+import type { PromotePlatform, PromotePublishMode } from '@/lib/promote/types'
 
 type MomentPostRow = {
   id: string
@@ -22,12 +26,20 @@ type MomentPostRow = {
   songs?: { atmosphere?: string | null } | Array<{ atmosphere?: string | null }> | null
 }
 
+export interface CreatePromoteQueueInput {
+  profileId: string
+  postId: string
+  publishMode: PromotePublishMode
+  platforms: PromotePlatform[]
+  confirmRepublish?: boolean
+}
+
 export async function createPromoteQueueFromMoment(
   admin: SupabaseClient,
-  profileId: string,
-  postId: string,
-  publishMode: PromotePublishMode,
+  input: CreatePromoteQueueInput,
 ): Promise<{ queueId: string; initialStatus: string }> {
+  const { profileId, postId, publishMode, platforms, confirmRepublish = false } = input
+
   const { data: post, error: postErr } = await admin
     .from('posts')
     .select(`
@@ -46,9 +58,20 @@ export async function createPromoteQueueFromMoment(
   }
 
   const prefs = exportPrefsFromPostRow(post as MomentPostRow)
-  const platforms = livePlatformsForShape(prefs.exportShapeId)
-  if (platforms.length === 0) {
-    throw new Error('This Moment shape is not supported for promotion yet — export as Shorts (9:16) first.')
+  const validation = validateSelectedPlatforms(prefs.exportShapeId, platforms)
+  if (!validation.ok) throw new Error(validation.error)
+
+  const publishRecords = await fetchPublishedPlatformsForPost(admin, profileId, postId)
+  const publishedByPlatform = latestPublishByPlatform(publishRecords)
+  const republishPlatforms = platforms.filter((p) => publishedByPlatform.has(p))
+  if (republishPlatforms.length > 0 && !confirmRepublish) {
+    const err = new Error('This Moment was already promoted to some selected platforms.') as Error & {
+      code: 'REPUBLISH_CONFIRM_REQUIRED'
+      republishPlatforms: PromotePlatform[]
+    }
+    err.code = 'REPUBLISH_CONFIRM_REQUIRED'
+    err.republishPlatforms = republishPlatforms
+    throw err
   }
 
   const initialStatus = publishMode === 'auto' ? 'approved' : 'pending_review'
@@ -80,7 +103,7 @@ export async function createPromoteQueueFromMoment(
   const connections = await fetchArtistSocialConnections(admin, profileId)
   const targetRows = buildPromoteQueueTargetRows(queue.id as string, platforms, connections)
   if (targetRows.length === 0) {
-    throw new Error('No promotion platforms are available for this shape yet.')
+    throw new Error('No valid platforms selected — connect an account in Settings first.')
   }
 
   const { error: targetErr } = await admin.from('promote_queue_targets').insert(targetRows)

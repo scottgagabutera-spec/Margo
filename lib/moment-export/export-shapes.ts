@@ -1,7 +1,7 @@
 import type { MomentShapeId } from '@/lib/moment/types'
 
 /** User-facing export sizes cycled in share/export UI. */
-export const EXPORT_SHAPE_CYCLE: MomentShapeId[] = ['square', 'vertical']
+export const EXPORT_SHAPE_CYCLE: MomentShapeId[] = ['square', 'vertical', 'wide']
 
 export const EXPORT_SHAPE_LABELS: Record<MomentShapeId, string> = {
   square: 'Feed',

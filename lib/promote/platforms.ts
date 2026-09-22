@@ -1,3 +1,4 @@
+import { EXPORT_SHAPE_HINTS, EXPORT_SHAPE_LABELS } from '@/lib/moment-export/export-shapes'
 import type { MomentShapeId } from '@/lib/moment/types'
 import type { PromotePlatform } from '@/lib/promote/types'
 
@@ -11,6 +12,14 @@ export interface PromotePlatformDef {
   /** OAuth start path when live. */
   oauthPath?: string
 }
+
+export type PromotePlatformPickerState =
+  | 'selectable'
+  | 'selected'
+  | 'wrong_shape'
+  | 'not_connected'
+  | 'coming_soon'
+  | 'already_published'
 
 /** Single source of truth for promote destinations — add platforms here as they ship. */
 export const PROMOTE_PLATFORM_DEFS: PromotePlatformDef[] = [
@@ -106,4 +115,39 @@ export function promoteDestinationSummary(shapeId: MomentShapeId): string {
 export function connectPlatformMessage(platform: PromotePlatform): string {
   const label = getPromotePlatformDef(platform)?.label ?? platform
   return `Connect ${label} in Settings before publishing.`
+}
+
+export function platformSupportsShape(platform: PromotePlatform, shapeId: MomentShapeId): boolean {
+  return getPromotePlatformDef(platform)?.shapes.includes(shapeId) ?? false
+}
+
+export function requiredShapeLabels(platform: PromotePlatform): string {
+  const def = getPromotePlatformDef(platform)
+  if (!def?.shapes.length) return ''
+  return def.shapes.map((s) => `${EXPORT_SHAPE_LABELS[s]} (${EXPORT_SHAPE_HINTS[s]})`).join(' or ')
+}
+
+export function shapeRequirementHint(platform: PromotePlatform, shapeId: MomentShapeId): string | null {
+  if (platformSupportsShape(platform, shapeId)) return null
+  return `Needs ${requiredShapeLabels(platform)}`
+}
+
+export function validateSelectedPlatforms(
+  shapeId: MomentShapeId,
+  platforms: PromotePlatform[],
+): { ok: true } | { ok: false; error: string } {
+  if (platforms.length === 0) {
+    return { ok: false, error: 'Select at least one platform.' }
+  }
+  for (const platform of platforms) {
+    if (!isPromotePlatformLive(platform)) {
+      const label = getPromotePlatformDef(platform)?.label ?? platform
+      return { ok: false, error: `${label} is not available yet.` }
+    }
+    if (!platformSupportsShape(platform, shapeId)) {
+      const label = getPromotePlatformDef(platform)?.label ?? platform
+      return { ok: false, error: `${label} requires ${requiredShapeLabels(platform)} for this export.` }
+    }
+  }
+  return { ok: true }
 }

@@ -27,15 +27,15 @@ export async function fetchArtistSocialConnections(
   return (data || []) as ConnectionRow[]
 }
 
-/** Build one target row per live platform for this shape. Skips platforms without a live connection. */
+/** Build target rows for artist-selected live platforms only. */
 export function buildPromoteQueueTargetRows(
   queueId: string,
-  platforms: PromotePlatform[],
+  selectedPlatforms: PromotePlatform[],
   connections: ConnectionRow[],
 ): PromoteQueueTargetInsert[] {
   const byPlatform = new Map(connections.map((c) => [c.platform, c]))
 
-  return platforms
+  return selectedPlatforms
     .filter((platform) => isPromotePlatformLive(platform))
     .map((platform) => {
       const connection = byPlatform.get(platform)
