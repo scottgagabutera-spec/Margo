@@ -139,26 +139,3 @@ export function lyricLineToCatalogDoc(
     createdAt: Date.now(),
   }
 }
-
-export function categorizeHits(
-  hits: Array<Record<string, unknown>>,
-  limitPerType: number,
-) {
-  const users: MargoSearchDocument[] = []
-  const lyrics: MargoSearchDocument[] = []
-  const artists: MargoSearchDocument[] = []
-  const catalogLines: MargoSearchDocument[] = []
-  const songs: MargoSearchDocument[] = []
-
-  for (const hit of hits) {
-    const doc = hit as unknown as MargoSearchDocument & { _formatted?: Partial<MargoSearchDocument> }
-    const type = doc.type
-    if (type === 'user' && users.length < limitPerType) users.push(doc)
-    else if (type === 'lyric' && lyrics.length < limitPerType) lyrics.push(doc)
-    else if (type === 'artist' && artists.length < limitPerType) artists.push(doc)
-    else if (type === 'catalog_line' && catalogLines.length < limitPerType) catalogLines.push(doc)
-    else if (type === 'song' && songs.length < limitPerType) songs.push(doc)
-  }
-
-  return { users, lyrics, artists, catalogLines, songs }
-}

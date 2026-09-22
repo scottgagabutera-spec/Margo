@@ -96,7 +96,7 @@ const SCOPES: Record<SearchScopeId, SearchScope> = {
   },
 }
 
-export function parseSearchScopeId(raw: string | null | undefined): SearchScopeId {
+function parseSearchScopeId(raw: string | null | undefined): SearchScopeId {
   if (raw && raw in SCOPES) return raw as SearchScopeId
   return 'all'
 }
