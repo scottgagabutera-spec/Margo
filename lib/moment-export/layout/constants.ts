@@ -79,6 +79,17 @@ export const STAGE_CARD_LAYOUT_REF = {
   markContentGap: 8,
 } as const
 
+/**
+ * YouTube Shorts / TikTok / Reels chrome (9:16).
+ * Bottom: title, sound sticker, nav. Top: search / close. Right: likes.
+ * Credits must sit inside the remaining safe rectangle, not on the frame edge.
+ */
+export const VERTICAL_SOCIAL_SAFE = {
+  topFraction: 0.10,
+  bottomFraction: 0.22,
+  sideFraction: 0.07,
+} as const
+
 /** Native 9:16 Shorts tokens at the 400px reference width. */
 export const STAGE_SHORTS_LAYOUT_REF = {
   padding: { top: 56, right: 32, bottom: 44, left: 32 },
