@@ -1,6 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { platformsForShape } from '@/lib/promote/types'
+import {
+  buildPromoteQueueTargetRows,
+  fetchArtistSocialConnections,
+} from '@/lib/promote/build-queue-targets'
 import type { ResolvedGenerateMoment } from '@/lib/promote/generate-catalog-moments'
+import { livePlatformsForShape } from '@/lib/promote/platforms'
 
 type SongRow = {
   id: string
@@ -16,18 +20,12 @@ export async function createPromoteQueueFromCatalogMoments(
   song: SongRow,
   moments: ResolvedGenerateMoment[],
 ): Promise<{ queueIds: string[] }> {
-  const platforms = platformsForShape('vertical')
+  const platforms = livePlatformsForShape('vertical')
   if (platforms.length === 0) {
     throw new Error('Vertical Shorts shape is required for generated promotions.')
   }
 
-  const { data: connection } = await admin
-    .from('artist_social_connections')
-    .select('id, status')
-    .eq('profile_id', profileId)
-    .eq('platform', 'youtube')
-    .maybeSingle()
-
+  const connections = await fetchArtistSocialConnections(admin, profileId)
   const queueIds: string[] = []
 
   for (const moment of moments) {
@@ -59,16 +57,7 @@ export async function createPromoteQueueFromCatalogMoments(
     if (queueErr || !queue) throw queueErr || new Error('Failed to create promote queue row')
     queueIds.push(queue.id as string)
 
-    const targetRows = platforms.map((platform) => ({
-      queue_id: queue.id,
-      platform,
-      connection_id: connection?.id ?? null,
-      status: connection?.status === 'connected' ? 'pending' : 'skipped',
-      error_message: connection?.status === 'connected'
-        ? null
-        : 'Connect YouTube in Settings before publishing.',
-    }))
-
+    const targetRows = buildPromoteQueueTargetRows(queue.id as string, platforms, connections)
     const { error: targetErr } = await admin.from('promote_queue_targets').insert(targetRows)
     if (targetErr) throw targetErr
   }

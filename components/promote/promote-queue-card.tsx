@@ -19,6 +19,7 @@ import { livingAtmosphereOrNull } from '@/lib/atmosphere'
 import { buildPromoteQueueMoment } from '@/lib/promote/build-queue-moment'
 import { publishQueueMomentVideo } from '@/lib/promote/publish-client'
 import { clearMomentVideoCache } from '@/lib/moment-export/video/moment-video-cache'
+import { getPromotePlatformDef } from '@/lib/promote/platforms'
 import type { PromoteQueueRow } from '@/lib/promote/types'
 import type { AtmosphereId } from '@/lib/atmosphere'
 import type { MomentShapeId } from '@/lib/moment/types'
@@ -102,10 +103,10 @@ export function PromoteQueueCard({
   }, [item.status, publishResult])
 
   useEffect(() => {
-    if (item.status !== 'published') return
-    const youtube = item.targets.find((t) => t.platform === 'youtube')
-    if (youtube?.externalPostUrl && youtube.externalPostId) {
-      setPublishResult({ videoUrl: youtube.externalPostUrl, videoId: youtube.externalPostId })
+    if (item.status !== 'published' && item.status !== 'partial') return
+    const published = item.targets.find((t) => t.status === 'published' && t.externalPostUrl && t.externalPostId)
+    if (published?.externalPostUrl && published.externalPostId) {
+      setPublishResult({ videoUrl: published.externalPostUrl, videoId: published.externalPostId })
     }
   }, [item.status, item.targets])
 
@@ -243,7 +244,7 @@ export function PromoteQueueCard({
       clearMomentVideoCache()
       const moment = buildMomentForPublish()
 
-      setBusy('Rendering and uploading to YouTube…')
+      setBusy('Rendering and uploading to connected platforms…')
       const result = await publishQueueMomentVideo(
         item.id,
         moment,
@@ -315,13 +316,13 @@ export function PromoteQueueCard({
     setConfirmPublish(true)
   }
 
-  const youtubeTarget = item.targets.find((t) => t.platform === 'youtube')
-  const publishedUrl = publishResult?.videoUrl ?? youtubeTarget?.externalPostUrl ?? null
+  const publishedTargets = item.targets.filter((t) => t.status === 'published' && t.externalPostUrl)
+  const failedTargets = item.targets.filter((t) => t.status === 'failed')
   const status = publishResult ? 'published' : localStatus
   const canEdit = (status === 'pending_review' || status === 'approved') && !busy
   const canPublish = status === 'approved' || status === 'partial'
   const canApprove = status === 'pending_review'
-  const isPublished = status === 'published'
+  const isPublished = status === 'published' || status === 'partial'
   const isPublishing = status === 'publishing' || !!busy
   const actionsLocked = !!busy || isPublishing || isPublished
 
@@ -414,11 +415,52 @@ export function PromoteQueueCard({
 
       {shapeId !== 'vertical' && (
         <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--gold)', marginBottom: '12px' }}>
-          YouTube Shorts require a 9:16 export — re-export this Moment as Shorts before promoting.
+          Short-form platforms require a 9:16 export — re-export this Moment as Shorts before promoting.
         </p>
       )}
 
-      {isPublished && publishedUrl && (
+      {item.targets.length > 0 && (
+        <div style={{ marginBottom: '12px' }}>
+          <p style={{
+            fontFamily: font,
+            fontSize: TYPE.label,
+            fontWeight: 600,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: 'var(--text-muted)',
+            margin: '0 0 8px',
+          }}>
+            Platforms
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {item.targets.map((target) => {
+              const label = getPromotePlatformDef(target.platform)?.label ?? target.platform
+              const statusLabel = target.status.replace('_', ' ')
+              return (
+                <div
+                  key={target.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    fontFamily: font,
+                    fontSize: TYPE.secondary,
+                    color: 'var(--text-secondary)',
+                  }}
+                >
+                  <span>{label}</span>
+                  <span style={{ color: target.status === 'published' ? 'var(--gold)' : 'var(--text-muted)' }}>
+                    {statusLabel}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {publishedTargets.length > 0 && (
         <div style={{
           marginTop: '12px',
           padding: '14px 16px',
@@ -433,31 +475,49 @@ export function PromoteQueueCard({
             color: 'var(--text)',
             margin: '0 0 8px',
           }}>
-            Published to YouTube
+            {status === 'partial' ? 'Published to some platforms' : 'Published'}
           </p>
-          <a
-            href={publishedUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ fontFamily: font, color: 'var(--gold)', fontSize: TYPE.secondary }}
-          >
-            View Short on YouTube →
-          </a>
+          {publishedTargets.map((target) => {
+            const label = getPromotePlatformDef(target.platform)?.label ?? target.platform
+            if (!target.externalPostUrl) return null
+            return (
+              <a
+                key={target.id}
+                href={target.externalPostUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'block',
+                  fontFamily: font,
+                  color: 'var(--gold)',
+                  fontSize: TYPE.secondary,
+                  marginBottom: '4px',
+                }}
+              >
+                View on {label} →
+              </a>
+            )
+          })}
         </div>
       )}
 
-      {youtubeTarget?.errorMessage && !isPublished && (
-        <p style={{
-          fontFamily: font,
-          fontSize: TYPE.secondary,
-          color: 'var(--text-secondary)',
-          marginTop: '8px',
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word',
-        }}>
-          {youtubeTarget.errorMessage}
-        </p>
-      )}
+      {failedTargets.map((target) => (
+        target.errorMessage ? (
+          <p
+            key={target.id}
+            style={{
+              fontFamily: font,
+              fontSize: TYPE.secondary,
+              color: 'var(--text-secondary)',
+              marginTop: '8px',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+            }}
+          >
+            {getPromotePlatformDef(target.platform)?.label ?? target.platform}: {target.errorMessage}
+          </p>
+        ) : null
+      ))}
 
       {error && (
         <p style={{
@@ -489,7 +549,7 @@ export function PromoteQueueCard({
             margin: '0 0 12px',
             lineHeight: 1.45,
           }}>
-            Are you sure you chose the right color and the right effect? This publishes to YouTube now and cannot be undone from Margo.
+            Are you sure you chose the right color and the right effect? This publishes to all connected platforms now and cannot be undone from Margo.
           </p>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <button
@@ -537,7 +597,7 @@ export function PromoteQueueCard({
                 disabled={actionsLocked || publishInFlightRef.current}
                 style={primaryBtn}
               >
-                Publish to YouTube
+                Publish
               </button>
               <button type="button" onClick={() => void reject()} disabled={actionsLocked} style={ghostBtn}>
                 Reject

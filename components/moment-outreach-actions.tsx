@@ -10,7 +10,9 @@ import {
   type MargoIconProps,
 } from '@/components/icons'
 import { UI_FONT } from '@/lib/fonts'
+import { promoteDestinationSummary, promotePlatformsForUi } from '@/lib/promote/platforms'
 import type { PromotePlatform } from '@/lib/promote/types'
+import type { MomentShapeId } from '@/lib/moment/types'
 
 const font = UI_FONT
 
@@ -31,6 +33,14 @@ const hintStyle: CSSProperties = {
   color: 'var(--text-muted)',
   lineHeight: 1.35,
   textAlign: 'left',
+}
+
+const PLATFORM_ICONS: Record<PromotePlatform, ComponentType<MargoIconProps>> = {
+  youtube: YouTubeIcon,
+  tiktok: TikTokIcon,
+  instagram: InstagramIcon,
+  facebook: FacebookIcon,
+  x: XIcon,
 }
 
 interface OutreachChipProps {
@@ -108,20 +118,56 @@ function OutreachChip({
   )
 }
 
-interface PromotePlatformConfig {
-  id: PromotePlatform
+interface PlatformBadgeProps {
   label: string
   Icon: ComponentType<MargoIconProps>
-  enabled: boolean
+  live: boolean
 }
 
-const PROMOTE_PLATFORMS: PromotePlatformConfig[] = [
-  { id: 'youtube', label: 'YouTube', Icon: YouTubeIcon, enabled: true },
-  { id: 'tiktok', label: 'TikTok', Icon: TikTokIcon, enabled: false },
-  { id: 'instagram', label: 'Instagram', Icon: InstagramIcon, enabled: false },
-  { id: 'facebook', label: 'Facebook', Icon: FacebookIcon, enabled: false },
-  { id: 'x', label: 'X', Icon: XIcon, enabled: false },
-]
+function PlatformBadge({ label, Icon, live }: PlatformBadgeProps) {
+  const color = live ? 'var(--gold)' : 'var(--text-muted)'
+  return (
+    <div
+      aria-hidden
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '4px',
+        minWidth: '56px',
+        padding: '6px 8px',
+        borderRadius: '10px',
+        border: live ? '1px solid var(--gold-border)' : '1px solid var(--border)',
+        background: live ? 'var(--gold-faint)' : 'rgba(255,255,255,0.02)',
+        opacity: live ? 1 : 0.55,
+        flexShrink: 0,
+      }}
+    >
+      <Icon size={16} color={color} />
+      <span style={{
+        fontFamily: font,
+        fontSize: '0.5rem',
+        fontWeight: 600,
+        color,
+        lineHeight: 1.2,
+        textAlign: 'center',
+      }}>
+        {label}
+      </span>
+      {!live && (
+        <span style={{
+          fontFamily: font,
+          fontSize: '0.48rem',
+          color: 'var(--text-muted)',
+          lineHeight: 1.1,
+        }}>
+          Soon
+        </span>
+      )}
+    </div>
+  )
+}
 
 interface MomentOutreachActionsProps {
   showStory: boolean
@@ -130,7 +176,8 @@ interface MomentOutreachActionsProps {
   showPromote: boolean
   promoteBusy: boolean
   promoteRequiresVertical: boolean
-  onPromoteYouTube: () => void
+  shapeId: MomentShapeId
+  onPromote: () => void
 }
 
 export function MomentOutreachActions({
@@ -140,7 +187,8 @@ export function MomentOutreachActions({
   showPromote,
   promoteBusy,
   promoteRequiresVertical,
-  onPromoteYouTube,
+  shapeId,
+  onPromote,
 }: MomentOutreachActionsProps) {
   if (!showStory && !showPromote) return null
 
@@ -151,6 +199,10 @@ export function MomentOutreachActions({
     paddingBottom: '2px',
     WebkitOverflowScrolling: 'touch',
   }
+
+  const platformDefs = promotePlatformsForUi(shapeId)
+  const destinationSummary = promoteDestinationSummary(shapeId)
+  const canPromote = !promoteRequiresVertical
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -180,37 +232,37 @@ export function MomentOutreachActions({
         <div>
           <p style={sectionLabelStyle}>Promote</p>
           <div style={scrollerStyle} className="margo-promote-platforms">
-            {PROMOTE_PLATFORMS.map((platform) => {
-              const isYouTube = platform.id === 'youtube'
-              const disabled = !platform.enabled || (isYouTube && promoteRequiresVertical)
-              const busy = isYouTube && promoteBusy
-              const color = disabled ? 'var(--text-muted)' : 'var(--gold)'
-
+            <OutreachChip
+              label="All platforms"
+              ariaLabel="Promote to all connected platforms"
+              icon={(
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
+                  <path d="M4 10h12M11 5l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+              onClick={onPromote}
+              disabled={!canPromote}
+              busy={promoteBusy}
+              active={canPromote}
+            />
+            {platformDefs.map((platform) => {
+              const Icon = PLATFORM_ICONS[platform.id]
               return (
-                <OutreachChip
+                <PlatformBadge
                   key={platform.id}
                   label={platform.label}
-                  hint={platform.enabled ? undefined : 'Soon'}
-                  ariaLabel={
-                    platform.enabled
-                      ? `Promote on ${platform.label}`
-                      : `${platform.label} promotion coming soon`
-                  }
-                  icon={<platform.Icon size={18} color={color} />}
-                  onClick={() => {
-                    if (isYouTube && platform.enabled) onPromoteYouTube()
-                  }}
-                  disabled={disabled}
-                  busy={busy}
-                  active={platform.enabled && !disabled}
+                  Icon={Icon}
+                  live={platform.live}
                 />
               )
             })}
           </div>
-          {promoteRequiresVertical && (
+          {promoteRequiresVertical ? (
             <p style={hintStyle}>
-              Switch to Shorts (9:16) to promote on YouTube.
+              Switch to Shorts (9:16) to promote across platforms.
             </p>
+          ) : (
+            <p style={hintStyle}>{destinationSummary}</p>
           )}
           <style>{`
             .margo-promote-platforms::-webkit-scrollbar { display: none; }

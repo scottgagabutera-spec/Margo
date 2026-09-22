@@ -1,6 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import {
+  buildPromoteQueueTargetRows,
+  fetchArtistSocialConnections,
+} from '@/lib/promote/build-queue-targets'
 import { exportPrefsFromPostRow } from '@/lib/promote/export-prefs'
-import { platformsForShape } from '@/lib/promote/types'
+import { livePlatformsForShape } from '@/lib/promote/platforms'
 import type { PromotePublishMode } from '@/lib/promote/types'
 
 type MomentPostRow = {
@@ -42,9 +46,9 @@ export async function createPromoteQueueFromMoment(
   }
 
   const prefs = exportPrefsFromPostRow(post as MomentPostRow)
-  const platforms = platformsForShape(prefs.exportShapeId)
+  const platforms = livePlatformsForShape(prefs.exportShapeId)
   if (platforms.length === 0) {
-    throw new Error('This Moment shape is not supported for YouTube yet — export as Shorts (9:16) first.')
+    throw new Error('This Moment shape is not supported for promotion yet — export as Shorts (9:16) first.')
   }
 
   const initialStatus = publishMode === 'auto' ? 'approved' : 'pending_review'
@@ -73,22 +77,11 @@ export async function createPromoteQueueFromMoment(
 
   if (queueErr || !queue) throw queueErr || new Error('Failed to create promote queue row')
 
-  const { data: connection } = await admin
-    .from('artist_social_connections')
-    .select('id, status')
-    .eq('profile_id', profileId)
-    .eq('platform', 'youtube')
-    .maybeSingle()
-
-  const targetRows = platforms.map((platform) => ({
-    queue_id: queue.id,
-    platform,
-    connection_id: connection?.id ?? null,
-    status: connection?.status === 'connected' ? 'pending' : 'skipped',
-    error_message: connection?.status === 'connected'
-      ? null
-      : 'Connect YouTube in Settings before publishing.',
-  }))
+  const connections = await fetchArtistSocialConnections(admin, profileId)
+  const targetRows = buildPromoteQueueTargetRows(queue.id as string, platforms, connections)
+  if (targetRows.length === 0) {
+    throw new Error('No promotion platforms are available for this shape yet.')
+  }
 
   const { error: targetErr } = await admin.from('promote_queue_targets').insert(targetRows)
   if (targetErr) throw targetErr

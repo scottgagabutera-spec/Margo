@@ -406,7 +406,7 @@ export function MomentShareStudio({
     }
   }, [resolvedPostId, persistExportPrefs, onExported])
 
-  const promoteToYouTube = useCallback(async () => {
+  const promoteToPlatforms = useCallback(async () => {
     if (!resolvedPostId || !enablePromote) return
     persistExportPrefs()
     setPromoteBusy(true)
@@ -523,7 +523,8 @@ export function MomentShareStudio({
       showPromote={enablePromote}
       promoteBusy={promoteBusy}
       promoteRequiresVertical={shapeId !== 'vertical'}
-      onPromoteYouTube={() => { void promoteToYouTube() }}
+      shapeId={shapeId}
+      onPromote={() => { void promoteToPlatforms() }}
     />
   ) : null
 

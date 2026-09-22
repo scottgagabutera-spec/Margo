@@ -176,7 +176,7 @@ export function GeneratePromotionBlock(props: GeneratePromotionBlockProps) {
         }}>
           {mode === 'auto'
             ? 'Auto scans the whole song and queues every strong shareable moment it finds (1–3 lines each).'
-            : 'AI picks quotable lyric windows and queues Shorts for your review — nothing posts to the Feed.'}
+            : 'AI picks quotable lyric windows and queues Shorts for your review on all connected platforms — nothing posts to the Feed.'}
         </p>
       </div>
 

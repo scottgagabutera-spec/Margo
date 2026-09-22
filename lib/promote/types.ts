@@ -101,11 +101,12 @@ export function resolveQueueVisualPrefs(row: Pick<
   }
 }
 
-/** Vertical → YouTube (Phase 1). Square skipped until those platforms ship. */
-export function platformsForShape(shapeId: MomentShapeId): PromotePlatform[] {
-  if (shapeId === 'vertical') return ['youtube']
-  return []
-}
+export {
+  platformsForShape,
+  livePlatformsForShape,
+  promoteDestinationSummary,
+  PROMOTE_PLATFORM_DEFS,
+} from '@/lib/promote/platforms'
 
 /** Queue items that no longer need artist action. */
 export const PROMOTE_RESOLVED_STATUSES = ['published', 'rejected', 'failed'] as const

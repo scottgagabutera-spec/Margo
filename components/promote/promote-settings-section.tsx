@@ -2,10 +2,28 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
+import {
+  FacebookIcon,
+  InstagramIcon,
+  TikTokIcon,
+  XIcon,
+  YouTubeIcon,
+  type MargoIconProps,
+} from '@/components/icons'
 import { TYPE, UI_FONT } from '@/lib/fonts'
-import type { PromotePublishMode, SocialConnectionPublic } from '@/lib/promote/types'
+import { PROMOTE_PLATFORM_DEFS } from '@/lib/promote/platforms'
+import type { PromotePlatform, PromotePublishMode, SocialConnectionPublic } from '@/lib/promote/types'
+import type { ComponentType } from 'react'
 
 const font = UI_FONT
+
+const PLATFORM_ICONS: Record<PromotePlatform, ComponentType<MargoIconProps>> = {
+  youtube: YouTubeIcon,
+  tiktok: TikTokIcon,
+  instagram: InstagramIcon,
+  facebook: FacebookIcon,
+  x: XIcon,
+}
 
 interface PromoteSettingsSectionProps {
   /** Active verified artist only — parent gates on is_artist + artist_status active */
@@ -50,8 +68,6 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
     }
   }, [load])
 
-  const youtube = connections.find((c) => c.platform === 'youtube')
-
   async function savePublishMode(next: PromotePublishMode) {
     setSaving(true)
     setMessage(null)
@@ -70,13 +86,13 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
     }
   }
 
-  async function disconnectYouTube() {
+  async function disconnectPlatform(platform: PromotePlatform) {
     setSaving(true)
     const res = await fetch('/api/promote/connections', {
       method: 'DELETE',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ platform: 'youtube' }),
+      body: JSON.stringify({ platform }),
     })
     setSaving(false)
     if (res.ok) void load()
@@ -86,76 +102,134 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
     return <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>Loading connected accounts…</p>
   }
 
+  const liveCount = PROMOTE_PLATFORM_DEFS.filter((p) => p.live).length
+  const connectedCount = connections.filter((c) => c.status === 'connected').length
+
   return (
     <div>
       {message && (
         <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--gold)', marginBottom: '12px' }}>{message}</p>
       )}
 
-      <div style={{ marginBottom: '20px' }}>
-        <div style={{ fontFamily: font, fontSize: TYPE.body, fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>
-          YouTube
-        </div>
-        {youtube?.status === 'connected' ? (
-          <div style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
-            Connected as {youtube.externalUsername || 'YouTube channel'}
-            {youtube.lastError && (
-              <div style={{ color: 'var(--text-secondary)', marginTop: '6px' }}>{youtube.lastError}</div>
-            )}
-            <div style={{ display: 'flex', gap: '12px', marginTop: '10px', flexWrap: 'wrap' }}>
-              <a
-                href="/api/promote/oauth/youtube?returnTo=/settings"
-                style={{ color: 'var(--gold)', fontSize: TYPE.secondary, textDecoration: 'none' }}
-              >
-                Reconnect
-              </a>
-              <button
-                type="button"
-                onClick={() => void disconnectYouTube()}
-                disabled={saving}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-muted)',
-                  fontFamily: font,
-                  fontSize: TYPE.secondary,
-                  cursor: 'pointer',
-                  padding: 0,
-                }}
-              >
-                Disconnect
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div>
-            <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', marginBottom: '10px' }}>
-              Connect your YouTube channel to publish Shorts from Margo.
-            </p>
-            <a
-              href="/api/promote/oauth/youtube?returnTo=/settings"
-              style={{
-                display: 'inline-block',
-                padding: '10px 18px',
-                borderRadius: '999px',
-                border: '1px solid var(--gold-border)',
-                color: 'var(--gold)',
-                fontFamily: font,
-                fontSize: TYPE.label,
-                letterSpacing: '0.5px',
-                textTransform: 'uppercase',
-                textDecoration: 'none',
-              }}
-            >
-              Connect YouTube
-            </a>
-            {youtube?.status === 'expired' && (
-              <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', marginTop: '8px' }}>
-                Session expired — reconnect to publish again.
-              </p>
-            )}
-          </div>
+      <p style={{
+        fontFamily: font,
+        fontSize: TYPE.secondary,
+        color: 'var(--text-secondary)',
+        marginBottom: '20px',
+        lineHeight: 1.45,
+      }}>
+        Connect your social accounts once — when you promote a Moment, Margo publishes to every connected platform.
+        {liveCount > connectedCount && (
+          <> YouTube is live today; TikTok, Instagram, Facebook, and X are coming soon.</>
         )}
+      </p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '24px' }}>
+        {PROMOTE_PLATFORM_DEFS.map((platform) => {
+          const Icon = PLATFORM_ICONS[platform.id]
+          const connection = connections.find((c) => c.platform === platform.id)
+          const connected = connection?.status === 'connected'
+
+          return (
+            <div key={platform.id}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                marginBottom: '6px',
+              }}>
+                <Icon size={18} color={connected ? 'var(--gold)' : 'var(--text-muted)'} />
+                <div style={{ fontFamily: font, fontSize: TYPE.body, fontWeight: 600, color: 'var(--text)' }}>
+                  {platform.label}
+                </div>
+                {!platform.live && (
+                  <span style={{
+                    fontFamily: font,
+                    fontSize: '0.58rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.5px',
+                    textTransform: 'uppercase',
+                    color: 'var(--text-muted)',
+                    padding: '2px 8px',
+                    borderRadius: '999px',
+                    border: '1px solid var(--border)',
+                  }}>
+                    Coming soon
+                  </span>
+                )}
+              </div>
+
+              {!platform.live ? (
+                <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-muted)', margin: 0 }}>
+                  Will publish Shorts from Margo when available.
+                </p>
+              ) : connected ? (
+                <div style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
+                  Connected as {connection?.externalUsername || `${platform.label} account`}
+                  {connection?.lastError && (
+                    <div style={{ color: 'var(--text-secondary)', marginTop: '6px' }}>{connection.lastError}</div>
+                  )}
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '10px', flexWrap: 'wrap' }}>
+                    {platform.oauthPath && (
+                      <a
+                        href={`${platform.oauthPath}?returnTo=/settings`}
+                        style={{ color: 'var(--gold)', fontSize: TYPE.secondary, textDecoration: 'none' }}
+                      >
+                        Reconnect
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => void disconnectPlatform(platform.id)}
+                      disabled={saving}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-muted)',
+                        fontFamily: font,
+                        fontSize: TYPE.secondary,
+                        cursor: 'pointer',
+                        padding: 0,
+                      }}
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', marginBottom: '10px' }}>
+                    Connect {platform.label} to include it when you promote.
+                  </p>
+                  {platform.oauthPath && (
+                    <a
+                      href={`${platform.oauthPath}?returnTo=/settings`}
+                      style={{
+                        display: 'inline-block',
+                        padding: '10px 18px',
+                        borderRadius: '999px',
+                        border: '1px solid var(--gold-border)',
+                        color: 'var(--gold)',
+                        fontFamily: font,
+                        fontSize: TYPE.label,
+                        letterSpacing: '0.5px',
+                        textTransform: 'uppercase',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      Connect {platform.label}
+                    </a>
+                  )}
+                  {connection?.status === 'expired' && (
+                    <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', marginTop: '8px' }}>
+                      Session expired — reconnect to publish again.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
 
       <div style={{ marginBottom: '16px' }}>
@@ -183,7 +257,7 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
             disabled={saving}
           />
           <span style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
-            Post automatically using the Moment&apos;s export look
+            Post automatically to all connected platforms using the Moment&apos;s export look
           </span>
         </label>
       </div>

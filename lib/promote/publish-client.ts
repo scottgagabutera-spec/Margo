@@ -57,7 +57,7 @@ export async function publishQueueMomentVideo(
     throw new Error(`Could not stage video for publish: ${uploadErr.message}`)
   }
 
-  onProgress?.('Publishing to YouTube…')
+  onProgress?.('Publishing to connected platforms…')
   if (signal?.aborted) throw new DOMException('Publish cancelled', 'AbortError')
 
   let res: Response
@@ -73,7 +73,7 @@ export async function publishQueueMomentVideo(
     if ((err as Error)?.name === 'AbortError') throw err
     throw new Error(
       `Publish request never completed: ${err instanceof Error ? err.message : 'network error'}. ` +
-      'YouTube was not called.',
+      'Publish was not completed.',
     )
   }
 

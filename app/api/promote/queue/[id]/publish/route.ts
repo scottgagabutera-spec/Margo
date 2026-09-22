@@ -3,11 +3,11 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { getPromoteAdmin } from '@/lib/promote/admin-client'
 import { requirePromoteSession } from '@/lib/promote/api-auth'
 import { cleanupPromoteStagingVideoIfComplete } from '@/lib/promote/cleanup-staging'
-import { getValidYouTubeAccessToken } from '@/lib/promote/connections'
 import { signedPromoteVideoUrl, uploadPromoteVideo } from '@/lib/promote/r2-promote-upload'
-import { resolveQueueVisualPrefs } from '@/lib/promote/types'
-import { buildYouTubePromoteCopy, isMargoArtistAccount } from '@/lib/promote/youtube-copy'
-import { uploadVideoToYouTube } from '@/lib/promote/youtube-publish'
+import { isPromotePlatformLive } from '@/lib/promote/platforms'
+import { publishVideoToPlatform } from '@/lib/promote/publish-to-platform'
+import { resolveQueueStatusFromTargets } from '@/lib/promote/resolve-queue-status'
+import { resolveQueueVisualPrefs, type PromotePlatform } from '@/lib/promote/types'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -79,6 +79,24 @@ async function readPublishVideoBuffer(
   return { buffer }
 }
 
+type TargetRow = {
+  id: string
+  platform: PromotePlatform
+  status: string
+  connection_id: string | null
+  external_post_id: string | null
+  external_post_url: string | null
+}
+
+function publishedTargetResponse(target: TargetRow) {
+  return {
+    ok: true as const,
+    videoId: target.external_post_id,
+    videoUrl: target.external_post_url,
+    alreadyPublished: true,
+  }
+}
+
 export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> },
@@ -113,23 +131,25 @@ export async function POST(
     .select('*')
     .eq('queue_id', queueId)
 
-  const youtubeTarget = (targets || []).find((t) => t.platform === 'youtube')
-  if (!youtubeTarget || youtubeTarget.status === 'skipped') {
+  const allTargets = (targets || []) as TargetRow[]
+  const publishableTargets = allTargets.filter(
+    (t) => isPromotePlatformLive(t.platform) && t.status !== 'skipped',
+  )
+
+  if (publishableTargets.length === 0) {
     await admin.from('promote_queue').update({ status: 'failed', updated_at: new Date().toISOString() }).eq('id', queueId)
-    return NextResponse.json({ error: 'YouTube target not available — connect YouTube in Settings.' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'No connected platforms — connect your accounts in Settings before publishing.' },
+      { status: 400 },
+    )
   }
 
-  if (
-    youtubeTarget.status === 'published'
-    && youtubeTarget.external_post_id
-    && youtubeTarget.external_post_url
-  ) {
-    return NextResponse.json({
-      ok: true,
-      videoId: youtubeTarget.external_post_id,
-      videoUrl: youtubeTarget.external_post_url,
-      alreadyPublished: true,
-    })
+  const alreadyPublished = publishableTargets.filter(
+    (t) => t.status === 'published' && t.external_post_id && t.external_post_url,
+  )
+  if (alreadyPublished.length === publishableTargets.length) {
+    const primary = alreadyPublished[0]
+    return NextResponse.json(publishedTargetResponse(primary))
   }
 
   const { data: claimed, error: claimErr } = await admin
@@ -142,25 +162,19 @@ export async function POST(
     .maybeSingle()
 
   if (claimErr) {
-    return NextResponse.json({ error: claimErr.message }, { status: 500 })
+    return NextResponse.json({ error: claimErr.message }, { status: 500 }
+    )
   }
   if (!claimed) {
-    const { data: refreshedTarget } = await admin
+    const { data: refreshedTargets } = await admin
       .from('promote_queue_targets')
-      .select('external_post_id, external_post_url, status')
-      .eq('id', youtubeTarget.id)
-      .maybeSingle()
-    if (
-      refreshedTarget?.status === 'published'
-      && refreshedTarget.external_post_id
-      && refreshedTarget.external_post_url
-    ) {
-      return NextResponse.json({
-        ok: true,
-        videoId: refreshedTarget.external_post_id,
-        videoUrl: refreshedTarget.external_post_url,
-        alreadyPublished: true,
-      })
+      .select('external_post_id, external_post_url, status, platform')
+      .eq('queue_id', queueId)
+    const done = (refreshedTargets || []).filter(
+      (t) => t.status === 'published' && t.external_post_id && t.external_post_url,
+    )
+    if (done.length > 0) {
+      return NextResponse.json(publishedTargetResponse(done[0] as TargetRow))
     }
     return NextResponse.json(
       { error: 'This moment is already being published. Please wait.' },
@@ -187,108 +201,156 @@ export async function POST(
     return NextResponse.json({ error: `Failed to store rendered video: ${message}` }, { status: 500 })
   }
 
-  const { data: connection, error: connErr } = await admin
-    .from('artist_social_connections')
-    .select('*')
-    .eq('profile_id', session.userId)
-    .eq('platform', 'youtube')
+  const prefs = resolveQueueVisualPrefs({
+    defaultShapeId: queue.default_shape_id,
+    defaultThemeId: queue.default_theme_id,
+    defaultAtmosphereId: queue.default_atmosphere_id,
+    overrideShapeId: queue.override_shape_id,
+    overrideThemeId: queue.override_theme_id,
+    overrideAtmosphereId: queue.override_atmosphere_id,
+  })
+
+  const { data: publisher } = await admin
+    .from('profiles')
+    .select('username')
+    .eq('id', session.userId)
     .maybeSingle()
 
-  if (connErr || !connection) {
-    await admin
-      .from('promote_queue_targets')
-      .update({
-        status: 'failed',
-        error_message: 'YouTube not connected',
+  const publishResults: Array<{
+    platform: PromotePlatform
+    videoId: string
+    videoUrl: string
+    status: 'published' | 'failed'
+    error?: string
+  }> = []
+
+  for (const target of publishableTargets) {
+    if (target.status === 'published' && target.external_post_id && target.external_post_url) {
+      publishResults.push({
+        platform: target.platform,
+        videoId: target.external_post_id,
+        videoUrl: target.external_post_url,
+        status: 'published',
       })
-      .eq('id', youtubeTarget.id)
-    await admin.from('promote_queue').update({ status: 'failed', updated_at: new Date().toISOString() }).eq('id', queueId)
-    await cleanupPromoteStagingVideoIfComplete(admin, queueId, objectKey)
-    return NextResponse.json({ error: 'YouTube not connected' }, { status: 400 })
-  }
+      continue
+    }
 
-  await admin
-    .from('promote_queue_targets')
-    .update({ status: 'publishing' })
-    .eq('id', youtubeTarget.id)
-
-  try {
-    const accessToken = await getValidYouTubeAccessToken(admin, connection)
-    const prefs = resolveQueueVisualPrefs({
-      defaultShapeId: queue.default_shape_id,
-      defaultThemeId: queue.default_theme_id,
-      defaultAtmosphereId: queue.default_atmosphere_id,
-      overrideShapeId: queue.override_shape_id,
-      overrideThemeId: queue.override_theme_id,
-      overrideAtmosphereId: queue.override_atmosphere_id,
-    })
-
-    const { title, description } = buildYouTubePromoteCopy({
-      songTitle: queue.song_title,
-      lyricText: queue.lyric_text,
-    })
-
-    const { data: publisher } = await admin
-      .from('profiles')
-      .select('username')
-      .eq('id', session.userId)
+    const { data: connection, error: connErr } = await admin
+      .from('artist_social_connections')
+      .select('*')
+      .eq('profile_id', session.userId)
+      .eq('platform', target.platform)
       .maybeSingle()
 
-    const result = await uploadVideoToYouTube({
-      accessToken,
-      videoBytes: videoBuffer,
-      title,
-      description,
-      privacyStatus: 'public',
-      containsSyntheticMedia: isMargoArtistAccount(publisher?.username) || undefined,
-    })
+    if (connErr || !connection) {
+      const message = `Connect ${target.platform} in Settings before publishing.`
+      await admin
+        .from('promote_queue_targets')
+        .update({ status: 'failed', error_message: message })
+        .eq('id', target.id)
+      publishResults.push({
+        platform: target.platform,
+        videoId: '',
+        videoUrl: '',
+        status: 'failed',
+        error: message,
+      })
+      continue
+    }
 
     await admin
       .from('promote_queue_targets')
-      .update({
+      .update({ status: 'publishing' })
+      .eq('id', target.id)
+
+    try {
+      const result = await publishVideoToPlatform(
+        admin,
+        target.platform,
+        connection,
+        videoBuffer,
+        {
+          songTitle: queue.song_title,
+          lyricText: queue.lyric_text,
+          artistName: queue.artist_name,
+          publisherUsername: publisher?.username,
+          privacyStatus: 'public',
+        },
+      )
+
+      await admin
+        .from('promote_queue_targets')
+        .update({
+          status: 'published',
+          external_post_id: result.postId,
+          external_post_url: result.postUrl,
+          published_at: new Date().toISOString(),
+          error_message: null,
+        })
+        .eq('id', target.id)
+
+      await admin
+        .from('artist_social_connections')
+        .update({ last_publish_at: new Date().toISOString(), last_error: null })
+        .eq('id', connection.id)
+
+      publishResults.push({
+        platform: target.platform,
+        videoId: result.postId,
+        videoUrl: result.postUrl,
         status: 'published',
-        external_post_id: result.videoId,
-        external_post_url: result.videoUrl,
-        published_at: new Date().toISOString(),
-        error_message: null,
       })
-      .eq('id', youtubeTarget.id)
-
-    await admin
-      .from('artist_social_connections')
-      .update({ last_publish_at: new Date().toISOString(), last_error: null })
-      .eq('id', connection.id)
-
-    await admin
-      .from('promote_queue')
-      .update({
-        status: 'published',
-        updated_at: new Date().toISOString(),
+    } catch (err) {
+      const message = err instanceof Error ? err.message : `${target.platform} publish failed`
+      console.error(`[promote/publish] ${target.platform} failed`, err)
+      await admin
+        .from('promote_queue_targets')
+        .update({ status: 'failed', error_message: message })
+        .eq('id', target.id)
+      await admin
+        .from('artist_social_connections')
+        .update({ last_error: message })
+        .eq('id', connection.id)
+      publishResults.push({
+        platform: target.platform,
+        videoId: '',
+        videoUrl: '',
+        status: 'failed',
+        error: message,
       })
-      .eq('id', queueId)
-
-    await cleanupPromoteStagingVideoIfComplete(admin, queueId, objectKey)
-
-    return NextResponse.json({
-      ok: true,
-      videoId: result.videoId,
-      videoUrl: result.videoUrl,
-      shapeId: prefs.exportShapeId,
-      objectKey,
-    })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'YouTube publish failed'
-    console.error('[promote/publish] YouTube failed', err)
-    await admin
-      .from('promote_queue_targets')
-      .update({ status: 'failed', error_message: message })
-      .eq('id', youtubeTarget.id)
-    await admin
-      .from('artist_social_connections')
-      .update({ last_error: message })
-      .eq('id', connection.id)
-    await admin.from('promote_queue').update({ status: 'failed', updated_at: new Date().toISOString() }).eq('id', queueId)
-    await cleanupPromoteStagingVideoIfComplete(admin, queueId, objectKey)
-    return NextResponse.json({ error: message }, { status: 502 })
+    }
   }
+
+  const { data: finalTargets } = await admin
+    .from('promote_queue_targets')
+    .select('status')
+    .eq('queue_id', queueId)
+
+  const finalStatus = resolveQueueStatusFromTargets(finalTargets || [])
+  await admin
+    .from('promote_queue')
+    .update({
+      status: finalStatus,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', queueId)
+
+  await cleanupPromoteStagingVideoIfComplete(admin, queueId, objectKey)
+
+  const successes = publishResults.filter((r) => r.status === 'published')
+  if (successes.length === 0) {
+    const firstError = publishResults.find((r) => r.error)?.error || 'Publish failed on all platforms'
+    return NextResponse.json({ error: firstError }, { status: 502 })
+  }
+
+  const primary = successes[0]
+  return NextResponse.json({
+    ok: true,
+    videoId: primary.videoId,
+    videoUrl: primary.videoUrl,
+    shapeId: prefs.exportShapeId,
+    objectKey,
+    results: publishResults,
+    queueStatus: finalStatus,
+  })
 }
