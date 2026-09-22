@@ -102,6 +102,8 @@ export const STAGE_SHORTS_LAYOUT_REF = {
     stanzaGapEm: 0.36,
   },
   artwork: { size: 56, radius: 10, gap: 16 },
+  /** Space under the last lyric line before cover / song / artist. */
+  lyricCreditGap: 36,
 } as const
 
 export const SHORTS_ASPECT = 16 / 9

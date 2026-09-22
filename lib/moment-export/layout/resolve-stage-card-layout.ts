@@ -142,6 +142,9 @@ export function resolveStageCardLayout(
   const metaGap = scaleStageToken(ref.meta.gap, W)
   const artRef = shorts ? STAGE_SHORTS_LAYOUT_REF.artwork : ref.artwork
   const artGap = scaleStageToken(artRef.gap, W)
+  const lyricCreditGap = shorts
+    ? scaleStageToken(STAGE_SHORTS_LAYOUT_REF.lyricCreditGap, W)
+    : artGap
   const artSize = roundStageToken(artRef.size, W)
   const hasArt = !!input.artworkUrl
 
@@ -165,7 +168,7 @@ export function resolveStageCardLayout(
   const markSymbol = roundStageToken(ref.mark.symbol, W)
   const markInset = scaleStageToken(ref.mark.inset, W)
   const creditH = Math.max(hasArt ? artSize : 0, metaHeight, vibePillH)
-  const creditBlock = creditH > 0 ? creditH + artGap : 0
+  const creditBlock = creditH > 0 ? creditH + lyricCreditGap : 0
 
   let cursorY = padding.top
   let shortsCreditY = 0
@@ -178,7 +181,7 @@ export function resolveStageCardLayout(
     cursorY = lyricHeight <= available
       ? bodyTop + Math.max(0, (available - lyricHeight) / 2)
       : bodyTop
-    shortsCreditY = cursorY + lyricHeight + artGap
+    shortsCreditY = cursorY + lyricHeight + lyricCreditGap
     if (creditH > 0 && shortsCreditY + creditH > bodyBottom) {
       shortsCreditY = bodyBottom - creditH
       cursorY = bodyTop
