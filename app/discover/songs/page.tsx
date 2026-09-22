@@ -111,8 +111,6 @@ export default function SongsCatalogPage() {
       items={sorted}
       loading={loading}
       getKey={s => s.id}
-      getSearchText={s => `${s.title} ${s.artist}`}
-      searchPlaceholder="Search songs, artists…"
       sortOptions={SORT_OPTIONS}
       activeSort={sort}
       onSortChange={setSort}

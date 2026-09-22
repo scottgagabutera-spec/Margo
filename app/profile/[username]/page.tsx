@@ -27,7 +27,8 @@ import { resolvePublicArtistCredit } from '@/lib/artist-identity'
 import { uploadProfileCover } from '@/components/cover-upload'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
-import { playFull, togglePlayPause } from '@/lib/audio-engine'
+import { playFull, playSnippet, togglePlayPause } from '@/lib/audio-engine'
+import { matchLyricLine } from '@/lib/lyric-match'
 import { useIsBuffering, useIsPlaying } from '@/hooks/useAudioEngine'
 
 const supabase = createClient()
@@ -122,17 +123,43 @@ function ProfileStat({
 function SignaturePlayButton({
   track,
 }: {
-  track: { id: string; title: string; artist: string; artwork: string | null; audioUrl: string }
+  track: {
+    id: string
+    title: string
+    artist: string
+    artwork: string | null
+    audioUrl: string
+    lineIndex?: number
+    lineText?: string
+    startSec?: number
+    endSec?: number
+  }
 }) {
   const playing = useIsPlaying(track.id)
   const buffering = useIsBuffering(track.id)
+  const hasSnippet = (track.endSec ?? 0) > (track.startSec ?? 0)
   return (
     <button
       type="button"
-      aria-label={playing ? 'Pause signature song' : 'Play signature song'}
+      aria-label={playing ? 'Pause signature' : 'Play signature'}
       onClick={() => {
         if (playing) {
           togglePlayPause()
+          return
+        }
+        if (hasSnippet) {
+          void playSnippet({
+            songId: track.id,
+            audioUrl: track.audioUrl,
+            title: track.title,
+            artist: track.artist,
+            artwork: track.artwork,
+            lineIndex: track.lineIndex ?? 0,
+            lineText: track.lineText || '',
+            startSec: track.startSec ?? 0,
+            endSec: track.endSec ?? 0,
+            source: 'feed',
+          })
           return
         }
         void playFull({
@@ -221,6 +248,10 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
     artist: string
     artwork: string | null
     audioUrl: string
+    lineIndex?: number
+    lineText?: string
+    startSec?: number
+    endSec?: number
   } | null>(null)
 
   useEffect(() => {
@@ -319,6 +350,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
 
   useEffect(() => {
     const id = profile?.signatureSongId
+    const lyric = profile?.signatureLyric
     if (!id) {
       setSignatureTrack(null)
       return
@@ -329,22 +361,28 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
       .select('id, title, artist_display_name, artwork_url, audio_url')
       .eq('id', id)
       .maybeSingle()
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         if (!active) return
         if (!data?.audio_url) {
           setSignatureTrack(null)
           return
         }
+        const match = lyric ? await matchLyricLine(supabase, data.id, lyric) : null
+        if (!active) return
         setSignatureTrack({
           id: data.id,
           title: data.title,
           artist: data.artist_display_name,
           artwork: data.artwork_url,
           audioUrl: data.audio_url,
+          lineIndex: match?.lineId,
+          lineText: lyric || undefined,
+          startSec: match?.startSec,
+          endSec: match?.endSec,
         })
       })
     return () => { active = false }
-  }, [profile?.signatureSongId])
+  }, [profile?.signatureSongId, profile?.signatureLyric])
 
   const isOwnProfile = !!identity && !!profile && identity.username === profile.username
 

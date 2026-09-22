@@ -7,43 +7,66 @@
   max-width: 1080px;
   margin: 0 auto;
   box-sizing: border-box;
+  min-height: 100%;
   padding:
     max(16px, env(safe-area-inset-top))
-    max(16px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-right))
     max(40px, env(safe-area-inset-bottom))
-    max(16px, env(safe-area-inset-left));
-  gap: clamp(20px, 4vw, 36px);
+    max(24px, env(safe-area-inset-left));
+  gap: 0;
   align-items: start;
   grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
   grid-template-areas:
-    "toolbar"
-    "main";
-}
-
-.margo-auth-layout__toolbar {
-  grid-area: toolbar;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-  width: 100%;
+    "back"
+    "panel";
 }
 
 .margo-auth-layout__back {
-  flex: 0 0 auto;
-}
-
-.margo-auth-layout__tabs {
-  flex: 1 1 auto;
+  grid-area: back;
+  display: flex;
+  align-items: center;
   min-width: 0;
+  width: 100%;
+  min-height: var(--margo-touch-min);
 }
 
 .margo-auth-layout__brand {
   display: none;
 }
 
+.margo-auth-layout__panel {
+  grid-area: panel;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Lockup + mode CTAs sit below Back — not in the same row. */
+.margo-auth-layout__intro {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  position: relative;
+  padding-top: clamp(28px, 7vh, 64px);
+  padding-bottom: 28px;
+}
+
+.margo-auth-layout__mark {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 32px;
+}
+
+.margo-auth-layout__tabs {
+  width: 100%;
+  min-width: 0;
+}
+
 .margo-auth-layout__main {
-  grid-area: main;
   width: 100%;
   min-width: 0;
 }
@@ -51,10 +74,14 @@
 @media (min-width: 901px) {
   .margo-auth-layout {
     grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+    grid-template-rows: auto 1fr;
     grid-template-areas:
-      "toolbar toolbar"
-      "brand main";
-    padding-top: max(24px, env(safe-area-inset-top));
+      "back back"
+      "brand panel";
+    padding-top: max(20px, env(safe-area-inset-top));
+    column-gap: clamp(16px, 4vw, 40px);
+    min-height: 100dvh;
+    align-items: stretch;
   }
 
   .margo-auth-layout__brand {
@@ -62,6 +89,22 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding-right: clamp(16px, 4vw, 40px);
+    padding-bottom: 24px;
+  }
+
+  .margo-auth-layout__panel {
+    max-width: none;
+    margin: 0;
+    justify-content: center;
+  }
+
+  /* Desktop already has the lockup in the brand column. */
+  .margo-auth-layout__mark {
+    display: none;
+  }
+
+  .margo-auth-layout__intro {
+    padding-top: 0;
+    padding-bottom: 24px;
   }
 }

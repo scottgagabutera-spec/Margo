@@ -106,8 +106,6 @@ export default function ArtistsCatalogPage() {
       items={sortedArtists}
       loading={loading}
       getKey={a => a.id}
-      getSearchText={a => `${a.displayName || ''} ${a.username || ''}`}
-      searchPlaceholder="Search artists…"
       emptyMessage="No artists yet — check back soon."
       minCardWidth={110}
       skeletonCount={12}

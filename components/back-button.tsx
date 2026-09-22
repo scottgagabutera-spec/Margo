@@ -3,7 +3,6 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeftIcon } from '@/components/icons'
 import { canPopInAppHistory } from '@/components/nav-back'
 import { PendingNavLink } from '@/components/pending-nav-link'
-import { UI_FONT } from '@/lib/fonts'
 
 /**
  * In-app back for depth routes. Chrome Back pops history immediately when
@@ -17,19 +16,21 @@ export function BackButton({
   label = 'Back',
   onBack,
   preferHistory,
+  replace,
   variant = 'page',
 }: {
   fallbackHref?: string
   label?: string
   onBack?: () => boolean | void
   preferHistory?: boolean
+  replace?: boolean
   variant?: 'page' | 'chrome'
 }) {
   const router = useRouter()
   const dest = fallbackHref || '/feed'
   const isChrome = variant === 'chrome'
 
-  const chromeStyle: React.CSSProperties = {
+  const iconStyle: React.CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -52,6 +53,7 @@ export function BackButton({
       <PendingNavLink
         href={dest}
         prefetch
+        replace={replace}
         indicator="subtle"
         aria-label={label}
         onClick={(event) => {
@@ -59,16 +61,14 @@ export function BackButton({
             event.preventDefault()
             return
           }
-          // Default chrome Back pops when possible. Opt out with preferHistory={false}
-          // (Studio always returns to profile / You, not the previous screen).
           if (preferHistory !== false && canPopInAppHistory()) {
             event.preventDefault()
             window.history.back()
           }
         }}
-        style={chromeStyle}
+        style={iconStyle}
       >
-        <ArrowLeftIcon size={20} color="var(--text-secondary)" />
+        <ArrowLeftIcon size={20} color="var(--gold)" />
       </PendingNavLink>
     )
   }
@@ -77,6 +77,10 @@ export function BackButton({
     if (onBack?.() === true) return
     if (preferHistory && typeof window !== 'undefined' && window.history.length > 1) {
       router.back()
+      return
+    }
+    if (replace) {
+      router.replace(dest)
       return
     }
     router.push(dest)
@@ -88,33 +92,11 @@ export function BackButton({
       onClick={handleBack}
       aria-label={label}
       style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'flex-start',
-        gap: '8px',
-        minWidth: 'var(--margo-touch-min)',
-        minHeight: 'var(--margo-touch-min)',
-        padding: '0 12px',
-        marginLeft: '-12px',
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        boxSizing: 'border-box',
-        flexShrink: 0,
-        WebkitTapHighlightColor: 'transparent',
+        ...iconStyle,
+        marginLeft: '-4px',
       }}
     >
-      <ArrowLeftIcon size={16} color="var(--text-secondary)" />
-      <span style={{
-        fontFamily: UI_FONT,
-        fontSize: '0.75rem',
-        fontWeight: 600,
-        letterSpacing: '1.5px',
-        textTransform: 'uppercase',
-        color: 'var(--text-secondary)',
-      }}>
-        {label}
-      </span>
+      <ArrowLeftIcon size={20} color="var(--gold)" />
     </button>
   )
 }

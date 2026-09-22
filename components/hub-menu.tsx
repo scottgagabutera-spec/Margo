@@ -17,7 +17,7 @@ import { createPortal } from 'react-dom'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useHubSurfaces } from '@/hooks/useHubSurfaces'
 import { MARGO_CLOSE_HUB_EVENT, persistActivePrimaryScroll, readActiveScrollTop } from '@/components/primary-tab-shell'
-import { BellIcon, HubGridIcon, LibraryIcon, MessagesIcon, HomeIcon, SearchIcon } from '@/components/icons'
+import { BellIcon, HubGridIcon, LibraryIcon, MessagesIcon, SearchIcon } from '@/components/icons'
 import { LoadingRing } from '@/components/loading-ring'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { UI_FONT } from '@/lib/fonts'
@@ -25,6 +25,7 @@ import type { HubSurface, HubSurfaceId } from '@/lib/hub/surfaces'
 import { MargoSymbol } from '@/components/margo-symbol'
 import { SignInLink } from '@/components/signin-link'
 import { buildSigninHref, persistAuthReturnScroll } from '@/lib/auth-return'
+import { searchHrefForPath, searchScopeForPath, consumeHubOverlayRestore } from '@/lib/search-scope'
 
 /** UI chrome — MARGO_BRAND §3 Geist Sans */
 const font = UI_FONT
@@ -401,8 +402,19 @@ export function HubProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     pendingHrefRef.current = null
-    setOpen(false)
     setPendingHref(null)
+    const restoreHub = typeof window !== 'undefined'
+      && (
+        new URLSearchParams(window.location.search).get('hub') === '1'
+        || consumeHubOverlayRestore()
+      )
+    setOpen(restoreHub)
+    if (restoreHub && typeof window !== 'undefined') {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('hub')
+      const next = url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : '')
+      window.history.replaceState(window.history.state, '', next)
+    }
   }, [pathname])
 
   useEffect(() => {
@@ -545,41 +557,16 @@ export function HubTabButton({ style, labelStyle }: { style: CSSProperties; labe
   )
 }
 
-export function HomeNavLink() {
-  const pathname = usePathname()
-  const active = pathname === '/'
-  return (
-    <PendingNavLink
-      href="/"
-      aria-label="Home"
-      ringSize={18}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: TOUCH,
-        height: TOUCH,
-        position: 'relative',
-        boxSizing: 'border-box',
-        flexShrink: 0,
-        borderRadius: '8px',
-      }}
-    >
-      <HomeIcon
-        size={20}
-        color={active ? 'var(--gold)' : 'rgba(255,255,255,0.5)'}
-      />
-    </PendingNavLink>
-  )
-}
-
 export function SearchNavLink() {
   const pathname = usePathname()
+  const { open } = useHub()
+  const href = searchHrefForPath(pathname, open ? '/hub' : null)
+  const scope = searchScopeForPath(open ? '/hub' : pathname)
   const active = pathname === '/search'
   return (
     <PendingNavLink
-      href="/search"
-      aria-label="Search"
+      href={href}
+      aria-label={scope.placeholder}
       ringSize={18}
       style={{
         display: 'flex',

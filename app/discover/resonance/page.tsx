@@ -57,8 +57,6 @@ export default function ResonanceCatalogPage() {
       items={resonances}
       loading={postsLoading || songsLoading}
       getKey={p => p.id}
-      getSearchText={p => `${p.text || ''} ${p.knowledge?.song || ''} ${p.knowledge?.artist || ''} ${p.username || ''}`}
-      searchPlaceholder="Search posts, songs, people…"
       extraFilters={<DiscoverVibeFilterRow selected={vibe} onSelect={setVibe} />}
       emptyMessage={vibe === 'ALL' ? 'No song posts yet.' : `No Resonance posts tagged ${vibe} yet.`}
       minCardWidth={240}

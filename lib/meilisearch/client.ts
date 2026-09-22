@@ -12,14 +12,9 @@ function getAdminKey(): string {
   return key
 }
 
-function getSearchKey(): string {
-  return process.env.MEILISEARCH_SEARCH_KEY || getAdminKey()
-}
-
-async function meiliFetch(path: string, init: RequestInit & { admin?: boolean } = {}): Promise<Response> {
-  const key = init.admin === false ? getSearchKey() : getAdminKey()
+async function meiliFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers)
-  headers.set('Authorization', `Bearer ${key}`)
+  headers.set('Authorization', `Bearer ${getAdminKey()}`)
   if (init.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
@@ -27,14 +22,13 @@ async function meiliFetch(path: string, init: RequestInit & { admin?: boolean } 
 }
 
 export async function ensureMargoIndex(): Promise<void> {
-  const res = await meiliFetch('/indexes', { method: 'GET', admin: true })
+  const res = await meiliFetch('/indexes', { method: 'GET' })
   if (!res.ok) throw new Error(`Meilisearch indexes list failed: ${res.status}`)
   const data = (await res.json()) as { results?: { uid: string }[] }
   const exists = (data.results || []).some(i => i.uid === INDEX_UID)
   if (!exists) {
     const create = await meiliFetch('/indexes', {
       method: 'POST',
-      admin: true,
       body: JSON.stringify({ uid: INDEX_UID, primaryKey: 'id' }),
     })
     if (!create.ok && create.status !== 409) {
@@ -44,7 +38,6 @@ export async function ensureMargoIndex(): Promise<void> {
 
   await meiliFetch(`/indexes/${INDEX_UID}/settings`, {
     method: 'PATCH',
-    admin: true,
     body: JSON.stringify({
       searchableAttributes: ['text', 'title', 'subtitle', 'username', 'emotion'],
       filterableAttributes: ['type'],
@@ -70,7 +63,6 @@ export async function upsertMargoDocuments(docs: unknown[]): Promise<void> {
   await ensureMargoIndex()
   const res = await meiliFetch(`/indexes/${INDEX_UID}/documents`, {
     method: 'POST',
-    admin: true,
     body: JSON.stringify(docs),
   })
   if (!res.ok) {
@@ -83,37 +75,10 @@ export async function deleteMargoDocuments(ids: string[]): Promise<void> {
   if (ids.length === 0) return
   const res = await meiliFetch(`/indexes/${INDEX_UID}/documents/delete-batch`, {
     method: 'POST',
-    admin: true,
     body: JSON.stringify(ids),
   })
   if (!res.ok) {
     const body = await res.text()
     throw new Error(`Meilisearch delete failed (${res.status}): ${body}`)
   }
-}
-
-export async function searchMargoIndex(
-  query: string,
-  limitPerType = 8,
-): Promise<{
-  hits: Array<Record<string, unknown>>
-  processingTimeMs: number
-}> {
-  const res = await meiliFetch(`/indexes/${INDEX_UID}/search`, {
-    method: 'POST',
-    admin: false,
-    body: JSON.stringify({
-      q: query,
-      limit: limitPerType * 4,
-      attributesToHighlight: ['text', 'title', 'subtitle', 'username'],
-      highlightPreTag: '<mark>',
-      highlightPostTag: '</mark>',
-    }),
-  })
-  if (!res.ok) {
-    const body = await res.text()
-    throw new Error(`Meilisearch search failed (${res.status}): ${body}`)
-  }
-  const data = (await res.json()) as { hits: Array<Record<string, unknown>>; processingTimeMs: number }
-  return { hits: data.hits || [], processingTimeMs: data.processingTimeMs || 0 }
 }

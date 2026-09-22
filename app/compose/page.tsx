@@ -102,7 +102,7 @@ const YOUR_LINE_CUE = 'Write your line…'
 const backBtnStyle: React.CSSProperties = {
   background: 'none', border: 'none', cursor: 'pointer',
   fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
-  color: 'var(--text-secondary, var(--text-2))', letterSpacing: '0.5px',
+  color: 'var(--gold)', letterSpacing: '0.5px',
   marginBottom: '32px', padding: '0 12px', minHeight: 'var(--margo-touch-min)',
   display: 'inline-flex', alignItems: 'center', gap: '6px', boxSizing: 'border-box',
   transition: 'color 150ms ease',

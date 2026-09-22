@@ -117,8 +117,6 @@ export default function ArtistDiscographyPage() {
       items={sorted}
       loading={loading}
       getKey={s => s.id}
-      getSearchText={s => s.title}
-      searchPlaceholder="Search this discography…"
       sortOptions={SORT_OPTIONS}
       activeSort={sort}
       onSortChange={setSort}

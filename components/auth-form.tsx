@@ -28,6 +28,8 @@ interface AuthFormProps {
   externalError?: string | null
   /** Post-OAuth redirect path (e.g. /compose) — set by auth gate. */
   oauthReturnTo?: string | null
+  /** Sign-in page owns Sign in / Create account as tabs — skip the duplicate h1. */
+  hideTitle?: boolean
 }
 
 interface TermsCompletionFormProps {
@@ -264,7 +266,7 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
   )
 }
 
-export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthReturnTo }: AuthFormProps) {
+export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthReturnTo, hideTitle }: AuthFormProps) {
   const { rehydrate } = useAuthGate()
   const { waitUntilReady } = useIdentity()
   const emailId = useId()
@@ -432,17 +434,19 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
 
   return (
     <div style={{ width: '100%' }}>
-      <header style={{ marginBottom: isSignup ? '18px' : '28px', textAlign: 'center' }}>
-        <h1 style={{
-          fontFamily: ui,
-          fontSize: TYPE.pageTitle,
-          color: 'var(--text)',
-          fontWeight: 600,
-          margin: 0,
-        }}>
-          {isSignup ? 'Create your account' : 'Sign in'}
-        </h1>
-      </header>
+      {hideTitle ? null : (
+        <header style={{ marginBottom: isSignup ? '18px' : '28px', textAlign: 'center' }}>
+          <h1 style={{
+            fontFamily: ui,
+            fontSize: TYPE.pageTitle,
+            color: 'var(--text)',
+            fontWeight: 600,
+            margin: 0,
+          }}>
+            {isSignup ? 'Create your account' : 'Sign in'}
+          </h1>
+        </header>
+      )}
 
       {isSignup ? (
         <>

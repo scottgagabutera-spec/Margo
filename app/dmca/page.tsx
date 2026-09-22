@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 
-const FOOTER_LINKS = ['about', 'privacy', 'terms', 'dmca', 'contact'] as const
+const FOOTER_LINKS = ['help', 'faq', 'about', 'privacy', 'terms', 'dmca', 'contact'] as const
 
 export default function DmcaPage() {
   return (

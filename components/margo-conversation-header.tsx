@@ -55,7 +55,7 @@ export function MargoConversationHeader({
           padding: '0 6px',
           marginLeft: '-4px',
           textDecoration: 'none',
-          color: 'var(--text-secondary)',
+          color: 'var(--gold)',
           boxSizing: 'border-box',
           WebkitTapHighlightColor: 'transparent',
         }}

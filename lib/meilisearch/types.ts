@@ -1,4 +1,10 @@
-export type MargoSearchDocType = 'user' | 'lyric' | 'artist' | 'catalog_line'
+export type MargoSearchDocType = 'user' | 'lyric' | 'artist' | 'catalog_line' | 'song'
+
+export type RelatedSongHit = {
+  id: string
+  title: string
+  artworkUrl?: string | null
+}
 
 export interface MargoSearchDocument {
   /** Composite id: `post:uuid`, `user:uuid`, `song:uuid`, `line:songId:index` */
@@ -16,6 +22,8 @@ export interface MargoSearchDocument {
   resonateCount?: number
   plays?: number
   createdAt?: number
+  /** Artist results: a few of their live songs. */
+  relatedSongs?: RelatedSongHit[]
 }
 
 export interface MargoSearchHit extends MargoSearchDocument {
@@ -27,6 +35,7 @@ export interface MargoSearchCategoryResults {
   lyrics: MargoSearchHit[]
   artists: MargoSearchHit[]
   catalogLines: MargoSearchHit[]
+  songs: MargoSearchHit[]
 }
 
 export interface MargoSearchResponse {
