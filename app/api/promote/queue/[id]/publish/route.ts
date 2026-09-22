@@ -6,6 +6,7 @@ import { cleanupPromoteStagingVideoIfComplete } from '@/lib/promote/cleanup-stag
 import { getValidYouTubeAccessToken } from '@/lib/promote/connections'
 import { signedPromoteVideoUrl, uploadPromoteVideo } from '@/lib/promote/r2-promote-upload'
 import { resolveQueueVisualPrefs } from '@/lib/promote/types'
+import { buildYouTubePromoteCopy, isMargoArtistAccount } from '@/lib/promote/youtube-copy'
 import { uploadVideoToYouTube } from '@/lib/promote/youtube-publish'
 
 export const runtime = 'nodejs'
@@ -222,14 +223,16 @@ export async function POST(
       overrideAtmosphereId: queue.override_atmosphere_id,
     })
 
-    const title = `${queue.song_title} — ${String(queue.lyric_text).split('\n')[0]}`.slice(0, 100)
-    const description = [
-      String(queue.lyric_text).trim(),
-      '',
-      `${queue.song_title} · ${queue.artist_name}`,
-      '',
-      'Shared via MARGO',
-    ].join('\n')
+    const { title, description } = buildYouTubePromoteCopy({
+      songTitle: queue.song_title,
+      lyricText: queue.lyric_text,
+    })
+
+    const { data: publisher } = await admin
+      .from('profiles')
+      .select('username')
+      .eq('id', session.userId)
+      .maybeSingle()
 
     const result = await uploadVideoToYouTube({
       accessToken,
@@ -237,6 +240,7 @@ export async function POST(
       title,
       description,
       privacyStatus: 'public',
+      containsSyntheticMedia: isMargoArtistAccount(publisher?.username) || undefined,
     })
 
     await admin

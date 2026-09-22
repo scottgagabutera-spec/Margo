@@ -6,6 +6,8 @@ export interface YouTubeUploadInput {
   title: string
   description: string
   privacyStatus?: 'public' | 'unlisted' | 'private'
+  /** Official Margo artist uploads only — other artists keep their own Studio toggle. */
+  containsSyntheticMedia?: boolean
 }
 
 export interface YouTubeUploadResult {
@@ -23,6 +25,7 @@ export async function uploadVideoToYouTube({
   title,
   description,
   privacyStatus = 'public',
+  containsSyntheticMedia,
 }: YouTubeUploadInput): Promise<YouTubeUploadResult> {
   const initParams = new URLSearchParams({
     uploadType: 'resumable',
@@ -47,6 +50,7 @@ export async function uploadVideoToYouTube({
         status: {
           privacyStatus,
           selfDeclaredMadeForKids: false,
+          ...(containsSyntheticMedia ? { containsSyntheticMedia: true } : {}),
         },
       }),
     },
