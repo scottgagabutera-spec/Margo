@@ -10,7 +10,9 @@ import { SearchRowSkeletonList } from '@/components/margo-skeletons'
 import type { MargoSearchHit, MargoSearchResponse } from '@/lib/meilisearch/types'
 import {
   getSearchScope,
+  markHubOverlayRestore,
   safeSearchFromPath,
+  searchFromOpensHub,
   sectionVisible,
 } from '@/lib/search-scope'
 import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
@@ -190,7 +192,17 @@ function SearchPageInner() {
   const from = safeSearchFromPath(params.get('from')) || scope.backHref
   const playlistId = params.get('playlist')
 
-  useRegisterNavBack({ fallbackHref: from, preferHistory: false })
+  useRegisterNavBack({
+    fallbackHref: from,
+    preferHistory: true,
+    replace: true,
+    onBack: () => {
+      if (scope.id === 'hub' || searchFromOpensHub(from)) {
+        markHubOverlayRestore()
+      }
+      return false
+    },
+  })
 
   const [query, setQuery] = useState('')
   const [debounced, setDebounced] = useState('')

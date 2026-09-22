@@ -76,13 +76,8 @@ function SigninPageInner() {
     }}>
       <div className="margo-auth-layout">
         {showModeTabs ? (
-          <div className="margo-auth-layout__toolbar">
-            <div className="margo-auth-layout__back">
-              <BackButton variant="chrome" preferHistory={false} fallbackHref={returnTo || '/'} />
-            </div>
-            <div className="margo-auth-layout__tabs">
-              <AuthModeTabs mode={mode} onChange={setMode} />
-            </div>
+          <div className="margo-auth-layout__back">
+            <BackButton variant="chrome" preferHistory={false} fallbackHref={returnTo || '/'} />
           </div>
         ) : null}
 
@@ -111,41 +106,68 @@ function SigninPageInner() {
           </p>
         </aside>
 
-        <main className="margo-auth-layout__main">
-          {isTermsStep ? (
-            <TermsCompletionForm
-              externalError={externalError}
-              onSuccess={finishAuth}
-            />
-          ) : (
-            <AuthForm
-              mode={mode}
-              onSwitchMode={setMode}
-              externalError={externalError}
-              oauthReturnTo={returnTo}
-              onSuccess={finishAuth}
-            />
-          )}
-          <p style={{
-            marginTop: '20px',
-            textAlign: 'center',
-          }}>
-            <Link
-              href="/help/account"
-              style={{
-                fontFamily: ui,
-                fontSize: '0.68rem',
-                fontWeight: 700,
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-                color: 'var(--text-muted)',
-                textDecoration: 'none',
-              }}
-            >
-              Help
-            </Link>
-          </p>
-        </main>
+        <div className="margo-auth-layout__panel">
+          {showModeTabs ? (
+            <div className="margo-auth-layout__intro">
+              <h1 style={{
+                position: 'absolute',
+                width: '1px',
+                height: '1px',
+                padding: 0,
+                margin: '-1px',
+                overflow: 'hidden',
+                clip: 'rect(0, 0, 0, 0)',
+                whiteSpace: 'nowrap',
+                border: 0,
+              }}>
+                {mode === 'signup' ? 'Create account' : 'Sign in'}
+              </h1>
+              <div className="margo-auth-layout__mark">
+                <MargoLogo tier="lockup" size={32} rings />
+              </div>
+              <div className="margo-auth-layout__tabs">
+                <AuthModeTabs mode={mode} onChange={setMode} />
+              </div>
+            </div>
+          ) : null}
+
+          <main className="margo-auth-layout__main">
+            {isTermsStep ? (
+              <TermsCompletionForm
+                externalError={externalError}
+                onSuccess={finishAuth}
+              />
+            ) : (
+              <AuthForm
+                mode={mode}
+                onSwitchMode={setMode}
+                externalError={externalError}
+                oauthReturnTo={returnTo}
+                onSuccess={finishAuth}
+                hideTitle
+              />
+            )}
+            <p style={{
+              marginTop: '20px',
+              textAlign: 'center',
+            }}>
+              <Link
+                href="/help/account"
+                style={{
+                  fontFamily: ui,
+                  fontSize: '0.68rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.14em',
+                  textTransform: 'uppercase',
+                  color: 'var(--text-muted)',
+                  textDecoration: 'none',
+                }}
+              >
+                Help
+              </Link>
+            </p>
+          </main>
+        </div>
       </div>
     </div>
   )

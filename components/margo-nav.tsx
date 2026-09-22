@@ -179,6 +179,7 @@ export function MargoNav() {
             variant="chrome"
             fallbackHref={navBack.fallbackHref}
             preferHistory={navBack.preferHistory}
+            replace={navBack.replace}
             onBack={navBack.onBack}
             label={navBack.label || 'Back'}
           />

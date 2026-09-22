@@ -25,7 +25,7 @@ import type { HubSurface, HubSurfaceId } from '@/lib/hub/surfaces'
 import { MargoSymbol } from '@/components/margo-symbol'
 import { SignInLink } from '@/components/signin-link'
 import { buildSigninHref, persistAuthReturnScroll } from '@/lib/auth-return'
-import { searchHrefForPath, searchScopeForPath } from '@/lib/search-scope'
+import { searchHrefForPath, searchScopeForPath, consumeHubOverlayRestore } from '@/lib/search-scope'
 
 /** UI chrome — MARGO_BRAND §3 Geist Sans */
 const font = UI_FONT
@@ -404,7 +404,10 @@ export function HubProvider({ children }: { children: ReactNode }) {
     pendingHrefRef.current = null
     setPendingHref(null)
     const restoreHub = typeof window !== 'undefined'
-      && new URLSearchParams(window.location.search).get('hub') === '1'
+      && (
+        new URLSearchParams(window.location.search).get('hub') === '1'
+        || consumeHubOverlayRestore()
+      )
     setOpen(restoreHub)
     if (restoreHub && typeof window !== 'undefined') {
       const url = new URL(window.location.href)

@@ -16,12 +16,14 @@ export function BackButton({
   label = 'Back',
   onBack,
   preferHistory,
+  replace,
   variant = 'page',
 }: {
   fallbackHref?: string
   label?: string
   onBack?: () => boolean | void
   preferHistory?: boolean
+  replace?: boolean
   variant?: 'page' | 'chrome'
 }) {
   const router = useRouter()
@@ -51,6 +53,7 @@ export function BackButton({
       <PendingNavLink
         href={dest}
         prefetch
+        replace={replace}
         indicator="subtle"
         aria-label={label}
         onClick={(event) => {
@@ -74,6 +77,10 @@ export function BackButton({
     if (onBack?.() === true) return
     if (preferHistory && typeof window !== 'undefined' && window.history.length > 1) {
       router.back()
+      return
+    }
+    if (replace) {
+      router.replace(dest)
       return
     }
     router.push(dest)

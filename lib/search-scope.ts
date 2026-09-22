@@ -150,6 +150,34 @@ export function safeSearchFromPath(raw: string | null | undefined): string | nul
   return q ? `${path}?${q}` : path
 }
 
+const HUB_RESTORE_KEY = 'margo-restore-hub'
+
+/** Search Back pops to a page that is not `/search` — Hub is an overlay, so restore it after the pop. */
+export function markHubOverlayRestore() {
+  try {
+    sessionStorage.setItem(HUB_RESTORE_KEY, '1')
+  } catch {
+    /* private mode / SSR */
+  }
+}
+
+export function consumeHubOverlayRestore(): boolean {
+  try {
+    if (sessionStorage.getItem(HUB_RESTORE_KEY) !== '1') return false
+    sessionStorage.removeItem(HUB_RESTORE_KEY)
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function searchFromOpensHub(from: string | null | undefined): boolean {
+  if (!from) return false
+  const query = from.split('?')[1]
+  if (!query) return false
+  return new URLSearchParams(query).get('hub') === '1'
+}
+
 export function searchHrefForPath(
   pathname: string | null | undefined,
   overlayPath?: string | null,

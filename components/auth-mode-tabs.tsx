@@ -1,7 +1,7 @@
 'use client'
 
 import type { AuthMode } from '@/components/auth-form'
-import { UI_FONT } from '@/lib/fonts'
+import { TYPE, UI_FONT } from '@/lib/fonts'
 
 interface AuthModeTabsProps {
   mode: AuthMode
@@ -18,11 +18,11 @@ export function AuthModeTabs({ mode, onChange, className }: AuthModeTabsProps) {
       style={{
         display: 'grid',
         gridTemplateColumns: '1fr 1fr',
-        gap: '6px',
-        padding: '3px',
-        borderRadius: '12px',
-        background: 'rgba(255,255,255,0.03)',
-        border: '1px solid rgba(255,255,255,0.08)',
+        gap: '4px',
+        padding: '4px',
+        borderRadius: '14px',
+        background: 'var(--surface-2)',
+        border: '1px solid var(--border)',
         width: '100%',
         boxSizing: 'border-box',
       }}
@@ -37,16 +37,19 @@ export function AuthModeTabs({ mode, onChange, className }: AuthModeTabsProps) {
             aria-selected={active}
             onClick={() => onChange(tab)}
             style={{
-              height: '36px',
-              borderRadius: '9px',
+              minHeight: 'var(--margo-touch-min)',
+              height: 'var(--margo-touch-min)',
+              borderRadius: '11px',
               border: 'none',
               cursor: 'pointer',
               fontFamily: UI_FONT,
-              fontSize: '0.76rem',
-              fontWeight: active ? 600 : 500,
+              fontSize: TYPE.secondary,
+              fontWeight: active ? 700 : 500,
+              letterSpacing: '0.02em',
               color: active ? 'var(--text-on-gold, var(--bg))' : 'var(--text-secondary)',
               background: active ? 'var(--gold)' : 'transparent',
               transition: 'background 150ms ease, color 150ms ease',
+              WebkitTapHighlightColor: 'transparent',
             }}
           >
             {tab === 'signin' ? 'Sign in' : 'Create account'}

@@ -44,6 +44,8 @@ function NavHistoryTracker() {
 export type NavBackConfig = {
   fallbackHref?: string
   preferHistory?: boolean
+  /** When there is no in-app history, replace the current entry instead of pushing. */
+  replace?: boolean
   onBack?: () => boolean | void
   label?: string
 }
@@ -72,7 +74,7 @@ export function navBackForPath(pathname: string | null | undefined): NavBackConf
     return null
   }
 
-  if (p === '/search') return { fallbackHref: '/feed' }
+  if (p === '/search') return { fallbackHref: '/feed', replace: true }
   if (p === '/studio') return { fallbackHref: '/you', preferHistory: false }
   if (p.startsWith('/studio/')) return { fallbackHref: '/studio' }
   if (p === '/settings' || p === '/profile/edit' || p === '/apply-artist') {
@@ -125,6 +127,7 @@ export function useRegisterNavBack(config: NavBackConfig | null) {
 
   const fallbackHref = config?.fallbackHref
   const preferHistory = config?.preferHistory
+  const replace = config?.replace
   const label = config?.label
   const enabled = config != null
 
@@ -136,9 +139,10 @@ export function useRegisterNavBack(config: NavBackConfig | null) {
     setOverride({
       fallbackHref,
       preferHistory,
+      replace,
       label,
       onBack: () => onBackRef.current?.(),
     })
     return () => setOverride(null)
-  }, [enabled, fallbackHref, preferHistory, label, setOverride])
+  }, [enabled, fallbackHref, preferHistory, replace, label, setOverride])
 }
