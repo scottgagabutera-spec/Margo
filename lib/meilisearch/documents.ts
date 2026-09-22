@@ -85,6 +85,25 @@ export function postToLyricDoc(row: {
   }
 }
 
+export function songToSearchDoc(row: {
+  id: string
+  title: string
+  artist_display_name?: string | null
+  artwork_url?: string | null
+  owner_profile_id?: string | null
+}): MargoSearchDocument {
+  return {
+    id: `song:${row.id}`,
+    type: 'song',
+    title: row.title,
+    subtitle: row.artist_display_name || undefined,
+    songId: row.id,
+    artworkUrl: row.artwork_url ?? null,
+    profileId: row.owner_profile_id || undefined,
+    createdAt: Date.now(),
+  }
+}
+
 export function lyricLineToCatalogDoc(
   row: {
     song_id: string
@@ -129,6 +148,7 @@ export function categorizeHits(
   const lyrics: MargoSearchDocument[] = []
   const artists: MargoSearchDocument[] = []
   const catalogLines: MargoSearchDocument[] = []
+  const songs: MargoSearchDocument[] = []
 
   for (const hit of hits) {
     const doc = hit as unknown as MargoSearchDocument & { _formatted?: Partial<MargoSearchDocument> }
@@ -137,7 +157,8 @@ export function categorizeHits(
     else if (type === 'lyric' && lyrics.length < limitPerType) lyrics.push(doc)
     else if (type === 'artist' && artists.length < limitPerType) artists.push(doc)
     else if (type === 'catalog_line' && catalogLines.length < limitPerType) catalogLines.push(doc)
+    else if (type === 'song' && songs.length < limitPerType) songs.push(doc)
   }
 
-  return { users, lyrics, artists, catalogLines }
+  return { users, lyrics, artists, catalogLines, songs }
 }

@@ -402,8 +402,16 @@ export function HubProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     pendingHrefRef.current = null
-    setOpen(false)
     setPendingHref(null)
+    const restoreHub = typeof window !== 'undefined'
+      && new URLSearchParams(window.location.search).get('hub') === '1'
+    setOpen(restoreHub)
+    if (restoreHub && typeof window !== 'undefined') {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('hub')
+      const next = url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : '')
+      window.history.replaceState(window.history.state, '', next)
+    }
   }, [pathname])
 
   useEffect(() => {

@@ -65,11 +65,13 @@
 }
 
 .margo-auth-layout__main::before {
-  min-height: clamp(28px, 8vh, 88px);
+  min-height: clamp(88px, 22vh, 220px);
+  flex: 2 1 auto;
 }
 
 .margo-auth-layout__main::after {
-  min-height: clamp(32px, 10vh, 96px);
+  min-height: clamp(16px, 4vh, 48px);
+  flex: 1 1 auto;
 }
 
 @media (min-width: 901px) {

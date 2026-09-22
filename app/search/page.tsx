@@ -5,7 +5,9 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { MargoSearchInput } from '@/components/margo-search-input'
 import { useRegisterNavBack } from '@/components/nav-back'
-import type { MargoSearchResponse } from '@/lib/meilisearch/types'
+import { LoadingRing } from '@/components/loading-ring'
+import { SearchRowSkeletonList } from '@/components/margo-skeletons'
+import type { MargoSearchHit, MargoSearchResponse } from '@/lib/meilisearch/types'
 import {
   getSearchScope,
   safeSearchFromPath,
@@ -39,37 +41,144 @@ function HitSection({
   )
 }
 
-function ResultCard({
-  href,
-  primary,
-  secondary,
-  lyric,
+function Cover({
+  src,
+  alt,
+  round,
+  size = 48,
 }: {
-  href: string
-  primary: string
-  secondary?: string
-  lyric?: boolean
+  src?: string | null
+  alt: string
+  round?: boolean
+  size?: number
 }) {
+  const radius = round ? '50%' : '8px'
+  return (
+    <div style={{
+      width: size,
+      height: size,
+      borderRadius: radius,
+      overflow: 'hidden',
+      flexShrink: 0,
+      background: 'linear-gradient(135deg, rgba(232,197,71,0.2), rgba(232,197,71,0.05))',
+      border: '1px solid var(--gold-border, rgba(232,197,71,0.22))',
+    }}>
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt={alt} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+      ) : (
+        <div style={{
+          width: '100%', height: '100%',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontFamily: font, fontSize: '0.85rem', fontWeight: 700, color: 'var(--gold)',
+        }}>
+          {(alt || '?').charAt(0).toUpperCase()}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PersonCard({ hit, artist }: { hit: MargoSearchHit; artist?: boolean }) {
+  const name = hit.title || hit.username || ''
+  return (
+    <div style={{
+      padding: '12px 14px',
+      borderRadius: '12px',
+      background: 'var(--surface)',
+      border: '1px solid var(--border)',
+    }}>
+      <Link href={`/profile/${hit.username}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <Cover src={hit.artworkUrl} alt={name} round size={48} />
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <p style={{
+            fontFamily: font, fontSize: TYPE.song, fontWeight: 600,
+            color: 'var(--text)', margin: 0, lineHeight: 1.3,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{name}</p>
+          <p style={{
+            fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)',
+            margin: '4px 0 0', letterSpacing: '0.02em',
+          }}>
+            {hit.subtitle || (hit.username ? `@${hit.username}` : '')}
+            {artist ? ' · Artist' : ''}
+          </p>
+        </div>
+      </Link>
+      {artist && hit.relatedSongs && hit.relatedSongs.length > 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px', paddingLeft: '62px' }}>
+          {hit.relatedSongs.map((song) => (
+            <Link
+              key={song.id}
+              href={`/song/${song.id}`}
+              style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}
+            >
+              <Cover src={song.artworkUrl} alt={song.title} size={32} />
+              <p style={{
+                fontFamily: font, fontSize: TYPE.artist, color: 'var(--text-secondary)',
+                margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>{song.title}</p>
+            </Link>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function SongCard({ hit }: { hit: MargoSearchHit }) {
+  const title = hit.title || ''
+  const href = hit.songId ? `/song/${hit.songId}` : '/discover/songs'
   return (
     <Link href={href} style={{ textDecoration: 'none' }}>
       <div style={{
+        display: 'flex', alignItems: 'center', gap: '14px',
+        padding: '12px 14px', borderRadius: '12px',
+        background: 'var(--surface)', border: '1px solid var(--border)',
+      }}>
+        <Cover src={hit.artworkUrl} alt={title} size={56} />
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <p style={{
+            fontFamily: font, fontSize: TYPE.song, fontWeight: 600,
+            color: 'var(--text)', margin: 0, lineHeight: 1.3,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{title}</p>
+          {hit.subtitle ? (
+            <p style={{
+              fontFamily: font, fontSize: TYPE.artist, color: 'var(--text-secondary)',
+              margin: '4px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>{hit.subtitle}</p>
+          ) : null}
+        </div>
+      </div>
+    </Link>
+  )
+}
+
+function LyricCard({ hit }: { hit: MargoSearchHit }) {
+  const href = hit.postId ? `/post/${hit.postId}` : (hit.songId ? `/song/${hit.songId}` : '/feed')
+  const primary = hit.text || hit.title || ''
+  const secondary = [hit.subtitle, hit.username ? `@${hit.username}` : ''].filter(Boolean).join(' · ')
+  return (
+    <Link href={href} style={{ textDecoration: 'none' }}>
+      <div style={{
+        display: 'flex', alignItems: 'flex-start', gap: '14px',
         padding: '14px 16px', borderRadius: '12px',
         background: 'var(--surface)', border: '1px solid var(--border)',
       }}>
-        <p style={{
-          fontFamily: lyric ? lyricFont : font,
-          fontStyle: lyric ? 'italic' : 'normal',
-          fontSize: lyric ? TYPE.lyric : TYPE.song,
-          fontWeight: lyric ? 400 : 600,
-          color: 'var(--text)', margin: 0, lineHeight: 1.45,
-        }}>{primary}</p>
-        {secondary ? (
+        {hit.artworkUrl ? <Cover src={hit.artworkUrl} alt="" size={48} /> : null}
+        <div style={{ minWidth: 0, flex: 1 }}>
           <p style={{
-            fontFamily: font, fontSize: TYPE.meta,
-            color: 'var(--text-muted)', letterSpacing: '0.04em',
-            margin: '6px 0 0',
-          }}>{secondary}</p>
-        ) : null}
+            fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric,
+            color: 'var(--text)', margin: 0, lineHeight: 1.45,
+          }}>{primary}</p>
+          {secondary ? (
+            <p style={{
+              fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)',
+              margin: '6px 0 0', letterSpacing: '0.04em',
+            }}>{secondary}</p>
+          ) : null}
+        </div>
       </div>
     </Link>
   )
@@ -79,8 +188,9 @@ function SearchPageInner() {
   const params = useSearchParams()
   const scope = useMemo(() => getSearchScope(params.get('scope')), [params])
   const from = safeSearchFromPath(params.get('from')) || scope.backHref
+  const playlistId = params.get('playlist')
 
-  useRegisterNavBack({ fallbackHref: from })
+  useRegisterNavBack({ fallbackHref: from, preferHistory: false })
 
   const [query, setQuery] = useState('')
   const [debounced, setDebounced] = useState('')
@@ -105,7 +215,11 @@ function SearchPageInner() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&scope=${encodeURIComponent(scope.id)}`)
+      const search = new URLSearchParams()
+      search.set('q', q)
+      search.set('scope', scope.id)
+      if (playlistId) search.set('playlist', playlistId)
+      const res = await fetch(`/api/search?${search.toString()}`)
       const json = (await res.json()) as MargoSearchResponse & { error?: string }
       if (id !== reqId.current) return
       if (!res.ok) throw new Error(json.error || `Search failed (${res.status})`)
@@ -117,7 +231,7 @@ function SearchPageInner() {
     } finally {
       if (id === reqId.current) setLoading(false)
     }
-  }, [scope.id])
+  }, [scope.id, playlistId])
 
   useEffect(() => {
     void runSearch(debounced)
@@ -128,15 +242,15 @@ function SearchPageInner() {
   const showLyrics = sectionVisible(scope, 'lyric')
   const showArtists = sectionVisible(scope, 'artist')
   const showLines = sectionVisible(scope, 'catalog_line')
+  const showSongs = sectionVisible(scope, 'song')
 
   const hasResults = results && (
     (showPeople ? results.users.length : 0) +
     (showLyrics ? results.lyrics.length : 0) +
     (showArtists ? results.artists.length : 0) +
-    (showLines ? results.catalogLines.length : 0) > 0
+    (showLines ? results.catalogLines.length : 0) +
+    (showSongs ? (results.songs?.length || 0) : 0) > 0
   )
-
-  const lineTitle = scope.id === 'songs' ? 'Songs' : 'Lyric moments'
 
   return (
     <div style={{
@@ -152,9 +266,21 @@ function SearchPageInner() {
       />
 
       {loading && debounced.length >= 2 && (
-        <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-muted)', marginTop: '20px', fontSize: TYPE.secondary }}>
-          Searching…
-        </p>
+        <div style={{ marginTop: '8px' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '10px',
+            marginTop: '16px', color: 'var(--text-muted)',
+          }}>
+            <LoadingRing size={22} strokeWidth={1.75} state="spinning" />
+            <p style={{
+              fontFamily: font, fontSize: TYPE.meta, letterSpacing: '0.12em',
+              textTransform: 'uppercase', margin: 0, fontWeight: 700,
+            }}>
+              Searching
+            </p>
+          </div>
+          <SearchRowSkeletonList count={4} />
+        </div>
       )}
 
       {error && (
@@ -169,31 +295,12 @@ function SearchPageInner() {
         </p>
       )}
 
-      {results && (
+      {!loading && results && (
         <div style={{ marginTop: '24px' }}>
-          {showPeople ? (
-            <HitSection title="People" empty={results.users.length === 0}>
-              {results.users.map(hit => (
-                <ResultCard
-                  key={hit.id}
-                  href={`/profile/${hit.username}`}
-                  primary={hit.title || hit.username || ''}
-                  secondary={hit.subtitle}
-                />
-              ))}
-            </HitSection>
-          ) : null}
-
-          {showLyrics ? (
-            <HitSection title="Posted lyrics" empty={results.lyrics.length === 0}>
-              {results.lyrics.map(hit => (
-                <ResultCard
-                  key={hit.id}
-                  href={hit.postId ? `/post/${hit.postId}` : '/feed'}
-                  primary={hit.text || hit.title || ''}
-                  secondary={[hit.subtitle, hit.username ? `@${hit.username}` : ''].filter(Boolean).join(' · ')}
-                  lyric
-                />
+          {showSongs ? (
+            <HitSection title="Songs" empty={!results.songs || results.songs.length === 0}>
+              {(results.songs || []).map(hit => (
+                <SongCard key={hit.id} hit={hit} />
               ))}
             </HitSection>
           ) : null}
@@ -201,26 +308,31 @@ function SearchPageInner() {
           {showArtists ? (
             <HitSection title="Artists" empty={results.artists.length === 0}>
               {results.artists.map(hit => (
-                <ResultCard
-                  key={hit.id}
-                  href={`/profile/${hit.username}`}
-                  primary={hit.title || hit.username || ''}
-                  secondary="Artist"
-                />
+                <PersonCard key={hit.id} hit={hit} artist />
+              ))}
+            </HitSection>
+          ) : null}
+
+          {showPeople ? (
+            <HitSection title="People" empty={results.users.length === 0}>
+              {results.users.map(hit => (
+                <PersonCard key={hit.id} hit={hit} />
+              ))}
+            </HitSection>
+          ) : null}
+
+          {showLyrics ? (
+            <HitSection title={scope.id === 'resonance' ? 'Posts' : 'Posted lyrics'} empty={results.lyrics.length === 0}>
+              {results.lyrics.map(hit => (
+                <LyricCard key={hit.id} hit={hit} />
               ))}
             </HitSection>
           ) : null}
 
           {showLines ? (
-            <HitSection title={lineTitle} empty={results.catalogLines.length === 0}>
+            <HitSection title="Lyric moments" empty={results.catalogLines.length === 0}>
               {results.catalogLines.map(hit => (
-                <ResultCard
-                  key={hit.id}
-                  href={hit.songId ? `/song/${hit.songId}` : '/discover'}
-                  primary={hit.text || hit.title || ''}
-                  secondary={hit.subtitle}
-                  lyric
-                />
+                <LyricCard key={hit.id} hit={hit} />
               ))}
             </HitSection>
           ) : null}

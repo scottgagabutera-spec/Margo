@@ -138,6 +138,41 @@ export function DiscoverPageSkeleton() {
   )
 }
 
+/** Search results: cover/avatar + two text lines. */
+export function SearchRowSkeletonList({ count = 5 }: { count?: number }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '24px' }} aria-hidden>
+      <PulseStyle />
+      {Array.from({ length: count }, (_, i) => (
+        <div
+          key={i}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+            padding: '12px 14px',
+            borderRadius: '12px',
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+          }}
+        >
+          <div style={bone({
+            width: 48,
+            height: 48,
+            borderRadius: i % 2 === 0 ? 8 : '50%',
+            border: 'none',
+            flexShrink: 0,
+          }, i * 50)} />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={bone({ height: 12, width: i % 2 === 0 ? '62%' : '48%', borderRadius: 4, border: 'none' }, i * 50 + 30)} />
+            <div style={bone({ height: 9, width: '34%', borderRadius: 4, border: 'none' }, i * 50 + 60)} />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 /** Alerts: avatar + two text lines. */
 export function NotificationRowSkeletonList({ count = 6 }: { count?: number }) {
   return (
