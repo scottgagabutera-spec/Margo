@@ -27,8 +27,8 @@ import { resolvePublicArtistCredit } from '@/lib/artist-identity'
 import { uploadProfileCover } from '@/components/cover-upload'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
-import { playFull, playSnippet, togglePlayPause } from '@/lib/audio-engine'
-import { matchLyricLine } from '@/lib/lyric-match'
+import { playSnippet, togglePlayPause } from '@/lib/audio-engine'
+import { resolveSignatureMomentSnippet } from '@/lib/signature-snippet'
 import { useIsBuffering, useIsPlaying } from '@/hooks/useAudioEngine'
 
 const supabase = createClient()
@@ -129,15 +129,14 @@ function SignaturePlayButton({
     artist: string
     artwork: string | null
     audioUrl: string
-    lineIndex?: number
-    lineText?: string
-    startSec?: number
-    endSec?: number
+    lineIndex: number
+    lineText: string
+    startSec: number
+    endSec: number
   }
 }) {
   const playing = useIsPlaying(track.id)
   const buffering = useIsBuffering(track.id)
-  const hasSnippet = (track.endSec ?? 0) > (track.startSec ?? 0)
   return (
     <button
       type="button"
@@ -147,29 +146,17 @@ function SignaturePlayButton({
           togglePlayPause()
           return
         }
-        if (hasSnippet) {
-          void playSnippet({
-            songId: track.id,
-            audioUrl: track.audioUrl,
-            title: track.title,
-            artist: track.artist,
-            artwork: track.artwork,
-            lineIndex: track.lineIndex ?? 0,
-            lineText: track.lineText || '',
-            startSec: track.startSec ?? 0,
-            endSec: track.endSec ?? 0,
-            source: 'feed',
-          })
-          return
-        }
-        void playFull({
+        void playSnippet({
           songId: track.id,
           audioUrl: track.audioUrl,
           title: track.title,
           artist: track.artist,
           artwork: track.artwork,
-          autoplay: true,
-          source: 'feed-tier1',
+          lineIndex: track.lineIndex ?? 0,
+          lineText: track.lineText || '',
+          startSec: track.startSec,
+          endSec: track.endSec,
+          source: 'feed',
         })
       }}
       style={{
@@ -248,10 +235,10 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
     artist: string
     artwork: string | null
     audioUrl: string
-    lineIndex?: number
-    lineText?: string
-    startSec?: number
-    endSec?: number
+    lineIndex: number
+    lineText: string
+    startSec: number
+    endSec: number
   } | null>(null)
 
   useEffect(() => {
@@ -367,18 +354,22 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
           setSignatureTrack(null)
           return
         }
-        const match = lyric ? await matchLyricLine(supabase, data.id, lyric) : null
+        const snippet = await resolveSignatureMomentSnippet(supabase, data.id, lyric)
         if (!active) return
+        if (!snippet) {
+          setSignatureTrack(null)
+          return
+        }
         setSignatureTrack({
           id: data.id,
           title: data.title,
           artist: data.artist_display_name,
           artwork: data.artwork_url,
           audioUrl: data.audio_url,
-          lineIndex: match?.lineId,
-          lineText: lyric || undefined,
-          startSec: match?.startSec,
-          endSec: match?.endSec,
+          lineIndex: snippet.lineIndex,
+          lineText: snippet.lineText || lyric || '',
+          startSec: snippet.startSec,
+          endSec: snippet.endSec,
         })
       })
     return () => { active = false }

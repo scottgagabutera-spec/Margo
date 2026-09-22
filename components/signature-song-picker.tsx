@@ -6,8 +6,10 @@ import { CloseIcon } from '@/components/icons'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { createClient } from '@/lib/supabase/client'
 import { searchMargoSongs, type MargoSongHit } from '@/lib/search-margo-songs'
-import { playOrToggleSnippet, playFull, togglePlayPause } from '@/lib/audio-engine'
+import { playOrToggleSnippet, togglePlayPause } from '@/lib/audio-engine'
+import { fallbackSnippetWindow } from '@/lib/lyric-match'
 import { matchLyricWindowFromLines } from '@/lib/lyric-match'
+import { buildCatalogLyricUnits } from '@/lib/catalog-lyric-unit'
 import { useIsBuffering, useIsPlaying, useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
 import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import type { ComposeLyricLine } from '@/components/compose-line-picker'
@@ -29,35 +31,26 @@ function CatalogPlayButton({
   return (
     <button
       type="button"
-      aria-label={playing ? 'Pause' : hasSnippet ? 'Play this line' : 'Play song'}
+      aria-label={playing ? 'Pause' : 'Play this moment'}
       onClick={() => {
         if (playing) {
           togglePlayPause()
           return
         }
-        if (hasSnippet && snippet) {
-          playOrToggleSnippet({
-            songId: track.id,
-            audioUrl: track.audioUrl,
-            title: track.title,
-            artist: track.artist,
-            artwork: track.artwork,
-            lineIndex: snippet.lineIndex,
-            lineText: snippet.lineText,
-            startSec: snippet.startSec,
-            endSec: snippet.endSec,
-            source: 'feed',
-          })
-          return
-        }
-        void playFull({
+        const window = hasSnippet && snippet
+          ? snippet
+          : { lineIndex: 0, lineText: '', ...fallbackSnippetWindow() }
+        playOrToggleSnippet({
           songId: track.id,
           audioUrl: track.audioUrl,
           title: track.title,
           artist: track.artist,
           artwork: track.artwork,
-          autoplay: true,
-          source: 'feed-tier1',
+          lineIndex: window.lineIndex,
+          lineText: window.lineText,
+          startSec: window.startSec,
+          endSec: window.endSec,
+          source: 'feed',
         })
       }}
       style={{
@@ -193,14 +186,29 @@ export function SignatureSongPicker({
       end_sec: l.endSec,
     })), currentLyric)
     : null
-  const snippet = pickedSnippet && pickedSnippet.endSec > pickedSnippet.startSec
-    ? {
-      lineIndex: pickedSnippet.lineId,
-      lineText: pickedSnippet.lineText,
-      startSec: pickedSnippet.startSec,
-      endSec: pickedSnippet.endSec,
-    }
+  const momentUnit = pickedSnippet
+    ? buildCatalogLyricUnits(lines.map((l) => ({
+      lineIndex: l.lineIndex,
+      text: l.text,
+      startSec: l.startSec,
+      endSec: l.endSec,
+    })), pickedSnippet.lineId)?.window
     : null
+  const snippet = momentUnit && momentUnit.endSec > momentUnit.startSec
+    ? {
+      lineIndex: momentUnit.centerLineIndex,
+      lineText: currentLyric || momentUnit.text,
+      startSec: momentUnit.startSec,
+      endSec: momentUnit.endSec,
+    }
+    : pickedSnippet && pickedSnippet.endSec > pickedSnippet.startSec
+      ? {
+        lineIndex: pickedSnippet.lineId,
+        lineText: pickedSnippet.lineText,
+        startSec: pickedSnippet.startSec,
+        endSec: pickedSnippet.endSec,
+      }
+      : null
 
   return (
     <div>

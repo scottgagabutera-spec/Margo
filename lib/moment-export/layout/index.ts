@@ -17,6 +17,7 @@ export {
   STAGE_CARD_LAYOUT_REF,
   STAGE_CARD_REF_WIDTH,
   STAGE_SHORTS_LAYOUT_REF,
+  VERTICAL_SOCIAL_SAFE,
   roundStageToken,
   scaleStageToken,
   stageCardScale,

@@ -479,7 +479,8 @@ export function StageMomentCard({
               marginTop: isShorts ? 0 : '16px',
               position: isShorts ? 'absolute' : undefined,
               right: isShorts && layout ? layout.padding.right : undefined,
-              bottom: isShorts && layout ? layout.padding.bottom : undefined,
+              top: isShorts && layout?.vibePill ? layout.vibePill.rect.y : undefined,
+              bottom: isShorts && layout && !layout.vibePill ? layout.padding.bottom : undefined,
               zIndex: 4,
             }}>
               <div

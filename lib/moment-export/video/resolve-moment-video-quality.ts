@@ -9,8 +9,11 @@ export const MOMENT_VIDEO_SOCIAL_TARGET_BYTES = 15 * 1024 * 1024
  */
 export const MOMENT_VIDEO_SOCIAL_QUANTIZER = 19
 
-/** AAC-LC stereo — enough for short lyric clips; saves budget for video. */
+/** AAC-LC stereo — Feed/WhatsApp. Shorts use {@link MOMENT_SHORTS_PLATFORM_AUDIO_BITRATE}. */
 export const MOMENT_VIDEO_SOCIAL_AUDIO_BITRATE = 128_000
+
+/** HD Shorts audio — YouTube recommended stereo AAC is 384 kbps; 192 keeps speech/music clean. */
+export const MOMENT_SHORTS_PLATFORM_AUDIO_BITRATE = 192_000
 
 /** Square quality baseline — used for pixel-scale diagnostics. */
 export const MOMENT_VIDEO_REFERENCE_WIDTH = 1080
@@ -22,13 +25,15 @@ const REFERENCE_MAX_VIDEO_BITRATE = 12_000_000
 const REFERENCE_MIN_VIDEO_BITRATE = 2_000_000
 
 /**
- * YouTube-recommended 1080p30 SDR upload bitrate (1080×1920 Shorts has the same pixel count).
+ * HD 1080p30 Shorts — above YouTube’s 8 Mbps recommended floor so text
+ * and Atmosphere survive their re-encode. Source is already 1080; we
+ * render at 2× then encode 1080×1920.
  * @see https://support.google.com/youtube/answer/1722171
  */
-export const MOMENT_SHORTS_PLATFORM_VIDEO_BITRATE = 8_000_000
+export const MOMENT_SHORTS_PLATFORM_VIDEO_BITRATE = 12_000_000
 
-/** Headroom for lyric text/gradients and WebCodecs under-spend (YouTube 1080p60 tier = 12 Mbps). */
-export const MOMENT_SHORTS_PLATFORM_VIDEO_MAX_BITRATE = 12_000_000
+/** WebCodecs VBR headroom — YouTube 1080p60 / high-motion SDR tier. */
+export const MOMENT_SHORTS_PLATFORM_VIDEO_MAX_BITRATE = 16_000_000
 
 /** Platform profile file ceiling — not WhatsApp-limited (YouTube accepts up to 256 GB). */
 export const MOMENT_SHORTS_PLATFORM_MAX_FILE_BYTES = 48 * 1024 * 1024
@@ -56,7 +61,7 @@ export interface MomentVideoQualityInput {
 
 /**
  * Feed/square: quantizer-led VBR capped for WhatsApp (~15 MB).
- * Shorts/vertical: YouTube-reference platform profile (~8 Mbps @ 30 fps), decoupled from WhatsApp.
+ * Shorts/vertical: HD 1080p30 profile (~12 Mbps, 192 kbps AAC), decoupled from WhatsApp.
  */
 export function resolveMomentVideoQualityPreset({
   durationSec,
@@ -71,7 +76,9 @@ export function resolveMomentVideoQualityPreset({
   const pixels = safeWidth * safeHeight
   const pixelScale = pixels / REFERENCE_PIXELS
 
-  const audioBitrate = hasAudio ? MOMENT_VIDEO_SOCIAL_AUDIO_BITRATE : 0
+  const audioBitrate = hasAudio
+    ? (format === 'shorts' ? MOMENT_SHORTS_PLATFORM_AUDIO_BITRATE : MOMENT_VIDEO_SOCIAL_AUDIO_BITRATE)
+    : 0
   const audioBytes = (audioBitrate * safeDurationSec) / 8
 
   if (format !== 'shorts') {
