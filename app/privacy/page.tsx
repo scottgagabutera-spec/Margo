@@ -103,7 +103,7 @@ export default function PrivacyPage() {
 
             <h2 style={h2Style}>7. Your rights and choices</h2>
             <p style={pStyle}>Depending on where you live and applicable law, you may have rights to access, correct, delete, or obtain a copy of your personal information; to object to or restrict certain processing; or to withdraw consent where processing is based on consent.</p>
-            <p style={pStyle}>To exercise these rights, or if you have questions about your data, contact <a href="mailto:hello@trymargo.com" style={linkStyle}>hello@trymargo.com</a>. We may need to verify your identity before completing certain requests. If your request concerns copyrighted material on Margo, use the DMCA process instead (see Section 12).</p>
+            <p style={pStyle}>To exercise these rights, or if you have questions about your data, contact <a href="mailto:hello@trymargo.com" style={linkStyle}>hello@trymargo.com</a> or see our <Link href="/data-deletion" style={linkStyle}>Account &amp; Data Deletion</Link> page for step-by-step instructions. We may need to verify your identity before completing certain requests. If your request concerns copyrighted material on Margo, use the DMCA process instead (see Section 12).</p>
             <p style={pStyle}>You can update most account and profile information — including username, bio, avatar, and privacy or messaging settings — directly in Settings at any time.</p>
 
             <h2 style={h2Style}>8. Security</h2>

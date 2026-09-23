@@ -32,6 +32,10 @@ export function mapConnectionPublic(row: ConnectionRow): SocialConnectionPublic 
   }
 }
 
+export function getFacebookPageAccessToken(connection: ConnectionRow): string {
+  return decryptPromoteToken(connection.access_token_enc)
+}
+
 export async function getValidYouTubeAccessToken(
   admin: SupabaseClient,
   connection: ConnectionRow,

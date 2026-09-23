@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { getValidYouTubeAccessToken } from '@/lib/promote/connections'
+import { getFacebookPageAccessToken, getValidYouTubeAccessToken } from '@/lib/promote/connections'
+import { buildFacebookPromoteCopy } from '@/lib/promote/facebook-copy'
+import { uploadVideoToFacebookPage } from '@/lib/promote/facebook-publish'
 import { isPromotePlatformLive } from '@/lib/promote/platforms'
 import { buildYouTubePromoteCopy, isMargoArtistAccount } from '@/lib/promote/youtube-copy'
 import { uploadVideoToYouTube } from '@/lib/promote/youtube-publish'
@@ -60,6 +62,28 @@ export async function publishVideoToPlatform(
         description,
         privacyStatus: input.privacyStatus ?? 'public',
         containsSyntheticMedia: isMargoArtistAccount(input.publisherUsername) || undefined,
+      })
+      return {
+        platform,
+        postId: result.videoId,
+        postUrl: result.videoUrl,
+      }
+    }
+    case 'facebook': {
+      const { title, description } = buildFacebookPromoteCopy({
+        songTitle: input.songTitle,
+        lyricText: input.lyricText,
+        artistName: input.artistName,
+      })
+      const pageId = connection.external_account_id
+      if (!pageId) throw new Error('Facebook Page id missing — reconnect in Settings.')
+      const accessToken = getFacebookPageAccessToken(connection)
+      const result = await uploadVideoToFacebookPage({
+        pageId,
+        accessToken,
+        videoBytes,
+        title,
+        description,
       })
       return {
         platform,

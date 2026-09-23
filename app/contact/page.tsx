@@ -50,7 +50,8 @@ const categories: ContactCategory[] = [
     email: 'hello@trymargo.com',
     description: (
       <>
-        Requests about your personal data or how we handle it. See our{' '}
+        Requests about your personal data or how we handle it. See{' '}
+        <Link href="/data-deletion" style={linkStyle}>Account &amp; Data Deletion</Link> or our{' '}
         <Link href="/privacy" style={linkStyle}>Privacy Policy</Link>.
       </>
     ),

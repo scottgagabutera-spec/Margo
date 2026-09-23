@@ -33,10 +33,11 @@ export const PLATFORM_SETUP_GUIDES: Record<PromotePlatform, PlatformSetupGuide> 
     ],
   },
   facebook: {
-    margoStatus: 'Coming soon — Margo is wiring Facebook Page video posts.',
+    margoStatus: 'Live — connect a Facebook Page you manage (not a personal profile).',
     artistSteps: [
-      'You will connect a Facebook Page you manage (not a personal profile).',
-      'Shorts (9:16) export will map to Facebook Reels.',
+      'You must admin the Facebook Page you connect.',
+      'Personal profiles cannot be used for Auto-Promote.',
+      'Shorts (9:16) export maps to Page video posts.',
     ],
   },
   x: {

@@ -30,12 +30,17 @@ interface PromoteSettingsSectionProps {
   /** Active verified artist only — parent gates on is_artist + artist_status active */
 }
 
+type FacebookPageOption = { id: string; name: string }
+
 export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
   const [connections, setConnections] = useState<SocialConnectionPublic[]>([])
   const [publishMode, setPublishMode] = useState<PromotePublishMode>('review')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [facebookPages, setFacebookPages] = useState<FacebookPageOption[]>([])
+  const [selectedFacebookPageId, setSelectedFacebookPageId] = useState<string>('')
+  const [showFacebookPagePicker, setShowFacebookPagePicker] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -65,9 +70,58 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
       if (promote === 'youtube_connected') setMessage('YouTube connected.')
       if (promote === 'youtube_error') setMessage('YouTube connection failed — try again.')
       if (promote === 'youtube_denied') setMessage('YouTube connection was cancelled.')
+      if (promote === 'facebook_connected') setMessage('Facebook Page connected.')
+      if (promote === 'facebook_error') setMessage('Facebook connection failed — try again.')
+      if (promote === 'facebook_denied') setMessage('Facebook connection was cancelled.')
+      if (promote === 'facebook_invalid') setMessage('Facebook connection expired — try again.')
+      if (promote === 'facebook_no_pages') setMessage('No Facebook Pages found — you must admin a Page to connect.')
+      if (promote === 'facebook_pick_page') setShowFacebookPagePicker(true)
       if (promote === 'denied') setMessage('Auto-Promote is available to active verified artists only.')
     }
   }, [load])
+
+  useEffect(() => {
+    if (!showFacebookPagePicker) return
+    void (async () => {
+      const res = await fetch('/api/promote/oauth/facebook/pages', { credentials: 'include' })
+      if (!res.ok) {
+        setMessage('Could not load your Facebook Pages — try connecting again.')
+        setShowFacebookPagePicker(false)
+        return
+      }
+      const json = await res.json()
+      const pages = (json.pages || []) as FacebookPageOption[]
+      if (pages.length === 0) {
+        setMessage('Page selection expired — connect Facebook again.')
+        setShowFacebookPagePicker(false)
+        return
+      }
+      setFacebookPages(pages)
+      setSelectedFacebookPageId(pages[0]?.id ?? '')
+    })()
+  }, [showFacebookPagePicker])
+
+  async function confirmFacebookPage() {
+    if (!selectedFacebookPageId) return
+    setSaving(true)
+    setMessage(null)
+    const res = await fetch('/api/promote/oauth/facebook/pages', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pageId: selectedFacebookPageId }),
+    })
+    setSaving(false)
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}))
+      setMessage(json.error || 'Could not connect that Facebook Page.')
+      return
+    }
+    setShowFacebookPagePicker(false)
+    setFacebookPages([])
+    setMessage('Facebook Page connected.')
+    void load()
+  }
 
   async function savePublishMode(next: PromotePublishMode) {
     setSaving(true)
@@ -120,9 +174,58 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
         lineHeight: 1.45,
       }}>
         Connect accounts here, then choose which platforms each export goes to from the export sheet.
-        YouTube is live today; TikTok, Instagram, Facebook, and X are coming soon.
-        LinkedIn is not in this release — tell us if you want it prioritized.
+        YouTube and Facebook Page are live today; TikTok, Instagram, and X are coming soon.
+        Facebook connects a Page you manage — not a personal profile.
       </p>
+
+      {showFacebookPagePicker && facebookPages.length > 0 && (
+        <div style={{
+          marginBottom: '20px',
+          padding: '16px',
+          borderRadius: '12px',
+          border: '1px solid var(--gold-border)',
+          background: 'var(--gold-faint)',
+        }}>
+          <p style={{ fontFamily: font, fontSize: TYPE.body, fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>
+            Choose a Facebook Page
+          </p>
+          <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', marginBottom: '12px', lineHeight: 1.45 }}>
+            Margo publishes to Pages only. Pick which Page to use for Auto-Promote.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+            {facebookPages.map((page) => (
+              <label key={page.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name="facebook_page"
+                  checked={selectedFacebookPageId === page.id}
+                  onChange={() => setSelectedFacebookPageId(page.id)}
+                />
+                <span style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text)' }}>{page.name}</span>
+              </label>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => void confirmFacebookPage()}
+            disabled={saving || !selectedFacebookPageId}
+            style={{
+              padding: '10px 18px',
+              borderRadius: '999px',
+              border: '1px solid var(--gold-border)',
+              background: 'transparent',
+              color: 'var(--gold)',
+              fontFamily: font,
+              fontSize: TYPE.label,
+              letterSpacing: '0.5px',
+              textTransform: 'uppercase',
+              cursor: saving ? 'wait' : 'pointer',
+            }}
+          >
+            Connect Page
+          </button>
+        </div>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '24px' }}>
         {PROMOTE_PLATFORM_DEFS.map((platform) => {

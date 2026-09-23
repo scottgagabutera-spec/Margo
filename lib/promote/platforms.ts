@@ -45,8 +45,9 @@ export const PROMOTE_PLATFORM_DEFS: PromotePlatformDef[] = [
   {
     id: 'facebook',
     label: 'Facebook',
-    live: false,
+    live: true,
     shapes: ['vertical'],
+    oauthPath: '/api/promote/oauth/facebook',
   },
   {
     id: 'x',

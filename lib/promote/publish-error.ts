@@ -37,6 +37,34 @@ export function formatYouTubeApiError(
   return `YouTube ${phase} failed (HTTP ${status}): ${trimmed.slice(0, 800)}`
 }
 
+/** Parse Facebook Graph API error JSON into a readable line. */
+export function formatFacebookApiError(status: number, bodyText: string, phase: string): string {
+  const trimmed = (bodyText || '').trim()
+  try {
+    const json = JSON.parse(trimmed) as {
+      error?: { code?: number; message?: string; type?: string; error_subcode?: number }
+    }
+    const err = json.error
+    if (err) {
+      const bits = [
+        `Facebook ${phase} failed `,
+        `(HTTP ${err.code ?? status}`,
+        err.type ? ` ${err.type}` : '',
+        err.error_subcode ? `, subcode ${err.error_subcode}` : '',
+        ')',
+        `: ${err.message || trimmed}`,
+      ]
+      return bits.join('')
+    }
+  } catch {
+    /* use raw body below */
+  }
+  if (!trimmed) {
+    return `Facebook ${phase} failed (HTTP ${status}) with an empty response body`
+  }
+  return `Facebook ${phase} failed (HTTP ${status}): ${trimmed.slice(0, 800)}`
+}
+
 function parsedErrorMessage(parsed: unknown): string | null {
   if (!parsed || typeof parsed !== 'object') return null
   const rec = parsed as { error?: unknown; message?: unknown }
