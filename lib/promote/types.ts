@@ -113,6 +113,9 @@ export const PROMOTE_RESOLVED_STATUSES = ['published', 'rejected', 'failed'] as 
 
 export const PROMOTE_RESOLVED_RETENTION_MS = 24 * 60 * 60 * 1000
 
+/** Expire pending_review + rejected catalog candidates from DB (and paired R2 staging). */
+export const PROMOTE_CANDIDATE_EXPIRY_MS = 2 * 60 * 60 * 1000
+
 export function isResolvedPromoteStatus(
   status: PromoteQueueStatus | string,
 ): status is typeof PROMOTE_RESOLVED_STATUSES[number] {

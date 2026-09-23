@@ -336,7 +336,20 @@ export async function POST(
     })
     .eq('id', queueId)
 
-  await cleanupPromoteStagingVideoIfComplete(admin, queueId, objectKey)
+  const cleanupOutcome = await cleanupPromoteStagingVideoIfComplete(
+    admin,
+    queueId,
+    session.userId,
+    objectKey,
+  )
+  if (cleanupOutcome.status === 'failed') {
+    console.error('[promote/publish] staging cleanup failed after publish', {
+      queueId,
+      objectKey,
+      reason: cleanupOutcome.reason,
+      error: cleanupOutcome.error,
+    })
+  }
 
   const successes = publishResults.filter((r) => r.status === 'published')
   if (successes.length === 0) {

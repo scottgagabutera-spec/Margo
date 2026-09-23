@@ -64,6 +64,26 @@ export function publicPromoteVideoUrl(objectKey: string): string {
   return `https://${r2PublicMediaHost()}/${normalized}`
 }
 
+/** Resolve object key from a public promote URL (audio.trymargo.com/Margo/promote/...). */
+export function parsePromoteVideoObjectKeyFromUrl(url: string | null | undefined): string | null {
+  if (!url?.trim()) return null
+  try {
+    const key = new URL(url.trim()).pathname.replace(/^\/+/, '')
+    return key.startsWith(`${PROMOTE_OBJECT_PREFIX}/`) ? key : null
+  } catch {
+    return null
+  }
+}
+
+export function resolvePromoteObjectKey(
+  profileId: string,
+  queueId: string,
+  renderedVideoUrl: string | null | undefined,
+): string {
+  return parsePromoteVideoObjectKeyFromUrl(renderedVideoUrl)
+    ?? promoteVideoObjectKey(profileId, queueId)
+}
+
 /** Delete a staged promote MP4. Throws on R2 errors (caller logs). */
 export async function deletePromoteVideo(objectKey: string): Promise<void> {
   const client = r2Client()

@@ -200,7 +200,7 @@ export default function StudioPromotePage() {
         Review color and effect, Approve, then confirm Publish to YouTube.
       </p>
       <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-muted)', marginBottom: '8px' }}>
-        Published, rejected, and failed posts clear from this list after 24 hours.
+        Pending and rejected candidates are removed after 2 hours. Published and failed posts hide from this list after 24 hours.
       </p>
       <Link href="/settings" style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--gold)', textDecoration: 'none' }}>
         Connected accounts & preferences
