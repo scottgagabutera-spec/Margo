@@ -37,6 +37,26 @@ export function formatYouTubeApiError(
   return `YouTube ${phase} failed (HTTP ${status}): ${trimmed.slice(0, 800)}`
 }
 
+/** Parse TikTok Open API error JSON into a readable line. */
+export function formatTikTokApiError(status: number, bodyText: string, phase: string): string {
+  const trimmed = (bodyText || '').trim()
+  try {
+    const json = JSON.parse(trimmed) as {
+      error?: { code?: string; message?: string; log_id?: string }
+    }
+    const err = json.error
+    if (err?.code && err.code !== 'ok') {
+      return `TikTok ${phase} failed (${err.code}${err.log_id ? `, log ${err.log_id}` : ''}): ${err.message || trimmed}`
+    }
+  } catch {
+    /* use raw body below */
+  }
+  if (!trimmed) {
+    return `TikTok ${phase} failed (HTTP ${status}) with an empty response body`
+  }
+  return `TikTok ${phase} failed (HTTP ${status}): ${trimmed.slice(0, 800)}`
+}
+
 /** Parse Facebook Graph API error JSON into a readable line. */
 export function formatFacebookApiError(status: number, bodyText: string, phase: string): string {
   const trimmed = (bodyText || '').trim()

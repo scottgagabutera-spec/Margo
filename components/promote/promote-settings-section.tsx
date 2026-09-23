@@ -76,6 +76,10 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
       if (promote === 'facebook_invalid') setMessage('Facebook connection expired — try again.')
       if (promote === 'facebook_no_pages') setMessage('No Facebook Pages found — you must admin a Page to connect.')
       if (promote === 'facebook_pick_page') setShowFacebookPagePicker(true)
+      if (promote === 'tiktok_connected') setMessage('TikTok connected.')
+      if (promote === 'tiktok_error') setMessage('TikTok connection failed — try again.')
+      if (promote === 'tiktok_denied') setMessage('TikTok connection was cancelled.')
+      if (promote === 'tiktok_invalid') setMessage('TikTok connection expired — try again.')
       if (promote === 'denied') setMessage('Auto-Promote is available to active verified artists only.')
     }
   }, [load])

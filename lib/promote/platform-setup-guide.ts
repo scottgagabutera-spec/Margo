@@ -17,11 +17,12 @@ export const PLATFORM_SETUP_GUIDES: Record<PromotePlatform, PlatformSetupGuide> 
     ],
   },
   tiktok: {
-    margoStatus: 'Coming soon — Margo is finishing TikTok posting API setup.',
+    margoStatus: 'In review — OAuth and publish are built; waiting on TikTok app approval before going live.',
     artistSteps: [
-      'Make sure your TikTok is a Business or Creator account.',
-      'When Margo launches TikTok, connect here — no need to re-enter lyrics.',
-      'Shorts (9:16) export will map to TikTok vertical video.',
+      'Use a TikTok Business or Creator account.',
+      'Margo will connect via Login Kit once TikTok approves video.publish.',
+      'Shorts (9:16) export maps to TikTok vertical video (PULL_FROM_URL from Margo staging).',
+      'Verify audio.trymargo.com URL prefix in your TikTok app before publish works.',
     ],
   },
   instagram: {

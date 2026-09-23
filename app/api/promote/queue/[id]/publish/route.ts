@@ -275,6 +275,7 @@ export async function POST(
           artistName: queue.artist_name,
           publisherUsername: publisher?.username,
           privacyStatus: 'public',
+          videoPublicUrl,
         },
       )
 

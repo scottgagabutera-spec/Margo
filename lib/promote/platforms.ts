@@ -35,6 +35,7 @@ export const PROMOTE_PLATFORM_DEFS: PromotePlatformDef[] = [
     label: 'TikTok',
     live: false,
     shapes: ['vertical'],
+    oauthPath: '/api/promote/oauth/tiktok',
   },
   {
     id: 'instagram',

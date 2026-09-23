@@ -1,8 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { getFacebookPageAccessToken, getValidYouTubeAccessToken } from '@/lib/promote/connections'
+import { getFacebookPageAccessToken, getValidTikTokAccessToken, getValidYouTubeAccessToken } from '@/lib/promote/connections'
 import { buildFacebookPromoteCopy } from '@/lib/promote/facebook-copy'
 import { uploadVideoToFacebookPage } from '@/lib/promote/facebook-publish'
 import { isPromotePlatformLive } from '@/lib/promote/platforms'
+import { buildTikTokPromoteCaption } from '@/lib/promote/tiktok-copy'
+import { publishVideoToTikTokViaUrl } from '@/lib/promote/tiktok-publish'
 import { buildYouTubePromoteCopy, isMargoArtistAccount } from '@/lib/promote/youtube-copy'
 import { uploadVideoToYouTube } from '@/lib/promote/youtube-publish'
 import type { PromotePlatform } from '@/lib/promote/types'
@@ -21,6 +23,7 @@ type ConnectionRow = {
   connected_at: string
   last_publish_at: string | null
   last_error: string | null
+  platform_meta?: Record<string, unknown> | null
 }
 
 export interface PlatformPublishInput {
@@ -29,6 +32,8 @@ export interface PlatformPublishInput {
   artistName: string
   publisherUsername?: string | null
   privacyStatus?: 'public' | 'unlisted' | 'private'
+  /** Public HTTPS MP4 URL — required for TikTok PULL_FROM_URL. */
+  videoPublicUrl?: string | null
 }
 
 export interface PlatformPublishResult {
@@ -67,6 +72,39 @@ export async function publishVideoToPlatform(
         platform,
         postId: result.videoId,
         postUrl: result.videoUrl,
+      }
+    }
+    case 'tiktok': {
+      if (!input.videoPublicUrl) {
+        throw new Error('TikTok publish requires a public video URL — staging upload failed.')
+      }
+      const title = buildTikTokPromoteCaption({
+        songTitle: input.songTitle,
+        lyricText: input.lyricText,
+        artistName: input.artistName,
+      })
+      const accessToken = await getValidTikTokAccessToken(admin, connection)
+      const meta = connection.platform_meta as { username?: string | null } | undefined
+      const creatorUsername = meta?.username
+        ?? connection.external_username?.replace(/^@/, '')
+        ?? null
+      const result = await publishVideoToTikTokViaUrl({
+        accessToken,
+        videoUrl: input.videoPublicUrl,
+        title,
+        creatorUsername,
+      })
+      const postId = result.postId || result.publishId
+      const postUrl = result.postUrl
+        ?? (creatorUsername && result.postId
+          ? `https://www.tiktok.com/@${creatorUsername}/video/${result.postId}`
+          : creatorUsername
+            ? `https://www.tiktok.com/@${creatorUsername}`
+            : '')
+      return {
+        platform,
+        postId,
+        postUrl,
       }
     }
     case 'facebook': {
