@@ -3,22 +3,11 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { getPromoteAdmin } from '@/lib/promote/admin-client'
 import { requirePromoteSession } from '@/lib/promote/api-auth'
 import { cleanupPromoteStagingVideoIfComplete } from '@/lib/promote/cleanup-staging'
-import {
-  fetchArtistBufferConnection,
-} from '@/lib/promote/buffer/connections'
-import {
-  isPlatformPublishReady,
-  loadArtistPublishContext,
-} from '@/lib/promote/publish-readiness'
 import { uploadPromoteVideo } from '@/lib/promote/r2-promote-upload'
-import { publishVideoViaAdapter } from '@/lib/promote/publish-via-adapter'
+import { isPromotePlatformLive } from '@/lib/promote/platforms'
+import { publishVideoToPlatform } from '@/lib/promote/publish-to-platform'
 import { resolveQueueStatusFromTargets } from '@/lib/promote/resolve-queue-status'
-import {
-  resolveQueueVisualPrefs,
-  type PromotePlatform,
-  type PublishAdapterKind,
-} from '@/lib/promote/types'
-import type { SocialConnectionRow } from '@/lib/promote/adapters/types'
+import { resolveQueueVisualPrefs, type PromotePlatform } from '@/lib/promote/types'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -93,7 +82,6 @@ async function readPublishVideoBuffer(
 type TargetRow = {
   id: string
   platform: PromotePlatform
-  publish_adapter: PublishAdapterKind | string
   status: string
   connection_id: string | null
   external_post_id: string | null
@@ -138,8 +126,6 @@ export async function POST(
     return NextResponse.json({ error: 'Queue item not found or not ready to publish' }, { status: 404 })
   }
 
-  const { connections, bufferConnection } = await loadArtistPublishContext(admin, session.userId)
-
   const { data: targets } = await admin
     .from('promote_queue_targets')
     .select('*')
@@ -147,8 +133,7 @@ export async function POST(
 
   const allTargets = (targets || []) as TargetRow[]
   const publishableTargets = allTargets.filter(
-    (t) => t.status !== 'skipped'
-      && isPlatformPublishReady(t.platform, connections, bufferConnection),
+    (t) => isPromotePlatformLive(t.platform) && t.status !== 'skipped',
   )
 
   if (publishableTargets.length === 0) {
@@ -182,7 +167,7 @@ export async function POST(
   if (!claimed) {
     const { data: refreshedTargets } = await admin
       .from('promote_queue_targets')
-      .select('external_post_id, external_post_url, status, platform, publish_adapter')
+      .select('external_post_id, external_post_url, status, platform')
       .eq('queue_id', queueId)
     const done = (refreshedTargets || []).filter(
       (t) => t.status === 'published' && t.external_post_id && t.external_post_url,
@@ -233,7 +218,6 @@ export async function POST(
 
   const publishResults: Array<{
     platform: PromotePlatform
-    adapter: PublishAdapterKind
     videoId: string
     videoUrl: string
     status: 'published' | 'failed'
@@ -244,7 +228,6 @@ export async function POST(
     if (target.status === 'published' && target.external_post_id && target.external_post_url) {
       publishResults.push({
         platform: target.platform,
-        adapter: target.publish_adapter === 'buffer' ? 'buffer' : 'direct',
         videoId: target.external_post_id,
         videoUrl: target.external_post_url,
         status: 'published',
@@ -252,27 +235,14 @@ export async function POST(
       continue
     }
 
-    const adapterKind: PublishAdapterKind = target.publish_adapter === 'buffer' ? 'buffer' : 'direct'
+    const { data: connection, error: connErr } = await admin
+      .from('artist_social_connections')
+      .select('*')
+      .eq('profile_id', session.userId)
+      .eq('platform', target.platform)
+      .maybeSingle()
 
-    let connection: SocialConnectionRow | null = null
-    if (target.connection_id) {
-      const { data: connRow } = await admin
-        .from('artist_social_connections')
-        .select('*')
-        .eq('id', target.connection_id)
-        .maybeSingle()
-      connection = (connRow as SocialConnectionRow | null) ?? null
-    } else {
-      const { data: connRow } = await admin
-        .from('artist_social_connections')
-        .select('*')
-        .eq('profile_id', session.userId)
-        .eq('platform', target.platform)
-        .maybeSingle()
-      connection = (connRow as SocialConnectionRow | null) ?? null
-    }
-
-    if (adapterKind === 'direct' && !connection) {
+    if (connErr || !connection) {
       const message = `Connect ${target.platform} in Settings before publishing.`
       await admin
         .from('promote_queue_targets')
@@ -280,7 +250,6 @@ export async function POST(
         .eq('id', target.id)
       publishResults.push({
         platform: target.platform,
-        adapter: adapterKind,
         videoId: '',
         videoUrl: '',
         status: 'failed',
@@ -289,40 +258,17 @@ export async function POST(
       continue
     }
 
-    if (adapterKind === 'buffer') {
-      const bufferConn = bufferConnection ?? await fetchArtistBufferConnection(admin, session.userId)
-      if (!bufferConn || bufferConn.status !== 'connected') {
-        const message = 'Connect Buffer in Settings before publishing.'
-        await admin
-          .from('promote_queue_targets')
-          .update({ status: 'failed', error_message: message })
-          .eq('id', target.id)
-        publishResults.push({
-          platform: target.platform,
-          adapter: adapterKind,
-          videoId: '',
-          videoUrl: '',
-          status: 'failed',
-          error: message,
-        })
-        continue
-      }
-    }
-
     await admin
       .from('promote_queue_targets')
       .update({ status: 'publishing' })
       .eq('id', target.id)
 
     try {
-      const result = await publishVideoViaAdapter(
+      const result = await publishVideoToPlatform(
         admin,
-        session.userId,
         target.platform,
-        adapterKind,
         connection,
         videoBuffer,
-        videoPublicUrl,
         {
           songTitle: queue.song_title,
           lyricText: queue.lyric_text,
@@ -343,36 +289,30 @@ export async function POST(
         })
         .eq('id', target.id)
 
-      if (connection?.id) {
-        await admin
-          .from('artist_social_connections')
-          .update({ last_publish_at: new Date().toISOString(), last_error: null })
-          .eq('id', connection.id)
-      }
+      await admin
+        .from('artist_social_connections')
+        .update({ last_publish_at: new Date().toISOString(), last_error: null })
+        .eq('id', connection.id)
 
       publishResults.push({
         platform: target.platform,
-        adapter: adapterKind,
         videoId: result.postId,
         videoUrl: result.postUrl,
         status: 'published',
       })
     } catch (err) {
       const message = err instanceof Error ? err.message : `${target.platform} publish failed`
-      console.error(`[promote/publish] ${target.platform} (${adapterKind}) failed`, err)
+      console.error(`[promote/publish] ${target.platform} failed`, err)
       await admin
         .from('promote_queue_targets')
         .update({ status: 'failed', error_message: message })
         .eq('id', target.id)
-      if (connection?.id) {
-        await admin
-          .from('artist_social_connections')
-          .update({ last_error: message })
-          .eq('id', connection.id)
-      }
+      await admin
+        .from('artist_social_connections')
+        .update({ last_error: message })
+        .eq('id', connection.id)
       publishResults.push({
         platform: target.platform,
-        adapter: adapterKind,
         videoId: '',
         videoUrl: '',
         status: 'failed',

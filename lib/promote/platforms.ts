@@ -74,14 +74,8 @@ export function livePlatformsForShape(shapeId: MomentShapeId): PromotePlatform[]
     .map((p) => p.id)
 }
 
-/** Direct OAuth + server publish implemented (excludes Buffer-only platforms). */
-export function isPromotePlatformDirectLive(platform: PromotePlatform): boolean {
-  return PROMOTE_PLATFORM_DEFS.some((p) => p.id === platform && p.live)
-}
-
-/** @deprecated Prefer isPromotePlatformDirectLive or publish-readiness helpers. */
 export function isPromotePlatformLive(platform: PromotePlatform): boolean {
-  return isPromotePlatformDirectLive(platform)
+  return PROMOTE_PLATFORM_DEFS.some((p) => p.id === platform && p.live)
 }
 
 /** UI defs for a shape — every destination the artist will eventually reach from Margo. */

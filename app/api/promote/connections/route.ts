@@ -11,7 +11,7 @@ export async function GET() {
   const supabase = await createServerSupabase()
   const { data, error } = await supabase
     .from('artist_social_connections')
-    .select('id, platform, status, publish_adapter, external_account_id, external_username, connected_at, last_publish_at, last_error')
+    .select('id, platform, status, external_account_id, external_username, connected_at, last_publish_at, last_error')
     .eq('profile_id', session.userId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

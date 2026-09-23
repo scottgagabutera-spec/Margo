@@ -56,7 +56,7 @@ export async function uploadPromoteVideo(
 }
 
 /**
- * Stable public HTTPS URL for platform fetch (Buffer, future direct APIs).
+ * Stable public HTTPS URL for platform fetch (TikTok, Meta, etc.).
  * Requires Margo/promote/* publicly readable on the R2 custom domain.
  */
 export function publicPromoteVideoUrl(objectKey: string): string {

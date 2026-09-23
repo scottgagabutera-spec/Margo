@@ -55,7 +55,6 @@ export async function GET(request: NextRequest) {
     const row = {
       profile_id: session.userId,
       platform: 'youtube' as const,
-      publish_adapter: 'direct' as const,
       status: 'connected' as const,
       external_account_id: channel.channelId,
       external_username: channel.title,
