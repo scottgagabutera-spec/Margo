@@ -17,12 +17,12 @@ export const PLATFORM_SETUP_GUIDES: Record<PromotePlatform, PlatformSetupGuide> 
     ],
   },
   tiktok: {
-    margoStatus: 'In review — OAuth and publish are built; waiting on TikTok app approval before going live.',
+    margoStatus: 'Live — connect your TikTok account below.',
     artistSteps: [
-      'Use a TikTok Business or Creator account.',
-      'Margo will connect via Login Kit once TikTok approves video.publish.',
+      'Use a TikTok account you can post from (Creator or Business).',
+      'Approve user.info.basic and video.publish when TikTok asks.',
       'Shorts (9:16) export maps to TikTok vertical video (PULL_FROM_URL from Margo staging).',
-      'Verify audio.trymargo.com URL prefix in your TikTok app before publish works.',
+      'Until TikTok approves the app, posts publish as private (SELF_ONLY) by default.',
     ],
   },
   instagram: {

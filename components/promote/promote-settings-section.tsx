@@ -178,7 +178,7 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
         lineHeight: 1.45,
       }}>
         Connect accounts here, then choose which platforms each export goes to from the export sheet.
-        YouTube and Facebook Page are live today; TikTok, Instagram, and X are coming soon.
+        YouTube, Facebook Page, and TikTok are live today; Instagram and X are coming soon.
         Facebook connects a Page you manage — not a personal profile.
       </p>
 
