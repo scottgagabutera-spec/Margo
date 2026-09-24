@@ -1,4 +1,5 @@
 import { randomBytes } from 'crypto'
+import { getActiveTikTokPromoteCredentials } from '@/lib/promote/tiktok-promote-config'
 
 export const TIKTOK_OPEN_API = 'https://open.tiktokapis.com'
 export const TIKTOK_AUTH_URL = 'https://www.tiktok.com/v2/auth/authorize/'
@@ -44,15 +45,11 @@ export interface TikTokUserInfo {
 }
 
 function tiktokClientKey(): string {
-  const key = process.env.TIKTOK_PROMOTE_CLIENT_KEY?.trim()
-  if (!key) throw new Error('TIKTOK_PROMOTE_CLIENT_KEY is not configured')
-  return key
+  return getActiveTikTokPromoteCredentials().clientKey
 }
 
 function tiktokClientSecret(): string {
-  const secret = process.env.TIKTOK_PROMOTE_CLIENT_SECRET?.trim()
-  if (!secret) throw new Error('TIKTOK_PROMOTE_CLIENT_SECRET is not configured')
-  return secret
+  return getActiveTikTokPromoteCredentials().clientSecret
 }
 
 export function buildTikTokOAuthState(): string {
