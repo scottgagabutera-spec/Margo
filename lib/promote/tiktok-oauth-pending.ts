@@ -26,8 +26,12 @@ export async function createTikTokOAuthPending(
   if (error) throw error
 }
 
-/** One-time consume: deletes the row when valid and not expired. */
-export async function consumeTikTokOAuthPending(
+function normalizeReturnTo(raw: string): string {
+  return raw.startsWith('/') && !raw.startsWith('//') ? raw : '/settings'
+}
+
+/** Resolve pending OAuth state without deleting (allows retry if token exchange fails). */
+export async function resolveTikTokOAuthPending(
   admin: SupabaseClient,
   state: string,
 ): Promise<TikTokOAuthPendingRow | null> {
@@ -42,12 +46,15 @@ export async function consumeTikTokOAuthPending(
   if (error) throw error
   if (!data) return null
 
+  return {
+    profile_id: data.profile_id,
+    return_to: normalizeReturnTo(data.return_to),
+  }
+}
+
+export async function clearTikTokOAuthPending(
+  admin: SupabaseClient,
+  state: string,
+): Promise<void> {
   await admin.from('promote_tiktok_oauth_pending').delete().eq('state', state)
-
-  const returnTo =
-    data.return_to.startsWith('/') && !data.return_to.startsWith('//')
-      ? data.return_to
-      : '/settings'
-
-  return { profile_id: data.profile_id, return_to: returnTo }
 }

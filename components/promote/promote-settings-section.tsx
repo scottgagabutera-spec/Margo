@@ -63,28 +63,47 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
   }, [])
 
   useEffect(() => {
-    void load()
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search)
-      const promote = params.get('promote')
-      if (promote === 'youtube_connected') setMessage('YouTube connected.')
-      if (promote === 'youtube_error') setMessage('YouTube connection failed — try again.')
-      if (promote === 'youtube_denied') setMessage('YouTube connection was cancelled.')
-      if (promote === 'facebook_connected') setMessage('Facebook Page connected.')
-      if (promote === 'facebook_error') setMessage('Facebook connection failed — try again.')
-      if (promote === 'facebook_denied') setMessage('Facebook connection was cancelled.')
-      if (promote === 'facebook_invalid') setMessage('Facebook connection expired — try again.')
-      if (promote === 'facebook_no_pages') setMessage('No Facebook Pages found — you must admin a Page to connect.')
-      if (promote === 'facebook_pick_page') setShowFacebookPagePicker(true)
-      if (promote === 'tiktok_connected') setMessage('TikTok connected.')
-      if (promote === 'tiktok_error') setMessage('TikTok connection failed — try again.')
-      if (promote === 'tiktok_denied') setMessage('TikTok connection was cancelled.')
-      if (promote === 'tiktok_invalid') setMessage('TikTok connection expired — try again.')
-      if (promote === 'server_error') {
-        setMessage('Connection could not finish — server configuration may be missing. Try again or contact support.')
+    void (async () => {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search)
+        const promote = params.get('promote')
+        if (promote === 'youtube_connected') setMessage('YouTube connected.')
+        if (promote === 'youtube_error') setMessage('YouTube connection failed — try again.')
+        if (promote === 'youtube_denied') setMessage('YouTube connection was cancelled.')
+        if (promote === 'facebook_connected') setMessage('Facebook Page connected.')
+        if (promote === 'facebook_error') setMessage('Facebook connection failed — try again.')
+        if (promote === 'facebook_denied') setMessage('Facebook connection was cancelled.')
+        if (promote === 'facebook_invalid') setMessage('Facebook connection expired — try again.')
+        if (promote === 'facebook_no_pages') setMessage('No Facebook Pages found — you must admin a Page to connect.')
+        if (promote === 'facebook_pick_page') setShowFacebookPagePicker(true)
+        if (promote === 'tiktok_connected') setMessage('TikTok connected.')
+        if (promote === 'tiktok_error') {
+          setMessage('TikTok connection failed — check sandbox credentials in Vercel, then try Connect again.')
+        }
+        if (promote === 'tiktok_denied') setMessage('TikTok connection was cancelled.')
+        if (promote === 'tiktok_invalid') {
+          setMessage('TikTok link expired — tap Connect TikTok again (stay in the same browser if you can).')
+        }
+        if (promote === 'server_error') {
+          setMessage('Connection could not finish — server configuration may be missing. Try again or contact support.')
+        }
+        if (promote === 'denied') setMessage('Auto-Promote is available to active verified artists only.')
+        if (promote) {
+          params.delete('promote')
+          const qs = params.toString()
+          window.history.replaceState(null, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`)
+        }
       }
-      if (promote === 'denied') setMessage('Auto-Promote is available to active verified artists only.')
+      await load()
+    })()
+  }, [load])
+
+  useEffect(() => {
+    const onFocus = () => {
+      void load()
     }
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
   }, [load])
 
   useEffect(() => {
@@ -150,6 +169,7 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
 
   async function disconnectPlatform(platform: PromotePlatform) {
     setSaving(true)
+    setMessage(null)
     const res = await fetch('/api/promote/connections', {
       method: 'DELETE',
       credentials: 'include',
@@ -157,7 +177,12 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
       body: JSON.stringify({ platform }),
     })
     setSaving(false)
-    if (res.ok) void load()
+    if (res.ok) {
+      setMessage(`${platform === 'tiktok' ? 'TikTok' : platform} disconnected in Margo. Revoke the app in TikTok too if you want the consent screen again.`)
+      void load()
+    } else {
+      setMessage('Could not disconnect — try again.')
+    }
   }
 
   if (loading) {
