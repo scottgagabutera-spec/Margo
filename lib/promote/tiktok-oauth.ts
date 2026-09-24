@@ -36,6 +36,31 @@ export interface TikTokTokenResponse {
   token_type: string
   error?: string
   error_description?: string
+  log_id?: string
+}
+
+export class TikTokOAuthTokenError extends Error {
+  readonly logId?: string
+  readonly tiktokError?: string
+
+  constructor(message: string, opts?: { logId?: string; tiktokError?: string }) {
+    super(message)
+    this.name = 'TikTokOAuthTokenError'
+    this.logId = opts?.logId
+    this.tiktokError = opts?.tiktokError
+  }
+}
+
+export class TikTokOAuthUserInfoError extends Error {
+  readonly logId?: string
+  readonly tiktokCode?: string
+
+  constructor(message: string, opts?: { logId?: string; tiktokCode?: string }) {
+    super(message)
+    this.name = 'TikTokOAuthUserInfoError'
+    this.logId = opts?.logId
+    this.tiktokCode = opts?.tiktokCode
+  }
 }
 
 export interface TikTokUserInfo {
@@ -80,7 +105,10 @@ async function postTikTokToken(body: URLSearchParams): Promise<TikTokTokenRespon
   })
   const json = await res.json() as TikTokTokenResponse
   if (!res.ok || json.error) {
-    throw new Error(json.error_description || json.error || `TikTok token request failed (HTTP ${res.status})`)
+    throw new TikTokOAuthTokenError(
+      json.error_description || json.error || `TikTok token request failed (HTTP ${res.status})`,
+      { logId: json.log_id, tiktokError: json.error },
+    )
   }
   return json
 }
@@ -114,10 +142,13 @@ export async function fetchTikTokUserInfo(accessToken: string): Promise<TikTokUs
   })
   const json = await res.json() as {
     data?: { user?: { open_id?: string; display_name?: string; username?: string } }
-    error?: { code?: string; message?: string }
+    error?: { code?: string; message?: string; log_id?: string }
   }
-  if (!res.ok || json.error?.code && json.error.code !== 'ok') {
-    throw new Error(json.error?.message || `TikTok user info failed (HTTP ${res.status})`)
+  if (!res.ok || (json.error?.code && json.error.code !== 'ok')) {
+    throw new TikTokOAuthUserInfoError(
+      json.error?.message || `TikTok user info failed (HTTP ${res.status})`,
+      { logId: json.error?.log_id, tiktokCode: json.error?.code },
+    )
   }
   const user = json.data?.user
   if (!user?.open_id) throw new Error('TikTok user info missing open_id')

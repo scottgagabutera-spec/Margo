@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { getPromoteAdmin } from '@/lib/promote/admin-client'
 import { requirePromoteSession } from '@/lib/promote/api-auth'
+import { createTikTokOAuthPending } from '@/lib/promote/tiktok-oauth-pending'
 import {
   buildTikTokAuthorizeUrl,
   buildTikTokOAuthState,
@@ -18,8 +20,14 @@ export async function GET(request: NextRequest) {
   const returnTo = request.nextUrl.searchParams.get('returnTo') || '/settings'
   const safeReturn = returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/settings'
 
+  const admin = getPromoteAdmin()
+  if (!admin) {
+    return NextResponse.redirect(new URL(`${safeReturn}?promote=server_error`, request.url))
+  }
+
   try {
     const state = buildTikTokOAuthState()
+    await createTikTokOAuthPending(admin, state, session.userId, safeReturn)
     const url = buildTikTokAuthorizeUrl(origin, state)
     const res = NextResponse.redirect(url)
     res.cookies.set(PROMOTE_TIKTOK_STATE_COOKIE, state, PROMOTE_TIKTOK_COOKIE_OPTS)
