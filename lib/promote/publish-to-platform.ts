@@ -4,7 +4,7 @@ import { buildFacebookPromoteCopy } from '@/lib/promote/facebook-copy'
 import { uploadVideoToFacebookPage } from '@/lib/promote/facebook-publish'
 import { isPromotePlatformLive } from '@/lib/promote/platforms'
 import { buildTikTokPromoteCaption } from '@/lib/promote/tiktok-copy'
-import { publishVideoToTikTokViaUrl } from '@/lib/promote/tiktok-publish'
+import { publishVideoToTikTok } from '@/lib/promote/tiktok-publish'
 import { buildYouTubePromoteCopy, isMargoArtistAccount } from '@/lib/promote/youtube-copy'
 import { uploadVideoToYouTube } from '@/lib/promote/youtube-publish'
 import type { PromotePlatform } from '@/lib/promote/types'
@@ -75,9 +75,6 @@ export async function publishVideoToPlatform(
       }
     }
     case 'tiktok': {
-      if (!input.videoPublicUrl) {
-        throw new Error('TikTok publish requires a public video URL — staging upload failed.')
-      }
       const title = buildTikTokPromoteCaption({
         songTitle: input.songTitle,
         lyricText: input.lyricText,
@@ -88,8 +85,9 @@ export async function publishVideoToPlatform(
       const creatorUsername = meta?.username
         ?? connection.external_username?.replace(/^@/, '')
         ?? null
-      const result = await publishVideoToTikTokViaUrl({
+      const result = await publishVideoToTikTok({
         accessToken,
+        videoBytes,
         videoUrl: input.videoPublicUrl,
         title,
         creatorUsername,

@@ -7,13 +7,20 @@ export type TikTokPrivacyLevel =
   | 'FOLLOWER_OF_CREATOR'
   | 'SELF_ONLY'
 
-export interface TikTokPullPublishInput {
+export interface TikTokPublishInput {
   accessToken: string
-  videoUrl: string
   title: string
   /** TikTok @handle without @ — used to build post URL when publish completes. */
   creatorUsername?: string | null
   privacyLevel?: TikTokPrivacyLevel
+}
+
+export interface TikTokPullPublishInput extends TikTokPublishInput {
+  videoUrl: string
+}
+
+export interface TikTokFilePublishInput extends TikTokPublishInput {
+  videoBytes: Buffer
 }
 
 export interface TikTokPublishResult {
@@ -29,6 +36,8 @@ type TikTokApiEnvelope<T> = {
 
 const POLL_INTERVAL_MS = 3000
 const POLL_TIMEOUT_MS = 180_000
+const MIN_CHUNK_BYTES = 5 * 1024 * 1024
+const DEFAULT_CHUNK_BYTES = 10 * 1024 * 1024
 
 function defaultPrivacyLevel(): TikTokPrivacyLevel {
   const raw = process.env.TIKTOK_PROMOTE_PRIVACY_LEVEL?.trim()
@@ -40,8 +49,11 @@ function defaultPrivacyLevel(): TikTokPrivacyLevel {
   ) {
     return raw
   }
-  // Unaudited TikTok apps must post non-public until app review clears.
   return 'SELF_ONLY'
+}
+
+function preferPullFromUrl(): boolean {
+  return process.env.TIKTOK_PROMOTE_TRANSFER?.trim().toLowerCase() === 'pull_from_url'
 }
 
 async function tikTokPostJson<T>(
@@ -80,38 +92,64 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-/**
- * Direct Post via PULL_FROM_URL — TikTok fetches the public R2 MP4.
- * @see https://developers.tiktok.com/doc/content-posting-api-reference-direct-post
- */
-export async function publishVideoToTikTokViaUrl({
-  accessToken,
-  videoUrl,
-  title,
-  creatorUsername,
-  privacyLevel = defaultPrivacyLevel(),
-}: TikTokPullPublishInput): Promise<TikTokPublishResult> {
-  const init = await tikTokPostJson<{ publish_id?: string }>(
-    '/v2/post/publish/video/init/',
-    accessToken,
-    {
-      post_info: {
-        title,
-        privacy_level: privacyLevel,
-        disable_comment: false,
-        disable_duet: false,
-        disable_stitch: false,
-      },
-      source_info: {
-        source: 'PULL_FROM_URL',
-        video_url: videoUrl,
-      },
-    },
-  )
+function buildPostInfo(title: string, privacyLevel: TikTokPrivacyLevel) {
+  return {
+    title,
+    privacy_level: privacyLevel,
+    disable_comment: false,
+    disable_duet: false,
+    disable_stitch: false,
+    brand_content_toggle: false,
+    brand_organic_toggle: false,
+  }
+}
 
-  const publishId = init.data?.publish_id
-  if (!publishId) throw new Error('TikTok publish init succeeded but no publish_id returned')
+function fileUploadChunkPlan(videoSize: number): { chunkSize: number; totalChunkCount: number } {
+  if (videoSize <= 0) {
+    throw new Error('TikTok publish requires a non-empty video file')
+  }
+  if (videoSize < MIN_CHUNK_BYTES) {
+    return { chunkSize: videoSize, totalChunkCount: 1 }
+  }
+  const chunkSize = DEFAULT_CHUNK_BYTES
+  const totalChunkCount = Math.max(1, Math.ceil(videoSize / chunkSize))
+  return { chunkSize, totalChunkCount }
+}
 
+async function uploadVideoChunksToTikTok(
+  uploadUrl: string,
+  videoBytes: Buffer,
+  videoSize: number,
+  chunkSize: number,
+  totalChunkCount: number,
+): Promise<void> {
+  for (let index = 0; index < totalChunkCount; index += 1) {
+    const start = index * chunkSize
+    const end = Math.min(start + chunkSize, videoSize) - 1
+    const chunk = videoBytes.subarray(start, end + 1)
+    const res = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'video/mp4',
+        'Content-Length': String(chunk.length),
+        'Content-Range': `bytes ${start}-${end}/${videoSize}`,
+      },
+      body: chunk,
+    })
+    if (res.status !== 201 && res.status !== 206) {
+      const text = await res.text().catch(() => '')
+      throw new Error(
+        `TikTok video chunk upload failed (HTTP ${res.status})${text ? `: ${text.slice(0, 400)}` : ''}`,
+      )
+    }
+  }
+}
+
+async function waitForTikTokPublishComplete(
+  accessToken: string,
+  publishId: string,
+  creatorUsername: string | null | undefined,
+): Promise<TikTokPublishResult> {
   const deadline = Date.now() + POLL_TIMEOUT_MS
   while (Date.now() < deadline) {
     const status = await tikTokPostJson<{
@@ -146,4 +184,90 @@ export async function publishVideoToTikTokViaUrl({
     `TikTok publish timed out after ${Math.round(POLL_TIMEOUT_MS / 1000)}s (publish_id=${publishId}). ` +
     'The video may still finish processing on TikTok — check the creator account.',
   )
+}
+
+/**
+ * Direct Post via FILE_UPLOAD — Margo sends the MP4 to TikTok (no URL ownership verification).
+ * @see https://developers.tiktok.com/doc/content-posting-api-reference-direct-post
+ */
+export async function publishVideoToTikTokViaFileUpload({
+  accessToken,
+  videoBytes,
+  title,
+  creatorUsername,
+  privacyLevel = defaultPrivacyLevel(),
+}: TikTokFilePublishInput): Promise<TikTokPublishResult> {
+  const videoSize = videoBytes.length
+  const { chunkSize, totalChunkCount } = fileUploadChunkPlan(videoSize)
+
+  const init = await tikTokPostJson<{ publish_id?: string; upload_url?: string }>(
+    '/v2/post/publish/video/init/',
+    accessToken,
+    {
+      post_info: buildPostInfo(title, privacyLevel),
+      source_info: {
+        source: 'FILE_UPLOAD',
+        video_size: videoSize,
+        chunk_size: chunkSize,
+        total_chunk_count: totalChunkCount,
+      },
+    },
+  )
+
+  const publishId = init.data?.publish_id
+  const uploadUrl = init.data?.upload_url
+  if (!publishId || !uploadUrl) {
+    throw new Error('TikTok publish init succeeded but publish_id or upload_url was missing')
+  }
+
+  await uploadVideoChunksToTikTok(uploadUrl, videoBytes, videoSize, chunkSize, totalChunkCount)
+  return waitForTikTokPublishComplete(accessToken, publishId, creatorUsername)
+}
+
+/**
+ * Direct Post via PULL_FROM_URL — requires verified domain/URL prefix in TikTok Developer Portal.
+ * @see https://developers.tiktok.com/doc/content-posting-api-media-transfer-guide/#pull_from_url
+ */
+export async function publishVideoToTikTokViaUrl({
+  accessToken,
+  videoUrl,
+  title,
+  creatorUsername,
+  privacyLevel = defaultPrivacyLevel(),
+}: TikTokPullPublishInput): Promise<TikTokPublishResult> {
+  const init = await tikTokPostJson<{ publish_id?: string }>(
+    '/v2/post/publish/video/init/',
+    accessToken,
+    {
+      post_info: buildPostInfo(title, privacyLevel),
+      source_info: {
+        source: 'PULL_FROM_URL',
+        video_url: videoUrl,
+      },
+    },
+  )
+
+  const publishId = init.data?.publish_id
+  if (!publishId) throw new Error('TikTok publish init succeeded but no publish_id returned')
+
+  return waitForTikTokPublishComplete(accessToken, publishId, creatorUsername)
+}
+
+/** Default path: FILE_UPLOAD unless TIKTOK_PROMOTE_TRANSFER=pull_from_url. */
+export async function publishVideoToTikTok(
+  input: TikTokFilePublishInput & { videoUrl?: string | null },
+): Promise<TikTokPublishResult> {
+  if (preferPullFromUrl()) {
+    if (!input.videoUrl) {
+      throw new Error('TIKTOK_PROMOTE_TRANSFER=pull_from_url requires a public video URL')
+    }
+    return publishVideoToTikTokViaUrl({
+      accessToken: input.accessToken,
+      videoUrl: input.videoUrl,
+      title: input.title,
+      creatorUsername: input.creatorUsername,
+      privacyLevel: input.privacyLevel,
+    })
+  }
+  return publishVideoToTikTokViaFileUpload(input)
 }
