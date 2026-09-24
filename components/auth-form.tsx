@@ -202,13 +202,14 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
         throw { message: body.error || 'Something went wrong. Please try again.' }
       }
       await rehydrate({ force: true })
-      await waitUntilReady()
       toast.success('Welcome to Margo.')
       if (onSuccess) {
         onSuccess()
       } else {
         router.push('/feed')
       }
+      // Profile creation can lag behind OAuth; do not block terms completion on it.
+      void waitUntilReady()
     } catch (e) {
       setError(friendlyError(e as { message?: string }))
     } finally {
