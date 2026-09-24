@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { AuthForm, TermsCompletionForm, type AuthMode } from '@/components/auth-form'
 import { AuthModeTabs } from '@/components/auth-mode-tabs'
 import { CONSENT_REQUIRED_MESSAGE } from '@/lib/legal/consent-copy'
@@ -9,6 +9,7 @@ import { BackButton } from '@/components/back-button'
 import MargoLogo from '@/components/MargoLogo'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { AUTH_RETURN_QUERY, sanitizeAuthReturnPath } from '@/lib/auth-return'
+import { completeAuthNavigation } from '@/lib/auth-complete-navigation'
 import Link from 'next/link'
 import './auth-layout.css'
 
@@ -38,7 +39,6 @@ export default function SigninPage() {
 }
 
 function SigninPageInner() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const { user, loading, needsTermsAcceptance } = useAuthGate()
   const initialMode = parseMode(searchParams.get('mode'))
@@ -55,8 +55,8 @@ function SigninPageInner() {
   )
 
   const finishAuth = useCallback(() => {
-    router.replace(returnTo || '/feed')
-  }, [router, returnTo])
+    completeAuthNavigation(returnTo)
+  }, [returnTo])
 
   useEffect(() => {
     if (loading) return

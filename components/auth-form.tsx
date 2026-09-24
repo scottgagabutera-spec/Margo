@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useId, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { completeAuthNavigation } from '@/lib/auth-complete-navigation'
 import { setBrowserAccessToken } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useIdentity } from '@/hooks/useIdentity'
@@ -172,18 +172,19 @@ const primaryBtnStyle: React.CSSProperties = {
 }
 
 export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletionFormProps) {
-  const router = useRouter()
   const { rehydrate } = useAuthGate()
   const { waitUntilReady } = useIdentity()
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [redirecting, setRedirecting] = useState(false)
 
   useEffect(() => {
     if (externalError) setError(externalError)
   }, [externalError])
 
   const handleSubmit = async () => {
+    if (redirecting) return
     if (!termsAccepted) {
       setError(CONSENT_REQUIRED_MESSAGE)
       return
@@ -202,22 +203,23 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
         throw { message: body.error || 'Something went wrong. Please try again.' }
       }
       await rehydrate({ force: true })
+      setRedirecting(true)
       toast.success('Welcome to Margo.')
+      // Profile creation can lag behind OAuth; do not block terms completion on it.
+      void waitUntilReady()
       if (onSuccess) {
         onSuccess()
       } else {
-        router.push('/feed')
+        completeAuthNavigation('/feed')
       }
-      // Profile creation can lag behind OAuth; do not block terms completion on it.
-      void waitUntilReady()
+      return
     } catch (e) {
       setError(friendlyError(e as { message?: string }))
-    } finally {
       setLoading(false)
     }
   }
 
-  const disabled = loading || !termsAccepted
+  const disabled = loading || redirecting || !termsAccepted
 
   return (
     <div style={{ width: '100%' }}>
@@ -265,7 +267,7 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
           opacity: disabled ? 0.55 : 1,
         }}
       >
-        {loading ? 'Saving…' : 'Continue to Margo'}
+        {redirecting ? 'Taking you to Margo…' : loading ? 'Saving…' : 'Continue to Margo'}
       </button>
     </div>
   )
