@@ -201,10 +201,14 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
       if (!res.ok) {
         throw { message: body.error || 'Something went wrong. Please try again.' }
       }
-      await rehydrate()
+      await rehydrate({ force: true })
       await waitUntilReady()
       toast.success('Welcome to Margo.')
-      onSuccess?.() ?? router.push('/feed')
+      if (onSuccess) {
+        onSuccess()
+      } else {
+        router.push('/feed')
+      }
     } catch (e) {
       setError(friendlyError(e as { message?: string }))
     } finally {

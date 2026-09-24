@@ -54,7 +54,7 @@ export function LegalConsentGateModal() {
       if (!res.ok) {
         throw new Error(body.error || 'Something went wrong. Please try again.')
       }
-      await rehydrate()
+      await rehydrate({ force: true })
       toast.success('Welcome to Margo.')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.')
