@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { completeAuthNavigation } from '@/lib/auth-complete-navigation'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import {
   CONSENT_REQUIRED_MESSAGE,
@@ -35,6 +36,7 @@ export function LegalConsentGateModal() {
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [redirecting, setRedirecting] = useState(false)
 
   const handleSubmit = async () => {
     if (!termsAccepted) {
@@ -54,16 +56,18 @@ export function LegalConsentGateModal() {
       if (!res.ok) {
         throw new Error(body.error || 'Something went wrong. Please try again.')
       }
-      await rehydrate()
+      await rehydrate({ force: true })
+      setRedirecting(true)
       toast.success('Welcome to Margo.')
+      completeAuthNavigation('/feed')
+      return
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.')
-    } finally {
       setLoading(false)
     }
   }
 
-  const disabled = loading || !termsAccepted
+  const disabled = loading || redirecting || !termsAccepted
 
   return (
     <div
@@ -150,7 +154,7 @@ export function LegalConsentGateModal() {
             opacity: disabled ? 0.55 : 1,
           }}
         >
-          {loading ? 'Saving…' : 'Continue to Margo'}
+          {redirecting ? 'Taking you to Margo…' : loading ? 'Saving…' : 'Continue to Margo'}
         </button>
       </div>
     </div>

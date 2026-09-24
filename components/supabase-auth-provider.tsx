@@ -34,6 +34,11 @@ type RehydrateOptions = {
    * must still fetch.
    */
   source?: 'boot' | 'explicit' | 'focus' | 'broadcast'
+  /**
+   * Always fetch /api/auth/me even when user is already set (e.g. after
+   * accept-terms when needsTermsAcceptance must refresh).
+   */
+  force?: boolean
 }
 
 type RequireAuthOptions = {
@@ -111,6 +116,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
 
   const rehydrate = useCallback(async (opts?: RehydrateOptions) => {
     const soft = opts?.soft === true
+    const force = opts?.force === true
     const source = opts?.source ?? (soft ? 'focus' : 'explicit')
 
     // Cold-load: boot /me + window focus/visibility often overlap → twin fetches.
@@ -121,7 +127,8 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
 
     // Coalesce: assign the shared promise *before* any await so two sync callers
     // cannot both start a fetch. Soft waiters return after the shared work.
-    if (inflightRef.current) {
+    // force=true must never await a stuck inflight fetch (e.g. focus /me still pending).
+    if (inflightRef.current && !force) {
       await inflightRef.current
       if (soft) return
       if (userRef.current) return

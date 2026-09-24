@@ -1,12 +1,18 @@
+import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { supabaseCookieOptions } from '@/lib/supabase/cookie-options'
 import {
   buildLegalConsentSettings,
   mergeLegalConsentIntoSettings,
 } from '@/lib/legal/consent'
+import {
+  applyPendingSessionCookies,
+  type PendingSessionCookie,
+} from '@/lib/supabase/pending-session-cookies'
 
 /**
  * Record Terms + Privacy acceptance for a signed-in user (OAuth completion step).
+ * Session cookies are attached explicitly on the JSON response (OAuth pattern).
  */
 export async function POST(req: NextRequest) {
   let body: { acceptedTerms?: boolean }
@@ -23,7 +29,30 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const supabase = await createClient()
+  const pendingCookies: PendingSessionCookie[] = []
+  const pendingHeaders: [string, string][] = []
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookieOptions: supabaseCookieOptions,
+      cookies: {
+        getAll() {
+          return req.cookies.getAll()
+        },
+        setAll(cookiesToSet, headers) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            pendingCookies.push({ name, value, options })
+          })
+          Object.entries(headers).forEach(([key, value]) => {
+            pendingHeaders.push([key, value])
+          })
+        },
+      },
+    },
+  )
+
   const { data: { user }, error: userErr } = await supabase.auth.getUser()
   if (userErr || !user) {
     return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
@@ -52,5 +81,7 @@ export async function POST(req: NextRequest) {
   )
   await supabase.from('profiles').update({ settings }).eq('id', user.id)
 
-  return NextResponse.json({ ok: true })
+  const response = NextResponse.json({ ok: true })
+  applyPendingSessionCookies(response, pendingCookies, pendingHeaders)
+  return response
 }
