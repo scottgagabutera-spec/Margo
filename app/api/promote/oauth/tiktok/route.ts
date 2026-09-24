@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { getPromoteAdmin } from '@/lib/promote/admin-client'
 import { requirePromoteSession } from '@/lib/promote/api-auth'
+import { resolvePromoteOAuthOrigin } from '@/lib/promote/oauth-public-origin'
 import { createTikTokOAuthPending } from '@/lib/promote/tiktok-oauth-pending'
 import {
   buildTikTokAuthorizeUrl,
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/settings?promote=denied', request.url))
   }
 
-  const origin = new URL(request.url).origin
+  const origin = resolvePromoteOAuthOrigin(request)
   const returnTo = request.nextUrl.searchParams.get('returnTo') || '/settings'
   const safeReturn = returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/settings'
 
