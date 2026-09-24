@@ -80,6 +80,9 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
       if (promote === 'tiktok_error') setMessage('TikTok connection failed — try again.')
       if (promote === 'tiktok_denied') setMessage('TikTok connection was cancelled.')
       if (promote === 'tiktok_invalid') setMessage('TikTok connection expired — try again.')
+      if (promote === 'server_error') {
+        setMessage('Connection could not finish — server configuration may be missing. Try again or contact support.')
+      }
       if (promote === 'denied') setMessage('Auto-Promote is available to active verified artists only.')
     }
   }, [load])
