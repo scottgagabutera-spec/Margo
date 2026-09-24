@@ -19,8 +19,11 @@ import { livingAtmosphereOrNull } from '@/lib/atmosphere'
 import { buildPromoteQueueMoment } from '@/lib/promote/build-queue-moment'
 import { publishQueueMomentVideo } from '@/lib/promote/publish-client'
 import { clearMomentVideoCache } from '@/lib/moment-export/video/moment-video-cache'
+import { PromoteQueuePlatformPicker } from '@/components/promote/promote-queue-platform-picker'
+import { hasPublishableSelection } from '@/lib/promote/queue-item-platforms'
+import type { QueueItemPlatformRow } from '@/lib/promote/queue-item-platforms'
 import { getPromotePlatformDef } from '@/lib/promote/platforms'
-import type { PromoteQueueRow } from '@/lib/promote/types'
+import type { PromotePlatform, PromoteQueueRow } from '@/lib/promote/types'
 import type { AtmosphereId } from '@/lib/atmosphere'
 import type { MomentShapeId } from '@/lib/moment/types'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
@@ -67,12 +70,21 @@ export function PromoteQueueCard({
   const [atmosphereId, setAtmosphereId] = useState<AtmosphereId>(
     item.overrideAtmosphereId ?? item.defaultAtmosphereId,
   )
-  const [shapeId] = useState<MomentShapeId>(item.overrideShapeId ?? item.defaultShapeId)
+  const [shapeId, setShapeId] = useState<MomentShapeId>(item.overrideShapeId ?? item.defaultShapeId)
+  const [selectedPlatforms, setSelectedPlatforms] = useState<PromotePlatform[]>(
+    item.targets.filter((t) => t.status === 'pending' || t.status === 'publishing').map((t) => t.platform),
+  )
+  const [platformRows, setPlatformRows] = useState<QueueItemPlatformRow[]>([])
 
   const publishInFlightRef = useRef(false)
   const actionLockRef = useRef(false)
   const publishAbortRef = useRef<AbortController | null>(null)
-  const prefsRef = useRef({ themeId, atmosphereId, shapeId })
+  const onUpdatedRef = useRef(onUpdated)
+  const prefsRef = useRef({ themeId, atmosphereId, shapeId, selectedPlatforms })
+
+  useEffect(() => {
+    onUpdatedRef.current = onUpdated
+  }, [onUpdated])
 
   const resolvedSongId = songId ?? item.sourceSongId ?? null
   const resolvedStart = snippetStart ?? item.snippetStartSec ?? null
@@ -80,12 +92,17 @@ export function PromoteQueueCard({
   const songAtmosphere = useSongAtmosphere(resolvedSongId)
 
   useEffect(() => {
-    prefsRef.current = { themeId, atmosphereId, shapeId }
-  }, [themeId, atmosphereId, shapeId])
+    prefsRef.current = { themeId, atmosphereId, shapeId, selectedPlatforms }
+  }, [themeId, atmosphereId, shapeId, selectedPlatforms])
 
   useEffect(() => {
     setThemeId(asStageTheme(item.overrideThemeId ?? item.defaultThemeId))
     setAtmosphereId(item.overrideAtmosphereId ?? item.defaultAtmosphereId)
+    setShapeId(item.overrideShapeId ?? item.defaultShapeId)
+    setSelectedPlatforms(
+      item.targets.filter((t) => t.status === 'pending' || t.status === 'publishing').map((t) => t.platform),
+    )
+    setPlatformRows([])
     setConfirmPublish(false)
     setError(null)
     setPublishResult(null)
@@ -190,12 +207,14 @@ export function PromoteQueueCard({
         overrideThemeId: prefs.themeId,
         overrideAtmosphereId: prefs.atmosphereId,
         overrideShapeId: prefs.shapeId,
+        selectedPlatforms: prefs.selectedPlatforms,
       }),
     })
     const body = await res.json().catch(() => ({}))
     if (!res.ok) {
       throw new Error(typeof body.error === 'string' ? body.error : 'Could not save changes')
     }
+    await onUpdatedRef.current({ silent: true })
   }, [item.id])
 
   useEffect(() => {
@@ -206,7 +225,17 @@ export function PromoteQueueCard({
       })
     }, 400)
     return () => window.clearTimeout(timer)
-  }, [item.status, themeId, atmosphereId, shapeId, saveOverrides])
+  }, [item.status, themeId, atmosphereId, shapeId, selectedPlatforms, saveOverrides])
+
+  const handlePlatformsLoaded = useCallback((payload: {
+    platforms: QueueItemPlatformRow[]
+    selectedPlatforms: PromotePlatform[]
+  }) => {
+    setPlatformRows(payload.platforms)
+    setSelectedPlatforms(payload.selectedPlatforms)
+  }, [])
+
+  const canPublishToSelection = hasPublishableSelection(platformRows, selectedPlatforms)
 
   const cancelPublish = useCallback(() => {
     publishAbortRef.current?.abort()
@@ -408,18 +437,47 @@ export function PromoteQueueCard({
             setAtmosphereId(resolved)
           }}
           shapeId={shapeId}
-          onShapeChange={() => {}}
-          style={{ marginBottom: '16px', opacity: shapeId === 'vertical' ? 1 : 0.6 }}
+          onShapeChange={setShapeId}
+          style={{ marginBottom: '16px' }}
         />
       )}
 
-      {shapeId !== 'vertical' && (
-        <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--gold)', marginBottom: '12px' }}>
-          Short-form platforms require a 9:16 export — re-export this Moment as Shorts before promoting.
-        </p>
+      {canEdit && (
+        <div style={{ marginBottom: '12px' }}>
+          <p style={{
+            fontFamily: font,
+            fontSize: TYPE.label,
+            fontWeight: 600,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: 'var(--text-muted)',
+            margin: '0 0 8px',
+          }}>
+            Platforms
+          </p>
+          <PromoteQueuePlatformPicker
+            queueId={item.id}
+            shapeId={shapeId}
+            disabled={!!busy}
+            selected={selectedPlatforms}
+            onSelectedChange={setSelectedPlatforms}
+            onPlatformsLoaded={handlePlatformsLoaded}
+          />
+          {!canPublishToSelection && (
+            <p style={{
+              fontFamily: font,
+              fontSize: TYPE.secondary,
+              color: 'var(--gold)',
+              margin: '10px 0 0',
+              lineHeight: 1.4,
+            }}>
+              Select at least one connected platform that supports this size before approving or publishing.
+            </p>
+          )}
+        </div>
       )}
 
-      {item.targets.length > 0 && (
+      {!canEdit && item.targets.length > 0 && (
         <div style={{ marginBottom: '12px' }}>
           <p style={{
             fontFamily: font,
@@ -549,13 +607,13 @@ export function PromoteQueueCard({
             margin: '0 0 12px',
             lineHeight: 1.45,
           }}>
-            Are you sure you chose the right color and the right effect? This publishes to all connected platforms now and cannot be undone from Margo.
+            Are you sure you chose the right color, effect, size, and platforms? This publishes to your selected destinations now and cannot be undone from Margo.
           </p>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <button
               type="button"
               onClick={() => void runPublish()}
-              disabled={!!busy || shapeId !== 'vertical'}
+              disabled={!!busy || !canPublishToSelection}
               style={primaryBtn}
             >
               Confirm publish
@@ -579,7 +637,7 @@ export function PromoteQueueCard({
               <button
                 type="button"
                 onClick={() => void approve()}
-                disabled={actionsLocked || shapeId !== 'vertical'}
+                disabled={actionsLocked || !canPublishToSelection}
                 style={primaryBtn}
               >
                 Approve
@@ -589,7 +647,7 @@ export function PromoteQueueCard({
               </button>
             </>
           )}
-          {canPublish && shapeId === 'vertical' && (
+          {canPublish && canPublishToSelection && (
             <>
               <button
                 type="button"
