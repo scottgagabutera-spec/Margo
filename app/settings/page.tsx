@@ -1,12 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient, signOutBrowser } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { SignInLink } from '@/components/signin-link'
 import { TYPE, UI_FONT } from '@/lib/fonts'
 import { PromoteSettingsSection } from '@/components/promote/promote-settings-section'
+import {
+  readAccountSettingsSessionCache,
+  writeAccountSettingsSessionCache,
+} from '@/lib/settings/account-settings-session-cache'
+import { PromoteInlineStatus } from '@/components/promote/promote-page-shell'
 
 const supabase = createClient()
 
@@ -215,11 +220,13 @@ function TierTwoButton({
 
 export default function AccountSettingsPage() {
   const { user, loading: authLoading, hasPasswordAuth } = useAuthGate()
-  const [loading, setLoading] = useState(true)
+  const [bootstrapping, setBootstrapping] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [profile, setProfile] = useState<ProfileRow | null>(null)
   const [application, setApplication] = useState<ArtistApplication | null>(null)
   const [notifications, setNotifications] = useState<NotificationPrefs>(DEFAULT_NOTIFICATIONS)
+  const lastFetchAtRef = useRef(0)
 
   const [newPassword, setNewPassword] = useState('')
   const [passwordStatus, setPasswordStatus] = useState<string | null>(null)
@@ -237,14 +244,28 @@ export default function AccountSettingsPage() {
       setUserId(null)
       setProfile(null)
       setApplication(null)
-      setLoading(false)
+      setBootstrapping(false)
+      setRefreshing(false)
       return
     }
 
     let cancelled = false
+    const cached = readAccountSettingsSessionCache(user.id)
+    if (cached && !profile) {
+      setUserId(user.id)
+      setProfile(cached.profile as unknown as ProfileRow)
+      setApplication(cached.application as ArtistApplication | null)
+      setNotifications({
+        ...DEFAULT_NOTIFICATIONS,
+        ...(cached.notifications as Partial<NotificationPrefs>),
+      })
+      setBootstrapping(false)
+    }
 
-    async function load() {
-      setLoading(true)
+    async function load(options?: { silent?: boolean }) {
+      const silent = options?.silent ?? (profile != null || cached != null)
+      if (silent) setRefreshing(true)
+      else setBootstrapping(true)
       setUserId(user!.id)
 
       const { data: profileRow } = await supabase
@@ -255,12 +276,16 @@ export default function AccountSettingsPage() {
 
       if (cancelled) return
 
-      if (profileRow) {
-        setProfile(profileRow as ProfileRow)
-        setNotifications({
+      const nextNotifications = profileRow
+        ? {
           ...DEFAULT_NOTIFICATIONS,
           ...(profileRow.settings?.notifications ?? {}),
-        })
+        }
+        : DEFAULT_NOTIFICATIONS
+
+      if (profileRow) {
+        setProfile(profileRow as ProfileRow)
+        setNotifications(nextNotifications)
       } else {
         setProfile(null)
       }
@@ -275,17 +300,65 @@ export default function AccountSettingsPage() {
 
       if (cancelled) return
 
-      if (applicationRow) setApplication(applicationRow as ArtistApplication)
-      else setApplication(null)
+      const nextApplication = applicationRow
+        ? (applicationRow as ArtistApplication)
+        : null
+      setApplication(nextApplication)
 
-      setLoading(false)
+      if (profileRow) {
+        writeAccountSettingsSessionCache({
+          userId: user!.id,
+          profile: profileRow as Record<string, unknown>,
+          application: nextApplication,
+          notifications: nextNotifications,
+        })
+        lastFetchAtRef.current = Date.now()
+      }
+
+      setBootstrapping(false)
+      setRefreshing(false)
     }
 
-    void load()
+    void load({ silent: cached != null || profile != null })
     return () => {
       cancelled = true
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- profile hydrated from session cache once per user
   }, [authLoading, user])
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState !== 'visible') return
+      if (authLoading || !user || !profile) return
+      if (Date.now() - lastFetchAtRef.current < 2 * 60 * 1000) return
+      void (async () => {
+        setRefreshing(true)
+        const { data: profileRow } = await supabase
+          .from('profiles')
+          .select('id, username, is_artist, artist_status, is_private, follow_lists_private, who_can_message, deactivated_at, settings')
+          .eq('id', user.id)
+          .single()
+        if (profileRow) {
+          const nextNotifications = {
+            ...DEFAULT_NOTIFICATIONS,
+            ...(profileRow.settings?.notifications ?? {}),
+          }
+          setProfile(profileRow as ProfileRow)
+          setNotifications(nextNotifications)
+          writeAccountSettingsSessionCache({
+            userId: user.id,
+            profile: profileRow as Record<string, unknown>,
+            application,
+            notifications: nextNotifications,
+          })
+          lastFetchAtRef.current = Date.now()
+        }
+        setRefreshing(false)
+      })()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [authLoading, user, profile, application])
 
   async function updatePassword() {
     if (newPassword.length < 8) {
@@ -391,7 +464,7 @@ export default function AccountSettingsPage() {
     }
   }
 
-  if (authLoading || loading) {
+  if ((authLoading && !profile) || (bootstrapping && !profile)) {
     return (
       <div style={{ padding: 'calc(var(--nav-height, 72px) + 24px) 24px', textAlign: 'center', color: 'var(--text-secondary)', fontFamily: font }}>
         Loading your settings.
@@ -440,6 +513,7 @@ export default function AccountSettingsPage() {
         padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)',
       }}
     >
+      {refreshing && <PromoteInlineStatus message="Updating settings…" tone="gold" />}
       <h1
         style={{
           fontFamily: font,
