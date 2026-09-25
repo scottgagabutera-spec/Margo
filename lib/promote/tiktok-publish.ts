@@ -38,7 +38,8 @@ type TikTokApiEnvelope<T> = {
 
 const POLL_INTERVAL_MS = 3000
 const POLL_TIMEOUT_MS = 180_000
-const MIN_CHUNK_BYTES = 5 * 1024 * 1024
+/** TikTok allows a single-chunk upload up to 128 MB (final chunk max); promote renders are smaller. */
+const MAX_SINGLE_CHUNK_BYTES = 128 * 1024 * 1024
 const DEFAULT_CHUNK_BYTES = 10 * 1024 * 1024
 
 function preferPullFromUrl(): boolean {
@@ -107,11 +108,11 @@ function fileUploadChunkPlan(videoSize: number): { chunkSize: number; totalChunk
   if (videoSize <= 0) {
     throw new Error('TikTok publish requires a non-empty video file')
   }
-  if (videoSize < MIN_CHUNK_BYTES) {
+  if (videoSize <= MAX_SINGLE_CHUNK_BYTES) {
     return { chunkSize: videoSize, totalChunkCount: 1 }
   }
   const chunkSize = DEFAULT_CHUNK_BYTES
-  const totalChunkCount = Math.max(1, Math.ceil(videoSize / chunkSize))
+  const totalChunkCount = Math.floor((videoSize - 1) / chunkSize) + 1
   return { chunkSize, totalChunkCount }
 }
 

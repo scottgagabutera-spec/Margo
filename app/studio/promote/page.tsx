@@ -30,6 +30,7 @@ export default function StudioPromotePage() {
   const searchParams = useSearchParams()
   const autopublishAttempted = useRef<string | null>(null)
   const publishAbortHandlers = useRef<Set<() => void>>(new Set())
+  const queueScrollYRef = useRef(0)
 
   const isActiveArtist = identity?.isArtist && identity.artistStatus === 'active'
 
@@ -46,6 +47,9 @@ export default function StudioPromotePage() {
   }, [])
 
   const loadQueue = useCallback(async (options?: PromoteQueueUpdateOptions) => {
+    if (typeof window !== 'undefined' && options?.silent) {
+      queueScrollYRef.current = window.scrollY
+    }
     if (!options?.silent) {
       setLoading(true)
     }
@@ -61,6 +65,10 @@ export default function StudioPromotePage() {
       setItems(json.items || [])
     } finally {
       if (!options?.silent) setLoading(false)
+      if (typeof window !== 'undefined' && options?.silent) {
+        const y = queueScrollYRef.current
+        requestAnimationFrame(() => window.scrollTo({ top: y, behavior: 'instant' as ScrollBehavior }))
+      }
     }
   }, [])
 

@@ -625,8 +625,10 @@ export default function AccountSettingsPage() {
 
       {profile.is_artist && profile.artist_status === 'active' && (
         <Card>
-          <SectionLabel>Connected Accounts &amp; Auto-Promote</SectionLabel>
-          <PromoteSettingsSection />
+          <div id="margo-auto-promote" style={{ scrollMarginTop: 'calc(var(--nav-height, 72px) + 16px)' }}>
+            <SectionLabel>Connected Accounts &amp; Auto-Promote</SectionLabel>
+            <PromoteSettingsSection />
+          </div>
         </Card>
       )}
 

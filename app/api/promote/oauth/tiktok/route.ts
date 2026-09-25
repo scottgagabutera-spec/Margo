@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { getPromoteAdmin } from '@/lib/promote/admin-client'
 import { requirePromoteSession } from '@/lib/promote/api-auth'
 import { resolvePromoteOAuthOrigin } from '@/lib/promote/oauth-public-origin'
+import { MARGO_AUTO_PROMOTE_SETTINGS_PATH } from '@/lib/promote/settings-anchor'
 import { createTikTokOAuthPending } from '@/lib/promote/tiktok-oauth-pending'
 import {
   buildTikTokAuthorizeUrl,
@@ -18,8 +19,11 @@ export async function GET(request: NextRequest) {
   }
 
   const origin = resolvePromoteOAuthOrigin(request)
-  const returnTo = request.nextUrl.searchParams.get('returnTo') || '/settings'
-  const safeReturn = returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/settings'
+  const returnTo = request.nextUrl.searchParams.get('returnTo') || MARGO_AUTO_PROMOTE_SETTINGS_PATH
+  const pathOnly = returnTo.split('#')[0]?.split('?')[0] ?? ''
+  const safeReturn = pathOnly.startsWith('/') && !pathOnly.startsWith('//')
+    ? returnTo
+    : MARGO_AUTO_PROMOTE_SETTINGS_PATH
 
   const admin = getPromoteAdmin()
   if (!admin) {

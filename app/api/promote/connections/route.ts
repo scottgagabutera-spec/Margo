@@ -3,6 +3,15 @@ import { createClient as createServerSupabase } from '@/lib/supabase/server'
 import { getPromoteAdmin } from '@/lib/promote/admin-client'
 import { requirePromoteSession } from '@/lib/promote/api-auth'
 import { mapConnectionPublic } from '@/lib/promote/connections'
+import type { PromotePlatform } from '@/lib/promote/types'
+
+const DISCONNECT_PLATFORMS = new Set<PromotePlatform>([
+  'youtube',
+  'tiktok',
+  'instagram',
+  'facebook',
+  'x',
+])
 
 export async function GET() {
   const session = await requirePromoteSession()
@@ -41,6 +50,10 @@ export async function DELETE(request: Request) {
 
   if (!body.platform) {
     return NextResponse.json({ error: 'platform is required' }, { status: 400 })
+  }
+
+  if (!DISCONNECT_PLATFORMS.has(body.platform as PromotePlatform)) {
+    return NextResponse.json({ error: 'Invalid platform' }, { status: 400 })
   }
 
   const admin = getPromoteAdmin()
