@@ -13,6 +13,7 @@ import {
 import { TYPE, UI_FONT } from '@/lib/fonts'
 import { PROMOTE_PLATFORM_DEFS } from '@/lib/promote/platforms'
 import { getPlatformSetupGuide } from '@/lib/promote/platform-setup-guide'
+import { connectionSettingsNotice } from '@/lib/promote/connection-settings-copy'
 import {
   MARGO_AUTO_PROMOTE_SETTINGS_PATH,
   scrollToAutoPromoteSettings,
@@ -303,6 +304,7 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
           const Icon = PLATFORM_ICONS[platform.id]
           const connection = connections.find((c) => c.platform === platform.id)
           const connected = connection?.status === 'connected'
+          const connectionNotice = connection ? connectionSettingsNotice(connection) : null
 
           return (
             <div key={platform.id}>
@@ -369,8 +371,10 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
                     </p>
                   )}
                   Connected as {connection?.externalUsername || `${platform.label} account`}
-                  {connection?.lastError && (
-                    <div style={{ color: 'var(--text-secondary)', marginTop: '6px' }}>{connection.lastError}</div>
+                  {connectionNotice && (
+                    <div style={{ color: 'var(--text-muted)', marginTop: '8px', lineHeight: 1.45, fontSize: TYPE.secondary }}>
+                      {connectionNotice}
+                    </div>
                   )}
                   <div style={{ display: 'flex', gap: '12px', marginTop: '10px', flexWrap: 'wrap' }}>
                     {platform.oauthPath && (
@@ -424,8 +428,14 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
                     </a>
                   )}
                   {connection?.status === 'expired' && (
-                    <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', marginTop: '8px' }}>
+                    <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', marginTop: '8px', lineHeight: 1.45 }}>
                       Session expired — reconnect to publish again.
+                      {connectionNotice && (
+                        <>
+                          {' '}
+                          {connectionNotice}
+                        </>
+                      )}
                     </p>
                   )}
                 </div>
