@@ -79,6 +79,7 @@ export function PromoteQueueCard({
   const publishInFlightRef = useRef(false)
   const actionLockRef = useRef(false)
   const publishAbortRef = useRef<AbortController | null>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
   const onUpdatedRef = useRef(onUpdated)
   const prefsRef = useRef({ themeId, atmosphereId, shapeId, selectedPlatforms })
 
@@ -343,10 +344,12 @@ export function PromoteQueueCard({
     if (actionLockRef.current || publishInFlightRef.current || busy) return
     setError(null)
     setConfirmPublish(true)
+    requestAnimationFrame(() => {
+      cardRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    })
   }
 
   const publishedTargets = item.targets.filter((t) => t.status === 'published' && t.externalPostUrl)
-  const failedTargets = item.targets.filter((t) => t.status === 'failed')
   const status = publishResult ? 'published' : localStatus
   const canEdit = (status === 'pending_review' || status === 'approved') && !busy
   const canPublish = status === 'approved' || status === 'partial'
@@ -357,12 +360,14 @@ export function PromoteQueueCard({
 
   return (
     <div
+      ref={cardRef}
       style={{
         background: 'var(--surface)',
         border: '1px solid var(--border)',
         borderRadius: '16px',
         padding: '20px',
         marginBottom: '20px',
+        scrollMarginTop: 'calc(var(--nav-height, 72px) + 12px)',
       }}
     >
       <div style={{ fontFamily: font, fontSize: TYPE.label, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>
@@ -495,22 +500,35 @@ export function PromoteQueueCard({
               const label = getPromotePlatformDef(target.platform)?.label ?? target.platform
               const statusLabel = target.status.replace('_', ' ')
               return (
-                <div
-                  key={target.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '12px',
-                    fontFamily: font,
-                    fontSize: TYPE.secondary,
-                    color: 'var(--text-secondary)',
-                  }}
-                >
-                  <span>{label}</span>
-                  <span style={{ color: target.status === 'published' ? 'var(--gold)' : 'var(--text-muted)' }}>
-                    {statusLabel}
-                  </span>
+                <div key={target.id}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                      fontFamily: font,
+                      fontSize: TYPE.secondary,
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
+                    <span>{label}</span>
+                    <span style={{ color: target.status === 'published' ? 'var(--gold)' : 'var(--text-muted)' }}>
+                      {statusLabel}
+                    </span>
+                  </div>
+                  {target.status === 'failed' && target.errorMessage && (
+                    <p style={{
+                      fontFamily: font,
+                      fontSize: '0.72rem',
+                      color: 'var(--text-muted)',
+                      margin: '4px 0 0',
+                      lineHeight: 1.35,
+                      wordBreak: 'break-word',
+                    }}>
+                      {target.errorMessage}
+                    </p>
+                  )}
                 </div>
               )
             })}
@@ -559,24 +577,10 @@ export function PromoteQueueCard({
         </div>
       )}
 
-      {failedTargets.map((target) => (
-        target.errorMessage ? (
-          <p
-            key={target.id}
-            style={{
-              fontFamily: font,
-              fontSize: TYPE.secondary,
-              color: 'var(--text-secondary)',
-              marginTop: '8px',
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-            }}
-          >
-            {getPromotePlatformDef(target.platform)?.label ?? target.platform}: {target.errorMessage}
-          </p>
-        ) : null
-      ))}
-
+      <div style={{
+        marginTop: '12px',
+        minHeight: confirmPublish ? 132 : busy ? 36 : error ? 40 : 0,
+      }}>
       {error && (
         <p style={{
           fontFamily: font,
@@ -589,12 +593,12 @@ export function PromoteQueueCard({
       )}
 
       {busy && (
-        <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', marginTop: '8px' }}>{busy}</p>
+        <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--gold)', marginTop: '8px' }}>{busy}</p>
       )}
 
       {confirmPublish && (
         <div style={{
-          marginTop: '16px',
+          marginTop: '8px',
           padding: '14px 16px',
           borderRadius: '12px',
           border: '1px solid var(--border-hi)',
@@ -629,6 +633,7 @@ export function PromoteQueueCard({
           </div>
         </div>
       )}
+      </div>
 
       {!confirmPublish && !isPublished && !isPublishing && (
         <div style={{ display: 'flex', gap: '10px', marginTop: '16px', flexWrap: 'wrap' }}>

@@ -13,6 +13,10 @@ import {
 import { TYPE, UI_FONT } from '@/lib/fonts'
 import { PROMOTE_PLATFORM_DEFS } from '@/lib/promote/platforms'
 import { getPlatformSetupGuide } from '@/lib/promote/platform-setup-guide'
+import {
+  MARGO_AUTO_PROMOTE_SETTINGS_PATH,
+  scrollToAutoPromoteSettings,
+} from '@/lib/promote/settings-anchor'
 import type { PromotePlatform, PromotePublishMode, SocialConnectionPublic } from '@/lib/promote/types'
 import type { ComponentType } from 'react'
 
@@ -41,9 +45,10 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
   const [facebookPages, setFacebookPages] = useState<FacebookPageOption[]>([])
   const [selectedFacebookPageId, setSelectedFacebookPageId] = useState<string>('')
   const [showFacebookPagePicker, setShowFacebookPagePicker] = useState(false)
+  const [platformHighlight, setPlatformHighlight] = useState<PromotePlatform | null>(null)
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  const load = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) setLoading(true)
     try {
       const [connRes, settingsRes] = await Promise.all([
         fetch('/api/promote/connections', { credentials: 'include' }),
@@ -58,49 +63,79 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
         setPublishMode(json.settings?.publishMode === 'auto' ? 'auto' : 'review')
       }
     } finally {
-      setLoading(false)
+      if (!options?.silent) setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (window.location.hash.includes('margo-auto-promote')) {
+      requestAnimationFrame(() => scrollToAutoPromoteSettings('instant'))
     }
   }, [])
 
   useEffect(() => {
     void (async () => {
-      if (typeof window !== 'undefined') {
-        const params = new URLSearchParams(window.location.search)
-        const promote = params.get('promote')
-        if (promote === 'youtube_connected') setMessage('YouTube connected.')
-        if (promote === 'youtube_error') setMessage('YouTube connection failed — try again.')
-        if (promote === 'youtube_denied') setMessage('YouTube connection was cancelled.')
-        if (promote === 'facebook_connected') setMessage('Facebook Page connected.')
-        if (promote === 'facebook_error') setMessage('Facebook connection failed — try again.')
-        if (promote === 'facebook_denied') setMessage('Facebook connection was cancelled.')
-        if (promote === 'facebook_invalid') setMessage('Facebook connection expired — try again.')
-        if (promote === 'facebook_no_pages') setMessage('No Facebook Pages found — you must admin a Page to connect.')
-        if (promote === 'facebook_pick_page') setShowFacebookPagePicker(true)
-        if (promote === 'tiktok_connected') setMessage('TikTok connected.')
-        if (promote === 'tiktok_error') {
-          setMessage('TikTok connection failed — check sandbox credentials in Vercel, then try Connect again.')
-        }
-        if (promote === 'tiktok_denied') setMessage('TikTok connection was cancelled.')
-        if (promote === 'tiktok_invalid') {
-          setMessage('TikTok link expired — tap Connect TikTok again (stay in the same browser if you can).')
-        }
-        if (promote === 'server_error') {
-          setMessage('Connection could not finish — server configuration may be missing. Try again or contact support.')
-        }
-        if (promote === 'denied') setMessage('Auto-Promote is available to active verified artists only.')
-        if (promote) {
-          params.delete('promote')
-          const qs = params.toString()
-          window.history.replaceState(null, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`)
-        }
+      if (typeof window === 'undefined') return
+      const params = new URLSearchParams(window.location.search)
+      const promote = params.get('promote')
+      let oauthReturn = false
+
+      if (promote === 'youtube_connected') {
+        setPlatformHighlight('youtube')
+        setMessage('YouTube connected.')
+        oauthReturn = true
       }
-      await load()
+      if (promote === 'youtube_error') setMessage('YouTube connection failed — try again.')
+      if (promote === 'youtube_denied') setMessage('YouTube connection was cancelled.')
+      if (promote === 'facebook_connected') {
+        setPlatformHighlight('facebook')
+        setMessage('Facebook Page connected.')
+        oauthReturn = true
+      }
+      if (promote === 'facebook_error') setMessage('Facebook connection failed — try again.')
+      if (promote === 'facebook_denied') setMessage('Facebook connection was cancelled.')
+      if (promote === 'facebook_invalid') setMessage('Facebook connection expired — try again.')
+      if (promote === 'facebook_no_pages') setMessage('No Facebook Pages found — you must admin a Page to connect.')
+      if (promote === 'facebook_pick_page') setShowFacebookPagePicker(true)
+      if (promote === 'tiktok_connected') {
+        setPlatformHighlight('tiktok')
+        setMessage('TikTok connected.')
+        oauthReturn = true
+      }
+      if (promote === 'tiktok_error') {
+        setMessage('TikTok connection failed — check sandbox credentials in Vercel, then try Connect again.')
+      }
+      if (promote === 'tiktok_denied') setMessage('TikTok connection was cancelled.')
+      if (promote === 'tiktok_invalid') {
+        setMessage('TikTok link expired — tap Connect TikTok again (stay in the same browser if you can).')
+      }
+      if (promote === 'server_error') {
+        setMessage('Connection could not finish — server configuration may be missing. Try again or contact support.')
+      }
+      if (promote === 'denied') setMessage('Auto-Promote is available to active verified artists only.')
+
+      if (promote) {
+        params.delete('promote')
+        const qs = params.toString()
+        const hash = window.location.hash || ''
+        window.history.replaceState(null, '', `${window.location.pathname}${qs ? `?${qs}` : ''}${hash}`)
+      }
+
+      if (oauthReturn || promote) {
+        await load({ silent: true })
+        requestAnimationFrame(() => scrollToAutoPromoteSettings('smooth'))
+      }
     })()
   }, [load])
 
   useEffect(() => {
     const onFocus = () => {
-      void load()
+      void load({ silent: true })
     }
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
@@ -178,14 +213,18 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
     })
     setSaving(false)
     if (res.ok) {
+      setPlatformHighlight(null)
       setMessage(`${platform === 'tiktok' ? 'TikTok' : platform} disconnected in Margo. Revoke the app in TikTok too if you want the consent screen again.`)
-      void load()
+      void load({ silent: true })
+      scrollToAutoPromoteSettings('smooth')
     } else {
-      setMessage('Could not disconnect — try again.')
+      const json = await res.json().catch(() => ({}))
+      setMessage(typeof json.error === 'string' ? json.error : 'Could not disconnect — try again.')
+      scrollToAutoPromoteSettings('smooth')
     }
   }
 
-  if (loading) {
+  if (loading && connections.length === 0) {
     return <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>Loading connected accounts…</p>
   }
 
@@ -324,6 +363,11 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
                 </ul>
               ) : connected ? (
                 <div style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
+                  {platformHighlight === platform.id && (
+                    <p style={{ color: 'var(--gold)', margin: '0 0 8px', fontWeight: 600 }}>
+                      Connected successfully.
+                    </p>
+                  )}
                   Connected as {connection?.externalUsername || `${platform.label} account`}
                   {connection?.lastError && (
                     <div style={{ color: 'var(--text-secondary)', marginTop: '6px' }}>{connection.lastError}</div>
@@ -331,7 +375,7 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
                   <div style={{ display: 'flex', gap: '12px', marginTop: '10px', flexWrap: 'wrap' }}>
                     {platform.oauthPath && (
                       <a
-                        href={`${platform.oauthPath}?returnTo=/settings`}
+                        href={`${platform.oauthPath}?returnTo=${encodeURIComponent(MARGO_AUTO_PROMOTE_SETTINGS_PATH)}`}
                         style={{ color: 'var(--gold)', fontSize: TYPE.secondary, textDecoration: 'none' }}
                       >
                         Reconnect
@@ -362,7 +406,7 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
                   </p>
                   {platform.oauthPath && (
                     <a
-                      href={`${platform.oauthPath}?returnTo=/settings`}
+                      href={`${platform.oauthPath}?returnTo=${encodeURIComponent(MARGO_AUTO_PROMOTE_SETTINGS_PATH)}`}
                       style={{
                         display: 'inline-block',
                         padding: '10px 18px',

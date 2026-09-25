@@ -8,6 +8,7 @@ import {
   clearTikTokOAuthPending,
   resolveTikTokOAuthPending,
 } from '@/lib/promote/tiktok-oauth-pending'
+import { MARGO_AUTO_PROMOTE_SETTINGS_HASH, MARGO_AUTO_PROMOTE_SETTINGS_PATH } from '@/lib/promote/settings-anchor'
 import {
   exchangeTikTokCode,
   fetchTikTokUserInfo,
@@ -19,8 +20,13 @@ import {
 } from '@/lib/promote/tiktok-oauth'
 
 function safeReturnPath(raw: string | undefined | null): string {
-  if (raw && raw.startsWith('/') && !raw.startsWith('//')) return raw
-  return '/settings'
+  const fallback = MARGO_AUTO_PROMOTE_SETTINGS_PATH
+  if (!raw?.startsWith('/')) return fallback
+  const pathOnly = raw.split('#')[0]?.split('?')[0] ?? ''
+  if (!pathOnly.startsWith('/') || pathOnly.startsWith('//')) return fallback
+  if (raw.includes(`#${MARGO_AUTO_PROMOTE_SETTINGS_HASH}`)) return raw
+  const base = raw.split('#')[0] ?? '/settings'
+  return `${base}#${MARGO_AUTO_PROMOTE_SETTINGS_HASH}`
 }
 
 function tiktokLogIdFromError(err: unknown): string | undefined {
