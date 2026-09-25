@@ -128,6 +128,7 @@ export function isPromoteQueueItemVisible(
   updatedAt: string | Date | null | undefined,
   nowMs = Date.now(),
 ): boolean {
+  if (status === 'cancelled' || status === 'draft') return false
   if (!isResolvedPromoteStatus(status)) return true
   if (!updatedAt) return true
   const resolvedAt = new Date(updatedAt).getTime()

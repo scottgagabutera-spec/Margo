@@ -215,7 +215,6 @@ export function PromoteQueueCard({
     if (!res.ok) {
       throw new Error(typeof body.error === 'string' ? body.error : 'Could not save changes')
     }
-    await onUpdatedRef.current({ silent: true })
   }, [item.id])
 
   useEffect(() => {
@@ -344,9 +343,34 @@ export function PromoteQueueCard({
     if (actionLockRef.current || publishInFlightRef.current || busy) return
     setError(null)
     setConfirmPublish(true)
-    requestAnimationFrame(() => {
-      cardRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-    })
+  }
+
+  async function dismissFromQueue() {
+    if (actionLockRef.current || publishInFlightRef.current || localStatus === 'publishing') return
+    if (typeof window !== 'undefined') {
+      const ok = window.confirm('Remove this promotion from your queue?')
+      if (!ok) return
+    }
+    actionLockRef.current = true
+    setBusy('Removing…')
+    setError(null)
+    try {
+      const res = await fetch(`/api/promote/queue/${item.id}/dismiss`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(typeof body.error === 'string' ? body.error : 'Could not remove from queue')
+      }
+      setBusy(null)
+      await onUpdated({ silent: true })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not remove from queue')
+      setBusy(null)
+    } finally {
+      actionLockRef.current = false
+    }
   }
 
   const publishedTargets = item.targets.filter((t) => t.status === 'published' && t.externalPostUrl)
@@ -370,8 +394,37 @@ export function PromoteQueueCard({
         scrollMarginTop: 'calc(var(--nav-height, 72px) + 12px)',
       }}
     >
-      <div style={{ fontFamily: font, fontSize: TYPE.label, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>
-        {isPublished ? 'published' : status.replace('_', ' ')}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '12px',
+        marginBottom: '8px',
+      }}>
+        <div style={{ fontFamily: font, fontSize: TYPE.label, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+          {isPublished ? 'published' : status.replace('_', ' ')}
+        </div>
+        {localStatus !== 'publishing' && !busy?.includes('Rendering') && (
+          <button
+            type="button"
+            onClick={() => void dismissFromQueue()}
+            disabled={!!busy || publishInFlightRef.current}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--text-muted)',
+              fontFamily: font,
+              fontSize: '0.62rem',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              cursor: busy ? 'wait' : 'pointer',
+              padding: '4px 0',
+              flexShrink: 0,
+            }}
+          >
+            Remove
+          </button>
+        )}
       </div>
       <div style={{ fontFamily: font, fontSize: TYPE.song, fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>
         {item.songTitle}
