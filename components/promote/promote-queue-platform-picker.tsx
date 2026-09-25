@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ComponentType,
 } from 'react'
@@ -61,8 +62,8 @@ export function PromoteQueuePlatformPicker({
   const [loading, setLoading] = useState(true)
   const [platforms, setPlatforms] = useState<QueueItemPlatformRow[]>([])
 
-  const loadPlatforms = useCallback(async () => {
-    setLoading(true)
+  const loadPlatforms = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) setLoading(true)
     try {
       const res = await fetch(
         `/api/promote/queue/${encodeURIComponent(queueId)}/platforms?shapeId=${encodeURIComponent(shapeId)}`,
@@ -79,13 +80,16 @@ export function PromoteQueuePlatformPicker({
       setPlatforms(rows)
       onPlatformsLoaded?.({ platforms: rows, selectedPlatforms: nextSelected })
     } finally {
-      setLoading(false)
+      if (!options?.silent) setLoading(false)
     }
   }, [queueId, shapeId, onPlatformsLoaded])
 
+  const platformsCountRef = useRef(0)
+  platformsCountRef.current = platforms.length
+
   useEffect(() => {
-    void loadPlatforms()
-  }, [loadPlatforms])
+    void loadPlatforms({ silent: platformsCountRef.current > 0 })
+  }, [queueId, shapeId, loadPlatforms])
 
   const selectedSet = useMemo(() => new Set(selected), [selected])
 
