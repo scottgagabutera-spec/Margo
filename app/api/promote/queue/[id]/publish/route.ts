@@ -308,10 +308,6 @@ export async function POST(
         .from('promote_queue_targets')
         .update({ status: 'failed', error_message: message })
         .eq('id', target.id)
-      await admin
-        .from('artist_social_connections')
-        .update({ last_error: message })
-        .eq('id', connection.id)
       publishResults.push({
         platform: target.platform,
         videoId: '',

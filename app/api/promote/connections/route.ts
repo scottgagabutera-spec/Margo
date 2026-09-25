@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
 import { getPromoteAdmin } from '@/lib/promote/admin-client'
 import { requirePromoteSession } from '@/lib/promote/api-auth'
+import { isStalePromoteAttemptError } from '@/lib/promote/connection-settings-copy'
 import { mapConnectionPublic } from '@/lib/promote/connections'
 import type { PromotePlatform } from '@/lib/promote/types'
 
@@ -26,14 +27,24 @@ export async function GET() {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   return NextResponse.json({
-    connections: (data || []).map((row) => mapConnectionPublic({
-      ...row,
-      profile_id: session.userId,
-      access_token_enc: '',
-      refresh_token_enc: null,
-      token_expires_at: null,
-      scopes: [],
-    })),
+    connections: (data || []).map((row) => {
+      const pub = mapConnectionPublic({
+        ...row,
+        profile_id: session.userId,
+        access_token_enc: '',
+        refresh_token_enc: null,
+        token_expires_at: null,
+        scopes: [],
+      })
+      if (
+        pub.status === 'connected'
+        && pub.lastError
+        && isStalePromoteAttemptError(pub.lastError)
+      ) {
+        return { ...pub, lastError: null }
+      }
+      return pub
+    }),
   })
 }
 
