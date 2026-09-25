@@ -11,26 +11,36 @@ import { TYPE, UI_FONT } from '@/lib/fonts'
 import { buildPromoteQueueMoment } from '@/lib/promote/build-queue-moment'
 import { publishQueueMomentVideo } from '@/lib/promote/publish-client'
 import { clearMomentVideoCache } from '@/lib/moment-export/video/moment-video-cache'
+import {
+  readPromoteQueueSessionCache,
+  writePromoteQueueSessionCache,
+} from '@/lib/promote/promote-queue-session-cache'
 import type { PromoteQueueRow } from '@/lib/promote/types'
+import { PromoteInlineStatus, PromotePageFrame } from '@/components/promote/promote-page-shell'
 
 const font = UI_FONT
 const supabase = createClient()
 
 export default function StudioPromotePage() {
   const { user, identity, loading: identityLoading } = useIdentity()
-  const [items, setItems] = useState<PromoteQueueRow[]>([])
+  const cachedOnMount = readPromoteQueueSessionCache()
+  const [items, setItems] = useState<PromoteQueueRow[]>(() => cachedOnMount ?? [])
   const [audioByPost, setAudioByPost] = useState<Record<string, {
     songId: string | null
     audioUrl: string | null
     snippetStart: number | null
     snippetEnd: number | null
   }>>({})
-  const [loading, setLoading] = useState(true)
+  const [bootstrapping, setBootstrapping] = useState(() => !cachedOnMount)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const searchParams = useSearchParams()
   const autopublishAttempted = useRef<string | null>(null)
   const publishAbortHandlers = useRef<Set<() => void>>(new Set())
+  const lastFetchAtRef = useRef(cachedOnMount ? Date.now() : 0)
+  const initialQueueLoadRef = useRef(false)
   const isActiveArtist = identity?.isArtist && identity.artistStatus === 'active'
+  const hasQueueSnapshot = items.length > 0
 
   const registerPublishAbort = useCallback((abort: () => void) => {
     publishAbortHandlers.current.add(abort)
@@ -45,26 +55,50 @@ export default function StudioPromotePage() {
   }, [])
 
   const loadQueue = useCallback(async (options?: PromoteQueueUpdateOptions) => {
-    if (!options?.silent) {
-      setLoading(true)
-    }
+    const hasSnapshot =
+      options?.silent === true
+      || items.length > 0
+      || readPromoteQueueSessionCache() != null
+    const silent = options?.silent ?? hasSnapshot
+    if (silent) setRefreshing(true)
+    else setBootstrapping(true)
     setError(null)
     try {
       const res = await fetch('/api/promote/queue', { credentials: 'include' })
       if (!res.ok) {
         setError('Could not load promotion queue.')
-        if (!options?.silent) setItems([])
+        if (!silent) setItems([])
         return
       }
       const json = await res.json()
-      setItems(json.items || [])
+      const next = (json.items || []) as PromoteQueueRow[]
+      setItems(next)
+      writePromoteQueueSessionCache(next)
+      lastFetchAtRef.current = Date.now()
     } finally {
-      if (!options?.silent) setLoading(false)
+      setBootstrapping(false)
+      setRefreshing(false)
     }
-  }, [])
+  }, [items.length])
 
   useEffect(() => {
-    if (!identityLoading && isActiveArtist) void loadQueue()
+    if (identityLoading) return
+    if (!isActiveArtist) return
+    if (initialQueueLoadRef.current) return
+    initialQueueLoadRef.current = true
+    const cached = readPromoteQueueSessionCache()
+    void loadQueue({ silent: hasQueueSnapshot || (cached?.length ?? 0) > 0 })
+  }, [identityLoading, isActiveArtist, loadQueue, hasQueueSnapshot])
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState !== 'visible') return
+      if (!isActiveArtist || identityLoading) return
+      if (Date.now() - lastFetchAtRef.current < 2 * 60 * 1000) return
+      void loadQueue({ silent: true })
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
   }, [identityLoading, isActiveArtist, loadQueue])
 
   const postIds = useMemo(
@@ -158,40 +192,37 @@ export default function StudioPromotePage() {
     onBack: handleBack,
   })
 
-  if (identityLoading) {
+  if (identityLoading && !hasQueueSnapshot) {
     return (
-      <div style={{ padding: 'calc(var(--nav-height, 72px) + 24px) 24px', fontFamily: font, color: 'var(--text-secondary)', fontSize: TYPE.secondary }}>
-        Loading…
-      </div>
+      <PromotePageFrame>
+        <PromoteInlineStatus message="Loading promotion queue…" />
+      </PromotePageFrame>
     )
   }
 
-  if (!user || !isActiveArtist) {
+  if (!identityLoading && (!user || !isActiveArtist)) {
     return (
-      <div style={{ padding: 'calc(var(--nav-height, 72px) + 24px) 24px', maxWidth: 560, margin: '0 auto', fontFamily: font }}>
-        <p style={{ color: 'var(--text-secondary)', fontSize: TYPE.secondary, marginTop: '16px' }}>
+      <PromotePageFrame>
+        <p style={{ color: 'var(--text-secondary)', fontSize: TYPE.secondary, marginTop: '16px', fontFamily: font }}>
           Auto-Promote is available to active verified artists only.
         </p>
-      </div>
+      </PromotePageFrame>
     )
   }
 
-  if (loading) {
+  if (bootstrapping && !hasQueueSnapshot) {
     return (
-      <div style={{ padding: 'calc(var(--nav-height, 72px) + 24px) 24px', fontFamily: font, color: 'var(--text-secondary)', fontSize: TYPE.secondary }}>
-        Loading…
-      </div>
+      <PromotePageFrame>
+        <PromoteInlineStatus message="Loading promotion queue…" />
+      </PromotePageFrame>
     )
   }
 
   return (
-    <div
-      style={{
-        maxWidth: 640,
-        margin: '0 auto',
-        padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)',
-      }}
-    >
+    <PromotePageFrame>
+      {refreshing && (
+        <PromoteInlineStatus message="Updating queue…" tone="gold" />
+      )}
       <h1 style={{ fontFamily: font, fontSize: TYPE.pageTitle, fontWeight: 600, margin: '0 0 8px' }}>
         Promotion queue
       </h1>
@@ -234,6 +265,6 @@ export default function StudioPromotePage() {
           })
         )}
       </div>
-    </div>
+    </PromotePageFrame>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   FacebookIcon,
   InstagramIcon,
@@ -18,6 +18,11 @@ import {
   MARGO_AUTO_PROMOTE_SETTINGS_PATH,
   scrollToAutoPromoteSettings,
 } from '@/lib/promote/settings-anchor'
+import {
+  readPromoteConnectionsSessionCache,
+  writePromoteConnectionsSessionCache,
+} from '@/lib/promote/promote-connections-session-cache'
+import { PromoteInlineStatus } from '@/components/promote/promote-page-shell'
 import type { PromotePlatform, PromotePublishMode, SocialConnectionPublic } from '@/lib/promote/types'
 import type { ComponentType } from 'react'
 
@@ -38,9 +43,16 @@ interface PromoteSettingsSectionProps {
 type FacebookPageOption = { id: string; name: string }
 
 export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
-  const [connections, setConnections] = useState<SocialConnectionPublic[]>([])
-  const [publishMode, setPublishMode] = useState<PromotePublishMode>('review')
-  const [loading, setLoading] = useState(true)
+  const cachedOnMount = readPromoteConnectionsSessionCache()
+  const [connections, setConnections] = useState<SocialConnectionPublic[]>(
+    () => cachedOnMount?.connections ?? [],
+  )
+  const [publishMode, setPublishMode] = useState<PromotePublishMode>(
+    () => cachedOnMount?.publishMode ?? 'review',
+  )
+  const [bootstrapping, setBootstrapping] = useState(() => !cachedOnMount)
+  const [refreshing, setRefreshing] = useState(false)
+  const lastFetchAtRef = useRef(cachedOnMount ? Date.now() : 0)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [facebookPages, setFacebookPages] = useState<FacebookPageOption[]>([])
@@ -49,22 +61,31 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
   const [platformHighlight, setPlatformHighlight] = useState<PromotePlatform | null>(null)
 
   const load = useCallback(async (options?: { silent?: boolean }) => {
-    if (!options?.silent) setLoading(true)
+    const silent = options?.silent ?? (readPromoteConnectionsSessionCache() != null)
+    if (silent) setRefreshing(true)
+    else setBootstrapping(true)
     try {
       const [connRes, settingsRes] = await Promise.all([
         fetch('/api/promote/connections', { credentials: 'include' }),
         fetch('/api/promote/settings', { credentials: 'include' }),
       ])
+      let nextConnections: SocialConnectionPublic[] = []
+      let nextMode: PromotePublishMode = 'review'
       if (connRes.ok) {
         const json = await connRes.json()
-        setConnections(json.connections || [])
+        nextConnections = json.connections || []
+        setConnections(nextConnections)
       }
       if (settingsRes.ok) {
         const json = await settingsRes.json()
-        setPublishMode(json.settings?.publishMode === 'auto' ? 'auto' : 'review')
+        nextMode = json.settings?.publishMode === 'auto' ? 'auto' : 'review'
+        setPublishMode(nextMode)
       }
+      writePromoteConnectionsSessionCache(nextConnections, nextMode)
+      lastFetchAtRef.current = Date.now()
     } finally {
-      if (!options?.silent) setLoading(false)
+      setBootstrapping(false)
+      setRefreshing(false)
     }
   }, [])
 
@@ -135,11 +156,13 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
   }, [load])
 
   useEffect(() => {
-    const onFocus = () => {
+    const onVisibility = () => {
+      if (document.visibilityState !== 'visible') return
+      if (Date.now() - lastFetchAtRef.current < 2 * 60 * 1000) return
       void load({ silent: true })
     }
-    window.addEventListener('focus', onFocus)
-    return () => window.removeEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
   }, [load])
 
   useEffect(() => {
@@ -225,7 +248,7 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
     }
   }
 
-  if (loading && connections.length === 0) {
+  if (bootstrapping && connections.length === 0) {
     return <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>Loading connected accounts…</p>
   }
 
@@ -234,6 +257,7 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
 
   return (
     <div>
+      {refreshing && <PromoteInlineStatus message="Updating connected accounts…" tone="gold" />}
       {message && (
         <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--gold)', marginBottom: '12px' }}>{message}</p>
       )}
