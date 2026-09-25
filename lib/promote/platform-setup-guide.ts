@@ -22,7 +22,7 @@ export const PLATFORM_SETUP_GUIDES: Record<PromotePlatform, PlatformSetupGuide> 
       'Use a TikTok account you can post from (Creator or Business).',
       'Approve user.info.basic and video.publish when TikTok asks.',
       'Shorts (9:16) export maps to TikTok vertical video (uploaded from Margo servers).',
-      'Until TikTok approves the app, posts publish as private (SELF_ONLY) by default.',
+      'Until TikTok approves the app, set your TikTok account to Private and posts go out as SELF_ONLY only.',
     ],
   },
   instagram: {

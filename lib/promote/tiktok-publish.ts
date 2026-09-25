@@ -1,11 +1,13 @@
 import { TIKTOK_OPEN_API } from '@/lib/promote/tiktok-oauth'
+import { fetchTikTokCreatorInfo } from '@/lib/promote/tiktok-creator-info'
+import {
+  pickTikTokPublishPrivacyLevel,
+  resolveTikTokPromotePrivacyPreference,
+  type TikTokPrivacyLevel,
+} from '@/lib/promote/tiktok-privacy'
 import { formatTikTokApiError } from '@/lib/promote/publish-error'
 
-export type TikTokPrivacyLevel =
-  | 'PUBLIC_TO_EVERYONE'
-  | 'MUTUAL_FOLLOW_FRIENDS'
-  | 'FOLLOWER_OF_CREATOR'
-  | 'SELF_ONLY'
+export type { TikTokPrivacyLevel }
 
 export interface TikTokPublishInput {
   accessToken: string
@@ -38,19 +40,6 @@ const POLL_INTERVAL_MS = 3000
 const POLL_TIMEOUT_MS = 180_000
 const MIN_CHUNK_BYTES = 5 * 1024 * 1024
 const DEFAULT_CHUNK_BYTES = 10 * 1024 * 1024
-
-function defaultPrivacyLevel(): TikTokPrivacyLevel {
-  const raw = process.env.TIKTOK_PROMOTE_PRIVACY_LEVEL?.trim()
-  if (
-    raw === 'PUBLIC_TO_EVERYONE'
-    || raw === 'MUTUAL_FOLLOW_FRIENDS'
-    || raw === 'FOLLOWER_OF_CREATOR'
-    || raw === 'SELF_ONLY'
-  ) {
-    return raw
-  }
-  return 'SELF_ONLY'
-}
 
 function preferPullFromUrl(): boolean {
   return process.env.TIKTOK_PROMOTE_TRANSFER?.trim().toLowerCase() === 'pull_from_url'
@@ -92,15 +81,25 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-function buildPostInfo(title: string, privacyLevel: TikTokPrivacyLevel) {
+async function resolvePostInfoForPublish(
+  accessToken: string,
+  title: string,
+  privacyOverride?: TikTokPrivacyLevel,
+) {
+  const creator = await fetchTikTokCreatorInfo(accessToken)
+  const preference = privacyOverride ?? resolveTikTokPromotePrivacyPreference()
+  const privacyLevel = pickTikTokPublishPrivacyLevel(creator.privacyLevelOptions, preference)
   return {
-    title,
-    privacy_level: privacyLevel,
-    disable_comment: false,
-    disable_duet: false,
-    disable_stitch: false,
-    brand_content_toggle: false,
-    brand_organic_toggle: false,
+    postInfo: {
+      title,
+      privacy_level: privacyLevel,
+      disable_comment: creator.commentDisabled,
+      disable_duet: creator.duetDisabled,
+      disable_stitch: creator.stitchDisabled,
+      brand_content_toggle: false,
+      brand_organic_toggle: false,
+    },
+    creatorUsernameFromApi: creator.creatorUsername,
   }
 }
 
@@ -195,16 +194,22 @@ export async function publishVideoToTikTokViaFileUpload({
   videoBytes,
   title,
   creatorUsername,
-  privacyLevel = defaultPrivacyLevel(),
+  privacyLevel,
 }: TikTokFilePublishInput): Promise<TikTokPublishResult> {
   const videoSize = videoBytes.length
   const { chunkSize, totalChunkCount } = fileUploadChunkPlan(videoSize)
+  const { postInfo, creatorUsernameFromApi } = await resolvePostInfoForPublish(
+    accessToken,
+    title,
+    privacyLevel,
+  )
+  const postAs = creatorUsername ?? creatorUsernameFromApi
 
   const init = await tikTokPostJson<{ publish_id?: string; upload_url?: string }>(
     '/v2/post/publish/video/init/',
     accessToken,
     {
-      post_info: buildPostInfo(title, privacyLevel),
+      post_info: postInfo,
       source_info: {
         source: 'FILE_UPLOAD',
         video_size: videoSize,
@@ -221,7 +226,7 @@ export async function publishVideoToTikTokViaFileUpload({
   }
 
   await uploadVideoChunksToTikTok(uploadUrl, videoBytes, videoSize, chunkSize, totalChunkCount)
-  return waitForTikTokPublishComplete(accessToken, publishId, creatorUsername)
+  return waitForTikTokPublishComplete(accessToken, publishId, postAs)
 }
 
 /**
@@ -233,13 +238,20 @@ export async function publishVideoToTikTokViaUrl({
   videoUrl,
   title,
   creatorUsername,
-  privacyLevel = defaultPrivacyLevel(),
+  privacyLevel,
 }: TikTokPullPublishInput): Promise<TikTokPublishResult> {
+  const { postInfo, creatorUsernameFromApi } = await resolvePostInfoForPublish(
+    accessToken,
+    title,
+    privacyLevel,
+  )
+  const postAs = creatorUsername ?? creatorUsernameFromApi
+
   const init = await tikTokPostJson<{ publish_id?: string }>(
     '/v2/post/publish/video/init/',
     accessToken,
     {
-      post_info: buildPostInfo(title, privacyLevel),
+      post_info: postInfo,
       source_info: {
         source: 'PULL_FROM_URL',
         video_url: videoUrl,
@@ -250,7 +262,7 @@ export async function publishVideoToTikTokViaUrl({
   const publishId = init.data?.publish_id
   if (!publishId) throw new Error('TikTok publish init succeeded but no publish_id returned')
 
-  return waitForTikTokPublishComplete(accessToken, publishId, creatorUsername)
+  return waitForTikTokPublishComplete(accessToken, publishId, postAs)
 }
 
 /** Default path: FILE_UPLOAD unless TIKTOK_PROMOTE_TRANSFER=pull_from_url. */
