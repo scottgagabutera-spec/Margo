@@ -7,16 +7,21 @@ import {
   PROMOTE_FACEBOOK_RETURN_COOKIE,
   PROMOTE_FACEBOOK_STATE_COOKIE,
 } from '@/lib/promote/facebook-oauth'
+import { buildPromoteOAuthReturnUrl, normalizePromoteOAuthReturnPath } from '@/lib/promote/oauth-return-redirect'
+import { resolvePromoteOAuthOrigin } from '@/lib/promote/oauth-public-origin'
+import { MARGO_AUTO_PROMOTE_SETTINGS_PATH } from '@/lib/promote/settings-anchor'
 
 export async function GET(request: NextRequest) {
+  const origin = resolvePromoteOAuthOrigin(request)
   const session = await requirePromoteSession()
   if (!session) {
-    return NextResponse.redirect(new URL('/settings?promote=denied', request.url))
+    return NextResponse.redirect(
+      buildPromoteOAuthReturnUrl(origin, MARGO_AUTO_PROMOTE_SETTINGS_PATH, 'denied'),
+    )
   }
 
-  const origin = new URL(request.url).origin
-  const returnTo = request.nextUrl.searchParams.get('returnTo') || '/settings'
-  const safeReturn = returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/settings'
+  const returnTo = request.nextUrl.searchParams.get('returnTo') || MARGO_AUTO_PROMOTE_SETTINGS_PATH
+  const safeReturn = normalizePromoteOAuthReturnPath(returnTo)
 
   try {
     const state = buildFacebookOAuthState()
@@ -27,6 +32,8 @@ export async function GET(request: NextRequest) {
     return res
   } catch (err) {
     console.error('[promote/facebook oauth]', err)
-    return NextResponse.redirect(new URL(`${safeReturn}?promote=facebook_error`, request.url))
+    return NextResponse.redirect(
+      buildPromoteOAuthReturnUrl(origin, safeReturn, 'facebook_error'),
+    )
   }
 }

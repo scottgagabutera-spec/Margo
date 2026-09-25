@@ -15,6 +15,10 @@ import { PROMOTE_PLATFORM_DEFS } from '@/lib/promote/platforms'
 import { getPlatformSetupGuide } from '@/lib/promote/platform-setup-guide'
 import { connectionSettingsNotice } from '@/lib/promote/connection-settings-copy'
 import {
+  buildPathAfterPromoteOAuthHandled,
+  readPromoteOAuthReturnParam,
+} from '@/lib/promote/oauth-return-redirect'
+import {
   MARGO_AUTO_PROMOTE_SETTINGS_PATH,
   scrollToAutoPromoteSettings,
 } from '@/lib/promote/settings-anchor'
@@ -103,8 +107,10 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
   useEffect(() => {
     void (async () => {
       if (typeof window === 'undefined') return
-      const params = new URLSearchParams(window.location.search)
-      const promote = params.get('promote')
+      const promote = readPromoteOAuthReturnParam(
+        window.location.search,
+        window.location.hash,
+      )
       let oauthReturn = false
 
       if (promote === 'youtube_connected') {
@@ -114,6 +120,9 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
       }
       if (promote === 'youtube_error') setMessage('YouTube connection failed — try again.')
       if (promote === 'youtube_denied') setMessage('YouTube connection was cancelled.')
+      if (promote === 'youtube_invalid') {
+        setMessage('YouTube link expired — tap Connect YouTube again in the same browser.')
+      }
       if (promote === 'facebook_connected') {
         setPlatformHighlight('facebook')
         setMessage('Facebook Page connected.')
@@ -142,10 +151,15 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
       if (promote === 'denied') setMessage('Auto-Promote is available to active verified artists only.')
 
       if (promote) {
-        params.delete('promote')
-        const qs = params.toString()
-        const hash = window.location.hash || ''
-        window.history.replaceState(null, '', `${window.location.pathname}${qs ? `?${qs}` : ''}${hash}`)
+        window.history.replaceState(
+          null,
+          '',
+          buildPathAfterPromoteOAuthHandled(
+            window.location.pathname,
+            window.location.search,
+            window.location.hash,
+          ),
+        )
       }
 
       if (oauthReturn || promote) {

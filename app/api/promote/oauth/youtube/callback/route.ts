@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { getPromoteAdmin } from '@/lib/promote/admin-client'
 import { requirePromoteSession } from '@/lib/promote/api-auth'
+import { buildPromoteOAuthReturnUrl } from '@/lib/promote/oauth-return-redirect'
+import { resolvePromoteOAuthOrigin } from '@/lib/promote/oauth-public-origin'
 import { encryptPromoteToken } from '@/lib/promote/token-vault'
 import {
   exchangeYouTubeCode,
@@ -12,10 +14,8 @@ import {
 
 export async function GET(request: NextRequest) {
   const session = await requirePromoteSession()
-  const origin = new URL(request.url).origin
+  const origin = resolvePromoteOAuthOrigin(request)
   const returnTo = request.cookies.get(PROMOTE_OAUTH_RETURN_COOKIE)?.value || '/settings'
-  const safeReturn = returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/settings'
-  const redirectBase = `${origin}${safeReturn}`
 
   const clearCookies = (res: NextResponse) => {
     res.cookies.delete(PROMOTE_OAUTH_STATE_COOKIE)
@@ -25,12 +25,16 @@ export async function GET(request: NextRequest) {
   }
 
   if (!session) {
-    return clearCookies(NextResponse.redirect(`${redirectBase}?promote=denied`))
+    return clearCookies(
+      NextResponse.redirect(buildPromoteOAuthReturnUrl(origin, returnTo, 'denied')),
+    )
   }
 
   const params = request.nextUrl.searchParams
   if (params.get('error')) {
-    return clearCookies(NextResponse.redirect(`${redirectBase}?promote=youtube_denied`))
+    return clearCookies(
+      NextResponse.redirect(buildPromoteOAuthReturnUrl(origin, returnTo, 'youtube_denied')),
+    )
   }
 
   const code = params.get('code')
@@ -39,12 +43,16 @@ export async function GET(request: NextRequest) {
   const verifier = request.cookies.get(PROMOTE_OAUTH_VERIFIER_COOKIE)?.value
 
   if (!code || !state || !expectedState || state !== expectedState || !verifier) {
-    return clearCookies(NextResponse.redirect(`${redirectBase}?promote=youtube_invalid`))
+    return clearCookies(
+      NextResponse.redirect(buildPromoteOAuthReturnUrl(origin, returnTo, 'youtube_invalid')),
+    )
   }
 
   const admin = getPromoteAdmin()
   if (!admin) {
-    return clearCookies(NextResponse.redirect(`${redirectBase}?promote=server_error`))
+    return clearCookies(
+      NextResponse.redirect(buildPromoteOAuthReturnUrl(origin, returnTo, 'server_error')),
+    )
   }
 
   try {
@@ -79,9 +87,13 @@ export async function GET(request: NextRequest) {
       .from('artist_promote_settings')
       .upsert({ profile_id: session.userId }, { onConflict: 'profile_id' })
 
-    return clearCookies(NextResponse.redirect(`${redirectBase}?promote=youtube_connected`))
+    return clearCookies(
+      NextResponse.redirect(buildPromoteOAuthReturnUrl(origin, returnTo, 'youtube_connected')),
+    )
   } catch (err) {
     console.error('[promote/youtube callback]', err)
-    return clearCookies(NextResponse.redirect(`${redirectBase}?promote=youtube_error`))
+    return clearCookies(
+      NextResponse.redirect(buildPromoteOAuthReturnUrl(origin, returnTo, 'youtube_error')),
+    )
   }
 }
