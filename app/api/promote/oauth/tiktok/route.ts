@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { getPromoteAdmin } from '@/lib/promote/admin-client'
 import { requirePromoteSession } from '@/lib/promote/api-auth'
+import { buildPromoteOAuthReturnUrl, normalizePromoteOAuthReturnPath } from '@/lib/promote/oauth-return-redirect'
 import { resolvePromoteOAuthOrigin } from '@/lib/promote/oauth-public-origin'
 import { MARGO_AUTO_PROMOTE_SETTINGS_PATH } from '@/lib/promote/settings-anchor'
 import { createTikTokOAuthPending } from '@/lib/promote/tiktok-oauth-pending'
@@ -14,20 +15,21 @@ import {
 
 export async function GET(request: NextRequest) {
   const session = await requirePromoteSession()
+  const origin = resolvePromoteOAuthOrigin(request)
   if (!session) {
-    return NextResponse.redirect(new URL('/settings?promote=denied', request.url))
+    return NextResponse.redirect(
+      buildPromoteOAuthReturnUrl(origin, MARGO_AUTO_PROMOTE_SETTINGS_PATH, 'denied'),
+    )
   }
 
-  const origin = resolvePromoteOAuthOrigin(request)
   const returnTo = request.nextUrl.searchParams.get('returnTo') || MARGO_AUTO_PROMOTE_SETTINGS_PATH
-  const pathOnly = returnTo.split('#')[0]?.split('?')[0] ?? ''
-  const safeReturn = pathOnly.startsWith('/') && !pathOnly.startsWith('//')
-    ? returnTo
-    : MARGO_AUTO_PROMOTE_SETTINGS_PATH
+  const safeReturn = normalizePromoteOAuthReturnPath(returnTo)
 
   const admin = getPromoteAdmin()
   if (!admin) {
-    return NextResponse.redirect(new URL(`${safeReturn}?promote=server_error`, request.url))
+    return NextResponse.redirect(
+      buildPromoteOAuthReturnUrl(origin, safeReturn, 'server_error'),
+    )
   }
 
   try {
@@ -40,6 +42,8 @@ export async function GET(request: NextRequest) {
     return res
   } catch (err) {
     console.error('[promote/tiktok oauth]', err)
-    return NextResponse.redirect(new URL(`${safeReturn}?promote=tiktok_error`, request.url))
+    return NextResponse.redirect(
+      buildPromoteOAuthReturnUrl(origin, safeReturn, 'tiktok_error'),
+    )
   }
 }

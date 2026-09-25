@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { getPromoteAdmin } from '@/lib/promote/admin-client'
 import { requirePromoteSession } from '@/lib/promote/api-auth'
+import { buildPromoteOAuthReturnUrl, normalizePromoteOAuthReturnPath } from '@/lib/promote/oauth-return-redirect'
 import { resolvePromoteOAuthOrigin } from '@/lib/promote/oauth-public-origin'
 import { saveTikTokConnection } from '@/lib/promote/tiktok-connection'
 import { logTikTokOAuthCallback } from '@/lib/promote/tiktok-oauth-callback-log'
@@ -8,7 +9,6 @@ import {
   clearTikTokOAuthPending,
   resolveTikTokOAuthPending,
 } from '@/lib/promote/tiktok-oauth-pending'
-import { MARGO_AUTO_PROMOTE_SETTINGS_HASH, MARGO_AUTO_PROMOTE_SETTINGS_PATH } from '@/lib/promote/settings-anchor'
 import {
   exchangeTikTokCode,
   fetchTikTokUserInfo,
@@ -18,16 +18,6 @@ import {
   TikTokOAuthUserInfoError,
   type TikTokUserInfo,
 } from '@/lib/promote/tiktok-oauth'
-
-function safeReturnPath(raw: string | undefined | null): string {
-  const fallback = MARGO_AUTO_PROMOTE_SETTINGS_PATH
-  if (!raw?.startsWith('/')) return fallback
-  const pathOnly = raw.split('#')[0]?.split('?')[0] ?? ''
-  if (!pathOnly.startsWith('/') || pathOnly.startsWith('//')) return fallback
-  if (raw.includes(`#${MARGO_AUTO_PROMOTE_SETTINGS_HASH}`)) return raw
-  const base = raw.split('#')[0] ?? '/settings'
-  return `${base}#${MARGO_AUTO_PROMOTE_SETTINGS_HASH}`
-}
 
 function tiktokLogIdFromError(err: unknown): string | undefined {
   if (err instanceof TikTokOAuthTokenError || err instanceof TikTokOAuthUserInfoError) {
@@ -42,8 +32,9 @@ function redirectToSettings(
   promote: string,
   clearCookies: (res: NextResponse) => NextResponse,
 ): NextResponse {
-  const path = safeReturnPath(returnTo)
-  return clearCookies(NextResponse.redirect(`${origin}${path}?promote=${promote}`))
+  return clearCookies(
+    NextResponse.redirect(buildPromoteOAuthReturnUrl(origin, returnTo, promote)),
+  )
 }
 
 export async function GET(request: NextRequest) {
@@ -60,7 +51,9 @@ export async function GET(request: NextRequest) {
   const admin = getPromoteAdmin()
 
   if (params.get('error')) {
-    const returnTo = safeReturnPath(request.cookies.get(PROMOTE_TIKTOK_RETURN_COOKIE)?.value)
+    const returnTo = normalizePromoteOAuthReturnPath(
+      request.cookies.get(PROMOTE_TIKTOK_RETURN_COOKIE)?.value,
+    )
     logTikTokOAuthCallback('oauth_denied', { has_session: Boolean(session) })
     return redirectToSettings(origin, returnTo, 'tiktok_denied', clearOAuthCookies)
   }
@@ -69,7 +62,9 @@ export async function GET(request: NextRequest) {
   const state = params.get('state')
 
   if (!code || !state) {
-    const returnTo = safeReturnPath(request.cookies.get(PROMOTE_TIKTOK_RETURN_COOKIE)?.value)
+    const returnTo = normalizePromoteOAuthReturnPath(
+      request.cookies.get(PROMOTE_TIKTOK_RETURN_COOKIE)?.value,
+    )
     logTikTokOAuthCallback('bad_state', {
       has_code: Boolean(code),
       has_state: Boolean(state),
@@ -79,20 +74,24 @@ export async function GET(request: NextRequest) {
   }
 
   if (!admin) {
-    const returnTo = safeReturnPath(request.cookies.get(PROMOTE_TIKTOK_RETURN_COOKIE)?.value)
+    const returnTo = normalizePromoteOAuthReturnPath(
+      request.cookies.get(PROMOTE_TIKTOK_RETURN_COOKIE)?.value,
+    )
     logTikTokOAuthCallback('no_admin', { has_session: Boolean(session) })
     return redirectToSettings(origin, returnTo, 'server_error', clearOAuthCookies)
   }
 
   let profileId: string | null = null
-  let returnTo = safeReturnPath(request.cookies.get(PROMOTE_TIKTOK_RETURN_COOKIE)?.value)
+  let returnTo = normalizePromoteOAuthReturnPath(
+    request.cookies.get(PROMOTE_TIKTOK_RETURN_COOKIE)?.value,
+  )
   let pendingResolved = false
 
   try {
     const pending = await resolveTikTokOAuthPending(admin, state)
     if (pending) {
       profileId = pending.profile_id
-      returnTo = pending.return_to
+      returnTo = normalizePromoteOAuthReturnPath(pending.return_to)
       pendingResolved = true
     }
   } catch (err) {
@@ -121,8 +120,6 @@ export async function GET(request: NextRequest) {
     })
   }
 
-  const redirectBase = `${origin}${safeReturnPath(returnTo)}`
-
   try {
     const tokens = await exchangeTikTokCode(origin, code)
     let user: TikTokUserInfo
@@ -149,7 +146,9 @@ export async function GET(request: NextRequest) {
       await clearTikTokOAuthPending(admin, state)
     }
     logTikTokOAuthCallback('ok', { has_session: Boolean(session) })
-    return clearOAuthCookies(NextResponse.redirect(`${redirectBase}?promote=tiktok_connected`))
+    return clearOAuthCookies(
+      NextResponse.redirect(buildPromoteOAuthReturnUrl(origin, returnTo, 'tiktok_connected')),
+    )
   } catch (err) {
     const logId = tiktokLogIdFromError(err)
     if (err instanceof TikTokOAuthTokenError) {
@@ -170,6 +169,8 @@ export async function GET(request: NextRequest) {
         message: err instanceof Error ? err.message : 'unknown',
       })
     }
-    return clearOAuthCookies(NextResponse.redirect(`${redirectBase}?promote=tiktok_error`))
+    return clearOAuthCookies(
+      NextResponse.redirect(buildPromoteOAuthReturnUrl(origin, returnTo, 'tiktok_error')),
+    )
   }
 }
