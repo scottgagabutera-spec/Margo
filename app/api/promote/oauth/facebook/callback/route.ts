@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { getPromoteAdmin } from '@/lib/promote/admin-client'
 import { requirePromoteSession } from '@/lib/promote/api-auth'
 import { saveFacebookPageConnection } from '@/lib/promote/facebook-connection'
+import { saveFacebookPagePending } from '@/lib/promote/facebook-page-pending'
 import {
   exchangeFacebookCode,
   exchangeFacebookLongLivedToken,
@@ -71,8 +72,12 @@ export async function GET(request: NextRequest) {
       pages: pages.map((p) => ({ id: p.id, name: p.name, accessToken: p.accessToken })),
     }))
 
+    await saveFacebookPagePending(admin, session.userId, pendingPayload)
+
     const res = redirect('facebook_pick_page')
-    res.cookies.set(PROMOTE_FACEBOOK_PENDING_COOKIE, pendingPayload, PROMOTE_FACEBOOK_COOKIE_OPTS)
+    if (pendingPayload.length <= 3800) {
+      res.cookies.set(PROMOTE_FACEBOOK_PENDING_COOKIE, pendingPayload, PROMOTE_FACEBOOK_COOKIE_OPTS)
+    }
     return res
   } catch (err) {
     console.error('[promote/facebook callback]', err)
