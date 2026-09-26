@@ -35,19 +35,21 @@ No other files require PostHog imports for removal.
 
 | Field | Detail |
 | --- | --- |
-| **What / why** | Error and performance monitoring. Fin Startup Pack — **~$5,000 credits**, 12 months (apply at [sentry.io/for/startups](https://sentry.io/for/startups)). |
-| **Activated** | _Not integrated in repo yet — fill when SDK is added._ |
-| **Credit duration** | **12 months** from program approval (per Sentry startup terms) |
-| **Env vars (planned)** | `SENTRY_DSN`, `SENTRY_AUTH_TOKEN` (CI/releases), `NEXT_PUBLIC_SENTRY_DSN` if client errors needed — exact set when integrated. |
-| **Code touchpoints (planned)** | Typically `sentry.client.config.ts`, `sentry.server.config.ts`, `instrumentation.ts`, `next.config` wrapper — **none present today**. |
+| **What / why** | Production error monitoring (client, server, App Router request failures). Sentry for Startups — **$5,000 credits**, **12 months**, org **`margo-q2`**. Thin adapter so we can remove without touching every callsite. |
+| **Activated** | **2026-09-26** (startup program approved; confirm credit expiry in Sentry → Settings → Subscription) |
+| **Credit duration** | **~12 months** from approval (per Sentry startup terms; check org billing) |
+| **Env vars (Vercel)** | **`SENTRY_DSN`** — server/API/SSR (secret). **`NEXT_PUBLIC_SENTRY_DSN`** — same DSN value for browser (public; DSN is not a secret). Optional: **`SENTRY_ORG`** (`margo-q2`), **`SENTRY_PROJECT`** (slug, for future releases/source maps), **`SENTRY_ENVIRONMENT`** (defaults to `VERCEL_ENV` / `NODE_ENV`), **`SENTRY_ENABLED=false`** (kill switch). **`SENTRY_AUTH_TOKEN`** — not required until source map upload / releases. |
+| **Code touchpoints** | `lib/observability/sentry-options.ts` (init options), `lib/observability/report-error.ts` (**`reportError` / `reportMessage`** — use this in app code), `instrumentation.ts` + `instrumentation-client.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`, `app/global-error.tsx`, `app/error.tsx`. No `withSentryConfig` / source maps in pass 1. |
+| **Not enabled** | Performance tracing, session replay, release health, source map upload. |
 
-### How to remove Sentry (when integrated)
+### How to remove Sentry
 
-1. Remove Sentry env vars from Vercel.
-2. Remove `@sentry/nextjs` and Sentry config files listed above.
-3. Revert any `next.config` Sentry wrapper.
-4. `npm uninstall @sentry/nextjs`.
-5. Update this section.
+1. Remove Sentry env vars from Vercel (`SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, optional `SENTRY_*`).
+2. Delete `lib/observability/sentry-options.ts`, `lib/observability/report-error.ts`, `instrumentation.ts`, `instrumentation-client.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`, `app/global-error.tsx`, and revert `app/error.tsx` if it only existed for Sentry (or remove `reportError` calls).
+3. `npm uninstall @sentry/nextjs`.
+4. Update this section.
+
+App code should import **`@/lib/observability/report-error`** only — not `@sentry/nextjs` directly (except the bootstrap files above).
 
 ---
 
@@ -108,3 +110,4 @@ Disable or uninstall Intercom widget if added later; no backend dependency expec
 | Date | Change |
 | --- | --- |
 | 2026-09-26 | PostHog integrated (events + pageviews). Registry created. |
+| 2026-09-26 | Sentry integrated (errors-only, margo-q2 org). |
