@@ -24,6 +24,7 @@ import { ReplayAttribution } from '@/components/replay-attribution'
 import { useRecentReplays } from '@/hooks/useRecentReplays'
 import { usePrimaryTab, restoreActivePrimaryScroll } from '@/components/primary-tab-shell'
 import { FeedPostSkeletonList } from '@/components/margo-skeletons'
+import { FeedOceanFooter } from '@/components/feed-ocean-footer'
 import { feedRankIds, feedSortScore } from '@/lib/feed-rank'
 import { StoryRing } from '@/components/stories/story-ring'
 import { StoriesDock, useMargoMobileViewport } from '@/components/stories/stories-dock'
@@ -49,7 +50,14 @@ function FeedPageInner() {
   const { isTabActive } = usePrimaryTab()
   const feedLive = isTabActive('feed')
   const isMobileViewport = useMargoMobileViewport()
-  const { posts: livePosts, loading, reload } = usePosts({ enabled: feedLive })
+  const {
+    posts: livePosts,
+    loading,
+    reload,
+    loadOlder,
+    loadingOlder,
+    hasMoreOlder,
+  } = usePosts({ enabled: feedLive })
   const {
     items: posts,
     seeded,
@@ -630,14 +638,16 @@ function FeedPageInner() {
         {listReady && feedItems.length === 0 && (
           <div style={{ textAlign: 'center', padding: '64px 0' }}>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '1rem', marginBottom: '16px' }}>
-              {`No ${selectedVibe === 'ALL' ? '' : selectedVibe.toLowerCase()} lyrics yet`}
+              {selectedVibe === 'ALL'
+                ? 'Quiet for now.'
+                : `Nothing tagged ${selectedVibe.toLowerCase()} yet.`}
             </p>
             <Link href="/compose" style={{
               padding: '10px 24px', border: '1px solid var(--border)',
               borderRadius: '50px', color: 'var(--text-secondary)',
               fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
               letterSpacing: '1px', textTransform: 'uppercase', textDecoration: 'none',
-            }}>Be the first</Link>
+            }}>Share a lyric</Link>
           </div>
         )}
 
@@ -685,7 +695,11 @@ function FeedPageInner() {
         </div>
 
         {listReady && feedItems.length > 0 && (
-          <div style={{ height: '48px' }} aria-hidden />
+          <FeedOceanFooter
+            hasMore={hasMoreOlder}
+            loadingOlder={loadingOlder}
+            onLoadOlder={() => void loadOlder()}
+          />
         )}
       </main>
 

@@ -52,6 +52,8 @@ export default function EditProfilePage() {
   const [signatureSheetOpen, setSignatureSheetOpen] = useState(false)
   const lyricInputRef = useRef<HTMLTextAreaElement>(null)
   const signatureSectionRef = useRef<HTMLDivElement>(null)
+  /** Avoid re-seeding the form when avatar/cover sync updates identity mid-edit. */
+  const formSeedKeyRef = useRef<string | null>(null)
 
   // Stay here and open the auth gate so a successful sign-in returns to edit.
   useEffect(() => {
@@ -60,25 +62,28 @@ export default function EditProfilePage() {
     }
   }, [loading, user, requireAuth])
 
-  // Seed local form state once identity resolves. Runs again if identity
-  // changes underneath us (e.g. another tab updated it).
   useEffect(() => {
-    if (identity) {
+    if (!identity) return
+    const seedKey = identity.username
+    if (formSeedKeyRef.current === seedKey) {
       setAvatarUrl(identity.avatarUrl ?? null)
-      setDisplayName(identity.displayName || '')
-      setUsername(identity.username || '')
-      setBio(identity.bio || '')
-      setLyric(identity.signatureLyric || '')
-      setSong(identity.signatureSong || '')
-      setArtist(identity.signatureArtist || '')
-      setCatalogSongId(identity.signatureSongId ?? null)
-      setIsPrivateLocal(identity.isPrivate)
-      const seeded: Record<string, string> = {}
-      for (const field of ARTIST_LINK_FIELDS) {
-        seeded[field.key] = identity.artistLinks?.[field.key] || ''
-      }
-      setArtistLinkDraft(seeded)
+      return
     }
+    formSeedKeyRef.current = seedKey
+    setAvatarUrl(identity.avatarUrl ?? null)
+    setDisplayName(identity.displayName || '')
+    setUsername(identity.username || '')
+    setBio(identity.bio || '')
+    setLyric(identity.signatureLyric || '')
+    setSong(identity.signatureSong || '')
+    setArtist(identity.signatureArtist || '')
+    setCatalogSongId(identity.signatureSongId ?? null)
+    setIsPrivateLocal(identity.isPrivate)
+    const seeded: Record<string, string> = {}
+    for (const field of ARTIST_LINK_FIELDS) {
+      seeded[field.key] = identity.artistLinks?.[field.key] || ''
+    }
+    setArtistLinkDraft(seeded)
   }, [identity])
 
   const handleSave = useCallback(async () => {
@@ -338,15 +343,6 @@ export default function EditProfilePage() {
                 onLyricPick={(text) => setLyric(text)}
                 onManageSelectedLine={() => setSignatureSheetOpen(true)}
               />
-              <p style={{
-                fontFamily: font,
-                fontSize: TYPE.secondary,
-                color: 'var(--text-muted)',
-                lineHeight: 1.45,
-                margin: '12px 0 0',
-              }}>
-                Sound plays only when the line is tied to a song hosted on Margo. A typed lyric stays quiet — we do not play music we do not have rights to host. Private account (below) hides your posts from people who do not follow you.
-              </p>
               {!catalogSongId && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
                   <input

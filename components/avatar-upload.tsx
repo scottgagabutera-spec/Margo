@@ -2,6 +2,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { MargoPhotoSource } from '@/components/margo-photo-source'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 import { TYPE, UI_FONT } from '@/lib/fonts'
@@ -25,7 +26,7 @@ export function AvatarUpload({ currentAvatarUrl, displayName, onUploaded }: Avat
   // Local override after a successful upload this session; otherwise follow the prop.
   const [localPreview, setLocalPreview] = useState<string | null>(null)
   const [imgFailed, setImgFailed] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [sourceOpen, setSourceOpen] = useState(false)
 
   const previewUrl = localPreview ?? currentAvatarUrl
   const showPhoto = !!previewUrl && !imgFailed
@@ -36,9 +37,8 @@ export function AvatarUpload({ currentAvatarUrl, displayName, onUploaded }: Avat
 
   const initials = (displayName || '??').slice(0, 2).toUpperCase()
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !user) return
+  const uploadFile = async (file: File) => {
+    if (!user) return
 
     if (!file.type.startsWith('image/')) {
       setError('Please choose an image file.')
@@ -81,7 +81,6 @@ export function AvatarUpload({ currentAvatarUrl, displayName, onUploaded }: Avat
       setError('Could not upload image. Please try again.')
     } finally {
       setUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
@@ -118,7 +117,7 @@ export function AvatarUpload({ currentAvatarUrl, displayName, onUploaded }: Avat
 
       <button
         type="button"
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => setSourceOpen(true)}
         disabled={uploading}
         style={{
           minHeight: 'var(--margo-touch-min)', padding: '0 20px',
@@ -134,12 +133,11 @@ export function AvatarUpload({ currentAvatarUrl, displayName, onUploaded }: Avat
         {uploading ? 'Uploading…' : showPhoto ? 'Change Photo' : 'Add Photo'}
       </button>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleFileSelect}
-        style={{ display: 'none' }}
+      <MargoPhotoSource
+        open={sourceOpen}
+        onOpenChange={setSourceOpen}
+        title="Profile photo"
+        onFile={(file) => void uploadFile(file)}
       />
     </div>
   )

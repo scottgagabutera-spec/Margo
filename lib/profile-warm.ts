@@ -62,23 +62,17 @@ export function peekProfileCache(username: string): WarmProfileBundle | null {
 export async function fetchProfileBundle(username: string): Promise<WarmProfileBundle | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, display_name, is_artist, artist_status, bio, avatar_url, cover_url, signature_lyric, signature_song, signature_artist, signature_song_id, is_private, follow_lists_private, artist_links')
+    .select('id, username, display_name, is_artist, artist_status, bio, avatar_url, cover_url, signature_lyric, signature_song, signature_artist, signature_song_id, is_private, follow_lists_private, artist_links, followers_count, following_count')
     .eq('username', username)
     .maybeSingle()
 
   if (error || !data) return null
 
-  const [followers, following] = await Promise.all([
-    supabase.from('follows').select('*', { count: 'exact', head: true })
-      .eq('followee_id', data.id).eq('status', 'accepted'),
-    supabase.from('follows').select('*', { count: 'exact', head: true })
-      .eq('follower_id', data.id).eq('status', 'accepted'),
-  ])
-
   return {
     profile: mapRow(data as Record<string, unknown>),
-    followerCount: followers.count ?? 0,
-    followingCount: following.count ?? 0,
+    // Denormalized counters (all accepted follows) — client-side follows count is RLS-filtered.
+    followerCount: Math.max(0, Number(data.followers_count) || 0),
+    followingCount: Math.max(0, Number(data.following_count) || 0),
     loadedAt: Date.now(),
   }
 }

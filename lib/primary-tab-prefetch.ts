@@ -123,6 +123,9 @@ type CacheEntry<T> = {
 
 const postsCache: CacheEntry<Post[]> = { data: null, loadedAt: 0, inflight: null }
 
+const FEED_PAGE_SIZE = 200
+const FEED_OLDER_PAGE_SIZE = 40
+
 export async function fetchFeedPosts(): Promise<Post[]> {
   const { data, error } = await supabase
     .from('posts')
@@ -130,10 +133,28 @@ export async function fetchFeedPosts(): Promise<Post[]> {
     .is('parent_post_id', null)
     .not('status', 'in', '("hidden","private","sent")')
     .order('created_at', { ascending: false })
-    .limit(200)
+    .limit(FEED_PAGE_SIZE)
 
   if (error) {
     console.error('fetchFeedPosts: failed', error)
+    return []
+  }
+  return (data ?? []).map(mapPostRow)
+}
+
+/** Older page for feed “ocean” — cursor is ISO timestamp strictly before the oldest visible post. */
+export async function fetchFeedPostsOlder(beforeCreatedAtIso: string): Promise<Post[]> {
+  const { data, error } = await supabase
+    .from('posts')
+    .select(POST_SELECT)
+    .is('parent_post_id', null)
+    .not('status', 'in', '("hidden","private","sent")')
+    .lt('created_at', beforeCreatedAtIso)
+    .order('created_at', { ascending: false })
+    .limit(FEED_OLDER_PAGE_SIZE)
+
+  if (error) {
+    console.error('fetchFeedPostsOlder: failed', error)
     return []
   }
   return (data ?? []).map(mapPostRow)

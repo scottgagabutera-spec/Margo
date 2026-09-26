@@ -7,6 +7,7 @@ import {
   PRIMARY_TAB_STALE_MS,
   peekFeedPostsCache,
   warmFeedPosts,
+  fetchFeedPostsOlder,
 } from '@/lib/primary-tab-prefetch'
 import type { PostLine } from '@/lib/post-lines'
 import type { AtmosphereId } from '@/lib/atmosphere'
@@ -138,9 +139,44 @@ export function usePosts(options: UsePostsOptions = {}) {
 
   const waitingOnPrivacy = posts.length > 0 && !visibilityReady && lastVisibleRef.current.length === 0
 
+  const [loadingOlder, setLoadingOlder] = useState(false)
+  const [hasMoreOlder, setHasMoreOlder] = useState(true)
+
+  useEffect(() => {
+    if (posts.length > 0 && posts.length < 200) {
+      setHasMoreOlder(false)
+    }
+  }, [posts.length])
+
+  const loadOlder = useCallback(async () => {
+    const source = posts.length > 0 ? posts : visiblePosts
+    const oldest = source[source.length - 1]?.timestamp
+    if (!oldest || loadingOlder || !hasMoreOlder) return
+    setLoadingOlder(true)
+    try {
+      const iso = new Date(oldest).toISOString()
+      const rows = await fetchFeedPostsOlder(iso)
+      if (rows.length < 40) setHasMoreOlder(false)
+      if (rows.length === 0) return
+      setPosts((prev) => {
+        const seen = new Set(prev.map((p) => p.id))
+        const merged = [...prev]
+        for (const row of rows) {
+          if (!seen.has(row.id)) merged.push(row)
+        }
+        return merged
+      })
+    } finally {
+      setLoadingOlder(false)
+    }
+  }, [posts, visiblePosts, loadingOlder, hasMoreOlder])
+
   return {
     posts: visiblePosts,
     loading: loading || waitingOnPrivacy,
     reload: () => load(true),
+    loadOlder,
+    loadingOlder,
+    hasMoreOlder,
   }
 }
