@@ -11,7 +11,8 @@ import {
   type MargoIconProps,
 } from '@/components/icons'
 import { TYPE, UI_FONT } from '@/lib/fonts'
-import { PROMOTE_PLATFORM_DEFS } from '@/lib/promote/platforms'
+import { isPromotePlatformLive, PROMOTE_PLATFORM_DEFS } from '@/lib/promote/platforms'
+import { PromoteComingSoonPlatformsRow } from '@/components/promote/promote-coming-soon-platforms-row'
 import { getPlatformSetupGuide } from '@/lib/promote/platform-setup-guide'
 import { connectionSettingsNotice } from '@/lib/promote/connection-settings-copy'
 import {
@@ -276,8 +277,10 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
     return <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>Loading connected accounts…</p>
   }
 
-  const liveCount = PROMOTE_PLATFORM_DEFS.filter((p) => p.live).length
-  const connectedCount = connections.filter((c) => c.status === 'connected').length
+  const livePlatformDefs = PROMOTE_PLATFORM_DEFS.filter((p) => p.live)
+  const legacyConnected = connections.filter(
+    (c) => c.status === 'connected' && !isPromotePlatformLive(c.platform),
+  )
 
   return (
     <div>
@@ -293,9 +296,9 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
         marginBottom: '20px',
         lineHeight: 1.45,
       }}>
-        Connect accounts here, then choose which platforms each export goes to from the export sheet.
-        YouTube, Facebook Page, and TikTok are live today; Instagram and X are coming soon.
-        Facebook connects a Page you manage — not a personal profile.
+        Connect YouTube and TikTok here for auto-promote (Shorts / 9:16). In the export sheet, pick
+        any size — Feed, Shorts, or Wide — and use Export, Share, or download; queue auto-promote
+        when Shorts is selected.
       </p>
 
       {showFacebookPagePicker && facebookPagesLoading && (
@@ -353,8 +356,8 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '24px' }}>
-        {PROMOTE_PLATFORM_DEFS.map((platform) => {
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '16px' }}>
+        {livePlatformDefs.map((platform) => {
           const Icon = PLATFORM_ICONS[platform.id]
           const connection = connections.find((c) => c.platform === platform.id)
           const connected = connection?.status === 'connected'
@@ -372,52 +375,19 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
                 <div style={{ fontFamily: font, fontSize: TYPE.body, fontWeight: 600, color: 'var(--text)' }}>
                   {platform.label}
                 </div>
-                {!platform.live && (
-                  <span style={{
-                    fontFamily: font,
-                    fontSize: '0.58rem',
-                    fontWeight: 700,
-                    letterSpacing: '0.5px',
-                    textTransform: 'uppercase',
-                    color: 'var(--text-muted)',
-                    padding: '2px 8px',
-                    borderRadius: '999px',
-                    border: '1px solid var(--border)',
-                  }}>
-                    Coming soon
-                  </span>
-                )}
               </div>
 
-              {(() => {
-                const guide = getPlatformSetupGuide(platform.id)
-                return (
-                  <p style={{
-                    fontFamily: font,
-                    fontSize: TYPE.secondary,
-                    color: 'var(--text-muted)',
-                    margin: '0 0 8px',
-                    lineHeight: 1.45,
-                  }}>
-                    {guide.margoStatus}
-                  </p>
-                )
-              })()}
+              <p style={{
+                fontFamily: font,
+                fontSize: TYPE.secondary,
+                color: 'var(--text-muted)',
+                margin: '0 0 8px',
+                lineHeight: 1.45,
+              }}>
+                {getPlatformSetupGuide(platform.id).margoStatus}
+              </p>
 
-              {!platform.live ? (
-                <ul style={{
-                  fontFamily: font,
-                  fontSize: TYPE.secondary,
-                  color: 'var(--text-muted)',
-                  margin: '0 0 8px',
-                  paddingLeft: '18px',
-                  lineHeight: 1.45,
-                }}>
-                  {getPlatformSetupGuide(platform.id).artistSteps.map((step) => (
-                    <li key={step}>{step}</li>
-                  ))}
-                </ul>
-              ) : connected ? (
+              {connected ? (
                 <div style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
                   {platformHighlight === platform.id && (
                     <p style={{ color: 'var(--gold)', margin: '0 0 8px', fontWeight: 600 }}>
@@ -490,6 +460,59 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
           )
         })}
       </div>
+
+      <PromoteComingSoonPlatformsRow />
+
+      {legacyConnected.length > 0 && (
+        <div style={{ marginBottom: '20px' }}>
+          <p style={{
+            fontFamily: font,
+            fontSize: TYPE.secondary,
+            color: 'var(--text-muted)',
+            margin: '0 0 10px',
+            lineHeight: 1.45,
+          }}>
+            Older connections (not used for new auto-promote until those platforms launch):
+          </p>
+          {legacyConnected.map((connection) => {
+            const def = PROMOTE_PLATFORM_DEFS.find((p) => p.id === connection.platform)
+            const Icon = PLATFORM_ICONS[connection.platform]
+            return (
+              <div
+                key={connection.platform}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  flexWrap: 'wrap',
+                  marginBottom: '8px',
+                }}
+              >
+                <Icon size={16} color="var(--text-muted)" />
+                <span style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
+                  {def?.label ?? connection.platform} — connected as {connection.externalUsername || 'linked account'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void disconnectPlatform(connection.platform)}
+                  disabled={saving}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    fontFamily: font,
+                    fontSize: TYPE.secondary,
+                    cursor: 'pointer',
+                    padding: 0,
+                  }}
+                >
+                  Disconnect
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       <div style={{ marginBottom: '16px' }}>
         <div style={{ fontFamily: font, fontSize: TYPE.body, fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>
