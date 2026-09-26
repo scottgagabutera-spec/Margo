@@ -21,6 +21,7 @@ export interface WarmProfileRow {
   followListsPrivate: boolean
   artistLinks: ArtistApplicationLinks
   coverUrl: string | null
+  whoCanMessage: 'everyone' | 'followers' | 'no_one'
 }
 
 export interface WarmProfileBundle {
@@ -50,6 +51,7 @@ function mapRow(data: Record<string, unknown>): WarmProfileRow {
     followListsPrivate: !!data.follow_lists_private,
     artistLinks: (links && typeof links === 'object' ? links : {}) as ArtistApplicationLinks,
     coverUrl: (data.cover_url as string | null) ?? null,
+    whoCanMessage: (data.who_can_message as WarmProfileRow['whoCanMessage']) || 'everyone',
   }
 }
 
@@ -80,6 +82,7 @@ function bundleFromPeekPayload(payload: Record<string, unknown>): WarmProfileBun
       is_private: p.isPrivate ?? p.is_private,
       follow_lists_private: p.followListsPrivate ?? p.follow_lists_private,
       artist_links: p.artistLinks ?? p.artist_links,
+      who_can_message: p.whoCanMessage ?? p.who_can_message,
     }),
     followerCount: Math.max(0, Number(payload.followerCount) || 0),
     followingCount: Math.max(0, Number(payload.followingCount) || 0),
@@ -98,7 +101,7 @@ export async function fetchProfilePeek(username: string): Promise<WarmProfileBun
 export async function fetchProfileBundle(username: string): Promise<WarmProfileBundle | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, display_name, is_artist, artist_status, bio, avatar_url, cover_url, signature_lyric, signature_song, signature_artist, signature_song_id, is_private, follow_lists_private, artist_links, followers_count, following_count')
+    .select('id, username, display_name, is_artist, artist_status, bio, avatar_url, cover_url, signature_lyric, signature_song, signature_artist, signature_song_id, is_private, follow_lists_private, who_can_message, artist_links, followers_count, following_count')
     .eq('username', username)
     .maybeSingle()
 

@@ -23,6 +23,7 @@ import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { ProfileArtistLinks } from '@/components/profile-artist-links'
 import { ProfileImageLightbox } from '@/components/profile-image-lightbox'
 import { fetchProfilePeek, peekProfileCache, warmProfile, type WarmProfileRow } from '@/lib/profile-warm'
+import { resolveMessageEligibility } from '@/lib/message-eligibility'
 import { resolvePublicArtistCredit } from '@/lib/artist-identity'
 import { uploadProfileCover } from '@/components/cover-upload'
 import { PendingNavLink } from '@/components/pending-nav-link'
@@ -442,6 +443,15 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
 
   const canViewContent = !profile?.isPrivate || isOwnProfile || followStatus === 'accepted'
 
+  const messageEligibility = useMemo(
+    () => resolveMessageEligibility({
+      whoCanMessage: profile?.whoCanMessage,
+      followStatus,
+      isOwnProfile,
+    }),
+    [profile?.whoCanMessage, followStatus, isOwnProfile],
+  )
+
   useEffect(() => {
     if (!accountMenuOpen) return
     const onDoc = (e: MouseEvent) => {
@@ -754,22 +764,33 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
               )}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap', marginBottom: '12px' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <h1 style={{ fontFamily: font, fontSize: TYPE.displayName, fontWeight: 600, color: 'var(--text)', margin: 0 }}>
+            <div style={{ marginBottom: '12px' }}>
+              <div style={{ minWidth: 0, marginBottom: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px', minWidth: 0 }}>
+                  <h1 style={{
+                    fontFamily: font,
+                    fontSize: TYPE.song,
+                    fontWeight: 600,
+                    color: 'var(--text)',
+                    margin: 0,
+                    minWidth: 0,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}>
                     {profile.displayName}
                   </h1>
                   {profile.isPrivate && (
                     <span style={{
                       fontFamily: font, fontSize: TYPE.label, fontWeight: 700,
-                      letterSpacing: '0.16em', textTransform: 'uppercase', padding: '3px 8px',
+                      letterSpacing: '0.16em', textTransform: 'uppercase', padding: '2px 7px',
                       borderRadius: '50px', background: 'var(--surface-2)',
                       border: '1px solid var(--border)', color: 'var(--text-muted)',
+                      flexShrink: 0,
                     }}>Private</span>
                   )}
                 </div>
-                <p style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-secondary)', margin: 0 }}>
+                <p style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.2 }}>
                   @{profile.username}
                 </p>
               </div>
@@ -872,33 +893,51 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
               )}
 
               {!isOwnProfile && user && (
-                <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-                  <Link
-                    href={`/messages/${profile.username}`}
-                    style={{
-                      minHeight: 'var(--margo-touch-min)', padding: '0 22px',
-                      display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                      background: 'transparent', color: 'var(--text-secondary)',
-                      border: '1px solid var(--border)', borderRadius: '50px',
-                      fontFamily: font, fontWeight: 700, fontSize: TYPE.label,
-                      letterSpacing: '1.2px', textTransform: 'uppercase',
-                      textDecoration: 'none', cursor: 'pointer',
-                    }}
-                  >Message</Link>
+                <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '6px', alignItems: 'center' }}>
+                  {messageEligibility.canOpenThread ? (
+                    <Link
+                      href={`/messages/${profile.username}`}
+                      style={{
+                        height: '32px', padding: '0 14px',
+                        display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
+                        background: 'var(--surface-2)', color: 'var(--text)',
+                        border: '1px solid var(--gold-border)', borderRadius: '50px',
+                        fontFamily: font, fontWeight: 700, fontSize: TYPE.label,
+                        letterSpacing: '0.14em', textTransform: 'uppercase',
+                        textDecoration: 'none', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                      }}
+                    >Message</Link>
+                  ) : (
+                    <span
+                      role="button"
+                      aria-disabled="true"
+                      title={messageEligibility.blockedReason || undefined}
+                      style={{
+                        height: '32px', padding: '0 14px',
+                        display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
+                        background: 'transparent', color: 'var(--text-muted)',
+                        border: '1px solid var(--border)', borderRadius: '50px',
+                        fontFamily: font, fontWeight: 700, fontSize: TYPE.label,
+                        letterSpacing: '0.14em', textTransform: 'uppercase',
+                        whiteSpace: 'nowrap', flexShrink: 0, opacity: 0.55, cursor: 'not-allowed',
+                      }}
+                    >Message</span>
+                  )}
                   <button
                     type="button"
                     onClick={handleFollowClick}
                     disabled={followBusy}
                     style={{
-                      minHeight: 'var(--margo-touch-min)', padding: '0 26px',
+                      height: '32px', padding: '0 16px',
                       display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
                       background: followStatus ? 'transparent' : 'var(--gold)',
                       color: followStatus ? 'var(--text-secondary)' : 'var(--bg)',
                       border: followStatus ? '1px solid var(--border)' : 'none',
                       borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: TYPE.label,
-                      letterSpacing: '1.2px', textTransform: 'uppercase',
+                      letterSpacing: '0.14em', textTransform: 'uppercase',
                       cursor: followBusy ? 'not-allowed' : 'pointer',
                       opacity: followBusy ? 0.7 : 1,
+                      whiteSpace: 'nowrap', flexShrink: 0,
                     }}
                   >{followLabel}</button>
                 </div>
