@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useMessaging } from '@/hooks/useMessaging'
 import { isPartnerUuid } from '@/lib/messages/partner-key'
+import { resolveMessageEligibility, type FollowStatus } from '@/lib/message-eligibility'
 
 const supabase = createClient()
 
@@ -133,19 +134,22 @@ export function useThread(partnerKey: string) {
         }
         setPartner(other)
 
-        if (other.whoCanMessage === 'no_one') {
-          setCanSend(false)
-        } else if (other.whoCanMessage === 'followers') {
+        let followStatus: FollowStatus = null
+        if (other.whoCanMessage === 'followers') {
           const { data: f } = await supabase
             .from('follows')
             .select('status')
             .eq('follower_id', uid)
             .eq('followee_id', other.id)
             .maybeSingle()
-          if (active && !timedOut) setCanSend(f?.status === 'accepted')
-        } else {
-          setCanSend(true)
+          followStatus = f ? (f.status as FollowStatus) : null
         }
+        const eligibility = resolveMessageEligibility({
+          whoCanMessage: other.whoCanMessage,
+          followStatus,
+          isOwnProfile: false,
+        })
+        if (active && !timedOut) setCanSend(eligibility.canSend)
 
         await loadThread(uid, other)
         if (!active || timedOut) return
