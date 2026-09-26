@@ -1,9 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { getPromoteAdmin } from '@/lib/promote/admin-client'
-import { requirePromoteSession } from '@/lib/promote/api-auth'
-import { buildPromoteOAuthReturnUrl, normalizePromoteOAuthReturnPath } from '@/lib/promote/oauth-return-redirect'
-import { resolvePromoteOAuthOrigin } from '@/lib/promote/oauth-public-origin'
-import { MARGO_AUTO_PROMOTE_SETTINGS_PATH } from '@/lib/promote/settings-anchor'
+import { buildPromoteOAuthReturnUrl } from '@/lib/promote/oauth-return-redirect'
+import { gatePromoteOAuthStart } from '@/lib/promote/oauth-start-handler'
 import { createTikTokOAuthPending } from '@/lib/promote/tiktok-oauth-pending'
 import {
   buildTikTokAuthorizeUrl,
@@ -13,17 +11,13 @@ import {
   PROMOTE_TIKTOK_STATE_COOKIE,
 } from '@/lib/promote/tiktok-oauth'
 
-export async function GET(request: NextRequest) {
-  const session = await requirePromoteSession()
-  const origin = resolvePromoteOAuthOrigin(request)
-  if (!session) {
-    return NextResponse.redirect(
-      buildPromoteOAuthReturnUrl(origin, MARGO_AUTO_PROMOTE_SETTINGS_PATH, 'denied'),
-    )
-  }
+const TIKTOK_PENDING_WRITE_TIMEOUT_MS = 12_000
 
-  const returnTo = request.nextUrl.searchParams.get('returnTo') || MARGO_AUTO_PROMOTE_SETTINGS_PATH
-  const safeReturn = normalizePromoteOAuthReturnPath(returnTo)
+export async function GET(request: NextRequest) {
+  const gate = await gatePromoteOAuthStart(request, 'tiktok_error')
+  if (!gate.allowed) return gate.response
+
+  const { origin, safeReturn, userId } = gate
 
   const admin = getPromoteAdmin()
   if (!admin) {
@@ -34,7 +28,12 @@ export async function GET(request: NextRequest) {
 
   try {
     const state = buildTikTokOAuthState()
-    await createTikTokOAuthPending(admin, state, session.userId, safeReturn)
+    await Promise.race([
+      createTikTokOAuthPending(admin, state, userId, safeReturn),
+      new Promise<void>((_, reject) => {
+        setTimeout(() => reject(new Error('TikTok pending write timed out')), TIKTOK_PENDING_WRITE_TIMEOUT_MS)
+      }),
+    ])
     const url = buildTikTokAuthorizeUrl(origin, state)
     const res = NextResponse.redirect(url)
     res.cookies.set(PROMOTE_TIKTOK_STATE_COOKIE, state, PROMOTE_TIKTOK_COOKIE_OPTS)

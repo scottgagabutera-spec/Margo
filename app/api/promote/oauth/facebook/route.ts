@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { requirePromoteSession } from '@/lib/promote/api-auth'
 import {
   buildFacebookAuthorizeUrl,
   buildFacebookOAuthState,
@@ -7,21 +6,14 @@ import {
   PROMOTE_FACEBOOK_RETURN_COOKIE,
   PROMOTE_FACEBOOK_STATE_COOKIE,
 } from '@/lib/promote/facebook-oauth'
-import { buildPromoteOAuthReturnUrl, normalizePromoteOAuthReturnPath } from '@/lib/promote/oauth-return-redirect'
-import { resolvePromoteOAuthOrigin } from '@/lib/promote/oauth-public-origin'
-import { MARGO_AUTO_PROMOTE_SETTINGS_PATH } from '@/lib/promote/settings-anchor'
+import { buildPromoteOAuthReturnUrl } from '@/lib/promote/oauth-return-redirect'
+import { gatePromoteOAuthStart } from '@/lib/promote/oauth-start-handler'
 
 export async function GET(request: NextRequest) {
-  const origin = resolvePromoteOAuthOrigin(request)
-  const session = await requirePromoteSession()
-  if (!session) {
-    return NextResponse.redirect(
-      buildPromoteOAuthReturnUrl(origin, MARGO_AUTO_PROMOTE_SETTINGS_PATH, 'denied'),
-    )
-  }
+  const gate = await gatePromoteOAuthStart(request, 'facebook_error')
+  if (!gate.allowed) return gate.response
 
-  const returnTo = request.nextUrl.searchParams.get('returnTo') || MARGO_AUTO_PROMOTE_SETTINGS_PATH
-  const safeReturn = normalizePromoteOAuthReturnPath(returnTo)
+  const { origin, safeReturn } = gate
 
   try {
     const state = buildFacebookOAuthState()
