@@ -22,7 +22,7 @@ import { usePrimaryTab } from '@/components/primary-tab-shell'
 import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { ProfileArtistLinks } from '@/components/profile-artist-links'
 import { ProfileImageLightbox } from '@/components/profile-image-lightbox'
-import { peekProfileCache, warmProfile, type WarmProfileRow } from '@/lib/profile-warm'
+import { fetchProfilePeek, peekProfileCache, warmProfile, type WarmProfileRow } from '@/lib/profile-warm'
 import { resolvePublicArtistCredit } from '@/lib/artist-identity'
 import { uploadProfileCover } from '@/components/cover-upload'
 import { PendingNavLink } from '@/components/pending-nav-link'
@@ -276,18 +276,20 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
         return
       }
 
-      const { data: visibility } = await supabase.rpc('profile_visibility_for_username', {
-        p_username: username,
-      })
+      const peek = await fetchProfilePeek(username)
       if (!active) return
-      const row = visibility as { exists?: boolean; is_private?: boolean } | null
-      if (row?.exists && row?.is_private) {
-        setPrivateInaccessible(true)
-        setProfile(null)
-      } else {
-        setNotFound(true)
-        setProfile(null)
+      if (peek) {
+        setProfile(peek.profile)
+        setFollowerCount(peek.followerCount)
+        setFollowingCount(peek.followingCount)
+        setNotFound(false)
+        setPrivateInaccessible(false)
+        setLoading(false)
+        return
       }
+      setNotFound(true)
+      setProfile(null)
+      setPrivateInaccessible(false)
       setLoading(false)
     })
     return () => { active = false }
@@ -1150,6 +1152,20 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
             )}
 
             <div style={{ marginBottom: '28px' }}>
+              {!canViewContent ? (
+                <div style={{
+                  border: '1px solid var(--border)', borderRadius: '16px', padding: '24px',
+                  textAlign: 'center',
+                }}>
+                  <p style={{ ...emptyLyricStyle, marginBottom: '4px' }}>
+                    This account is private.
+                  </p>
+                  <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', margin: 0 }}>
+                    Follow {profile.displayName || profile.username} to see their lyrics.
+                  </p>
+                </div>
+              ) : (
+              <>
               <div
                 role="tablist"
                 aria-label="Profile content"
@@ -1189,19 +1205,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 })}
               </div>
 
-              {!canViewContent ? (
-                <div style={{
-                  border: '1px solid var(--border)', borderRadius: '16px', padding: '24px',
-                  textAlign: 'center',
-                }}>
-                  <p style={{ ...emptyLyricStyle, marginBottom: '4px' }}>
-                    This account is private.
-                  </p>
-                  <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
-                    Follow {profile.displayName} to see their lyrics.
-                  </p>
-                </div>
-              ) : contentTab === 'lyrics' ? (
+              {contentTab === 'lyrics' ? (
                 ownPosts.length === 0 ? (
                   isOwnProfile ? (
                     <Link href="/compose" style={{ ...emptyLyricStyle, textDecoration: 'none' }}>
@@ -1307,6 +1311,8 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                     />
                   ))}
                 </div>
+              )}
+              </>
               )}
             </div>
           </div>

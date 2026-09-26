@@ -27,7 +27,8 @@ import { FeedPostSkeletonList } from '@/components/margo-skeletons'
 import { FeedOceanFooter } from '@/components/feed-ocean-footer'
 import { feedRankIds, feedSortScore } from '@/lib/feed-rank'
 import { StoryRing } from '@/components/stories/story-ring'
-import { StoriesDock, useMargoMobileViewport } from '@/components/stories/stories-dock'
+import { StoriesPortalDock } from '@/components/stories/stories-portal-dock'
+import { useMargoMobileViewport } from '@/components/stories/stories-dock'
 import { StoryFeedAuthorSync, StoryRingProvider } from '@/components/stories/story-ring-context'
 
 const supabase = createClient()
@@ -707,7 +708,7 @@ function FeedPageInner() {
     </div>
     </PullToRefresh>
       {feedLive && (
-        <StoriesDock
+        <StoriesPortalDock
           onAddStory={() => {
             toast('Open a Moment and tap Add to Story in the export sheet.')
           }}

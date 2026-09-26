@@ -11,9 +11,8 @@ import { playOrToggleSnippet, togglePlayPause } from '@/lib/audio-engine'
 import { fallbackSnippetWindow } from '@/lib/lyric-match'
 import { matchLyricWindowFromLines } from '@/lib/lyric-match'
 import { buildCatalogLyricUnits } from '@/lib/catalog-lyric-unit'
-import { useIsBuffering, useIsPlaying, useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
-import { useLongPress } from '@/hooks/useLongPress'
-import { MargoLongPressHint } from '@/components/margo-long-press-hint'
+import { useIsBuffering, useIsPlaying } from '@/hooks/useAudioEngine'
+import { ComposeLinePicker } from '@/components/compose-line-picker'
 import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import type { ComposeLyricLine } from '@/components/compose-line-picker'
 
@@ -83,7 +82,6 @@ export function SignatureSongPicker({
   currentLyric,
   onChange,
   onLyricPick,
-  onManageSelectedLine,
 }: {
   songTitle: string
   artistName: string
@@ -91,7 +89,6 @@ export function SignatureSongPicker({
   currentLyric?: string
   onChange: (next: { song: string; artist: string; catalogSongId: string | null }) => void
   onLyricPick?: (lyric: string) => void
-  /** When user taps an already-selected catalog line — open action sheet instead of re-picking. */
   onManageSelectedLine?: () => void
 }) {
   const [query, setQuery] = useState('')
@@ -250,17 +247,34 @@ export function SignatureSongPicker({
 
   return (
     <div>
+      <MargoSearchInput
+        value={query}
+        onChange={setQuery}
+        placeholder="Search Margo, Genius, or Apple Music"
+        ariaLabel="Search songs"
+        loading={loading}
+      />
+      <ComposeSearchDropdown
+        open={showResults && query.trim().length >= 2}
+        loading={loading}
+        results={hits}
+        highlightQuery={query}
+        onSelect={selectSearchHit}
+        onClose={() => setShowResults(false)}
+        variant="compose"
+      />
+
       {selectedLabel ? (
-        <>
         <div style={{
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
           minHeight: 'var(--margo-touch-min)',
-          padding: '4px 8px 4px 8px',
+          padding: '4px 8px',
           borderRadius: '12px',
           border: '1px solid var(--gold-border)',
           background: 'var(--gold-faint)',
+          marginTop: '12px',
           marginBottom: '12px',
         }}>
           {selected?.audioUrl ? (
@@ -290,7 +304,11 @@ export function SignatureSongPicker({
           <button
             type="button"
             aria-label="Clear song"
-            onClick={() => onChange({ song: '', artist: '', catalogSongId: null })}
+            onClick={() => {
+              setSelected(null)
+              setLines([])
+              onChange({ song: '', artist: '', catalogSongId: null })
+            }}
             style={{
               width: 'var(--margo-touch-min)',
               height: 'var(--margo-touch-min)',
@@ -306,198 +324,38 @@ export function SignatureSongPicker({
             <CloseIcon size={14} color="var(--text-secondary)" />
           </button>
         </div>
-        {catalogSongId && linesLoading ? (
-          <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', margin: '0 0 8px' }}>
-            Loading lyrics…
-          </p>
-        ) : catalogSongId && lines.length > 0 ? (
-          <div style={{
-            maxHeight: '220px',
-            overflowY: 'auto',
-            overscrollBehavior: 'contain',
-            border: '1px solid var(--border)',
-            borderRadius: '12px',
-            background: 'var(--surface)',
-          }}>
-            {lines.map((line, index) => (
-              <SignatureLineRow
-                key={line.lineIndex}
-                line={line}
-                selected={(currentLyric || '').trim() === line.text.trim()}
-                isLast={index === lines.length - 1}
-                songTitle={selected?.title || songTitle}
-                artistName={selected?.artist || artistName}
-                audioUrl={selected?.audioUrl || null}
-                songId={selected?.id || catalogSongId}
-                artwork={selected?.artwork || null}
-                onPick={() => onLyricPick?.(line.text.slice(0, 140))}
-                onManageSelected={onManageSelectedLine}
-              />
-            ))}
-          </div>
-        ) : !catalogSongId ? (
-          <p style={{
-            fontFamily: font,
-            fontSize: TYPE.secondary,
-            color: 'var(--text-muted)',
-            margin: '0 0 8px',
-            lineHeight: 1.45,
-          }}>
-            Type or paste your lyric in the box above — same as Compose when the song is not on Margo yet.
-          </p>
-        ) : null}
-        </>
-      ) : (
-        <>
-          <MargoSearchInput
-            value={query}
-            onChange={setQuery}
-            placeholder="Search Margo, Genius, or Apple Music"
-            ariaLabel="Search songs"
-            loading={loading}
-          />
-          <ComposeSearchDropdown
-            open={showResults && query.trim().length >= 2}
-            loading={loading}
-            results={hits}
-            highlightQuery={query}
-            onSelect={selectSearchHit}
-            onClose={() => setShowResults(false)}
-            variant="compose"
-          />
-        </>
-      )}
-    </div>
-  )
-}
+      ) : null}
 
-function SignatureLineRow({
-  line,
-  selected,
-  isLast,
-  songTitle,
-  artistName,
-  audioUrl,
-  songId,
-  artwork,
-  onPick,
-  onManageSelected,
-}: {
-  line: ComposeLyricLine
-  selected: boolean
-  isLast: boolean
-  songTitle: string
-  artistName: string
-  audioUrl: string | null
-  songId: string | null
-  artwork: string | null
-  onPick: () => void
-  onManageSelected?: () => void
-}) {
-  const { playing, buffering } = useSnippetPlaybackUi(songId || audioUrl || '', line.lineIndex)
-  const manageLongPress = useLongPress({
-    disabled: !selected || !onManageSelected,
-    onLongPress: () => onManageSelected?.(),
-  })
-  return (
-    <div
-      style={{
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-        padding: '10px 12px',
-        minHeight: 'var(--margo-touch-min)',
-        background: selected ? 'color-mix(in srgb, var(--gold) 16%, transparent)' : 'none',
-        borderBottom: isLast ? 'none' : '1px solid var(--border)',
-        boxShadow: selected ? 'inset 3px 0 0 var(--gold)' : 'none',
-        boxSizing: 'border-box',
-      }}
-    >
-      <button
-        type="button"
-        aria-label={playing ? 'Pause snippet' : 'Play snippet'}
-        onClick={() => {
-          if (audioUrl && songId && line.endSec > line.startSec) {
-            playOrToggleSnippet({
-              songId,
-              audioUrl,
-              title: songTitle,
-              artist: artistName,
-              artwork,
-              lineIndex: line.lineIndex,
-              lineText: line.text,
-              startSec: line.startSec,
-              endSec: line.endSec,
-              source: 'feed',
-            })
-          }
-        }}
-        style={{
-          width: 28,
-          height: 28,
-          flexShrink: 0,
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          border: 'none',
-          background: 'transparent',
-          cursor: 'pointer',
-          padding: 0,
-        }}
-      >
-        <PlayPauseIcon playing={playing} buffering={buffering} size={14} color="var(--gold)" />
-      </button>
-      <MargoLongPressHint
-        active={manageLongPress.pressing}
-        progress={manageLongPress.progress}
-        style={{ flex: 1, minWidth: 0, borderRadius: '8px' }}
-      >
-        <button
-          type="button"
-          aria-label={selected && onManageSelected ? 'Hold for signature options' : 'Select this line'}
-          {...manageLongPress.handlers}
-          onClick={() => {
-            if (manageLongPress.consumeClick()) return
-            if (selected && onManageSelected) return
-            onPick()
+      {catalogSongId ? (
+        <ComposeLinePicker
+          lines={lines}
+          loading={linesLoading}
+          songTitle={selected?.title || songTitle}
+          artistName={selected?.artist || artistName}
+          audioUrl={selected?.audioUrl ?? null}
+          songId={selected?.id || catalogSongId}
+          artwork={selected?.artwork || null}
+          enableParagraphPick
+          maxParagraphLines={2}
+          hideHeader
+          onPick={(line) => onLyricPick?.(line.text.slice(0, 140))}
+          onPickParagraph={(picked) => {
+            const joined = picked.map((l) => l.text.trim()).filter(Boolean).join('\n')
+            onLyricPick?.(joined.slice(0, 140))
           }}
-          style={{
-            width: '100%',
-            flex: 1,
-            minWidth: 0,
-            border: 'none',
-            background: 'transparent',
-            cursor: 'pointer',
-            textAlign: 'left',
-            padding: '2px 0',
-            WebkitTapHighlightColor: 'transparent',
-          }}
-        >
-          <span style={{
-            fontFamily: lyricFont,
-            fontStyle: 'italic',
-            fontSize: TYPE.lyric,
-            color: selected ? 'var(--gold)' : 'var(--text)',
-            lineHeight: 1.4,
-          }}>
-            {line.text}
-          </span>
-          {selected && onManageSelected ? (
-            <span style={{
-              display: 'block',
-              fontFamily: font,
-              fontSize: TYPE.label,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              color: 'var(--text-muted)',
-              marginTop: '4px',
-            }}>
-              Hold for options
-            </span>
-          ) : null}
-        </button>
-      </MargoLongPressHint>
+          onBack={() => {}}
+        />
+      ) : hasSongMeta ? (
+        <p style={{
+          fontFamily: font,
+          fontSize: TYPE.secondary,
+          color: 'var(--text-muted)',
+          margin: '8px 0 0',
+          lineHeight: 1.45,
+        }}>
+          Type your lyric in the box above — this song is not on Margo yet.
+        </p>
+      ) : null}
     </div>
   )
 }

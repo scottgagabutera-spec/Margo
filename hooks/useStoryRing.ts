@@ -15,7 +15,7 @@ export function useStoryRing(options: { enabled?: boolean } = {}) {
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
-    if (!viewerId || !identity) {
+    if (!viewerId) {
       setAuthors([])
       setLoading(false)
       return
@@ -89,7 +89,7 @@ export function useStoryRing(options: { enabled?: boolean } = {}) {
 
     setAuthors(sorted)
     setLoading(false)
-  }, [viewerId, identity])
+  }, [viewerId])
 
   useEffect(() => {
     if (!enabled) return

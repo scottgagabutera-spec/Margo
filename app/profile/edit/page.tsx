@@ -11,6 +11,11 @@ import { SignInLink } from '@/components/signin-link'
 import { LoadingRing } from '@/components/loading-ring'
 import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { ARTIST_LINK_FIELDS, sanitizeArtistLinks } from '@/lib/artist-links'
+import {
+  clearProfileEditDraft,
+  readProfileEditDraft,
+  writeProfileEditDraft,
+} from '@/lib/profile-edit-draft'
 
 const font = UI_FONT
 const lyricFont = LYRIC_FONT
@@ -63,28 +68,54 @@ export default function EditProfilePage() {
   }, [loading, user, requireAuth])
 
   useEffect(() => {
-    if (!identity) return
+    if (!identity || !user?.id) return
     const seedKey = identity.username
     if (formSeedKeyRef.current === seedKey) {
       setAvatarUrl(identity.avatarUrl ?? null)
       return
     }
     formSeedKeyRef.current = seedKey
+    const draft = readProfileEditDraft(user.id)
     setAvatarUrl(identity.avatarUrl ?? null)
-    setDisplayName(identity.displayName || '')
-    setUsername(identity.username || '')
-    setBio(identity.bio || '')
-    setLyric(identity.signatureLyric || '')
-    setSong(identity.signatureSong || '')
-    setArtist(identity.signatureArtist || '')
-    setCatalogSongId(identity.signatureSongId ?? null)
-    setIsPrivateLocal(identity.isPrivate)
+    setDisplayName(draft?.displayName ?? (identity.displayName || ''))
+    setUsername(draft?.username ?? (identity.username || ''))
+    setBio(draft?.bio ?? (identity.bio || ''))
+    setLyric(draft?.lyric ?? (identity.signatureLyric || ''))
+    setSong(draft?.song ?? (identity.signatureSong || ''))
+    setArtist(draft?.artist ?? (identity.signatureArtist || ''))
+    setCatalogSongId(draft?.catalogSongId ?? identity.signatureSongId ?? null)
+    setIsPrivateLocal(draft?.isPrivate ?? identity.isPrivate)
     const seeded: Record<string, string> = {}
     for (const field of ARTIST_LINK_FIELDS) {
-      seeded[field.key] = identity.artistLinks?.[field.key] || ''
+      seeded[field.key] = draft?.artistLinkDraft?.[field.key] ?? (identity.artistLinks?.[field.key] || '')
     }
     setArtistLinkDraft(seeded)
-  }, [identity])
+  }, [identity, user?.id])
+
+  useEffect(() => {
+    if (!user?.id) return
+    const persist = () => {
+      if (document.visibilityState === 'hidden') {
+        writeProfileEditDraft(user.id, {
+          displayName,
+          username,
+          bio,
+          lyric,
+          song,
+          artist,
+          catalogSongId,
+          isPrivate,
+          artistLinkDraft,
+        })
+      }
+    }
+    document.addEventListener('visibilitychange', persist)
+    window.addEventListener('pagehide', persist)
+    return () => {
+      document.removeEventListener('visibilitychange', persist)
+      window.removeEventListener('pagehide', persist)
+    }
+  }, [user?.id, displayName, username, bio, lyric, song, artist, catalogSongId, isPrivate, artistLinkDraft])
 
   const handleSave = useCallback(async () => {
     if (!identity) return
@@ -142,9 +173,10 @@ export default function EditProfilePage() {
       setSaving(false)
       setError(failed.error || 'Something went wrong saving your profile.')
     } else {
+      if (user?.id) clearProfileEditDraft(user.id)
       router.push(`/profile/${destinationUsername}`)
     }
-  }, [identity, displayName, username, bio, lyric, song, artist, catalogSongId, isPrivate, artistLinkDraft, updateDisplayName, changeUsername, updateBio, updateSignatureLyric, setPrivate, updateArtistLinks, router])
+  }, [identity, user?.id, displayName, username, bio, lyric, song, artist, catalogSongId, isPrivate, artistLinkDraft, updateDisplayName, changeUsername, updateBio, updateSignatureLyric, setPrivate, updateArtistLinks, router])
 
   if (!loading && !user) {
     return (
@@ -185,13 +217,27 @@ export default function EditProfilePage() {
     )
   }
 
-  if (loading || !identity) {
+  const showBootSpinner = (loading && !identity) || (!user && loading)
+
+  if (showBootSpinner) {
     return (
       <main style={{ minHeight: '100vh', background: 'var(--bg)' }}>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: '160px 0' }}>
           {[0, 1, 2].map(i => (
             <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--gold)', opacity: 0.5 }} />
           ))}
+        </div>
+      </main>
+    )
+  }
+
+  if (!identity) {
+    return (
+      <main style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+        <div style={{ maxWidth: '420px', margin: '0 auto', padding: '120px 24px', textAlign: 'center' }}>
+          <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
+            Could not load your profile. Pull to refresh or try again.
+          </p>
         </div>
       </main>
     )

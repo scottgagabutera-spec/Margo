@@ -144,6 +144,7 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
   const [identityUser, setIdentityUser] = useState<IdentityUser | null>(null)
   const [identity, setIdentityState] = useState<Identity | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
+  const syncedUidRef = useRef<string | null>(null)
 
   const ensureProfile = useCallback(async (su: SupabaseUser): Promise<Identity | null> => {
     const { data: existing } = await supabase
@@ -232,10 +233,15 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
     if (authLoading) return
 
     let active = true
-    if (supabaseUser) setProfileLoading(true)
+    const uid = supabaseUser?.id ?? null
+    const uidChanged = uid !== syncedUidRef.current
 
     async function sync() {
-      if (supabaseUser) {
+      if (supabaseUser && uid) {
+        if (uidChanged) {
+          syncedUidRef.current = uid
+          setProfileLoading(true)
+        }
         setIdentityUser({
           uid: supabaseUser.id,
           id: supabaseUser.id,
@@ -254,6 +260,7 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
         return
       }
 
+      syncedUidRef.current = null
       setIdentityUser(null)
       setIdentityState(null)
       if (active) {
