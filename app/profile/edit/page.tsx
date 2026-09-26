@@ -387,7 +387,6 @@ export default function EditProfilePage() {
                   setCatalogSongId(nextId)
                 }}
                 onLyricPick={(text) => setLyric(text)}
-                onManageSelectedLine={() => setSignatureSheetOpen(true)}
               />
               {!catalogSongId && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { ArrowLeftIcon } from '@/components/icons'
-import { UI_FONT } from '@/lib/fonts'
+import { TYPE, UI_FONT } from '@/lib/fonts'
 
 export interface MargoConversationHeaderProps {
   displayName?: string
@@ -12,8 +12,10 @@ export interface MargoConversationHeaderProps {
   compactTop?: boolean
 }
 
+const touch = 'var(--margo-touch-min)'
+
 /**
- * Message thread header — back to inbox + partner identity (avatar left, name beside).
+ * Message thread header — icon-only back (matches BackButton chrome) + centered partner identity.
  */
 export function MargoConversationHeader({
   displayName,
@@ -28,18 +30,19 @@ export function MargoConversationHeader({
     <header
       style={{
         flexShrink: 0,
+        position: 'relative',
         background: 'var(--bg)',
         borderBottom: '1px solid var(--border)',
         paddingTop: compactTop
-          ? 'max(12px, env(safe-area-inset-top, 0px))'
+          ? 'max(8px, env(safe-area-inset-top, 0px))'
           : '8px',
-        paddingLeft: '12px',
-        paddingRight: '16px',
-        paddingBottom: '12px',
-        display: 'flex',
+        paddingLeft: '8px',
+        paddingRight: '8px',
+        paddingBottom: '10px',
+        display: 'grid',
+        gridTemplateColumns: `${touch} 1fr ${touch}`,
         alignItems: 'center',
-        gap: '10px',
-        minHeight: 'var(--margo-touch-min)',
+        minHeight: touch,
       }}
     >
       <Link
@@ -48,31 +51,16 @@ export function MargoConversationHeader({
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '4px',
-          flexShrink: 0,
-          minWidth: 'var(--margo-touch-min)',
-          minHeight: 'var(--margo-touch-min)',
-          padding: '0 6px',
-          marginLeft: '-4px',
+          justifyContent: 'center',
+          width: touch,
+          height: touch,
           textDecoration: 'none',
           color: 'var(--gold)',
           boxSizing: 'border-box',
           WebkitTapHighlightColor: 'transparent',
         }}
       >
-        <ArrowLeftIcon size={16} color="currentColor" />
-        <span
-          className="margo-conversation-back-label"
-          style={{
-            fontFamily: UI_FONT,
-            fontSize: '0.72rem',
-            fontWeight: 600,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-          }}
-        >
-          Messages
-        </span>
+        <ArrowLeftIcon size={20} color="currentColor" />
       </Link>
 
       {profileHref && name ? (
@@ -80,10 +68,11 @@ export function MargoConversationHeader({
           href={profileHref}
           style={{
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
-            gap: '10px',
-            flex: 1,
+            justifyContent: 'center',
             minWidth: 0,
+            padding: '0 4px',
             textDecoration: 'none',
             color: 'inherit',
             WebkitTapHighlightColor: 'transparent',
@@ -91,11 +80,12 @@ export function MargoConversationHeader({
         >
           <div
             style={{
-              width: '34px',
-              height: '34px',
+              width: '32px',
+              height: '32px',
               borderRadius: '50%',
               flexShrink: 0,
               overflow: 'hidden',
+              marginBottom: '4px',
               background: avatarUrl ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
               border: '1px solid var(--gold-border)',
               display: 'flex',
@@ -106,54 +96,52 @@ export function MargoConversationHeader({
             {avatarUrl ? (
               <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-              <span style={{ fontFamily: UI_FONT, fontSize: '0.62rem', fontWeight: 700, color: 'var(--bg)' }}>
+              <span style={{ fontFamily: UI_FONT, fontSize: TYPE.label, fontWeight: 700, color: 'var(--bg)' }}>
                 {name.slice(0, 2).toUpperCase()}
               </span>
             )}
           </div>
-          <div style={{ minWidth: 0, flex: 1 }}>
+          <p
+            style={{
+              fontFamily: UI_FONT,
+              fontSize: TYPE.secondary,
+              fontWeight: 600,
+              color: 'var(--text)',
+              margin: 0,
+              maxWidth: '100%',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              lineHeight: 1.2,
+              textAlign: 'center',
+            }}
+          >
+            {name}
+          </p>
+          {username ? (
             <p
               style={{
                 fontFamily: UI_FONT,
-                fontSize: '0.88rem',
-                fontWeight: 600,
-                color: 'var(--text)',
-                margin: 0,
+                fontSize: TYPE.meta,
+                color: 'var(--text-muted)',
+                margin: '2px 0 0',
+                maxWidth: '100%',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                lineHeight: 1.25,
+                lineHeight: 1.2,
+                textAlign: 'center',
               }}
             >
-              {name}
+              @{username}
             </p>
-            {username ? (
-              <p
-                style={{
-                  fontFamily: UI_FONT,
-                  fontSize: '0.68rem',
-                  color: 'var(--text-muted)',
-                  margin: '2px 0 0',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  lineHeight: 1.2,
-                }}
-              >
-                @{username}
-              </p>
-            ) : null}
-          </div>
+          ) : null}
         </Link>
       ) : (
-        <div style={{ flex: 1, minHeight: '34px' }} aria-hidden />
+        <div aria-hidden />
       )}
 
-      <style>{`
-        @media (min-width: 640px) {
-          .margo-conversation-back-label { display: none; }
-        }
-      `}</style>
+      <div aria-hidden style={{ width: touch, height: touch }} />
     </header>
   )
 }

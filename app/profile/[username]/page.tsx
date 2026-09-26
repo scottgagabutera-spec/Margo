@@ -215,7 +215,6 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
   const [profile, setProfile] = useState<ProfileData | null>(cached?.profile ?? null)
   const [loading, setLoading] = useState(!cached)
   const [notFound, setNotFound] = useState(false)
-  const [privateInaccessible, setPrivateInaccessible] = useState(false)
   const [followerCount, setFollowerCount] = useState<number | null>(cached?.followerCount ?? null)
   const [followingCount, setFollowingCount] = useState<number | null>(cached?.followingCount ?? null)
   const [followStatus, setFollowStatus] = useState<FollowStatus>(null)
@@ -260,7 +259,6 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
       setFollowingCount(cachedNow.followingCount)
       setLoading(false)
       setNotFound(false)
-      setPrivateInaccessible(false)
     } else {
       setProfile((prev) => (prev?.username === username ? prev : null))
     }
@@ -272,7 +270,6 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
         setFollowerCount(bundle.followerCount)
         setFollowingCount(bundle.followingCount)
         setNotFound(false)
-        setPrivateInaccessible(false)
         setLoading(false)
         return
       }
@@ -284,13 +281,11 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
         setFollowerCount(peek.followerCount)
         setFollowingCount(peek.followingCount)
         setNotFound(false)
-        setPrivateInaccessible(false)
         setLoading(false)
         return
       }
       setNotFound(true)
       setProfile(null)
-      setPrivateInaccessible(false)
       setLoading(false)
     })
     return () => { active = false }
@@ -608,24 +603,6 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
         <p style={{ ...emptyLyricStyle, textAlign: 'center', paddingTop: 'calc(var(--nav-height, 72px) + 88px)' }}>
           No one here by that name.
         </p>
-      )}
-
-      {!loading && privateInaccessible && (
-        <div style={{
-          maxWidth: '360px', margin: '0 auto', paddingTop: 'calc(var(--nav-height, 72px) + 68px)', paddingLeft: '24px', paddingRight: '24px',
-          textAlign: 'center',
-        }}>
-          <div style={{
-            border: '1px solid var(--border)', borderRadius: '16px', padding: '24px',
-          }}>
-            <p style={{ ...emptyLyricStyle, marginBottom: '4px' }}>
-              This account is private.
-            </p>
-            <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', margin: 0 }}>
-              Only people they accept can see their profile.
-            </p>
-          </div>
-        </div>
       )}
 
       {!loading && profile && (

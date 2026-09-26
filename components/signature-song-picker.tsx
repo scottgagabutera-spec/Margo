@@ -89,7 +89,6 @@ export function SignatureSongPicker({
   currentLyric?: string
   onChange: (next: { song: string; artist: string; catalogSongId: string | null }) => void
   onLyricPick?: (lyric: string) => void
-  onManageSelectedLine?: () => void
 }) {
   const [query, setQuery] = useState('')
   const [hits, setHits] = useState<ComposeSearchHit[]>([])
