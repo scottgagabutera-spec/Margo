@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useMessaging } from '@/hooks/useMessaging'
 import { isPartnerUuid } from '@/lib/messages/partner-key'
+import { resolveMessageEligibility, type FollowStatus } from '@/lib/message-eligibility'
+import { resolveThreadPartner } from '@/lib/resolve-thread-partner'
 
 const supabase = createClient()
 
@@ -55,6 +57,7 @@ export function useThread(partnerKey: string) {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [canSend, setCanSend] = useState(true)
+  const [blockedReason, setBlockedReason] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
 
   const loadThread = useCallback(async (uid: string, other: ThreadPartner) => {
@@ -102,49 +105,48 @@ export function useThread(partnerKey: string) {
         setLoadError('This conversation is taking too long to load.')
       }, timeoutMs)
       try {
-        const profileQuery = isPartnerUuid(partnerKey)
-          ? supabase
-              .from('profiles')
-              .select('id, username, display_name, avatar_url, who_can_message')
-              .eq('id', partnerKey)
-              .maybeSingle()
-          : supabase
-              .from('profiles')
-              .select('id, username, display_name, avatar_url, who_can_message')
-              .eq('username', partnerKey)
-              .maybeSingle()
-
-        const { data: profile, error } = await profileQuery
+        const row = await resolveThreadPartner(supabase, partnerKey)
 
         // Cancelled / timed-out mount — do not keep applying results.
         if (!active || timedOut) return
-        if (error || !profile) {
-          setLoadError('Could not open this conversation.')
+        if (!row) {
+          setLoadError('This person could not be found.')
           setLoading(false)
           return
         }
 
         const other: ThreadPartner = {
-          id: profile.id,
-          username: profile.username,
-          displayName: profile.display_name,
-          avatarUrl: profile.avatar_url,
-          whoCanMessage: profile.who_can_message,
+          id: row.id,
+          username: row.username,
+          displayName: row.displayName,
+          avatarUrl: row.avatarUrl,
+          whoCanMessage: row.whoCanMessage,
         }
         setPartner(other)
 
-        if (other.whoCanMessage === 'no_one') {
-          setCanSend(false)
-        } else if (other.whoCanMessage === 'followers') {
+        let followStatus: FollowStatus = null
+        if (other.whoCanMessage === 'followers') {
           const { data: f } = await supabase
             .from('follows')
             .select('status')
             .eq('follower_id', uid)
             .eq('followee_id', other.id)
             .maybeSingle()
-          if (active && !timedOut) setCanSend(f?.status === 'accepted')
-        } else {
-          setCanSend(true)
+          followStatus = f ? (f.status as FollowStatus) : null
+        }
+        const eligibility = resolveMessageEligibility({
+          whoCanMessage: other.whoCanMessage,
+          followStatus,
+          isOwnProfile: false,
+        })
+        if (active && !timedOut) {
+          setCanSend(eligibility.canSend)
+          setBlockedReason(eligibility.blockedReason)
+        }
+
+        if (!eligibility.canOpenThread) {
+          setMessages([])
+          return
         }
 
         await loadThread(uid, other)
@@ -237,5 +239,5 @@ export function useThread(partnerKey: string) {
     })
   }, [userId, partner, applyOutboundMessage])
 
-  return { partner, messages, loading, loadError, canSend, sending, sendMessage }
+  return { partner, messages, loading, loadError, canSend, blockedReason, sending, sendMessage }
 }

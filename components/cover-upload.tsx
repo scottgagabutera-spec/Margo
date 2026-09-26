@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 import { ImagePlusIcon } from '@/components/icons'
+import { MargoPhotoSource } from '@/components/margo-photo-source'
 import { TYPE, UI_FONT } from '@/lib/fonts'
 
 const supabase = createClient()
@@ -43,16 +44,15 @@ export function CoverUpload({
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [localPreview, setLocalPreview] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [sourceOpen, setSourceOpen] = useState(false)
   const previewUrl = localPreview ?? currentCoverUrl
 
   useEffect(() => {
     setLocalPreview(null)
   }, [currentCoverUrl])
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !user) return
+  const uploadFile = async (file: File) => {
+    if (!user) return
     setUploading(true)
     setError(null)
     try {
@@ -63,7 +63,6 @@ export function CoverUpload({
       setError(err instanceof Error ? err.message : 'Could not upload cover. Please try again.')
     } finally {
       setUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
@@ -71,7 +70,7 @@ export function CoverUpload({
     <div>
       <button
         type="button"
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => setSourceOpen(true)}
         disabled={uploading}
         aria-label={previewUrl ? 'Change cover photo' : 'Add cover photo'}
         style={{
@@ -124,12 +123,11 @@ export function CoverUpload({
           {error}
         </p>
       )}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleFileSelect}
-        style={{ display: 'none' }}
+      <MargoPhotoSource
+        open={sourceOpen}
+        onOpenChange={setSourceOpen}
+        title="Cover photo"
+        onFile={(file) => void uploadFile(file)}
       />
     </div>
   )

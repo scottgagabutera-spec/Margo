@@ -106,25 +106,30 @@ export async function GET(request: NextRequest) {
 
   const query = lyric || song
   if (!query) return NextResponse.json({ error: 'lyric or song query required' }, { status: 400 })
-  if (!process.env.GENIUS_API_KEY) return NextResponse.json({ error: 'Genius not configured' }, { status: 503 })
 
   const cacheKey = normalize(query)
   if (searchCache[cacheKey]) {
     return NextResponse.json({ results: searchCache[cacheKey], source: 'cache' })
   }
 
+  const geniusKey = process.env.GENIUS_API_KEY
+
   try {
     const [geniusResult, itunesResult] = await Promise.allSettled([
-      searchGenius(query, process.env.GENIUS_API_KEY!),
+      geniusKey ? searchGenius(query, geniusKey) : Promise.resolve([] as SearchResult[]),
       searchItunes(query),
     ])
     const geniusResults = geniusResult.status === 'fulfilled' ? geniusResult.value : []
     const itunesResults = itunesResult.status === 'fulfilled' ? itunesResult.value : []
     const merged = dedupe([...geniusResults, ...itunesResults])
     const results = merged.slice(0, 5)
-    if (!results.length) return NextResponse.json({ error: 'No results found' }, { status: 404 })
+    if (!results.length) {
+      return NextResponse.json({
+        error: geniusKey ? 'No results found' : 'No results found (Genius not configured on this environment)',
+      }, { status: 404 })
+    }
     searchCache[cacheKey] = results
-    return NextResponse.json({ results })
+    return NextResponse.json({ results, geniusConfigured: !!geniusKey })
   } catch (err: any) {
     return NextResponse.json({ error: 'Search failed', detail: err.message }, { status: 500 })
   }

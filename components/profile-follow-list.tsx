@@ -193,6 +193,9 @@ function FollowRow({ person }: { person: FollowListPerson }) {
             marginTop: '1px',
           }}>
             @{person.username}
+            {person.isPrivate ? (
+              <span style={{ marginLeft: '8px', color: 'var(--text-muted)' }}>Private</span>
+            ) : null}
           </span>
         </span>
       </PendingNavLink>

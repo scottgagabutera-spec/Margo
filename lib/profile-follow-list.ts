@@ -8,6 +8,7 @@ export interface FollowListPerson {
   displayName: string
   avatarUrl: string | null
   isArtist: boolean
+  isPrivate?: boolean
 }
 
 export type FollowListResult =

@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { MargoActionSheet } from '@/components/margo-action-sheet'
 import { useRouter } from 'next/navigation'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useAuthGate } from '@/components/supabase-auth-provider'
@@ -10,6 +11,11 @@ import { SignInLink } from '@/components/signin-link'
 import { LoadingRing } from '@/components/loading-ring'
 import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { ARTIST_LINK_FIELDS, sanitizeArtistLinks } from '@/lib/artist-links'
+import {
+  clearProfileEditDraft,
+  readProfileEditDraft,
+  writeProfileEditDraft,
+} from '@/lib/profile-edit-draft'
 
 const font = UI_FONT
 const lyricFont = LYRIC_FONT
@@ -48,6 +54,11 @@ export default function EditProfilePage() {
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [signatureSheetOpen, setSignatureSheetOpen] = useState(false)
+  const lyricInputRef = useRef<HTMLTextAreaElement>(null)
+  const signatureSectionRef = useRef<HTMLDivElement>(null)
+  /** Avoid re-seeding the form when avatar/cover sync updates identity mid-edit. */
+  const formSeedKeyRef = useRef<string | null>(null)
 
   // Stay here and open the auth gate so a successful sign-in returns to edit.
   useEffect(() => {
@@ -56,26 +67,55 @@ export default function EditProfilePage() {
     }
   }, [loading, user, requireAuth])
 
-  // Seed local form state once identity resolves. Runs again if identity
-  // changes underneath us (e.g. another tab updated it).
   useEffect(() => {
-    if (identity) {
+    if (!identity || !user?.id) return
+    const seedKey = identity.username
+    if (formSeedKeyRef.current === seedKey) {
       setAvatarUrl(identity.avatarUrl ?? null)
-      setDisplayName(identity.displayName || '')
-      setUsername(identity.username || '')
-      setBio(identity.bio || '')
-      setLyric(identity.signatureLyric || '')
-      setSong(identity.signatureSong || '')
-      setArtist(identity.signatureArtist || '')
-      setCatalogSongId(identity.signatureSongId ?? null)
-      setIsPrivateLocal(identity.isPrivate)
-      const seeded: Record<string, string> = {}
-      for (const field of ARTIST_LINK_FIELDS) {
-        seeded[field.key] = identity.artistLinks?.[field.key] || ''
-      }
-      setArtistLinkDraft(seeded)
+      return
     }
-  }, [identity])
+    formSeedKeyRef.current = seedKey
+    const draft = readProfileEditDraft(user.id)
+    setAvatarUrl(identity.avatarUrl ?? null)
+    setDisplayName(draft?.displayName ?? (identity.displayName || ''))
+    setUsername(draft?.username ?? (identity.username || ''))
+    setBio(draft?.bio ?? (identity.bio || ''))
+    setLyric(draft?.lyric ?? (identity.signatureLyric || ''))
+    setSong(draft?.song ?? (identity.signatureSong || ''))
+    setArtist(draft?.artist ?? (identity.signatureArtist || ''))
+    setCatalogSongId(draft?.catalogSongId ?? identity.signatureSongId ?? null)
+    setIsPrivateLocal(draft?.isPrivate ?? identity.isPrivate)
+    const seeded: Record<string, string> = {}
+    for (const field of ARTIST_LINK_FIELDS) {
+      seeded[field.key] = draft?.artistLinkDraft?.[field.key] ?? (identity.artistLinks?.[field.key] || '')
+    }
+    setArtistLinkDraft(seeded)
+  }, [identity, user?.id])
+
+  useEffect(() => {
+    if (!user?.id) return
+    const persist = () => {
+      if (document.visibilityState === 'hidden') {
+        writeProfileEditDraft(user.id, {
+          displayName,
+          username,
+          bio,
+          lyric,
+          song,
+          artist,
+          catalogSongId,
+          isPrivate,
+          artistLinkDraft,
+        })
+      }
+    }
+    document.addEventListener('visibilitychange', persist)
+    window.addEventListener('pagehide', persist)
+    return () => {
+      document.removeEventListener('visibilitychange', persist)
+      window.removeEventListener('pagehide', persist)
+    }
+  }, [user?.id, displayName, username, bio, lyric, song, artist, catalogSongId, isPrivate, artistLinkDraft])
 
   const handleSave = useCallback(async () => {
     if (!identity) return
@@ -133,9 +173,10 @@ export default function EditProfilePage() {
       setSaving(false)
       setError(failed.error || 'Something went wrong saving your profile.')
     } else {
+      if (user?.id) clearProfileEditDraft(user.id)
       router.push(`/profile/${destinationUsername}`)
     }
-  }, [identity, displayName, username, bio, lyric, song, artist, catalogSongId, isPrivate, artistLinkDraft, updateDisplayName, changeUsername, updateBio, updateSignatureLyric, setPrivate, updateArtistLinks, router])
+  }, [identity, user?.id, displayName, username, bio, lyric, song, artist, catalogSongId, isPrivate, artistLinkDraft, updateDisplayName, changeUsername, updateBio, updateSignatureLyric, setPrivate, updateArtistLinks, router])
 
   if (!loading && !user) {
     return (
@@ -176,13 +217,27 @@ export default function EditProfilePage() {
     )
   }
 
-  if (loading || !identity) {
+  const showBootSpinner = (loading && !identity) || (!user && loading)
+
+  if (showBootSpinner) {
     return (
       <main style={{ minHeight: '100vh', background: 'var(--bg)' }}>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: '160px 0' }}>
           {[0, 1, 2].map(i => (
             <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--gold)', opacity: 0.5 }} />
           ))}
+        </div>
+      </main>
+    )
+  }
+
+  if (!identity) {
+    return (
+      <main style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+        <div style={{ maxWidth: '420px', margin: '0 auto', padding: '120px 24px', textAlign: 'center' }}>
+          <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
+            Could not load your profile. Pull to refresh or try again.
+          </p>
         </div>
       </main>
     )
@@ -301,9 +356,10 @@ export default function EditProfilePage() {
               </div>
             ))}
 
-            <div>
+            <div id="signature" ref={signatureSectionRef}>
               <label style={labelStyle}>Signature</label>
               <textarea
+                ref={lyricInputRef}
                 value={lyric}
                 onChange={e => setLyric(e.target.value.slice(0, 140))}
                 rows={2}
@@ -390,6 +446,45 @@ export default function EditProfilePage() {
           </div>
         </div>
       </div>
+      <MargoActionSheet
+        open={signatureSheetOpen}
+        onOpenChange={setSignatureSheetOpen}
+        title="Signature lyric"
+        message={lyric.trim() ? `\u201C${lyric.trim()}\u201D` : 'Choose what to do with your signature.'}
+        actions={[
+          {
+            id: 'edit',
+            label: 'Edit lyric text',
+            onSelect: () => {
+              lyricInputRef.current?.focus()
+            },
+          },
+          {
+            id: 'replace',
+            label: 'Replace song or line',
+            onSelect: () => {
+              signatureSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            },
+          },
+          {
+            id: 'remove',
+            label: 'Remove signature',
+            tone: 'destructive',
+            onSelect: () => {
+              setLyric('')
+              setSong('')
+              setArtist('')
+              setCatalogSongId(null)
+            },
+          },
+          {
+            id: 'cancel',
+            label: 'Cancel',
+            tone: 'cancel',
+            onSelect: () => {},
+          },
+        ]}
+      />
       {saving && (
         <div
           role="status"

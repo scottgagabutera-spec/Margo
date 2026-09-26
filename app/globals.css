@@ -566,6 +566,13 @@ html, body {
   outline: none;
 }
 
+.margo-message-compose::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+  font-style: normal;
+  font-weight: 400;
+}
+
 @keyframes margo-spin {
   to { transform: rotate(360deg); }
 }

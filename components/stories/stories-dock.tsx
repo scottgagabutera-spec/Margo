@@ -15,7 +15,10 @@ const TOOLBAR_HIT = 44
 
 /** Matches Feed / nav mobile breakpoint (tab bar, 639px). null until mounted. */
 export function useMargoMobileViewport(): boolean | null {
-  const [mobile, setMobile] = useState<boolean | null>(null)
+  const [mobile, setMobile] = useState<boolean | null>(() => {
+    if (typeof window === 'undefined') return null
+    return window.matchMedia(MOBILE_MQ).matches
+  })
   useEffect(() => {
     const mq = window.matchMedia(MOBILE_MQ)
     const sync = () => setMobile(mq.matches)
@@ -45,7 +48,7 @@ export function StoriesDock({ onAddStory }: { onAddStory?: () => void }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [expanded])
 
-  if (!ctx?.signedIn || isMobile !== true) return null
+  if (!ctx?.signedIn || isMobile === false) return null
 
   const { authors, openStory, warmStory } = ctx
   const unseen = authors.find((a) => a.hasUnseen) ?? authors[0] ?? null

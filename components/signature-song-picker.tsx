@@ -1,16 +1,18 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { ComposeSearchDropdown, type ComposeSearchHit } from '@/components/compose-search-dropdown'
 import { MargoSearchInput } from '@/components/margo-search-input'
 import { CloseIcon } from '@/components/icons'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { createClient } from '@/lib/supabase/client'
-import { searchMargoSongs, type MargoSongHit } from '@/lib/search-margo-songs'
+import { fetchUnifiedSongSearchHits } from '@/lib/song-search/unified-song-search'
 import { playOrToggleSnippet, togglePlayPause } from '@/lib/audio-engine'
 import { fallbackSnippetWindow } from '@/lib/lyric-match'
 import { matchLyricWindowFromLines } from '@/lib/lyric-match'
 import { buildCatalogLyricUnits } from '@/lib/catalog-lyric-unit'
-import { useIsBuffering, useIsPlaying, useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
+import { useIsBuffering, useIsPlaying } from '@/hooks/useAudioEngine'
+import { ComposeLinePicker } from '@/components/compose-line-picker'
 import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import type { ComposeLyricLine } from '@/components/compose-line-picker'
 
@@ -32,7 +34,8 @@ function CatalogPlayButton({
     <button
       type="button"
       aria-label={playing ? 'Pause' : 'Play this moment'}
-      onClick={() => {
+      onClick={(e) => {
+        e.stopPropagation()
         if (playing) {
           togglePlayPause()
           return
@@ -88,24 +91,35 @@ export function SignatureSongPicker({
   onLyricPick?: (lyric: string) => void
 }) {
   const [query, setQuery] = useState('')
-  const [hits, setHits] = useState<MargoSongHit[]>([])
+  const [hits, setHits] = useState<ComposeSearchHit[]>([])
   const [loading, setLoading] = useState(false)
-  const [selected, setSelected] = useState<MargoSongHit | null>(null)
+  const [showResults, setShowResults] = useState(false)
+  const [selected, setSelected] = useState<MargoSongHitLocal | null>(null)
   const [lines, setLines] = useState<ComposeLyricLine[]>([])
   const [linesLoading, setLinesLoading] = useState(false)
   const genRef = useRef(0)
+
+  type MargoSongHitLocal = {
+    id: string
+    title: string
+    artist: string
+    artwork: string
+    audioUrl: string | null
+  }
 
   useEffect(() => {
     const q = query.trim()
     if (q.length < 2) {
       setHits([])
       setLoading(false)
+      setShowResults(false)
       return
     }
     const gen = ++genRef.current
     setLoading(true)
+    setShowResults(true)
     const t = window.setTimeout(() => {
-      void searchMargoSongs(supabase, q, 6).then((rows) => {
+      void fetchUnifiedSongSearchHits(supabase, q, 10).then((rows) => {
         if (gen !== genRef.current) return
         setHits(rows)
         setLoading(false)
@@ -174,7 +188,8 @@ export function SignatureSongPicker({
     return () => { active = false }
   }, [catalogSongId])
 
-  const selectedLabel = catalogSongId
+  const hasSongMeta = !!(catalogSongId || (songTitle.trim() && artistName.trim()))
+  const selectedLabel = hasSongMeta
     ? [selected?.title || songTitle, selected?.artist || artistName].filter(Boolean).join(' · ')
     : null
 
@@ -210,19 +225,55 @@ export function SignatureSongPicker({
       }
       : null
 
+  function selectSearchHit(hit: ComposeSearchHit) {
+    setQuery('')
+    setHits([])
+    setShowResults(false)
+    if (hit.source === 'margo' && hit.margoSongId) {
+      setSelected({
+        id: hit.margoSongId,
+        title: hit.title,
+        artist: hit.artist,
+        artwork: hit.artwork || '',
+        audioUrl: hit.audioUrl ?? null,
+      })
+      onChange({ song: hit.title, artist: hit.artist, catalogSongId: hit.margoSongId })
+      return
+    }
+    setSelected(null)
+    onChange({ song: hit.title, artist: hit.artist, catalogSongId: null })
+  }
+
   return (
     <div>
+      <MargoSearchInput
+        value={query}
+        onChange={setQuery}
+        placeholder="Search Margo, Genius, or Apple Music"
+        ariaLabel="Search songs"
+        loading={loading}
+      />
+      <ComposeSearchDropdown
+        open={showResults && query.trim().length >= 2}
+        loading={loading}
+        results={hits}
+        highlightQuery={query}
+        onSelect={selectSearchHit}
+        onClose={() => setShowResults(false)}
+        variant="compose"
+      />
+
       {selectedLabel ? (
-        <>
         <div style={{
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
           minHeight: 'var(--margo-touch-min)',
-          padding: '4px 8px 4px 8px',
+          padding: '4px 8px',
           borderRadius: '12px',
           border: '1px solid var(--gold-border)',
           background: 'var(--gold-faint)',
+          marginTop: '12px',
           marginBottom: '12px',
         }}>
           {selected?.audioUrl ? (
@@ -251,8 +302,12 @@ export function SignatureSongPicker({
           </span>
           <button
             type="button"
-            aria-label="Clear catalog song"
-            onClick={() => onChange({ song: '', artist: '', catalogSongId: null })}
+            aria-label="Clear song"
+            onClick={() => {
+              setSelected(null)
+              setLines([])
+              onChange({ song: '', artist: '', catalogSongId: null })
+            }}
             style={{
               width: 'var(--margo-touch-min)',
               height: 'var(--margo-touch-min)',
@@ -268,209 +323,38 @@ export function SignatureSongPicker({
             <CloseIcon size={14} color="var(--text-secondary)" />
           </button>
         </div>
-        {linesLoading ? (
-          <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', margin: '0 0 8px' }}>
-            Loading lyrics…
-          </p>
-        ) : lines.length > 0 ? (
-          <div style={{
-            maxHeight: '220px',
-            overflowY: 'auto',
-            overscrollBehavior: 'contain',
-            border: '1px solid var(--border)',
-            borderRadius: '12px',
-            background: 'var(--surface)',
-          }}>
-            {lines.map((line, index) => (
-              <SignatureLineRow
-                key={line.lineIndex}
-                line={line}
-                selected={(currentLyric || '').trim() === line.text.trim()}
-                isLast={index === lines.length - 1}
-                songTitle={selected?.title || songTitle}
-                artistName={selected?.artist || artistName}
-                audioUrl={selected?.audioUrl || null}
-                songId={selected?.id || catalogSongId}
-                artwork={selected?.artwork || null}
-                onPick={() => onLyricPick?.(line.text.slice(0, 140))}
-              />
-            ))}
-          </div>
-        ) : null}
-        </>
-      ) : (
-        <>
-          <MargoSearchInput
-            value={query}
-            onChange={setQuery}
-            placeholder="Search songs"
-            ariaLabel="Search songs"
-            loading={loading}
-          />
-          {hits.length > 0 && (
-            <ul style={{
-              listStyle: 'none',
-              margin: '8px 0 0',
-              padding: 0,
-              border: '1px solid var(--border)',
-              borderRadius: '12px',
-              overflow: 'hidden',
-              background: 'var(--surface)',
-            }}>
-              {hits.map((hit) => (
-                <li key={hit.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelected(hit)
-                      onChange({ song: hit.title, artist: hit.artist, catalogSongId: hit.id })
-                      setQuery('')
-                      setHits([])
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      width: '100%',
-                      minHeight: 'var(--margo-touch-min)',
-                      padding: '8px 12px',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                    }}
-                  >
-                    {hit.artwork ? (
-                      <img
-                        src={hit.artwork}
-                        alt=""
-                        style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '8px',
-                          objectFit: 'cover',
-                          flexShrink: 0,
-                        }}
-                      />
-                    ) : (
-                      <span style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '8px',
-                        background: 'var(--surface-2)',
-                        flexShrink: 0,
-                      }} />
-                    )}
-                    <span style={{ minWidth: 0, flex: 1 }}>
-                      <span style={{
-                        display: 'block',
-                        fontFamily: font,
-                        fontSize: TYPE.song,
-                        fontWeight: 600,
-                        color: 'var(--text)',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}>
-                        {hit.title}
-                      </span>
-                      <span style={{
-                        display: 'block',
-                        fontFamily: font,
-                        fontSize: TYPE.meta,
-                        color: 'var(--text-secondary)',
-                      }}>
-                        {hit.artist}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
-      )}
-    </div>
-  )
-}
+      ) : null}
 
-function SignatureLineRow({
-  line,
-  selected,
-  isLast,
-  songTitle,
-  artistName,
-  audioUrl,
-  songId,
-  artwork,
-  onPick,
-}: {
-  line: ComposeLyricLine
-  selected: boolean
-  isLast: boolean
-  songTitle: string
-  artistName: string
-  audioUrl: string | null
-  songId: string | null
-  artwork: string | null
-  onPick: () => void
-}) {
-  const { playing, buffering } = useSnippetPlaybackUi(songId || audioUrl || '', line.lineIndex)
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        if (audioUrl && songId && line.endSec > line.startSec) {
-          playOrToggleSnippet({
-            songId,
-            audioUrl,
-            title: songTitle,
-            artist: artistName,
-            artwork,
-            lineIndex: line.lineIndex,
-            lineText: line.text,
-            startSec: line.startSec,
-            endSec: line.endSec,
-            source: 'feed',
-          })
-        }
-        onPick()
-      }}
-      style={{
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-        padding: '10px 12px',
-        minHeight: 'var(--margo-touch-min)',
-        background: selected ? 'color-mix(in srgb, var(--gold) 16%, transparent)' : 'none',
-        border: 'none',
-        borderBottom: isLast ? 'none' : '1px solid var(--border)',
-        boxShadow: selected ? 'inset 3px 0 0 var(--gold)' : 'none',
-        cursor: 'pointer',
-        textAlign: 'left',
-        boxSizing: 'border-box',
-      }}
-    >
-      <span style={{
-        width: 28,
-        height: 28,
-        flexShrink: 0,
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-        <PlayPauseIcon playing={playing} buffering={buffering} size={14} color="var(--gold)" />
-      </span>
-      <span style={{
-        fontFamily: lyricFont,
-        fontStyle: 'italic',
-        fontSize: TYPE.lyric,
-        color: selected ? 'var(--gold)' : 'var(--text)',
-        lineHeight: 1.4,
-      }}>
-        {line.text}
-      </span>
-    </button>
+      {catalogSongId ? (
+        <ComposeLinePicker
+          lines={lines}
+          loading={linesLoading}
+          songTitle={selected?.title || songTitle}
+          artistName={selected?.artist || artistName}
+          audioUrl={selected?.audioUrl ?? null}
+          songId={selected?.id || catalogSongId}
+          artwork={selected?.artwork || null}
+          enableParagraphPick
+          maxParagraphLines={2}
+          hideHeader
+          onPick={(line) => onLyricPick?.(line.text.slice(0, 140))}
+          onPickParagraph={(picked) => {
+            const joined = picked.map((l) => l.text.trim()).filter(Boolean).join('\n')
+            onLyricPick?.(joined.slice(0, 140))
+          }}
+          onBack={() => {}}
+        />
+      ) : hasSongMeta ? (
+        <p style={{
+          fontFamily: font,
+          fontSize: TYPE.secondary,
+          color: 'var(--text-muted)',
+          margin: '8px 0 0',
+          lineHeight: 1.45,
+        }}>
+          Type your lyric in the box above — this song is not on Margo yet.
+        </p>
+      ) : null}
+    </div>
   )
 }

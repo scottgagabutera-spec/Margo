@@ -24,9 +24,11 @@ import { ReplayAttribution } from '@/components/replay-attribution'
 import { useRecentReplays } from '@/hooks/useRecentReplays'
 import { usePrimaryTab, restoreActivePrimaryScroll } from '@/components/primary-tab-shell'
 import { FeedPostSkeletonList } from '@/components/margo-skeletons'
+import { FeedOceanFooter } from '@/components/feed-ocean-footer'
 import { feedRankIds, feedSortScore } from '@/lib/feed-rank'
 import { StoryRing } from '@/components/stories/story-ring'
-import { StoriesDock, useMargoMobileViewport } from '@/components/stories/stories-dock'
+import { StoriesPortalDock } from '@/components/stories/stories-portal-dock'
+import { useMargoMobileViewport } from '@/components/stories/stories-dock'
 import { StoryFeedAuthorSync, StoryRingProvider } from '@/components/stories/story-ring-context'
 
 const supabase = createClient()
@@ -49,7 +51,14 @@ function FeedPageInner() {
   const { isTabActive } = usePrimaryTab()
   const feedLive = isTabActive('feed')
   const isMobileViewport = useMargoMobileViewport()
-  const { posts: livePosts, loading, reload } = usePosts({ enabled: feedLive })
+  const {
+    posts: livePosts,
+    loading,
+    reload,
+    loadOlder,
+    loadingOlder,
+    hasMoreOlder,
+  } = usePosts({ enabled: feedLive })
   const {
     items: posts,
     seeded,
@@ -514,17 +523,6 @@ function FeedPageInner() {
     return () => window.cancelAnimationFrame(frame)
   }, [feedLive, listReady, posts.length, highlightParam])
 
-  useEffect(() => {
-    if (!feedLive) return
-    const onReselect = (event: Event) => {
-      const id = (event as CustomEvent<{ id?: string }>).detail?.id
-      if (id !== 'feed') return
-      if (pendingCount > 0) flushPending()
-    }
-    window.addEventListener('margo:primary-tab-reselect', onReselect)
-    return () => window.removeEventListener('margo:primary-tab-reselect', onReselect)
-  }, [feedLive, pendingCount, flushPending])
-
   const exportMoment = useMemo(
     () => (exportPost ? resolveMargoMomentFromPost(exportPost) : null),
     // Feed rebuilds `exportPost` on every parent render. Key on the opened post id only.
@@ -553,7 +551,7 @@ function FeedPageInner() {
     >
     <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative', paddingTop: 'var(--nav-height, 72px)' }}>
       {!ptrBusy && feedLive && pendingCount > 0 && (
-        <FeedNewMomentsPill count={pendingCount} onReveal={flushPending} variant="fixed" />
+        <FeedNewMomentsPill visible onReveal={flushPending} />
       )}
       {!ptrBusy && feedLive && (songCount > 0 || artistCount > 0) && (
         <ContentUpdatesBar
@@ -570,7 +568,7 @@ function FeedPageInner() {
       </div>
 
       <main className="margo-feed-column" style={{ position: 'relative', zIndex: 5, padding: '16px 24px var(--margo-page-padding-bottom)' }}>
-        {feedLive && isMobileViewport === false && (
+        {feedLive && isMobileViewport !== true && (
           <div className="margo-story-ring-tray">
             <StoryRing
               onAddStory={() => {
@@ -630,14 +628,16 @@ function FeedPageInner() {
         {listReady && feedItems.length === 0 && (
           <div style={{ textAlign: 'center', padding: '64px 0' }}>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '1rem', marginBottom: '16px' }}>
-              {`No ${selectedVibe === 'ALL' ? '' : selectedVibe.toLowerCase()} lyrics yet`}
+              {selectedVibe === 'ALL'
+                ? 'Quiet for now.'
+                : `Nothing tagged ${selectedVibe.toLowerCase()} yet.`}
             </p>
             <Link href="/compose" style={{
               padding: '10px 24px', border: '1px solid var(--border)',
               borderRadius: '50px', color: 'var(--text-secondary)',
               fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
               letterSpacing: '1px', textTransform: 'uppercase', textDecoration: 'none',
-            }}>Be the first</Link>
+            }}>Share a lyric</Link>
           </div>
         )}
 
@@ -685,7 +685,11 @@ function FeedPageInner() {
         </div>
 
         {listReady && feedItems.length > 0 && (
-          <div style={{ height: '48px' }} aria-hidden />
+          <FeedOceanFooter
+            hasMore={hasMoreOlder}
+            loadingOlder={loadingOlder}
+            onLoadOlder={() => void loadOlder()}
+          />
         )}
       </main>
 
@@ -704,7 +708,7 @@ function FeedPageInner() {
     </div>
     </PullToRefresh>
       {feedLive && (
-        <StoriesDock
+        <StoriesPortalDock
           onAddStory={() => {
             toast('Open a Moment and tap Add to Story in the export sheet.')
           }}
