@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { MargoActionSheet } from '@/components/margo-action-sheet'
 import { useRouter } from 'next/navigation'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useAuthGate } from '@/components/supabase-auth-provider'
@@ -48,6 +49,9 @@ export default function EditProfilePage() {
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [signatureSheetOpen, setSignatureSheetOpen] = useState(false)
+  const lyricInputRef = useRef<HTMLTextAreaElement>(null)
+  const signatureSectionRef = useRef<HTMLDivElement>(null)
 
   // Stay here and open the auth gate so a successful sign-in returns to edit.
   useEffect(() => {
@@ -301,9 +305,10 @@ export default function EditProfilePage() {
               </div>
             ))}
 
-            <div>
+            <div id="signature" ref={signatureSectionRef}>
               <label style={labelStyle}>Signature</label>
               <textarea
+                ref={lyricInputRef}
                 value={lyric}
                 onChange={e => setLyric(e.target.value.slice(0, 140))}
                 rows={2}
@@ -331,6 +336,7 @@ export default function EditProfilePage() {
                   setCatalogSongId(nextId)
                 }}
                 onLyricPick={(text) => setLyric(text)}
+                onManageSelectedLine={() => setSignatureSheetOpen(true)}
               />
               {!catalogSongId && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
@@ -390,6 +396,45 @@ export default function EditProfilePage() {
           </div>
         </div>
       </div>
+      <MargoActionSheet
+        open={signatureSheetOpen}
+        onOpenChange={setSignatureSheetOpen}
+        title="Signature lyric"
+        message={lyric.trim() ? `\u201C${lyric.trim()}\u201D` : 'Choose what to do with your signature.'}
+        actions={[
+          {
+            id: 'edit',
+            label: 'Edit lyric text',
+            onSelect: () => {
+              lyricInputRef.current?.focus()
+            },
+          },
+          {
+            id: 'replace',
+            label: 'Replace song or line',
+            onSelect: () => {
+              signatureSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            },
+          },
+          {
+            id: 'remove',
+            label: 'Remove signature',
+            tone: 'destructive',
+            onSelect: () => {
+              setLyric('')
+              setSong('')
+              setArtist('')
+              setCatalogSongId(null)
+            },
+          },
+          {
+            id: 'cancel',
+            label: 'Cancel',
+            tone: 'cancel',
+            onSelect: () => {},
+          },
+        ]}
+      />
       {saving && (
         <div
           role="status"

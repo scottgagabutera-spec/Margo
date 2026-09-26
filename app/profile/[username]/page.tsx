@@ -28,6 +28,7 @@ import { uploadProfileCover } from '@/components/cover-upload'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { playSnippet, togglePlayPause } from '@/lib/audio-engine'
+import { MargoActionSheet } from '@/components/margo-action-sheet'
 import { resolveSignatureMomentSnippet } from '@/lib/signature-snippet'
 import { useIsBuffering, useIsPlaying } from '@/hooks/useAudioEngine'
 
@@ -196,7 +197,7 @@ type ProfileContentTab = 'lyrics' | 'replays' | 'backs' | 'private'
 export default function ProfilePage({ username: usernameProp }: { username?: string } = {}) {
   const params = useParams<{ username: string }>()
   const router = useRouter()
-  const { user, identity, syncCoverUrl } = useIdentity()
+  const { user, identity, syncCoverUrl, updateSignatureLyric } = useIdentity()
   const { application } = useArtistApplication()
   const { isTabActive } = usePrimaryTab()
   const username = (usernameProp || (typeof params.username === 'string' ? params.username : '')).trim()
@@ -229,6 +230,8 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
   const [artistSongs, setArtistSongs] = useState<ArtistSongRow[]>([])
   const [artistSongsLoading, setArtistSongsLoading] = useState(false)
   const [artistStats, setArtistStats] = useState({ totalPlays: 0, totalResonates: 0 })
+  const [signatureSheetOpen, setSignatureSheetOpen] = useState(false)
+  const [signatureActionBusy, setSignatureActionBusy] = useState(false)
   const [signatureTrack, setSignatureTrack] = useState<{
     id: string
     title: string
@@ -940,24 +943,63 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
             }}>
               <p style={sectionLabelStyle}>Signature lyric</p>
               {profile.signatureLyric ? (
-                <>
-                  <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--gold)', lineHeight: 1.5, marginBottom: '8px' }}>
-                    &ldquo;{profile.signatureLyric}&rdquo;
-                  </p>
-                  {(profile.signatureSong || profile.signatureArtist || signatureTrack) && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      {signatureTrack ? <SignaturePlayButton track={signatureTrack} /> : null}
-                      <p style={{
-                        fontFamily: font,
-                        fontSize: TYPE.meta,
-                        color: 'var(--text-secondary)',
-                        margin: 0,
-                      }}>
-                        {profile.signatureSong}{profile.signatureSong && profile.signatureArtist ? ' · ' : ''}{profile.signatureArtist}
-                      </p>
-                    </div>
-                  )}
-                </>
+                isOwnProfile ? (
+                  <button
+                    type="button"
+                    onClick={() => setSignatureSheetOpen(true)}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      margin: 0,
+                      padding: 0,
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      WebkitTapHighlightColor: 'transparent',
+                    }}
+                  >
+                    <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--gold)', lineHeight: 1.5, marginBottom: '8px' }}>
+                      &ldquo;{profile.signatureLyric}&rdquo;
+                    </p>
+                    {(profile.signatureSong || profile.signatureArtist || signatureTrack) && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {signatureTrack ? (
+                          <span onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                            <SignaturePlayButton track={signatureTrack} />
+                          </span>
+                        ) : null}
+                        <p style={{
+                          fontFamily: font,
+                          fontSize: TYPE.meta,
+                          color: 'var(--text-secondary)',
+                          margin: 0,
+                        }}>
+                          {profile.signatureSong}{profile.signatureSong && profile.signatureArtist ? ' · ' : ''}{profile.signatureArtist}
+                        </p>
+                      </div>
+                    )}
+                  </button>
+                ) : (
+                  <>
+                    <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--gold)', lineHeight: 1.5, marginBottom: '8px' }}>
+                      &ldquo;{profile.signatureLyric}&rdquo;
+                    </p>
+                    {(profile.signatureSong || profile.signatureArtist || signatureTrack) && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {signatureTrack ? <SignaturePlayButton track={signatureTrack} /> : null}
+                        <p style={{
+                          fontFamily: font,
+                          fontSize: TYPE.meta,
+                          color: 'var(--text-secondary)',
+                          margin: 0,
+                        }}>
+                          {profile.signatureSong}{profile.signatureSong && profile.signatureArtist ? ' · ' : ''}{profile.signatureArtist}
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )
               ) : isOwnProfile ? (
                 <Link href="/profile/edit" style={{ ...emptyLyricStyle, textDecoration: 'none' }}>
                   Add the lyric that says it best
@@ -1230,6 +1272,60 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
           artistUsernameHint={profile?.username}
         />
       ) : null}
+      <MargoActionSheet
+        open={signatureSheetOpen}
+        onOpenChange={setSignatureSheetOpen}
+        title="Signature lyric"
+        message={profile?.signatureLyric ? `\u201C${profile.signatureLyric}\u201D` : undefined}
+        actions={[
+          {
+            id: 'edit',
+            label: 'Edit',
+            disabled: signatureActionBusy,
+            onSelect: () => { router.push('/profile/edit') },
+          },
+          {
+            id: 'replace',
+            label: 'Replace',
+            disabled: signatureActionBusy,
+            onSelect: () => { router.push('/profile/edit#signature') },
+          },
+          {
+            id: 'remove',
+            label: 'Remove',
+            tone: 'destructive',
+            disabled: signatureActionBusy,
+            onSelect: () => {
+              void (async () => {
+                setSignatureActionBusy(true)
+                const res = await updateSignatureLyric({
+                  lyric: '',
+                  song: '',
+                  artist: '',
+                  songId: null,
+                })
+                setSignatureActionBusy(false)
+                if (res.success && profile) {
+                  setProfile({
+                    ...profile,
+                    signatureLyric: null,
+                    signatureSong: null,
+                    signatureArtist: null,
+                    signatureSongId: null,
+                  })
+                  setSignatureTrack(null)
+                }
+              })()
+            },
+          },
+          {
+            id: 'cancel',
+            label: 'Cancel',
+            tone: 'cancel',
+            onSelect: () => {},
+          },
+        ]}
+      />
     </main>
   )
 }
