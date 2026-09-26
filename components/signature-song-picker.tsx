@@ -12,6 +12,8 @@ import { fallbackSnippetWindow } from '@/lib/lyric-match'
 import { matchLyricWindowFromLines } from '@/lib/lyric-match'
 import { buildCatalogLyricUnits } from '@/lib/catalog-lyric-unit'
 import { useIsBuffering, useIsPlaying, useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
+import { useLongPress } from '@/hooks/useLongPress'
+import { MargoLongPressHint } from '@/components/margo-long-press-hint'
 import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import type { ComposeLyricLine } from '@/components/compose-line-picker'
 
@@ -393,6 +395,10 @@ function SignatureLineRow({
   onManageSelected?: () => void
 }) {
   const { playing, buffering } = useSnippetPlaybackUi(songId || audioUrl || '', line.lineIndex)
+  const manageLongPress = useLongPress({
+    disabled: !selected || !onManageSelected,
+    onLongPress: () => onManageSelected?.(),
+  })
   return (
     <div
       style={{
@@ -442,36 +448,56 @@ function SignatureLineRow({
       >
         <PlayPauseIcon playing={playing} buffering={buffering} size={14} color="var(--gold)" />
       </button>
-      <button
-        type="button"
-        onClick={() => {
-          if (selected && onManageSelected) {
-            onManageSelected()
-            return
-          }
-          onPick()
-        }}
-        style={{
-          flex: 1,
-          minWidth: 0,
-          border: 'none',
-          background: 'transparent',
-          cursor: 'pointer',
-          textAlign: 'left',
-          padding: 0,
-          WebkitTapHighlightColor: 'transparent',
-        }}
+      <MargoLongPressHint
+        active={manageLongPress.pressing}
+        progress={manageLongPress.progress}
+        style={{ flex: 1, minWidth: 0, borderRadius: '8px' }}
       >
-        <span style={{
-          fontFamily: lyricFont,
-          fontStyle: 'italic',
-          fontSize: TYPE.lyric,
-          color: selected ? 'var(--gold)' : 'var(--text)',
-          lineHeight: 1.4,
-        }}>
-          {line.text}
-        </span>
-      </button>
+        <button
+          type="button"
+          aria-label={selected && onManageSelected ? 'Hold for signature options' : 'Select this line'}
+          {...manageLongPress.handlers}
+          onClick={() => {
+            if (manageLongPress.consumeClick()) return
+            if (selected && onManageSelected) return
+            onPick()
+          }}
+          style={{
+            width: '100%',
+            flex: 1,
+            minWidth: 0,
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            textAlign: 'left',
+            padding: '2px 0',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          <span style={{
+            fontFamily: lyricFont,
+            fontStyle: 'italic',
+            fontSize: TYPE.lyric,
+            color: selected ? 'var(--gold)' : 'var(--text)',
+            lineHeight: 1.4,
+          }}>
+            {line.text}
+          </span>
+          {selected && onManageSelected ? (
+            <span style={{
+              display: 'block',
+              fontFamily: font,
+              fontSize: TYPE.label,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--text-muted)',
+              marginTop: '4px',
+            }}>
+              Hold for options
+            </span>
+          ) : null}
+        </button>
+      </MargoLongPressHint>
     </div>
   )
 }

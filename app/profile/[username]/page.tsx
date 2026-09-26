@@ -29,8 +29,10 @@ import { PendingNavLink } from '@/components/pending-nav-link'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { playSnippet, togglePlayPause } from '@/lib/audio-engine'
 import { MargoActionSheet } from '@/components/margo-action-sheet'
+import { MargoLongPressHint } from '@/components/margo-long-press-hint'
 import { resolveSignatureMomentSnippet } from '@/lib/signature-snippet'
 import { useIsBuffering, useIsPlaying } from '@/hooks/useAudioEngine'
+import { useLongPress } from '@/hooks/useLongPress'
 
 const supabase = createClient()
 
@@ -243,6 +245,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
     startSec: number
     endSec: number
   } | null>(null)
+  const signaturePlaying = useIsPlaying(signatureTrack?.id ?? '')
 
   useEffect(() => {
     if (!username) return
@@ -379,6 +382,11 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
   }, [profile?.signatureSongId, profile?.signatureLyric])
 
   const isOwnProfile = !!identity && !!profile && identity.username === profile.username
+
+  const signatureLongPress = useLongPress({
+    disabled: !isOwnProfile,
+    onLongPress: () => setSignatureSheetOpen(true),
+  })
 
   useEffect(() => {
     if (!user || !profile || isOwnProfile) { setFollowStatus(null); return }
@@ -944,42 +952,79 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
               <p style={sectionLabelStyle}>Signature lyric</p>
               {profile.signatureLyric ? (
                 isOwnProfile ? (
-                  <button
-                    type="button"
-                    onClick={() => setSignatureSheetOpen(true)}
-                    style={{
-                      display: 'block',
-                      width: '100%',
-                      margin: 0,
-                      padding: 0,
-                      border: 'none',
-                      background: 'transparent',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      WebkitTapHighlightColor: 'transparent',
-                    }}
+                  <MargoLongPressHint
+                    active={signatureLongPress.pressing}
+                    progress={signatureLongPress.progress}
+                    style={{ borderRadius: '12px' }}
                   >
-                    <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--gold)', lineHeight: 1.5, marginBottom: '8px' }}>
-                      &ldquo;{profile.signatureLyric}&rdquo;
-                    </p>
-                    {(profile.signatureSong || profile.signatureArtist || signatureTrack) && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        {signatureTrack ? (
-                          <span onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-                            <SignaturePlayButton track={signatureTrack} />
-                          </span>
-                        ) : null}
-                        <p style={{
-                          fontFamily: font,
-                          fontSize: TYPE.meta,
-                          color: 'var(--text-secondary)',
-                          margin: 0,
-                        }}>
-                          {profile.signatureSong}{profile.signatureSong && profile.signatureArtist ? ' · ' : ''}{profile.signatureArtist}
-                        </p>
-                      </div>
-                    )}
-                  </button>
+                    <button
+                      type="button"
+                      aria-label="Signature lyric. Tap to play when available. Hold for options."
+                      {...signatureLongPress.handlers}
+                      onClick={() => {
+                        if (signatureLongPress.consumeClick()) return
+                        if (!signatureTrack) return
+                        if (signaturePlaying) {
+                          togglePlayPause()
+                          return
+                        }
+                        void playSnippet({
+                          songId: signatureTrack.id,
+                          audioUrl: signatureTrack.audioUrl,
+                          title: signatureTrack.title,
+                          artist: signatureTrack.artist,
+                          artwork: signatureTrack.artwork,
+                          lineIndex: signatureTrack.lineIndex ?? 0,
+                          lineText: signatureTrack.lineText || '',
+                          startSec: signatureTrack.startSec,
+                          endSec: signatureTrack.endSec,
+                          source: 'feed',
+                        })
+                      }}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        margin: 0,
+                        padding: '4px 0',
+                        border: 'none',
+                        background: 'transparent',
+                        cursor: signatureTrack ? 'pointer' : 'default',
+                        textAlign: 'left',
+                        WebkitTapHighlightColor: 'transparent',
+                      }}
+                    >
+                      <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--gold)', lineHeight: 1.5, marginBottom: '8px' }}>
+                        &ldquo;{profile.signatureLyric}&rdquo;
+                      </p>
+                      {(profile.signatureSong || profile.signatureArtist || signatureTrack) && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          {signatureTrack ? (
+                            <span onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                              <SignaturePlayButton track={signatureTrack} />
+                            </span>
+                          ) : null}
+                          <p style={{
+                            fontFamily: font,
+                            fontSize: TYPE.meta,
+                            color: 'var(--text-secondary)',
+                            margin: 0,
+                          }}>
+                            {profile.signatureSong}{profile.signatureSong && profile.signatureArtist ? ' · ' : ''}{profile.signatureArtist}
+                          </p>
+                        </div>
+                      )}
+                      <p style={{
+                        fontFamily: font,
+                        fontSize: TYPE.label,
+                        letterSpacing: '0.12em',
+                        textTransform: 'uppercase',
+                        color: 'var(--text-muted)',
+                        margin: '10px 0 0',
+                      }}>
+                        Hold for options
+                      </p>
+                    </button>
+                  </MargoLongPressHint>
                 ) : (
                   <>
                     <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--gold)', lineHeight: 1.5, marginBottom: '8px' }}>

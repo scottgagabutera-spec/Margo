@@ -1,7 +1,7 @@
 # Destructive / ambiguous tap audit (Margo)
 
 Living list for rolling out `MargoActionSheet` (see `components/margo-action-sheet.tsx`).  
-**Last updated:** 2026-09-26 — signature lyric wired; other rows are audit-only.
+**Last updated:** 2026-09-26 — signature lyric uses **long-press → action sheet** (tap = play when catalog-linked); see `docs/SMART_INTERACTIONS_ROADMAP.md`.
 
 Legend: **High** = data loss, account, or irreversible without confirm. **Medium** = surprising state change. **Low** = reversible or already has a dialog.
 
@@ -11,8 +11,8 @@ Legend: **High** = data loss, account, or irreversible without confirm. **Medium
 
 | Target | Current behavior | Risk | Notes |
 |--------|------------------|------|--------|
-| Signature lyric (own profile) | **Fixed:** action sheet (Edit / Replace / Remove / Cancel) | Was **High** if tap cleared | Remove persists immediately via `updateSignatureLyric` |
-| Signature catalog line (edit) | **Fixed:** selected line → sheet; play is separate control | Was **High** if tap toggled off | Unselected line still picks lyric |
+| Signature lyric (own profile) | **Fixed:** **hold** → action sheet; tap plays snippet when linked | Was **High** if tap cleared | Remove only from sheet |
+| Signature catalog line (edit) | **Fixed:** **hold** selected line → sheet; tap picks when unselected | Was **High** if tap toggled off | Play is separate control |
 | Clear song (×) on signature picker | Clears song/artist/catalog only | Medium | No sheet yet |
 | Sign Out (account menu) | Immediate sign-out | Medium | Expected; could add confirm |
 | Edit Profile / cover / avatar | Nav or picker — low risk | Low | |
