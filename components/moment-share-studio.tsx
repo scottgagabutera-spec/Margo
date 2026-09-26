@@ -55,6 +55,7 @@ import {
   toastMomentShareFailed,
   toastMomentVideoSaved,
 } from '@/lib/moment-export/moment-export-toasts'
+import { trackEvent } from '@/lib/analytics/track'
 import { savePostExportPrefsClient } from '@/lib/promote/client-export-prefs'
 import type { PromotePlatform } from '@/lib/promote/types'
 import { createStoryFromPost } from '@/lib/stories/create-story-client'
@@ -273,6 +274,7 @@ export function MomentShareStudio({
       await saveMargoMomentImage(exportMoment)
       persistExportPrefs()
       void recordCardExport({ postId: resolvedPostId, theme: cardThemeId, shape: shapeId })
+      trackEvent('moment_exported', { format: 'image', shape: shapeId })
       toastMomentImageSaved()
       onExported?.()
     } catch {
@@ -288,6 +290,7 @@ export function MomentShareStudio({
       if (!exportMoment) return
       const result = await shareMargoMomentImage(exportMoment)
       if (result === 'shared') {
+        trackEvent('moment_shared', { format: 'image', shape: shapeId })
         toastMomentShared()
         onShared?.()
       } else {
@@ -296,7 +299,7 @@ export function MomentShareStudio({
     } finally {
       setShareBusy(false)
     }
-  }, [exportMoment, onShared])
+  }, [exportMoment, onShared, shapeId])
 
   const prepareVideo = useCallback(async () => {
     if (!exportMoment || !canExportVideo || !canClipExport) return null
@@ -363,6 +366,7 @@ export function MomentShareStudio({
         const result = await triggerFileDownload(file)
         if (result !== 'failed') {
           persistExportPrefs()
+          trackEvent('moment_exported', { format: 'video', shape: shapeId })
           toastMomentVideoSaved(result)
           setMediaReadySheet(null)
           onExported?.()
@@ -378,6 +382,7 @@ export function MomentShareStudio({
     try {
       const result = await sharePreparedMomentVideo(file)
       if (result === 'shared') {
+        trackEvent('moment_shared', { format: 'video', shape: shapeId })
         toastMomentShared()
         setMediaReadySheet(null)
         onShared?.()
@@ -387,7 +392,7 @@ export function MomentShareStudio({
     } finally {
       setShareBusy(false)
     }
-  }, [mediaReadySheet, onExported, onShared, persistExportPrefs])
+  }, [mediaReadySheet, onExported, onShared, persistExportPrefs, shapeId])
 
   const [promoteBusy, setPromoteBusy] = useState(false)
   const [storyBusy, setStoryBusy] = useState(false)

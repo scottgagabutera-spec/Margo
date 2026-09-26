@@ -28,3 +28,8 @@ Applies to every task — UI, backend, RLS, copy, and infra — not only fronten
 
 - Targeted diffs only; don’t restructure files to fix one issue.
 - No drive-by refactors or unrequested docs.
+
+## Startup credit integrations
+
+- Tools under `STARTUP_CREDITS.md` (PostHog, Sentry, ElevenLabs, Stripe, etc.) must stay **removable**: thin adapters, env-gated, no vendor imports scattered outside documented touchpoints.
+- Any PR that adds, changes, or removes one of those integrations **must update `STARTUP_CREDITS.md` in the same PR**.
