@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
-import { scrollActiveTo } from '@/components/primary-tab-shell'
+import { readActiveScrollTop, scrollActiveTo } from '@/components/primary-tab-shell'
 
 export interface UseNewItemsBufferResult<T extends { id: string }> {
   /** Stable list shown in the UI (may lag live while scrolled). */
@@ -97,7 +97,9 @@ export function useNewItemsBuffer<T extends { id: string }>(
     setDisplayed(next)
     setPendingIds([])
     setSeeded(true)
-    scrollActiveTo(0, 'smooth')
+    if (readActiveScrollTop() < 96) {
+      scrollActiveTo(0, 'smooth')
+    }
   }, [])
 
   const applyImmediate = useCallback((snapshot?: T[]) => {

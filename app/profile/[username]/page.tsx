@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState, useRef, type ChangeEvent } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, signOutBrowser } from '@/lib/supabase/client'
@@ -30,6 +30,7 @@ import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { playSnippet, togglePlayPause } from '@/lib/audio-engine'
 import { MargoActionSheet } from '@/components/margo-action-sheet'
 import { MargoLongPressHint } from '@/components/margo-long-press-hint'
+import { MargoPhotoSource } from '@/components/margo-photo-source'
 import { resolveSignatureMomentSnippet } from '@/lib/signature-snippet'
 import { useIsBuffering, useIsPlaying } from '@/hooks/useAudioEngine'
 import { useLongPress } from '@/hooks/useLongPress'
@@ -221,7 +222,8 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
   const [avatarLightboxOpen, setAvatarLightboxOpen] = useState(false)
   const [coverLightboxOpen, setCoverLightboxOpen] = useState(false)
   const [coverBusy, setCoverBusy] = useState(false)
-  const coverInputRef = useRef<HTMLInputElement>(null)
+  const [coverSourceOpen, setCoverSourceOpen] = useState(false)
+  const [coverError, setCoverError] = useState<string | null>(null)
   const [previewSong, setPreviewSong] = useState<SongPreviewSeed | null>(null)
 
   // ── Discography — public, live-only catalog for this profile, if
@@ -559,19 +561,19 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
   const coverUrl = profile?.coverUrl ?? null
   const hasCover = !!coverUrl
 
-  async function handleCoverFile(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file || !user || !profile) return
+  async function handleCoverFile(file: File) {
+    if (!user || !profile) return
     setCoverBusy(true)
+    setCoverError(null)
     try {
       const url = await uploadProfileCover(user.id, file)
       setProfile({ ...profile, coverUrl: url })
       syncCoverUrl(url)
     } catch (err) {
       console.error('Cover upload failed:', err)
+      setCoverError(err instanceof Error ? err.message : 'Could not upload cover.')
     } finally {
       setCoverBusy(false)
-      if (coverInputRef.current) coverInputRef.current.value = ''
     }
   }
 
@@ -649,7 +651,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
               {isOwnProfile && (
                 <button
                   type="button"
-                  onClick={() => coverInputRef.current?.click()}
+                  onClick={() => setCoverSourceOpen(true)}
                   disabled={coverBusy}
                   aria-label="Change cover photo"
                   style={{
@@ -676,7 +678,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
           ) : isOwnProfile ? (
             <button
               type="button"
-              onClick={() => coverInputRef.current?.click()}
+              onClick={() => setCoverSourceOpen(true)}
               disabled={coverBusy}
               aria-label="Add cover photo"
               style={{
@@ -700,13 +702,25 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
             <div style={{ height: 'var(--nav-height, 72px)' }} />
           )}
 
-          <input
-            ref={coverInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleCoverFile}
-            style={{ display: 'none' }}
-          />
+          {isOwnProfile ? (
+            <MargoPhotoSource
+              open={coverSourceOpen}
+              onOpenChange={setCoverSourceOpen}
+              title="Cover photo"
+              onFile={(file) => { void handleCoverFile(file) }}
+            />
+          ) : null}
+          {isOwnProfile && coverError ? (
+            <p style={{
+              fontFamily: font,
+              fontSize: TYPE.secondary,
+              color: 'var(--text-secondary)',
+              textAlign: 'center',
+              margin: '8px 24px 0',
+            }}>
+              {coverError}
+            </p>
+          ) : null}
 
           <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0 24px var(--margo-page-padding-bottom)' }}>
             <div style={{ marginTop: hasCover || isOwnProfile ? '-44px' : '20px', marginBottom: '20px' }}>
@@ -945,61 +959,70 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
               <ProfileArtistLinks links={profile.artistLinks} />
             )}
 
-            <div style={{
-              background: 'var(--gold-faint)', border: '1px solid var(--gold-border)',
-              borderRadius: '20px', padding: '24px', textAlign: 'left', marginBottom: '28px',
-            }}>
+            <MargoLongPressHint
+              active={isOwnProfile && !!profile.signatureLyric ? signatureLongPress.pressing : false}
+              progress={signatureLongPress.progress}
+              style={{
+                background: 'var(--gold-faint)',
+                border: '1px solid var(--gold-border)',
+                borderRadius: '20px',
+                padding: '24px',
+                textAlign: 'left',
+                marginBottom: '28px',
+              }}
+            >
+              <div
+                {...(isOwnProfile && profile.signatureLyric ? signatureLongPress.handlers : {})}
+                role={isOwnProfile && profile.signatureLyric ? 'button' : undefined}
+                tabIndex={isOwnProfile && profile.signatureLyric ? 0 : undefined}
+                aria-label={isOwnProfile && profile.signatureLyric ? 'Signature lyric. Tap to play when available. Hold anywhere on this card for options.' : undefined}
+                onClick={isOwnProfile && profile.signatureLyric ? () => {
+                  if (signatureLongPress.consumeClick()) return
+                  if (!signatureTrack) return
+                  if (signaturePlaying) {
+                    togglePlayPause()
+                    return
+                  }
+                  void playSnippet({
+                    songId: signatureTrack.id,
+                    audioUrl: signatureTrack.audioUrl,
+                    title: signatureTrack.title,
+                    artist: signatureTrack.artist,
+                    artwork: signatureTrack.artwork,
+                    lineIndex: signatureTrack.lineIndex ?? 0,
+                    lineText: signatureTrack.lineText || '',
+                    startSec: signatureTrack.startSec,
+                    endSec: signatureTrack.endSec,
+                    source: 'feed',
+                  })
+                } : undefined}
+                onKeyDown={isOwnProfile && profile.signatureLyric ? (e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    ;(e.currentTarget as HTMLDivElement).click()
+                  }
+                } : undefined}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  cursor: isOwnProfile && signatureTrack ? 'pointer' : 'default',
+                  WebkitTapHighlightColor: 'transparent',
+                }}
+              >
               <p style={sectionLabelStyle}>Signature lyric</p>
               {profile.signatureLyric ? (
                 isOwnProfile ? (
-                  <MargoLongPressHint
-                    active={signatureLongPress.pressing}
-                    progress={signatureLongPress.progress}
-                    style={{ borderRadius: '12px' }}
-                  >
-                    <button
-                      type="button"
-                      aria-label="Signature lyric. Tap to play when available. Hold for options."
-                      {...signatureLongPress.handlers}
-                      onClick={() => {
-                        if (signatureLongPress.consumeClick()) return
-                        if (!signatureTrack) return
-                        if (signaturePlaying) {
-                          togglePlayPause()
-                          return
-                        }
-                        void playSnippet({
-                          songId: signatureTrack.id,
-                          audioUrl: signatureTrack.audioUrl,
-                          title: signatureTrack.title,
-                          artist: signatureTrack.artist,
-                          artwork: signatureTrack.artwork,
-                          lineIndex: signatureTrack.lineIndex ?? 0,
-                          lineText: signatureTrack.lineText || '',
-                          startSec: signatureTrack.startSec,
-                          endSec: signatureTrack.endSec,
-                          source: 'feed',
-                        })
-                      }}
-                      style={{
-                        display: 'block',
-                        width: '100%',
-                        margin: 0,
-                        padding: '4px 0',
-                        border: 'none',
-                        background: 'transparent',
-                        cursor: signatureTrack ? 'pointer' : 'default',
-                        textAlign: 'left',
-                        WebkitTapHighlightColor: 'transparent',
-                      }}
-                    >
+                  <>
                       <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--gold)', lineHeight: 1.5, marginBottom: '8px' }}>
                         &ldquo;{profile.signatureLyric}&rdquo;
                       </p>
                       {(profile.signatureSong || profile.signatureArtist || signatureTrack) && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           {signatureTrack ? (
-                            <span onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                            <span
+                              onPointerDown={(e) => e.stopPropagation()}
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <SignaturePlayButton track={signatureTrack} />
                             </span>
                           ) : null}
@@ -1023,8 +1046,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                       }}>
                         Hold for options
                       </p>
-                    </button>
-                  </MargoLongPressHint>
+                  </>
                 ) : (
                   <>
                     <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--gold)', lineHeight: 1.5, marginBottom: '8px' }}>
@@ -1054,7 +1076,8 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                   Hasn&rsquo;t picked one yet.
                 </p>
               )}
-            </div>
+              </div>
+            </MargoLongPressHint>
 
             {/* ── Discography preview — a taste, not the whole catalog.
                 Capped at DISCOGRAPHY_PREVIEW_COUNT and horizontally

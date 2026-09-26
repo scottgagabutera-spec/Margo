@@ -522,17 +522,6 @@ function FeedPageInner() {
     return () => window.cancelAnimationFrame(frame)
   }, [feedLive, listReady, posts.length, highlightParam])
 
-  useEffect(() => {
-    if (!feedLive) return
-    const onReselect = (event: Event) => {
-      const id = (event as CustomEvent<{ id?: string }>).detail?.id
-      if (id !== 'feed') return
-      if (pendingCount > 0) flushPending()
-    }
-    window.addEventListener('margo:primary-tab-reselect', onReselect)
-    return () => window.removeEventListener('margo:primary-tab-reselect', onReselect)
-  }, [feedLive, pendingCount, flushPending])
-
   const exportMoment = useMemo(
     () => (exportPost ? resolveMargoMomentFromPost(exportPost) : null),
     // Feed rebuilds `exportPost` on every parent render. Key on the opened post id only.
@@ -561,7 +550,7 @@ function FeedPageInner() {
     >
     <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative', paddingTop: 'var(--nav-height, 72px)' }}>
       {!ptrBusy && feedLive && pendingCount > 0 && (
-        <FeedNewMomentsPill count={pendingCount} onReveal={flushPending} variant="fixed" />
+        <FeedNewMomentsPill visible onReveal={flushPending} />
       )}
       {!ptrBusy && feedLive && (songCount > 0 || artistCount > 0) && (
         <ContentUpdatesBar
@@ -578,7 +567,7 @@ function FeedPageInner() {
       </div>
 
       <main className="margo-feed-column" style={{ position: 'relative', zIndex: 5, padding: '16px 24px var(--margo-page-padding-bottom)' }}>
-        {feedLive && isMobileViewport === false && (
+        {feedLive && isMobileViewport !== true && (
           <div className="margo-story-ring-tray">
             <StoryRing
               onAddStory={() => {

@@ -1,68 +1,68 @@
 'use client'
 
-import { ChevronUpIcon } from '@/components/icons/chevron-up-icon'
+import { TYPE, UI_FONT } from '@/lib/fonts'
 
-const font = 'var(--font-lora), serif'
+const font = UI_FONT
 
 interface FeedNewMomentsPillProps {
-  count: number
+  visible: boolean
   onReveal: () => void
-  /** inline = below search bar; fixed = legacy floating (unused on Feed) */
-  variant?: 'inline' | 'fixed'
 }
 
 /**
- * Compact floating control when new Moments arrive while the user is on Feed.
- * Buffered via useNewItemsBuffer — tap merges pending posts and scrolls to top.
+ * Soft centered signal when new Moments arrived — no count, no auto-merge until tap.
  */
-export function FeedNewMomentsPill({ count, onReveal, variant = 'fixed' }: FeedNewMomentsPillProps) {
-  if (count <= 0) return null
-
-  const label =
-    count === 1 ? '1 new Moment' : `${count} new Moments`
-
-  const isInline = variant === 'inline'
+export function FeedNewMomentsPill({ visible, onReveal }: FeedNewMomentsPillProps) {
+  if (!visible) return null
 
   return (
-    <button
-      type="button"
-      onClick={onReveal}
-      role="status"
-      aria-live="polite"
-      aria-label={`Show ${label}`}
+    <div
       style={{
-        position: isInline ? 'relative' : 'fixed',
-        top: isInline ? undefined : 'calc(var(--nav-height, 72px) + 8px)',
-        left: isInline ? undefined : '50%',
-        transform: isInline ? undefined : 'translateX(-50%)',
-        zIndex: isInline ? undefined : 45,
-        minHeight: isInline ? '36px' : 'var(--margo-touch-min)',
-        padding: isInline ? '0 12px' : '0 14px',
-        display: 'inline-flex',
-        alignItems: 'center',
+        position: 'fixed',
+        top: 'calc(var(--nav-height, 72px) + 10px)',
+        left: 0,
+        right: 0,
+        zIndex: 45,
+        display: 'flex',
         justifyContent: 'center',
-        gap: '5px',
+        pointerEvents: 'none',
+        padding: '0 16px',
         boxSizing: 'border-box',
-        background: isInline
-          ? 'linear-gradient(135deg, rgba(232,197,71,0.14), rgba(232,197,71,0.06))'
-          : 'color-mix(in srgb, var(--bg) 82%, transparent)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        color: 'var(--gold)',
-        border: '1px solid var(--gold-border)',
-        borderRadius: '50px',
-        fontFamily: font,
-        fontWeight: 700,
-        fontSize: isInline ? '0.54rem' : '0.58rem',
-        letterSpacing: '1.1px',
-        textTransform: 'uppercase',
-        cursor: 'pointer',
-        boxShadow: isInline ? '0 2px 12px rgba(0,0,0,0.2)' : '0 4px 20px rgba(0, 0, 0, 0.35)',
-        animation: 'fadeInUp 220ms var(--ease-out) both',
       }}
     >
-      <ChevronUpIcon size={12} color="var(--gold)" />
-      {label}
-    </button>
+      <button
+        type="button"
+        onClick={onReveal}
+        role="status"
+        aria-live="polite"
+        aria-label="Show new moments"
+        style={{
+          pointerEvents: 'auto',
+          minHeight: '36px',
+          padding: '0 16px',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxSizing: 'border-box',
+          background: 'color-mix(in srgb, var(--surface) 88%, transparent)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          color: 'var(--text-secondary)',
+          border: '1px solid var(--border)',
+          borderRadius: '50px',
+          fontFamily: font,
+          fontWeight: 600,
+          fontSize: TYPE.label,
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          cursor: 'pointer',
+          boxShadow: '0 2px 16px color-mix(in srgb, var(--bg) 70%, transparent)',
+          animation: 'fadeInUp 280ms var(--ease-out) both',
+          WebkitTapHighlightColor: 'transparent',
+        }}
+      >
+        New moments
+      </button>
+    </div>
   )
 }
