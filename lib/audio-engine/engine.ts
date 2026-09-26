@@ -20,6 +20,7 @@
  * state every frame instead of a value captured once at fade start.
  */
 
+import { trackEvent } from '@/lib/analytics/track'
 import {
   type AudioEngineListener,
   type AudioEngineState,
@@ -807,6 +808,11 @@ export async function playSnippet(request: PlaySnippetRequest): Promise<void> {
   patch({ playing: true, error: null })
   requestWakeLock()
   syncMediaSessionFromState(_state)
+  trackEvent('song_played', {
+    mode: 'snippet',
+    songId: request.songId,
+    source: request.source,
+  })
 
   // The snippet timer (and, if applicable, the crossfade it schedules)
   // only starts counting once playback is actually confirmed audible —
@@ -884,6 +890,11 @@ export async function playFull(request: PlayFullRequest): Promise<void> {
     playPromise.then(() => {
       if (generation !== _handlerGeneration) return
       patch({ buffering: false, error: null })
+      trackEvent('song_played', {
+        mode: 'full',
+        songId: request.songId,
+        source: request.source,
+      })
     }).catch(() => {
       if (generation !== _handlerGeneration) return
       patch({ playing: false, buffering: false, error: 'Play blocked — tap to start' })

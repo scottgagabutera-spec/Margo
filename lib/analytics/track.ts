@@ -1,3 +1,4 @@
+import { capturePostHogEvent } from '@/lib/analytics/posthog-browser'
 import { track as vercelTrack } from '@vercel/analytics'
 
 /** Phase 3 analytics events. */
@@ -15,15 +16,18 @@ export type MargoAnalyticsEvent =
   | 'moment_opened'
   | 'lyric_back_opened'
   | 'lyric_back_sent'
+  | 'song_played'
 
 export function trackEvent(
   event: MargoAnalyticsEvent,
   properties?: Record<string, string | number | boolean | null>,
 ): void {
   if (typeof window === 'undefined') return
+  const props = properties ?? {}
   try {
-    vercelTrack(event, properties ?? {})
+    vercelTrack(event, props)
   } catch {
     // Analytics must never block UX.
   }
+  capturePostHogEvent(event, props)
 }
