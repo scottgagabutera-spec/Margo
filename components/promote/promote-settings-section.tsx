@@ -27,6 +27,7 @@ import {
   writePromoteConnectionsSessionCache,
 } from '@/lib/promote/promote-connections-session-cache'
 import { PromoteInlineStatus } from '@/components/promote/promote-page-shell'
+import { PromoteOAuthConnectButton } from '@/components/promote/promote-oauth-connect-button'
 import type { PromotePlatform, PromotePublishMode, SocialConnectionPublic } from '@/lib/promote/types'
 import type { ComponentType } from 'react'
 
@@ -431,12 +432,14 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
                   )}
                   <div style={{ display: 'flex', gap: '12px', marginTop: '10px', flexWrap: 'wrap' }}>
                     {platform.oauthPath && (
-                      <a
-                        href={`${platform.oauthPath}?returnTo=${encodeURIComponent(MARGO_AUTO_PROMOTE_SETTINGS_PATH)}`}
-                        style={{ color: 'var(--gold)', fontSize: TYPE.secondary, textDecoration: 'none' }}
-                      >
-                        Reconnect
-                      </a>
+                      <PromoteOAuthConnectButton
+                        platform={platform.id}
+                        oauthPath={platform.oauthPath}
+                        label="Reconnect"
+                        variant="textLink"
+                        disabled={saving}
+                        onNavigateError={setMessage}
+                      />
                     )}
                     <button
                       type="button"
@@ -462,23 +465,13 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
                     Connect {platform.label} to include it when you promote.
                   </p>
                   {platform.oauthPath && (
-                    <a
-                      href={`${platform.oauthPath}?returnTo=${encodeURIComponent(MARGO_AUTO_PROMOTE_SETTINGS_PATH)}`}
-                      style={{
-                        display: 'inline-block',
-                        padding: '10px 18px',
-                        borderRadius: '999px',
-                        border: '1px solid var(--gold-border)',
-                        color: 'var(--gold)',
-                        fontFamily: font,
-                        fontSize: TYPE.label,
-                        letterSpacing: '0.5px',
-                        textTransform: 'uppercase',
-                        textDecoration: 'none',
-                      }}
-                    >
-                      Connect {platform.label}
-                    </a>
+                    <PromoteOAuthConnectButton
+                      platform={platform.id}
+                      oauthPath={platform.oauthPath}
+                      label={`Connect ${platform.label}`}
+                      disabled={saving}
+                      onNavigateError={setMessage}
+                    />
                   )}
                   {connection?.status === 'expired' && (
                     <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', marginTop: '8px', lineHeight: 1.45 }}>
