@@ -14,6 +14,7 @@ import {
   EXPORT_SHAPE_LABELS,
 } from '@/lib/moment-export/export-shapes'
 import type { MomentShapeId } from '@/lib/moment/types'
+import { exportShapePromoteHint } from '@/lib/moment-export/shape-promote-hint'
 import {
   cycleStageCardTheme,
   getStageCardTheme,
@@ -86,11 +87,11 @@ function AspectGlyph({
   ratio,
   selected,
 }: {
-  ratio: '1:1' | '9:16'
+  ratio: '1:1' | '9:16' | '16:9'
   selected: boolean
 }) {
-  const w = ratio === '1:1' ? 14 : 10
-  const h = ratio === '1:1' ? 14 : 18
+  const w = ratio === '16:9' ? 18 : ratio === '1:1' ? 14 : 10
+  const h = ratio === '16:9' ? 10 : ratio === '1:1' ? 14 : 18
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden>
       <rect
@@ -248,7 +249,8 @@ export function MomentExportCustomizeBar({
         >
           {EXPORT_SHAPE_CYCLE.map((id) => {
             const selected = shapeId === id
-            const ratio = id === 'vertical' ? '9:16' : '1:1'
+            const ratio: '1:1' | '9:16' | '16:9' =
+              id === 'vertical' ? '9:16' : id === 'wide' ? '16:9' : '1:1'
             return (
               <button
                 key={id}
@@ -279,10 +281,21 @@ export function MomentExportCustomizeBar({
             )
           })}
         </div>
-        <span style={captionStyle()}>
+        <span style={captionStyle(true)}>
           {EXPORT_SHAPE_LABELS[shapeId]} · {EXPORT_SHAPE_HINTS[shapeId]}
         </span>
       </div>
+      <p style={{
+        gridColumn: '1 / -1',
+        margin: '10px 0 0',
+        fontFamily: UI_FONT,
+        fontSize: '0.58rem',
+        color: 'var(--text-muted)',
+        lineHeight: 1.45,
+        textAlign: 'center',
+      }}>
+        {exportShapePromoteHint(shapeId)}
+      </p>
     </div>
   )
 }

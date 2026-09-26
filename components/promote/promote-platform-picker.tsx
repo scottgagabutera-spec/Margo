@@ -17,6 +17,8 @@ import {
   YouTubeIcon,
   type MargoIconProps,
 } from '@/components/icons'
+import { PromoteComingSoonPlatformsRow } from '@/components/promote/promote-coming-soon-platforms-row'
+import { exportShapePromoteHint } from '@/lib/moment-export/shape-promote-hint'
 import { EXPORT_SHAPE_HINTS, EXPORT_SHAPE_LABELS } from '@/lib/moment-export/export-shapes'
 import { UI_FONT } from '@/lib/fonts'
 import type { MomentShapeId } from '@/lib/moment/types'
@@ -103,6 +105,15 @@ export function PromotePlatformPicker({
 
   const canQueue = selectedList.length > 0 && !busy && !loading
 
+  const livePlatforms = useMemo(
+    () => platforms.filter((p) => p.live),
+    [platforms],
+  )
+  const hasComingSoon = useMemo(
+    () => platforms.some((p) => !p.live),
+    [platforms],
+  )
+
   function togglePlatform(platform: PromoteEligibilityPlatform) {
     if (platform.state === 'coming_soon' || platform.state === 'wrong_shape' || platform.state === 'not_connected') {
       return
@@ -142,12 +153,11 @@ export function PromotePlatformPicker({
         margin: 0,
         lineHeight: 1.4,
       }}>
-        Size: {EXPORT_SHAPE_LABELS[shapeId]} ({EXPORT_SHAPE_HINTS[shapeId]}) — pick where this export goes.
-        Change size above to reach other platforms, then queue again.
+        {EXPORT_SHAPE_LABELS[shapeId]} ({EXPORT_SHAPE_HINTS[shapeId]}) — {exportShapePromoteHint(shapeId)}
       </p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        {platforms.map((platform) => {
+        {livePlatforms.map((platform) => {
           const Icon = PLATFORM_ICONS[platform.id]
           const isChecked = selected.has(platform.id)
           const disabled = platform.state === 'coming_soon'
@@ -235,6 +245,8 @@ export function PromotePlatformPicker({
           )
         })}
       </div>
+
+      {hasComingSoon && <PromoteComingSoonPlatformsRow compact />}
 
       {confirmRepublishOpen && republishSelected.length > 0 && (
         <div style={{
