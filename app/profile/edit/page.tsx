@@ -338,6 +338,15 @@ export default function EditProfilePage() {
                 onLyricPick={(text) => setLyric(text)}
                 onManageSelectedLine={() => setSignatureSheetOpen(true)}
               />
+              <p style={{
+                fontFamily: font,
+                fontSize: TYPE.secondary,
+                color: 'var(--text-muted)',
+                lineHeight: 1.45,
+                margin: '12px 0 0',
+              }}>
+                Sound plays only when the line is tied to a song hosted on Margo. A typed lyric stays quiet — we do not play music we do not have rights to host. Private account (below) hides your posts from people who do not follow you.
+              </p>
               {!catalogSongId && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
                   <input

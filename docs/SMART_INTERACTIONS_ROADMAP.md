@@ -93,6 +93,26 @@ Phase A–B are logical next PRs after you sign off on long-press signature UX.
 
 ---
 
+## Profile: privacy + signature sound (any user or artist)
+
+Already in product:
+
+| Need | Where |
+|------|--------|
+| Hide posts until someone follows | Edit profile → **Private** (`profiles.is_private`) |
+| Hide follower lists | `follow_lists_private` (when set) |
+| Signature lyric without a playable file | Type/paste the line; leave catalog song empty |
+| Playable signature | Only `signature_song_id` → Margo-hosted audio (`resolveSignatureMomentSnippet`) |
+| Delete account | Settings, typed username confirm |
+
+**Do not** play Genius/Apple/YouTube audio as a profile bed. Rights sit with the catalog we host. A “muffled background” of an unlicensed track is still a use of that recording.
+
+**Possible later (not built):** volume “soft bed” for **Margo-hosted** signature snippets only; optional “signature visible to followers” separate from full private account. Needs a product call before schema.
+
+## Tab switches (Feed / Discover / Hub / You)
+
+First open of a Vercel **preview** can sit on a cold compile: the tap used to flash gold for 160ms then look idle until the route arrived. The shell now **keeps the tab gold (and the ring, once pending)** until the route commits, and **idles warm** of Feed, Discover, and You data plus `router.prefetch` after first paint. Repeat switches should hit the keepalive pane. Production after the first visit should feel instant; a brand-new preview URL can still take seconds once, with the tab staying visibly live.
+
 ## How to test signature long-press (before merge)
 
 1. **You tab** → hold signature block ~1s → sheet; quick tap should **play** (if catalog-linked), not remove.

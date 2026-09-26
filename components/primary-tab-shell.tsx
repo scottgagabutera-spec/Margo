@@ -569,11 +569,42 @@ export function PrimaryTabShell({
   const acknowledgePrimaryTab = useCallback((id: PrimaryTabId) => {
     setAckedTab(id)
     if (ackClearRef.current != null) window.clearTimeout(ackClearRef.current)
+    ackClearRef.current = null
+  }, [])
+
+  // Gold stays for the whole in-flight switch. A 160ms flash alone looks like a dead tap
+  // when the first preview route is still compiling.
+  useEffect(() => {
+    if (navPending) return
+    if (!ackedTab) return
     ackClearRef.current = window.setTimeout(() => {
-      setAckedTab((curr) => (curr === id ? null : curr))
+      setAckedTab(null)
       ackClearRef.current = null
     }, TAB_ACK_MS)
-  }, [])
+    return () => {
+      if (ackClearRef.current != null) window.clearTimeout(ackClearRef.current)
+    }
+  }, [navPending, ackedTab])
+
+  useEffect(() => {
+    const warmAll = () => {
+      warmPrimaryTab('/feed')
+      warmPrimaryTab('/discover')
+      warmPrimaryTab('/you')
+      router.prefetch('/feed')
+      router.prefetch('/discover')
+      router.prefetch('/compose')
+      router.prefetch('/you')
+    }
+    const idle = typeof window.requestIdleCallback === 'function'
+    const handle = idle
+      ? window.requestIdleCallback(warmAll, { timeout: 1800 })
+      : window.setTimeout(warmAll, 400)
+    return () => {
+      if (idle) window.cancelIdleCallback(handle as number)
+      else window.clearTimeout(handle as number)
+    }
+  }, [router])
 
   useEffect(() => {
     if (!navPending || !paintedTab) {
