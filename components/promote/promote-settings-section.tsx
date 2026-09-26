@@ -62,6 +62,7 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
   const [facebookPages, setFacebookPages] = useState<FacebookPageOption[]>([])
   const [selectedFacebookPageId, setSelectedFacebookPageId] = useState<string>('')
   const [showFacebookPagePicker, setShowFacebookPagePicker] = useState(false)
+  const [facebookPagesLoading, setFacebookPagesLoading] = useState(false)
   const [platformHighlight, setPlatformHighlight] = useState<PromotePlatform | null>(null)
 
   const load = useCallback(async (options?: { silent?: boolean }) => {
@@ -181,23 +182,31 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
 
   useEffect(() => {
     if (!showFacebookPagePicker) return
+    let cancelled = false
+    setFacebookPagesLoading(true)
     void (async () => {
-      const res = await fetch('/api/promote/oauth/facebook/pages', { credentials: 'include' })
-      if (!res.ok) {
-        setMessage('Could not load your Facebook Pages — try connecting again.')
-        setShowFacebookPagePicker(false)
-        return
+      try {
+        const res = await fetch('/api/promote/oauth/facebook/pages', { credentials: 'include' })
+        if (cancelled) return
+        if (!res.ok) {
+          setMessage('Could not load your Facebook Pages — try connecting again.')
+          setShowFacebookPagePicker(false)
+          return
+        }
+        const json = await res.json()
+        const pages = (json.pages || []) as FacebookPageOption[]
+        if (pages.length === 0) {
+          setMessage('Page selection expired — connect Facebook again.')
+          setShowFacebookPagePicker(false)
+          return
+        }
+        setFacebookPages(pages)
+        setSelectedFacebookPageId(pages[0]?.id ?? '')
+      } finally {
+        if (!cancelled) setFacebookPagesLoading(false)
       }
-      const json = await res.json()
-      const pages = (json.pages || []) as FacebookPageOption[]
-      if (pages.length === 0) {
-        setMessage('Page selection expired — connect Facebook again.')
-        setShowFacebookPagePicker(false)
-        return
-      }
-      setFacebookPages(pages)
-      setSelectedFacebookPageId(pages[0]?.id ?? '')
     })()
+    return () => { cancelled = true }
   }, [showFacebookPagePicker])
 
   async function confirmFacebookPage() {
@@ -288,7 +297,13 @@ export function PromoteSettingsSection(_props: PromoteSettingsSectionProps) {
         Facebook connects a Page you manage — not a personal profile.
       </p>
 
-      {showFacebookPagePicker && facebookPages.length > 0 && (
+      {showFacebookPagePicker && facebookPagesLoading && (
+        <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', marginBottom: '16px' }}>
+          Loading your Facebook Pages…
+        </p>
+      )}
+
+      {showFacebookPagePicker && !facebookPagesLoading && facebookPages.length > 0 && (
         <div style={{
           marginBottom: '20px',
           padding: '16px',

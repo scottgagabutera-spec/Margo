@@ -1,4 +1,5 @@
 import { randomBytes } from 'crypto'
+import { fetchWithTimeout } from '@/lib/promote/fetch-with-timeout'
 
 export const FACEBOOK_GRAPH_VERSION = 'v21.0'
 
@@ -74,7 +75,7 @@ export async function exchangeFacebookCode(origin: string, code: string): Promis
     redirect_uri: redirectUri,
     code,
   })
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/oauth/access_token?${params.toString()}`,
   )
   if (!res.ok) {
@@ -92,7 +93,7 @@ export async function exchangeFacebookLongLivedToken(shortLivedToken: string): P
     client_secret: facebookAppSecret(),
     fb_exchange_token: shortLivedToken,
   })
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/oauth/access_token?${params.toString()}`,
   )
   if (!res.ok) {
@@ -107,7 +108,7 @@ export async function fetchFacebookManagedPages(userAccessToken: string): Promis
     fields: 'id,name,access_token',
     access_token: userAccessToken,
   })
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/me/accounts?${params.toString()}`,
   )
   if (!res.ok) {
