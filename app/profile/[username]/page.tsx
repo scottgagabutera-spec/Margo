@@ -764,8 +764,14 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
               )}
             </div>
 
-            <div style={{ marginBottom: '12px' }}>
-              <div style={{ minWidth: 0, marginBottom: '10px' }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: '12px',
+              marginBottom: '12px',
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px', minWidth: 0 }}>
                   <h1 style={{
                     fontFamily: font,
@@ -893,7 +899,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
               )}
 
               {!isOwnProfile && user && (
-                <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '6px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
                   {messageEligibility.canOpenThread ? (
                     <Link
                       href={`/messages/${profile.username}`}

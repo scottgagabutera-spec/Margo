@@ -14,8 +14,10 @@ import { MargoConversationHeader } from '@/components/margo-conversation-header'
 import { MomentMessageCard } from '@/components/moment-message-card'
 import { parseMomentMessageBody } from '@/lib/moment/message-format'
 import { isPartnerUuid } from '@/lib/messages/partner-key'
+import { TYPE, UI_FONT } from '@/lib/fonts'
 
 const font = 'var(--font-lora), serif'
+const uiFont = UI_FONT
 
 function timeLabel(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
@@ -56,7 +58,7 @@ export default function ThreadPage() {
   const router = useRouter()
   const partnerKey = params.username
   const { user } = useIdentity()
-  const { partner, messages, loading, loadError, canSend, sending, sendMessage } = useThread(partnerKey)
+  const { partner, messages, loading, loadError, canSend, blockedReason, sending, sendMessage } = useThread(partnerKey)
   const [draft, setDraft] = useState('')
   const [isMobile, setIsMobile] = useState(false)
 
@@ -128,8 +130,8 @@ export default function ThreadPage() {
       contentMaxWidth={560}
     >
       {!canSend ? (
-        <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'center', margin: 0 }}>
-          {partner ? `${partner.displayName} isn't accepting messages right now` : ''}
+        <p style={{ fontFamily: uiFont, fontSize: TYPE.secondary, color: 'var(--text-secondary)', textAlign: 'center', margin: 0, lineHeight: 1.45 }}>
+          {blockedReason || (partner ? `${partner.displayName} is not accepting messages right now.` : '')}
         </p>
       ) : (
         <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
@@ -137,12 +139,15 @@ export default function ThreadPage() {
             value={draft}
             onChange={e => setDraft(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleSend() } }}
-            placeholder="Write a message..."
+            placeholder="Write a message…"
+            aria-label="Message text"
+            className="margo-message-compose"
             style={{
               flex: 1, height: '40px', padding: '0 14px',
-              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: '20px', color: 'var(--text)', fontFamily: font,
-              fontSize: '0.8rem', outline: 'none', boxSizing: 'border-box',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: '20px', color: 'var(--text)', fontFamily: uiFont,
+              fontSize: TYPE.secondary, outline: 'none', boxSizing: 'border-box',
             }}
           />
           <button
