@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { MargoActionSheet } from '@/components/margo-action-sheet'
 import { useRouter } from 'next/navigation'
 import { useIdentity } from '@/hooks/useIdentity'
@@ -57,8 +58,25 @@ export default function EditProfilePage() {
   const [signatureSheetOpen, setSignatureSheetOpen] = useState(false)
   const lyricInputRef = useRef<HTMLTextAreaElement>(null)
   const signatureSectionRef = useRef<HTMLDivElement>(null)
-  /** Avoid re-seeding the form when avatar/cover sync updates identity mid-edit. */
-  const formSeedKeyRef = useRef<string | null>(null)
+  /** Seed form once per mount — identity refresh must not reset typed fields. */
+  const formSeededRef = useRef(false)
+  const searchParams = useSearchParams()
+  const showWelcome = searchParams.get('welcome') === '1'
+
+  const persistDraftNow = useCallback(() => {
+    if (!user?.id) return
+    writeProfileEditDraft(user.id, {
+      displayName,
+      username,
+      bio,
+      lyric,
+      song,
+      artist,
+      catalogSongId,
+      isPrivate,
+      artistLinkDraft,
+    })
+  }, [user?.id, displayName, username, bio, lyric, song, artist, catalogSongId, isPrivate, artistLinkDraft])
 
   // Stay here and open the auth gate so a successful sign-in returns to edit.
   useEffect(() => {
@@ -69,12 +87,11 @@ export default function EditProfilePage() {
 
   useEffect(() => {
     if (!identity || !user?.id) return
-    const seedKey = identity.username
-    if (formSeedKeyRef.current === seedKey) {
+    if (formSeededRef.current) {
       setAvatarUrl(identity.avatarUrl ?? null)
       return
     }
-    formSeedKeyRef.current = seedKey
+    formSeededRef.current = true
     const draft = readProfileEditDraft(user.id)
     setAvatarUrl(identity.avatarUrl ?? null)
     setDisplayName(draft?.displayName ?? (identity.displayName || ''))
@@ -93,21 +110,15 @@ export default function EditProfilePage() {
   }, [identity, user?.id])
 
   useEffect(() => {
+    if (!user?.id || !formSeededRef.current) return
+    const timer = window.setTimeout(() => persistDraftNow(), 400)
+    return () => window.clearTimeout(timer)
+  }, [user?.id, persistDraftNow])
+
+  useEffect(() => {
     if (!user?.id) return
     const persist = () => {
-      if (document.visibilityState === 'hidden') {
-        writeProfileEditDraft(user.id, {
-          displayName,
-          username,
-          bio,
-          lyric,
-          song,
-          artist,
-          catalogSongId,
-          isPrivate,
-          artistLinkDraft,
-        })
-      }
+      if (document.visibilityState === 'hidden') persistDraftNow()
     }
     document.addEventListener('visibilitychange', persist)
     window.addEventListener('pagehide', persist)
@@ -115,7 +126,7 @@ export default function EditProfilePage() {
       document.removeEventListener('visibilitychange', persist)
       window.removeEventListener('pagehide', persist)
     }
-  }, [user?.id, displayName, username, bio, lyric, song, artist, catalogSongId, isPrivate, artistLinkDraft])
+  }, [user?.id, persistDraftNow])
 
   const handleSave = useCallback(async () => {
     if (!identity) return
@@ -289,11 +300,28 @@ export default function EditProfilePage() {
             </button>
           </div>
 
+          {showWelcome ? (
+            <p style={{
+              fontFamily: font,
+              fontSize: TYPE.secondary,
+              color: 'var(--text-secondary)',
+              lineHeight: 1.45,
+              margin: '0 0 16px',
+              padding: '12px 14px',
+              borderRadius: '12px',
+              border: '1px solid var(--gold-border)',
+              background: 'var(--gold-faint)',
+            }}>
+              Welcome — add a photo and anything you want on your profile, then tap Save. You can change this anytime.
+            </p>
+          ) : null}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <AvatarUpload
                 currentAvatarUrl={avatarUrl ?? identity.avatarUrl ?? null}
                 displayName={displayName || identity.displayName || ''}
+                onBeforePick={persistDraftNow}
                 onUploaded={(url) => {
                   setAvatarUrl(url)
                   syncAvatarUrl(url)
@@ -305,6 +333,7 @@ export default function EditProfilePage() {
               <label style={labelStyle}>Cover</label>
               <CoverUpload
                 currentCoverUrl={identity.coverUrl ?? null}
+                onBeforePick={persistDraftNow}
                 onUploaded={(url) => syncCoverUrl(url)}
               />
             </div>

@@ -59,7 +59,7 @@ export function LegalConsentGateModal() {
       await rehydrate({ force: true })
       setRedirecting(true)
       toast.success('Welcome to Margo.')
-      completeAuthNavigation('/feed')
+      completeAuthNavigation('/profile/edit?welcome=1')
       return
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.')

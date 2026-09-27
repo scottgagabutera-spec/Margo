@@ -17,9 +17,11 @@ interface AvatarUploadProps {
   currentAvatarUrl: string | null
   displayName: string
   onUploaded?: (url: string) => void
+  /** Persist form draft before OS photo picker (mobile may skip visibility events). */
+  onBeforePick?: () => void
 }
 
-export function AvatarUpload({ currentAvatarUrl, displayName, onUploaded }: AvatarUploadProps) {
+export function AvatarUpload({ currentAvatarUrl, displayName, onUploaded, onBeforePick }: AvatarUploadProps) {
   const { user } = useIdentity()
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -117,7 +119,10 @@ export function AvatarUpload({ currentAvatarUrl, displayName, onUploaded }: Avat
 
       <button
         type="button"
-        onClick={() => setSourceOpen(true)}
+        onClick={() => {
+          onBeforePick?.()
+          setSourceOpen(true)
+        }}
         disabled={uploading}
         style={{
           minHeight: 'var(--margo-touch-min)', padding: '0 20px',
