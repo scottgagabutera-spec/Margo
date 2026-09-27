@@ -39,7 +39,7 @@ No other files require PostHog imports for removal.
 | **Activated** | **2026-09-26** (startup program approved; confirm credit expiry in Sentry → Settings → Subscription) |
 | **Credit duration** | **~12 months** from approval (per Sentry startup terms; check org billing) |
 | **Env vars (Vercel)** | **`SENTRY_DSN`** — server/API/SSR (secret). **`NEXT_PUBLIC_SENTRY_DSN`** — same DSN value for browser (public; DSN is not a secret). Optional: **`SENTRY_ORG`** (`margo-q2`), **`SENTRY_PROJECT`** (slug, for future releases/source maps), **`SENTRY_ENVIRONMENT`** (defaults to `VERCEL_ENV` / `NODE_ENV`), **`SENTRY_ENABLED=false`** (kill switch). **`SENTRY_AUTH_TOKEN`** — not required until source map upload / releases. |
-| **Code touchpoints** | `lib/observability/sentry-options.ts` (init options), `lib/observability/report-error.ts` (**`reportError` / `reportMessage`** — use this in app code), `instrumentation.ts` + `instrumentation-client.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`, `app/global-error.tsx`, `app/error.tsx`. No `withSentryConfig` / source maps in pass 1. |
+| **Code touchpoints** | `lib/observability/sentry-options.ts` (init options), `lib/observability/report-error.ts` (**`reportError` / `reportMessage`** — use this in app code), `instrumentation.ts` + `instrumentation-client.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`, `app/global-error.tsx`, `app/error.tsx`. **Temporary E2E:** `SENTRY_TEST_SECRET`, `GET /debug/sentry?token=…`, `POST /api/debug/sentry-test` — delete after verification. No `withSentryConfig` / source maps in pass 1. |
 | **Not enabled** | Performance tracing, session replay, release health, source map upload. |
 
 ### How to remove Sentry

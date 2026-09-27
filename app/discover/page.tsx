@@ -21,6 +21,7 @@ import { CloseIcon } from '@/components/icons'
 import { SaveQueueButton } from '@/components/save-queue-button'
 import { stop as engineStop, warmUrls, subscribeAudioEngine, togglePlayPause } from '@/lib/audio-engine'
 import { DISCOVER_VIBES, discoverVibeColor } from '@/lib/discover-vibes'
+import { isExcludedDiscoverArtist } from '@/lib/discover-artist-roster'
 import { buildLyricMomentsFromRows, type LyricMoment } from '@/lib/lyric-moments-board'
 import { playLyricMomentPool, queueLyricMoment } from '@/lib/lyric-moment-playback'
 import { playResonancePost, queueResonancePost } from '@/lib/resonance-snippet'
@@ -410,9 +411,11 @@ function ArtistsSection() {
       .then(({ data, error }) => {
         if (cancelled) return
         if (error) { console.error('Failed to load artists:', error); setLoading(false); return }
-        setArtists((data || []).map(p => ({
-          id: p.id, username: p.username, displayName: p.display_name, avatarUrl: p.avatar_url,
-        })))
+        setArtists((data || [])
+          .filter((p) => !isExcludedDiscoverArtist(p.username))
+          .map(p => ({
+            id: p.id, username: p.username, displayName: p.display_name, avatarUrl: p.avatar_url,
+          })))
         setLoading(false)
       })
     return () => { cancelled = true }
