@@ -6,6 +6,7 @@ import { useSongs } from '@/hooks/useSongs'
 import { CatalogGrid } from '@/components/catalog-grid'
 import { createClient } from '@/lib/supabase/client'
 import { ArtistBadge, type ArtistStatus } from '@/components/artist-badge'
+import { isExcludedDiscoverArtist } from '@/lib/discover-artist-roster'
 
 const supabase = createClient()
 
@@ -71,7 +72,11 @@ export default function ArtistsCatalogPage() {
         // standing — frozen/removed are excluded entirely here rather
         // than shown without a badge, since listing them at all implies
         // they're an active part of the roster.
-        const visible = (data || []).filter(p => p.artist_status !== 'frozen' && p.artist_status !== 'removed')
+        const visible = (data || []).filter(
+          (p) => p.artist_status !== 'frozen'
+            && p.artist_status !== 'removed'
+            && !isExcludedDiscoverArtist(p.username),
+        )
         setArtists(visible.map(p => ({
           id: p.id, username: p.username, displayName: p.display_name,
           avatarUrl: p.avatar_url, artistStatus: p.artist_status ?? null,
