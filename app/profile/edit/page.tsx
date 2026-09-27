@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { MargoActionSheet } from '@/components/margo-action-sheet'
 import { useRouter } from 'next/navigation'
@@ -17,6 +17,8 @@ import {
   readProfileEditDraft,
   writeProfileEditDraft,
 } from '@/lib/profile-edit-draft'
+import { profileEditHasUnsavedChanges } from '@/lib/profile-edit-unsaved'
+import { useProfileEditLeaveGuard } from '@/hooks/useProfileEditLeaveGuard'
 
 const font = UI_FONT
 const lyricFont = LYRIC_FONT
@@ -127,6 +129,23 @@ export default function EditProfilePage() {
       window.removeEventListener('pagehide', persist)
     }
   }, [user?.id, persistDraftNow])
+
+  const hasUnsavedChanges = useMemo(() => {
+    if (!identity || !formSeededRef.current) return false
+    return profileEditHasUnsavedChanges(identity, {
+      displayName,
+      username,
+      bio,
+      lyric,
+      song,
+      artist,
+      catalogSongId,
+      isPrivate,
+      artistLinkDraft,
+    })
+  }, [identity, displayName, username, bio, lyric, song, artist, catalogSongId, isPrivate, artistLinkDraft])
+
+  useProfileEditLeaveGuard(hasUnsavedChanges)
 
   const handleSave = useCallback(async () => {
     if (!identity) return
