@@ -210,7 +210,7 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
       if (onSuccess) {
         onSuccess()
       } else {
-        completeAuthNavigation('/feed')
+        completeAuthNavigation('/profile/edit?welcome=1')
       }
       return
     } catch (e) {

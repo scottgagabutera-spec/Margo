@@ -36,9 +36,11 @@ export async function uploadProfileCover(userId: string, file: File): Promise<st
 export function CoverUpload({
   currentCoverUrl,
   onUploaded,
+  onBeforePick,
 }: {
   currentCoverUrl: string | null
   onUploaded?: (url: string) => void
+  onBeforePick?: () => void
 }) {
   const { user } = useIdentity()
   const [uploading, setUploading] = useState(false)
@@ -70,7 +72,10 @@ export function CoverUpload({
     <div>
       <button
         type="button"
-        onClick={() => setSourceOpen(true)}
+        onClick={() => {
+          onBeforePick?.()
+          setSourceOpen(true)
+        }}
         disabled={uploading}
         aria-label={previewUrl ? 'Change cover photo' : 'Add cover photo'}
         style={{

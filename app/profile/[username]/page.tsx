@@ -607,12 +607,13 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
 
       {!loading && profile && (
         <div>
+          <div style={{ marginTop: 'var(--nav-height, 72px)', position: 'relative' }}>
           {hasCover ? (
             <div style={{
               position: 'relative',
               width: '100%',
               height: '148px',
-              marginTop: 'var(--nav-height, 72px)',
+              zIndex: 0,
               background: 'var(--surface-2)',
               overflow: 'hidden',
             }}>
@@ -676,7 +677,6 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 justifyContent: 'center',
                 width: '100%',
                 minHeight: '100px',
-                marginTop: 'var(--nav-height, 72px)',
                 padding: 0,
                 border: 'none',
                 borderBottom: '1px dashed var(--gold-border)',
@@ -687,9 +687,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
             >
               <ImagePlusIcon size={28} color="var(--gold)" />
             </button>
-          ) : (
-            <div style={{ height: 'var(--nav-height, 72px)' }} />
-          )}
+          ) : null}
 
           {isOwnProfile ? (
             <MargoPhotoSource
@@ -711,8 +709,15 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
             </p>
           ) : null}
 
-          <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0 24px var(--margo-page-padding-bottom)' }}>
-            <div style={{ marginTop: hasCover || isOwnProfile ? '-44px' : '20px', marginBottom: '20px' }}>
+          <div style={{
+            maxWidth: '640px',
+            margin: '0 auto',
+            padding: '0 24px var(--margo-page-padding-bottom)',
+            position: 'relative',
+            zIndex: 2,
+            marginTop: hasCover ? '-48px' : (isOwnProfile ? '16px' : '20px'),
+          }}>
+            <div style={{ marginBottom: '20px', width: 'fit-content', position: 'relative', zIndex: 2 }}>
               {profile.avatarUrl ? (
                 <button
                   type="button"
@@ -723,6 +728,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                     background: 'none', border: '4px solid var(--bg)', boxSizing: 'border-box',
                     overflow: 'hidden', cursor: 'pointer', display: 'block',
                     WebkitTapHighlightColor: 'transparent',
+                    boxShadow: '0 0 0 1px var(--border)',
                   }}
                 >
                   <img src={profile.avatarUrl} alt={profile.displayName} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -1337,6 +1343,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
               </>
               )}
             </div>
+          </div>
           </div>
         </div>
       )}
