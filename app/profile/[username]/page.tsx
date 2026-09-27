@@ -16,7 +16,7 @@ import { SongPreviewSheet, type SongPreviewSeed } from '@/components/song-previe
 import { PostCard } from '@/components/post-card'
 import { CardExportModal } from '@/components/card-export-modal'
 import { resolveMargoMomentFromPost } from '@/lib/moment'
-import { MoreIcon, EditIcon, ImagePlusIcon } from '@/components/icons'
+import { MoreIcon, ImagePlusIcon } from '@/components/icons'
 import type { Post } from '@/hooks/usePosts'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
 import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
@@ -25,13 +25,11 @@ import { ProfileImageLightbox } from '@/components/profile-image-lightbox'
 import { fetchProfilePeek, peekProfileCache, warmProfile, type WarmProfileRow } from '@/lib/profile-warm'
 import { resolveMessageEligibility } from '@/lib/message-eligibility'
 import { resolvePublicArtistCredit } from '@/lib/artist-identity'
-import { uploadProfileCover } from '@/components/cover-upload'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { playSnippet, togglePlayPause } from '@/lib/audio-engine'
 import { MargoActionSheet } from '@/components/margo-action-sheet'
 import { MargoLongPressHint } from '@/components/margo-long-press-hint'
-import { MargoPhotoSource } from '@/components/margo-photo-source'
 import { resolveSignatureMomentSnippet } from '@/lib/signature-snippet'
 import { useIsBuffering, useIsPlaying } from '@/hooks/useAudioEngine'
 import { useLongPress } from '@/hooks/useLongPress'
@@ -201,7 +199,7 @@ type ProfileContentTab = 'lyrics' | 'replays' | 'backs' | 'private'
 export default function ProfilePage({ username: usernameProp }: { username?: string } = {}) {
   const params = useParams<{ username: string }>()
   const router = useRouter()
-  const { user, identity, syncCoverUrl, updateSignatureLyric } = useIdentity()
+  const { user, identity, updateSignatureLyric } = useIdentity()
   const { application } = useArtistApplication()
   const { isTabActive } = usePrimaryTab()
   const username = (usernameProp || (typeof params.username === 'string' ? params.username : '')).trim()
@@ -221,9 +219,6 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
   const [followBusy, setFollowBusy] = useState(false)
   const [avatarLightboxOpen, setAvatarLightboxOpen] = useState(false)
   const [coverLightboxOpen, setCoverLightboxOpen] = useState(false)
-  const [coverBusy, setCoverBusy] = useState(false)
-  const [coverSourceOpen, setCoverSourceOpen] = useState(false)
-  const [coverError, setCoverError] = useState<string | null>(null)
   const [previewSong, setPreviewSong] = useState<SongPreviewSeed | null>(null)
 
   // ── Discography — public, live-only catalog for this profile, if
@@ -568,22 +563,6 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
   const coverUrl = profile?.coverUrl ?? null
   const hasCover = !!coverUrl
 
-  async function handleCoverFile(file: File) {
-    if (!user || !profile) return
-    setCoverBusy(true)
-    setCoverError(null)
-    try {
-      const url = await uploadProfileCover(user.id, file)
-      setProfile({ ...profile, coverUrl: url })
-      syncCoverUrl(url)
-    } catch (err) {
-      console.error('Cover upload failed:', err)
-      setCoverError(err instanceof Error ? err.message : 'Could not upload cover.')
-    } finally {
-      setCoverBusy(false)
-    }
-  }
-
   return (
     <main style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
       <style>{`
@@ -638,39 +617,11 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
               </button>
-              {isOwnProfile && (
-                <button
-                  type="button"
-                  onClick={() => setCoverSourceOpen(true)}
-                  disabled={coverBusy}
-                  aria-label="Change cover photo"
-                  style={{
-                    position: 'absolute',
-                    right: '12px',
-                    bottom: '12px',
-                    width: 'var(--margo-touch-min)',
-                    height: 'var(--margo-touch-min)',
-                    borderRadius: '50%',
-                    background: 'var(--margo-bar)',
-                    border: '1px solid var(--border-hi)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: coverBusy ? 'not-allowed' : 'pointer',
-                    padding: 0,
-                    WebkitTapHighlightColor: 'transparent',
-                  }}
-                >
-                  <EditIcon size={16} color="var(--text-secondary)" />
-                </button>
-              )}
             </div>
           ) : isOwnProfile ? (
-            <button
-              type="button"
-              onClick={() => setCoverSourceOpen(true)}
-              disabled={coverBusy}
-              aria-label="Add cover photo"
+            <Link
+              href="/profile/edit"
+              aria-label="Add cover photo in Edit profile"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -681,32 +632,13 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 border: 'none',
                 borderBottom: '1px dashed var(--gold-border)',
                 background: 'var(--surface)',
-                cursor: coverBusy ? 'not-allowed' : 'pointer',
+                cursor: 'pointer',
                 WebkitTapHighlightColor: 'transparent',
+                textDecoration: 'none',
               }}
             >
               <ImagePlusIcon size={28} color="var(--gold)" />
-            </button>
-          ) : null}
-
-          {isOwnProfile ? (
-            <MargoPhotoSource
-              open={coverSourceOpen}
-              onOpenChange={setCoverSourceOpen}
-              title="Cover photo"
-              onFile={(file) => { void handleCoverFile(file) }}
-            />
-          ) : null}
-          {isOwnProfile && coverError ? (
-            <p style={{
-              fontFamily: font,
-              fontSize: TYPE.secondary,
-              color: 'var(--text-secondary)',
-              textAlign: 'center',
-              margin: '8px 24px 0',
-            }}>
-              {coverError}
-            </p>
+            </Link>
           ) : null}
 
           <div style={{
