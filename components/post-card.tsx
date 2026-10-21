@@ -101,6 +101,9 @@ export interface PostCardProps {
   domId?: string
   /** Brief highlight after the user just published this Moment. */
   highlightShared?: boolean
+  /** One-shot: open Lyric Back panel (e.g. /feed?highlight=&openLb=1). */
+  openLyricBack?: boolean
+  onLyricBackPanelChange?: (open: boolean) => void
 }
 
 const VIBE_LABELS: Record<string, string> = {
@@ -171,6 +174,8 @@ export function PostCard({
   threadDetail = false,
   domId,
   highlightShared = false,
+  openLyricBack = false,
+  onLyricBackPanelChange,
 }: PostCardProps) {
   const router = useRouter()
   const { requireAuth } = useAuthGate()
@@ -186,7 +191,6 @@ export function PostCard({
   const cardRef = useRef<HTMLDivElement>(null)
   const isOwner = !!user?.id && !!post.authorUid && post.authorUid === user.id
   const lyricBackAllowed = isLyricBackAllowed(post)
-  const lyricBackHref = `/lyric-back?postId=${post.id}`
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deletedLocally, setDeletedLocally] = useState(false)
@@ -202,6 +206,38 @@ export function PostCard({
   const [rowExpanded, setRowExpanded] = useState(false)
   const [avatarBroken, setAvatarBroken] = useState(false)
   const [suggestionsOpen, setSuggestionsOpen] = useState(false)
+  const openLyricBackHandledRef = useRef(false)
+
+  const scrollLyricBackPanelIntoView = useCallback(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const panel = cardRef.current?.querySelector('.margo-post-card__lb-panel')
+        const target = (panel ?? cardRef.current) as HTMLElement | null
+        target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    })
+  }, [])
+
+  const setLyricBackPanelOpen = useCallback((next: boolean) => {
+    setSuggestionsOpen(next)
+    onLyricBackPanelChange?.(next)
+    if (next) scrollLyricBackPanelIntoView()
+  }, [onLyricBackPanelChange, scrollLyricBackPanelIntoView])
+
+  const toggleLyricBackPanel = useCallback(() => {
+    setSuggestionsOpen((prev) => {
+      const next = !prev
+      onLyricBackPanelChange?.(next)
+      if (next) scrollLyricBackPanelIntoView()
+      return next
+    })
+  }, [onLyricBackPanelChange, scrollLyricBackPanelIntoView])
+
+  useEffect(() => {
+    if (!openLyricBack || openLyricBackHandledRef.current || !lyricBackAllowed) return
+    openLyricBackHandledRef.current = true
+    setLyricBackPanelOpen(true)
+  }, [openLyricBack, lyricBackAllowed, setLyricBackPanelOpen])
   useEffect(() => { setAvatarBroken(false) }, [post.authorAvatarUrl, post.authorUid])
   const closeReplayMenu = useCallback(() => {
     setReplayMenuOpen(false)
@@ -758,7 +794,7 @@ export function PostCard({
             artist: post.knowledge?.artist ?? null,
           }}
           open={suggestionsOpen}
-          onClose={() => setSuggestionsOpen(false)}
+          onClose={() => setLyricBackPanelOpen(false)}
           onRequireAuth={requireAuth}
           onOpenThread={(echoId) => {
             persistActivePrimaryScroll()
@@ -777,7 +813,7 @@ export function PostCard({
           aria-expanded={suggestionsOpen}
           onClick={(e) => {
             e.stopPropagation()
-            setSuggestionsOpen((o) => !o)
+            toggleLyricBackPanel()
           }}
         >
           {suggestionsOpen ? 'Close Lyric Back' : 'Add Lyric Back'}
@@ -817,7 +853,7 @@ export function PostCard({
             aria-expanded={suggestionsOpen}
             onClick={(e) => {
               e.stopPropagation()
-              setSuggestionsOpen((o) => !o)
+              toggleLyricBackPanel()
             }}
             style={{ color: suggestionsOpen ? 'var(--post-vibe-text)' : 'var(--text-secondary)' }}
           >

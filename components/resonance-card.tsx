@@ -76,7 +76,7 @@ export function ResonanceCard({
   return (
     <>
       <PendingNavLink
-        href={`/lyric-back?postId=${post.id}`}
+        href={`/feed?highlight=${encodeURIComponent(post.id)}&openLb=1`}
         style={{
           flexShrink: variant === 'row' ? 0 : undefined,
           width: variant === 'row' ? '240px' : '100%',

@@ -1001,6 +1001,8 @@ html[data-margo-stage-idle] .margo-stage-zone {
   outline-offset: 2px;
 }
 .margo-post-card__lb-panel {
+  scroll-margin-top: calc(var(--nav-height, 72px) + 16px);
+  scroll-margin-bottom: calc(var(--margo-page-bottom, 88px) + 16px);
   margin-top: 16px;
   margin-left: calc(-1 * var(--margo-post-card-pad));
   margin-right: calc(-1 * var(--margo-post-card-pad));

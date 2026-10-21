@@ -49,6 +49,8 @@ function FeedPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const highlightParam = searchParams.get('highlight')
+  const openLbParam = searchParams.get('openLb') === '1'
+  const [autoOpenLyricBackPostId, setAutoOpenLyricBackPostId] = useState<string | null>(null)
   const { isTabActive } = usePrimaryTab()
   const feedLive = isTabActive('feed')
   const isMobileViewport = useMargoMobileViewport()
@@ -501,11 +503,12 @@ function FeedPageInner() {
 
     setHighlightPostId(highlightParam)
     setSharedLabel(true)
+    if (openLbParam) setAutoOpenLyricBackPostId(highlightParam)
     router.replace('/feed', { scroll: false })
 
     const scrollTimer = window.setTimeout(() => {
       const el = document.getElementById(`feed-post-${highlightParam}`)
-      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el?.scrollIntoView({ behavior: 'smooth', block: openLbParam ? 'start' : 'center' })
     }, 120)
 
     const labelTimer = window.setTimeout(() => setSharedLabel(false), 2600)
@@ -516,7 +519,7 @@ function FeedPageInner() {
       window.clearTimeout(labelTimer)
       window.clearTimeout(glowTimer)
     }
-  }, [highlightParam, listReady, posts, router])
+  }, [highlightParam, listReady, openLbParam, posts, router])
 
   const restoredScrollRef = useRef(false)
   const restoreTriesRef = useRef(0)
@@ -703,6 +706,12 @@ function FeedPageInner() {
                 {...cardProps}
                 domId={`feed-post-${post.id}`}
                 highlightShared={highlightPostId === post.id}
+                openLyricBack={autoOpenLyricBackPostId === post.id}
+                onLyricBackPanelChange={(open) => {
+                  if (!open && autoOpenLyricBackPostId === post.id) {
+                    setAutoOpenLyricBackPostId(null)
+                  }
+                }}
               />
             )
           })}
