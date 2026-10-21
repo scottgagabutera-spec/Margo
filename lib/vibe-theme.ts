@@ -16,8 +16,18 @@ export type VibeTheme = {
 
 const GOLD_FILL = '#E8C547'
 
-/** Post-card / mini-player heartbreak hue (not in DISCOVER_VIBES). */
-const PAIN_FILL = '#ff6060'
+/**
+ * Feed-card fill overrides — ≥25° hue separation on a dark screen (gold exempt).
+ * Discover / EMOTION_COLORS unchanged elsewhere; see hue table in PR #252.
+ */
+const FEED_VIBE_FILL: Record<string, string> = {
+  /** ~7° — hot scarlet (was DISCOVER hype #FF4D4D ~0°). */
+  hype: '#FF2E12',
+  /** ~292° — orchid (was heartbreak #ff6060 ~0°; distinct from HYPE & LOVE ~340°). */
+  pain: '#C056D0',
+  /** ~236° — periwinkle-violet (DISCOVER hope #7B9FFF ~224°, nudged for CHILL ~207°). */
+  hope: '#7880FF',
+}
 
 function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace('#', '')
@@ -61,9 +71,20 @@ export function normalizeVibeKey(emotion: string | null | undefined): string {
 }
 
 function fillForKey(key: string): string {
-  if (key === 'pain') return PAIN_FILL
   if (key === 'gold') return GOLD_FILL
+  if (FEED_VIBE_FILL[key]) return FEED_VIBE_FILL[key]
   return DISCOVER_VIBE_COLORS[key] || GOLD_FILL
+}
+
+/** Hue angle (0–360) for feed-card fills — documentation / QA. */
+export const FEED_VIBE_HUE_DEG: Record<string, number> = {
+  hype: 7,
+  pain: 292,
+  proud: 35,
+  love: 340,
+  chill: 207,
+  hope: 236,
+  gold: 47,
 }
 
 /** WCAG-friendly theme tokens for one vibe (no runtime color extraction). */
