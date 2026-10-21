@@ -271,7 +271,7 @@ export function PostCardSuggestedReply({
             aria-expanded={ideasOpen}
             onClick={() => setIdeasOpen((o) => !o)}
           >
-            <span>Ideas</span>
+            <span>Suggestions</span>
             <span
               className="margo-post-card__lb-ideas-chevron"
               style={{ transform: ideasOpen ? 'rotate(90deg)' : 'none' }}

@@ -350,8 +350,8 @@ export const LyricBackPanelCompose = forwardRef<
           value={query}
           onChange={setQuery}
           loading={searchLoading}
-          placeholder="Song or artist"
-          ariaLabel="Search songs"
+          placeholder="Search by lyric, song or artist…"
+          ariaLabel="Search by lyric, song or artist"
           stackAboveOverlay={isPanelLayout && searchOpen}
           onFocus={() => {
             if (query.trim().length >= 2) setShowResults(true)
@@ -371,8 +371,10 @@ export const LyricBackPanelCompose = forwardRef<
 
       {selected ? (
         <div className="margo-post-card__lb-compose-track margo-post-card__lb-compose-track--picked">
-          <span className="margo-post-card__lb-compose-song">{selected.title}</span>
-          <span className="margo-post-card__lb-compose-artist">{selected.artist}</span>
+          <div className="margo-post-card__lb-compose-track-text">
+            <span className="margo-post-card__lb-compose-song">{selected.title}</span>
+            <span className="margo-post-card__lb-compose-artist">{selected.artist}</span>
+          </div>
           <button
             type="button"
             className="margo-post-card__lb-compose-clear"

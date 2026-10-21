@@ -1231,20 +1231,39 @@ html[data-margo-stage-idle] .margo-stage-zone {
 }
 .margo-post-card__lb-echo-artist,
 .margo-post-card__lb-compose-artist {
-  font-style: italic;
-  font-weight: 400;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-style: normal;
+  font-weight: 500;
+  font-size: var(--feed-type-artist);
   color: var(--text-muted);
   flex-shrink: 1;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.margo-post-card__lb-echo-song {
+  font-size: var(--feed-type-song-title);
+}
+.margo-post-card__lb-compose-song {
+  display: block;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-song-title);
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.25;
+}
+.margo-post-card__lb-compose-artist {
+  display: block;
+  margin-top: 2px;
+}
+.margo-post-card__lb-echo-track,
+.margo-post-card__lb-row-meta {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
 .margo-post-card__lb-echo-artist::before,
 .margo-post-card__lb-compose-artist::before {
-  content: '·';
-  font-style: normal;
-  margin-right: 6px;
-  color: var(--text-muted);
-  opacity: 0.7;
+  content: none;
 }
 .margo-post-card__lb-echo-thread-link {
   display: block;
@@ -1302,8 +1321,18 @@ html[data-margo-stage-idle] .margo-stage-zone {
 }
 .margo-post-card__lb-compose-track--picked {
   position: relative;
-  padding-right: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 36px 8px 10px;
   margin-top: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+}
+.margo-post-card__lb-compose-track-text {
+  flex: 1;
+  min-width: 0;
 }
 .margo-post-card__lb-compose-clear {
   position: absolute;
