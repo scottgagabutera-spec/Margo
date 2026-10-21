@@ -7,10 +7,15 @@ import { useEchoes, type Echo } from '@/hooks/useEchoes'
 import {
   FeedIconClose,
   FeedIconChevronRight,
+  FeedIconHeart,
+  FeedIconHeartFilled,
   FeedIconSend,
   FeedMomentPlaybackIcon,
 } from '@/components/feed-card-icons'
 import { PendingNavLink } from '@/components/pending-nav-link'
+import { useAuthGate } from '@/components/supabase-auth-provider'
+import { useIdentity } from '@/hooks/useIdentity'
+import { createClient } from '@/lib/supabase/client'
 import type { SuggestedLyricBack } from '@/lib/suggest-lyric-back'
 import { fetchLyricBackSuggestionsForPost } from '@/lib/lyric-back-suggestions'
 import { trackEvent } from '@/lib/analytics/track'
@@ -144,7 +149,6 @@ export function PostCardSuggestedReply({
       endSec: s.endSec,
     })
     setComposeError(null)
-    composeRef.current?.focus()
   }, [])
 
   const canSend = Boolean(
@@ -294,55 +298,117 @@ export function PostCardSuggestedReply({
       </div>
 
       <div className="margo-post-card__lb-compose">
-        {draft?.songTitle ? (
-          <p className="margo-post-card__lb-compose-track">
-            <span className="margo-post-card__lb-compose-song">{draft.songTitle}</span>
-            {draft.artistName ? (
-              <span className="margo-post-card__lb-compose-artist">{draft.artistName}</span>
+        {!draft?.songTitle ? (
+          <>
+            <p className="margo-post-card__lb-compose-lead">
+              A Lyric Back always ties to a song and artist — search Margo music or link Apple Music, Spotify, and the rest, the same way as Compose.
+            </p>
+            {onFindLine ? (
+              <button
+                type="button"
+                className="margo-post-card__lb-compose-find"
+                onClick={onFindLine}
+              >
+                Find your Lyric Back
+              </button>
             ) : null}
-          </p>
+          </>
         ) : (
-          <p className="margo-post-card__lb-compose-hint">
-            Find a line from Margo music, then send your Lyric Back
-          </p>
+          <>
+            <p className="margo-post-card__lb-compose-heading">Your Lyric Back</p>
+            <p className="margo-post-card__lb-compose-track">
+              <span className="margo-post-card__lb-compose-song">{draft.songTitle}</span>
+              {draft.artistName ? (
+                <span className="margo-post-card__lb-compose-artist">{draft.artistName}</span>
+              ) : null}
+            </p>
+            <p className="margo-post-card__lb-compose-lyric-preview">&ldquo;{draftLyric.trim() || draft.lyric}&rdquo;</p>
+            <textarea
+              ref={composeRef}
+              className="margo-post-card__lb-compose-input"
+              rows={2}
+              aria-label="Edit Lyric Back line"
+              value={draftLyric}
+              onChange={(e) => {
+                setDraftLyric(e.target.value)
+                setComposeError(null)
+              }}
+            />
+            {composeError ? (
+              <p className="margo-post-card__lb-compose-error" role="alert">{composeError}</p>
+            ) : null}
+            <div className="margo-post-card__lb-compose-bar">
+              {onFindLine ? (
+                <button
+                  type="button"
+                  className="margo-post-card__lb-compose-change"
+                  onClick={onFindLine}
+                >
+                  Change song
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="margo-post-card__lb-compose-send"
+                aria-label="Send Lyric Back"
+                disabled={!canSend}
+                onClick={() => void handleSend()}
+              >
+                <span className="margo-post-card__lb-compose-send-label">Send</span>
+                <FeedIconSend size={18} />
+              </button>
+            </div>
+          </>
         )}
-        <textarea
-          ref={composeRef}
-          className="margo-post-card__lb-compose-input"
-          rows={2}
-          placeholder="Your Lyric Back line…"
-          aria-label="Lyric Back line"
-          value={draftLyric}
-          onChange={(e) => {
-            setDraftLyric(e.target.value)
-            setComposeError(null)
-          }}
-        />
-        {composeError ? (
-          <p className="margo-post-card__lb-compose-error" role="alert">{composeError}</p>
-        ) : null}
-        <div className="margo-post-card__lb-compose-bar">
-          {onFindLine ? (
-            <button
-              type="button"
-              className="margo-post-card__lb-compose-find"
-              onClick={onFindLine}
-            >
-              Find a line
-            </button>
-          ) : null}
-          <button
-            type="button"
-            className="margo-post-card__lb-compose-send"
-            aria-label="Send Lyric Back"
-            disabled={!canSend}
-            onClick={() => void handleSend()}
-          >
-            <FeedIconSend size={20} />
-          </button>
-        </div>
       </div>
     </div>
+  )
+}
+
+const supabase = createClient()
+
+function EchoResonateButton({ echo }: { echo: Echo }) {
+  const { user } = useIdentity()
+  const { requireAuth } = useAuthGate()
+  const myId = user?.id
+  const [resonated, setResonated] = useState(() => Boolean(myId && echo.resonates?.[myId]))
+  const [count, setCount] = useState(echo.resonateCount ?? 0)
+
+  useEffect(() => {
+    setResonated(Boolean(myId && echo.resonates?.[myId]))
+    setCount(echo.resonateCount ?? 0)
+  }, [echo.id, echo.resonateCount, echo.resonates, myId])
+
+  const toggle = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!requireAuth() || !myId) return
+    const was = resonated
+    setResonated(!was)
+    setCount((c) => Math.max(0, c + (was ? -1 : 1)))
+    try {
+      if (was) {
+        const { error } = await supabase.from('post_resonates').delete().eq('post_id', echo.id).eq('actor_id', myId)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('post_resonates').insert({ post_id: echo.id, actor_id: myId })
+        if (error) throw error
+      }
+    } catch {
+      setResonated(was)
+      setCount((c) => Math.max(0, c + (was ? 1 : -1)))
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      className={`margo-post-card__lb-echo-resonate${resonated ? ' is-on' : ''}`}
+      aria-label={resonated ? 'Remove resonate' : 'Resonate with this Lyric Back'}
+      onClick={(e) => void toggle(e)}
+    >
+      {resonated ? <FeedIconHeartFilled size={16} /> : <FeedIconHeart size={16} />}
+      <span>Resonate{count > 0 ? ` · ${count}` : ''}</span>
+    </button>
   )
 }
 
@@ -404,18 +470,16 @@ function EchoRow({
           <button type="button" className="margo-post-card__lb-echo-bubble" onClick={onOpen}>
             <span className="margo-post-card__lb-echo-lyric">&ldquo;{echo.lyric}&rdquo;</span>
           </button>
-          <button
-            type="button"
-            className="margo-post-card__lb-echo-thread-link"
-            onClick={onOpen}
-          >
-            Open Lyric Back
-            {(echo.resonateCount ?? 0) > 0 ? (
-              <span className="margo-post-card__lb-echo-resonates">
-                · {echo.resonateCount} resonate
-              </span>
-            ) : null}
-          </button>
+          <div className="margo-post-card__lb-echo-actions">
+            <EchoResonateButton echo={echo} />
+            <button
+              type="button"
+              className="margo-post-card__lb-echo-thread-link"
+              onClick={onOpen}
+            >
+              Open Lyric Back
+            </button>
+          </div>
         </div>
         {canPlay ? (
           <button

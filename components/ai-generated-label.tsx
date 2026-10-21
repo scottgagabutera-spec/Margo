@@ -25,7 +25,7 @@ export function AiGeneratedLabel({
         className="margo-feed-ai-tag"
         style={style}
       >
-        AI
+        ai
       </span>
     )
   }

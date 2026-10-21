@@ -51,6 +51,7 @@ export function SongMeta({
   aiGenerated = false,
   layout = 'stacked',
   href,
+  className,
   style,
   titleStyle,
   artistStyle,
@@ -86,7 +87,7 @@ export function SongMeta({
   }
 
   const body = (
-    <div style={{ minWidth: 0, ...style }}>
+    <div className={className} style={{ minWidth: 0, ...style }}>
       {t || aiGenerated ? (
         <p
           className="margo-song-meta__title-line"
@@ -106,7 +107,7 @@ export function SongMeta({
             <span className="margo-song-meta__title-text">{t}</span>
           ) : null}
           {aiGenerated ? (
-            <span className="margo-feed-ai-tag" aria-label="AI generated">AI</span>
+            <span className="margo-feed-ai-tag margo-feed-ai-tag--title-adjacent" aria-label="AI generated song">ai</span>
           ) : null}
         </p>
       ) : null}

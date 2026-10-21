@@ -325,6 +325,7 @@ export function PostCardSongSection({
           <div className="margo-post-card__song-meta">
             {showSongMetaOnce && primaryCatalog ? (
               <SongMeta
+                className="margo-song-meta--feed-row"
                 title={primaryCatalog.songTitle}
                 artist={primaryCatalog.artistName}
                 aiGenerated={primaryCatalog.isAiGenerated}
