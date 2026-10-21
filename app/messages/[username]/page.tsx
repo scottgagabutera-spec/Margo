@@ -58,13 +58,14 @@ export default function ThreadPage() {
   const router = useRouter()
   const partnerKey = params.username
   const { user } = useIdentity()
-  const { partner, messages, loading, loadError, canSend, blockedReason, sending, sendMessage } = useThread(partnerKey)
+  const { partner, messages, loading, loadError, canSend, blockedReason, eligibilityReady, sending, sendMessage } = useThread(partnerKey)
   const [draft, setDraft] = useState('')
   const [isMobile, setIsMobile] = useState(false)
 
   const { keyboardOpen } = useKeyboardSafeChrome()
 
   const threadReady = !!partner && !loading && !loadError
+  const composerReady = threadReady && eligibilityReady
   const { scrollRef, handleScroll, scrollToLatestAfterSend } = useConversationScroll({
     ready: threadReady,
     loading,
@@ -123,7 +124,7 @@ export default function ThreadPage() {
     )
   }
 
-  const composer = (
+  const composer = composerReady ? (
     <KeyboardSafeCtaBar
       keyboardOpen={keyboardOpen}
       solidBackground
@@ -169,7 +170,7 @@ export default function ThreadPage() {
         </div>
       )}
     </KeyboardSafeCtaBar>
-  )
+  ) : null
 
   return (
     <MargoConversationLayout

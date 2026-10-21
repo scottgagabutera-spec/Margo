@@ -9,6 +9,8 @@ export type MessageEligibility = {
   canSend: boolean
   /** Short copy for disabled composer / profile hint. */
   blockedReason: string | null
+  /** False while follow relationship for this profile is still loading. */
+  followKnown: boolean
 }
 
 /**
@@ -19,11 +21,14 @@ export function resolveMessageEligibility(input: {
   whoCanMessage: WhoCanMessage | string | null | undefined
   followStatus: FollowStatus
   isOwnProfile: boolean
+  /** When false, do not infer Message/Follow UI from a null followStatus. */
+  followKnown?: boolean
 }): MessageEligibility {
   if (input.isOwnProfile) {
-    return { canOpenThread: false, canSend: false, blockedReason: null }
+    return { canOpenThread: false, canSend: false, blockedReason: null, followKnown: true }
   }
 
+  const followKnown = input.followKnown !== false
   const setting = (input.whoCanMessage || 'everyone') as WhoCanMessage
 
   if (setting === 'no_one') {
@@ -31,6 +36,16 @@ export function resolveMessageEligibility(input: {
       canOpenThread: false,
       canSend: false,
       blockedReason: 'Messages are turned off for this account.',
+      followKnown: true,
+    }
+  }
+
+  if (setting === 'followers' && !followKnown) {
+    return {
+      canOpenThread: false,
+      canSend: false,
+      blockedReason: null,
+      followKnown: false,
     }
   }
 
@@ -39,8 +54,9 @@ export function resolveMessageEligibility(input: {
       canOpenThread: false,
       canSend: false,
       blockedReason: 'Follow this account to message them.',
+      followKnown: true,
     }
   }
 
-  return { canOpenThread: true, canSend: true, blockedReason: null }
+  return { canOpenThread: true, canSend: true, blockedReason: null, followKnown: true }
 }

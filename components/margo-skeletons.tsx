@@ -227,6 +227,17 @@ export function ProfilePageSkeleton() {
 }
 
 /** First-visit optimistic tab — shown until the route commits and seeds keepalive. */
+/** Fixed-size Message + Follow pills on profile header (prevents layout jump). */
+export function ProfileSocialActionsSkeleton() {
+  return (
+    <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
+      <PulseStyle />
+      <div style={bone({ width: 96, height: 32, borderRadius: 50, border: 'none' })} />
+      <div style={bone({ width: 96, height: 32, borderRadius: 50, border: 'none' }, 80)} />
+    </div>
+  )
+}
+
 export function PrimaryTabPaneSkeleton({
   tab,
 }: {
