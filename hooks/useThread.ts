@@ -56,8 +56,9 @@ export function useThread(partnerKey: string) {
   const [messages, setMessages] = useState<ThreadMessage[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [canSend, setCanSend] = useState(true)
+  const [canSend, setCanSend] = useState(false)
   const [blockedReason, setBlockedReason] = useState<string | null>(null)
+  const [eligibilityReady, setEligibilityReady] = useState(false)
   const [sending, setSending] = useState(false)
 
   const loadThread = useCallback(async (uid: string, other: ThreadPartner) => {
@@ -97,6 +98,9 @@ export function useThread(partnerKey: string) {
     async function run() {
       setLoading(true)
       setLoadError(null)
+      setEligibilityReady(false)
+      setCanSend(false)
+      setBlockedReason(null)
       const timeoutMs = 15_000
       let timedOut = false
       const watchdog = setTimeout(() => {
@@ -138,10 +142,12 @@ export function useThread(partnerKey: string) {
           whoCanMessage: other.whoCanMessage,
           followStatus,
           isOwnProfile: false,
+          followKnown: true,
         })
         if (active && !timedOut) {
           setCanSend(eligibility.canSend)
           setBlockedReason(eligibility.blockedReason)
+          setEligibilityReady(eligibility.followKnown)
         }
 
         if (!eligibility.canOpenThread) {
@@ -239,5 +245,5 @@ export function useThread(partnerKey: string) {
     })
   }, [userId, partner, applyOutboundMessage])
 
-  return { partner, messages, loading, loadError, canSend, blockedReason, sending, sendMessage }
+  return { partner, messages, loading, loadError, canSend, blockedReason, eligibilityReady, sending, sendMessage }
 }

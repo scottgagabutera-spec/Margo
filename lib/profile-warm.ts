@@ -28,6 +28,8 @@ export interface WarmProfileBundle {
   profile: WarmProfileRow
   followerCount: number
   followingCount: number
+  /** Present when peek RPC includes the viewer's follow row (authenticated). */
+  viewerFollowStatus?: 'pending' | 'accepted' | null
   loadedAt: number
 }
 
@@ -86,8 +88,15 @@ function bundleFromPeekPayload(payload: Record<string, unknown>): WarmProfileBun
     }),
     followerCount: Math.max(0, Number(payload.followerCount) || 0),
     followingCount: Math.max(0, Number(payload.followingCount) || 0),
+    viewerFollowStatus: normalizeViewerFollowStatus(payload.viewerFollowStatus),
     loadedAt: Date.now(),
   }
+}
+
+function normalizeViewerFollowStatus(raw: unknown): 'pending' | 'accepted' | null | undefined {
+  if (raw === 'pending' || raw === 'accepted') return raw
+  if (raw === null) return null
+  return undefined
 }
 
 export async function fetchProfilePeek(username: string): Promise<WarmProfileBundle | null> {

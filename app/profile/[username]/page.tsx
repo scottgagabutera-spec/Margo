@@ -23,7 +23,9 @@ import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { ProfileArtistLinks } from '@/components/profile-artist-links'
 import { ProfileImageLightbox } from '@/components/profile-image-lightbox'
 import { fetchProfilePeek, peekProfileCache, warmProfile, type WarmProfileRow } from '@/lib/profile-warm'
-import { resolveMessageEligibility } from '@/lib/message-eligibility'
+import { resolveMessageEligibility, type FollowStatus } from '@/lib/message-eligibility'
+import { readViewerFollowCache, writeViewerFollowCache } from '@/lib/viewer-follow-cache'
+import { ProfileSocialActionsSkeleton } from '@/components/margo-skeletons'
 import { resolvePublicArtistCredit } from '@/lib/artist-identity'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
@@ -192,9 +194,12 @@ interface ArtistSongRow {
   is_ai_generated: boolean
 }
 
-type FollowStatus = null | 'pending' | 'accepted'
-
 type ProfileContentTab = 'lyrics' | 'replays' | 'backs' | 'private'
+
+type FollowRelationState = {
+  ready: boolean
+  status: FollowStatus
+}
 
 export default function ProfilePage({ username: usernameProp }: { username?: string } = {}) {
   const params = useParams<{ username: string }>()
@@ -215,7 +220,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
   const [notFound, setNotFound] = useState(false)
   const [followerCount, setFollowerCount] = useState<number | null>(cached?.followerCount ?? null)
   const [followingCount, setFollowingCount] = useState<number | null>(cached?.followingCount ?? null)
-  const [followStatus, setFollowStatus] = useState<FollowStatus>(null)
+  const [followRelation, setFollowRelation] = useState<FollowRelationState>({ ready: true, status: null })
   const [followBusy, setFollowBusy] = useState(false)
   const [avatarLightboxOpen, setAvatarLightboxOpen] = useState(false)
   const [coverLightboxOpen, setCoverLightboxOpen] = useState(false)
@@ -266,6 +271,9 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
         setFollowingCount(bundle.followingCount)
         setNotFound(false)
         setLoading(false)
+        if (bundle.viewerFollowStatus !== undefined) {
+          setFollowRelation({ ready: true, status: bundle.viewerFollowStatus ?? null })
+        }
         return
       }
 
@@ -277,6 +285,9 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
         setFollowingCount(peek.followingCount)
         setNotFound(false)
         setLoading(false)
+        if (peek.viewerFollowStatus !== undefined) {
+          setFollowRelation({ ready: true, status: peek.viewerFollowStatus ?? null })
+        }
         return
       }
       setNotFound(true)
@@ -384,7 +395,16 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
   })
 
   useEffect(() => {
-    if (!user || !profile || isOwnProfile) { setFollowStatus(null); return }
+    if (!user || !profile || isOwnProfile) {
+      setFollowRelation({ ready: true, status: null })
+      return
+    }
+    const cached = readViewerFollowCache(user.id, profile.id)
+    setFollowRelation({
+      ready: cached !== undefined,
+      status: cached !== undefined ? cached : null,
+    })
+
     let active = true
     supabase
       .from('follows')
@@ -394,10 +414,12 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
       .maybeSingle()
       .then(({ data }) => {
         if (!active) return
-        setFollowStatus(data ? (data.status as FollowStatus) : null)
+        const status = data ? (data.status as FollowStatus) : null
+        writeViewerFollowCache(user.id, profile.id, status)
+        setFollowRelation({ ready: true, status })
       })
     return () => { active = false }
-  }, [user, profile, isOwnProfile])
+  }, [user?.id, profile?.id, isOwnProfile])
 
   const ownPosts = useMemo(
     () => profile ? posts.filter(p => p.authorUid === profile.id) : [],
@@ -431,15 +453,26 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
     setExportPost(post)
   }
 
-  const canViewContent = !profile?.isPrivate || isOwnProfile || followStatus === 'accepted'
+  const followStatus = followRelation.status
+  const followKnown = followRelation.ready || isOwnProfile || !user
+  const socialActionsReady = followRelation.ready || isOwnProfile || !user
+
+  const profileContentAccess = useMemo(() => {
+    if (!profile?.isPrivate || isOwnProfile) return 'open' as const
+    if (!followKnown) return 'loading' as const
+    return followStatus === 'accepted' ? 'open' as const : 'blocked' as const
+  }, [profile?.isPrivate, isOwnProfile, followKnown, followStatus])
+
+  const canViewContent = profileContentAccess === 'open'
 
   const messageEligibility = useMemo(
     () => resolveMessageEligibility({
       whoCanMessage: profile?.whoCanMessage,
       followStatus,
       isOwnProfile,
+      followKnown,
     }),
-    [profile?.whoCanMessage, followStatus, isOwnProfile],
+    [profile?.whoCanMessage, followStatus, isOwnProfile, followKnown],
   )
 
   useEffect(() => {
@@ -533,7 +566,8 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
           .single()
         if (!error && data) {
           const resultStatus = data.status as FollowStatus
-          setFollowStatus(resultStatus)
+          setFollowRelation({ ready: true, status: resultStatus })
+          if (user) writeViewerFollowCache(user.id, profile.id, resultStatus)
           if (resultStatus === 'accepted') {
             setFollowerCount(c => (c !== null ? c + 1 : c))
           }
@@ -547,7 +581,8 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
           if (followStatus === 'accepted') {
             setFollowerCount(c => (c !== null ? Math.max(0, c - 1) : c))
           }
-          setFollowStatus(null)
+          setFollowRelation({ ready: true, status: null })
+          if (user) writeViewerFollowCache(user.id, profile.id, null)
         }
       }
     } finally {
@@ -814,6 +849,9 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
               )}
 
               {!isOwnProfile && user && (
+                !socialActionsReady ? (
+                  <ProfileSocialActionsSkeleton />
+                ) : (
                 <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
                   {messageEligibility.canOpenThread ? (
                     <Link
@@ -847,7 +885,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                   <button
                     type="button"
                     onClick={handleFollowClick}
-                    disabled={followBusy}
+                    disabled={followBusy || !socialActionsReady}
                     style={{
                       height: '32px', padding: '0 16px',
                       display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
@@ -862,6 +900,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                     }}
                   >{followLabel}</button>
                 </div>
+                )
               )}
             </div>
 
@@ -1112,7 +1151,16 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
             )}
 
             <div style={{ marginBottom: '28px' }}>
-              {!canViewContent ? (
+              {profileContentAccess === 'loading' ? (
+                <div style={{
+                  border: '1px solid var(--border)', borderRadius: '16px', padding: '24px',
+                  textAlign: 'center',
+                }}>
+                  <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-muted)', margin: 0 }}>
+                    Loading profile…
+                  </p>
+                </div>
+              ) : profileContentAccess === 'blocked' ? (
                 <div style={{
                   border: '1px solid var(--border)', borderRadius: '16px', padding: '24px',
                   textAlign: 'center',
