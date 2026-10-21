@@ -37,7 +37,10 @@ import {
   fullSongToQueueItem,
   queueItemToFullRequest,
   queueItemToSnippetRequest,
+  snippetToQueueItem,
+  type PlayPostMomentRequest,
 } from './types'
+import { POST_MOMENT_CROSSFADE_MS } from '@/lib/moment/playback-segments'
 import { syncMediaSessionFromState, bindMediaSessionHandlers, clearMediaSessionHandlers } from './media-session'
 import {
   getPreloadReadyState,
@@ -228,6 +231,8 @@ function patch(partial: Partial<AudioEngineState>): void {
       _state.currentTime,
       _state.duration,
       _state.snippet,
+      _state.postMomentPlayback,
+      _state.queueIndex,
     )
   }
   notify()
@@ -388,6 +393,10 @@ function pauseSnippetAtEnd(): void {
   const { queue, queueIndex } = _state
   if (queue.length > 0 && queueIndex < queue.length - 1) {
     queueNext()
+    return
+  }
+  if (_state.postMomentPlayback) {
+    patch({ postMomentPlayback: null })
   }
 }
 
@@ -650,7 +659,9 @@ function armSnippetTimer(generation: number): void {
     // gets a short, proportional fade instead of no fade at all; a long
     // one gets the full 800ms. Schedule fires early enough that the fade
     // finishes right as this snippet's natural end arrives.
-    const crossfadeDurationMs = computeCrossfadeMs(ms)
+    const crossfadeDurationMs = _state.postMomentPlayback
+      ? Math.min(POST_MOMENT_CROSSFADE_MS, computeCrossfadeMs(ms))
+      : computeCrossfadeMs(ms)
     const crossfadeStartDelay = ms - crossfadeDurationMs
     _crossfadeTimer = setTimeout(() => {
       if (generation !== _handlerGeneration) return
@@ -766,10 +777,18 @@ export function attachAudioElements(elA: HTMLAudioElement, elB: HTMLAudioElement
 
 // ── Public API: playback (exclusive) ──────────────────────────────
 
-export async function playSnippet(request: PlaySnippetRequest): Promise<void> {
+export async function playSnippet(
+  request: PlaySnippetRequest,
+  options?: { postMomentPlayback?: import('./types').PostMomentPlayback },
+): Promise<void> {
   const generation = bumpSession()
   clearSnippetTimer()
   releaseWakeLock()
+  if (options?.postMomentPlayback) {
+    patch({ postMomentPlayback: options.postMomentPlayback })
+  } else {
+    patch({ postMomentPlayback: null })
+  }
 
   const snippet: SnippetBounds = {
     startSec: request.startSec,
@@ -854,11 +873,73 @@ export function playOrToggleSnippet(request: PlaySnippetRequest): void {
   void playSnippet(request)
 }
 
+/** Play all segments of a feed post as one mini-player session (internal queue + crossfade). */
+export async function playPostMoment(request: PlayPostMomentRequest): Promise<void> {
+  if (!request.segments.length) return
+
+  const postMomentPlayback = {
+    postKey: request.postKey,
+    segments: request.segments.map((s) => ({ startSec: s.startSec, endSec: s.endSec })),
+    lineText: request.lineText,
+  }
+
+  const queueItems = request.segments.map((seg) =>
+    snippetToQueueItem({
+      songId: request.songId,
+      audioUrl: request.audioUrl,
+      title: request.title,
+      artist: request.artist,
+      artwork: request.artwork ?? null,
+      lineIndex: request.lineIndex,
+      lineText: request.lineText,
+      startSec: seg.startSec,
+      endSec: seg.endSec,
+      atmosphere: request.atmosphere ?? null,
+    }),
+  )
+
+  _brokenAudioUrls.clear()
+  patch({ queue: queueItems, queueIndex: 0 })
+
+  const first = request.segments[0]
+  await playSnippet(
+    {
+      songId: request.songId,
+      audioUrl: request.audioUrl,
+      title: request.title,
+      artist: request.artist,
+      artwork: request.artwork ?? null,
+      lineIndex: request.lineIndex,
+      lineText: request.lineText,
+      startSec: first.startSec,
+      endSec: first.endSec,
+      atmosphere: request.atmosphere ?? null,
+      source: request.source,
+    },
+    { postMomentPlayback },
+  )
+}
+
+/** Toggle pause/resume when the same post is already the active post-moment session. */
+export function playOrTogglePostMoment(request: PlayPostMomentRequest): void {
+  const s = getAudioEngineState()
+  const samePost =
+    s.mode === 'snippet'
+    && s.postMomentPlayback?.postKey === request.postKey
+    && s.songId === request.songId
+  if (samePost) {
+    togglePlayPause()
+    return
+  }
+  void playPostMoment(request)
+}
+
 export async function playFull(request: PlayFullRequest): Promise<void> {
   const generation = bumpSession()
   _qualifiedPlayFired = false
   clearSnippetTimer()
   releaseWakeLock()
+  patch({ postMomentPlayback: null })
 
   const startSec = request.startSec ?? 0
   applyTrackMetadata(request, 'full', null)
@@ -1011,6 +1092,7 @@ export function stop(options?: StopOptions): void {
     snippet: null,
     error: null,
     atmosphere: null,
+    postMomentPlayback: null,
     ...(clearQueue ? { queue: [], queueIndex: 0 } : {}),
   })
 
@@ -1251,6 +1333,8 @@ export const audioEngine = {
   attachAudioElements,
   playSnippet,
   playOrToggleSnippet,
+  playPostMoment,
+  playOrTogglePostMoment,
   playFull,
   togglePlayPause,
   stop,
