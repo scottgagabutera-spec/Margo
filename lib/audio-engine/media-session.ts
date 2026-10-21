@@ -109,14 +109,14 @@ export function bindMediaSessionHandlers(): void {
 
   setHandler('previoustrack', () => {
     const s = getAudioEngineState()
-    const { canPrev } = getQueueNavigationState(s.queue, s.queueIndex)
+    const { canPrev } = getQueueNavigationState(s.queue, s.queueIndex, s.postMomentPlayback)
     if (!canPrev) return
     queuePrev()
   })
 
   setHandler('nexttrack', () => {
     const s = getAudioEngineState()
-    const { canNext } = getQueueNavigationState(s.queue, s.queueIndex)
+    const { canNext } = getQueueNavigationState(s.queue, s.queueIndex, s.postMomentPlayback)
     if (!canNext) return
     queueNext()
   })

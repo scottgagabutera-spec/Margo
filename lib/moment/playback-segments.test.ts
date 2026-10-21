@@ -18,20 +18,65 @@ describe('computePlaybackSegments', () => {
     assert.deepEqual(segs[0], { startSec: 10, endSec: 15 })
   })
 
-  it('keeps small inter-line gaps as separate segments (no silent audio inside a range)', () => {
+  it('merges with gap exactly 0 (touching ranges)', () => {
+    const segs = computePlaybackSegments([
+      line(0, 's1', 10, 14),
+      line(1, 's1', 14, 18),
+    ])
+    assert.equal(segs.length, 1)
+    assert.deepEqual(segs[0], { startSec: 10, endSec: 18 })
+  })
+
+  it('merges with gap 0.5s', () => {
     const segs = computePlaybackSegments([
       line(0, 's1', 10, 14),
       line(1, 's1', 14.5, 18),
-      line(2, 's1', 18.2, 22),
     ])
-    assert.equal(segs.length, 3)
-    assert.deepEqual(segs[0], { startSec: 10, endSec: 14 })
-    assert.deepEqual(segs[1], { startSec: 14.5, endSec: 18 })
-    assert.deepEqual(segs[2], { startSec: 18.2, endSec: 22 })
-    assert.ok(segs[1].startSec - segs[0].endSec <= GAP_MAX_SEC)
+    assert.equal(segs.length, 1)
+    assert.deepEqual(segs[0], { startSec: 10, endSec: 18 })
   })
 
-  it('merges touching and overlapping lines into one continuous segment', () => {
+  it('merges with gap exactly GAP_MAX_SEC (1.5s)', () => {
+    const segs = computePlaybackSegments([
+      line(0, 's1', 10, 12),
+      line(1, 's1', 13.5, 16),
+    ])
+    assert.equal(segs.length, 1)
+    assert.equal(13.5 - 12, GAP_MAX_SEC)
+    assert.deepEqual(segs[0], { startSec: 10, endSec: 16 })
+  })
+
+  it('splits when gap is 1.51s', () => {
+    const segs = computePlaybackSegments([
+      line(0, 's1', 10, 12),
+      line(1, 's1', 13.51, 16),
+    ])
+    assert.equal(segs.length, 2)
+    assert.deepEqual(segs[0], { startSec: 10, endSec: 12 })
+    assert.deepEqual(segs[1], { startSec: 13.51, endSec: 16 })
+  })
+
+  it('splits when gap is 2s', () => {
+    const segs = computePlaybackSegments([
+      line(0, 's1', 10, 12),
+      line(1, 's1', 14, 16),
+    ])
+    assert.equal(segs.length, 2)
+    assert.deepEqual(segs[0], { startSec: 10, endSec: 12 })
+    assert.deepEqual(segs[1], { startSec: 14, endSec: 16 })
+  })
+
+  it('merges three lines each 1s apart into one segment', () => {
+    const segs = computePlaybackSegments([
+      line(0, 's1', 10, 11),
+      line(1, 's1', 12, 13),
+      line(2, 's1', 14, 15),
+    ])
+    assert.equal(segs.length, 1)
+    assert.deepEqual(segs[0], { startSec: 10, endSec: 15 })
+  })
+
+  it('merges overlapping lines into one continuous segment', () => {
     const segs = computePlaybackSegments([
       line(0, 's1', 10, 20),
       line(1, 's1', 19, 25),

@@ -23,9 +23,8 @@ function isValidInterval(start: number, end: number): boolean {
 /**
  * Build ordered playback segments for a post's Margo catalog lines.
  * - Preserves post line order (position).
- * - Merges overlapping / touching intervals (gap <= 0).
- * - Gaps in (0, GAP_MAX_SEC] become separate segments (no silent gap played; engine crossfades).
- * - Gaps > GAP_MAX_SEC start a new segment group.
+ * - Merges overlapping intervals and gaps in [0, GAP_MAX_SEC] into one continuous segment.
+ * - Gaps strictly greater than GAP_MAX_SEC start a new segment (engine crossfades between them).
  * - Multiple songs: keeps first song only (console warning).
  */
 export function computePlaybackSegments(lines: PlaybackSegmentLineInput[]): PlaybackSegment[] {
@@ -70,14 +69,8 @@ export function computePlaybackSegments(lines: PlaybackSegmentLineInput[]): Play
       continue
     }
 
-    if (gap <= 0) {
-      last.startSec = Math.min(last.startSec, startSec)
-      last.endSec = Math.max(last.endSec, endSec)
-      continue
-    }
-
-    // 0 < gap <= GAP_MAX_SEC — same group, but do not play silence between lines
-    segments.push({ startSec, endSec })
+    last.startSec = Math.min(last.startSec, startSec)
+    last.endSec = Math.max(last.endSec, endSec)
   }
 
   return dedupeSegments(segments)

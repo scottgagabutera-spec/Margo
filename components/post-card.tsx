@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import {
@@ -588,7 +588,13 @@ export function PostCard({
   const catalogLines = lines.filter(
     (line) => line.source !== 'external' && !!(line.songId && line.audioUrl),
   )
-  const playbackSegments = computePlaybackSegments(postLinesToSegmentInput(catalogLines))
+  const playbackSegmentsKey = catalogLines
+    .map((l) => `${l.id ?? ''}|${l.songId ?? ''}|${l.snippetStart ?? ''}|${l.snippetEnd ?? ''}`)
+    .join(';')
+  const playbackSegments = useMemo(
+    () => computePlaybackSegments(postLinesToSegmentInput(catalogLines)),
+    [playbackSegmentsKey],
+  )
   const snippetWarmSec = playbackSegments[0]?.startSec ?? post.snippetStart ?? 0
   const fullLine = catalogLines[0] || lines.find((l) => l.songId && l.songId === post.songId) || lines[0]
 
