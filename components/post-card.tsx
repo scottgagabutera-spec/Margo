@@ -209,13 +209,11 @@ export function PostCard({
   const openLyricBackHandledRef = useRef(false)
 
   const scrollLyricBackPanelIntoView = useCallback(() => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const panel = cardRef.current?.querySelector('.margo-post-card__lb-panel')
-        const target = (panel ?? cardRef.current) as HTMLElement | null
-        target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      })
-    })
+    window.setTimeout(() => {
+      const panel = cardRef.current?.querySelector('.margo-post-card__lb-panel')
+      const target = (panel ?? cardRef.current) as HTMLElement | null
+      target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 80)
   }, [])
 
   const setLyricBackPanelOpen = useCallback((next: boolean) => {
