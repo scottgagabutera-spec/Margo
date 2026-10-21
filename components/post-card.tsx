@@ -45,7 +45,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 import { PostThumbnail } from '@/components/post-thumbnail'
 import { VibeTag } from '@/components/vibe-tag'
-import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
+import { UI_FONT, LYRIC_FONT, FEED_TYPE } from '@/lib/fonts'
 import { resolveMomentLines } from '@/lib/post-lines'
 import { PostCardSuggestedReply } from '@/components/post-card-suggested-reply'
 import { SongMeta } from '@/components/song-meta'
@@ -65,6 +65,27 @@ const supabase = createClient()
 export type PostCardVariant = 'feed' | 'compact' | 'row'
 
 const REPORT_REASONS = ['Spam', 'Harassment', 'Inappropriate', 'Other'] as const
+
+function feedLyricLengthClass(text: string): string {
+  const trimmed = text.trim()
+  const compactLen = trimmed.replace(/\s/g, '').length
+  const lineBreaks = trimmed.split('\n').length
+  if (compactLen <= 36 && lineBreaks <= 1) return 'margo-feed-lyric--len-short'
+  if (compactLen <= 100 && lineBreaks <= 2) return 'margo-feed-lyric--len-medium'
+  if (compactLen <= 200) return 'margo-feed-lyric--len-long'
+  return 'margo-feed-lyric--len-very-long'
+}
+
+function feedLyricNeedsExpand(text: string): boolean {
+  const trimmed = text.trim()
+  if (!trimmed) return false
+  if (trimmed.split('\n').length > 6) return true
+  return trimmed.length > 220
+}
+
+function feedLyricSingleLineBalance(text: string): boolean {
+  return !text.includes('\n') && text.trim().length > 34
+}
 
 function isLyricBackAllowed(post: Post): boolean {
   return (post.status ?? 'active') === 'active'
@@ -248,10 +269,13 @@ function ExternalListenButton({ href, label }: { href: string; label: string }) 
 function PostMomentBody({
   post,
   isCompact,
+  isRow,
 }: {
   post: Post
   isCompact: boolean
+  isRow?: boolean
 }) {
+  const [lyricExpanded, setLyricExpanded] = useState(false)
   const lines = resolveMomentLines(post)
   const multi = lines.length > 1
 
@@ -266,6 +290,8 @@ function PostMomentBody({
     && catalogLines.every((l) => l.songId === catalogLines[0].songId)
   const showSongMetaOnce = allSameSong && catalogLines.some((l) => l.songTitle || l.artistName)
   const combinedLyric = lines.map((l) => l.text.trim()).filter(Boolean).join('\n')
+  const anyLyricNeedsExpand = lines.some((l) => feedLyricNeedsExpand(l.text))
+  const lyricCompactClass = isCompact ? 'margo-feed-lyric--compact' : isRow ? 'margo-feed-lyric--row' : ''
 
   const sharedMetaArtwork =
     primaryCatalog?.artworkUrl || post.knowledge?.artwork || null
@@ -277,33 +303,56 @@ function PostMomentBody({
         display: 'flex',
         alignItems: 'flex-start',
         gap: '12px',
-        ...(multi ? { borderLeft: '2px solid rgba(232,197,71,0.25)', paddingLeft: '12px' } : null),
+        ...(multi ? { borderLeft: '1px solid rgba(232,197,71,0.18)', paddingLeft: '12px' } : null),
       }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           {lines.map((line, i) => (
             <div key={line.id || `line-${line.position}-${i}`}>
               {multi && i > 0 ? (
-                <p style={{
-                  margin: '10px 0 8px',
-                  fontFamily: UI_FONT,
-                  fontSize: '0.6rem',
-                  fontWeight: 700,
-                  letterSpacing: '1.5px',
-                  textTransform: 'uppercase',
-                  color: 'var(--text-muted)',
-                  textAlign: 'center',
-                }}>
+                <p className="margo-feed-stitch" aria-hidden>
                   stitch
                 </p>
               ) : null}
               <p
-                className={isCompact ? 'margo-feed-lyric margo-feed-lyric--compact' : 'margo-feed-lyric'}
-                style={{ margin: i > 0 ? '0 0 4px' : '0 0 4px' }}
+                className={[
+                  'margo-feed-lyric',
+                  lyricCompactClass,
+                  feedLyricLengthClass(line.text),
+                  feedLyricSingleLineBalance(line.text) ? 'margo-feed-lyric--balance' : '',
+                  !lyricExpanded && feedLyricNeedsExpand(line.text) ? 'margo-feed-lyric--collapsed' : '',
+                ].filter(Boolean).join(' ')}
+                style={{ margin: '0 0 4px' }}
               >
                 &ldquo;{line.text}&rdquo;
               </p>
             </div>
           ))}
+          {anyLyricNeedsExpand && !lyricExpanded ? (
+            <button
+              type="button"
+              className="margo-feed-lyric__more"
+              data-no-card-nav
+              onClick={(e) => {
+                e.stopPropagation()
+                setLyricExpanded(true)
+              }}
+            >
+              more
+            </button>
+          ) : null}
+          {anyLyricNeedsExpand && lyricExpanded ? (
+            <button
+              type="button"
+              className="margo-feed-lyric__more"
+              data-no-card-nav
+              onClick={(e) => {
+                e.stopPropagation()
+                setLyricExpanded(false)
+              }}
+            >
+              less
+            </button>
+          ) : null}
         </div>
         {hasUnifiedPlay && primaryCatalog ? (
           <PostMomentPlayButton
@@ -376,8 +425,8 @@ function PostMomentBody({
             artist={primaryCatalog.artistName}
             aiGenerated={primaryCatalog.isAiGenerated}
             href={primaryCatalog.songId ? `/song/${primaryCatalog.songId}` : null}
-            titleStyle={{ fontSize: '0.82rem' }}
-            artistStyle={{ fontSize: '0.7rem' }}
+            titleStyle={{ fontSize: `var(${FEED_TYPE.songTitle})`, fontWeight: 600 }}
+            artistStyle={{ fontSize: `var(${FEED_TYPE.artist})` }}
           />
         </div>
       ) : null}
@@ -515,8 +564,12 @@ function EarnedTag({ label, onClick }: { label: 'New' | 'Trending' | 'Top'; onCl
       type="button"
       onClick={(e) => { e.stopPropagation(); onClick() }}
       style={{
-        fontFamily: UI_FONT, fontSize: '0.6rem', fontWeight: 400,
-        letterSpacing: 0, textTransform: 'none', padding: '0 2px',
+        fontFamily: UI_FONT,
+        fontSize: `var(${FEED_TYPE.sectionLabel})`,
+        fontWeight: 600,
+        letterSpacing: '0.04em',
+        textTransform: 'uppercase',
+        padding: '0 2px',
         minHeight: 'var(--margo-touch-min)',
         borderRadius: 0, background: 'none',
         border: 'none', color: 'var(--text-muted)',
@@ -582,7 +635,11 @@ export function PostCard({
   const isRow = variant === 'row'
   const isCompact = variant === 'compact' || (isRow && rowExpanded)
   const avatarPx = isCompact ? '32px' : '40px'
+  const hasMoodChip = !!(label && !isRow)
   const cardPadding = isCompact ? '12px' : '16px'
+  const cardPaddingBottom = hasMoodChip
+    ? (isCompact ? '24px' : '28px')
+    : cardPadding
 
   const lines = resolveMomentLines(post)
   const catalogLines = lines.filter(
@@ -663,12 +720,20 @@ export function PostCard({
           minHeight: 'var(--margo-touch-min)',
         }}
       >
-        <p style={{
-          margin: 0, fontFamily: LYRIC_FONT, fontStyle: 'italic', fontSize: '0.95rem',
-          color: 'var(--text)', lineHeight: 1.4,
-          display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-        }}>
+        <p
+          className={[
+            'margo-feed-lyric',
+            'margo-feed-lyric--row',
+            feedLyricLengthClass(post.text || ''),
+          ].join(' ')}
+          style={{
+            margin: 0,
+            display: '-webkit-box',
+            WebkitLineClamp: 1,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
           {post.text || 'Untitled lyric'}
         </p>
         {(post.knowledge?.song || post.knowledge?.artist) ? (
@@ -677,8 +742,8 @@ export function PostCard({
               title={post.knowledge?.song}
               artist={post.knowledge?.artist}
               aiGenerated={post.isAiGenerated}
-              titleStyle={{ fontSize: '0.75rem' }}
-              artistStyle={{ fontSize: '0.65rem' }}
+              titleStyle={{ fontSize: `var(${FEED_TYPE.songTitle})`, fontWeight: 600 }}
+              artistStyle={{ fontSize: `var(${FEED_TYPE.artist})` }}
             />
           </div>
         ) : null}
@@ -706,7 +771,8 @@ export function PostCard({
       style={{
         background: isTier1 ? 'rgba(232,197,71,0.04)' : 'rgba(255,255,255,0.02)',
         border: `1px solid ${isTier1 ? 'rgba(232,197,71,0.22)' : 'rgba(255,255,255,0.06)'}`,
-        borderRadius: '18px', padding: cardPadding,
+        borderRadius: '18px',
+        padding: `${cardPadding} ${cardPadding} ${cardPaddingBottom} ${cardPadding}`,
         position: 'relative', overflow: 'visible',
         isolation: 'isolate',
         transition: 'border-color 200ms ease',
@@ -753,7 +819,7 @@ export function PostCard({
           : 'linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent)',
       }} />
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', gap: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', gap: '8px', rowGap: '4px' }}>
         {(() => {
           const profileUsername = (authorProfile?.username || post.username || '').replace(/^@/, '')
           const profileHref = profileUsername ? `/profile/${profileUsername}` : null
@@ -764,13 +830,13 @@ export function PostCard({
           const displayLabel = storyAuthor?.displayName || authorProfile?.displayName || post.username || 'profile'
           const timeNode = post.timestamp != null ? (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ color: 'var(--text-muted)', fontSize: isCompact ? '0.58rem' : '0.6rem' }} aria-hidden>·</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: `var(${FEED_TYPE.date})` }} aria-hidden>·</span>
               <RelativeTime
                 date={post.timestamp}
                 variant="long"
                 style={{
                   fontFamily: UI_FONT,
-                  fontSize: isCompact ? '0.58rem' : '0.6rem',
+                  fontSize: `var(${FEED_TYPE.date})`,
                   color: 'var(--text-muted)',
                   lineHeight: 1.3,
                   whiteSpace: 'nowrap',
@@ -784,7 +850,7 @@ export function PostCard({
           ) : (
             <span style={{
               fontFamily: UI_FONT,
-              fontSize: isCompact ? '0.6rem' : '0.7rem',
+              fontSize: `var(${FEED_TYPE.handle})`,
               fontWeight: 700,
               color: isTier1 ? 'var(--bg)' : 'var(--gold)',
             }}>
@@ -942,13 +1008,13 @@ export function PostCard({
               aria-label="Edit Moment"
               onClick={() => setEditOpen(true)}
               style={{
-                width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0,
+                width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', flexShrink: 0,
                 background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
                 color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex',
                 alignItems: 'center', justifyContent: 'center', padding: 0, boxSizing: 'border-box',
               }}
             >
-              <EditIcon size={14} color="currentColor" />
+              <EditIcon size={16} color="currentColor" />
             </button>
           )}
           <div ref={moreWrapRef} style={{ position: 'relative' }}>
@@ -1100,7 +1166,7 @@ export function PostCard({
         />
       )}
 
-      <PostMomentBody post={post} isCompact={isCompact} />
+      <PostMomentBody post={post} isCompact={isCompact} isRow={isRow && rowExpanded} />
 
       {/* Suggested Lyric Back — on-demand underline; fetches only on tap. */}
       {lyricBackAllowed ? (
@@ -1140,7 +1206,12 @@ export function PostCard({
       ) : null}
 
       <div data-no-card-nav>
-      <div className="margo-feed-actions">
+      <div className={(() => {
+        const actionCount = 2 + (!threadDetail && lyricBackAllowed ? 1 : 0) + (onReplay ? 1 : 0)
+        return actionCount === 3
+          ? 'margo-feed-actions margo-feed-actions--cols-3'
+          : 'margo-feed-actions'
+      })()}>
         <button
           type="button"
           className="margo-feed-action"
@@ -1153,8 +1224,8 @@ export function PostCard({
         >
           <span className="margo-feed-action__icon-wrap">
             {resonated
-              ? <HeartFilledIcon size={18} color="var(--gold)" />
-              : <HeartIcon size={18} color="var(--text-secondary)" />
+              ? <HeartFilledIcon size={20} color="var(--gold)" />
+              : <HeartIcon size={20} color="var(--text-secondary)" />
             }
             {resonateCount > 0 ? (
               <span className="margo-feed-action__badge">{resonateCount}</span>
@@ -1175,7 +1246,7 @@ export function PostCard({
             }}
           >
             <span className="margo-feed-action__icon-wrap">
-              <LyricBackIcon size={18} color="var(--text-secondary)" />
+              <LyricBackIcon size={20} color="var(--text-secondary)" />
               {echoCount > 0 ? (
                 <span className="margo-feed-action__badge">{echoCount}</span>
               ) : null}
@@ -1194,13 +1265,13 @@ export function PostCard({
           }}
         >
           <span className="margo-feed-action__icon-wrap">
-            <CardIcon size={18} color="var(--text-secondary)" />
+            <CardIcon size={20} color="var(--text-secondary)" />
           </span>
           <span className="margo-feed-action__label">Card</span>
         </button>
 
         {onReplay ? (
-        <div ref={replayWrapRef} style={{ position: 'relative', flex: '1 1 0', minWidth: 0 }}>
+        <div ref={replayWrapRef} style={{ position: 'relative', minWidth: 0 }}>
           <button
             type="button"
             className="margo-feed-action"
@@ -1218,7 +1289,7 @@ export function PostCard({
             }}
           >
             <span className="margo-feed-action__icon-wrap">
-              <ReplayIcon size={18} color={replayed ? 'var(--gold)' : 'var(--text-secondary)'} />
+              <ReplayIcon size={20} color={replayed ? 'var(--gold)' : 'var(--text-secondary)'} />
               {replayCount > 0 ? (
                 <span className="margo-feed-action__badge">{replayCount}</span>
               ) : null}

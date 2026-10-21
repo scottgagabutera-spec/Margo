@@ -56,6 +56,22 @@
   --stage-footer-gap: clamp(48px, 12vh, 96px);
   --stage-moment-to-actions: 22px;
   --margo-feed-max-width: 720px;
+  /* Feed post card type scale (lib/fonts.ts FEED_TYPE_SCALE) */
+  --feed-type-lyric: 1.0625rem;
+  --feed-type-lyric-lh: 1.5;
+  --feed-type-song-title: 0.875rem;
+  --feed-type-artist: 0.75rem;
+  --feed-type-display-name: 0.875rem;
+  --feed-type-handle: 0.75rem;
+  --feed-type-date: 0.6875rem;
+  --feed-type-action-label: 0.6875rem;
+  --feed-type-action-badge: 0.625rem;
+  --feed-type-mood-chip: 0.625rem;
+  --feed-type-section-label: 0.625rem;
+  --feed-type-lyric-short: 1.25rem;
+  --feed-type-lyric-medium: 1.0625rem;
+  --feed-type-lyric-long: 1rem;
+  --feed-type-lyric-very-long: 0.9375rem;
 }
 @media (min-width: 640px) {
   :root {
@@ -327,23 +343,81 @@ html[data-margo-stage-idle] .margo-stage-zone {
   }
 }
 
-/* Feed lyric — mobile-first; larger on desktop without stretching line length */
+/* Feed lyric — length-aware scale; row/compact use same tokens */
 .margo-feed-lyric {
   font-family: var(--font-lora), serif;
   font-style: italic;
   color: var(--text);
-  line-height: 1.45;
+  line-height: var(--feed-type-lyric-lh);
   margin: 0;
-  font-size: clamp(1.15rem, 2.8vw, 1.5rem);
+  font-size: var(--feed-type-lyric-medium);
   white-space: pre-line;
 }
-@media (min-width: 640px) {
-  .margo-feed-lyric {
-    font-size: clamp(1.3rem, 1.65vw, 1.8rem);
-  }
+.margo-feed-lyric--len-short {
+  font-size: var(--feed-type-lyric-short);
 }
-.margo-feed-lyric--compact {
-  font-size: 1rem;
+.margo-feed-lyric--len-medium {
+  font-size: var(--feed-type-lyric-medium);
+}
+.margo-feed-lyric--len-long {
+  font-size: var(--feed-type-lyric-long);
+}
+.margo-feed-lyric--len-very-long {
+  font-size: var(--feed-type-lyric-very-long);
+}
+.margo-feed-lyric--balance {
+  max-width: 34ch;
+  text-wrap: balance;
+  text-wrap: pretty;
+}
+.margo-feed-lyric--collapsed {
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.margo-feed-lyric__more {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 4px 0;
+  min-height: var(--margo-touch-min);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-action-label);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.margo-feed-lyric__more:hover {
+  color: var(--text-secondary);
+}
+.margo-feed-lyric--compact,
+.margo-feed-lyric--row {
+  font-size: var(--feed-type-lyric-medium);
+}
+.margo-feed-lyric--row.margo-feed-lyric--len-short {
+  font-size: var(--feed-type-lyric-short);
+}
+.margo-feed-lyric--row.margo-feed-lyric--len-long {
+  font-size: var(--feed-type-lyric-long);
+}
+.margo-feed-lyric--row.margo-feed-lyric--len-very-long {
+  font-size: var(--feed-type-lyric-very-long);
+}
+.margo-feed-stitch {
+  margin: 8px 0 4px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-section-label);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: center;
+  opacity: 0.72;
 }
 
 .margo-feed-column {
@@ -429,23 +503,24 @@ html[data-margo-stage-idle] .margo-stage-zone {
    Counts sit as small badges on the icon, not full-size inline numbers.
    Word labels stay visible on mobile at a reduced size so LYRIC BACK still fits. */
 .margo-feed-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: nowrap;
-  gap: 0;
   width: 100%;
+}
+.margo-feed-actions--cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .margo-feed-action {
   display: inline-flex !important;
-  flex-direction: row !important;
+  flex-direction: column !important;
   align-items: center !important;
   justify-content: center;
   gap: 4px !important;
-  flex: 1 1 0;
   min-width: 0;
+  width: 100%;
   min-height: var(--margo-touch-min);
-  padding: 8px 2px !important;
+  padding: 4px 2px !important;
   box-sizing: border-box;
   background: none;
   border: none;
@@ -458,8 +533,8 @@ html[data-margo-stage-idle] .margo-stage-zone {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
 }
 @keyframes margo-feed-shared-glow {
@@ -490,7 +565,7 @@ html[data-margo-stage-idle] .margo-stage-zone {
   align-items: center;
   justify-content: center;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.5rem;
+  font-size: var(--feed-type-action-badge);
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0;
@@ -504,28 +579,24 @@ html[data-margo-stage-idle] .margo-stage-zone {
 .margo-feed-action__label {
   display: inline !important;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.4rem;
+  font-size: var(--feed-type-action-label);
   font-weight: 600;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: clip;
+  text-overflow: ellipsis;
   min-width: 0;
+  max-width: 100%;
 }
 @media (min-width: 640px) {
   .margo-feed-action {
     gap: 6px !important;
-    padding: 8px 8px !important;
-  }
-  .margo-feed-action__label {
-    font-size: 0.55rem;
-    letter-spacing: 1.5px;
+    padding: 8px 4px !important;
   }
   .margo-feed-action__badge {
     top: -8px;
     right: -10px;
-    font-size: 0.52rem;
   }
 }
 
