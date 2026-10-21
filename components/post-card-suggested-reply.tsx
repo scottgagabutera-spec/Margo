@@ -301,6 +301,7 @@ export function PostCardSuggestedReply({
               <li key={echo.id}>
                 <LyricBackThreadRow
                   echo={echo}
+                  tone="reply"
                   onLyricBack={() => focusNestedLyricBack(echo)}
                   onOpenThread={(id) => onOpenThread?.(id)}
                   onExport={onExportEcho}

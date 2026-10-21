@@ -38,6 +38,8 @@ export type LyricBackThreadRowProps = {
   onReplay?: (echoId: string) => void
   replayed?: boolean
   replayCount?: number
+  /** reply = smaller nested row; anchor = focused post on thread page */
+  tone?: 'reply' | 'anchor'
 }
 
 function profileHref(echo: Echo): string | null {
@@ -58,6 +60,7 @@ export function LyricBackThreadRow({
   onReplay,
   replayed = false,
   replayCount = 0,
+  tone = 'reply',
 }: LyricBackThreadRowProps) {
   const engine = useAudioEngine()
   const { user } = useIdentity()
@@ -120,9 +123,15 @@ export function LyricBackThreadRow({
     }
   }
 
+  const rowClass = [
+    'margo-lb-thread-row',
+    isAnchor || tone === 'anchor' ? 'margo-lb-thread-row--anchor' : '',
+    !isAnchor && tone === 'reply' ? 'margo-lb-thread-row--reply' : '',
+  ].filter(Boolean).join(' ')
+
   return (
     <article
-      className={`margo-lb-thread-row${isAnchor ? ' margo-lb-thread-row--anchor' : ''}`}
+      className={rowClass}
       data-echo-id={echo.id}
     >
       {isAnchor ? (
@@ -157,24 +166,34 @@ export function LyricBackThreadRow({
           {resonated ? <FeedIconHeartFilled size={16} /> : <FeedIconHeart size={16} />}
           <span>{resonateCount > 0 ? resonateCount : 'Resonate'}</span>
         </button>
-        {onLyricBack ? (
-          <button type="button" className="margo-lb-thread-row__action" aria-label="Lyric Back" onClick={(e) => { e.stopPropagation(); onLyricBack(echo.id) }}>
-            <FeedIconLyricBack size={16} />
-            <span>{lbCount > 0 ? lbCount : 'Lyric Back'}</span>
-          </button>
-        ) : null}
-        {onReplay ? (
-          <button type="button" className="margo-lb-thread-row__action" aria-label="Replay" onClick={(e) => { e.stopPropagation(); onReplay(echo.id) }} style={{ color: replayed ? 'var(--gold)' : undefined }}>
-            <FeedIconReplay size={16} />
-            <span>{replayCount > 0 ? replayCount : 'Replay'}</span>
-          </button>
-        ) : null}
-        {onExport ? (
-          <button type="button" className="margo-lb-thread-row__action" aria-label="Export card" onClick={(e) => { e.stopPropagation(); onExport(echo) }}>
-            <FeedIconCard size={16} />
-            <span>Card</span>
-          </button>
-        ) : null}
+        <button
+          type="button"
+          className="margo-lb-thread-row__action"
+          aria-label="Lyric Back"
+          onClick={(e) => { e.stopPropagation(); onLyricBack?.(echo.id) }}
+        >
+          <FeedIconLyricBack size={16} />
+          <span>{lbCount > 0 ? lbCount : 'Lyric Back'}</span>
+        </button>
+        <button
+          type="button"
+          className="margo-lb-thread-row__action"
+          aria-label="Replay"
+          onClick={(e) => { e.stopPropagation(); onReplay?.(echo.id) }}
+          style={{ color: replayed ? 'var(--gold)' : undefined }}
+        >
+          <FeedIconReplay size={16} />
+          <span>{replayCount > 0 ? replayCount : 'Replay'}</span>
+        </button>
+        <button
+          type="button"
+          className="margo-lb-thread-row__action"
+          aria-label="Export card"
+          onClick={(e) => { e.stopPropagation(); onExport?.(echo) }}
+        >
+          <FeedIconCard size={16} />
+          <span>Card</span>
+        </button>
         {canPlay ? (
           <button
             type="button"

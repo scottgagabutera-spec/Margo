@@ -39,6 +39,14 @@ export default function PostDetailPage() {
   })
   const [resonateCounts, setResonateCounts] = useState<Record<string, number>>({})
   const [exportPost, setExportPost] = useState<Post | null>(null)
+  const [replayed, setReplayed] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set()
+    try {
+      const saved = localStorage.getItem('margoReplayed')
+      return saved ? new Set(JSON.parse(saved)) : new Set()
+    } catch { return new Set() }
+  })
+  const [replayCounts, setReplayCounts] = useState<Record<string, number>>({})
 
   useEffect(() => {
     if (!post) return
@@ -111,12 +119,60 @@ export default function PostDetailPage() {
 
   const handleExportEcho = (echo: Echo) => handleExport(echoToPost(echo))
 
+  const goLyricBack = (targetId: string) => {
+    if (!requireAuth()) return
+    router.push(`/lyric-back?echoId=${encodeURIComponent(targetId)}`)
+  }
+
+  const toggleReplay = async (id: string) => {
+    if (!requireAuth()) return
+    if (!user?.id) return
+    const myId = user.id
+    const already = replayed.has(id)
+    setReplayed(prev => {
+      const next = new Set(prev)
+      already ? next.delete(id) : next.add(id)
+      try { localStorage.setItem('margoReplayed', JSON.stringify([...next])) } catch {}
+      return next
+    })
+    setReplayCounts(prev => ({ ...prev, [id]: Math.max(0, (prev[id] ?? 0) + (already ? -1 : 1)) }))
+    try {
+      if (already) {
+        const { error } = await supabase.from('post_replays').delete().eq('post_id', id).eq('replayer_id', myId)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('post_replays').insert({ post_id: id, replayer_id: myId, quote_text: null })
+        if (error) throw error
+      }
+    } catch {
+      setReplayed(prev => {
+        const next = new Set(prev)
+        already ? next.add(id) : next.delete(id)
+        return next
+      })
+      setReplayCounts(prev => ({ ...prev, [id]: Math.max(0, (prev[id] ?? 0) + (already ? 1 : -1)) }))
+    }
+  }
+
   useRegisterNavBack({
     preferHistory: !post?.parentPostId,
     fallbackHref: post?.parentPostId ? `/post/${post.parentPostId}` : '/feed',
   })
 
   const isLyricBack = Boolean(post?.parentPostId)
+  const rootMoment = ancestors[0] ?? null
+
+  const threadRowHandlers = (echo: Echo) => ({
+    onResonate: toggleResonate,
+    onLyricBack: goLyricBack,
+    onOpenThread: (id: string) => router.push(`/post/${id}`),
+    onExport: handleExportEcho,
+    onReplay: toggleReplay,
+    replayed: replayed.has(echo.id),
+    replayCount: replayCounts[echo.id] ?? 0,
+    resonated: resonated.has(echo.id),
+    resonateCount: resonateCounts[echo.id] ?? echo.resonateCount ?? 0,
+  })
 
   return (
     <main style={{
@@ -139,21 +195,28 @@ export default function PostDetailPage() {
 
       {post && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {ancestors.length > 0 && (
+          {isLyricBack && rootMoment ? (
+            <Link href={`/post/${rootMoment.id}`} className="margo-post-thread-root-compact">
+              <p className="margo-post-thread-root-compact__label">Original moment</p>
+              <p className="margo-post-thread-root-compact__lyric">&ldquo;{rootMoment.text}&rdquo;</p>
+            </Link>
+          ) : null}
+
+          {isLyricBack && ancestors.length > 1 ? (
             <section className="margo-post-thread-ancestors">
-              <p className="margo-post-thread-section-label">Earlier in this thread</p>
-              {ancestors.map((ancestor) => (
+              <p className="margo-post-thread-section-label">Earlier Lyric Backs</p>
+              {ancestors.slice(1).map((ancestor) => (
                 <Link key={ancestor.id} href={`/post/${ancestor.id}`} className="margo-post-thread-ancestor-link">
                   <span className="margo-post-thread-ancestor-user">@{ancestor.username?.replace(/^@/, '') || 'user'}</span>
                   <span className="margo-post-thread-ancestor-lyric">&ldquo;{ancestor.text}&rdquo;</span>
                 </Link>
               ))}
             </section>
-          )}
+          ) : null}
 
           {isLyricBack ? (
             <section>
-              <p className="margo-post-thread-section-label">You&apos;re viewing</p>
+              <p className="margo-post-thread-section-label">You&apos;re viewing this Lyric Back</p>
               <LyricBackThreadRow
                 echo={{
                   id: post.id,
@@ -175,15 +238,18 @@ export default function PostDetailPage() {
                   artwork: post.knowledge?.artwork ?? null,
                 }}
                 isAnchor
-                resonated={resonated.has(post.id)}
-                resonateCount={resonateCounts[post.id] ?? post.resonates ?? 0}
-                onResonate={toggleResonate}
-                onOpenThread={(id) => router.push(`/post/${id}`)}
+                tone="anchor"
+                {...threadRowHandlers({
+                  id: post.id,
+                  lyric: post.text || '',
+                  song: post.knowledge?.song || '',
+                  artist: post.knowledge?.artist || '',
+                  emotion: post.emotion || '',
+                  username: post.username || '',
+                  timestamp: post.timestamp ?? 0,
+                  resonateCount: post.resonates ?? 0,
+                } as Echo)}
                 onExport={() => handleExport(post)}
-                onLyricBack={() => {
-                  if (!requireAuth()) return
-                  router.push(`/lyric-back?echoId=${encodeURIComponent(post.id)}`)
-                }}
               />
             </section>
           ) : (
@@ -196,6 +262,9 @@ export default function PostDetailPage() {
                 echoCount={post.replies ?? echoes.length}
                 onResonate={toggleResonate}
                 onExport={handleExport}
+                onReplay={toggleReplay}
+                replayed={replayed.has(post.id)}
+                replayCount={replayCounts[post.id] ?? 0}
                 disableCardNav
                 threadDetail
               />
@@ -205,22 +274,15 @@ export default function PostDetailPage() {
           {echoes.length > 0 && (
             <section>
               <p className="margo-post-thread-section-label">
-                Lyric Backs on {isLyricBack ? 'this reply' : 'this moment'}
+                Lyric Backs {isLyricBack ? 'on this reply' : 'on this moment'}
               </p>
               <ul className="margo-post-thread-list">
                 {echoes.map((e) => (
                   <li key={e.id}>
                     <LyricBackThreadRow
                       echo={e}
-                      resonated={resonated.has(e.id)}
-                      resonateCount={resonateCounts[e.id] ?? e.resonateCount ?? 0}
-                      onResonate={toggleResonate}
-                      onOpenThread={(id) => router.push(`/post/${id}`)}
-                      onExport={handleExportEcho}
-                      onLyricBack={(id) => {
-                        if (!requireAuth()) return
-                        router.push(`/lyric-back?echoId=${encodeURIComponent(id)}`)
-                      }}
+                      tone="reply"
+                      {...threadRowHandlers(e)}
                     />
                   </li>
                 ))}

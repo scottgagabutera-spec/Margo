@@ -586,7 +586,6 @@ html[data-margo-stage-idle] .margo-stage-zone {
   vertical-align: baseline;
 }
 .margo-feed-ai-tag--title-adjacent {
-  margin-left: 4px;
   font-size: 0.5rem;
   font-weight: 500;
   letter-spacing: 0.06em;
@@ -594,10 +593,6 @@ html[data-margo-stage-idle] .margo-stage-zone {
   padding: 0 2px;
   border: none;
   opacity: 0.55;
-  vertical-align: 0.05em;
-}
-.margo-post-card__song-meta .margo-song-meta__title-line {
-  align-items: baseline;
 }
 .margo-post-card__lb-compose-lead {
   margin: 0 0 10px;
@@ -670,17 +665,17 @@ html[data-margo-stage-idle] .margo-stage-zone {
   margin-right: 2px;
 }
 .margo-song-meta__title-line {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  min-width: 0;
-}
-.margo-song-meta__title-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
-  flex: 1 1 auto;
+}
+.margo-song-meta__title-text {
+  display: inline;
+}
+.margo-song-meta__title-line .margo-feed-ai-tag--title-adjacent {
+  margin-left: 0.3em;
+  vertical-align: baseline;
 }
 .margo-post-card__header {
   display: grid;
@@ -2254,15 +2249,61 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 
 /* Lyric Back thread — compact rows (panel + /post/[id]) */
 .margo-lb-thread-row {
-  padding: 10px 0;
+  padding: 8px 0 10px;
   border-bottom: 1px solid var(--border);
 }
+.margo-lb-thread-row--reply {
+  padding: 6px 8px;
+  margin-left: 8px;
+  border-left: 2px solid var(--post-vibe-border);
+  background: color-mix(in srgb, var(--surface-2) 65%, transparent);
+  border-radius: 0 8px 8px 0;
+}
+.margo-lb-thread-row--reply .margo-lb-thread-row__bubble {
+  font-size: calc(var(--feed-type-suggestion-lyric) * 0.92);
+  padding: 6px 8px;
+}
+.margo-lb-thread-row--reply .margo-lb-thread-row__action {
+  min-height: 32px;
+  font-size: 0.55rem;
+}
 .margo-lb-thread-row--anchor {
-  padding: 12px;
+  padding: 14px 12px;
   border: 1px solid var(--post-vibe-border);
   border-radius: 12px;
   background: var(--post-vibe-faint);
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--post-vibe-fill) 12%, transparent);
+}
+.margo-lb-thread-row--anchor .margo-lb-thread-row__bubble {
+  border-color: var(--post-vibe-border);
+  background: color-mix(in srgb, var(--post-vibe-faint) 80%, var(--surface));
+}
+.margo-post-thread-root-compact {
+  display: block;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--gold-border);
+  background: color-mix(in srgb, var(--gold-faint) 40%, var(--surface));
+  text-decoration: none;
+  color: inherit;
+}
+.margo-post-thread-root-compact__label {
+  margin: 0 0 4px;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.margo-post-thread-root-compact__lyric {
+  margin: 0;
+  font-family: var(--font-lora), serif;
+  font-style: italic;
+  font-size: var(--feed-type-control-label);
+  color: var(--text);
+  line-height: 1.4;
 }
 .margo-lb-thread-row__badge {
   margin: 0 0 6px;
