@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { Suspense, useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { MargoActionSheet } from '@/components/margo-action-sheet'
 import { useRouter } from 'next/navigation'
@@ -19,6 +19,7 @@ import {
 } from '@/lib/profile-edit-draft'
 import { profileEditHasUnsavedChanges } from '@/lib/profile-edit-unsaved'
 import { useProfileEditLeaveGuard } from '@/hooks/useProfileEditLeaveGuard'
+import { EditProfilePageSkeleton } from '@/components/margo-skeletons'
 
 const font = UI_FONT
 const lyricFont = LYRIC_FONT
@@ -35,7 +36,7 @@ const labelStyle: React.CSSProperties = {
   textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: '8px', fontWeight: 700,
 }
 
-export default function EditProfilePage() {
+function EditProfilePageInner() {
   const router = useRouter()
   const {
     user, identity, loading,
@@ -564,5 +565,13 @@ export default function EditProfilePage() {
         </div>
       )}
     </main>
+  )
+}
+
+export default function EditProfilePage() {
+  return (
+    <Suspense fallback={<EditProfilePageSkeleton />}>
+      <EditProfilePageInner />
+    </Suspense>
   )
 }

@@ -227,6 +227,63 @@ export function ProfilePageSkeleton() {
 }
 
 /** First-visit optimistic tab — shown until the route commits and seeds keepalive. */
+/** Edit profile form — matches /profile/edit chrome (no spinner flash). */
+export function EditProfilePageSkeleton() {
+  return (
+    <main style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+      <div style={{
+        paddingTop: 'calc(var(--nav-height, 72px) + 8px)',
+        paddingBottom: 'var(--margo-page-padding-bottom)',
+        paddingLeft: '20px',
+        paddingRight: '20px',
+      }}>
+        <div style={{ maxWidth: '560px', margin: '0 auto' }}>
+          <PulseStyle />
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            minHeight: 'var(--margo-touch-min)',
+            marginBottom: '12px',
+          }}>
+            <div style={bone({ height: 12, width: 100, borderRadius: 4, border: 'none' })} />
+            <div style={bone({ height: 12, width: 48, borderRadius: 4, border: 'none' }, 40)} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <div style={bone({ width: 96, height: 96, borderRadius: '50%', border: 'none' }, 60)} />
+            </div>
+            <div>
+              <div style={bone({ height: 10, width: 56, borderRadius: 4, border: 'none', marginBottom: 8 }, 80)} />
+              <div style={bone({ height: 120, width: '100%', borderRadius: 16, border: 'none' }, 100)} />
+            </div>
+            {[0, 1, 2].map((i) => (
+              <div key={i}>
+                <div style={bone({ height: 10, width: 72, borderRadius: 4, border: 'none', marginBottom: 8 }, 120 + i * 40)} />
+                <div style={bone({ height: 44, width: '100%', borderRadius: 12, border: 'none' }, 140 + i * 40)} />
+              </div>
+            ))}
+            <div>
+              <div style={bone({ height: 10, width: 80, borderRadius: 4, border: 'none', marginBottom: 8 }, 260)} />
+              <div style={bone({ height: 72, width: '100%', borderRadius: 12, border: 'none', marginBottom: 12 }, 280)} />
+              <div style={bone({ height: 44, width: '100%', borderRadius: 12, border: 'none' }, 300)} />
+            </div>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              minHeight: 'var(--margo-touch-min)',
+            }}>
+              <div style={bone({ height: 10, width: 64, borderRadius: 4, border: 'none' }, 320)} />
+              <div style={bone({ width: 52, height: 30, borderRadius: 20, border: 'none' }, 340)} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  )
+}
+
 /** Fixed-size Message + Follow pills on profile header (prevents layout jump). */
 export function ProfileSocialActionsSkeleton() {
   return (
