@@ -105,9 +105,31 @@ Disable or uninstall Intercom widget if added later; no backend dependency expec
 
 ---
 
+## OpenAI
+
+| Field | Detail |
+| --- | --- |
+| **What / why** | Emotion tagging, moderation, and **on-demand Lyric Back catalog ranking** (`gpt-4o-mini`). Not a startup-credit program in this registry — billed per token; **daily USD cap** limits rank spend until PR 5a precompute. |
+| **Activated** | In production paths for suggest rank (feed panel opt-in) and existing compose/moderation flows. |
+| **Env vars (Vercel)** | `OPENAI_API_KEY` (server). **`SUGGEST_LYRIC_BACK_RANK_ENABLED`** (default on). **`SUGGEST_LYRIC_BACK_DAILY_USD_CAP`** (default `3` USD/day estimate for rank calls). |
+| **Code touchpoints** | `lib/suggest-lyric-back.ts`, `lib/suggest-lyric-back-config.ts`, `lib/suggest-lyric-back-spend.ts`, `app/api/suggest-lyric-back/route.ts`, `components/post-card-suggested-reply.tsx` (fetch only when “See ideas” expanded). DB: `suggest_lyric_back_daily_spend` (service role via `getSupabaseAdmin()`). |
+| **Limitations** | Rank skipped when cap exceeded or `SUGGEST_LYRIC_BACK_RANK_ENABLED=false`. Offline clients see panel message without calling API. |
+
+### How to remove / disable OpenAI Lyric Back rank
+
+1. Set `SUGGEST_LYRIC_BACK_RANK_ENABLED=false` (or remove `OPENAI_API_KEY` for rank failures).
+2. Remove suggest API route and client fetch; panel keeps echo list + catalog search only.
+3. Optional: drop `suggest_lyric_back_daily_spend` via migration if precompute replaces rank entirely.
+4. Update this section.
+
+Other OpenAI uses (moderation, emotion) are separate; do not delete the key unless retiring those features too.
+
+---
+
 ## Changelog
 
 | Date | Change |
 | --- | --- |
 | 2026-09-26 | PostHog integrated (events + pageviews). Registry created. |
 | 2026-09-26 | Sentry integrated (errors-only, margo-q2 org). |
+| 2026-10-21 | OpenAI Lyric Back rank: persistent daily spend cap table + env flags (PR #252). |

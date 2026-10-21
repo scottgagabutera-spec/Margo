@@ -613,7 +613,7 @@ export async function suggestLyricBacksForPosts(
     throw new SuggestRankError('OpenAI is not configured')
   }
 
-  if (!canSpendOnSuggestRank()) {
+  if (!(await canSpendOnSuggestRank(supabase))) {
     throw new SuggestRankError(
       'Daily suggestion limit reached. Try again tomorrow or search the catalog.',
     )
@@ -625,7 +625,7 @@ export async function suggestLyricBacksForPosts(
       return { id: post.id, ok: false as const, reason: outcome.reason }
     }
     if (outcome.picks.length > 0) {
-      recordSuggestRankSpend()
+      await recordSuggestRankSpend(supabase)
     }
     await writeCache(supabase, post.id, outcome.picks, fingerprint)
     return { id: post.id, ok: true as const, picks: outcome.picks }

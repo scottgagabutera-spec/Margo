@@ -672,7 +672,7 @@ function FeedPageInner() {
               post,
               resonated: resonated.has(post.id),
               resonateCount: postStats[post.id]?.resonateCount ?? resonateCounts[post.id] ?? post.resonates ?? 0,
-              echoCount: postStats[post.id]?.echoCount ?? 0,
+              echoCount: postStats[post.id]?.echoCount ?? post.replies ?? 0,
               onResonate: toggleResonate,
               replayed: replayed.has(post.id),
               replayCount: postStats[post.id]?.replayCount ?? replayCounts[post.id] ?? post.replays ?? 0,

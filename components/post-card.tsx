@@ -41,6 +41,7 @@ import { PostCardLyricSection, PostCardSongSection } from '@/components/post-car
 import { resolveMomentLines } from '@/lib/post-lines'
 import { PostCardSuggestedReply } from '@/components/post-card-suggested-reply'
 import { SongMeta } from '@/components/song-meta'
+import { AtmosphereLayer } from '@/components/atmosphere-layer'
 
 const supabase = createClient()
 
@@ -116,10 +117,21 @@ export function normalizeEmotion(e: string) {
     .toUpperCase()
 }
 
-function PostMomentBody({ post }: { post: Post }) {
+function PostMomentBody({
+  post,
+  atmosphereRooms,
+}: {
+  post: Post
+  atmosphereRooms: { songId: string; lineText: string }[]
+}) {
   return (
     <div className="margo-post-card__body">
-      <PostCardLyricSection post={post} />
+      <div className="margo-post-card__lyric-atmosphere">
+        {atmosphereRooms.length > 0 ? (
+          <AtmosphereLayer variant="card" rooms={atmosphereRooms} />
+        ) : null}
+        <PostCardLyricSection post={post} />
+      </div>
       <PostCardSongSection post={post} showMomentControls />
     </div>
   )
@@ -206,6 +218,10 @@ export function PostCard({
   const avatarPx = isCompact ? '32px' : '36px'
 
   const lines = resolveMomentLines(post)
+  const atmosphereRooms = useMemo(
+    () => lines.flatMap((l) => (l.songId ? [{ songId: l.songId, lineText: l.text }] : [])),
+    [lines],
+  )
   const vibeTheme = getVibeTheme(emotion || post.emotion)
   const catalogLines = lines.filter(
     (line) => line.source !== 'external' && !!(line.songId && line.audioUrl),
@@ -707,13 +723,19 @@ export function PostCard({
         />
       )}
 
-      <PostMomentBody post={post} />
+      <PostMomentBody post={post} atmosphereRooms={atmosphereRooms} />
 
       {lyricBackAllowed ? (
         <PostCardSuggestedReply
           postId={post.id}
+          echoCount={echoCount}
+          parentUsername={post.username}
           open={suggestionsOpen}
           onClose={() => setSuggestionsOpen(false)}
+          onOpenEcho={(echoId) => {
+            persistActivePrimaryScroll()
+            router.push(`/post/${echoId}`)
+          }}
           onWriteOwn={() => {
             if (!requireAuth()) return
             persistActivePrimaryScroll()

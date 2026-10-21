@@ -2,7 +2,6 @@
 
 import { UI_FONT } from '@/lib/fonts'
 import { PendingNavLink } from '@/components/pending-nav-link'
-import { AiGeneratedLabel } from '@/components/ai-generated-label'
 
 type SongMetaProps = {
   title?: string | null
@@ -15,7 +14,6 @@ type SongMetaProps = {
   style?: React.CSSProperties
   titleStyle?: React.CSSProperties
   artistStyle?: React.CSSProperties
-  aiLabelStyle?: React.CSSProperties
 }
 
 function ArtistCreditLine({
@@ -44,10 +42,13 @@ function ArtistCreditLine({
   )
 }
 
+function titleWithAiSuffix(title: string, aiGenerated: boolean): string {
+  if (!aiGenerated) return title
+  return `${title} [AI]`
+}
+
 /**
- * Canonical song title vs artist hierarchy (D3).
- * Title: --text, semibold, larger. Artist: --text-secondary, regular, smaller.
- * AI provenance: quiet "(AI-generated)" in brackets after the song title.
+ * Song title + optional [AI] suffix ellipsize as one unit; artist on the next line.
  */
 export function SongMeta({
   title,
@@ -58,11 +59,12 @@ export function SongMeta({
   style,
   titleStyle,
   artistStyle,
-  aiLabelStyle,
 }: SongMetaProps) {
   const t = (title || '').trim()
   const a = (artist || '').trim()
   if (!t && !a && !aiGenerated) return null
+
+  const titleLine = t ? titleWithAiSuffix(t, aiGenerated) : (aiGenerated ? '[AI]' : '')
 
   if (layout === 'inline') {
     const node = (
@@ -71,16 +73,15 @@ export function SongMeta({
         fontSize: '0.7rem',
         color: 'var(--text-muted)',
         letterSpacing: '0.2px',
-        display: 'inline-flex',
-        alignItems: 'baseline',
-        flexWrap: 'wrap',
+        display: 'block',
         minWidth: 0,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
         ...style,
         ...titleStyle,
       }}>
-        {t ? <span style={{ minWidth: 0 }}>{t}</span> : null}
-        {aiGenerated ? <AiGeneratedLabel show spaced={!!t} variant="feed" style={aiLabelStyle} /> : null}
-        {a ? <span>{(t || aiGenerated) ? ' · ' : ''}{a}</span> : null}
+        {titleLine}{a ? ` · ${a}` : ''}
       </span>
     )
     if (href) {
@@ -91,38 +92,29 @@ export function SongMeta({
 
   const body = (
     <div style={{ minWidth: 0, ...style }}>
-      {(t || aiGenerated) ? (
-        <p style={{
-          margin: 0,
-          fontFamily: UI_FONT,
-          fontSize: '0.95rem',
-          fontWeight: 600,
-          color: 'var(--text)',
-          lineHeight: 1.3,
-          display: 'flex',
-          alignItems: 'baseline',
-          minWidth: 0,
-          ...titleStyle,
-        }}>
-          {t ? (
-            <span style={{
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              minWidth: 0,
-              flex: '1 1 auto',
-            }}>
-              {t}
-            </span>
-          ) : null}
-          {aiGenerated ? <AiGeneratedLabel show spaced={!!t} variant="feed" style={aiLabelStyle} /> : null}
+      {titleLine ? (
+        <p
+          className="margo-song-meta__title-line"
+          style={{
+            margin: 0,
+            fontFamily: UI_FONT,
+            fontSize: '0.95rem',
+            fontWeight: 600,
+            color: 'var(--text)',
+            lineHeight: 1.3,
+            minWidth: 0,
+            ...titleStyle,
+          }}
+          title={titleLine}
+        >
+          {titleLine}
         </p>
       ) : null}
       {a ? (
         <ArtistCreditLine
           artist={a}
           style={{
-            margin: (t || aiGenerated) ? '2px 0 0' : 0,
+            margin: titleLine ? '2px 0 0' : 0,
             ...artistStyle,
           }}
         />
