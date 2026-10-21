@@ -1,12 +1,16 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { usePost, usePostAncestors } from '@/hooks/usePost'
 import { useEchoes } from '@/hooks/useEchoes'
 import { PostCard } from '@/components/post-card'
 import { LyricBackThreadRow } from '@/components/lyric-back-thread-row'
+import {
+  LyricBackPanelCompose,
+  type LyricBackPanelComposeHandle,
+} from '@/components/lyric-back-panel-compose'
 import { CardExportModal } from '@/components/card-export-modal'
 import { resolveMargoMomentFromPost } from '@/lib/moment'
 import { echoToPost } from '@/lib/echo-to-post'
@@ -27,7 +31,9 @@ export default function PostDetailPage() {
   const postId = params.id || null
   const { post, loading } = usePost(postId)
   const { ancestors } = usePostAncestors(post?.parentPostId)
-  const { echoes } = useEchoes(postId)
+  const { echoes, refetch: refetchEchoes } = useEchoes(postId)
+  const composeRef = useRef<LyricBackPanelComposeHandle>(null)
+  const [replyTargetId, setReplyTargetId] = useState<string | null>(null)
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
   const [resonated, setResonated] = useState<Set<string>>(() => {
@@ -47,6 +53,11 @@ export default function PostDetailPage() {
     } catch { return new Set() }
   })
   const [replayCounts, setReplayCounts] = useState<Record<string, number>>({})
+
+  useEffect(() => {
+    if (!post?.id) return
+    setReplyTargetId(post.id)
+  }, [post?.id])
 
   useEffect(() => {
     if (!post) return
@@ -159,13 +170,8 @@ export default function PostDetailPage() {
 
   const goLyricBack = (targetId: string) => {
     if (!requireAuth()) return
-    const rootId = rootMoment?.id ?? (post?.parentPostId ? null : post?.id)
-    const q = new URLSearchParams()
-    if (rootId) q.set('postId', rootId)
-    else if (post?.id) q.set('postId', post.id)
-    const threadRoot = rootId ?? post?.id
-    if (threadRoot && targetId !== threadRoot) q.set('echoId', targetId)
-    router.push(`/lyric-back?${q.toString()}`)
+    setReplyTargetId(targetId)
+    requestAnimationFrame(() => composeRef.current?.scrollIntoView())
   }
 
   const threadRowHandlers = (echo: Echo) => ({
@@ -203,14 +209,12 @@ export default function PostDetailPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {isLyricBack && rootMoment ? (
             <Link href={`/post/${rootMoment.id}`} className="margo-post-thread-root-compact">
-              <p className="margo-post-thread-root-compact__label">Original moment</p>
               <p className="margo-post-thread-root-compact__lyric">&ldquo;{rootMoment.text}&rdquo;</p>
             </Link>
           ) : null}
 
           {isLyricBack && ancestors.length > 1 ? (
             <section className="margo-post-thread-ancestors">
-              <p className="margo-post-thread-section-label">Earlier Lyric Backs</p>
               {ancestors.slice(1).map((ancestor) => (
                 <Link key={ancestor.id} href={`/post/${ancestor.id}`} className="margo-post-thread-ancestor-link">
                   <span className="margo-post-thread-ancestor-user">@{ancestor.username?.replace(/^@/, '') || 'user'}</span>
@@ -222,7 +226,6 @@ export default function PostDetailPage() {
 
           {isLyricBack ? (
             <section>
-              <p className="margo-post-thread-section-label">You&apos;re viewing this Lyric Back</p>
               <LyricBackThreadRow
                 echo={{
                   id: post.id,
@@ -260,7 +263,6 @@ export default function PostDetailPage() {
             </section>
           ) : (
             <section>
-              <p className="margo-post-thread-section-label">Original moment</p>
               <PostCard
                 post={post}
                 resonated={resonated.has(post.id)}
@@ -279,9 +281,6 @@ export default function PostDetailPage() {
 
           {echoes.length > 0 && (
             <section>
-              <p className="margo-post-thread-section-label">
-                Lyric Backs {isLyricBack ? 'on this reply' : 'on this moment'}
-              </p>
               <ul className="margo-post-thread-list">
                 {echoes.map((e) => (
                   <li key={e.id}>
@@ -295,6 +294,19 @@ export default function PostDetailPage() {
               </ul>
             </section>
           )}
+
+          {post && replyTargetId ? (
+            <section className="margo-post-thread-compose">
+              <LyricBackPanelCompose
+                ref={composeRef}
+                key={replyTargetId}
+                parentPostId={replyTargetId}
+                parentEmotion={post.emotion || 'chill'}
+                onRequireAuth={requireAuth}
+                onSent={() => void refetchEchoes()}
+              />
+            </section>
+          ) : null}
         </div>
       )}
 

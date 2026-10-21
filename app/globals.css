@@ -1273,6 +1273,50 @@ html[data-margo-stage-idle] .margo-stage-zone {
   padding-top: 10px;
   border-top: 1px solid var(--border);
 }
+.margo-post-card__lb-compose--inline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.margo-post-card__lb-compose-track--picked {
+  position: relative;
+  padding-right: 36px;
+  margin-top: 4px;
+}
+.margo-post-card__lb-compose-clear {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: var(--margo-touch-min);
+  height: var(--margo-touch-min);
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.margo-post-card__lb-line-picker {
+  max-height: min(36vh, 280px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 4px 0;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+.margo-post-thread-compose {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.margo-post-thread-compose .margo-post-card__lb-compose {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 0;
+}
 .margo-post-card__lb-compose-hint {
   margin: 0 0 6px;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
@@ -1316,6 +1360,7 @@ html[data-margo-stage-idle] .margo-stage-zone {
 .margo-post-card__lb-compose-bar {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
   margin-top: 8px;
 }

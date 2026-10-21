@@ -764,13 +764,6 @@ export function PostCard({
             persistActivePrimaryScroll()
             router.push(`/post/${echoId}`)
           }}
-          onFindLineForTarget={(targetId, rootId) => {
-            if (!requireAuth()) return
-            persistActivePrimaryScroll()
-            const q = new URLSearchParams({ postId: rootId })
-            if (targetId !== rootId) q.set('echoId', targetId)
-            router.push(`/lyric-back?${q.toString()}`)
-          }}
           onExportEcho={(echo) => onExport(echoToPost(echo))}
           onReplayEcho={onReplay ? (echoId) => onReplay(echoId) : undefined}
         />

@@ -8,23 +8,17 @@ import { LyricBackThreadRow } from '@/components/lyric-back-thread-row'
 import {
   FeedIconClose,
   FeedIconChevronRight,
-  FeedIconSend,
   FeedMomentPlaybackIcon,
 } from '@/components/feed-card-icons'
 import type { SuggestedLyricBack } from '@/lib/suggest-lyric-back'
 import { fetchLyricBackSuggestionsForPost } from '@/lib/lyric-back-suggestions'
-import { trackEvent } from '@/lib/analytics/track'
+import {
+  LyricBackPanelCompose,
+  type LyricBackPanelComposeHandle,
+  type LyricBackPanelPrefill,
+} from '@/components/lyric-back-panel-compose'
 
 export type { SuggestedLyricBack }
-
-type ComposeDraft = {
-  lyric: string
-  songTitle: string
-  artistName: string
-  songId: string | null
-  startSec: number | null
-  endSec: number | null
-}
 
 export type PostCardSuggestedReplyProps = {
   /** Root feed moment id (thread root). */
@@ -40,7 +34,6 @@ export type PostCardSuggestedReplyProps = {
   open: boolean
   onClose: () => void
   onRequireAuth?: () => boolean
-  onFindLineForTarget?: (targetPostId: string, rootPostId: string) => void
   onOpenThread?: (echoId: string) => void
   onExportEcho?: (echo: Echo) => void
   onReplayEcho?: (echoId: string) => void
@@ -82,14 +75,14 @@ export function PostCardSuggestedReply({
   open,
   onClose,
   onRequireAuth,
-  onFindLineForTarget,
   onOpenThread,
   onExportEcho,
   onReplayEcho,
 }: PostCardSuggestedReplyProps) {
   const panelRef = useRef<HTMLDivElement>(null)
+  const composeRef = useRef<LyricBackPanelComposeHandle>(null)
   const [replyTargetId, setReplyTargetId] = useState(postId)
-  const [replyTargetLabel, setReplyTargetLabel] = useState<string | null>(null)
+  const [composePrefill, setComposePrefill] = useState<LyricBackPanelPrefill | null>(null)
   const { echoes, loading: echoesLoading, refetch: refetchEchoes } = useEchoes(open ? replyTargetId : null)
 
   const [ideasOpen, setIdeasOpen] = useState(false)
@@ -98,11 +91,6 @@ export function PostCardSuggestedReply({
   const [picks, setPicks] = useState<SuggestedLyricBack[] | null>(null)
   const [ideasFetched, setIdeasFetched] = useState(false)
 
-  const [draftLyric, setDraftLyric] = useState('')
-  const [draft, setDraft] = useState<ComposeDraft | null>(null)
-  const [posting, setPosting] = useState(false)
-  const [composeError, setComposeError] = useState<string | null>(null)
-
   useEffect(() => {
     if (!open) {
       setIdeasOpen(false)
@@ -110,25 +98,21 @@ export function PostCardSuggestedReply({
       setIdeasError(null)
       setPicks(null)
       setIdeasFetched(false)
-      setDraftLyric('')
-      setDraft(null)
-      setPosting(false)
-      setComposeError(null)
+      setComposePrefill(null)
       setReplyTargetId(postId)
-      setReplyTargetLabel(null)
     }
   }, [open, postId])
 
   useEffect(() => {
     if (open) {
       setReplyTargetId(postId)
-      setReplyTargetLabel(null)
+      setComposePrefill(null)
     }
   }, [open, postId])
 
   const loadIdeas = useCallback(async () => {
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      setIdeasError('Offline. Search Margo music when you are back online.')
+      setIdeasError('Offline')
       setIdeasFetched(true)
       setIdeasLoading(false)
       return
@@ -155,8 +139,7 @@ export function PostCardSuggestedReply({
   }, [ideasOpen, ideasFetched, ideasLoading, loadIdeas])
 
   const applySuggestion = useCallback((s: SuggestedLyricBack) => {
-    setDraftLyric(s.text)
-    setDraft({
+    setComposePrefill({
       lyric: s.text,
       songTitle: s.songTitle,
       artistName: s.artistName,
@@ -164,75 +147,18 @@ export function PostCardSuggestedReply({
       startSec: s.startSec,
       endSec: s.endSec,
     })
-    setComposeError(null)
+    requestAnimationFrame(() => composeRef.current?.scrollIntoView())
   }, [])
-
-  const canSend = Boolean(
-    draftLyric.trim()
-    && draft?.songTitle
-    && draft?.artistName
-    && !posting,
-  )
-
-  const handleSend = useCallback(async () => {
-    if (onRequireAuth && !onRequireAuth()) return
-    if (!canSend || !draft) return
-    setPosting(true)
-    setComposeError(null)
-    try {
-      const res = await fetch('/api/posts/lyric-back', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          parentPostId: replyTargetId,
-          isPrivate: false,
-          text: draftLyric.trim(),
-          emotion: parentEmotion,
-          songId: draft.songId,
-          songTitle: draft.songTitle,
-          artistName: draft.artistName,
-          snippetStartSec: draft.startSec,
-          snippetEndSec: draft.endSec,
-        }),
-      })
-      const payload = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        setComposeError(typeof payload.error === 'string' ? payload.error : 'Could not send.')
-        return
-      }
-      trackEvent('lyric_back_sent', { private: false, inline: true })
-      const replyId = typeof payload.id === 'string' ? payload.id : null
-      if (replyId) {
-        fetch('/api/moderate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: draftLyric.trim(), postId: replyId }),
-        }).catch(() => {})
-      }
-      setDraftLyric('')
-      setDraft(null)
-      void refetchEchoes()
-    } catch {
-      setComposeError('Could not send. Try again.')
-    } finally {
-      setPosting(false)
-    }
-  }, [canSend, draft, draftLyric, onRequireAuth, parentEmotion, replyTargetId, refetchEchoes])
 
   const focusNestedLyricBack = useCallback((echo: Echo) => {
     setReplyTargetId(echo.id)
-    const handle = echo.username ? `@${echo.username.replace(/^@/, '')}` : 'this Lyric Back'
-    setReplyTargetLabel(handle)
-    setDraft(null)
-    setDraftLyric('')
+    setComposePrefill(null)
+    requestAnimationFrame(() => composeRef.current?.scrollIntoView())
   }, [])
 
   if (!open) return null
 
   const displayCount = Math.max(echoCount, echoes.length)
-  const showEchoEmpty = !echoesLoading && echoes.length === 0
-  const showIdeasEmpty = ideasFetched && !ideasLoading && !ideasError && (picks?.length ?? 0) === 0
-
   return (
     <div
       ref={panelRef}
@@ -255,9 +181,8 @@ export function PostCardSuggestedReply({
 
       <div className="margo-post-card__lb-scroll">
         <div className="margo-post-card__lb-context">
-          <p className="margo-post-card__lb-context-label">Original moment</p>
           <p className="margo-post-card__lb-context-lyric">
-            {parentMoment?.text ? `“${parentMoment.text}”` : 'This post'}
+            {parentMoment?.text ? `“${parentMoment.text}”` : null}
           </p>
           {(parentMoment?.song || parentMoment?.artist) ? (
             <p className="margo-post-card__lb-context-track">
@@ -276,24 +201,15 @@ export function PostCardSuggestedReply({
               className="margo-post-card__lb-focus-back"
               onClick={() => {
                 setReplyTargetId(postId)
-                setReplyTargetLabel(null)
+                setComposePrefill(null)
               }}
             >
-              ← All Lyric Backs on this moment
+              ← Back
             </button>
-            <p className="margo-post-card__lb-focus-label">
-              Replying to {replyTargetLabel ?? 'this Lyric Back'}
-            </p>
           </div>
         ) : null}
 
         {echoesLoading ? <LyricBackPanelSkeleton /> : null}
-
-        {showEchoEmpty ? (
-          <p className="margo-post-card__lb-empty-title margo-post-card__lb-empty-title--solo">
-            No Lyric Backs yet
-          </p>
-        ) : null}
 
         {!echoesLoading && echoes.length > 0 ? (
           <ul className="margo-post-card__lb-list margo-post-card__lb-list--echoes">
@@ -302,13 +218,7 @@ export function PostCardSuggestedReply({
                 <LyricBackThreadRow
                   echo={echo}
                   tone="reply"
-                  onLyricBack={(echoId) => {
-                    if (onFindLineForTarget) {
-                      onFindLineForTarget(echoId, postId)
-                      return
-                    }
-                    focusNestedLyricBack(echo)
-                  }}
+                  onLyricBack={() => focusNestedLyricBack(echo)}
                   onOpenThread={(id) => onOpenThread?.(id)}
                   onExport={onExportEcho}
                   onReplay={onReplayEcho}
@@ -325,7 +235,7 @@ export function PostCardSuggestedReply({
             aria-expanded={ideasOpen}
             onClick={() => setIdeasOpen((o) => !o)}
           >
-            <span>See ideas from Margo music</span>
+            <span>Ideas</span>
             <span
               className="margo-post-card__lb-ideas-chevron"
               style={{ transform: ideasOpen ? 'rotate(90deg)' : 'none' }}
@@ -339,7 +249,6 @@ export function PostCardSuggestedReply({
               {ideasLoading ? <IdeasSkeleton /> : null}
               {ideasError && !ideasLoading ? (
                 <div className="margo-post-card__lb-status-block">
-                  <p className="margo-post-card__lb-status-title">Could not load ideas</p>
                   <p className="margo-post-card__lb-status">{ideasError}</p>
                   <button
                     type="button"
@@ -349,9 +258,6 @@ export function PostCardSuggestedReply({
                     Retry
                   </button>
                 </div>
-              ) : null}
-              {showIdeasEmpty ? (
-                <p className="margo-post-card__lb-status">No ideas for this moment.</p>
               ) : null}
               {!ideasLoading && !ideasError && (picks?.length ?? 0) > 0 && picks ? (
                 <ul className="margo-post-card__lb-list">
@@ -367,54 +273,18 @@ export function PostCardSuggestedReply({
         </div>
       </div>
 
-      <div className="margo-post-card__lb-compose">
-        {!draft?.songTitle ? (
-          onFindLineForTarget ? (
-            <button
-              type="button"
-              className="margo-post-card__lb-compose-find"
-              onClick={() => onFindLineForTarget(replyTargetId, postId)}
-            >
-              Find your Lyric Back
-            </button>
-          ) : null
-        ) : (
-          <>
-            <p className="margo-post-card__lb-compose-heading">Your Lyric Back</p>
-            <p className="margo-post-card__lb-compose-track">
-              <span className="margo-post-card__lb-compose-song">{draft.songTitle}</span>
-              {draft.artistName ? (
-                <span className="margo-post-card__lb-compose-artist">{draft.artistName}</span>
-              ) : null}
-            </p>
-            <p className="margo-post-card__lb-compose-lyric-preview">&ldquo;{draftLyric.trim() || draft.lyric}&rdquo;</p>
-            {composeError ? (
-              <p className="margo-post-card__lb-compose-error" role="alert">{composeError}</p>
-            ) : null}
-            <div className="margo-post-card__lb-compose-bar">
-              {onFindLineForTarget ? (
-                <button
-                  type="button"
-                  className="margo-post-card__lb-compose-change"
-                  onClick={() => onFindLineForTarget(replyTargetId, postId)}
-                >
-                  Change song
-                </button>
-              ) : null}
-              <button
-                type="button"
-                className="margo-post-card__lb-compose-send"
-                aria-label="Send Lyric Back"
-                disabled={!canSend}
-                onClick={() => void handleSend()}
-              >
-                <span className="margo-post-card__lb-compose-send-label">Send</span>
-                <FeedIconSend size={18} />
-              </button>
-            </div>
-          </>
-        )}
-      </div>
+      <LyricBackPanelCompose
+        ref={composeRef}
+        key={replyTargetId}
+        parentPostId={replyTargetId}
+        parentEmotion={parentEmotion}
+        onRequireAuth={onRequireAuth}
+        prefill={composePrefill}
+        onSent={() => {
+          setComposePrefill(null)
+          void refetchEchoes()
+        }}
+      />
     </div>
   )
 }

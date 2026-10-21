@@ -792,9 +792,6 @@ function LyricBackContent() {
 
           {/* Step 1 */}
           <div style={{ display: step === 1 ? 'block' : 'none' }}>
-            <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)', color: text, marginBottom: '16px' }}>
-              {catalogOnly ? "Find a line from Margo's music" : 'Find your lyric back'}
-            </p>
             <MargoSearchInput
               value={searchQuery}
               onChange={handleSearch}
@@ -882,9 +879,6 @@ function LyricBackContent() {
               />
             ) : (
               <>
-            <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)', color: text, marginBottom: '16px' }}>
-              Your lyric back
-            </p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
               {(['Artist', 'Song'] as const).map(label => (
                 <div key={label}>
@@ -1145,11 +1139,6 @@ function LyricBackContent() {
                   <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: gold, opacity: 0.5 }} />
                 ))}
               </div>
-            )}
-            {!echoesLoading && echoes.length === 0 && (
-              <p style={{ fontFamily: font, fontStyle: 'italic', color: text3, fontSize: '0.9rem', textAlign: 'center', padding: '32px 0' }}>
-                No lyric backs yet — be the first.
-              </p>
             )}
             {echoes.map(lb => {
               const post = echoToPost(lb)
