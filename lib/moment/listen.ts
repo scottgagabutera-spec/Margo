@@ -1,4 +1,8 @@
 import type { MargoMoment, MargoMomentLine } from '@/lib/moment/types'
+import {
+  computePlaybackSegments,
+  type PlaybackSegment,
+} from '@/lib/moment/playback-segments'
 
 export type MomentListenMode = 'margo-inline' | 'external'
 
@@ -22,6 +26,8 @@ export interface MomentListenResolution {
   snippetStart?: number | null
   snippetEnd?: number | null
   lineLyric?: string | null
+  /** Merged plan for multi-line Margo posts (feed playback). */
+  playbackSegments?: PlaybackSegment[]
 }
 
 function trimUrl(url: string | null | undefined): string | null {
@@ -70,7 +76,17 @@ function lineListenContext(line: MargoMomentLine): MomentListenContext {
   }
 }
 
-function primaryLineForListen(moment: MargoMoment): MargoMomentLine | null {
+function momentLinesToSegmentInput(lines: MargoMomentLine[]) {
+  return lines.map((l, i) => ({
+    position: l.position ?? i,
+    songId: l.songId,
+    snippetStart: l.snippetStart,
+    snippetEnd: l.snippetEnd,
+  }))
+}
+
+/** First catalog line with snippet times, else first non-empty lyric line. */
+export function primaryLineForListen(moment: MargoMoment): MargoMomentLine | null {
   const playable = moment.lines.find(
     (l) =>
       l.songId &&
@@ -80,6 +96,19 @@ function primaryLineForListen(moment: MargoMoment): MargoMomentLine | null {
   )
   if (playable) return playable
   return moment.lines.find((l) => l.lyric.trim().length > 0) ?? null
+}
+
+function primaryCatalogLineForPlayback(moment: MargoMoment): MargoMomentLine | null {
+  const segments = computePlaybackSegments(momentLinesToSegmentInput(moment.lines))
+  if (segments.length === 0) return primaryLineForListen(moment)
+  const playable = moment.lines.find(
+    (l) =>
+      l.songId &&
+      l.audioUrl &&
+      l.snippetStart != null &&
+      l.snippetEnd != null,
+  )
+  return playable ?? primaryLineForListen(moment)
 }
 
 function resolveExternalUrl(
@@ -110,7 +139,7 @@ export function resolveMomentListen(
   moment: MargoMoment,
   context: MomentListenContext = {},
 ): MomentListenResolution {
-  const line = primaryLineForListen(moment)
+  const line = primaryCatalogLineForPlayback(moment)
   if (!line) {
     return {
       mode: 'external',
@@ -119,23 +148,26 @@ export function resolveMomentListen(
     }
   }
 
+  const playbackSegments = computePlaybackSegments(momentLinesToSegmentInput(moment.lines))
   const canPlayInline = !!(
     line.songId &&
     line.audioUrl &&
-    line.snippetStart != null &&
-    line.snippetEnd != null
+    playbackSegments.length > 0
   )
 
   if (canPlayInline) {
+    const first = playbackSegments[0]
+    const combinedLyric = moment.lines.map((l) => l.lyric.trim()).filter(Boolean).join('\n')
     return {
       mode: 'margo-inline',
       canPlayInline: true,
       externalUrl: null,
       songId: line.songId,
       audioUrl: line.audioUrl,
-      snippetStart: line.snippetStart,
-      snippetEnd: line.snippetEnd,
-      lineLyric: line.lyric,
+      snippetStart: first.startSec,
+      snippetEnd: playbackSegments[playbackSegments.length - 1].endSec,
+      lineLyric: combinedLyric || line.lyric,
+      playbackSegments,
     }
   }
 

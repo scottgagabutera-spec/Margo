@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import {
@@ -20,13 +20,17 @@ import type { Post } from '@/hooks/usePosts'
 import { EditMomentModal } from '@/components/edit-moment-modal'
 import { DeleteMomentDialog } from '@/components/delete-moment-dialog'
 import {
-  playSnippet,
+  playOrTogglePostMoment,
   stop,
   playFull,
   togglePlayPause,
   warmUrl,
 } from '@/lib/audio-engine'
-import { useAudioEngine } from '@/hooks/useAudioEngine'
+import { useAudioEngine, usePostMomentPlaybackUi } from '@/hooks/useAudioEngine'
+import {
+  computePlaybackSegments,
+  postLinesToSegmentInput,
+} from '@/lib/moment/playback-segments'
 import { useWarmAudioUrlOnVisible } from '@/hooks/useWarmAudioUrl'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { persistActivePrimaryScroll } from '@/components/primary-tab-shell'
@@ -146,88 +150,65 @@ async function fetchLyricLines(songId: string): Promise<LyricLine[]> {
   return data.map(l => ({ id: l.line_index, line: l.text, start: l.start_sec, end: l.end_sec }))
 }
 
-function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artwork, snippetStart, snippetEnd, atmosphere }: {
-  audioUrl: string; songId: string | null; postText?: string
-  songTitle?: string; artist?: string; artwork?: string | null
-  snippetStart?: number | null; snippetEnd?: number | null
-  atmosphere?: string | null
+function PostMomentPlayButton({
+  postId,
+  lines,
+  segments,
+  primaryLine,
+  combinedLyric,
+}: {
+  postId: string
+  lines: ReturnType<typeof resolveMomentLines>
+  segments: Array<{ startSec: number; endSec: number }>
+  primaryLine: ReturnType<typeof resolveMomentLines>[number]
+  combinedLyric: string
 }) {
   const btnRef = useRef<HTMLButtonElement>(null)
-  const engineState = useAudioEngine()
-  useWarmAudioUrlOnVisible(audioUrl, btnRef, true, snippetStart ?? 0)
-  const isThisPlaying = engineState.playing &&
-    engineState.mode === 'snippet' &&
-    engineState.songId === songId &&
-    engineState.snippet?.lineText === (postText || '')
-  const isBuffering = engineState.buffering && isThisPlaying
-
-  const [lyrics, setLyrics] = useState<LyricLine[]>([])
-  const hasExactTiming = snippetStart != null && snippetEnd != null
-
-  useEffect(() => {
-    if (songId && !hasExactTiming) {
-      fetchLyricLines(songId).then(setLyrics)
-    }
-  }, [audioUrl, songId, hasExactTiming])
+  const songId = primaryLine.songId || null
+  const audioUrl = primaryLine.audioUrl || ''
+  useWarmAudioUrlOnVisible(audioUrl, btnRef, true, segments[0]?.startSec ?? 0)
+  const { playing, buffering } = usePostMomentPlaybackUi(postId, songId)
 
   const toggle = () => {
-    if (isThisPlaying) {
-      stop()
-      return
-    }
-
-    let startSec = snippetStart ?? 0
-    let endSec = snippetEnd ?? 5
-    let lineIndex = 0
-
-    if (!hasExactTiming) {
-      const match = matchLyricWindowFromLines(lyrics, postText || '')
-      if (match) {
-        startSec = match.startSec
-        endSec = match.endSec
-        lineIndex = match.lineId
-      } else {
-        const fb = fallbackSnippetWindow()
-        startSec = fb.startSec
-        endSec = fb.endSec
-      }
-    }
-
-    void playSnippet({
-      songId: songId || audioUrl,
+    if (!audioUrl || !songId || segments.length === 0) return
+    playOrTogglePostMoment({
+      postKey: postId,
+      songId,
       audioUrl,
-      title: songTitle || '',
-      artist: artist || '',
-      artwork: artwork ?? null,
-      lineIndex,
-      lineText: postText || '',
-      startSec,
-      endSec,
-      atmosphere: livingAtmosphereOrNull(atmosphere),
+      title: primaryLine.songTitle || '',
+      artist: primaryLine.artistName || '',
+      artwork: primaryLine.artworkUrl ?? null,
+      lineIndex: primaryLine.position ?? 0,
+      lineText: combinedLyric,
+      segments,
+      atmosphere: livingAtmosphereOrNull(primaryLine.atmosphere),
       source: 'feed',
     })
   }
 
-  const snippetLabel = isThisPlaying
-    ? (isBuffering ? 'Loading audio snippet' : 'Pause lyric snippet')
+  const snippetLabel = playing
+    ? (buffering ? 'Loading audio snippet' : 'Pause lyric snippet')
     : 'Play lyric snippet'
 
   return (
     <button
       ref={btnRef}
       type="button"
-      onClick={toggle}
+      onClick={(e) => {
+        e.stopPropagation()
+        toggle()
+      }}
       aria-label={snippetLabel}
       style={{
         width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', flexShrink: 0,
-        background: isThisPlaying ? 'rgba(232,197,71,0.2)' : 'rgba(232,197,71,0.1)',
+        background: playing ? 'rgba(232,197,71,0.2)' : 'rgba(232,197,71,0.1)',
         border: '1px solid rgba(232,197,71,0.25)',
         cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
         transition: 'background 200ms ease', marginTop: '4px',
         padding: 0, boxSizing: 'border-box',
       }}
     >
-      <PlayPauseIcon playing={isThisPlaying} buffering={isBuffering} size={16} color="var(--gold)" />
+      <PlayPauseIcon playing={playing} buffering={buffering} size={16} color="var(--gold)" />
     </button>
   )
 }
@@ -274,118 +255,132 @@ function PostMomentBody({
   const lines = resolveMomentLines(post)
   const multi = lines.length > 1
 
+  const catalogLines = lines.filter(
+    (line) => line.source !== 'external' && !!(line.songId && line.audioUrl),
+  )
+  const segments = computePlaybackSegments(postLinesToSegmentInput(catalogLines))
+  const hasUnifiedPlay = segments.length > 0 && catalogLines.length > 0
+  const primaryCatalog = catalogLines[0]
+  const allSameSong =
+    catalogLines.length > 0
+    && catalogLines.every((l) => l.songId === catalogLines[0].songId)
+  const showSongMetaOnce = allSameSong && catalogLines.some((l) => l.songTitle || l.artistName)
+  const combinedLyric = lines.map((l) => l.text.trim()).filter(Boolean).join('\n')
+
+  const sharedMetaArtwork =
+    primaryCatalog?.artworkUrl || post.knowledge?.artwork || null
+  const sharedYoutubeThumb = !sharedMetaArtwork ? post.youtubeMeta?.thumbnail : undefined
+
   return (
     <div style={{ marginBottom: multi ? '8px' : '12px' }}>
-      {lines.map((line, i) => {
-        const hasCatalogAudio =
-          line.source !== 'external' && !!(line.songId && line.audioUrl)
-        const hasMeta = !!(line.songTitle || line.artistName)
-        const showBesideLyric = isCompact && !!(line.artworkUrl || post.knowledge?.artwork) && !hasCatalogAudio
-        const metaArtwork = line.artworkUrl || post.knowledge?.artwork || null
-        const metaYoutubeThumb = !metaArtwork ? post.youtubeMeta?.thumbnail : undefined
-        const showMetaArtwork = !!(metaArtwork || metaYoutubeThumb) && (hasCatalogAudio || !isCompact)
-        const externalHref = hasCatalogAudio
-          ? null
-          : resolveExternalListenUrl({
-              songTitle: line.songTitle || post.knowledge?.song,
-              artistName: line.artistName || post.knowledge?.artist,
-              youtubeUrl: post.youtubeMeta?.youtubeUrl,
-            })
-        const externalLabel = externalHref ? externalListenAriaLabel(externalHref) : ''
-        return (
-          <div key={line.id || `line-${line.position}-${i}`}>
-            {multi && i > 0 ? (
-              <p style={{
-                margin: '10px 0 8px',
-                fontFamily: UI_FONT,
-                fontSize: '0.6rem',
-                fontWeight: 700,
-                letterSpacing: '1.5px',
-                textTransform: 'uppercase',
-                color: 'var(--text-muted)',
-                textAlign: 'center',
-              }}>
-                stitch
-              </p>
-            ) : null}
-            <div style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '12px',
-              ...(multi ? { borderLeft: '2px solid rgba(232,197,71,0.25)', paddingLeft: '12px' } : null),
-            }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '12px',
+        ...(multi ? { borderLeft: '2px solid rgba(232,197,71,0.25)', paddingLeft: '12px' } : null),
+      }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {lines.map((line, i) => (
+            <div key={line.id || `line-${line.position}-${i}`}>
+              {multi && i > 0 ? (
+                <p style={{
+                  margin: '10px 0 8px',
+                  fontFamily: UI_FONT,
+                  fontSize: '0.6rem',
+                  fontWeight: 700,
+                  letterSpacing: '1.5px',
+                  textTransform: 'uppercase',
+                  color: 'var(--text-muted)',
+                  textAlign: 'center',
+                }}>
+                  stitch
+                </p>
+              ) : null}
               <p
                 className={isCompact ? 'margo-feed-lyric margo-feed-lyric--compact' : 'margo-feed-lyric'}
-                style={{ flex: 1 }}
+                style={{ margin: i > 0 ? '0 0 4px' : '0 0 4px' }}
               >
                 &ldquo;{line.text}&rdquo;
               </p>
-              {hasCatalogAudio && line.audioUrl ? (
-                <SnippetIconButton
-                  audioUrl={line.audioUrl}
-                  songId={line.songId || null}
-                  postText={line.text}
-                  songTitle={line.songTitle || ''}
-                  artist={line.artistName || ''}
-                  artwork={line.artworkUrl || null}
-                  snippetStart={line.snippetStart}
-                  snippetEnd={line.snippetEnd}
-                  atmosphere={line.atmosphere}
-                />
-              ) : externalHref ? (
-                <ExternalListenButton href={externalHref} label={externalLabel} />
-              ) : showBesideLyric ? (
-                <PostThumbnail
-                  artwork={line.artworkUrl || post.knowledge?.artwork}
-                  alt=""
-                  style={{
-                    width: `${FEED_ARTWORK_THUMB_PX}px`,
-                    height: `${FEED_ARTWORK_THUMB_PX}px`,
-                    borderRadius: '8px',
-                    objectFit: 'cover',
-                    flexShrink: 0,
-                    border: '1px solid var(--border)',
-                  }}
-                />
-              ) : null}
             </div>
-            {hasMeta ? (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                marginTop: '8px',
-                marginBottom: multi && i < lines.length - 1 ? '0' : '10px',
-              }}>
-                {showMetaArtwork ? (
-                  <PostThumbnail
-                    artwork={metaArtwork}
-                    youtubeThumbnail={metaYoutubeThumb}
-                    alt=""
-                    loading="lazy"
-                    style={{
-                      width: `${FEED_ARTWORK_THUMB_PX}px`,
-                      height: `${FEED_ARTWORK_THUMB_PX}px`,
-                      borderRadius: '8px',
-                      objectFit: 'cover',
-                      flexShrink: 0,
-                      border: '1px solid var(--border)',
-                    }}
-                  />
-                ) : null}
-                <SongMeta
-                  title={line.songTitle}
-                  artist={line.artistName}
-                  aiGenerated={line.isAiGenerated}
-                  href={line.songId ? `/song/${line.songId}` : null}
-                  titleStyle={{ fontSize: '0.82rem' }}
-                  artistStyle={{ fontSize: '0.7rem' }}
-                />
-              </div>
-            ) : null}
+          ))}
+        </div>
+        {hasUnifiedPlay && primaryCatalog ? (
+          <PostMomentPlayButton
+            postId={post.id}
+            lines={lines}
+            segments={segments}
+            primaryLine={primaryCatalog}
+            combinedLyric={combinedLyric}
+          />
+        ) : null}
+      </div>
+
+      {!hasUnifiedPlay && lines.length === 1 ? (() => {
+        const line = lines[0]
+        const externalHref = resolveExternalListenUrl({
+          songTitle: line.songTitle || post.knowledge?.song,
+          artistName: line.artistName || post.knowledge?.artist,
+          youtubeUrl: post.youtubeMeta?.youtubeUrl,
+        })
+        const showBesideLyric = isCompact && !!(line.artworkUrl || post.knowledge?.artwork)
+        if (!externalHref && !showBesideLyric) return null
+        return (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+            {externalHref ? (
+              <ExternalListenButton href={externalHref} label={externalListenAriaLabel(externalHref)} />
+            ) : (
+              <PostThumbnail
+                artwork={line.artworkUrl || post.knowledge?.artwork}
+                alt=""
+                style={{
+                  width: `${FEED_ARTWORK_THUMB_PX}px`,
+                  height: `${FEED_ARTWORK_THUMB_PX}px`,
+                  borderRadius: '8px',
+                  objectFit: 'cover',
+                  flexShrink: 0,
+                  border: '1px solid var(--border)',
+                }}
+              />
+            )}
           </div>
         )
-      })}
+      })() : null}
+
+      {showSongMetaOnce && primaryCatalog ? (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          marginTop: '8px',
+          marginBottom: '10px',
+        }}>
+          {(sharedMetaArtwork || sharedYoutubeThumb) && (hasUnifiedPlay || !isCompact) ? (
+            <PostThumbnail
+              artwork={sharedMetaArtwork}
+              youtubeThumbnail={sharedYoutubeThumb}
+              alt=""
+              loading="lazy"
+              style={{
+                width: `${FEED_ARTWORK_THUMB_PX}px`,
+                height: `${FEED_ARTWORK_THUMB_PX}px`,
+                borderRadius: '8px',
+                objectFit: 'cover',
+                flexShrink: 0,
+                border: '1px solid var(--border)',
+              }}
+            />
+          ) : null}
+          <SongMeta
+            title={primaryCatalog.songTitle}
+            artist={primaryCatalog.artistName}
+            aiGenerated={primaryCatalog.isAiGenerated}
+            href={primaryCatalog.songId ? `/song/${primaryCatalog.songId}` : null}
+            titleStyle={{ fontSize: '0.82rem' }}
+            artistStyle={{ fontSize: '0.7rem' }}
+          />
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -590,8 +585,18 @@ export function PostCard({
   const cardPadding = isCompact ? '12px' : '16px'
 
   const lines = resolveMomentLines(post)
-  const fullLine = lines.find((l) => l.songId && l.songId === post.songId) || lines[0]
-  const snippetWarmSec = fullLine?.snippetStart ?? post.snippetStart ?? 0
+  const catalogLines = lines.filter(
+    (line) => line.source !== 'external' && !!(line.songId && line.audioUrl),
+  )
+  const playbackSegmentsKey = catalogLines
+    .map((l) => `${l.id ?? ''}|${l.songId ?? ''}|${l.snippetStart ?? ''}|${l.snippetEnd ?? ''}`)
+    .join(';')
+  const playbackSegments = useMemo(
+    () => computePlaybackSegments(postLinesToSegmentInput(catalogLines)),
+    [playbackSegmentsKey],
+  )
+  const snippetWarmSec = playbackSegments[0]?.startSec ?? post.snippetStart ?? 0
+  const fullLine = catalogLines[0] || lines.find((l) => l.songId && l.songId === post.songId) || lines[0]
 
   useEffect(() => {
     if (!audioUrl || !isTier1) return
@@ -601,13 +606,16 @@ export function PostCard({
       (entries) => {
         if (entries[0].isIntersecting) {
           warmUrl(audioUrl, snippetWarmSec)
+          for (let i = 1; i < playbackSegments.length; i++) {
+            warmUrl(audioUrl, playbackSegments[i].startSec)
+          }
         }
       },
       { threshold: 0.1 }
     )
     obs.observe(el)
     return () => obs.disconnect()
-  }, [audioUrl, isTier1, snippetWarmSec])
+  }, [audioUrl, isTier1, snippetWarmSec, playbackSegments])
 
   useEffect(() => {
     if (viewedRef.current) return

@@ -158,6 +158,21 @@ export interface PlaySnippetRequest {
   source: SnippetPlaybackSource
 }
 
+/** Play an entire feed post moment (1–3 segments) as one session. */
+export interface PlayPostMomentRequest {
+  postKey: string
+  songId: string
+  audioUrl: string
+  title: string
+  artist: string
+  artwork?: string | null
+  lineIndex: number
+  lineText: string
+  segments: Array<{ startSec: number; endSec: number }>
+  atmosphere?: AtmosphereId | null
+  source: SnippetPlaybackSource
+}
+
 export interface PlayFullRequest {
   songId: string
   audioUrl: string
@@ -177,6 +192,14 @@ export interface PlayFullRequest {
 }
 
 // ── Public engine state (Section 2.2) ─────────────────────────────
+
+/** Feed post multi-moment playback — one logical item, optional internal segment queue. */
+export interface PostMomentPlayback {
+  postKey: string
+  segments: Array<{ startSec: number; endSec: number }>
+  /** Combined lyric for Media Session / mini-player. */
+  lineText: string
+}
 
 export interface AudioEngineState {
   mode: PlaybackMode
@@ -207,6 +230,8 @@ export interface AudioEngineState {
   snippet: SnippetBounds | null
   queue: LyricMomentQueueItem[]
   queueIndex: number
+  /** Set when playing a multi-segment feed post as one session. */
+  postMomentPlayback: PostMomentPlayback | null
   error: string | null
   /**
    * Incremented on every exclusive playSnippet/playFull/stop.
@@ -247,6 +272,7 @@ export const INITIAL_AUDIO_ENGINE_STATE: AudioEngineState = {
   snippet: null,
   queue: [],
   queueIndex: 0,
+  postMomentPlayback: null,
   error: null,
   sessionGeneration: 0,
 }
@@ -259,13 +285,39 @@ export function getSnippetStopDurationMs(startSec: number, endSec: number): numb
   return Math.min(spanSec * 1000, SNIPPET_MAX_DURATION_SEC * 1000)
 }
 
+/** Progress across all segments in a post-moment session (0–100). */
+export function computePostMomentPlaybackProgress(
+  postMoment: PostMomentPlayback,
+  queueIndex: number,
+  snippet: SnippetBounds | null,
+  currentTime: number,
+): number {
+  const segs = postMoment.segments
+  if (!segs.length || !snippet) return 0
+  const total = segs.reduce((sum, s) => sum + Math.max(0, s.endSec - s.startSec), 0)
+  if (total <= 0) return 0
+  let elapsed = 0
+  for (let i = 0; i < queueIndex && i < segs.length; i++) {
+    elapsed += Math.max(0, segs[i].endSec - segs[i].startSec)
+  }
+  const span = snippet.endSec - snippet.startSec
+  const cur = span <= 0 ? 0 : Math.max(0, Math.min(currentTime - snippet.startSec, span))
+  elapsed += cur
+  return Math.max(0, Math.min(100, (elapsed / total) * 100))
+}
+
 /** Mode-aware progress 0–100 */
 export function computePlaybackProgress(
   mode: PlaybackMode,
   currentTime: number,
   duration: number,
   snippet: SnippetBounds | null,
+  postMomentPlayback: PostMomentPlayback | null = null,
+  queueIndex = 0,
 ): number {
+  if (mode === 'snippet' && snippet && postMomentPlayback) {
+    return computePostMomentPlaybackProgress(postMomentPlayback, queueIndex, snippet, currentTime)
+  }
   if (mode === 'snippet' && snippet) {
     const span = snippet.endSec - snippet.startSec
     if (span <= 0) return 0
@@ -281,7 +333,16 @@ export function computePlaybackProgress(
 export function getQueueNavigationState(
   queue: LyricMomentQueueItem[],
   queueIndex: number,
+  postMomentPlayback: PostMomentPlayback | null = null,
 ): QueueNavigationState {
+  if (postMomentPlayback) {
+    return {
+      canPrev: false,
+      canNext: false,
+      queueIndex: 0,
+      queueLength: 1,
+    }
+  }
   return {
     canPrev: queueIndex > 0,
     canNext: queue.length > 0 && queueIndex < queue.length - 1,

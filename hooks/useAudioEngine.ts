@@ -100,6 +100,35 @@ function snippetUiFlags(
  * Snippet playback UI flags for a specific line (feed cards, discover moments).
  * Reads current engine state on mount so a card that appears mid-play shows pause, not play.
  */
+/** Feed post — one play control for the whole post-moment session. */
+export function usePostMomentPlaybackUi(
+  postKey: string | null | undefined,
+  songId: string | null | undefined,
+): { playing: boolean; buffering: boolean } {
+  const [flags, setFlags] = useState({ playing: false, buffering: false })
+
+  useEffect(() => {
+    const sync = (s: AudioEngineState) => {
+      if (!postKey || !songId) {
+        setFlags({ playing: false, buffering: false })
+        return
+      }
+      const isThis =
+        s.mode === 'snippet'
+        && s.songId === songId
+        && s.postMomentPlayback?.postKey === postKey
+      setFlags({
+        playing: s.playing && isThis,
+        buffering: s.buffering && isThis,
+      })
+    }
+    sync(getAudioEngineState())
+    return subscribeAudioEngine(sync)
+  }, [postKey, songId])
+
+  return flags
+}
+
 export function useSnippetPlaybackUi(
   songId: string | null | undefined,
   lineKey: string | number | null | undefined,
@@ -136,12 +165,12 @@ export function usePlaybackProgress(): number {
 export function useQueueNavigation() {
   const [nav, setNav] = useState(() => {
     const s = getAudioEngineState()
-    return getQueueNavigationState(s.queue, s.queueIndex)
+    return getQueueNavigationState(s.queue, s.queueIndex, s.postMomentPlayback)
   })
 
   useEffect(() => {
     const unsub = subscribeAudioEngine(s => {
-      setNav(getQueueNavigationState(s.queue, s.queueIndex))
+      setNav(getQueueNavigationState(s.queue, s.queueIndex, s.postMomentPlayback))
     })
     return unsub
   }, [])
