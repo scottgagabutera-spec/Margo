@@ -5,10 +5,12 @@ import {
   PRIMARY_TAB_STALE_MS,
   peekMomentsCache,
   peekMomentsSongAtoms,
+  peekCuratedMomentsBySong,
   warmLyricMoments,
   type LyricMomentRow,
 } from '@/lib/primary-tab-prefetch'
 import type { CatalogLyricAtom } from '@/lib/catalog-lyric-unit'
+import type { CuratedMomentStored } from '@/lib/moments/curated-types'
 
 export type { LyricMomentRow }
 
@@ -28,9 +30,13 @@ export function useLyricMoments(options: UseLyricMomentsOptions = {}) {
   const enabled = options.enabled ?? true
   const cached = peekMomentsCache()
   const cachedAtoms = peekMomentsSongAtoms()
+  const cachedCurated = peekCuratedMomentsBySong()
   const [moments, setMoments] = useState<LyricMomentRow[]>(cached?.data ?? [])
   const [songAtomsBySongId, setSongAtomsBySongId] = useState<Record<string, CatalogLyricAtom[]>>(
     cachedAtoms ?? {},
+  )
+  const [curatedBySongId, setCuratedBySongId] = useState<Record<string, CuratedMomentStored[]>>(
+    cachedCurated ?? {},
   )
   const [loading, setLoading] = useState(!cached?.data)
   const lastLoadedAtRef = useRef(cached?.loadedAt ?? 0)
@@ -39,6 +45,7 @@ export function useLyricMoments(options: UseLyricMomentsOptions = {}) {
     const rows = await warmLyricMoments({ force })
     setMoments(rows)
     setSongAtomsBySongId(peekMomentsSongAtoms() ?? {})
+    setCuratedBySongId(peekCuratedMomentsBySong() ?? {})
     setLoading(false)
     lastLoadedAtRef.current = Date.now()
     return rows
@@ -54,5 +61,5 @@ export function useLyricMoments(options: UseLyricMomentsOptions = {}) {
     }
   }, [enabled, load])
 
-  return { moments, songAtomsBySongId, loading, refetch: () => load(true) }
+  return { moments, songAtomsBySongId, curatedBySongId, loading, refetch: () => load(true) }
 }

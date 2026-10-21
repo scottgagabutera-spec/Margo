@@ -5,6 +5,7 @@ import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { playSnippet, warmUrl } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
 import { UI_FONT } from '@/lib/fonts'
+import type { CuratedMomentStored } from '@/lib/moments/curated-types'
 
 export interface ComposeLyricLine {
   lineIndex: number
@@ -324,6 +325,8 @@ export function ComposeLinePicker({
   hideHeader = false,
 }: ComposeLinePickerProps) {
   const listRef = useRef<HTMLDivElement>(null)
+  const curateRequested = useRef(false)
+  const [curatedMoments, setCuratedMoments] = useState<CuratedMomentStored[]>([])
   const canHear = !!audioUrl
   const isStage = variant === 'stage'
   const paragraphEnabled = enableParagraphPick && !!onPickParagraph
@@ -337,6 +340,37 @@ export function ComposeLinePicker({
     warmUrl(audioUrl)
   }, [audioUrl, loading, lines.length])
 
+  useEffect(() => {
+    if (!songId || loading || lines.length === 0) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await fetch(`/api/moments/curated?songId=${encodeURIComponent(songId)}`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (cancelled) return
+        const moments = Array.isArray(data.moments) ? (data.moments as CuratedMomentStored[]) : []
+        setCuratedMoments(moments)
+        if (moments.length === 0 && !curateRequested.current) {
+          curateRequested.current = true
+          void fetch('/api/moments/curate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ songId }),
+          })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((payload) => {
+              if (payload?.moments?.length) setCuratedMoments(payload.moments as CuratedMomentStored[])
+            })
+            .catch(() => {})
+        }
+      } catch {
+        /* non-blocking */
+      }
+    })()
+    return () => { cancelled = true }
+  }, [songId, loading, lines.length])
+
   const showLimitHint = useCallback((message: string) => {
     setLimitHint(message)
     if (limitHintTimer.current) clearTimeout(limitHintTimer.current)
@@ -349,6 +383,47 @@ export function ComposeLinePicker({
   useEffect(() => () => {
     if (limitHintTimer.current) clearTimeout(limitHintTimer.current)
   }, [])
+
+  const pickCuratedMoment = useCallback((moment: CuratedMomentStored) => {
+    const indexes = moment.lineIndexes.slice(0, maxParagraphLines)
+    const picked = indexes
+      .map((idx) => lines.find((l) => l.lineIndex === idx))
+      .filter((l): l is ComposeLyricLine => !!l)
+    if (picked.length === 0) return
+    if (moment.lineIndexes.length > maxParagraphLines) {
+      showLimitHint(`Using first ${maxParagraphLines} lines of this moment`)
+    }
+    if (audioUrl && picked.length > 0) {
+      void playSnippet({
+        songId: songId || audioUrl,
+        audioUrl,
+        title: songTitle,
+        artist: artistName,
+        artwork,
+        lineIndex: picked[0].lineIndex,
+        lineText: picked.map((l) => l.text).join('\n'),
+        startSec: picked[0].startSec,
+        endSec: picked[picked.length - 1].endSec,
+        source: 'feed',
+      })
+    }
+    if (picked.length >= 2 && onPickParagraph) {
+      onPickParagraph(picked)
+    } else {
+      onPick(picked[0])
+    }
+  }, [
+    audioUrl,
+    artistName,
+    artwork,
+    lines,
+    maxParagraphLines,
+    onPick,
+    onPickParagraph,
+    showLimitHint,
+    songId,
+    songTitle,
+  ])
 
   const resetSelection = useCallback(() => {
     setSelectionMode(false)
@@ -536,6 +611,72 @@ export function ComposeLinePicker({
             }}
           >
             {limitHint}
+          </div>
+        ) : null}
+        {curatedMoments.length > 0 && !selectionMode ? (
+          <div style={{ marginBottom: '14px' }}>
+            <p style={{
+              fontFamily: UI_FONT,
+              fontSize: '0.65rem',
+              fontWeight: 700,
+              letterSpacing: '1.2px',
+              textTransform: 'uppercase',
+              color: 'var(--text-muted)',
+              margin: '0 0 8px 4px',
+            }}>
+              Suggested moments
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {curatedMoments.map((m) => (
+                <button
+                  key={`${m.startLineIndex}_${m.endLineIndex}`}
+                  type="button"
+                  onClick={() => pickCuratedMoment(m)}
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    padding: '12px 14px',
+                    borderRadius: '14px',
+                    border: '1px solid var(--gold-border)',
+                    background: 'var(--gold-faint)',
+                    cursor: 'pointer',
+                    minHeight: 'var(--margo-touch-min)',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  <p style={{
+                    margin: '0 0 6px',
+                    fontFamily: lyricFont,
+                    fontStyle: 'italic',
+                    fontSize: '0.9rem',
+                    color: 'var(--text)',
+                    lineHeight: 1.4,
+                    whiteSpace: 'pre-line',
+                  }}>
+                    {m.text}
+                  </p>
+                  <p style={{
+                    margin: 0,
+                    fontFamily: UI_FONT,
+                    fontSize: '0.65rem',
+                    color: 'var(--text-muted)',
+                  }}>
+                    {formatTime(m.startSec)}–{formatTime(m.endSec)} · {m.primaryVibe}
+                  </p>
+                </button>
+              ))}
+            </div>
+            <p style={{
+              fontFamily: UI_FONT,
+              fontSize: '0.65rem',
+              fontWeight: 700,
+              letterSpacing: '1.2px',
+              textTransform: 'uppercase',
+              color: 'var(--text-muted)',
+              margin: '16px 0 8px 4px',
+            }}>
+              All lines
+            </p>
           </div>
         ) : null}
         <div

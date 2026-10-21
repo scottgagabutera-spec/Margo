@@ -10,6 +10,8 @@ import type { CatalogLyricAtom } from '@/lib/catalog-lyric-unit'
 import { warmProfile } from '@/lib/profile-warm'
 import { embedProfile, resolvePublicArtistCredit } from '@/lib/artist-identity'
 import { parseAtmosphere, SONG_POST_EMBED, type AtmosphereId } from '@/lib/atmosphere'
+import { isMomentsCurationClientEnabled } from '@/lib/moments/curation-config'
+import type { CuratedMomentStored } from '@/lib/moments/curated-types'
 
 const supabase = createClient()
 
@@ -316,6 +318,31 @@ const momentsAtomsCache: CacheEntry<Record<string, CatalogLyricAtom[]>> = {
   inflight: null,
 }
 
+const curatedMomentsCache: CacheEntry<Record<string, CuratedMomentStored[]>> = {
+  data: null,
+  loadedAt: 0,
+  inflight: null,
+}
+
+async function fetchCuratedMomentsBySong(): Promise<Record<string, CuratedMomentStored[]>> {
+  if (!isMomentsCurationClientEnabled()) return {}
+  const { data, error } = await supabase
+    .from('song_curated_moments')
+    .select('song_id, moments')
+  if (error) {
+    console.warn('fetchCuratedMomentsBySong: failed (table missing or RLS)', error.message)
+    return {}
+  }
+  const out: Record<string, CuratedMomentStored[]> = {}
+  for (const row of data || []) {
+    const moments = row.moments as CuratedMomentStored[]
+    if (Array.isArray(moments) && moments.length > 0) {
+      out[row.song_id as string] = moments
+    }
+  }
+  return out
+}
+
 async function fetchSongAtomsForMoments(
   songIds: string[],
   vibesBySongLine: Map<string, string[]>,
@@ -421,6 +448,11 @@ export function peekMomentsSongAtoms(): Record<string, CatalogLyricAtom[]> | nul
   return momentsAtomsCache.data
 }
 
+export function peekCuratedMomentsBySong(): Record<string, CuratedMomentStored[]> | null {
+  if (!curatedMomentsCache.data) return null
+  return curatedMomentsCache.data
+}
+
 export function warmLyricMoments(opts?: { force?: boolean }): Promise<LyricMomentRow[]> {
   const force = opts?.force === true
   const fresh =
@@ -432,10 +464,25 @@ export function warmLyricMoments(opts?: { force?: boolean }): Promise<LyricMomen
   }
   if (momentsCache.inflight) return momentsCache.inflight
 
-  const p = fetchLyricMoments().then((rows) => {
+  const p = fetchLyricMoments().then(async (rows) => {
     momentsCache.data = rows
     momentsCache.loadedAt = Date.now()
     momentsCache.inflight = null
+    if (isMomentsCurationClientEnabled()) {
+      curatedMomentsCache.inflight = fetchCuratedMomentsBySong()
+        .then((curated) => {
+          curatedMomentsCache.data = curated
+          curatedMomentsCache.loadedAt = Date.now()
+          curatedMomentsCache.inflight = null
+          return curated
+        })
+        .catch(() => {
+          curatedMomentsCache.data = {}
+          curatedMomentsCache.inflight = null
+          return {}
+        })
+      await curatedMomentsCache.inflight
+    }
     return rows
   }).catch((err) => {
     momentsCache.inflight = null
