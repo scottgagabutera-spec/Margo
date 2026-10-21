@@ -49,7 +49,7 @@ export function FeedPostSkeletonList({ count = 4 }: { count?: number }) {
           }}
         >
           <div className="margo-post-card__header" style={{ marginBottom: 10 }}>
-            <div style={bone({ width: 40, height: 40, borderRadius: '50%', border: 'none', gridRow: '1 / span 2' }, i * 60)} />
+            <div style={bone({ width: 36, height: 36, borderRadius: '50%', border: 'none', gridRow: '1 / span 2' }, i * 60)} />
             <div style={{ gridColumn: 2, display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={bone({ height: 10, width: '42%', borderRadius: 4, border: 'none' }, i * 60 + 40)} />
               <div style={bone({ height: 8, width: '28%', borderRadius: 4, border: 'none' }, i * 60 + 80)} />
@@ -60,17 +60,18 @@ export function FeedPostSkeletonList({ count = 4 }: { count?: number }) {
             <div style={bone({ height: 14, width: '62%', borderRadius: 4, border: 'none', marginTop: 8 }, i * 60 + 110)} />
           </div>
           <div className="margo-post-card__song-block">
-            <div className="margo-post-card__song-row">
-              <div style={bone({ width: 44, height: 44, borderRadius: 8, border: 'none' }, i * 60 + 120)} />
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={bone({ height: 10, width: '55%', borderRadius: 4, border: 'none' }, i * 60 + 140)} />
-                <div style={bone({ height: 8, width: '35%', borderRadius: 4, border: 'none' }, i * 60 + 160)} />
+            <div className="margo-post-card__song-row-shell">
+              <div className="margo-post-card__song-row">
+                <div style={bone({ width: 40, height: 40, borderRadius: 8, border: 'none' }, i * 60 + 120)} />
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={bone({ height: 10, width: '55%', borderRadius: 4, border: 'none' }, i * 60 + 140)} />
+                  <div style={bone({ height: 8, width: '35%', borderRadius: 4, border: 'none' }, i * 60 + 160)} />
+                </div>
+                <div style={bone({ width: 44, height: 44, borderRadius: '50%', border: 'none' }, i * 60 + 180)} />
               </div>
-              <div style={bone({ width: 44, height: 44, borderRadius: '50%', border: 'none' }, i * 60 + 180)} />
             </div>
-            <div className="margo-post-card__moment-meta">
-              <div style={bone({ height: 8, width: '38%', borderRadius: 4, border: 'none' }, i * 60 + 200)} />
-              <div style={bone({ flex: 1, height: 3, borderRadius: 999, border: 'none' }, i * 60 + 220)} />
+            <div className="margo-post-card__song-util">
+              <div style={bone({ width: 120, height: 28, borderRadius: 8, border: 'none' }, i * 60 + 200)} />
             </div>
           </div>
           <div className="margo-feed-actions">

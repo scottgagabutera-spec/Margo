@@ -79,7 +79,7 @@ export function SongMeta({
         ...titleStyle,
       }}>
         {t ? <span style={{ minWidth: 0 }}>{t}</span> : null}
-        {aiGenerated ? <AiGeneratedLabel show spaced={!!t} style={aiLabelStyle} /> : null}
+        {aiGenerated ? <AiGeneratedLabel show spaced={!!t} variant="feed" style={aiLabelStyle} /> : null}
         {a ? <span>{(t || aiGenerated) ? ' · ' : ''}{a}</span> : null}
       </span>
     )
@@ -115,7 +115,7 @@ export function SongMeta({
               {t}
             </span>
           ) : null}
-          {aiGenerated ? <AiGeneratedLabel show spaced={!!t} style={aiLabelStyle} /> : null}
+          {aiGenerated ? <AiGeneratedLabel show spaced={!!t} variant="feed" style={aiLabelStyle} /> : null}
         </p>
       ) : null}
       {a ? (

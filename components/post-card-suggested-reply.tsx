@@ -1,10 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { playSnippet, togglePlayPause } from '@/lib/audio-engine'
 import { useAudioEngine } from '@/hooks/useAudioEngine'
 import { FeedMomentPlaybackIcon } from '@/components/feed-card-icons'
-import { UI_FONT, LYRIC_FONT, FEED_TYPE } from '@/lib/fonts'
+import { UI_FONT } from '@/lib/fonts'
 import type { SuggestedLyricBack } from '@/lib/suggest-lyric-back'
 import { fetchLyricBackSuggestionsForPost } from '@/lib/lyric-back-suggestions'
 
@@ -13,8 +13,10 @@ export type { SuggestedLyricBack }
 export type PostCardSuggestedReplyProps = {
   postId: string
   open: boolean
+  onClose: () => void
   onAcceptSuggested?: (suggestion: SuggestedLyricBack) => void
   onOpenSuggestedSearch?: () => void
+  onWriteOwn?: () => void
 }
 
 /**
@@ -24,9 +26,12 @@ export type PostCardSuggestedReplyProps = {
 export function PostCardSuggestedReply({
   postId,
   open,
+  onClose,
   onAcceptSuggested,
   onOpenSuggestedSearch,
+  onWriteOwn,
 }: PostCardSuggestedReplyProps) {
+  const panelRef = useRef<HTMLDivElement>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [picks, setPicks] = useState<SuggestedLyricBack[] | null>(null)
@@ -56,65 +61,80 @@ export function PostCardSuggestedReply({
     }
   }, [open, fetched, loading, loadSuggestions])
 
+  useEffect(() => {
+    if (!open || !panelRef.current) return
+    const reduced = typeof window !== 'undefined'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    panelRef.current.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' })
+  }, [open])
+
   if (!open) return null
 
   const showEmpty = fetched && !loading && !error && (picks?.length ?? 0) === 0
   const showPicks = !loading && !error && (picks?.length ?? 0) > 0
 
-  const linkBtnStyle: CSSProperties = {
-    background: 'none',
-    border: 'none',
-    padding: '8px 0',
-    margin: 0,
-    cursor: 'pointer',
-    fontFamily: UI_FONT,
-    fontSize: `var(${FEED_TYPE.controlLabel})`,
-    fontWeight: 600,
-    color: 'var(--post-vibe-text)',
-    minHeight: 'var(--margo-touch-min)',
-    display: 'inline-flex',
-    alignItems: 'center',
-    boxSizing: 'border-box',
-  }
-
   return (
-    <div data-no-card-nav className="margo-post-card__suggestions">
+    <div
+      ref={panelRef}
+      data-no-card-nav
+      className="margo-post-card__lb-panel"
+    >
+      <div className="margo-post-card__lb-header">
+        <h3 className="margo-post-card__lb-title">Lyric Back</h3>
+        <button
+          type="button"
+          className="margo-post-card__lb-close"
+          aria-label="Close Lyric Back suggestions"
+          onClick={onClose}
+        >
+          ✕
+        </button>
+      </div>
+
       {loading && (
-        <p className="margo-post-card__suggestions-status">Finding lines that answer this…</p>
+        <p className="margo-post-card__lb-status">Finding lines that answer this…</p>
       )}
 
       {error && (
-        <div className="margo-post-card__suggestions-error">
-          <p className="margo-post-card__suggestions-status">{error}</p>
-          <button type="button" onClick={() => void loadSuggestions()} style={linkBtnStyle}>
+        <div className="margo-post-card__lb-status-block">
+          <p className="margo-post-card__lb-status">{error}</p>
+          <button type="button" className="margo-post-card__lb-footer-btn" onClick={() => void loadSuggestions()}>
             Retry
           </button>
         </div>
       )}
 
       {showEmpty && (
-        <p className="margo-post-card__suggestions-status">
+        <p className="margo-post-card__lb-status">
           No strong Lyric Back match in Margo&apos;s music right now.
         </p>
       )}
 
       {showPicks && picks && (
-        <div className="margo-post-card__suggestions-list">
+        <ul className="margo-post-card__lb-list">
           {picks.map((s) => (
-            <SuggestionRow
-              key={`${s.songId}_${s.lineIndex}_${s.startSec}`}
-              suggestion={s}
-              onAccept={() => onAcceptSuggested?.(s)}
-            />
+            <li key={`${s.songId}_${s.lineIndex}_${s.startSec}`}>
+              <SuggestionRow
+                suggestion={s}
+                onAccept={() => onAcceptSuggested?.(s)}
+              />
+            </li>
           ))}
-        </div>
+        </ul>
       )}
 
-      {onOpenSuggestedSearch && !loading && (
-        <button type="button" onClick={onOpenSuggestedSearch} style={linkBtnStyle}>
-          Search the catalog
-        </button>
-      )}
+      <div className="margo-post-card__lb-footer">
+        {onOpenSuggestedSearch ? (
+          <button type="button" className="margo-post-card__lb-footer-btn" onClick={onOpenSuggestedSearch}>
+            Search catalog
+          </button>
+        ) : null}
+        {onWriteOwn ? (
+          <button type="button" className="margo-post-card__lb-footer-btn" onClick={onWriteOwn}>
+            Write your own
+          </button>
+        ) : null}
+      </div>
     </div>
   )
 }
@@ -137,20 +157,20 @@ function SuggestionRow({
   const isBuffering = isPlaying && engine.buffering
 
   return (
-    <div className="margo-post-card__suggestion-row">
-      <button type="button" onClick={onAccept} className="margo-post-card__suggestion-body">
-        <p className="margo-post-card__suggestion-lyric margo-feed-lyric--suggestion">&ldquo;{suggestion.text}&rdquo;</p>
-        <p className="margo-post-card__suggestion-meta">
+    <div className="margo-post-card__lb-row">
+      <button type="button" onClick={onAccept} className="margo-post-card__lb-row-body">
+        <p className="margo-post-card__lb-row-lyric">&ldquo;{suggestion.text}&rdquo;</p>
+        <p className="margo-post-card__lb-row-meta">
           {suggestion.songTitle} · {suggestion.artistName}
         </p>
       </button>
-
-      {canPlay && (
+      {canPlay ? (
         <button
           type="button"
           aria-label={isPlaying ? 'Pause suggestion' : 'Play suggestion'}
-          className="margo-post-card__suggestion-play"
-          onClick={() => {
+          className="margo-post-card__lb-row-play"
+          onClick={(e) => {
+            e.stopPropagation()
             if (isPlaying) {
               togglePlayPause()
               return
@@ -171,9 +191,11 @@ function SuggestionRow({
             })
           }}
         >
-          <FeedMomentPlaybackIcon playing={isPlaying} buffering={isBuffering} size={18} color="var(--post-vibe-fill)" />
+          <span className="margo-post-card__lb-row-play-inner">
+            <FeedMomentPlaybackIcon playing={isPlaying} buffering={isBuffering} size={16} color="var(--post-vibe-fill)" />
+          </span>
         </button>
-      )}
+      ) : null}
     </div>
   )
 }

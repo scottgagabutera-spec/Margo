@@ -10,4 +10,4 @@
  */
 
 /** Inline artwork thumb in Feed cards. */
-export const FEED_ARTWORK_THUMB_PX = 44
+export const FEED_ARTWORK_THUMB_PX = 40

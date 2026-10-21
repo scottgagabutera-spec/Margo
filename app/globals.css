@@ -73,7 +73,8 @@
   --feed-type-suggestion-lyric: 0.875rem;
   --margo-post-card-pad: 16px;
   --margo-post-card-gap: 12px;
-  --margo-post-card-lyric-margin: 20px;
+  --margo-post-card-lyric-margin: 24px;
+  --feed-type-suggestion-lyric: 0.9375rem;
   --feed-type-lyric-hero: 1.5rem;
   --margo-feed-vibe-bar-h: 40px;
 }
@@ -548,9 +549,24 @@ html[data-margo-stage-idle] .margo-stage-zone {
 .margo-post-card--external {
   border-color: var(--border) !important;
 }
+.margo-feed-ai-tag {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  padding: 0 4px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--text-muted);
+  border: 1px solid var(--border-hi);
+  border-radius: 4px;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
 .margo-post-card__header {
   display: grid;
-  grid-template-columns: 40px 1fr auto auto;
+  grid-template-columns: 36px 1fr auto auto;
   grid-template-rows: auto auto;
   column-gap: 12px;
   row-gap: 4px;
@@ -630,7 +646,7 @@ html[data-margo-stage-idle] .margo-stage-zone {
 }
 @media (max-width: 360px) {
   .margo-post-card__header {
-    grid-template-columns: 40px 1fr auto;
+    grid-template-columns: 36px 1fr auto;
   }
   .margo-post-card__mood {
     grid-column: 2 / -1;
@@ -653,11 +669,45 @@ html[data-margo-stage-idle] .margo-stage-zone {
   padding-top: var(--margo-post-card-gap);
   margin-top: 0;
 }
+.margo-post-card__song-row-shell {
+  position: relative;
+  min-height: 56px;
+}
 .margo-post-card__song-row {
   display: grid;
-  grid-template-columns: 44px 1fr auto;
-  gap: var(--margo-post-card-gap);
+  grid-template-columns: 40px 1fr auto;
+  gap: 12px;
   align-items: center;
+  min-height: 56px;
+  padding-bottom: 2px;
+  box-sizing: border-box;
+}
+.margo-post-card__song-meta {
+  min-width: 0;
+}
+.margo-post-card__song-art-link {
+  display: block;
+  flex-shrink: 0;
+  min-width: var(--margo-touch-min);
+  min-height: var(--margo-touch-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.margo-post-card__song-play-cluster {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.margo-post-card__moment-time {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 2.5rem;
+  text-align: right;
 }
 .margo-post-card__moment-btn {
   width: var(--margo-touch-min);
@@ -676,8 +726,8 @@ html[data-margo-stage-idle] .margo-stage-zone {
   border: none;
 }
 .margo-post-card__moment-btn-inner {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -691,126 +741,228 @@ html[data-margo-stage-idle] .margo-stage-zone {
 .margo-post-card__moment-btn:active:not(:disabled) {
   opacity: 0.88;
 }
-.margo-post-card__moment-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.margo-post-card__moment-meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 8px;
-}
-.margo-post-card__moment-label {
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: var(--feed-type-control-label);
-  font-weight: 400;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-.margo-post-card__moment-label strong {
-  color: var(--post-vibe-fill);
-  font-weight: 600;
-}
-.margo-post-card__progress-track {
-  flex: 1;
-  height: 3px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
+.margo-post-card__song-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.08);
   overflow: hidden;
+  border-radius: 0 0 4px 4px;
 }
-.margo-post-card__progress-fill {
+.margo-post-card__song-progress-fill {
   height: 100%;
   background: var(--post-vibe-fill);
-  border-radius: inherit;
   transition: width 200ms linear;
 }
-.margo-post-card__full-song-pill {
+.margo-post-card__song-util {
+  display: flex;
+  align-items: center;
+  min-height: 28px;
+  margin-top: 4px;
+}
+.margo-post-card__read-along-chip {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
-  width: auto;
-  max-width: 100%;
-  min-height: var(--margo-touch-min);
-  margin-top: var(--margo-post-card-gap);
-  padding: 6px 12px;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
   border-radius: 8px;
   border: 1px solid var(--post-vibe-border);
-  background: var(--post-vibe-faint);
+  background: transparent;
   color: var(--post-vibe-text);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: var(--feed-type-control-label);
+  font-size: 0.75rem;
   font-weight: 600;
   text-decoration: none;
   box-sizing: border-box;
+  min-width: var(--margo-touch-min);
   -webkit-tap-highlight-color: transparent;
 }
-.margo-post-card__full-song-pill .margo-post-card__full-song-pill-inner {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 32px;
-}
-.margo-post-card__full-song-pill:focus-visible {
+.margo-post-card__read-along-chip:focus-visible {
   outline: 2px solid var(--post-vibe-text);
   outline-offset: 2px;
 }
-.margo-post-card__full-song-pill:active {
+.margo-post-card__read-along-chip:active {
   background: var(--post-vibe-faint);
 }
-.margo-post-card__full-song-pill-label {
-  flex: 1;
+.margo-post-card__external-meta {
   min-width: 0;
-  text-align: left;
+}
+.margo-post-card__external-title {
+  margin: 0;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-song-title);
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.margo-post-card__full-song-pill-icons {
-  display: inline-flex;
+.margo-post-card__external-source {
+  margin: 2px 0 0;
+  display: flex;
   align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  color: var(--post-vibe-fill);
+  gap: 4px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-artist);
+  font-weight: 400;
+  color: var(--text-muted);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.margo-post-card__listen-external {
-  display: inline-flex;
+.margo-post-card__external-source-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.margo-post-card__external-open {
+  width: var(--margo-touch-min);
+  height: var(--margo-touch-min);
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  width: auto;
-  max-width: 100%;
-  min-height: var(--margo-touch-min);
-  margin-top: var(--margo-post-card-gap);
-  padding: 6px 14px;
+  border: none;
+  background: transparent;
+  color: var(--post-vibe-text);
+  text-decoration: none;
+  box-sizing: border-box;
+}
+.margo-post-card__external-open-inner {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--post-vibe-border);
+  background: transparent;
+}
+.margo-post-card__external-open:focus-visible {
+  outline: 2px solid var(--post-vibe-text);
+  outline-offset: 2px;
+}
+.margo-post-card__lb-panel {
+  margin-top: 16px;
+  padding: 16px;
+  padding-bottom: calc(16px + var(--margo-miniplayer-h, 0px));
+  border-top: 1px solid var(--border);
+  scroll-margin-bottom: calc(var(--margo-page-bottom, 80px) + 16px);
+}
+.margo-post-card__lb-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.margo-post-card__lb-title {
+  margin: 0;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-control-label);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.margo-post-card__lb-close {
+  width: var(--margo-touch-min);
+  height: var(--margo-touch-min);
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--feed-type-control-label);
+  cursor: pointer;
   border-radius: 8px;
+  flex-shrink: 0;
+}
+.margo-post-card__lb-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.margo-post-card__lb-list > li + li {
+  border-top: 1px solid var(--border);
+}
+.margo-post-card__lb-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+}
+.margo-post-card__lb-row-body {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.margo-post-card__lb-row-lyric {
+  margin: 0 0 4px;
+  font-family: var(--font-lora), serif;
+  font-style: italic;
+  font-size: var(--feed-type-suggestion-lyric);
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+.margo-post-card__lb-row-meta {
+  margin: 0;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-artist);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.margo-post-card__lb-row-play {
+  width: var(--margo-touch-min);
+  height: var(--margo-touch-min);
+  border: none;
+  background: transparent;
+  padding: 0;
+  flex-shrink: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.margo-post-card__lb-row-play-inner {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
   border: 1px solid var(--post-vibe-border);
   background: var(--post-vibe-faint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.margo-post-card__lb-footer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+.margo-post-card__lb-footer-btn {
+  min-height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--post-vibe-border);
+  background: transparent;
   color: var(--post-vibe-text);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: var(--feed-type-control-label);
   font-weight: 600;
-  text-decoration: none;
-  box-sizing: border-box;
+  cursor: pointer;
+  padding: 0 12px;
 }
-.margo-post-card__listen-external-inner {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 32px;
-}
-.margo-post-card__external-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+.margo-post-card__lb-status {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: var(--feed-type-section-label);
-  font-weight: 400;
-  letter-spacing: normal;
-  text-transform: none;
+  font-size: var(--feed-type-artist);
   color: var(--text-muted);
-  margin-bottom: 8px;
+  margin: 0 0 12px;
 }
 .margo-feed-action__label {
   color: var(--text-secondary);
@@ -987,64 +1139,6 @@ html[data-margo-stage-idle] .margo-stage-zone {
 }
 .margo-feed-action:active:not(:disabled) {
   opacity: 0.75;
-}
-.margo-post-card__suggestions {
-  margin: 0 0 8px;
-  padding: 0;
-}
-.margo-post-card__suggestions-status {
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: var(--feed-type-control-label);
-  color: var(--text-muted);
-  margin: 0 0 8px;
-}
-.margo-post-card__suggestions-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.margo-post-card__suggestion-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 8px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border);
-}
-.margo-post-card__suggestion-body {
-  flex: 1;
-  min-width: 0;
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  text-align: left;
-}
-.margo-post-card__suggestion-lyric {
-  margin: 0 0 4px;
-}
-.margo-post-card__suggestion-meta {
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: var(--feed-type-artist);
-  color: var(--text-muted);
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.margo-post-card__suggestion-play {
-  width: var(--margo-touch-min);
-  height: var(--margo-touch-min);
-  border-radius: 50%;
-  flex-shrink: 0;
-  border: 1px solid var(--post-vibe-border);
-  background: var(--post-vibe-faint);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  cursor: pointer;
 }
 .margo-feed-action__label {
   display: inline !important;

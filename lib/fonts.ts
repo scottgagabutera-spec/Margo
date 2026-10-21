@@ -37,7 +37,7 @@ export const FEED_TYPE_SCALE = {
   moodChip: '0.75rem',
   sectionLabel: '0.75rem',
   aiLabel: '0.75rem',
-  suggestionLyric: '0.875rem',
+  suggestionLyric: '0.9375rem',
   /** Export / Discover hero lyric — not used on feed card moment body. */
   lyricHero: '1.5rem',
 } as const

@@ -4,29 +4,38 @@ import { UI_FONT } from '@/lib/fonts'
 
 /**
  * Inline disclosure for songs the artist marked as AI-generated.
- * Plain supporting metadata — no frame, border, or background.
- * Renders nothing when `show` is false — callers gate on the boolean.
- *
- * Default: small muted AI-generated tag immediately after the song title.
  */
 export function AiGeneratedLabel({
   show = true,
   spaced = true,
+  variant = 'default',
   style,
 }: {
   show?: boolean
-  /** Narrow space before the bracket when following a title. */
   spaced?: boolean
+  /** Feed song row: compact "AI" outline tag. */
+  variant?: 'default' | 'feed'
   style?: React.CSSProperties
 }) {
   if (!show) return null
+
+  if (variant === 'feed') {
+    return (
+      <span
+        className="margo-feed-ai-tag"
+        style={style}
+      >
+        AI
+      </span>
+    )
+  }
 
   return (
     <span
       style={{
         display: 'inline',
         fontFamily: UI_FONT,
-        fontSize: 'var(--feed-type-ai-label, 0.6875rem)',
+        fontSize: 'var(--feed-type-ai-label, 0.75rem)',
         fontWeight: 400,
         letterSpacing: 0,
         color: 'var(--text-muted)',

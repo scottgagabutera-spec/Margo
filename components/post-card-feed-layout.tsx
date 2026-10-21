@@ -33,19 +33,78 @@ import {
 } from '@/lib/post-card-lyric-layout'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { trackEvent } from '@/lib/analytics/track'
-import { FeedIconChevronRight, FeedIconExternal, FeedIconLyricsLines, FeedMomentPlaybackIcon } from '@/components/feed-card-icons'
+import { FeedIconExternal, FeedIconLyricsLines, FeedMomentPlaybackIcon } from '@/components/feed-card-icons'
 
-function MomentPlayControl({
+function externalProviderLabel(href: string): string {
+  if (/music\.apple\.com/i.test(href)) return 'Apple Music'
+  if (/spotify\.com/i.test(href)) return 'Spotify'
+  if (/youtube\.com|youtu\.be/i.test(href)) return 'YouTube'
+  return 'External'
+}
+
+function SongArtworkLink({
+  href,
+  artwork,
+  youtubeThumbnail,
+}: {
+  href: string | null
+  artwork: string | null
+  youtubeThumbnail?: string
+}) {
+  const thumb = (
+    <PostThumbnail
+      artwork={artwork}
+      youtubeThumbnail={youtubeThumbnail}
+      alt=""
+      loading="lazy"
+      style={{
+        width: `${FEED_ARTWORK_THUMB_PX}px`,
+        height: `${FEED_ARTWORK_THUMB_PX}px`,
+        borderRadius: '8px',
+        objectFit: 'cover',
+        flexShrink: 0,
+        border: '1px solid var(--border)',
+        display: 'block',
+      }}
+    />
+  )
+  const placeholder = (
+    <div
+      aria-hidden
+      style={{
+        width: `${FEED_ARTWORK_THUMB_PX}px`,
+        height: `${FEED_ARTWORK_THUMB_PX}px`,
+        borderRadius: '8px',
+        flexShrink: 0,
+        border: '1px solid var(--border)',
+        background: 'linear-gradient(145deg, var(--surface-2), var(--surface-3))',
+      }}
+    />
+  )
+  const node = artwork || youtubeThumbnail ? thumb : placeholder
+  if (!href) return node
+  return (
+    <PendingNavLink
+      href={href}
+      indicator="tint"
+      aria-label="Open song"
+      onClick={(e) => e.stopPropagation()}
+      className="margo-post-card__song-art-link"
+    >
+      {node}
+    </PendingNavLink>
+  )
+}
+
+function MomentPlayCluster({
   postId,
-  lines,
-  segments,
   primaryLine,
+  segments,
   combinedLyric,
 }: {
   postId: string
-  lines: PostLine[]
-  segments: Array<{ startSec: number; endSec: number }>
   primaryLine: PostLine
+  segments: Array<{ startSec: number; endSec: number }>
   combinedLyric: string
 }) {
   const btnRef = useRef<HTMLButtonElement>(null)
@@ -53,6 +112,10 @@ function MomentPlayControl({
   const audioUrl = primaryLine.audioUrl || ''
   useWarmAudioUrlOnVisible(audioUrl, btnRef, true, segments[0]?.startSec ?? 0)
   const { playing, buffering } = usePostMomentPlaybackUi(postId, songId)
+  const totalSec = useMemo(() => sumSegmentDuration(segments), [segments])
+  const { elapsedSec } = usePostMomentPlaybackMetrics(postId, songId, totalSec)
+  const displaySec = playing ? elapsedSec : totalSec
+  const clock = formatMomentClock(displaySec)
 
   const toggle = () => {
     if (!audioUrl || !songId || segments.length === 0) return
@@ -71,26 +134,60 @@ function MomentPlayControl({
     })
   }
 
-  const ariaPlay = playing
-    ? (buffering ? 'Loading moment audio' : 'Pause moment')
-    : 'Play moment'
+  const ariaLabel = playing
+    ? (buffering ? `Loading moment, ${clock}` : `Pause moment, ${clock}`)
+    : `Play moment, ${clock}`
 
   return (
-    <button
-      ref={btnRef}
-      type="button"
-      data-no-card-nav
-      onClick={(e) => {
-        e.stopPropagation()
-        toggle()
-      }}
-      aria-label={ariaPlay}
-      className="margo-post-card__moment-btn"
-    >
-      <span className="margo-post-card__moment-btn-inner">
-        <FeedMomentPlaybackIcon playing={playing} buffering={buffering} size={18} color="var(--bg)" />
+    <div className="margo-post-card__song-play-cluster">
+      <span className="margo-post-card__moment-time" aria-hidden>
+        {clock}
       </span>
-    </button>
+      <button
+        ref={btnRef}
+        type="button"
+        data-no-card-nav
+        onClick={(e) => {
+          e.stopPropagation()
+          toggle()
+        }}
+        aria-label={ariaLabel}
+        className="margo-post-card__moment-btn"
+      >
+        <span className="margo-post-card__moment-btn-inner">
+          <FeedMomentPlaybackIcon playing={playing} buffering={buffering} size={16} color="var(--bg)" />
+        </span>
+      </button>
+    </div>
+  )
+}
+
+function SongMomentProgress({
+  postId,
+  songId,
+  segments,
+}: {
+  postId: string
+  songId: string | null
+  segments: Array<{ startSec: number; endSec: number }>
+}) {
+  const totalSec = useMemo(() => sumSegmentDuration(segments), [segments])
+  const { playing } = usePostMomentPlaybackUi(postId, songId)
+  const { progressPct } = usePostMomentPlaybackMetrics(postId, songId, totalSec)
+  return (
+    <div
+      className="margo-post-card__song-progress"
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(playing ? progressPct : 0)}
+      aria-label={playing ? 'Moment playback progress' : 'Moment duration'}
+    >
+      <div
+        className="margo-post-card__song-progress-fill"
+        style={{ width: `${playing ? progressPct : 0}%` }}
+      />
+    </div>
   )
 }
 
@@ -211,169 +308,97 @@ export function PostCardSongSection({
   if (!showSongMetaOnce && !isExternalCard) return null
 
   const songId = primaryCatalog?.songId || post.songId
+  const songHref = songId ? `/song/${songId}` : null
+  const provider = externalHref ? externalProviderLabel(externalHref) : null
+  const externalArtist = (line?.artistName || post.knowledge?.artist || '').trim()
+  const externalTitle = (line?.songTitle || post.knowledge?.song || '').trim()
 
   return (
     <section className="margo-post-card__song-block" data-no-card-nav>
-      {isExternalCard ? (
-        <span className="margo-post-card__external-pill">
-          <FeedIconExternal size={14} />
-          External song · not on Margo
-        </span>
-      ) : null}
-      <div className="margo-post-card__song-row">
-        {(sharedMetaArtwork || sharedYoutubeThumb) ? (
-          <PostThumbnail
+      <div className="margo-post-card__song-row-shell">
+        <div className="margo-post-card__song-row">
+          <SongArtworkLink
+            href={isExternalCard ? null : songHref}
             artwork={sharedMetaArtwork}
-            youtubeThumbnail={sharedYoutubeThumb}
-            alt=""
-            loading="lazy"
-            style={{
-              width: `${FEED_ARTWORK_THUMB_PX}px`,
-              height: `${FEED_ARTWORK_THUMB_PX}px`,
-              borderRadius: '8px',
-              objectFit: 'cover',
-              flexShrink: 0,
-              border: '1px solid var(--border)',
-            }}
+            youtubeThumbnail={sharedYoutubeThumb ?? undefined}
           />
-        ) : (
-          <div
-            aria-hidden
-            style={{
-              width: `${FEED_ARTWORK_THUMB_PX}px`,
-              height: `${FEED_ARTWORK_THUMB_PX}px`,
-              borderRadius: '8px',
-              flexShrink: 0,
-              border: '1px solid var(--border)',
-              background: 'linear-gradient(145deg, var(--surface-2), var(--surface-3))',
-            }}
-          />
-        )}
-        <div style={{ minWidth: 0, flex: 1 }}>
-          {showSongMetaOnce && primaryCatalog ? (
-            <SongMeta
-              title={primaryCatalog.songTitle}
-              artist={primaryCatalog.artistName}
-              aiGenerated={primaryCatalog.isAiGenerated}
-              href={primaryCatalog.songId ? `/song/${primaryCatalog.songId}` : null}
-              titleStyle={{ fontSize: `var(${FEED_TYPE.songTitle})`, fontWeight: 600 }}
-              artistStyle={{ fontSize: `var(${FEED_TYPE.artist})` }}
-              aiLabelStyle={{ fontSize: 'var(--feed-type-ai-label)' }}
+          <div className="margo-post-card__song-meta">
+            {showSongMetaOnce && primaryCatalog ? (
+              <SongMeta
+                title={primaryCatalog.songTitle}
+                artist={primaryCatalog.artistName}
+                aiGenerated={primaryCatalog.isAiGenerated}
+                href={songHref}
+                titleStyle={{ fontSize: `var(${FEED_TYPE.songTitle})`, fontWeight: 600 }}
+                artistStyle={{ fontSize: `var(${FEED_TYPE.artist})`, color: 'var(--text-muted)' }}
+              />
+            ) : isExternalCard ? (
+              <div className="margo-post-card__external-meta">
+                {externalTitle ? (
+                  <p className="margo-post-card__external-title">{externalTitle}</p>
+                ) : null}
+                <p className="margo-post-card__external-source">
+                  <span className="margo-post-card__external-source-text">
+                    {externalArtist ? `${externalArtist} · ` : null}
+                    {provider}
+                  </span>
+                  <FeedIconExternal size={12} aria-hidden />
+                </p>
+              </div>
+            ) : null}
+          </div>
+          {hasUnifiedPlay && primaryCatalog ? (
+            <MomentPlayCluster
+              postId={post.id}
+              primaryLine={primaryCatalog}
+              segments={segments}
+              combinedLyric={combinedLyric}
             />
-          ) : isExternalCard ? (
-            <SongMeta
-              title={line?.songTitle || post.knowledge?.song}
-              artist={line?.artistName || post.knowledge?.artist}
-              titleStyle={{ fontSize: `var(${FEED_TYPE.songTitle})`, fontWeight: 600 }}
-              artistStyle={{ fontSize: `var(${FEED_TYPE.artist})` }}
-            />
+          ) : null}
+          {isExternalCard && externalHref ? (
+            <a
+              className="margo-post-card__external-open"
+              href={externalHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={externalListenAriaLabel(externalHref) || 'Open in Apple Music'}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="margo-post-card__external-open-inner">
+                <FeedIconExternal size={16} />
+              </span>
+            </a>
           ) : null}
         </div>
         {hasUnifiedPlay && primaryCatalog ? (
-          <MomentPlayControl
+          <SongMomentProgress
             postId={post.id}
-            lines={lines}
+            songId={primaryCatalog.songId || null}
             segments={segments}
-            primaryLine={primaryCatalog}
-            combinedLyric={combinedLyric}
           />
         ) : null}
       </div>
-      {hasUnifiedPlay && primaryCatalog ? (
-        <PostCardMomentMetaRow
-          postId={post.id}
-          lines={lines}
-          segments={segments}
-          primaryLine={primaryCatalog}
-          combinedLyric={combinedLyric}
-        />
-      ) : null}
-      {isExternalCard && externalHref ? (
-        <a
-          className="margo-post-card__listen-external"
-          href={externalHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={externalListenAriaLabel(externalHref)}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <span className="margo-post-card__listen-external-inner">
-            <FeedIconExternal size={18} aria-hidden />
-            Listen on Apple Music
-          </span>
-        </a>
-      ) : null}
       {hasUnifiedPlay && songId ? (
-        <PendingNavLink
-          href={`/song/${songId}`}
-          className="margo-post-card__full-song-pill"
-          indicator="tint"
-          aria-label="Read along with full song lyrics"
-          onClick={(e) => {
-            e.stopPropagation()
-            trackEvent('song_played', {
-              mode: 'full',
-              songId,
-              source: 'feed-tier1',
-            })
-          }}
-        >
-          <span className="margo-post-card__full-song-pill-inner">
-            <span className="margo-post-card__full-song-pill-icons" aria-hidden>
-              <FeedIconLyricsLines size={18} />
-            </span>
-            <span className="margo-post-card__full-song-pill-label">Read along · full song</span>
-            <span className="margo-post-card__full-song-pill-icons" aria-hidden>
-              <FeedIconChevronRight size={18} />
-            </span>
-          </span>
-        </PendingNavLink>
+        <div className="margo-post-card__song-util">
+          <PendingNavLink
+            href={`/song/${songId}`}
+            className="margo-post-card__read-along-chip"
+            indicator="tint"
+            aria-label="Read along with full song lyrics"
+            onClick={(e) => {
+              e.stopPropagation()
+              trackEvent('song_played', {
+                mode: 'full',
+                songId,
+                source: 'feed-tier1',
+              })
+            }}
+          >
+            <FeedIconLyricsLines size={14} aria-hidden />
+            <span>Read along ›</span>
+          </PendingNavLink>
+        </div>
       ) : null}
     </section>
-  )
-}
-
-/** Progress row aligned under song title (play control lives in song row). */
-function PostCardMomentMetaRow({
-  postId,
-  lines,
-  segments,
-  primaryLine,
-  combinedLyric,
-}: {
-  postId: string
-  lines: PostLine[]
-  segments: Array<{ startSec: number; endSec: number }>
-  primaryLine: PostLine
-  combinedLyric: string
-}) {
-  const songId = primaryLine.songId || null
-  const totalSec = useMemo(() => sumSegmentDuration(segments), [segments])
-  const { playing, buffering } = usePostMomentPlaybackUi(postId, songId)
-  const { progressPct, elapsedSec } = usePostMomentPlaybackMetrics(postId, songId, totalSec)
-  const displaySec = playing ? elapsedSec : totalSec
-  const statusLabel = playing
-    ? (buffering ? 'Loading moment' : 'Playing moment')
-    : 'Play moment'
-
-  return (
-    <div className="margo-post-card__moment-meta">
-      <span className="margo-post-card__moment-label">
-        {statusLabel} · <strong>{formatMomentClock(displaySec)}</strong>
-      </span>
-      <div
-        className="margo-post-card__progress-track"
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(playing ? progressPct : 0)}
-        aria-label={playing ? 'Moment playback progress' : 'Moment duration'}
-      >
-        <div
-          className="margo-post-card__progress-fill"
-          style={{ width: `${playing ? progressPct : 0}%` }}
-        />
-      </div>
-    </div>
   )
 }

@@ -203,7 +203,7 @@ export function PostCard({
   // row collapses to a dense one-liner; expand renders the compact card in place
   const isRow = variant === 'row'
   const isCompact = variant === 'compact' || (isRow && rowExpanded)
-  const avatarPx = isCompact ? '32px' : '40px'
+  const avatarPx = isCompact ? '32px' : '36px'
 
   const lines = resolveMomentLines(post)
   const vibeTheme = getVibeTheme(emotion || post.emotion)
@@ -439,7 +439,7 @@ export function PostCard({
             justifyContent: 'center',
             overflow: 'hidden',
           }
-          const avatarPxNum = isCompact ? 32 : 40
+          const avatarPxNum = isCompact ? 32 : 36
           const avatarCore = storyAuthor ? (
             <StoryAvatarRing size={avatarPxNum} hasUnseen={storyAuthor.hasUnseen}>
               {avatarInner}
@@ -742,6 +742,12 @@ export function PostCard({
         <PostCardSuggestedReply
           postId={post.id}
           open={suggestionsOpen}
+          onClose={() => setSuggestionsOpen(false)}
+          onWriteOwn={() => {
+            if (!requireAuth()) return
+            persistActivePrimaryScroll()
+            router.push(lyricBackHref)
+          }}
           onAcceptSuggested={(s) => {
             if (!requireAuth()) return
             const q = new URLSearchParams({
@@ -764,17 +770,6 @@ export function PostCard({
             router.push(`/lyric-back?postId=${encodeURIComponent(post.id)}&catalogOnly=1`)
           }}
         />
-      ) : null}
-
-      {lyricBackAllowed && suggestionsOpen ? (
-        <PendingNavLink
-          href={lyricBackHref}
-          className="margo-post-card__write-own-link"
-          indicator="tint"
-          onClick={(e) => e.stopPropagation()}
-        >
-          Write your own Lyric Back
-        </PendingNavLink>
       ) : null}
 
       {threadDetail && lyricBackAllowed ? (
