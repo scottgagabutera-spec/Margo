@@ -2252,3 +2252,200 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   }
 }
 
+/* Lyric Back thread — compact rows (panel + /post/[id]) */
+.margo-lb-thread-row {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.margo-lb-thread-row--anchor {
+  padding: 12px;
+  border: 1px solid var(--post-vibe-border);
+  border-radius: 12px;
+  background: var(--post-vibe-faint);
+  margin-bottom: 8px;
+}
+.margo-lb-thread-row__badge {
+  margin: 0 0 6px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.margo-lb-thread-row__badge--reply {
+  color: var(--post-vibe-text);
+}
+.margo-lb-thread-row__head {
+  margin-bottom: 6px;
+  min-width: 0;
+}
+.margo-lb-thread-row__user {
+  display: inline-block;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-control-label);
+  font-weight: 600;
+  color: var(--post-vibe-text);
+  text-decoration: none;
+}
+.margo-lb-thread-row__track {
+  margin: 2px 0 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  overflow: hidden;
+  min-width: 0;
+}
+.margo-lb-thread-row__song {
+  font-weight: 600;
+  color: var(--post-vibe-text);
+  font-size: var(--feed-type-artist);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.margo-lb-thread-row__artist {
+  font-style: italic;
+  color: var(--text-muted);
+  font-size: var(--feed-type-artist);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.margo-lb-thread-row__artist::before {
+  content: '·';
+  font-style: normal;
+  margin-right: 4px;
+  opacity: 0.7;
+}
+.margo-lb-thread-row__bubble {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-family: var(--font-lora), serif;
+  font-style: italic;
+  font-size: var(--feed-type-suggestion-lyric);
+  line-height: 1.45;
+  color: var(--text);
+  cursor: pointer;
+}
+.margo-lb-thread-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: center;
+}
+.margo-lb-thread-row__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 6px;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  cursor: pointer;
+  text-decoration: none;
+}
+.margo-lb-thread-row__action--play {
+  margin-left: auto;
+}
+.margo-post-card__lb-context {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-2) 80%, transparent);
+  border: 1px solid var(--border);
+}
+.margo-post-card__lb-context-label {
+  margin: 0 0 4px;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.margo-post-card__lb-context-lyric {
+  margin: 0 0 4px;
+  font-family: var(--font-lora), serif;
+  font-style: italic;
+  font-size: var(--feed-type-artist);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+.margo-post-card__lb-context-track,
+.margo-post-card__lb-context-user {
+  margin: 0;
+  font-size: var(--feed-type-artist);
+  color: var(--text-muted);
+}
+.margo-post-card__lb-focus {
+  margin-bottom: 10px;
+}
+.margo-post-card__lb-focus-back {
+  display: block;
+  margin-bottom: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--gold);
+  font-size: var(--feed-type-artist);
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 36px;
+  text-align: left;
+}
+.margo-post-card__lb-focus-label {
+  margin: 0;
+  font-size: var(--feed-type-control-label);
+  font-weight: 600;
+  color: var(--post-vibe-text);
+}
+.margo-post-thread-section-label {
+  margin: 0 0 10px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.margo-post-thread-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.margo-post-thread-ancestor-link {
+  display: block;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  text-decoration: none;
+  color: inherit;
+}
+.margo-post-thread-ancestor-user {
+  display: block;
+  font-size: var(--feed-type-artist);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.margo-post-thread-ancestor-lyric {
+  display: block;
+  font-family: var(--font-lora), serif;
+  font-style: italic;
+  font-size: var(--feed-type-artist);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+

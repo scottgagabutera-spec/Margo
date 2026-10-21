@@ -1,12 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { usePost, usePostAncestors } from '@/hooks/usePost'
 import { useEchoes } from '@/hooks/useEchoes'
 import { PostCard } from '@/components/post-card'
+import { LyricBackThreadRow } from '@/components/lyric-back-thread-row'
 import { CardExportModal } from '@/components/card-export-modal'
 import { resolveMargoMomentFromPost } from '@/lib/moment'
+import { echoToPost } from '@/lib/echo-to-post'
 import type { Post } from '@/hooks/usePosts'
 import type { Echo } from '@/hooks/useEchoes'
 import { useAuthGate } from '@/components/supabase-auth-provider'
@@ -18,30 +21,8 @@ const supabase = createClient()
 
 const font = 'var(--font-lora), serif'
 
-function echoToPost(lb: Echo): Post {
-  return {
-    id: lb.id,
-    text: lb.lyric,
-    emotion: lb.emotion,
-    status: lb.status,
-    knowledge: (lb.song || lb.artist || lb.artwork)
-      ? { song: lb.song || undefined, artist: lb.artist || undefined, artwork: lb.artwork ?? null }
-      : undefined,
-    username: lb.username,
-    authorUid: lb.authorUid ?? null,
-    authorAvatarUrl: lb.authorAvatarUrl ?? null,
-    authorDisplayName: lb.displayName ?? null,
-    timestamp: lb.timestamp,
-    resonates: lb.resonateCount ?? 0,
-    replies: lb.echoCount ?? 0,
-    songId: lb.songId ?? null,
-    audioUrl: lb.audioUrl ?? null,
-    snippetStart: lb.snippetStart ?? null,
-    snippetEnd: lb.snippetEnd ?? null,
-  }
-}
-
 export default function PostDetailPage() {
+  const router = useRouter()
   const params = useParams<{ id: string }>()
   const postId = params.id || null
   const { post, loading } = usePost(postId)
@@ -77,6 +58,15 @@ export default function PostDetailPage() {
       return next
     })
   }, [ancestors])
+
+  useEffect(() => {
+    for (const e of echoes) {
+      setResonateCounts(prev => ({
+        ...prev,
+        [e.id]: prev[e.id] ?? e.resonateCount ?? 0,
+      }))
+    }
+  }, [echoes])
 
   const toggleResonate = async (id: string) => {
     if (!requireAuth()) return
@@ -119,10 +109,14 @@ export default function PostDetailPage() {
     setExportPost(p)
   }
 
+  const handleExportEcho = (echo: Echo) => handleExport(echoToPost(echo))
+
   useRegisterNavBack({
     preferHistory: !post?.parentPostId,
     fallbackHref: post?.parentPostId ? `/post/${post.parentPostId}` : '/feed',
   })
+
+  const isLyricBack = Boolean(post?.parentPostId)
 
   return (
     <main style={{
@@ -144,71 +138,94 @@ export default function PostDetailPage() {
       )}
 
       {post && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {ancestors.length > 0 && (
-            <div>
-              <p style={{
-                fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
-                letterSpacing: '1.5px', textTransform: 'uppercase',
-                color: 'var(--text-muted)', marginBottom: '12px',
-              }}>
-                Conversation
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {ancestors.map((ancestor) => (
-                  <PostCard
-                    key={ancestor.id}
-                    variant="compact"
-                    post={ancestor}
-                    resonated={resonated.has(ancestor.id)}
-                    resonateCount={resonateCounts[ancestor.id] ?? ancestor.resonates ?? 0}
-                    echoCount={ancestor.replies ?? 0}
-                    onResonate={toggleResonate}
-                    onExport={handleExport}
-                  />
-                ))}
-              </div>
-            </div>
+            <section className="margo-post-thread-ancestors">
+              <p className="margo-post-thread-section-label">Earlier in this thread</p>
+              {ancestors.map((ancestor) => (
+                <Link key={ancestor.id} href={`/post/${ancestor.id}`} className="margo-post-thread-ancestor-link">
+                  <span className="margo-post-thread-ancestor-user">@{ancestor.username?.replace(/^@/, '') || 'user'}</span>
+                  <span className="margo-post-thread-ancestor-lyric">&ldquo;{ancestor.text}&rdquo;</span>
+                </Link>
+              ))}
+            </section>
           )}
 
-          <PostCard
-            post={post}
-            resonated={resonated.has(post.id)}
-            resonateCount={resonateCounts[post.id] ?? post.resonates ?? 0}
-            echoCount={post.replies ?? echoes.length}
-            onResonate={toggleResonate}
-            onExport={handleExport}
-            disableCardNav
-            threadDetail
-          />
+          {isLyricBack ? (
+            <section>
+              <p className="margo-post-thread-section-label">You&apos;re viewing</p>
+              <LyricBackThreadRow
+                echo={{
+                  id: post.id,
+                  lyric: post.text || '',
+                  song: post.knowledge?.song || '',
+                  artist: post.knowledge?.artist || '',
+                  emotion: post.emotion || '',
+                  username: post.username || '',
+                  displayName: post.authorDisplayName ?? undefined,
+                  authorUid: post.authorUid ?? undefined,
+                  authorAvatarUrl: post.authorAvatarUrl,
+                  timestamp: post.timestamp ?? 0,
+                  resonateCount: resonateCounts[post.id] ?? post.resonates ?? 0,
+                  echoCount: post.replies ?? echoes.length,
+                  songId: post.songId ?? null,
+                  snippetStart: post.snippetStart ?? null,
+                  snippetEnd: post.snippetEnd ?? null,
+                  audioUrl: post.audioUrl ?? null,
+                  artwork: post.knowledge?.artwork ?? null,
+                }}
+                isAnchor
+                resonated={resonated.has(post.id)}
+                resonateCount={resonateCounts[post.id] ?? post.resonates ?? 0}
+                onResonate={toggleResonate}
+                onOpenThread={(id) => router.push(`/post/${id}`)}
+                onExport={() => handleExport(post)}
+                onLyricBack={() => {
+                  if (!requireAuth()) return
+                  router.push(`/lyric-back?echoId=${encodeURIComponent(post.id)}`)
+                }}
+              />
+            </section>
+          ) : (
+            <section>
+              <p className="margo-post-thread-section-label">Original moment</p>
+              <PostCard
+                post={post}
+                resonated={resonated.has(post.id)}
+                resonateCount={resonateCounts[post.id] ?? post.resonates ?? 0}
+                echoCount={post.replies ?? echoes.length}
+                onResonate={toggleResonate}
+                onExport={handleExport}
+                disableCardNav
+                threadDetail
+              />
+            </section>
+          )}
 
           {echoes.length > 0 && (
-            <div style={{ marginTop: '12px' }}>
-              <p style={{
-                fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
-                letterSpacing: '1.5px', textTransform: 'uppercase',
-                color: 'var(--text-muted)', marginBottom: '12px',
-              }}>
-                Lyric Backs
+            <section>
+              <p className="margo-post-thread-section-label">
+                Lyric Backs on {isLyricBack ? 'this reply' : 'this moment'}
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {echoes.map(e => {
-                  const p = echoToPost(e)
-                  return (
-                    <PostCard
-                      key={p.id}
-                      variant="compact"
-                      post={p}
-                      resonated={resonated.has(p.id)}
-                      resonateCount={resonateCounts[p.id] ?? p.resonates ?? 0}
-                      echoCount={p.replies ?? 0}
+              <ul className="margo-post-thread-list">
+                {echoes.map((e) => (
+                  <li key={e.id}>
+                    <LyricBackThreadRow
+                      echo={e}
+                      resonated={resonated.has(e.id)}
+                      resonateCount={resonateCounts[e.id] ?? e.resonateCount ?? 0}
                       onResonate={toggleResonate}
-                      onExport={handleExport}
+                      onOpenThread={(id) => router.push(`/post/${id}`)}
+                      onExport={handleExportEcho}
+                      onLyricBack={(id) => {
+                        if (!requireAuth()) return
+                        router.push(`/lyric-back?echoId=${encodeURIComponent(id)}`)
+                      }}
                     />
-                  )
-                })}
-              </div>
-            </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
         </div>
       )}

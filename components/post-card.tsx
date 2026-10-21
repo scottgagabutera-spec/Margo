@@ -40,6 +40,7 @@ import { FeedVibeGlyph } from '@/components/feed-vibe-glyph'
 import { PostCardLyricSection, PostCardSongSection } from '@/components/post-card-feed-layout'
 import { resolveMomentLines } from '@/lib/post-lines'
 import { PostCardSuggestedReply } from '@/components/post-card-suggested-reply'
+import { echoToPost } from '@/lib/echo-to-post'
 import { SongMeta } from '@/components/song-meta'
 import { AtmosphereLayer } from '@/components/atmosphere-layer'
 
@@ -751,18 +752,27 @@ export function PostCard({
           echoCount={echoCount}
           parentUsername={post.username}
           parentEmotion={post.emotion || 'chill'}
+          parentMoment={{
+            text: post.text,
+            song: post.knowledge?.song ?? null,
+            artist: post.knowledge?.artist ?? null,
+          }}
           open={suggestionsOpen}
           onClose={() => setSuggestionsOpen(false)}
           onRequireAuth={requireAuth}
-          onOpenEcho={(echoId) => {
+          onOpenThread={(echoId) => {
             persistActivePrimaryScroll()
             router.push(`/post/${echoId}`)
           }}
-          onFindLine={() => {
+          onFindLineForTarget={(targetId, rootId) => {
             if (!requireAuth()) return
             persistActivePrimaryScroll()
-            router.push(lyricBackHref)
+            const q = new URLSearchParams({ postId: rootId })
+            if (targetId !== rootId) q.set('echoId', targetId)
+            router.push(`/lyric-back?${q.toString()}`)
           }}
+          onExportEcho={(echo) => onExport(echoToPost(echo))}
+          onReplayEcho={onReplay ? (echoId) => onReplay(echoId) : undefined}
         />
       ) : null}
 
