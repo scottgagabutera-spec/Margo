@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Margo — Feed post card design proposal</title>
+  <title>Margo — Feed post card design proposal v2</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet" />
@@ -29,21 +29,19 @@
 
     :root {
       --bg: #07060A;
+      --card-base: #0C0B10;
       --surface: rgba(255,255,255,0.04);
-      --surface-elevated: rgba(255,255,255,0.06);
       --border: rgba(255,255,255,0.08);
       --text: #F4F1ED;
-      --text-secondary: #B8B6C0;
-      --text-muted: #8A8894;
+      --text-secondary: #C4C2CC;
+      --text-muted: #9E9CAA;
       --gold: #E8C547;
       --gold-faint: rgba(232,197,71,0.08);
       --gold-border: rgba(232,197,71,0.28);
-      --gold-glow: rgba(232,197,71,0.12);
       --touch: 44px;
 
-      /* Proposal type scale (see report) */
-      --t-lyric-short: 1.1875rem;   /* 19px */
-      --t-lyric-long: 1.0625rem;    /* 17px */
+      --t-lyric-hero: 1.5rem;
+      --t-lyric-compact: 1.0625rem;
       --t-lyric-lh: 1.45;
       --t-display: 0.875rem;
       --t-handle: 0.75rem;
@@ -57,69 +55,174 @@
 
       --font-ui: 'Geist Sans', system-ui, sans-serif;
       --font-lyric: 'Lora', Georgia, serif;
+
+      /* Default / unknown vibe */
+      --vibe-fill: #E8C547;
+      --vibe-text: #f2dd94;
+      --vibe-glow: rgba(232, 197, 71, 0.14);
+      --vibe-faint: rgba(232, 197, 71, 0.1);
+      --vibe-border: rgba(232, 197, 71, 0.32);
+    }
+
+    /* Palette sources:
+       lib/discover-vibes.ts → DISCOVER_VIBE_COLORS (hype, proud, love, chill, hope)
+       components/post-card.tsx → EMOTION_COLORS (heartbreak → PAIN)
+       components/mini-player.tsx → VIBE_COLORS (overlapping set)
+    */
+    .post-card[data-vibe="hype"] {
+      --vibe-fill: #FF4D4D;
+      --vibe-text: #ff9898;
+      --vibe-glow: rgba(255, 77, 77, 0.16);
+      --vibe-faint: rgba(255, 77, 77, 0.12);
+      --vibe-border: rgba(255, 77, 77, 0.34);
+    }
+    .post-card[data-vibe="pain"] {
+      --vibe-fill: #ff6060;
+      --vibe-text: #ffa3a3;
+      --vibe-glow: rgba(255, 96, 96, 0.16);
+      --vibe-faint: rgba(255, 96, 96, 0.12);
+      --vibe-border: rgba(255, 96, 96, 0.34);
+    }
+    .post-card[data-vibe="proud"] {
+      --vibe-fill: #FFB347;
+      --vibe-text: #ffd394;
+      --vibe-glow: rgba(255, 179, 71, 0.15);
+      --vibe-faint: rgba(255, 179, 71, 0.11);
+      --vibe-border: rgba(255, 179, 71, 0.32);
+    }
+    .post-card[data-vibe="love"] {
+      --vibe-fill: #FF6B9D;
+      --vibe-text: #ffa9c6;
+      --vibe-glow: rgba(255, 107, 157, 0.15);
+      --vibe-faint: rgba(255, 107, 157, 0.11);
+      --vibe-border: rgba(255, 107, 157, 0.32);
+    }
+    .post-card[data-vibe="chill"] {
+      --vibe-fill: #60b8ff;
+      --vibe-text: #a3d6ff;
+      --vibe-glow: rgba(96, 184, 255, 0.15);
+      --vibe-faint: rgba(96, 184, 255, 0.11);
+      --vibe-border: rgba(96, 184, 255, 0.32);
+    }
+    .post-card[data-vibe="hope"] {
+      --vibe-fill: #7B9FFF;
+      --vibe-text: #b2c7ff;
+      --vibe-glow: rgba(123, 159, 255, 0.16);
+      --vibe-faint: rgba(123, 159, 255, 0.12);
+      --vibe-border: rgba(123, 159, 255, 0.34);
     }
 
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      padding: 24px 16px 48px;
+      padding: 24px 16px 64px;
       background: #0e0d12;
       color: var(--text-secondary);
       font-family: var(--font-ui);
       font-size: 0.8125rem;
-      line-height: 1.4;
+      line-height: 1.45;
     }
 
     .doc-header {
-      max-width: 1200px;
-      margin: 0 auto 20px;
+      max-width: 1280px;
+      margin: 0 auto 24px;
     }
     .doc-header h1 {
-      font-size: 1rem;
+      font-size: 1.05rem;
       font-weight: 600;
       color: var(--text);
-      margin: 0 0 6px;
+      margin: 0 0 8px;
     }
-    .doc-header p { margin: 0; max-width: 52ch; }
+    .doc-header h2 {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text);
+      margin: 20px 0 8px;
+    }
+    .doc-header p, .doc-header li { margin: 0 0 8px; max-width: 72ch; }
+    .doc-header ul { margin: 0 0 12px; padding-left: 1.2rem; }
 
-    .gallery {
-      display: flex;
-      gap: 20px;
-      overflow-x: auto;
-      padding-bottom: 12px;
-      scroll-snap-type: x mandatory;
+    .contrast-table {
+      width: 100%;
+      max-width: 720px;
+      border-collapse: collapse;
+      font-size: 0.75rem;
+      margin: 8px 0 16px;
     }
-    .gallery-label {
+    .contrast-table th, .contrast-table td {
+      border: 1px solid var(--border);
+      padding: 6px 8px;
+      text-align: left;
+    }
+    .contrast-table th { color: var(--text); font-weight: 600; }
+    .pass { color: #4ade80; }
+    .fail { color: #ff9898; }
+    .note-box {
+      max-width: 72ch;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      margin: 12px 0;
+    }
+
+    .gallery-section { margin-bottom: 28px; }
+    .gallery-title {
       font-size: var(--t-micro);
       font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: var(--text-muted);
+      margin: 0 0 10px;
+      max-width: 1280px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .gallery {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      padding-bottom: 12px;
+      scroll-snap-type: x mandatory;
+      max-width: 100%;
+    }
+    .gallery-label {
+      font-size: var(--t-micro);
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
       margin-bottom: 8px;
       text-align: center;
+      min-height: 2.4em;
     }
     .frame {
-      flex: 0 0 390px;
+      flex: 0 0 auto;
       scroll-snap-align: start;
     }
+    .frame--390 { width: 390px; }
+    .frame--360 { width: 360px; }
 
-    /* ── Card shell ── */
     .post-card {
-      width: 390px;
-      background: var(--surface);
+      width: 100%;
+      background:
+        linear-gradient(155deg, var(--vibe-glow) 0%, transparent 38%),
+        linear-gradient(180deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.03) 100%);
+      background-color: var(--card-base);
       border: 1px solid var(--border);
       border-radius: 16px;
-      padding: 14px 16px 12px;
+      padding: 14px 16px 14px;
       color: var(--text);
+      overflow: visible;
     }
     .post-card--tier1 {
-      background: rgba(232,197,71,0.04);
       border-color: var(--gold-border);
-      box-shadow: 0 0 0 1px rgba(232,197,71,0.06), 0 8px 24px rgba(0,0,0,0.35);
+      box-shadow: 0 0 0 1px rgba(232,197,71,0.06);
     }
     .post-card--external {
       border-style: dashed;
       border-color: rgba(255,255,255,0.12);
+      padding-bottom: 16px;
     }
 
     .post-header {
@@ -129,15 +232,15 @@
       column-gap: 10px;
       row-gap: 2px;
       align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
     .avatar {
       grid-row: 1 / span 2;
       width: 40px;
       height: 40px;
       border-radius: 50%;
-      background: linear-gradient(135deg, rgba(232,197,71,0.35), rgba(232,197,71,0.08));
-      border: 1px solid var(--gold-border);
+      background: linear-gradient(135deg, var(--vibe-faint), rgba(255,255,255,0.04));
+      border: 1px solid var(--vibe-border);
     }
     .display-name {
       font-size: var(--t-display);
@@ -164,9 +267,9 @@
       text-transform: uppercase;
       padding: 4px 8px;
       border-radius: 999px;
-      background: var(--gold-faint);
-      border: 1px solid var(--gold-border);
-      color: var(--gold);
+      background: var(--vibe-faint);
+      border: 1px solid var(--vibe-border);
+      color: var(--vibe-text);
       font-family: var(--font-ui);
       white-space: nowrap;
     }
@@ -196,17 +299,32 @@
       margin-bottom: 8px;
     }
 
+    .lyric-zone {
+      margin: 0 0 10px;
+    }
+    .lyric-zone--hero {
+      padding: 20px 6px 22px;
+      min-height: 88px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .lyric-zone--compact {
+      min-height: 99px;
+      padding: 0 2px;
+    }
     .lyric {
       font-family: var(--font-lyric);
       font-style: italic;
       font-weight: 400;
       color: var(--text);
       white-space: pre-line;
-      margin: 0 0 12px;
+      margin: 0;
       line-height: var(--t-lyric-lh);
     }
-    .lyric--short { font-size: var(--t-lyric-short); }
-    .lyric--long { font-size: var(--t-lyric-long); }
+    .lyric--hero { font-size: var(--t-lyric-hero); }
+    .lyric--compact { font-size: var(--t-lyric-compact); }
     .lyric-clamp {
       display: -webkit-box;
       -webkit-box-orient: vertical;
@@ -215,14 +333,14 @@
     }
     .lyric-more {
       display: inline-block;
-      margin-top: 4px;
+      margin-top: 2px;
       padding: 0;
       border: none;
       background: none;
       font-family: var(--font-ui);
       font-size: var(--t-link);
       font-weight: 600;
-      color: var(--gold);
+      color: var(--vibe-text);
       cursor: pointer;
     }
 
@@ -233,13 +351,13 @@
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: var(--text-muted);
-      margin: 8px 0;
+      margin: 6px 0;
     }
 
     .song-block {
       border-top: 1px solid var(--border);
-      padding-top: 12px;
-      margin-top: 4px;
+      padding-top: 10px;
+      margin-top: 2px;
     }
     .song-row {
       display: grid;
@@ -277,9 +395,9 @@
       width: var(--touch);
       height: var(--touch);
       border-radius: 50%;
-      border: 1px solid var(--gold-border);
-      background: var(--gold-faint);
-      color: var(--gold);
+      border: 1px solid var(--vibe-border);
+      background: var(--vibe-faint);
+      color: var(--vibe-fill);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -287,15 +405,16 @@
       cursor: pointer;
     }
     .moment-play--active {
-      background: rgba(232,197,71,0.22);
+      background: color-mix(in srgb, var(--vibe-fill) 22%, transparent);
     }
+    .moment-play svg { display: block; }
 
     .moment-meta {
       grid-column: 1 / -1;
       display: flex;
       align-items: center;
       gap: 10px;
-      margin-top: 10px;
+      margin-top: 8px;
     }
     .moment-label {
       font-size: var(--t-link);
@@ -303,33 +422,31 @@
       color: var(--text-secondary);
       white-space: nowrap;
     }
-    .moment-label strong { color: var(--gold); font-weight: 600; }
+    .moment-label strong { color: var(--vibe-text); font-weight: 600; }
     .progress-track {
       flex: 1;
       height: 3px;
       border-radius: 999px;
-      background: rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.1);
       overflow: hidden;
     }
     .progress-fill {
       height: 100%;
-      width: 35%;
-      background: var(--gold);
+      background: var(--vibe-fill);
       border-radius: inherit;
     }
-    .progress-fill--paused { opacity: 0.45; }
+    .progress-fill--paused { opacity: 0.5; }
 
     .full-song-link {
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      margin-top: 10px;
+      margin-top: 8px;
       font-size: var(--t-link);
       font-weight: 500;
       color: var(--text-muted);
       text-decoration: none;
     }
-    .full-song-link:hover { color: var(--text-secondary); }
 
     .listen-external {
       display: flex;
@@ -338,11 +455,11 @@
       gap: 8px;
       width: 100%;
       min-height: var(--touch);
-      margin-top: 12px;
+      margin-top: 10px;
       border-radius: 12px;
-      border: 1px solid var(--gold-border);
-      background: var(--gold-faint);
-      color: var(--gold);
+      border: 1px solid var(--vibe-border);
+      background: var(--vibe-faint);
+      color: var(--vibe-text);
       font-size: var(--t-link);
       font-weight: 600;
       text-decoration: none;
@@ -351,47 +468,48 @@
     .actions {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 4px;
-      margin-top: 14px;
-      padding-top: 12px;
+      gap: 0;
+      margin-top: 8px;
+      padding-top: 10px;
       border-top: 1px solid var(--border);
     }
     .action {
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      gap: 4px;
+      justify-content: flex-start;
+      gap: 3px;
+      min-width: var(--touch);
       min-height: var(--touch);
-      padding: 4px;
+      padding: 6px 4px 4px;
       border: none;
       background: transparent;
       color: var(--text-muted);
       cursor: pointer;
       position: relative;
     }
-    .action--on { color: var(--gold); }
+    .action--on { color: var(--vibe-text); }
     .action-label {
       font-size: var(--t-action);
       font-weight: 600;
       letter-spacing: 0.02em;
+      color: var(--text-secondary);
     }
+    .action--on .action-label { color: var(--vibe-text); }
     .action-icon {
       width: 20px;
       height: 20px;
-      border-radius: 4px;
-      border: 1.5px currentColor;
-      opacity: 0.85;
+      flex-shrink: 0;
     }
     .badge {
       position: absolute;
-      top: 2px;
-      right: calc(50% - 22px);
+      top: 4px;
+      right: calc(50% - 24px);
       min-width: 16px;
       height: 16px;
       padding: 0 4px;
       border-radius: 999px;
-      background: var(--gold);
+      background: var(--vibe-fill);
       color: var(--bg);
       font-size: var(--t-micro);
       font-weight: 700;
@@ -399,15 +517,10 @@
       text-align: center;
     }
 
-    /* Skeleton */
     .sk {
-      background: rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.07);
       border-radius: 6px;
-      animation: pulse 1.4s ease-in-out infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 0.45; }
-      50% { opacity: 0.9; }
+      opacity: 0.55;
     }
     .sk-line { height: 10px; margin-bottom: 8px; }
     .sk-lyric { height: 14px; margin-bottom: 6px; border-radius: 4px; }
@@ -415,229 +528,491 @@
 </head>
 <body>
   <div class="doc-header">
-    <h1>Feed post card — agent proposal (390px)</h1>
-    <p>Compare with product spec. Scroll horizontally for states. Fonts: Geist Sans (UI), Lora italic (lyrics), brand colors from globals.css.</p>
+    <h1>Feed post card — proposal v2 (Hero + compact, vibe theming)</h1>
+    <p>
+      Two lyric layouts in one component: <strong>Lyric Hero</strong> when the post is ≤2 lines or under ~80 characters;
+      <strong>compact</strong> at 17px with a 4-line clamp and “more” for long or multi-moment threads.
+      Header, player row, song row, and actions share the same structure in both modes.
+    </p>
+
+    <h2>Vibe palette (sources in repo)</h2>
+    <ul>
+      <li><code>lib/discover-vibes.ts</code> — <code>DISCOVER_VIBE_COLORS</code> (HYPE, PROUD, LOVE, CHILL, HOPE)</li>
+      <li><code>components/post-card.tsx</code> — <code>EMOTION_COLORS</code> (heartbreak → <strong>PAIN</strong> in this mock)</li>
+      <li><code>components/mini-player.tsx</code> — <code>VIBE_COLORS</code> (broader emotion set; chill/hope/love align)</li>
+      <li>Unknown / missing vibe → gold default <code>#E8C547</code> (same as Discover fallback via <code>discoverVibeColor</code>)</li>
+    </ul>
+    <p>Per vibe: <code>--vibe-fill</code> (accent), <code>--vibe-text</code> (lighter label accent), <code>--vibe-glow</code> (soft top-corner gradient). Applied to card background gradient, mood chip, play control, progress bar, and active action tint.</p>
+
+    <h2>WCAG AA contrast (computed on <code>#0C0B10</code> card base)</h2>
+    <table class="contrast-table">
+      <thead>
+        <tr>
+          <th>Vibe</th>
+          <th>Pair</th>
+          <th>Ratio</th>
+          <th>AA (4.5:1 text / 3:1 UI)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td rowspan="3">HYPE</td><td>Primary text #F4F1ED on card</td><td>17.42:1</td><td class="pass">Pass</td></tr>
+        <tr><td>Chip text #ff9898 on chip bg</td><td>8.28:1</td><td class="pass">Pass</td></tr>
+        <tr><td>Fill #FF4D4D on card (large UI)</td><td>6.00:1</td><td class="pass">Pass</td></tr>
+        <tr><td rowspan="3">PAIN</td><td>Primary text on card</td><td>17.42:1</td><td class="pass">Pass</td></tr>
+        <tr><td>Chip text #ffa3a3 on chip bg</td><td>8.79:1</td><td class="pass">Pass</td></tr>
+        <tr><td>Fill #ff6060 on card</td><td>6.62:1</td><td class="pass">Pass</td></tr>
+        <tr><td rowspan="3">PROUD</td><td>Primary text on card</td><td>17.42:1</td><td class="pass">Pass</td></tr>
+        <tr><td>Chip text #ffd394 on chip bg</td><td>11.00:1</td><td class="pass">Pass</td></tr>
+        <tr><td>Fill #FFB347 on card</td><td>11.01:1</td><td class="pass">Pass</td></tr>
+        <tr><td rowspan="3">LOVE</td><td>Primary text on card</td><td>17.42:1</td><td class="pass">Pass</td></tr>
+        <tr><td>Chip text #ffa9c6 on chip bg</td><td>9.20:1</td><td class="pass">Pass</td></tr>
+        <tr><td>Fill #FF6B9D on card</td><td>7.32:1</td><td class="pass">Pass</td></tr>
+        <tr><td rowspan="3">CHILL</td><td>Primary text on card</td><td>17.42:1</td><td class="pass">Pass</td></tr>
+        <tr><td>Chip text #a3d6ff on chip bg</td><td>10.27:1</td><td class="pass">Pass</td></tr>
+        <tr><td>Fill #60b8ff on card</td><td>9.15:1</td><td class="pass">Pass</td></tr>
+        <tr><td rowspan="3">HOPE</td><td>Primary text on card</td><td>17.42:1</td><td class="pass">Pass</td></tr>
+        <tr><td>Chip text #b2c7ff on chip bg</td><td>9.64:1</td><td class="pass">Pass</td></tr>
+        <tr><td>Fill #7B9FFF on card</td><td>7.70:1</td><td class="pass">Pass</td></tr>
+        <tr><td rowspan="3">Gold default</td><td>Primary text on card</td><td>17.42:1</td><td class="pass">Pass</td></tr>
+        <tr><td>Chip text #f2dd94 on chip bg</td><td>11.27:1</td><td class="pass">Pass</td></tr>
+        <tr><td>Action labels #C4C2CC on card</td><td>11.14:1</td><td class="pass">Pass</td></tr>
+      </tbody>
+    </table>
+    <p>Lyric body stays <code>--text</code> (not vibe-colored) so long passages always meet AA. Vibe fill on white lyric text fails AA for some hues — do not use fill as lyric color.</p>
+
+    <h2>Performance rules (feed card implementation)</h2>
+    <ul>
+      <li>CSS <code>linear-gradient</code> only for card tint — no <code>backdrop-filter</code>, no blur, no extra composited layers.</li>
+      <li>No animated layers on the mounted feed card (skeleton → content crossfade should be instant swap).</li>
+      <li>No additional font families beyond Geist Sans + Lora already loaded app-wide.</li>
+      <li>No network or image processing at render time; artwork URL is a static <code>&lt;img&gt;</code> or CSS placeholder.</li>
+      <li>Fixed <code>min-height</code> on hero and compact lyric zones so skeleton and final card share the same box (no CLS).</li>
+    </ul>
+    <p><strong>Estimated cost per card (mobile feed):</strong> ~1 card paint (~2 gradient fills), ~45–55 DOM nodes, 4×44px hit targets, 1 optional progress bar repaint on tick; ~0 KB extra fonts; 0 extra HTTP if artwork cached. Budget ≈ <strong>0.3–0.6 ms</strong> style/layout + <strong>0.2–0.4 ms</strong> paint on mid-tier GPU at 390px width (excluding audio decode).</p>
+
+    <div class="note-box">
+      <strong>Future: artwork-derived accent (not in this mock)</strong><br />
+      On upload, sample dominant/median RGB from artwork once (canvas or server worker), derive <code>accent</code>, <code>accentText</code>, and <code>glow</code> with the same WCAG guardrails, store on <code>songs.artwork_accent</code> (or post snapshot). Feed reads stored tokens only — no per-scroll color extraction.
+    </div>
   </div>
 
-  <div class="gallery">
-    <!-- Short lyric -->
-    <div class="frame">
-      <div class="gallery-label">Short lyric</div>
-      <article class="post-card" aria-label="Short lyric post">
-        <header class="post-header">
-          <div class="avatar" aria-hidden="true"></div>
-          <div class="display-name">Jordan Lee</div>
-          <div class="meta-line"><span>@jordan</span><span>·</span><time>2h</time></div>
-          <span class="mood-chip">Hope</span>
-          <button type="button" class="more-btn" aria-label="More">⋯</button>
-        </header>
-        <p class="lyric lyric--short">“I’m still learning how to stay.”</p>
-        <section class="song-block">
-          <div class="song-row">
-            <div class="artwork" aria-hidden="true"></div>
-            <div>
-              <p class="song-title">Golden Hour <span class="ai-tag">AI-generated</span></p>
-              <p class="artist">Margo Studio</p>
-            </div>
-            <button type="button" class="moment-play" aria-label="Play moment"><span>▶</span></button>
-          </div>
-          <div class="moment-meta">
-            <span class="moment-label">Play moment · <strong>0:18</strong></span>
-            <div class="progress-track" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="progress-fill" style="width:0"></div></div>
-          </div>
-          <a class="full-song-link" href="#">Hear the full song ›</a>
-        </section>
-        <nav class="actions" aria-label="Post actions">
-          <button type="button" class="action"><span class="action-icon"></span><span class="action-label">Resonate</span></button>
-          <button type="button" class="action"><span class="action-icon"></span><span class="action-label">Lyric Back</span></button>
-          <button type="button" class="action"><span class="action-icon"></span><span class="action-label">Card</span></button>
-          <button type="button" class="action"><span class="action-icon"></span><span class="action-label">Replay</span></button>
-        </nav>
-      </article>
-    </div>
+  <!-- Shared SVG symbols -->
+  <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="icon-play" viewBox="0 0 24 24"><path fill="currentColor" d="M8 5v14l11-7z"/></symbol>
+    <symbol id="icon-pause" viewBox="0 0 24 24"><path fill="currentColor" d="M6 5h4v14H6zm8 0h4v14h-4z"/></symbol>
+    <symbol id="icon-heart" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.75" d="M12 20s-7-4.5-7-9a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 4.5-7 9-7 9z"/></symbol>
+    <symbol id="icon-reply" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" d="M9 17H5v-4M5 17l4-4M5 17c2-5 6-7 11-7"/></symbol>
+    <symbol id="icon-card" viewBox="0 0 24 24"><rect fill="none" stroke="currentColor" stroke-width="1.75" x="4" y="6" width="16" height="12" rx="2"/><path fill="none" stroke="currentColor" stroke-width="1.75" d="M8 10h8M8 14h5"/></symbol>
+    <symbol id="icon-replay" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" d="M6 8V5l-3 3 3 3V8a6 6 0 1 1-6 6"/></symbol>
+  </svg>
 
-    <!-- Long Dribble -->
-    <div class="frame">
-      <div class="gallery-label">Long lyric (Dribble)</div>
-      <article class="post-card">
-        <header class="post-header">
-          <div class="avatar"></div>
-          <div class="display-name">Chris P.</div>
-          <div class="meta-line"><span>@cp3</span><span>·</span><time>5h</time></div>
-          <span class="mood-chip">Proud</span>
-          <button type="button" class="more-btn" aria-label="More">⋯</button>
-        </header>
-        <div class="lyric lyric--long lyric-clamp">“Dribble
+  <section class="gallery-section">
+    <p class="gallery-title">390px — all states (scroll →)</p>
+    <div class="gallery">
+      <!-- Hero HOPE -->
+      <div class="frame frame--390">
+        <div class="gallery-label">Hero · HOPE</div>
+        <article class="post-card" data-vibe="hope" aria-label="Hero short HOPE">
+          <header class="post-header">
+            <div class="avatar" aria-hidden="true"></div>
+            <div class="display-name">Jordan Lee</div>
+            <div class="meta-line"><span>@jordan</span><span>·</span><time>2h</time></div>
+            <span class="mood-chip">Hope</span>
+            <button type="button" class="more-btn" aria-label="More">⋯</button>
+          </header>
+          <div class="lyric-zone lyric-zone--hero">
+            <p class="lyric lyric--hero">“I'm still learning how to stay.”</p>
+          </div>
+          <section class="song-block">
+            <div class="song-row">
+              <div class="artwork" aria-hidden="true"></div>
+              <div>
+                <p class="song-title">Golden Hour <span class="ai-tag">AI-generated</span></p>
+                <p class="artist">Margo Studio</p>
+              </div>
+              <button type="button" class="moment-play" aria-label="Play moment"><svg class="action-icon" width="20" height="20"><use href="#icon-play"/></svg></button>
+            </div>
+            <div class="moment-meta">
+              <span class="moment-label">Play moment · <strong>0:18</strong></span>
+              <div class="progress-track" role="progressbar"><div class="progress-fill" style="width:0"></div></div>
+            </div>
+            <a class="full-song-link" href="#">Hear the full song ›</a>
+          </section>
+          <nav class="actions" aria-label="Post actions">
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-heart"/></svg><span class="action-label">Resonate</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-reply"/></svg><span class="action-label">Lyric Back</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-card"/></svg><span class="action-label">Card</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-replay"/></svg><span class="action-label">Replay</span></button>
+          </nav>
+        </article>
+      </div>
+
+      <!-- Hero HYPE -->
+      <div class="frame frame--390">
+        <div class="gallery-label">Hero · HYPE</div>
+        <article class="post-card" data-vibe="hype">
+          <header class="post-header">
+            <div class="avatar"></div>
+            <div class="display-name">Rae</div>
+            <div class="meta-line"><span>@rae</span><span>·</span><time>1h</time></div>
+            <span class="mood-chip">Hype</span>
+            <button type="button" class="more-btn" aria-label="More">⋯</button>
+          </header>
+          <div class="lyric-zone lyric-zone--hero">
+            <p class="lyric lyric--hero">“Run it back — louder this time.”</p>
+          </div>
+          <section class="song-block">
+            <div class="song-row">
+              <div class="artwork"></div>
+              <div><p class="song-title">Baseline</p><p class="artist">Demo Artist</p></div>
+              <button type="button" class="moment-play" aria-label="Play"><svg class="action-icon" width="20" height="20"><use href="#icon-play"/></svg></button>
+            </div>
+            <div class="moment-meta">
+              <span class="moment-label">Play moment · <strong>0:12</strong></span>
+              <div class="progress-track"><div class="progress-fill" style="width:0"></div></div>
+            </div>
+            <a class="full-song-link" href="#">Hear the full song ›</a>
+          </section>
+          <nav class="actions">
+            <button type="button" class="action action--on"><svg class="action-icon"><use href="#icon-heart"/></svg><span class="action-label">Resonate</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-reply"/></svg><span class="action-label">Lyric Back</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-card"/></svg><span class="action-label">Card</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-replay"/></svg><span class="action-label">Replay</span></button>
+          </nav>
+        </article>
+      </div>
+
+      <!-- Hero PAIN -->
+      <div class="frame frame--390">
+        <div class="gallery-label">Hero · PAIN</div>
+        <article class="post-card" data-vibe="pain">
+          <header class="post-header">
+            <div class="avatar"></div>
+            <div class="display-name">Morgan</div>
+            <div class="meta-line"><span>@morgan</span><span>·</span><time>4h</time></div>
+            <span class="mood-chip">Pain</span>
+            <button type="button" class="more-btn">⋯</button>
+          </header>
+          <div class="lyric-zone lyric-zone--hero">
+            <p class="lyric lyric--hero">“You left the chorus unfinished.”</p>
+          </div>
+          <section class="song-block">
+            <div class="song-row">
+              <div class="artwork"></div>
+              <div><p class="song-title">Unsent</p><p class="artist">Catalog</p></div>
+              <button type="button" class="moment-play"><svg class="action-icon" width="20" height="20"><use href="#icon-play"/></svg></button>
+            </div>
+            <div class="moment-meta">
+              <span class="moment-label">Play moment · <strong>0:20</strong></span>
+              <div class="progress-track"><div class="progress-fill" style="width:8%"></div></div>
+            </div>
+            <a class="full-song-link" href="#">Hear the full song ›</a>
+          </section>
+          <nav class="actions">
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-heart"/></svg><span class="action-label">Resonate</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-reply"/></svg><span class="action-label">Lyric Back</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-card"/></svg><span class="action-label">Card</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-replay"/></svg><span class="action-label">Replay</span></button>
+          </nav>
+        </article>
+      </div>
+
+      <!-- Hero LOVE -->
+      <div class="frame frame--390">
+        <div class="gallery-label">Hero · LOVE</div>
+        <article class="post-card" data-vibe="love">
+          <header class="post-header">
+            <div class="avatar"></div>
+            <div class="display-name">Ava</div>
+            <div class="meta-line"><span>@ava</span><span>·</span><time>1d</time></div>
+            <span class="mood-chip">Love</span>
+            <button type="button" class="more-btn">⋯</button>
+          </header>
+          <div class="lyric-zone lyric-zone--hero">
+            <p class="lyric lyric--hero">“You're the quiet in my loudest week.”</p>
+          </div>
+          <section class="song-block">
+            <div class="song-row">
+              <div class="artwork"></div>
+              <div><p class="song-title">Bridge Lights</p><p class="artist">Margo Catalog</p></div>
+              <button type="button" class="moment-play"><svg class="action-icon" width="20" height="20"><use href="#icon-play"/></svg></button>
+            </div>
+            <div class="moment-meta">
+              <span class="moment-label">Play moment · <strong>0:16</strong></span>
+              <div class="progress-track"><div class="progress-fill" style="width:0"></div></div>
+            </div>
+            <a class="full-song-link" href="#">Hear the full song ›</a>
+          </section>
+          <nav class="actions">
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-heart"/></svg><span class="action-label">Resonate</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-reply"/></svg><span class="action-label">Lyric Back</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-card"/></svg><span class="action-label">Card</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-replay"/></svg><span class="action-label">Replay</span></button>
+          </nav>
+        </article>
+      </div>
+
+      <!-- Compact Dribble -->
+      <div class="frame frame--390">
+        <div class="gallery-label">Compact · long (Dribble)</div>
+        <article class="post-card post-card--compact" data-vibe="proud">
+          <header class="post-header">
+            <div class="avatar"></div>
+            <div class="display-name">Chris P.</div>
+            <div class="meta-line"><span>@cp3</span><span>·</span><time>5h</time></div>
+            <span class="mood-chip">Proud</span>
+            <button type="button" class="more-btn">⋯</button>
+          </header>
+          <div class="lyric-zone lyric-zone--compact">
+            <div class="lyric lyric--compact lyric-clamp">“Dribble
 Keep your head up when the lane gets tight
 Crossover heart still beating on the baseline
 Every miss is just a setup for the next one
 They count stats I count breaths
 Still here still moving still me”</div>
-        <button type="button" class="lyric-more">more</button>
-        <section class="song-block">
-          <div class="song-row">
-            <div class="artwork"></div>
-            <div>
-              <p class="song-title">Dribble</p>
-              <p class="artist">Demo Artist</p>
+            <button type="button" class="lyric-more">more</button>
+          </div>
+          <section class="song-block">
+            <div class="song-row">
+              <div class="artwork"></div>
+              <div><p class="song-title">Dribble</p><p class="artist">Demo Artist</p></div>
+              <button type="button" class="moment-play"><svg class="action-icon" width="20" height="20"><use href="#icon-play"/></svg></button>
             </div>
-            <button type="button" class="moment-play" aria-label="Play moment">▶</button>
-          </div>
-          <div class="moment-meta">
-            <span class="moment-label">Play moment · <strong>0:22</strong></span>
-            <div class="progress-track"><div class="progress-fill" style="width:0"></div></div>
-          </div>
-          <a class="full-song-link" href="#">Hear the full song ›</a>
-        </section>
-        <nav class="actions">
-          <button type="button" class="action"><span class="action-icon"></span><span class="action-label">Resonate</span></button>
-          <button type="button" class="action action--on"><span class="action-icon"></span><span class="action-label">Lyric Back</span><span class="badge">2</span></button>
-          <button type="button" class="action"><span class="action-icon"></span><span class="action-label">Card</span></button>
-          <button type="button" class="action"><span class="action-icon"></span><span class="action-label">Replay</span></button>
-        </nav>
-      </article>
-    </div>
-
-    <!-- 3-moment -->
-    <div class="frame">
-      <div class="gallery-label">3-moment post</div>
-      <article class="post-card">
-        <header class="post-header">
-          <div class="avatar"></div>
-          <div class="display-name">Ava</div>
-          <div class="meta-line"><span>@ava</span><span>·</span><time>1d</time></div>
-          <span class="mood-chip">Love</span>
-          <button type="button" class="more-btn">⋯</button>
-        </header>
-        <p class="lyric lyric--long">“You’re the quiet in my loudest week”</p>
-        <p class="stitch">stitch</p>
-        <p class="lyric lyric--long">“Meet me where the chorus hits again”</p>
-        <p class="stitch">stitch</p>
-        <p class="lyric lyric--long">“Stay through the bridge this time”</p>
-        <section class="song-block">
-          <div class="song-row">
-            <div class="artwork"></div>
-            <div>
-              <p class="song-title">Bridge Lights</p>
-              <p class="artist">Margo Catalog</p>
+            <div class="moment-meta">
+              <span class="moment-label">Play moment · <strong>0:22</strong></span>
+              <div class="progress-track"><div class="progress-fill" style="width:0"></div></div>
             </div>
-            <button type="button" class="moment-play moment-play--active" aria-label="Pause moment">❚❚</button>
-          </div>
-          <div class="moment-meta">
-            <span class="moment-label">Playing moment · <strong>0:41</strong></span>
-            <div class="progress-track"><div class="progress-fill" style="width:42%"></div></div>
-          </div>
-          <a class="full-song-link" href="#">Hear the full song ›</a>
-        </section>
-        <nav class="actions">
-          <button type="button" class="action action--on"><span class="action-icon"></span><span class="action-label">Resonate</span></button>
-          <button type="button" class="action"><span class="action-icon"></span><span class="action-label">Lyric Back</span></button>
-          <button type="button" class="action"><span class="action-icon"></span><span class="action-label">Card</span></button>
-          <button type="button" class="action"><span class="action-icon"></span><span class="action-label">Replay</span></button>
-        </nav>
-      </article>
-    </div>
+            <a class="full-song-link" href="#">Hear the full song ›</a>
+          </section>
+          <nav class="actions">
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-heart"/></svg><span class="action-label">Resonate</span></button>
+            <button type="button" class="action action--on"><svg class="action-icon"><use href="#icon-reply"/></svg><span class="action-label">Lyric Back</span><span class="badge">2</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-card"/></svg><span class="action-label">Card</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-replay"/></svg><span class="action-label">Replay</span></button>
+          </nav>
+        </article>
+      </div>
 
-    <!-- External -->
-    <div class="frame">
-      <div class="gallery-label">External (Apple Music)</div>
-      <article class="post-card post-card--external">
-        <span class="external-pill">↗ External song · not on Margo</span>
-        <header class="post-header">
-          <div class="avatar"></div>
-          <div class="display-name">Sam</div>
-          <div class="meta-line"><span>@sam</span><span>·</span><time>3h</time></div>
-          <span class="mood-chip">Chill</span>
-          <button type="button" class="more-btn">⋯</button>
-        </header>
-        <p class="lyric lyric--short">“Blinding lights on a midnight drive”</p>
-        <section class="song-block">
-          <div class="song-row">
-            <div class="artwork"></div>
-            <div>
-              <p class="song-title">Blinding Lights</p>
-              <p class="artist">The Weeknd</p>
+      <!-- 3-moment playing -->
+      <div class="frame frame--390">
+        <div class="gallery-label">Compact · 3-moment playing</div>
+        <article class="post-card" data-vibe="love">
+          <header class="post-header">
+            <div class="avatar"></div>
+            <div class="display-name">Ava</div>
+            <div class="meta-line"><span>@ava</span><span>·</span><time>1d</time></div>
+            <span class="mood-chip">Love</span>
+            <button type="button" class="more-btn">⋯</button>
+          </header>
+          <div class="lyric-zone lyric-zone--compact">
+            <p class="lyric lyric--compact">“You're the quiet in my loudest week”</p>
+            <p class="stitch">stitch</p>
+            <p class="lyric lyric--compact">“Meet me where the chorus hits again”</p>
+            <p class="stitch">stitch</p>
+            <p class="lyric lyric--compact">“Stay through the bridge this time”</p>
+          </div>
+          <section class="song-block">
+            <div class="song-row">
+              <div class="artwork"></div>
+              <div><p class="song-title">Bridge Lights</p><p class="artist">Margo Catalog</p></div>
+              <button type="button" class="moment-play moment-play--active" aria-label="Pause"><svg class="action-icon" width="20" height="20"><use href="#icon-pause"/></svg></button>
             </div>
-          </div>
-          <a class="listen-external" href="#">Listen on Apple Music ↗</a>
-        </section>
-        <nav class="actions">
-          <button type="button" class="action"><span class="action-icon"></span><span class="action-label">Resonate</span></button>
-          <button type="button" class="action"><span class="action-icon"></span><span class="action-label">Lyric Back</span></button>
-          <button type="button" class="action"><span class="action-icon"></span><span class="action-label">Card</span></button>
-          <button type="button" class="action"><span class="action-label">Replay</span></button>
-        </nav>
-      </article>
-    </div>
-
-    <!-- Gold tier -->
-    <div class="frame">
-      <div class="gallery-label">Gold tier</div>
-      <article class="post-card post-card--tier1">
-        <header class="post-header">
-          <div class="avatar"></div>
-          <div class="display-name">Margo</div>
-          <div class="meta-line"><span>@trymargo</span><span>·</span><time>Now</time></div>
-          <span class="mood-chip">Joy</span>
-          <button type="button" class="more-btn">⋯</button>
-        </header>
-        <p class="lyric lyric--short">“Share the line that found you first.”</p>
-        <section class="song-block">
-          <div class="song-row">
-            <div class="artwork"></div>
-            <div>
-              <p class="song-title">Welcome Home <span class="ai-tag">AI-generated</span></p>
-              <p class="artist">Margo</p>
+            <div class="moment-meta">
+              <span class="moment-label">Playing moment · <strong>0:41</strong></span>
+              <div class="progress-track"><div class="progress-fill" style="width:42%"></div></div>
             </div>
-            <button type="button" class="moment-play">▶</button>
-          </div>
-          <div class="moment-meta">
-            <span class="moment-label">Play moment · <strong>0:24</strong></span>
-            <div class="progress-track"><div class="progress-fill progress-fill--paused" style="width:12%"></div></div>
-          </div>
-          <a class="full-song-link" href="#">Hear the full song ›</a>
-        </section>
-        <nav class="actions">
-          <button type="button" class="action"><span class="action-icon"></span><span class="action-label">Resonate</span></button>
-          <button type="button" class="action"><span class="action-icon"></span><span class="action-label">Lyric Back</span></button>
-          <button type="button" class="action"><span class="action-icon"></span><span class="action-label">Card</span></button>
-          <button type="button" class="action"><span class="action-icon"></span><span class="action-label">Replay</span></button>
-        </nav>
-      </article>
-    </div>
+            <a class="full-song-link" href="#">Hear the full song ›</a>
+          </section>
+          <nav class="actions">
+            <button type="button" class="action action--on"><svg class="action-icon"><use href="#icon-heart"/></svg><span class="action-label">Resonate</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-reply"/></svg><span class="action-label">Lyric Back</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-card"/></svg><span class="action-label">Card</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-replay"/></svg><span class="action-label">Replay</span></button>
+          </nav>
+        </article>
+      </div>
 
-    <!-- Skeleton -->
-    <div class="frame">
-      <div class="gallery-label">Loading skeleton</div>
-      <article class="post-card" aria-busy="true">
-        <header class="post-header">
-          <div class="avatar sk"></div>
-          <div style="flex:1">
-            <div class="sk sk-line" style="width:42%"></div>
-            <div class="sk sk-line" style="width:28%; height:8px"></div>
+      <!-- External Apple Music -->
+      <div class="frame frame--390">
+        <div class="gallery-label">External · Apple Music</div>
+        <article class="post-card post-card--external" data-vibe="chill">
+          <span class="external-pill">↗ External song · not on Margo</span>
+          <header class="post-header">
+            <div class="avatar"></div>
+            <div class="display-name">Sam</div>
+            <div class="meta-line"><span>@sam</span><span>·</span><time>3h</time></div>
+            <span class="mood-chip">Chill</span>
+            <button type="button" class="more-btn">⋯</button>
+          </header>
+          <div class="lyric-zone lyric-zone--hero">
+            <p class="lyric lyric--hero">“Blinding lights on a midnight drive”</p>
           </div>
-        </header>
-        <div class="sk sk-lyric" style="width:92%"></div>
-        <div class="sk sk-lyric" style="width:78%"></div>
-        <div class="sk sk-lyric" style="width:65%"></div>
-        <div class="song-block">
-          <div class="song-row">
-            <div class="artwork sk"></div>
+          <section class="song-block">
+            <div class="song-row">
+              <div class="artwork"></div>
+              <div><p class="song-title">Blinding Lights</p><p class="artist">The Weeknd</p></div>
+            </div>
+            <a class="listen-external" href="#">Listen on Apple Music ↗</a>
+          </section>
+          <nav class="actions">
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-heart"/></svg><span class="action-label">Resonate</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-reply"/></svg><span class="action-label">Lyric Back</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-card"/></svg><span class="action-label">Card</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-replay"/></svg><span class="action-label">Replay</span></button>
+          </nav>
+        </article>
+      </div>
+
+      <!-- Gold tier -->
+      <div class="frame frame--390">
+        <div class="gallery-label">Gold tier</div>
+        <article class="post-card post-card--tier1" data-vibe="hope">
+          <header class="post-header">
+            <div class="avatar"></div>
+            <div class="display-name">Margo</div>
+            <div class="meta-line"><span>@trymargo</span><span>·</span><time>Now</time></div>
+            <span class="mood-chip">Hope</span>
+            <button type="button" class="more-btn">⋯</button>
+          </header>
+          <div class="lyric-zone lyric-zone--hero">
+            <p class="lyric lyric--hero">“Share the line that found you first.”</p>
+          </div>
+          <section class="song-block">
+            <div class="song-row">
+              <div class="artwork"></div>
+              <div><p class="song-title">Welcome Home <span class="ai-tag">AI-generated</span></p><p class="artist">Margo</p></div>
+              <button type="button" class="moment-play"><svg class="action-icon" width="20" height="20"><use href="#icon-play"/></svg></button>
+            </div>
+            <div class="moment-meta">
+              <span class="moment-label">Play moment · <strong>0:24</strong></span>
+              <div class="progress-track"><div class="progress-fill progress-fill--paused" style="width:12%"></div></div>
+            </div>
+            <a class="full-song-link" href="#">Hear the full song ›</a>
+          </section>
+          <nav class="actions">
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-heart"/></svg><span class="action-label">Resonate</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-reply"/></svg><span class="action-label">Lyric Back</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-card"/></svg><span class="action-label">Card</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-replay"/></svg><span class="action-label">Replay</span></button>
+          </nav>
+        </article>
+      </div>
+
+      <!-- Skeleton -->
+      <div class="frame frame--390">
+        <div class="gallery-label">Loading skeleton</div>
+        <article class="post-card" aria-busy="true">
+          <header class="post-header">
+            <div class="avatar sk"></div>
             <div style="flex:1">
-              <div class="sk sk-line" style="width:55%"></div>
-              <div class="sk sk-line" style="width:35%; height:8px"></div>
+              <div class="sk sk-line" style="width:42%"></div>
+              <div class="sk sk-line" style="width:28%; height:8px"></div>
             </div>
-            <div class="moment-play sk" style="border:none"></div>
+          </header>
+          <div class="lyric-zone lyric-zone--hero">
+            <div class="sk" style="width:78%; height:22px; margin:0 auto"></div>
           </div>
-        </div>
-        <div class="actions">
-          <div class="sk" style="height:44px; border-radius:8px"></div>
-          <div class="sk" style="height:44px; border-radius:8px"></div>
-          <div class="sk" style="height:44px; border-radius:8px"></div>
-          <div class="sk" style="height:44px; border-radius:8px"></div>
-        </div>
-      </article>
+          <section class="song-block">
+            <div class="song-row">
+              <div class="artwork sk"></div>
+              <div style="flex:1">
+                <div class="sk sk-line" style="width:55%"></div>
+                <div class="sk sk-line" style="width:35%; height:8px"></div>
+              </div>
+              <div class="moment-play sk" style="border:none"></div>
+            </div>
+            <div class="moment-meta">
+              <div class="sk sk-line" style="width:38%; margin:0"></div>
+              <div class="progress-track sk" style="height:3px"></div>
+            </div>
+          </section>
+          <div class="actions">
+            <div class="sk" style="height:44px; border-radius:8px"></div>
+            <div class="sk" style="height:44px; border-radius:8px"></div>
+            <div class="sk" style="height:44px; border-radius:8px"></div>
+            <div class="sk" style="height:44px; border-radius:8px"></div>
+          </div>
+        </article>
+      </div>
     </div>
-  </div>
+  </section>
+
+  <section class="gallery-section">
+    <p class="gallery-title">360px — hero vs compact</p>
+    <div class="gallery">
+      <div class="frame frame--360">
+        <div class="gallery-label">360 · Hero HOPE</div>
+        <article class="post-card" data-vibe="hope">
+          <header class="post-header">
+            <div class="avatar"></div>
+            <div class="display-name">Jordan Lee</div>
+            <div class="meta-line"><span>@jordan</span><span>·</span><time>2h</time></div>
+            <span class="mood-chip">Hope</span>
+            <button type="button" class="more-btn">⋯</button>
+          </header>
+          <div class="lyric-zone lyric-zone--hero">
+            <p class="lyric lyric--hero">“I'm still learning how to stay.”</p>
+          </div>
+          <section class="song-block">
+            <div class="song-row">
+              <div class="artwork"></div>
+              <div><p class="song-title">Golden Hour</p><p class="artist">Margo Studio</p></div>
+              <button type="button" class="moment-play"><svg class="action-icon" width="20" height="20"><use href="#icon-play"/></svg></button>
+            </div>
+            <div class="moment-meta">
+              <span class="moment-label">Play moment · <strong>0:18</strong></span>
+              <div class="progress-track"><div class="progress-fill" style="width:0"></div></div>
+            </div>
+            <a class="full-song-link" href="#">Hear the full song ›</a>
+          </section>
+          <nav class="actions">
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-heart"/></svg><span class="action-label">Resonate</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-reply"/></svg><span class="action-label">Lyric Back</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-card"/></svg><span class="action-label">Card</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-replay"/></svg><span class="action-label">Replay</span></button>
+          </nav>
+        </article>
+      </div>
+      <div class="frame frame--360">
+        <div class="gallery-label">360 · Compact Dribble</div>
+        <article class="post-card" data-vibe="proud">
+          <header class="post-header">
+            <div class="avatar"></div>
+            <div class="display-name">Chris P.</div>
+            <div class="meta-line"><span>@cp3</span><span>·</span><time>5h</time></div>
+            <span class="mood-chip">Proud</span>
+            <button type="button" class="more-btn">⋯</button>
+          </header>
+          <div class="lyric-zone lyric-zone--compact">
+            <div class="lyric lyric--compact lyric-clamp">“Dribble
+Keep your head up when the lane gets tight
+Crossover heart still beating on the baseline
+Every miss is just a setup for the next one
+They count stats I count breaths
+Still here still moving still me”</div>
+            <button type="button" class="lyric-more">more</button>
+          </div>
+          <section class="song-block">
+            <div class="song-row">
+              <div class="artwork"></div>
+              <div><p class="song-title">Dribble</p><p class="artist">Demo Artist</p></div>
+              <button type="button" class="moment-play"><svg class="action-icon" width="20" height="20"><use href="#icon-play"/></svg></button>
+            </div>
+            <div class="moment-meta">
+              <span class="moment-label">Play moment · <strong>0:22</strong></span>
+              <div class="progress-track"><div class="progress-fill" style="width:0"></div></div>
+            </div>
+            <a class="full-song-link" href="#">Hear the full song ›</a>
+          </section>
+          <nav class="actions">
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-heart"/></svg><span class="action-label">Resonate</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-reply"/></svg><span class="action-label">Lyric Back</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-card"/></svg><span class="action-label">Card</span></button>
+            <button type="button" class="action"><svg class="action-icon"><use href="#icon-replay"/></svg><span class="action-label">Replay</span></button>
+          </nav>
+        </article>
+      </div>
+    </div>
+  </section>
 </body>
 </html>
