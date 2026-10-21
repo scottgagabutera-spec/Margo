@@ -14,6 +14,7 @@ import {
   FeedMomentPlaybackIcon,
 } from '@/components/feed-card-icons'
 import { PendingNavLink } from '@/components/pending-nav-link'
+import { PostThumbnail } from '@/components/post-thumbnail'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useIdentity } from '@/hooks/useIdentity'
 import { createClient } from '@/lib/supabase/client'
@@ -46,6 +47,47 @@ function profileHref(echo: Echo): string | null {
   const handle = (echo.username || '').replace(/^@/, '').trim()
   if (!handle) return null
   return `/profile/${encodeURIComponent(handle)}`
+}
+
+function authorLabels(echo: Echo): { primary: string; handle: string | null } {
+  const handleRaw = (echo.username || '').replace(/^@/, '').trim()
+  const display = (echo.displayName || '').trim()
+  if (display) {
+    return {
+      primary: display,
+      handle: handleRaw ? `@${handleRaw}` : null,
+    }
+  }
+  if (handleRaw) {
+    return { primary: `@${handleRaw}`, handle: null }
+  }
+  return { primary: 'Member', handle: null }
+}
+
+function AuthorAvatar({ echo }: { echo: Echo }) {
+  const [broken, setBroken] = useState(false)
+  const url = (echo.authorAvatarUrl || '').trim()
+  const handleRaw = (echo.username || '').replace(/^@/, '').trim()
+  const initial = (echo.displayName || handleRaw || 'M').charAt(0).toUpperCase()
+  const px = 32
+
+  if (url && !broken) {
+    return (
+      <img
+        src={url}
+        alt=""
+        width={px}
+        height={px}
+        onError={() => setBroken(true)}
+        className="margo-lb-thread-row__avatar-img"
+      />
+    )
+  }
+  return (
+    <span className="margo-lb-thread-row__avatar-fallback" aria-hidden>
+      {initial}
+    </span>
+  )
 }
 
 export function LyricBackThreadRow({
@@ -95,9 +137,10 @@ export function LyricBackThreadRow({
     ? resolveExternalListenUrl({ songTitle: echo.song, artistName: echo.artist })
     : null
 
-  const handle = echo.username ? `@${echo.username.replace(/^@/, '')}` : null
   const href = profileHref(echo)
+  const { primary, handle } = authorLabels(echo)
   const lbCount = echo.echoCount ?? 0
+  const songHref = echo.songId ? `/song/${echo.songId}` : null
 
   const toggleResonate = async (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -123,6 +166,27 @@ export function LyricBackThreadRow({
     }
   }
 
+  const toggleSnippet = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (isPlaying) {
+      togglePlayPause()
+      return
+    }
+    if (!echo.audioUrl || !echo.songId) return
+    void playSnippet({
+      songId: echo.songId,
+      audioUrl: echo.audioUrl,
+      title: echo.song,
+      artist: echo.artist,
+      artwork: echo.artwork ?? null,
+      lineIndex: 0,
+      lineText: echo.lyric,
+      startSec: echo.snippetStart ?? 0,
+      endSec: echo.snippetEnd ?? (echo.snippetStart ?? 0) + 8,
+      source: 'feed',
+    })
+  }
+
   const rowClass = [
     'margo-lb-thread-row',
     isAnchor || tone === 'anchor' ? 'margo-lb-thread-row--anchor' : '',
@@ -136,24 +200,97 @@ export function LyricBackThreadRow({
     >
       {isAnchor ? (
         <p className="margo-lb-thread-row__badge">This Lyric Back</p>
-      ) : (
-        <p className="margo-lb-thread-row__badge margo-lb-thread-row__badge--reply">Lyric Back</p>
-      )}
-      <div className="margo-lb-thread-row__head">
-        {handle && href ? (
-          <PendingNavLink href={href} indicator="subtle" className="margo-lb-thread-row__user" onClick={(e) => e.stopPropagation()}>
-            {handle}
-          </PendingNavLink>
-        ) : handle ? (
-          <span className="margo-lb-thread-row__user">{handle}</span>
-        ) : null}
-        {(echo.song || echo.artist) ? (
-          <p className="margo-lb-thread-row__track">
-            {echo.song ? <span className="margo-lb-thread-row__song">{echo.song}</span> : null}
-            {echo.artist ? <span className="margo-lb-thread-row__artist">{echo.artist}</span> : null}
-          </p>
-        ) : null}
+      ) : null}
+
+      <div className="margo-lb-thread-row__author">
+        <div className="margo-lb-thread-row__avatar" aria-hidden>
+          <AuthorAvatar echo={echo} />
+        </div>
+        <div className="margo-lb-thread-row__author-text">
+          {href ? (
+            <PendingNavLink href={href} indicator="subtle" className="margo-lb-thread-row__name" onClick={(e) => e.stopPropagation()}>
+              {primary}
+            </PendingNavLink>
+          ) : (
+            <span className="margo-lb-thread-row__name">{primary}</span>
+          )}
+          {handle ? (
+            <span className="margo-lb-thread-row__handle">{handle}</span>
+          ) : null}
+        </div>
       </div>
+
+      {(echo.song || echo.artist || canPlay || externalHref) ? (
+        <div className="margo-lb-thread-row__track-row">
+          <div className="margo-lb-thread-row__track-art">
+            {songHref ? (
+              <PendingNavLink href={songHref} indicator="tint" aria-label="Open song" onClick={(e) => e.stopPropagation()}>
+                <PostThumbnail
+                  artwork={echo.artwork}
+                  alt=""
+                  loading="lazy"
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '8px',
+                    objectFit: 'cover',
+                    display: 'block',
+                    border: '1px solid var(--border)',
+                  }}
+                />
+              </PendingNavLink>
+            ) : (
+              <PostThumbnail
+                artwork={echo.artwork}
+                alt=""
+                loading="lazy"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '8px',
+                  objectFit: 'cover',
+                  display: 'block',
+                  border: '1px solid var(--border)',
+                }}
+              />
+            )}
+          </div>
+          <div className="margo-lb-thread-row__track-meta">
+            {echo.song ? (
+              <span className="margo-lb-thread-row__song">{echo.song}</span>
+            ) : null}
+            {echo.artist ? (
+              <span className="margo-lb-thread-row__artist">{echo.artist}</span>
+            ) : null}
+          </div>
+          {canPlay ? (
+            <button
+              type="button"
+              className="margo-lb-thread-row__snippet-btn"
+              aria-label={isPlaying ? 'Pause line' : 'Play line'}
+              onClick={toggleSnippet}
+            >
+              <span className="margo-lb-thread-row__snippet-btn-inner">
+                <FeedMomentPlaybackIcon playing={isPlaying} size={16} color="var(--bg)" />
+              </span>
+            </button>
+          ) : externalHref ? (
+            <a
+              className="margo-lb-thread-row__snippet-btn margo-lb-thread-row__snippet-btn--external"
+              href={externalHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={externalListenAriaLabel(externalHref) || 'Open in music app'}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="margo-lb-thread-row__snippet-btn-inner margo-lb-thread-row__snippet-btn-inner--external">
+                <FeedIconExternal size={16} />
+              </span>
+            </a>
+          ) : null}
+        </div>
+      ) : null}
+
       <button
         type="button"
         className="margo-lb-thread-row__bubble"
@@ -194,48 +331,6 @@ export function LyricBackThreadRow({
           <FeedIconCard size={16} />
           <span>Card</span>
         </button>
-        {canPlay ? (
-          <button
-            type="button"
-            className="margo-lb-thread-row__action margo-lb-thread-row__action--play"
-            aria-label={isPlaying ? 'Pause' : 'Play line'}
-            onClick={(e) => {
-              e.stopPropagation()
-              if (isPlaying) {
-                togglePlayPause()
-                return
-              }
-              if (!echo.audioUrl || !echo.songId) return
-              void playSnippet({
-                songId: echo.songId,
-                audioUrl: echo.audioUrl,
-                title: echo.song,
-                artist: echo.artist,
-                artwork: echo.artwork ?? null,
-                lineIndex: 0,
-                lineText: echo.lyric,
-                startSec: echo.snippetStart ?? 0,
-                endSec: echo.snippetEnd ?? (echo.snippetStart ?? 0) + 8,
-                source: 'feed',
-              })
-            }}
-          >
-            <FeedMomentPlaybackIcon playing={isPlaying} size={16} color="var(--post-vibe-fill)" />
-          </button>
-        ) : null}
-        {externalHref ? (
-          <a
-            className="margo-lb-thread-row__action"
-            href={externalHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={externalListenAriaLabel(externalHref) || 'Open in music app'}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <FeedIconExternal size={16} />
-            <span>Open</span>
-          </a>
-        ) : null}
       </div>
     </article>
   )

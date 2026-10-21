@@ -302,7 +302,13 @@ export function PostCardSuggestedReply({
                 <LyricBackThreadRow
                   echo={echo}
                   tone="reply"
-                  onLyricBack={() => focusNestedLyricBack(echo)}
+                  onLyricBack={(echoId) => {
+                    if (onFindLineForTarget) {
+                      onFindLineForTarget(echoId, postId)
+                      return
+                    }
+                    focusNestedLyricBack(echo)
+                  }}
                   onOpenThread={(id) => onOpenThread?.(id)}
                   onExport={onExportEcho}
                   onReplay={onReplayEcho}
@@ -345,7 +351,7 @@ export function PostCardSuggestedReply({
                 </div>
               ) : null}
               {showIdeasEmpty ? (
-                <p className="margo-post-card__lb-status">No match. Use Find a line to search Margo music.</p>
+                <p className="margo-post-card__lb-status">No ideas for this moment.</p>
               ) : null}
               {!ideasLoading && !ideasError && (picks?.length ?? 0) > 0 && picks ? (
                 <ul className="margo-post-card__lb-list">
@@ -363,20 +369,15 @@ export function PostCardSuggestedReply({
 
       <div className="margo-post-card__lb-compose">
         {!draft?.songTitle ? (
-          <>
-            <p className="margo-post-card__lb-compose-lead">
-              A Lyric Back always ties to a song and artist — search Margo music or link Apple Music, Spotify, and the rest, the same way as Compose.
-            </p>
-            {onFindLineForTarget ? (
-              <button
-                type="button"
-                className="margo-post-card__lb-compose-find"
-                onClick={() => onFindLineForTarget(replyTargetId, postId)}
-              >
-                Find your Lyric Back
-              </button>
-            ) : null}
-          </>
+          onFindLineForTarget ? (
+            <button
+              type="button"
+              className="margo-post-card__lb-compose-find"
+              onClick={() => onFindLineForTarget(replyTargetId, postId)}
+            >
+              Find your Lyric Back
+            </button>
+          ) : null
         ) : (
           <>
             <p className="margo-post-card__lb-compose-heading">Your Lyric Back</p>

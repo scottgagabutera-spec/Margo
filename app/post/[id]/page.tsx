@@ -119,11 +119,6 @@ export default function PostDetailPage() {
 
   const handleExportEcho = (echo: Echo) => handleExport(echoToPost(echo))
 
-  const goLyricBack = (targetId: string) => {
-    if (!requireAuth()) return
-    router.push(`/lyric-back?echoId=${encodeURIComponent(targetId)}`)
-  }
-
   const toggleReplay = async (id: string) => {
     if (!requireAuth()) return
     if (!user?.id) return
@@ -161,6 +156,17 @@ export default function PostDetailPage() {
 
   const isLyricBack = Boolean(post?.parentPostId)
   const rootMoment = ancestors[0] ?? null
+
+  const goLyricBack = (targetId: string) => {
+    if (!requireAuth()) return
+    const rootId = rootMoment?.id ?? (post?.parentPostId ? null : post?.id)
+    const q = new URLSearchParams()
+    if (rootId) q.set('postId', rootId)
+    else if (post?.id) q.set('postId', post.id)
+    const threadRoot = rootId ?? post?.id
+    if (threadRoot && targetId !== threadRoot) q.set('echoId', targetId)
+    router.push(`/lyric-back?${q.toString()}`)
+  }
 
   const threadRowHandlers = (echo: Echo) => ({
     onResonate: toggleResonate,
