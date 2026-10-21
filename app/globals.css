@@ -594,76 +594,8 @@ html[data-margo-stage-idle] .margo-stage-zone {
   border: none;
   opacity: 0.55;
 }
-.margo-post-card__lb-compose-lead {
-  margin: 0 0 10px;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: var(--feed-type-artist);
-  color: var(--text-muted);
-  line-height: 1.45;
-}
-.margo-post-card__lb-compose-heading {
-  margin: 0 0 6px;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.65rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-.margo-post-card__lb-compose-lyric-preview {
-  margin: 0 0 8px;
-  font-family: var(--font-lora), serif;
-  font-style: italic;
-  font-size: var(--feed-type-suggestion-lyric);
-  line-height: 1.45;
-  color: var(--text);
-}
-.margo-post-card__lb-compose-change {
-  min-height: 36px;
-  padding: 0 10px;
-  margin-right: auto;
-  border: none;
-  background: none;
-  color: var(--text-muted);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: var(--feed-type-artist);
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.margo-post-card__lb-echo-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 8px;
-  flex-wrap: wrap;
-}
-.margo-post-card__lb-echo-resonate {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: var(--margo-touch-min);
-  padding: 0 8px 0 0;
-  border: none;
-  background: none;
-  color: var(--text-secondary);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: var(--feed-type-artist);
-  font-weight: 600;
-  cursor: pointer;
-}
-.margo-post-card__lb-echo-resonate.is-on {
-  color: var(--gold);
-}
-.margo-post-card__lb-compose-send-label {
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  margin-right: 2px;
-}
+
+
 .margo-song-meta__title-line {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1047,9 +979,7 @@ html[data-margo-stage-idle] .margo-stage-zone {
   -webkit-overflow-scrolling: touch;
   padding-right: 2px;
 }
-.margo-post-card__lb-empty-title--solo {
-  margin: 0 0 8px;
-}
+
 .margo-post-card__lb-header {
   display: flex;
   align-items: center;
@@ -1194,35 +1124,8 @@ html[data-margo-stage-idle] .margo-stage-zone {
   flex: 1;
   min-width: 0;
 }
-.margo-post-card__lb-echo-head {
-  margin-bottom: 6px;
-  min-width: 0;
-}
-.margo-post-card__lb-echo-user {
-  display: inline-block;
-  margin: 0;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: var(--feed-type-control-label);
-  font-weight: 600;
-  color: var(--post-vibe-text);
-  text-decoration: none;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.margo-post-card__lb-echo-track {
-  margin: 2px 0 0;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: var(--feed-type-artist);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  min-width: 0;
-}
+
+
 .margo-post-card__lb-echo-song,
 .margo-post-card__lb-compose-song {
   font-weight: 600;
@@ -1257,59 +1160,13 @@ html[data-margo-stage-idle] .margo-stage-zone {
   display: block;
   margin-top: 2px;
 }
-.margo-post-card__lb-echo-track,
-.margo-post-card__lb-row-meta {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-}
+
 .margo-post-card__lb-echo-artist::before,
 .margo-post-card__lb-compose-artist::before {
   content: none;
 }
-.margo-post-card__lb-echo-thread-link {
-  display: block;
-  width: 100%;
-  margin-top: 6px;
-  padding: 0;
-  border: none;
-  background: none;
-  text-align: left;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.65rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  cursor: pointer;
-  min-height: 32px;
-}
-.margo-post-card__lb-echo-resonates {
-  text-transform: none;
-  letter-spacing: 0;
-  font-weight: 500;
-  color: var(--gold);
-}
-.margo-post-card__lb-echo-bubble {
-  display: block;
-  width: 100%;
-  text-align: left;
-  margin: 0;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--post-vibe-border);
-  background: color-mix(in srgb, var(--post-vibe-faint) 55%, var(--surface));
-  cursor: pointer;
-  box-sizing: border-box;
-}
-.margo-post-card__lb-echo-lyric {
-  margin: 0;
-  font-family: var(--font-lora), serif;
-  font-style: italic;
-  font-size: var(--feed-type-suggestion-lyric);
-  line-height: 1.45;
-  color: var(--text);
-}
+
+
 .margo-post-card__lb-compose {
   flex-shrink: 0;
   margin-top: 10px;
@@ -1370,13 +1227,7 @@ html[data-margo-stage-idle] .margo-stage-zone {
   margin-top: 0;
   padding-top: 0;
 }
-.margo-post-card__lb-compose-hint {
-  margin: 0 0 6px;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: var(--feed-type-artist);
-  color: var(--text-muted);
-  line-height: 1.4;
-}
+
 .margo-post-card__lb-compose-track {
   margin: 0 0 6px;
   display: flex;
@@ -1417,20 +1268,7 @@ html[data-margo-stage-idle] .margo-stage-zone {
   gap: 8px;
   margin-top: 8px;
 }
-.margo-post-card__lb-compose-find {
-  width: 100%;
-  min-height: var(--margo-touch-min);
-  padding: 0 14px;
-  border-radius: 8px;
-  border: 1px solid var(--post-vibe-border);
-  background: var(--post-vibe-faint);
-  color: var(--post-vibe-text);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: var(--feed-type-control-label);
-  font-weight: 600;
-  cursor: pointer;
-  text-align: left;
-}
+
 .margo-post-card__lb-compose-send {
   margin-left: auto;
   width: var(--margo-touch-min);
@@ -1453,33 +1291,12 @@ html[data-margo-stage-idle] .margo-stage-zone {
   outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
-.margo-post-card__lb-empty--thread {
-  margin-bottom: 8px;
-}
+
 .margo-post-card__lb-skeleton--compact {
   margin-bottom: 8px;
 }
-.margo-post-card__lb-footer {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 12px;
-}
-.margo-post-card__lb-footer-btn--full {
-  width: 100%;
-}
-.margo-post-card__lb-footer-btn {
-  min-height: 40px;
-  border-radius: 8px;
-  border: 1px solid var(--post-vibe-border);
-  background: transparent;
-  color: var(--post-vibe-text);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: var(--feed-type-control-label);
-  font-weight: 600;
-  cursor: pointer;
-  padding: 0 12px;
-}
+
+
 .margo-post-card__lb-status {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: var(--feed-type-artist);
@@ -1490,30 +1307,8 @@ html[data-margo-stage-idle] .margo-stage-zone {
 .margo-post-card__lb-status-block {
   margin-bottom: 12px;
 }
-.margo-post-card__lb-status-title {
-  margin: 0 0 6px;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: var(--feed-type-control-label);
-  font-weight: 600;
-  color: var(--text);
-}
-.margo-post-card__lb-empty {
-  margin-bottom: 12px;
-}
-.margo-post-card__lb-empty-title {
-  margin: 0 0 6px;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: var(--feed-type-control-label);
-  font-weight: 600;
-  color: var(--text);
-}
-.margo-post-card__lb-empty-body {
-  margin: 0 0 12px;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: var(--feed-type-artist);
-  color: var(--text-muted);
-  line-height: 1.45;
-}
+
+
 .margo-post-card__lb-primary-btn {
   display: flex;
   align-items: center;
@@ -1531,9 +1326,7 @@ html[data-margo-stage-idle] .margo-stage-zone {
   cursor: pointer;
   padding: 0 12px;
 }
-.margo-post-card__lb-footer-btn--full {
-  grid-column: 1 / -1;
-}
+
 .margo-post-card__lb-skeleton {
   margin-bottom: 12px;
 }
@@ -2594,14 +2387,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   background: color-mix(in srgb, var(--surface-2) 80%, transparent);
   border: 1px solid var(--border);
 }
-.margo-post-card__lb-context-label {
-  margin: 0 0 4px;
-  font-size: 0.55rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
+
 .margo-post-card__lb-context-lyric {
   margin: 0 0 4px;
   font-family: var(--font-lora), serif;
@@ -2632,12 +2418,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   min-height: 36px;
   text-align: left;
 }
-.margo-post-card__lb-focus-label {
-  margin: 0;
-  font-size: var(--feed-type-control-label);
-  font-weight: 600;
-  color: var(--post-vibe-text);
-}
+
 .margo-post-thread-section-label {
   margin: 0 0 10px;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
