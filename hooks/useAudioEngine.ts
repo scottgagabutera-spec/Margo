@@ -21,7 +21,10 @@ import {
   getAudioEngineState,
 } from '@/lib/audio-engine/engine'
 import type { AudioEngineState } from '@/lib/audio-engine/types'
-import { getQueueNavigationState } from '@/lib/audio-engine/types'
+import {
+  computePlaybackProgress,
+  getQueueNavigationState,
+} from '@/lib/audio-engine/types'
 
 // ── Full state hook ───────────────────────────────────────────────
 
@@ -127,6 +130,72 @@ export function usePostMomentPlaybackUi(
   }, [postKey, songId])
 
   return flags
+}
+
+/** Progress + elapsed/total labels for merged post-moment playback on feed cards. */
+export function usePostMomentPlaybackMetrics(
+  postKey: string | null | undefined,
+  songId: string | null | undefined,
+  totalDurationSec: number,
+): {
+  playing: boolean
+  buffering: boolean
+  progressPct: number
+  elapsedSec: number
+} {
+  const [snap, setSnap] = useState({
+    playing: false,
+    buffering: false,
+    progressPct: 0,
+    elapsedSec: 0,
+  })
+
+  useEffect(() => {
+    const sync = (s: AudioEngineState) => {
+      if (!postKey || !songId) {
+        setSnap({ playing: false, buffering: false, progressPct: 0, elapsedSec: 0 })
+        return
+      }
+      const isThis =
+        s.mode === 'snippet'
+        && s.songId === songId
+        && s.postMomentPlayback?.postKey === postKey
+      const playing = s.playing && isThis
+      const buffering = s.buffering && isThis
+      if (!isThis) {
+        setSnap({ playing: false, buffering: false, progressPct: 0, elapsedSec: 0 })
+        return
+      }
+      const progressPct = computePlaybackProgress(
+        s.mode,
+        s.currentTime,
+        s.duration,
+        s.snippet,
+        s.postMomentPlayback,
+        s.queueIndex,
+      )
+      const segs = s.postMomentPlayback?.segments ?? []
+      let elapsed = 0
+      for (let i = 0; i < s.queueIndex && i < segs.length; i++) {
+        elapsed += Math.max(0, segs[i].endSec - segs[i].startSec)
+      }
+      if (s.snippet) {
+        const span = s.snippet.endSec - s.snippet.startSec
+        const cur = span <= 0 ? 0 : Math.max(0, Math.min(s.currentTime - s.snippet.startSec, span))
+        elapsed += cur
+      }
+      setSnap({
+        playing,
+        buffering,
+        progressPct,
+        elapsedSec: elapsed,
+      })
+    }
+    sync(getAudioEngineState())
+    return subscribeAudioEngine(sync)
+  }, [postKey, songId, totalDurationSec])
+
+  return snap
 }
 
 export function useSnippetPlaybackUi(

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { PlayPauseIcon } from '@/components/play-pause-icon'
 import {
   CardIcon,
   ChevronRightIcon,
@@ -11,27 +10,17 @@ import {
   HeartIcon,
   LyricBackIcon,
   MoreIcon,
-  MusicNoteIcon,
   ReplayIcon,
-  ShareIcon,
 } from '@/components/icons'
-import { FEED_ARTWORK_THUMB_PX } from '@/lib/feed/layout'
 import type { Post } from '@/hooks/usePosts'
 import { EditMomentModal } from '@/components/edit-moment-modal'
 import { DeleteMomentDialog } from '@/components/delete-moment-dialog'
-import {
-  playOrTogglePostMoment,
-  stop,
-  playFull,
-  togglePlayPause,
-  warmUrl,
-} from '@/lib/audio-engine'
-import { useAudioEngine, usePostMomentPlaybackUi } from '@/hooks/useAudioEngine'
+import { warmUrl } from '@/lib/audio-engine'
+import { resolveExternalListenUrl } from '@/lib/moment/listen'
 import {
   computePlaybackSegments,
   postLinesToSegmentInput,
 } from '@/lib/moment/playback-segments'
-import { useWarmAudioUrlOnVisible } from '@/hooks/useWarmAudioUrl'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { persistActivePrimaryScroll } from '@/components/primary-tab-shell'
 import { useDismissibleLayer } from '@/hooks/useDismissibleLayer'
@@ -43,22 +32,13 @@ import { RelativeTime } from '@/components/relative-time'
 import { useAuthorProfile } from '@/hooks/useAuthorProfile'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
-import { PostThumbnail } from '@/components/post-thumbnail'
-import { VibeTag } from '@/components/vibe-tag'
 import { UI_FONT, LYRIC_FONT, FEED_TYPE } from '@/lib/fonts'
+import { getVibeTheme, vibeThemeStyleVars } from '@/lib/vibe-theme'
+import { feedLyricLayoutMode, formatEchoBadge } from '@/lib/post-card-lyric-layout'
+import { PostCardLyricSection, PostCardSongSection } from '@/components/post-card-feed-layout'
 import { resolveMomentLines } from '@/lib/post-lines'
 import { PostCardSuggestedReply } from '@/components/post-card-suggested-reply'
 import { SongMeta } from '@/components/song-meta'
-import { AtmosphereLayer } from '@/components/atmosphere-layer'
-import { livingAtmosphereOrNull } from '@/lib/atmosphere'
-import {
-  resolveExternalListenUrl,
-  externalListenAriaLabel,
-} from '@/lib/moment/listen'
-import {
-  fallbackSnippetWindow,
-  matchLyricWindowFromLines,
-} from '@/lib/lyric-match'
 
 const supabase = createClient()
 
@@ -74,17 +54,6 @@ function feedLyricLengthClass(text: string): string {
   if (compactLen <= 100 && lineBreaks <= 2) return 'margo-feed-lyric--len-medium'
   if (compactLen <= 200) return 'margo-feed-lyric--len-long'
   return 'margo-feed-lyric--len-very-long'
-}
-
-function feedLyricNeedsExpand(text: string): boolean {
-  const trimmed = text.trim()
-  if (!trimmed) return false
-  if (trimmed.split('\n').length > 6) return true
-  return trimmed.length > 220
-}
-
-function feedLyricSingleLineBalance(text: string): boolean {
-  return !text.includes('\n') && text.trim().length > 34
 }
 
 function isLyricBackAllowed(post: Post): boolean {
@@ -138,16 +107,11 @@ export interface PostCardProps {
   highlightShared?: boolean
 }
 
-const EMOTION_COLORS: Record<string, string> = {
-  love: '#FF6B9D', heartbreak: '#ff6060', hope: '#7B9FFF',
-  nostalgia: '#E8C547', healing: '#4ade80', joy: '#ffc847',
-  rage: '#FF6440', loneliness: '#a0a0ff', sendit: '#00e5c8', letout: '#c864ff',
-}
-
 const VIBE_LABELS: Record<string, string> = {
-  love: 'Love', heartbreak: 'Heartbreak', hope: 'Hope', nostalgia: 'Nostalgia',
+  love: 'Love', heartbreak: 'Pain', pain: 'Pain', hope: 'Hope', nostalgia: 'Nostalgia',
   healing: 'Healing', joy: 'Joy', rage: 'Rage', loneliness: 'Loneliness',
-  sendit: 'Send It', letout: 'Let Out',
+  sendit: 'Send It', letout: 'Let Out', hype: 'Hype', chill: 'Chill', proud: 'Proud',
+  grateful: 'Grateful', spiritual: 'Spiritual',
 }
 
 export function normalizeEmotion(e: string) {
@@ -156,114 +120,6 @@ export function normalizeEmotion(e: string) {
     .replace('SendIt', 'SENDIT').replace('LetOut', 'LETOUT')
     .replace('SEND IT', 'SENDIT').replace('LET OUT', 'LETOUT')
     .toUpperCase()
-}
-
-interface LyricLine { id: number; line: string; start: number; end: number }
-
-// ── Migrated Aug 1, 2026 ───────────────────────────────────────────────
-async function fetchLyricLines(songId: string): Promise<LyricLine[]> {
-  const { data, error } = await supabase
-    .from('lyric_lines')
-    .select('line_index, text, start_sec, end_sec')
-    .eq('song_id', songId)
-    .order('line_index', { ascending: true })
-  if (error || !data) return []
-  return data.map(l => ({ id: l.line_index, line: l.text, start: l.start_sec, end: l.end_sec }))
-}
-
-function PostMomentPlayButton({
-  postId,
-  lines,
-  segments,
-  primaryLine,
-  combinedLyric,
-}: {
-  postId: string
-  lines: ReturnType<typeof resolveMomentLines>
-  segments: Array<{ startSec: number; endSec: number }>
-  primaryLine: ReturnType<typeof resolveMomentLines>[number]
-  combinedLyric: string
-}) {
-  const btnRef = useRef<HTMLButtonElement>(null)
-  const songId = primaryLine.songId || null
-  const audioUrl = primaryLine.audioUrl || ''
-  useWarmAudioUrlOnVisible(audioUrl, btnRef, true, segments[0]?.startSec ?? 0)
-  const { playing, buffering } = usePostMomentPlaybackUi(postId, songId)
-
-  const toggle = () => {
-    if (!audioUrl || !songId || segments.length === 0) return
-    playOrTogglePostMoment({
-      postKey: postId,
-      songId,
-      audioUrl,
-      title: primaryLine.songTitle || '',
-      artist: primaryLine.artistName || '',
-      artwork: primaryLine.artworkUrl ?? null,
-      lineIndex: primaryLine.position ?? 0,
-      lineText: combinedLyric,
-      segments,
-      atmosphere: livingAtmosphereOrNull(primaryLine.atmosphere),
-      source: 'feed',
-    })
-  }
-
-  const snippetLabel = playing
-    ? (buffering ? 'Loading audio snippet' : 'Pause lyric snippet')
-    : 'Play lyric snippet'
-
-  return (
-    <button
-      ref={btnRef}
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation()
-        toggle()
-      }}
-      aria-label={snippetLabel}
-      style={{
-        width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', flexShrink: 0,
-        background: playing ? 'rgba(232,197,71,0.2)' : 'rgba(232,197,71,0.1)',
-        border: '1px solid rgba(232,197,71,0.25)',
-        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        transition: 'background 200ms ease', marginTop: '4px',
-        padding: 0, boxSizing: 'border-box',
-      }}
-    >
-      <PlayPauseIcon playing={playing} buffering={buffering} size={16} color="var(--gold)" />
-    </button>
-  )
-}
-
-const listenControlStyle: React.CSSProperties = {
-  width: 'var(--margo-touch-min)',
-  height: 'var(--margo-touch-min)',
-  borderRadius: '50%',
-  flexShrink: 0,
-  background: 'var(--gold-faint)',
-  border: '1px solid var(--gold-border)',
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginTop: '4px',
-  padding: 0,
-  boxSizing: 'border-box',
-  textDecoration: 'none',
-}
-
-function ExternalListenButton({ href, label }: { href: string; label: string }) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      data-no-card-nav
-      aria-label={label}
-      onClick={(e) => e.stopPropagation()}
-      style={listenControlStyle}
-    >
-      <ShareIcon size={14} color="var(--gold)" />
-    </a>
-  )
 }
 
 function PostMomentBody({
@@ -275,284 +131,13 @@ function PostMomentBody({
   isCompact: boolean
   isRow?: boolean
 }) {
-  const [lyricExpanded, setLyricExpanded] = useState(false)
   const lines = resolveMomentLines(post)
-  const multi = lines.length > 1
-
-  const catalogLines = lines.filter(
-    (line) => line.source !== 'external' && !!(line.songId && line.audioUrl),
-  )
-  const segments = computePlaybackSegments(postLinesToSegmentInput(catalogLines))
-  const hasUnifiedPlay = segments.length > 0 && catalogLines.length > 0
-  const primaryCatalog = catalogLines[0]
-  const allSameSong =
-    catalogLines.length > 0
-    && catalogLines.every((l) => l.songId === catalogLines[0].songId)
-  const showSongMetaOnce = allSameSong && catalogLines.some((l) => l.songTitle || l.artistName)
-  const combinedLyric = lines.map((l) => l.text.trim()).filter(Boolean).join('\n')
-  const anyLyricNeedsExpand = lines.some((l) => feedLyricNeedsExpand(l.text))
-  const lyricCompactClass = isCompact ? 'margo-feed-lyric--compact' : isRow ? 'margo-feed-lyric--row' : ''
-
-  const sharedMetaArtwork =
-    primaryCatalog?.artworkUrl || post.knowledge?.artwork || null
-  const sharedYoutubeThumb = !sharedMetaArtwork ? post.youtubeMeta?.thumbnail : undefined
+  const layoutMode = isCompact || isRow ? 'compact' : feedLyricLayoutMode(lines)
 
   return (
-    <div style={{ marginBottom: multi ? '8px' : '12px' }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: '12px',
-        ...(multi ? { borderLeft: '1px solid rgba(232,197,71,0.18)', paddingLeft: '12px' } : null),
-      }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {lines.map((line, i) => (
-            <div key={line.id || `line-${line.position}-${i}`}>
-              {multi && i > 0 ? (
-                <p className="margo-feed-stitch" aria-hidden>
-                  stitch
-                </p>
-              ) : null}
-              <p
-                className={[
-                  'margo-feed-lyric',
-                  lyricCompactClass,
-                  feedLyricLengthClass(line.text),
-                  feedLyricSingleLineBalance(line.text) ? 'margo-feed-lyric--balance' : '',
-                  !lyricExpanded && feedLyricNeedsExpand(line.text) ? 'margo-feed-lyric--collapsed' : '',
-                ].filter(Boolean).join(' ')}
-                style={{ margin: '0 0 4px' }}
-              >
-                &ldquo;{line.text}&rdquo;
-              </p>
-            </div>
-          ))}
-          {anyLyricNeedsExpand && !lyricExpanded ? (
-            <button
-              type="button"
-              className="margo-feed-lyric__more"
-              data-no-card-nav
-              onClick={(e) => {
-                e.stopPropagation()
-                setLyricExpanded(true)
-              }}
-            >
-              more
-            </button>
-          ) : null}
-          {anyLyricNeedsExpand && lyricExpanded ? (
-            <button
-              type="button"
-              className="margo-feed-lyric__more"
-              data-no-card-nav
-              onClick={(e) => {
-                e.stopPropagation()
-                setLyricExpanded(false)
-              }}
-            >
-              less
-            </button>
-          ) : null}
-        </div>
-        {hasUnifiedPlay && primaryCatalog ? (
-          <PostMomentPlayButton
-            postId={post.id}
-            lines={lines}
-            segments={segments}
-            primaryLine={primaryCatalog}
-            combinedLyric={combinedLyric}
-          />
-        ) : null}
-      </div>
-
-      {!hasUnifiedPlay && lines.length === 1 ? (() => {
-        const line = lines[0]
-        const externalHref = resolveExternalListenUrl({
-          songTitle: line.songTitle || post.knowledge?.song,
-          artistName: line.artistName || post.knowledge?.artist,
-          youtubeUrl: post.youtubeMeta?.youtubeUrl,
-        })
-        const showBesideLyric = isCompact && !!(line.artworkUrl || post.knowledge?.artwork)
-        if (!externalHref && !showBesideLyric) return null
-        return (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
-            {externalHref ? (
-              <ExternalListenButton href={externalHref} label={externalListenAriaLabel(externalHref)} />
-            ) : (
-              <PostThumbnail
-                artwork={line.artworkUrl || post.knowledge?.artwork}
-                alt=""
-                style={{
-                  width: `${FEED_ARTWORK_THUMB_PX}px`,
-                  height: `${FEED_ARTWORK_THUMB_PX}px`,
-                  borderRadius: '8px',
-                  objectFit: 'cover',
-                  flexShrink: 0,
-                  border: '1px solid var(--border)',
-                }}
-              />
-            )}
-          </div>
-        )
-      })() : null}
-
-      {showSongMetaOnce && primaryCatalog ? (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          marginTop: '8px',
-          marginBottom: '10px',
-        }}>
-          {(sharedMetaArtwork || sharedYoutubeThumb) && (hasUnifiedPlay || !isCompact) ? (
-            <PostThumbnail
-              artwork={sharedMetaArtwork}
-              youtubeThumbnail={sharedYoutubeThumb}
-              alt=""
-              loading="lazy"
-              style={{
-                width: `${FEED_ARTWORK_THUMB_PX}px`,
-                height: `${FEED_ARTWORK_THUMB_PX}px`,
-                borderRadius: '8px',
-                objectFit: 'cover',
-                flexShrink: 0,
-                border: '1px solid var(--border)',
-              }}
-            />
-          ) : null}
-          <SongMeta
-            title={primaryCatalog.songTitle}
-            artist={primaryCatalog.artistName}
-            aiGenerated={primaryCatalog.isAiGenerated}
-            href={primaryCatalog.songId ? `/song/${primaryCatalog.songId}` : null}
-            titleStyle={{ fontSize: `var(${FEED_TYPE.songTitle})`, fontWeight: 600 }}
-            artistStyle={{ fontSize: `var(${FEED_TYPE.artist})` }}
-          />
-        </div>
-      ) : null}
-    </div>
-  )
-}
-
-function Tier1Player({ audioUrl, songId, postText, title, artist, artwork, atmosphere }: {
-  audioUrl: string; songId: string | null; postText?: string
-  title?: string; artist?: string; artwork?: string | null
-  atmosphere?: string | null
-}) {
-  const engineState = useAudioEngine()
-  const { requireAuth } = useAuthGate()
-  const isThisSong = engineState.songId === (songId || audioUrl)
-  const playing = engineState.playing && isThisSong && engineState.mode === 'full'
-  const isBuffering = engineState.buffering && isThisSong
-  const progress = isThisSong ? engineState.progress : 0
-  const currentTime = isThisSong ? engineState.currentTime : 0
-  const duration = isThisSong ? engineState.duration : 0
-
-  const [lyrics, setLyrics] = useState<LyricLine[]>([])
-  const [lyricsLoaded, setLyricsLoaded] = useState(false)
-  const progressRef = useRef<HTMLDivElement | null>(null)
-  const [dragging, setDragging] = useState(false)
-  const playedRef = useRef(false)
-
-  const loadLyrics = async () => {
-    if (lyricsLoaded || !songId) return
-    const lines = await fetchLyricLines(songId)
-    setLyrics(lines)
-    setLyricsLoaded(true)
-  }
-
-  const toggle = async () => {
-    if (!requireAuth()) return
-    loadLyrics()
-    if (isThisSong && engineState.mode === 'full') {
-      void togglePlayPause()
-      return
-    }
-    stop()
-    playedRef.current = true
-    void playFull({
-      songId: songId || audioUrl,
-      audioUrl,
-      title: title || '',
-      artist: artist || '',
-      artwork: artwork ?? null,
-      startSec: 0,
-      autoplay: true,
-      source: 'feed-tier1',
-      atmosphere: livingAtmosphereOrNull(atmosphere),
-    })
-  }
-
-  const seekFromX = (clientX: number) => {
-    const bar = progressRef.current
-    if (!bar || !duration || !isThisSong) return
-    const rect = bar.getBoundingClientRect()
-    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
-    import('@/lib/audio-engine').then(({ playFullSeek }) => playFullSeek(pct * duration))
-  }
-
-  const onMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault(); setDragging(true); seekFromX(e.clientX)
-    const onMove = (ev: MouseEvent) => seekFromX(ev.clientX)
-    const onUp = () => { setDragging(false); window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
-  }
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    setDragging(true); seekFromX(e.touches[0].clientX)
-    const onMove = (ev: TouchEvent) => seekFromX(ev.touches[0].clientX)
-    const onEnd = () => { setDragging(false); window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', onEnd) }
-    window.addEventListener('touchmove', onMove); window.addEventListener('touchend', onEnd)
-  }
-
-  const fmt = (s: number) => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`
-  const currentLine = lyrics.find(l => currentTime >= l.start && currentTime < l.end)
-
-  return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: currentLine ? '12px' : '0' }}>
-        <button
-          onMouseDown={e => e.preventDefault()}
-          onClick={toggle}
-          type="button"
-          aria-label={playing ? (isBuffering ? 'Loading full song' : 'Pause full song') : 'Play full song'}
-          style={{
-            width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', flexShrink: 0,
-            background: 'var(--gold)', border: 'none', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            outline: 'none', WebkitTapHighlightColor: 'transparent',
-            touchAction: 'manipulation', userSelect: 'none', boxSizing: 'border-box',
-          }}>
-          <PlayPauseIcon playing={playing} buffering={isBuffering} size={14} color='var(--bg)' />
-        </button>
-        <div style={{ flex: 1 }}>
-          <div ref={progressRef} className="margo-seek-scrub" onMouseDown={onMouseDown} onTouchStart={onTouchStart}
-            style={{ minHeight: 'var(--margo-touch-min)', height: '20px', display: 'flex', alignItems: 'center', cursor: 'pointer', marginBottom: '2px', boxSizing: 'border-box' }}>
-            <div style={{ position: 'relative', width: '100%', height: '3px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px' }}>
-              <div style={{ height: '100%', width: progress + '%', background: 'var(--gold)', borderRadius: '2px', transition: dragging ? 'none' : 'width 200ms linear' }} />
-              <div style={{
-                position: 'absolute', top: '50%', left: progress + '%',
-                transform: 'translate(-50%, -50%)',
-                width: '10px', height: '10px', borderRadius: '50%',
-                background: 'var(--gold)', boxShadow: '0 0 4px rgba(232,197,71,0.6)',
-                transition: dragging ? 'none' : 'left 200ms linear',
-              }} />
-            </div>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-muted)' }}>{fmt(currentTime)}</span>
-            <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-muted)' }}>{duration > 0 ? fmt(duration) : '--:--'}</span>
-          </div>
-        </div>
-      </div>
-
-      {playing && (
-        <div style={{ minHeight: '32px', padding: '8px 12px', background: 'rgba(232,197,71,0.06)', borderRadius: '8px', borderLeft: '2px solid var(--gold)', transition: 'all 200ms ease' }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.82rem', color: currentLine ? 'var(--gold)' : 'var(--text-muted)', lineHeight: 1.4, margin: 0, transition: 'color 200ms ease', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            {currentLine ? currentLine.line : <MusicNoteIcon size={14} color="var(--text-muted)" />}
-          </p>
-        </div>
-      )}
+    <div style={{ marginBottom: '8px' }}>
+      <PostCardLyricSection post={post} layoutMode={layoutMode} />
+      <PostCardSongSection post={post} showMomentControls />
     </div>
   )
 }
@@ -596,8 +181,9 @@ export function PostCard({
   const authorProfile = useAuthorProfile(post.authorUid || null)
   const viewedRef = useRef(false)
   const emotion = normalizeEmotion(post.emotion || '').toLowerCase()
-  const color = EMOTION_COLORS[emotion] || 'var(--text-disabled)'
+  const vibeTheme = getVibeTheme(emotion || post.emotion)
   const label = VIBE_LABELS[emotion] || post.emotion || ''
+  const echoBadge = formatEchoBadge(echoCount)
   const isTier1 = !!(post.songId && post.audioUrl)
   const audioUrl = post.audioUrl || null
   const cardRef = useRef<HTMLDivElement>(null)
@@ -635,11 +221,7 @@ export function PostCard({
   const isRow = variant === 'row'
   const isCompact = variant === 'compact' || (isRow && rowExpanded)
   const avatarPx = isCompact ? '32px' : '40px'
-  const hasMoodChip = !!(label && !isRow)
   const cardPadding = isCompact ? '12px' : '16px'
-  const cardPaddingBottom = hasMoodChip
-    ? (isCompact ? '24px' : '28px')
-    : cardPadding
 
   const lines = resolveMomentLines(post)
   const catalogLines = lines.filter(
@@ -653,8 +235,12 @@ export function PostCard({
     [playbackSegmentsKey],
   )
   const snippetWarmSec = playbackSegments[0]?.startSec ?? post.snippetStart ?? 0
-  const fullLine = catalogLines[0] || lines.find((l) => l.songId && l.songId === post.songId) || lines[0]
-
+  const firstLine = lines[0]
+  const externalCardLayout = catalogLines.length === 0 && lines.length > 0 && !!resolveExternalListenUrl({
+    songTitle: firstLine?.songTitle || post.knowledge?.song,
+    artistName: firstLine?.artistName || post.knowledge?.artist,
+    youtubeUrl: post.youtubeMeta?.youtubeUrl,
+  })
   useEffect(() => {
     if (!audioUrl || !isTier1) return
     const el = cardRef.current
@@ -763,36 +349,27 @@ export function PostCard({
     <div
       id={domId}
       ref={cardRef}
-      className={highlightShared ? 'margo-feed-post--shared' : undefined}
+      className={[
+        'margo-post-card',
+        isTier1 ? 'margo-post-card--tier1' : '',
+        externalCardLayout ? 'margo-post-card--external' : '',
+        highlightShared ? 'margo-feed-post--shared' : '',
+      ].filter(Boolean).join(' ')}
       onClick={goToPost}
       onPointerDown={() => {
         if (!disableCardNav && !isRow) persistActivePrimaryScroll()
       }}
       style={{
-        background: isTier1 ? 'rgba(232,197,71,0.04)' : 'rgba(255,255,255,0.02)',
-        border: `1px solid ${isTier1 ? 'rgba(232,197,71,0.22)' : 'rgba(255,255,255,0.06)'}`,
-        borderRadius: '18px',
-        padding: `${cardPadding} ${cardPadding} ${cardPaddingBottom} ${cardPadding}`,
+        ...vibeThemeStyleVars(vibeTheme),
+        border: `1px solid ${isTier1 ? 'var(--gold-border)' : 'rgba(255,255,255,0.06)'}`,
+        borderRadius: '16px',
+        padding: cardPadding,
         position: 'relative', overflow: 'visible',
         isolation: 'isolate',
-        transition: 'border-color 200ms ease',
         cursor: disableCardNav || isRow ? 'default' : 'pointer',
         ...(isRow ? { margin: '6px 0 10px' } : null),
       }}
     >
-      <AtmosphereLayer
-        variant="card"
-        rooms={resolveMomentLines(post).flatMap((l) => (
-          l.songId ? [{ songId: l.songId, lineText: l.text }] : []
-        ))}
-      />
-      {label && !isRow ? (
-        <VibeTag
-          label={label}
-          color={color}
-          onClick={() => onSelectVibe?.(emotion.toUpperCase())}
-        />
-      ) : null}
       {isRow && (
         <button
           type="button"
@@ -811,15 +388,7 @@ export function PostCard({
           </span>
         </button>
       )}
-      <div style={{
-        position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
-        width: '60%', height: '1px',
-        background: isTier1
-          ? 'linear-gradient(to right, transparent, rgba(232,197,71,0.5), transparent)'
-          : 'linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent)',
-      }} />
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', gap: '8px', rowGap: '4px' }}>
+      <div className="margo-post-card__header">
         {(() => {
           const profileUsername = (authorProfile?.username || post.username || '').replace(/^@/, '')
           const profileHref = profileUsername ? `/profile/${profileUsername}` : null
@@ -960,41 +529,49 @@ export function PostCard({
             </div>
           )
           return (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              minWidth: 0,
-              flex: 1,
-              minHeight: 'var(--margo-touch-min)',
-            }}>
-              {avatarControl}
-              {profileHref ? (
-                <PendingNavLink
-                  href={profileHref}
-                  indicator="overlay"
-                  ringSize={22}
-                  onClick={(e) => e.stopPropagation()}
-                  aria-label={`View profile @${profileUsername}`}
-                  style={{
-                    minWidth: 0,
-                    flex: 1,
-                    textDecoration: 'none',
-                    color: 'inherit',
-                    WebkitTapHighlightColor: 'transparent',
-                    display: 'block',
-                    borderRadius: '8px',
-                  }}
-                >
-                  {nameBlock}
-                </PendingNavLink>
-              ) : (
-                nameBlock
-              )}
-            </div>
+            <>
+              <div style={{ gridRow: '1 / span 2' }}>{avatarControl}</div>
+              <div style={{ minWidth: 0, gridColumn: 2 }}>
+                {profileHref ? (
+                  <PendingNavLink
+                    href={profileHref}
+                    indicator="overlay"
+                    ringSize={22}
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label={`View profile @${profileUsername}`}
+                    style={{
+                      minWidth: 0,
+                      textDecoration: 'none',
+                      color: 'inherit',
+                      WebkitTapHighlightColor: 'transparent',
+                      display: 'block',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    {nameBlock}
+                  </PendingNavLink>
+                ) : (
+                  nameBlock
+                )}
+              </div>
+            </>
           )
         })()}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+        {label && !isRow ? (
+          <button
+            type="button"
+            className="margo-post-card__mood"
+            data-no-card-nav
+            aria-label={`Vibe: ${label}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              onSelectVibe?.(emotion.toUpperCase())
+            }}
+          >
+            {label}
+          </button>
+        ) : null}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, gridColumn: 4, gridRow: '1 / span 2' }}>
           {variant === 'feed' && (isNew || isTrending || isTop) && (
             <div style={{ display: 'flex', gap: '6px' }}>
               {isTop && <EarnedTag label="Top" onClick={() => onSelectRank?.('TOP')} />}
@@ -1247,8 +824,8 @@ export function PostCard({
           >
             <span className="margo-feed-action__icon-wrap">
               <LyricBackIcon size={20} color="var(--text-secondary)" />
-              {echoCount > 0 ? (
-                <span className="margo-feed-action__badge">{echoCount}</span>
+              {echoBadge ? (
+                <span className="margo-feed-action__badge">{echoBadge}</span>
               ) : null}
             </span>
             <span className="margo-feed-action__label">Lyric Back</span>
@@ -1402,43 +979,6 @@ export function PostCard({
 
       </div>
 
-      {isTier1 && !isCompact && (
-        <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(232,197,71,0.12)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ flex: 1 }}>
-              {audioUrl && (
-                <Tier1Player
-                  audioUrl={audioUrl}
-                  songId={post.songId || null}
-                  postText={post.text}
-                  title={fullLine?.songTitle || post.knowledge?.song || ''}
-                  artist={fullLine?.artistName || post.knowledge?.artist || ''}
-                  artwork={fullLine?.artworkUrl || post.knowledge?.artwork || null}
-                  atmosphere={fullLine?.atmosphere || post.atmosphere}
-                />
-              )}
-            </div>
-            {variant === 'feed' && post.songId && (
-              <PendingNavLink
-                href={`/song/${post.songId}`}
-                aria-label="Full Karaoke"
-                indicator="tint"
-                onClick={(e) => { if (!requireAuth()) e.preventDefault() }}
-                style={{
-                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                minHeight: 'var(--margo-touch-min)', boxSizing: 'border-box',
-                fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
-                color: 'var(--gold)', letterSpacing: '1px', textTransform: 'uppercase',
-                textDecoration: 'none', padding: '0 14px', border: '1px solid var(--gold-border)',
-                borderRadius: '50px', flexShrink: 0, alignSelf: 'flex-start',
-              }}>
-                Full Karaoke
-                <ChevronRightIcon size={12} color="var(--gold)" />
-              </PendingNavLink>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

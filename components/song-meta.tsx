@@ -15,6 +15,7 @@ type SongMetaProps = {
   style?: React.CSSProperties
   titleStyle?: React.CSSProperties
   artistStyle?: React.CSSProperties
+  aiLabelStyle?: React.CSSProperties
 }
 
 function ArtistCreditLine({
@@ -57,6 +58,7 @@ export function SongMeta({
   style,
   titleStyle,
   artistStyle,
+  aiLabelStyle,
 }: SongMetaProps) {
   const t = (title || '').trim()
   const a = (artist || '').trim()
@@ -77,7 +79,7 @@ export function SongMeta({
         ...titleStyle,
       }}>
         {t ? <span style={{ minWidth: 0 }}>{t}</span> : null}
-        {aiGenerated ? <AiGeneratedLabel show spaced={!!t} /> : null}
+        {aiGenerated ? <AiGeneratedLabel show spaced={!!t} style={aiLabelStyle} /> : null}
         {a ? <span>{(t || aiGenerated) ? ' · ' : ''}{a}</span> : null}
       </span>
     )
@@ -113,7 +115,7 @@ export function SongMeta({
               {t}
             </span>
           ) : null}
-          {aiGenerated ? <AiGeneratedLabel show spaced={!!t} /> : null}
+          {aiGenerated ? <AiGeneratedLabel show spaced={!!t} style={aiLabelStyle} /> : null}
         </p>
       ) : null}
       {a ? (

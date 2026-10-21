@@ -33,7 +33,7 @@ function bone(
   }
 }
 
-/** Feed-shaped post cards (avatar + lyric lines + action row). */
+/** Feed-shaped post cards — layout-matched to margo-post-card. */
 export function FeedPostSkeletonList({ count = 4 }: { count?: number }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -41,35 +41,47 @@ export function FeedPostSkeletonList({ count = 4 }: { count?: number }) {
       {Array.from({ length: count }, (_, i) => (
         <div
           key={i}
+          className="margo-post-card"
           style={{
-            padding: '20px 0',
-            borderBottom: '1px solid var(--border)',
+            borderRadius: 16,
+            padding: 16,
+            border: '1px solid var(--border)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-            <div style={bone({ width: 40, height: 40, borderRadius: '50%', border: 'none' }, i * 60)} />
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={bone({ height: 10, width: '36%', borderRadius: 4, border: 'none' }, i * 60 + 40)} />
-              <div style={bone({ height: 8, width: '22%', borderRadius: 4, border: 'none' }, i * 60 + 80)} />
+          <div className="margo-post-card__header" style={{ marginBottom: 10 }}>
+            <div style={bone({ width: 40, height: 40, borderRadius: '50%', border: 'none', gridRow: '1 / span 2' }, i * 60)} />
+            <div style={{ gridColumn: 2, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={bone({ height: 10, width: '42%', borderRadius: 4, border: 'none' }, i * 60 + 40)} />
+              <div style={bone({ height: 8, width: '28%', borderRadius: 4, border: 'none' }, i * 60 + 80)} />
             </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 18, paddingLeft: 4 }}>
-            <div style={bone({ height: 14, width: '92%', borderRadius: 4, border: 'none' }, i * 60 + 100)} />
-            <div style={bone({ height: 14, width: '78%', borderRadius: 4, border: 'none' }, i * 60 + 140)} />
-            <div style={bone({ height: 14, width: '64%', borderRadius: 4, border: 'none' }, i * 60 + 180)} />
+          <div className="margo-post-card__lyric-zone margo-post-card__lyric-zone--hero">
+            <div style={bone({ height: 22, width: '78%', borderRadius: 4, border: 'none' }, i * 60 + 100)} />
           </div>
-          <div style={{ display: 'flex', gap: 12 }}>
+          <div className="margo-post-card__song-block">
+            <div className="margo-post-card__song-row">
+              <div style={bone({ width: 48, height: 48, borderRadius: 8, border: 'none' }, i * 60 + 120)} />
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={bone({ height: 10, width: '55%', borderRadius: 4, border: 'none' }, i * 60 + 140)} />
+                <div style={bone({ height: 8, width: '35%', borderRadius: 4, border: 'none' }, i * 60 + 160)} />
+              </div>
+              <div style={bone({ width: 44, height: 44, borderRadius: '50%', border: 'none' }, i * 60 + 180)} />
+            </div>
+            <div className="margo-post-card__moment-meta">
+              <div style={bone({ height: 8, width: '38%', borderRadius: 4, border: 'none' }, i * 60 + 200)} />
+              <div style={bone({ flex: 1, height: 3, borderRadius: 999, border: 'none' }, i * 60 + 220)} />
+            </div>
+          </div>
+          <div className="margo-feed-actions">
             {[0, 1, 2, 3].map((j) => (
               <div
                 key={j}
                 style={bone({
-                  height: 36,
-                  flex: 1,
-                  maxWidth: 88,
-                  borderRadius: 50,
+                  height: 44,
+                  borderRadius: 8,
                   border: 'none',
                   background: 'rgba(255,255,255,0.03)',
-                }, i * 60 + 200 + j * 40)}
+                }, i * 60 + 240 + j * 30)}
               />
             ))}
           </div>

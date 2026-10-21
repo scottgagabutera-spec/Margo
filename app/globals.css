@@ -68,6 +68,7 @@
   --feed-type-action-badge: 0.625rem;
   --feed-type-mood-chip: 0.625rem;
   --feed-type-section-label: 0.625rem;
+  --feed-type-lyric-hero: 1.5rem;
   --feed-type-lyric-short: 1.25rem;
   --feed-type-lyric-medium: 1.0625rem;
   --feed-type-lyric-long: 1rem;
@@ -416,8 +417,207 @@ html[data-margo-stage-idle] .margo-stage-zone {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text-muted);
-  text-align: center;
-  opacity: 0.72;
+  text-align: left;
+  opacity: 0.85;
+}
+.margo-feed-lyric--hero {
+  font-size: var(--feed-type-lyric-hero);
+  line-height: 1.45;
+}
+.margo-feed-lyric--compact {
+  font-size: var(--feed-type-lyric-medium);
+}
+.margo-feed-lyric--clamp-4 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+.margo-post-card__stitch {
+  font-size: 0.6875rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .margo-feed-lyric__more,
+  .margo-post-card__progress-fill,
+  .margo-feed-action {
+    transition: none !important;
+  }
+}
+
+.margo-post-card {
+  --post-vibe-fill: var(--gold);
+  --post-vibe-text: #f2dd94;
+  --post-vibe-glow: rgba(232, 197, 71, 0.14);
+  --post-vibe-faint: rgba(232, 197, 71, 0.1);
+  --post-vibe-border: rgba(232, 197, 71, 0.32);
+  background:
+    linear-gradient(155deg, var(--post-vibe-glow) 0%, transparent 38%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0%, rgba(255, 255, 255, 0.03) 100%);
+  background-color: rgba(12, 11, 16, 0.92);
+}
+.margo-post-card--tier1 {
+  border-color: var(--gold-border) !important;
+  box-shadow: 0 0 0 1px rgba(232, 197, 71, 0.06);
+}
+.margo-post-card--external {
+  border-style: dashed !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+.margo-post-card__header {
+  display: grid;
+  grid-template-columns: 40px 1fr auto auto;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  row-gap: 4px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.margo-post-card__mood {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  align-self: start;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--post-vibe-faint);
+  border: 1px solid var(--post-vibe-border);
+  color: var(--post-vibe-text);
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (max-width: 360px) {
+  .margo-post-card__header {
+    grid-template-columns: 40px 1fr auto;
+  }
+  .margo-post-card__mood {
+    grid-column: 2 / -1;
+    grid-row: 2;
+    justify-self: start;
+    margin-top: 2px;
+  }
+}
+.margo-post-card__lyric-zone {
+  margin: 0 0 10px;
+  text-align: left;
+}
+.margo-post-card__lyric-zone--hero {
+  padding: 12px 2px 14px;
+  min-height: 88px;
+}
+.margo-post-card__lyric-zone--compact {
+  min-height: 99px;
+  padding: 0 2px;
+}
+.margo-post-card__lyric-more {
+  color: var(--post-vibe-text);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: var(--feed-type-action-label);
+}
+.margo-post-card__song-block {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  margin-top: 2px;
+}
+.margo-post-card__song-row {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+.margo-post-card__moment-btn {
+  width: var(--margo-touch-min);
+  height: var(--margo-touch-min);
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-sizing: border-box;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.margo-post-card__moment-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.margo-post-card__moment-label {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-action-label);
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.margo-post-card__moment-label strong {
+  color: var(--post-vibe-text);
+  font-weight: 600;
+}
+.margo-post-card__progress-track {
+  flex: 1;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+.margo-post-card__progress-fill {
+  height: 100%;
+  background: var(--post-vibe-fill);
+  border-radius: inherit;
+  transition: width 200ms linear;
+}
+.margo-post-card__full-song-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--margo-touch-min);
+  margin-top: 8px;
+  padding: 0 4px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-action-label);
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: none;
+  box-sizing: border-box;
+}
+.margo-post-card__listen-external {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: var(--margo-touch-min);
+  margin-top: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--post-vibe-border);
+  background: var(--post-vibe-faint);
+  color: var(--post-vibe-text);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-action-label);
+  font-weight: 600;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+.margo-post-card__external-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.margo-feed-action__label {
+  color: var(--text-secondary);
 }
 
 .margo-feed-column {
@@ -507,6 +707,9 @@ html[data-margo-stage-idle] .margo-stage-zone {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: center;
   width: 100%;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
 }
 .margo-feed-actions--cols-3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
