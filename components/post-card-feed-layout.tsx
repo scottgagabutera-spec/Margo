@@ -9,6 +9,10 @@ import { PostThumbnail } from '@/components/post-thumbnail'
 import { SongMeta } from '@/components/song-meta'
 import { FEED_TYPE } from '@/lib/fonts'
 import {
+  FEED_CARD_LYRIC_CLASS,
+  FEED_CARD_LYRIC_CLAMP_CLASS,
+} from '@/lib/post-card-lyric-class'
+import {
   computePlaybackSegments,
   postLinesToSegmentInput,
 } from '@/lib/moment/playback-segments'
@@ -106,7 +110,7 @@ export function PostCardLyricSection({ post }: { post: Post }) {
     return (
       <div className="margo-post-card__lyric-zone">
         {!expanded && needsExpand ? (
-          <div className="margo-feed-lyric margo-post-card__lyric margo-feed-lyric--clamp-4">
+          <p className={FEED_CARD_LYRIC_CLAMP_CLASS}>
             {lines.map((line, i) => (
               <span key={line.id || `line-${line.position}-${i}`}>
                 {i > 0 ? (
@@ -115,14 +119,14 @@ export function PostCardLyricSection({ post }: { post: Post }) {
                 &ldquo;{line.text}&rdquo;
               </span>
             ))}
-          </div>
+          </p>
         ) : (
           lines.map((line, i) => (
             <div key={line.id || `line-${line.position}-${i}`}>
               {i > 0 ? (
                 <p className="margo-feed-stitch margo-post-card__stitch" aria-hidden>stitch</p>
               ) : null}
-              <p className="margo-feed-lyric margo-post-card__lyric">&ldquo;{line.text}&rdquo;</p>
+              <p className={FEED_CARD_LYRIC_CLASS}>&ldquo;{line.text}&rdquo;</p>
             </div>
           ))
         )}
@@ -149,11 +153,7 @@ export function PostCardLyricSection({ post }: { post: Post }) {
   return (
     <div className="margo-post-card__lyric-zone">
       <p
-        className={[
-          'margo-feed-lyric',
-          'margo-post-card__lyric',
-          needsExpand && !expanded ? 'margo-feed-lyric--clamp-4' : '',
-        ].filter(Boolean).join(' ')}
+        className={needsExpand && !expanded ? FEED_CARD_LYRIC_CLAMP_CLASS : FEED_CARD_LYRIC_CLASS}
       >
         &ldquo;{text}&rdquo;
       </p>

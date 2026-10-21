@@ -10,7 +10,8 @@
     "test:playback-segments": "node --experimental-strip-types --test lib/moment/playback-segments.test.ts",
     "test:curated-moments": "node --experimental-strip-types --test lib/moments/validate-curated-moments.test.ts",
     "test:post-card-lyric": "node --experimental-strip-types --test lib/post-card-lyric-layout.test.ts",
-    "test": "npm run test:playback-segments && npm run test:curated-moments && npm run test:post-card-lyric"
+    "test:post-card-lyric-uniform": "node --experimental-strip-types --test lib/post-card-lyric-uniform.test.ts",
+    "test": "npm run test:playback-segments && npm run test:curated-moments && npm run test:post-card-lyric && npm run test:post-card-lyric-uniform"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1136.0",

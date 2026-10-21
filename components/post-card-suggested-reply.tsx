@@ -68,7 +68,7 @@ export function PostCardSuggestedReply({
     margin: 0,
     cursor: 'pointer',
     fontFamily: UI_FONT,
-    fontSize: `var(${FEED_TYPE.actionLabel})`,
+    fontSize: `var(${FEED_TYPE.controlLabel})`,
     fontWeight: 600,
     color: 'var(--post-vibe-text)',
     minHeight: 'var(--margo-touch-min)',
@@ -139,7 +139,7 @@ function SuggestionRow({
   return (
     <div className="margo-post-card__suggestion-row">
       <button type="button" onClick={onAccept} className="margo-post-card__suggestion-body">
-        <p className="margo-post-card__suggestion-lyric">&ldquo;{suggestion.text}&rdquo;</p>
+        <p className="margo-post-card__suggestion-lyric margo-feed-lyric--suggestion">&ldquo;{suggestion.text}&rdquo;</p>
         <p className="margo-post-card__suggestion-meta">
           {suggestion.songTitle} · {suggestion.artistName}
         </p>

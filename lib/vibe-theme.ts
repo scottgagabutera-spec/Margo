@@ -5,15 +5,21 @@
 
 import { feedHueForEmotion, type FeedHueKey } from '@/lib/feed-vibe-map'
 
+export const FEED_CARD_SURFACE = '#0F0E13'
+
 export type VibeTheme = {
   hue: FeedHueKey
   fill: string
-  /** Accent text (progress, full-song label, moment strong). */
+  /** Accent text (full-song label, etc.). */
   text: string
   /** Chip label — meets 4.5:1 on chip fill. */
   chipText: string
   faint: string
   border: string
+  /** Radial gradient origin (lightest tinted point — contrast-check lyrics against this). */
+  gradientOrigin: string
+  /** Luminous 1px hairline mix. */
+  borderLuminous: string
 }
 
 const IVORY_FILL = '#E8E4DC'
@@ -45,6 +51,15 @@ function mixWhite(hex: string, whiteMix: number): string {
   return `#${toHex(f(r))}${toHex(f(g))}${toHex(f(b))}`
 }
 
+function mixHex(base: string, accent: string, accentWeight: number): string {
+  const [r1, g1, b1] = hexToRgb(base)
+  const [r2, g2, b2] = hexToRgb(accent)
+  const w = Math.min(1, Math.max(0, accentWeight))
+  const f = (a: number, b: number) => Math.round(a * (1 - w) + b * w)
+  const toHex = (n: number) => n.toString(16).padStart(2, '0')
+  return `#${toHex(f(r1, r2))}${toHex(f(g1, g2))}${toHex(f(b1, b2))}`
+}
+
 function rgba(hex: string, alpha: number): string {
   const [r, g, b] = hexToRgb(hex)
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
@@ -59,19 +74,23 @@ function fillForKey(key: FeedHueKey): string {
   return FEED_VIBE_FILL[key] ?? IVORY_FILL
 }
 
-/** WCAG-friendly theme tokens for feed cards (no card glow). */
+/** WCAG-friendly theme tokens for feed cards. */
 export function getVibeTheme(emotion: string | null | undefined): VibeTheme {
   const hue = feedHueForEmotion(emotion)
   const fill = fillForKey(hue)
   const textMix = hue === 'ivory' ? 0.2 : 0.38
   const chipText = hue === 'ivory' ? '#C8C4BC' : mixWhite(fill, 0.12)
+  const accentWeight = hue === 'ivory' ? 0.1 : 0.42
+  const gradientOrigin = mixHex(FEED_CARD_SURFACE, fill, accentWeight)
   return {
     hue,
     fill,
     text: mixWhite(fill, textMix),
     chipText,
-    faint: rgba(fill, hue === 'ivory' ? 0.08 : 0.14),
+    faint: rgba(fill, hue === 'ivory' ? 0.08 : 0.12),
     border: rgba(fill, hue === 'ivory' ? 0.22 : 0.38),
+    gradientOrigin,
+    borderLuminous: mixHex(FEED_CARD_SURFACE, mixWhite(fill, 0.15), 0.35),
   }
 }
 
@@ -90,5 +109,7 @@ export function vibeThemeStyleVars(theme: VibeTheme): Record<string, string> {
     ['--post-vibe-chip-text' as string]: theme.chipText,
     ['--post-vibe-faint' as string]: theme.faint,
     ['--post-vibe-border' as string]: theme.border,
+    ['--post-vibe-gradient-origin' as string]: theme.gradientOrigin,
+    ['--post-vibe-border-luminous' as string]: theme.borderLuminous,
   }
 }

@@ -22,21 +22,23 @@ export const TYPE = {
   label: '0.6rem',
 } as const
 
-/** Feed post card typography scale (min 0.75rem on card). */
+/** Feed post card typography scale (min 0.75rem on card chrome). */
 export const FEED_TYPE_SCALE = {
-  lyric: '1rem',
-  lyricLineHeight: '1.5',
+  lyric: '1.0625rem',
+  lyricLineHeight: '1.55',
   displayName: '0.9375rem',
   handle: '0.8125rem',
   date: '0.8125rem',
   songTitle: '0.875rem',
   artist: '0.8125rem',
-  actionLabel: '0.875rem',
+  controlLabel: '0.8125rem',
+  feedActionLabel: '0.75rem',
   actionCount: '0.8125rem',
   moodChip: '0.75rem',
   sectionLabel: '0.75rem',
   aiLabel: '0.75rem',
-  /** Export / Discover hero lyric — not used on feed cards. */
+  suggestionLyric: '0.875rem',
+  /** Export / Discover hero lyric — not used on feed card moment body. */
   lyricHero: '1.5rem',
 } as const
 
@@ -49,10 +51,12 @@ export const FEED_TYPE = {
   date: '--feed-type-date',
   songTitle: '--feed-type-song-title',
   artist: '--feed-type-artist',
-  actionLabel: '--feed-type-action-label',
+  controlLabel: '--feed-type-control-label',
+  feedActionLabel: '--feed-type-feed-action-label',
   actionCount: '--feed-type-action-count',
   moodChip: '--feed-type-mood-chip',
   sectionLabel: '--feed-type-section-label',
   aiLabel: '--feed-type-ai-label',
+  suggestionLyric: '--feed-type-suggestion-lyric',
   lyricHero: '--feed-type-lyric-hero',
 } as const

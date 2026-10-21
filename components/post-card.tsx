@@ -35,6 +35,7 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { UI_FONT, LYRIC_FONT, FEED_TYPE } from '@/lib/fonts'
 import { getVibeTheme, vibeThemeStyleVars } from '@/lib/vibe-theme'
 import { formatEchoBadge } from '@/lib/post-card-lyric-layout'
+import { FEED_CARD_LYRIC_ROW_CLASS } from '@/lib/post-card-lyric-class'
 import { FEED_HUE_GLYPH } from '@/lib/feed-vibe-map'
 import { FeedVibeGlyph } from '@/components/feed-vibe-glyph'
 import { PostCardLyricSection, PostCardSongSection } from '@/components/post-card-feed-layout'
@@ -317,16 +318,7 @@ export function PostCard({
           minHeight: 'var(--margo-touch-min)',
         }}
       >
-        <p
-          className="margo-feed-lyric margo-feed-lyric--row"
-          style={{
-            margin: 0,
-            display: '-webkit-box',
-            WebkitLineClamp: 1,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}
-        >
+        <p className={FEED_CARD_LYRIC_ROW_CLASS}>
           {post.text || 'Untitled lyric'}
         </p>
         {(post.knowledge?.song || post.knowledge?.artist) ? (
@@ -798,8 +790,7 @@ export function PostCard({
       <div className={(() => {
         const actionCount = 2 + (!threadDetail && lyricBackAllowed ? 1 : 0) + (onReplay ? 1 : 0)
         const cols = actionCount === 3 ? ' margo-feed-actions--cols-3' : ''
-        const icons = variant === 'feed' && !threadDetail ? ' margo-feed-actions--icons' : ''
-        return `margo-feed-actions${cols}${icons}`
+        return `margo-feed-actions${cols}`
       })()}>
         <button
           type="button"

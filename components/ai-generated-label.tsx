@@ -7,7 +7,7 @@ import { UI_FONT } from '@/lib/fonts'
  * Plain supporting metadata — no frame, border, or background.
  * Renders nothing when `show` is false — callers gate on the boolean.
  *
- * Default: small muted "(AI-generated)" immediately after the song title.
+ * Default: small muted AI-generated tag immediately after the song title.
  */
 export function AiGeneratedLabel({
   show = true,
@@ -36,7 +36,7 @@ export function AiGeneratedLabel({
         ...style,
       }}
     >
-      {spaced ? '\u2009' : null}(AI-generated)
+      {spaced ? '\u2009' : null}AI-generated
     </span>
   )
 }
