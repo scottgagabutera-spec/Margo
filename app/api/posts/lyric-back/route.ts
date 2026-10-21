@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
+import { isNotificationAllowed } from '@/lib/notification-prefs'
 
 const MAX_TEXT = 500
 const MAX_SONG = 300
@@ -26,6 +27,36 @@ async function requireUserId(): Promise<string | null> {
   const { data, error } = await supabase.auth.getUser()
   if (error || !data?.user?.id) return null
   return data.user.id
+}
+
+async function notifyParentLyricBack(
+  admin: ReturnType<typeof getAdmin>,
+  opts: {
+    parentPostId: string
+    parentAuthorId: string
+    actorId: string
+  },
+): Promise<void> {
+  if (!admin) return
+  const { parentPostId, parentAuthorId, actorId } = opts
+  if (parentAuthorId === actorId) return
+
+  try {
+    const allowed = await isNotificationAllowed(admin, parentAuthorId, 'lyricBack')
+    if (!allowed) return
+
+    const { error } = await admin.from('notifications').insert({
+      recipient_id: parentAuthorId,
+      actor_id: actorId,
+      type: 'lyric_back',
+      post_id: parentPostId,
+    })
+    if (error) {
+      console.error('[posts/lyric-back POST] lyric_back notification failed:', error)
+    }
+  } catch (err) {
+    console.error('[posts/lyric-back POST] lyric_back notification failed:', err)
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -69,10 +100,12 @@ export async function POST(req: NextRequest) {
   const admin = getAdmin()
   if (!admin) return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
 
+  let parentAuthorId: string | null = null
+
   if (parentPostId) {
     const { data: parent, error: parentErr } = await admin
       .from('posts')
-      .select('id, status')
+      .select('id, status, author_profile_id')
       .eq('id', parentPostId)
       .maybeSingle()
     if (parentErr || !parent) {
@@ -81,6 +114,7 @@ export async function POST(req: NextRequest) {
     if (parent.status !== 'active') {
       return NextResponse.json({ error: 'You can only reply to a public Moment.' }, { status: 400 })
     }
+    parentAuthorId = parent.author_profile_id ?? null
   }
 
   const { data, error } = await admin
@@ -107,6 +141,14 @@ export async function POST(req: NextRequest) {
       { error: 'Could not send your Lyric Back. Please try again.' },
       { status: 500 },
     )
+  }
+
+  if (parentPostId && !isPrivate && parentAuthorId) {
+    await notifyParentLyricBack(admin, {
+      parentPostId,
+      parentAuthorId,
+      actorId: userId,
+    })
   }
 
   return NextResponse.json({ id: data.id, status: data.status })
