@@ -333,7 +333,7 @@ export function SongPreviewSheet({
                 >
                   {song.title}
                 </h2>
-                {song.isAiGenerated ? <AiGeneratedLabel show spaced={false} /> : null}
+                {song.isAiGenerated ? <AiGeneratedLabel show spaced={false} variant="feed" /> : null}
               </div>
               <p style={{
                 fontFamily: UI_FONT, fontSize: '0.75rem', fontWeight: 400,

@@ -360,7 +360,7 @@ Empty states are invitations, not errors.
 
 - **Vibe gradient** = post mood only (`--post-vibe-*` from `lib/vibe-theme.ts`). **Gold** = brand, play control, primary CTAs — not the card fill.
 - **Lyric** = Lora, neutral `--text`, max ~36ch. **Song row** = 56px: artwork, title line + muted **AI** chip (small, low contrast), artist below, gold play.
-- **AI tag:** catalog **song title** only (`.margo-feed-ai-tag`). Never on lyric, username, or vibe chip. Set by artist on upload (`songs.is_ai_generated`).
+- **AI tag (` .margo-feed-ai-tag `):** small chip **beside catalog song title only** (`SongMeta`, discover/song preview feed variant). **Show:** feed song row, song page header, catalog cards when `is_ai_generated`. **Never:** lyric text, username, vibe chip, Lyric Back bubbles, compose placeholders, or echo rows. Source: artist toggle on Studio upload (`songs.is_ai_generated`).
 - **Atmosphere (artist “effect”):** `songs.atmosphere` (breath/drift/pulse/weight). **Moment stage** (tall lyric well, min ~128px) while **this card’s snippet** plays — not a single-line strip. Song row stays below the stage. Respects `prefers-reduced-motion`.
 - **Lyric Back panel:** **Lyric Backs · N**, scrollable echo bubbles (@ → profile, song line separate from Lora lyric), collapsed ideas, **inline compose** (catalog + send). Closes when card scrolls off-screen. No scroll prefetch.
 

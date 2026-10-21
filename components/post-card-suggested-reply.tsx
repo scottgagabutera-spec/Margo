@@ -34,8 +34,8 @@ export type PostCardSuggestedReplyProps = {
   open: boolean
   onClose: () => void
   onRequireAuth?: () => boolean
-  onOpenSuggestedSearch?: () => void
-  onOpenFullEditor?: () => void
+  /** Full Margo flow: search catalog, pick line, vibe (on /lyric-back). */
+  onFindLine?: () => void
   onOpenEcho?: (echoId: string) => void
 }
 
@@ -73,8 +73,7 @@ export function PostCardSuggestedReply({
   open,
   onClose,
   onRequireAuth,
-  onOpenSuggestedSearch,
-  onOpenFullEditor,
+  onFindLine,
   onOpenEcho,
 }: PostCardSuggestedReplyProps) {
   const panelRef = useRef<HTMLDivElement>(null)
@@ -108,7 +107,7 @@ export function PostCardSuggestedReply({
 
   const loadIdeas = useCallback(async () => {
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      setIdeasError('Offline. Try catalog search when you are back online.')
+      setIdeasError('Offline. Search Margo music when you are back online.')
       setIdeasFetched(true)
       setIdeasLoading(false)
       return
@@ -278,7 +277,7 @@ export function PostCardSuggestedReply({
                 </div>
               ) : null}
               {showIdeasEmpty ? (
-                <p className="margo-post-card__lb-status">No catalog match. Search or type below.</p>
+                <p className="margo-post-card__lb-status">No match. Use Find a line to search Margo music.</p>
               ) : null}
               {!ideasLoading && !ideasError && (picks?.length ?? 0) > 0 && picks ? (
                 <ul className="margo-post-card__lb-list">
@@ -297,16 +296,22 @@ export function PostCardSuggestedReply({
       <div className="margo-post-card__lb-compose">
         {draft?.songTitle ? (
           <p className="margo-post-card__lb-compose-track">
-            {draft.songTitle}{draft.artistName ? ` · ${draft.artistName}` : ''}
+            <span className="margo-post-card__lb-compose-song">{draft.songTitle}</span>
+            {draft.artistName ? (
+              <span className="margo-post-card__lb-compose-artist">{draft.artistName}</span>
+            ) : null}
           </p>
         ) : (
-          <p className="margo-post-card__lb-compose-hint">Pick a song from catalog to send</p>
+          <p className="margo-post-card__lb-compose-hint">
+            Find a line from Margo music, then send your Lyric Back
+          </p>
         )}
         <textarea
           ref={composeRef}
           className="margo-post-card__lb-compose-input"
           rows={2}
-          placeholder="Reply with a lyric…"
+          placeholder="Your Lyric Back line…"
+          aria-label="Lyric Back line"
           value={draftLyric}
           onChange={(e) => {
             setDraftLyric(e.target.value)
@@ -317,22 +322,13 @@ export function PostCardSuggestedReply({
           <p className="margo-post-card__lb-compose-error" role="alert">{composeError}</p>
         ) : null}
         <div className="margo-post-card__lb-compose-bar">
-          {onOpenSuggestedSearch ? (
+          {onFindLine ? (
             <button
               type="button"
-              className="margo-post-card__lb-compose-catalog"
-              onClick={onOpenSuggestedSearch}
+              className="margo-post-card__lb-compose-find"
+              onClick={onFindLine}
             >
-              Catalog
-            </button>
-          ) : null}
-          {onOpenFullEditor ? (
-            <button
-              type="button"
-              className="margo-post-card__lb-compose-more"
-              onClick={onOpenFullEditor}
-            >
-              More
+              Find a line
             </button>
           ) : null}
           <button
@@ -396,12 +392,29 @@ function EchoRow({
             ) : null}
             {(echo.song || echo.artist) ? (
               <p className="margo-post-card__lb-echo-track">
-                {echo.song}{echo.artist ? ` · ${echo.artist}` : ''}
+                {echo.song ? (
+                  <span className="margo-post-card__lb-echo-song">{echo.song}</span>
+                ) : null}
+                {echo.artist ? (
+                  <span className="margo-post-card__lb-echo-artist">{echo.artist}</span>
+                ) : null}
               </p>
             ) : null}
           </div>
           <button type="button" className="margo-post-card__lb-echo-bubble" onClick={onOpen}>
             <span className="margo-post-card__lb-echo-lyric">&ldquo;{echo.lyric}&rdquo;</span>
+          </button>
+          <button
+            type="button"
+            className="margo-post-card__lb-echo-thread-link"
+            onClick={onOpen}
+          >
+            Open Lyric Back
+            {(echo.resonateCount ?? 0) > 0 ? (
+              <span className="margo-post-card__lb-echo-resonates">
+                · {echo.resonateCount} resonate
+              </span>
+            ) : null}
           </button>
         </div>
         {canPlay ? (
@@ -462,7 +475,8 @@ function SuggestionRow({
       <button type="button" onClick={onAccept} className="margo-post-card__lb-row-body">
         <p className="margo-post-card__lb-row-lyric">&ldquo;{suggestion.text}&rdquo;</p>
         <p className="margo-post-card__lb-row-meta">
-          {suggestion.songTitle} · {suggestion.artistName}
+          <span className="margo-post-card__lb-echo-song">{suggestion.songTitle}</span>
+          <span className="margo-post-card__lb-echo-artist">{suggestion.artistName}</span>
         </p>
       </button>
       {canPlay ? (

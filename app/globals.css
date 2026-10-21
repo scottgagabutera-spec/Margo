@@ -698,6 +698,9 @@ html[data-margo-stage-idle] .margo-stage-zone {
   min-height: clamp(128px, 32vw, 176px);
   display: flex;
   align-items: center;
+  /* Weight/breath tints follow this post's vibe, not global gold */
+  --gold: var(--post-vibe-fill);
+  --gold-warm: var(--post-vibe-text);
 }
 .margo-post-card__moment-stage-inner {
   position: relative;
@@ -917,15 +920,19 @@ html[data-margo-stage-idle] .margo-stage-zone {
 }
 .margo-post-card__lb-panel {
   margin-top: 16px;
-  padding: 12px 16px 16px;
+  margin-left: calc(-1 * var(--margo-post-card-pad));
+  margin-right: calc(-1 * var(--margo-post-card-pad));
+  width: calc(100% + 2 * var(--margo-post-card-pad));
+  padding: 12px 14px 16px;
   padding-bottom: calc(12px + var(--margo-miniplayer-h, 0px));
   border-top: 1px solid var(--border);
   background: var(--surface-2);
-  border-radius: 0 0 12px 12px;
+  border-radius: 0 0 16px 16px;
   display: flex;
   flex-direction: column;
-  max-height: min(440px, 58vh);
+  max-height: min(460px, 62vh);
   min-height: 0;
+  box-sizing: border-box;
 }
 .margo-post-card__lb-scroll {
   flex: 1 1 auto;
@@ -996,10 +1003,10 @@ html[data-margo-stage-idle] .margo-stage-zone {
   margin: 0;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: var(--feed-type-artist);
-  color: var(--text-muted);
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .margo-post-card__lb-row-play {
   width: var(--margo-touch-min);
@@ -1102,10 +1109,61 @@ html[data-margo-stage-idle] .margo-stage-zone {
   margin: 2px 0 0;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: var(--feed-type-artist);
-  color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.margo-post-card__lb-echo-song,
+.margo-post-card__lb-compose-song {
+  font-weight: 600;
+  color: var(--post-vibe-text);
+  flex-shrink: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.margo-post-card__lb-echo-artist,
+.margo-post-card__lb-compose-artist {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--text-muted);
+  flex-shrink: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.margo-post-card__lb-echo-artist::before,
+.margo-post-card__lb-compose-artist::before {
+  content: '·';
+  font-style: normal;
+  margin-right: 6px;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+.margo-post-card__lb-echo-thread-link {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  cursor: pointer;
+  min-height: 32px;
+}
+.margo-post-card__lb-echo-resonates {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+  color: var(--gold);
 }
 .margo-post-card__lb-echo-bubble {
   display: block;
@@ -1133,19 +1191,20 @@ html[data-margo-stage-idle] .margo-stage-zone {
   padding-top: 10px;
   border-top: 1px solid var(--border);
 }
-.margo-post-card__lb-compose-hint,
-.margo-post-card__lb-compose-track {
+.margo-post-card__lb-compose-hint {
   margin: 0 0 6px;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: var(--feed-type-artist);
   color: var(--text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.4;
 }
 .margo-post-card__lb-compose-track {
-  color: var(--post-vibe-text);
-  font-weight: 600;
+  margin: 0 0 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
 .margo-post-card__lb-compose-input {
   width: 100%;
@@ -1178,18 +1237,19 @@ html[data-margo-stage-idle] .margo-stage-zone {
   gap: 8px;
   margin-top: 8px;
 }
-.margo-post-card__lb-compose-catalog,
-.margo-post-card__lb-compose-more {
+.margo-post-card__lb-compose-find {
+  flex: 1;
   min-height: var(--margo-touch-min);
-  padding: 0 12px;
+  padding: 0 14px;
   border-radius: 8px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text-secondary);
+  border: 1px solid var(--post-vibe-border);
+  background: var(--post-vibe-faint);
+  color: var(--post-vibe-text);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: var(--feed-type-artist);
+  font-size: var(--feed-type-control-label);
   font-weight: 600;
   cursor: pointer;
+  text-align: left;
 }
 .margo-post-card__lb-compose-send {
   margin-left: auto;

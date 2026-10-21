@@ -758,15 +758,10 @@ export function PostCard({
             persistActivePrimaryScroll()
             router.push(`/post/${echoId}`)
           }}
-          onOpenFullEditor={() => {
+          onFindLine={() => {
             if (!requireAuth()) return
             persistActivePrimaryScroll()
             router.push(lyricBackHref)
-          }}
-          onOpenSuggestedSearch={() => {
-            if (!requireAuth()) return
-            persistActivePrimaryScroll()
-            router.push(`/lyric-back?postId=${encodeURIComponent(post.id)}&catalogOnly=1`)
           }}
         />
       ) : null}
