@@ -87,3 +87,51 @@ export function FeedIconExternal({ size = 20, className }: Props) {
     </svg>
   )
 }
+
+type MomentIconProps = Props & { color?: string }
+
+export function FeedMomentPlaybackIcon({
+  playing,
+  buffering = false,
+  size = 20,
+  color = 'currentColor',
+  className,
+}: MomentIconProps & { playing: boolean; buffering?: boolean }) {
+  const stroke = color
+  if (buffering) {
+    return (
+      <svg
+        width={size}
+        height={size}
+        className={className}
+        aria-hidden
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="8"
+          stroke={stroke}
+          strokeWidth={1.75}
+          strokeLinecap="round"
+          strokeDasharray="4 3"
+          className="margo-feed-moment-spin"
+        />
+      </svg>
+    )
+  }
+  if (playing) {
+    return (
+      <svg width={size} height={size} className={className} aria-hidden viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9 7v10M15 7v10" stroke={stroke} strokeWidth={1.75} strokeLinecap="round" />
+      </svg>
+    )
+  }
+  return (
+    <svg width={size} height={size} className={className} aria-hidden viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M9 7.5v9l8-4.5-8-4.5z" fill={stroke} stroke="none" />
+    </svg>
+  )
+}

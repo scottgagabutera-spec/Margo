@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type CSSProperties } from 'react'
 import { playSnippet, togglePlayPause } from '@/lib/audio-engine'
 import { useAudioEngine } from '@/hooks/useAudioEngine'
-import { PlayPauseIcon } from '@/components/play-pause-icon'
+import { FeedMomentPlaybackIcon } from '@/components/feed-card-icons'
 import { UI_FONT, LYRIC_FONT, FEED_TYPE } from '@/lib/fonts'
 import type { SuggestedLyricBack } from '@/lib/suggest-lyric-back'
 import { fetchLyricBackSuggestionsForPost } from '@/lib/lyric-back-suggestions'
@@ -171,7 +171,7 @@ function SuggestionRow({
             })
           }}
         >
-          <PlayPauseIcon playing={isPlaying} buffering={isBuffering} size={18} color="var(--post-vibe-fill)" />
+          <FeedMomentPlaybackIcon playing={isPlaying} buffering={isBuffering} size={18} color="var(--post-vibe-fill)" />
         </button>
       )}
     </div>

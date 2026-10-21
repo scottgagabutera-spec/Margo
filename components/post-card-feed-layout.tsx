@@ -7,7 +7,7 @@ import { resolveMomentLines } from '@/lib/post-lines'
 import { FEED_ARTWORK_THUMB_PX } from '@/lib/feed/layout'
 import { PostThumbnail } from '@/components/post-thumbnail'
 import { SongMeta } from '@/components/song-meta'
-import { PlayPauseIcon } from '@/components/play-pause-icon'
+import { FeedMomentPlaybackIcon } from '@/components/feed-card-icons'
 import { FEED_TYPE } from '@/lib/fonts'
 import {
   computePlaybackSegments,
@@ -85,7 +85,7 @@ function MomentPlayControl({
       aria-label={ariaPlay}
       className="margo-post-card__moment-btn"
     >
-      <PlayPauseIcon playing={playing} buffering={buffering} size={18} color="var(--bg)" />
+      <FeedMomentPlaybackIcon playing={playing} buffering={buffering} size={18} color="var(--bg)" />
     </button>
   )
 }

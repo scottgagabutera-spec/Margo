@@ -444,6 +444,18 @@ html[data-margo-stage-idle] .margo-stage-zone {
   .margo-feed-action {
     transition: none !important;
   }
+  .margo-feed-moment-spin {
+    animation: none !important;
+  }
+}
+@keyframes margo-feed-moment-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.margo-feed-moment-spin {
+  transform-origin: center;
+  animation: margo-feed-moment-spin 1s linear infinite;
 }
 
 .margo-post-card {
