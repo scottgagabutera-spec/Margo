@@ -2,7 +2,7 @@
 import { ShareIcon, CardIcon } from '@/components/icons'
 import { BackButton } from '@/components/back-button'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { Suspense, useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
@@ -40,7 +40,7 @@ const KARAOKE_RESUME_KEY = 'margo-karaoke-resume'
 // load) — that's the one case where a query param still earns its
 // place, since it's a transient "where to start," not part of the
 // route's identity.
-export default function SongPage() {
+function SongPageInner() {
   const params = useParams()
   const songId = (Array.isArray(params?.id) ? params.id[0] : params?.id) as string | undefined
   const searchParams = useSearchParams()
@@ -567,5 +567,19 @@ export default function SongPage() {
         artwork={song?.artwork || null}
       />
     </div>
+  )
+}
+
+function SongPageFallback() {
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }} aria-busy="true" aria-label="Loading song" />
+  )
+}
+
+export default function SongPage() {
+  return (
+    <Suspense fallback={<SongPageFallback />}>
+      <SongPageInner />
+    </Suspense>
   )
 }

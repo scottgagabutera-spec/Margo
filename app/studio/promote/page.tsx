@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { PromoteQueueCard, type PromoteQueueUpdateOptions } from '@/components/promote/promote-queue-card'
@@ -21,7 +21,7 @@ import { PromoteInlineStatus, PromotePageFrame } from '@/components/promote/prom
 const font = UI_FONT
 const supabase = createClient()
 
-export default function StudioPromotePage() {
+function StudioPromotePageInner() {
   const { user, identity, loading: identityLoading } = useIdentity()
   const cachedOnMount = readPromoteQueueSessionCache()
   const [items, setItems] = useState<PromoteQueueRow[]>(() => cachedOnMount ?? [])
@@ -266,5 +266,33 @@ export default function StudioPromotePage() {
         )}
       </div>
     </PromotePageFrame>
+  )
+}
+
+function StudioPromotePageFallback() {
+  return (
+    <PromotePageFrame>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }} aria-busy="true" aria-label="Loading promote queue">
+        {[0, 1].map((i) => (
+          <div
+            key={i}
+            style={{
+              height: 120,
+              borderRadius: 16,
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.06)',
+            }}
+          />
+        ))}
+      </div>
+    </PromotePageFrame>
+  )
+}
+
+export default function StudioPromotePage() {
+  return (
+    <Suspense fallback={<StudioPromotePageFallback />}>
+      <StudioPromotePageInner />
+    </Suspense>
   )
 }
