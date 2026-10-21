@@ -1,10 +1,7 @@
 /**
- * Feed post-card vibe tokens — single source for fill, text accent, and glow.
- * Base hues from lib/discover-vibes.ts (DISCOVER_VIBE_COLORS) and post-card
- * emotions (heartbreak → pain). Gold matches discoverVibeColor fallback.
+ * Feed post-card vibe tokens only — Discover / mini-player / EMOTION_COLORS unchanged.
+ * Gold (#E8C547) is reserved for Margo brand + tier-1 card chrome, not unknown vibes.
  */
-
-import { DISCOVER_VIBE_COLORS } from '@/lib/discover-vibes'
 
 export type VibeTheme = {
   fill: string
@@ -14,20 +11,22 @@ export type VibeTheme = {
   border: string
 }
 
-const GOLD_FILL = '#E8C547'
+export type FeedVibeLayoutGlow = 'hero' | 'compact'
 
-/**
- * Feed-card fill overrides — ≥25° hue separation on a dark screen (gold exempt).
- * Discover / EMOTION_COLORS unchanged elsewhere; see hue table in PR #252.
- */
-const FEED_VIBE_FILL: Record<string, string> = {
-  /** ~7° — hot scarlet (was DISCOVER hype #FF4D4D ~0°). */
-  hype: '#FF2E12',
-  /** ~292° — orchid (was heartbreak #ff6060 ~0°; distinct from HYPE & LOVE ~340°). */
-  pain: '#C056D0',
-  /** ~236° — periwinkle-violet (DISCOVER hope #7B9FFF ~224°, nudged for CHILL ~207°). */
-  hope: '#7880FF',
+const IVORY_FILL = '#E8E4DC'
+
+/** Feed card palette (PR #252 quality pass). */
+export const FEED_VIBE_FILL: Record<string, string> = {
+  hype: '#FF5A36',
+  proud: '#F5B83A',
+  hope: '#3DDC97',
+  chill: '#35C6E8',
+  pain: '#9B7BFF',
+  love: '#FF5C9E',
+  ivory: IVORY_FILL,
 }
+
+const FEED_VIBE_KEYS = new Set(['hype', 'pain', 'proud', 'love', 'chill', 'hope'])
 
 function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace('#', '')
@@ -50,57 +49,46 @@ function rgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
-/** Normalize feed emotion / discover vibe to a palette key. */
+/** Normalize feed emotion to one of six vibes or ivory (unknown). */
 export function normalizeVibeKey(emotion: string | null | undefined): string {
   const raw = (emotion || '').trim().toLowerCase()
-  if (!raw) return 'gold'
+  if (!raw) return 'ivory'
   if (raw === 'pain' || raw === 'heartbreak') return 'pain'
-  if (raw in DISCOVER_VIBE_COLORS) return raw
-  const aliases: Record<string, string> = {
-    sendit: 'sendit',
-    letout: 'letout',
-    rage: 'rage',
-    joy: 'joy',
-    healing: 'healing',
-    nostalgia: 'nostalgia',
-    loneliness: 'loneliness',
-    grateful: 'grateful',
-    spiritual: 'spiritual',
-  }
-  return aliases[raw] || 'gold'
+  if (FEED_VIBE_KEYS.has(raw)) return raw
+  return 'ivory'
 }
 
 function fillForKey(key: string): string {
-  if (key === 'gold') return GOLD_FILL
-  if (FEED_VIBE_FILL[key]) return FEED_VIBE_FILL[key]
-  return DISCOVER_VIBE_COLORS[key] || GOLD_FILL
+  return FEED_VIBE_FILL[key] ?? IVORY_FILL
 }
 
-/** Hue angle (0–360) for feed-card fills — documentation / QA. */
-export const FEED_VIBE_HUE_DEG: Record<string, number> = {
-  hype: 7,
-  pain: 292,
-  proud: 35,
-  love: 340,
-  chill: 207,
-  hope: 236,
-  gold: 47,
-}
-
-/** WCAG-friendly theme tokens for one vibe (no runtime color extraction). */
-export function getVibeTheme(emotion: string | null | undefined): VibeTheme {
+/** WCAG-friendly theme tokens for feed cards. */
+export function getVibeTheme(
+  emotion: string | null | undefined,
+  options?: { layout?: FeedVibeLayoutGlow },
+): VibeTheme {
   const key = normalizeVibeKey(emotion)
   const fill = fillForKey(key)
+  const glowAlpha = options?.layout === 'hero' ? 0.22 : 0.12
+  const textMix = key === 'ivory' ? 0.25 : 0.42
   return {
     fill,
-    text: mixWhite(fill, key === 'gold' ? 0.38 : 0.42),
-    glow: rgba(fill, 0.16),
+    text: mixWhite(fill, textMix),
+    glow: rgba(fill, glowAlpha),
     faint: rgba(fill, 0.11),
-    border: rgba(fill, 0.32),
+    border: rgba(fill, key === 'ivory' ? 0.22 : 0.32),
   }
 }
 
-/** Inline CSS variables for a card root (color-mix-free fallbacks). */
+/** Tier-1 / brand gold tokens (border only on card shell — not unknown vibe). */
+export const TIER1_GOLD_THEME: VibeTheme = {
+  fill: '#E8C547',
+  text: mixWhite('#E8C547', 0.38),
+  glow: rgba('#E8C547', 0.12),
+  faint: rgba('#E8C547', 0.1),
+  border: rgba('#E8C547', 0.32),
+}
+
 export function vibeThemeStyleVars(theme: VibeTheme): Record<string, string> {
   return {
     ['--post-vibe-fill' as string]: theme.fill,

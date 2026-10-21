@@ -31,6 +31,7 @@ import {
 } from '@/lib/post-card-lyric-layout'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { trackEvent } from '@/lib/analytics/track'
+import { FeedIconChevronRight, FeedIconExternal, FeedIconLyricsLines } from '@/components/feed-card-icons'
 
 function MomentPlayControl({
   postId,
@@ -83,11 +84,6 @@ function MomentPlayControl({
       }}
       aria-label={ariaPlay}
       className="margo-post-card__moment-btn"
-      style={{
-        background: 'var(--post-vibe-fill)',
-        border: 'none',
-        color: 'var(--bg)',
-      }}
     >
       <PlayPauseIcon playing={playing} buffering={buffering} size={18} color="var(--bg)" />
     </button>
@@ -208,7 +204,10 @@ export function PostCardSongSection({
   return (
     <section className="margo-post-card__song-block" data-no-card-nav>
       {isExternalCard ? (
-        <span className="margo-post-card__external-pill">↗ External song · not on Margo</span>
+        <span className="margo-post-card__external-pill">
+          <FeedIconExternal size={16} />
+          External song · not on Margo
+        </span>
       ) : null}
       <div className="margo-post-card__song-row">
         {(sharedMetaArtwork || sharedYoutubeThumb) ? (
@@ -248,7 +247,7 @@ export function PostCardSongSection({
               href={primaryCatalog.songId ? `/song/${primaryCatalog.songId}` : null}
               titleStyle={{ fontSize: `var(${FEED_TYPE.songTitle})`, fontWeight: 600 }}
               artistStyle={{ fontSize: `var(${FEED_TYPE.artist})` }}
-              aiLabelStyle={{ fontSize: 'var(--feed-type-section-label)' }}
+              aiLabelStyle={{ fontSize: 'var(--feed-type-ai-label)' }}
             />
           ) : isExternalCard ? (
             <SongMeta
@@ -287,14 +286,16 @@ export function PostCardSongSection({
           aria-label={externalListenAriaLabel(externalHref)}
           onClick={(e) => e.stopPropagation()}
         >
-          Listen on Apple Music ↗
+          <FeedIconExternal size={18} aria-hidden />
+          Listen on Apple Music
         </a>
       ) : null}
       {hasUnifiedPlay && songId ? (
         <PendingNavLink
           href={`/song/${songId}`}
-          className="margo-post-card__full-song-link"
+          className="margo-post-card__full-song-pill"
           indicator="tint"
+          aria-label="Read along with full song lyrics"
           onClick={(e) => {
             e.stopPropagation()
             trackEvent('song_played', {
@@ -304,7 +305,13 @@ export function PostCardSongSection({
             })
           }}
         >
-          Hear the full song ›
+          <span className="margo-post-card__full-song-pill-icons" aria-hidden>
+            <FeedIconLyricsLines size={18} />
+          </span>
+          <span className="margo-post-card__full-song-pill-label">Read along · full song</span>
+          <span className="margo-post-card__full-song-pill-icons" aria-hidden>
+            <FeedIconChevronRight size={18} />
+          </span>
         </PendingNavLink>
       ) : null}
     </section>

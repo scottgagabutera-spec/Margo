@@ -567,7 +567,7 @@ function FeedPageInner() {
         <div style={{ position: 'absolute', bottom: '-160px', right: '-160px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.03)', borderRadius: '50%', filter: 'blur(80px)' }} />
       </div>
 
-      <main className="margo-feed-column" style={{ position: 'relative', zIndex: 5, padding: '16px 24px var(--margo-page-padding-bottom)' }}>
+      <main className="margo-feed-column" style={{ position: 'relative', zIndex: 5, padding: '16px 16px var(--margo-page-padding-bottom)' }}>
         {feedLive && isMobileViewport !== true && (
           <div className="margo-story-ring-tray">
             <StoryRing

@@ -26,7 +26,7 @@ export function AiGeneratedLabel({
       style={{
         display: 'inline',
         fontFamily: UI_FONT,
-        fontSize: '0.6875rem',
+        fontSize: 'var(--feed-type-ai-label, 0.6875rem)',
         fontWeight: 400,
         letterSpacing: 0,
         color: 'var(--text-muted)',

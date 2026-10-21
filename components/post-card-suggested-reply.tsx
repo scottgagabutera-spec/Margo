@@ -1,30 +1,32 @@
 'use client'
 
-import { useCallback, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useState, type CSSProperties } from 'react'
 import { playSnippet, togglePlayPause } from '@/lib/audio-engine'
 import { useAudioEngine } from '@/hooks/useAudioEngine'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
-import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
+import { UI_FONT, LYRIC_FONT, FEED_TYPE } from '@/lib/fonts'
 import type { SuggestedLyricBack } from '@/lib/suggest-lyric-back'
+import { fetchLyricBackSuggestionsForPost } from '@/lib/lyric-back-suggestions'
 
 export type { SuggestedLyricBack }
 
 export type PostCardSuggestedReplyProps = {
   postId: string
+  open: boolean
   onAcceptSuggested?: (suggestion: SuggestedLyricBack) => void
   onOpenSuggestedSearch?: () => void
 }
 
 /**
- * Suggested Lyric Back — collapsed underline trigger; fetches only on tap.
- * Expands inline on the same post (no Feed auto-batch).
+ * Inline Lyric Back suggestions panel (no standalone trigger row).
+ * Loads when `open` becomes true.
  */
 export function PostCardSuggestedReply({
   postId,
+  open,
   onAcceptSuggested,
   onOpenSuggestedSearch,
 }: PostCardSuggestedReplyProps) {
-  const [expanded, setExpanded] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [picks, setPicks] = useState<SuggestedLyricBack[] | null>(null)
@@ -34,19 +36,7 @@ export function PostCardSuggestedReply({
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/suggest-lyric-back', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ postIds: [postId] }),
-      })
-      const data = await res.json().catch(() => ({})) as {
-        suggestions?: Record<string, SuggestedLyricBack[]>
-        error?: string
-      }
-      if (!res.ok) {
-        throw new Error(data.error || `Could not load suggestions (${res.status})`)
-      }
-      const list = (data.suggestions?.[postId] ?? []).slice(0, 3)
+      const list = await fetchLyricBackSuggestionsForPost(postId)
       setPicks(list)
       setFetched(true)
     } catch (e) {
@@ -59,127 +49,57 @@ export function PostCardSuggestedReply({
     }
   }, [postId])
 
-  const handleOpen = useCallback(() => {
-    setExpanded(true)
+  useEffect(() => {
+    if (!open) return
     if (!fetched && !loading) {
       void loadSuggestions()
     }
-  }, [fetched, loading, loadSuggestions])
+  }, [open, fetched, loading, loadSuggestions])
 
-  const handleRetry = useCallback(() => {
-    void loadSuggestions()
-  }, [loadSuggestions])
+  if (!open) return null
 
-  const triggerStyle: CSSProperties = {
+  const showEmpty = fetched && !loading && !error && (picks?.length ?? 0) === 0
+  const showPicks = !loading && !error && (picks?.length ?? 0) > 0
+
+  const linkBtnStyle: CSSProperties = {
     background: 'none',
     border: 'none',
-    padding: 0,
-    margin: '0 0 12px',
+    padding: '8px 0',
+    margin: 0,
     cursor: 'pointer',
     fontFamily: UI_FONT,
-    fontSize: '0.72rem',
+    fontSize: `var(${FEED_TYPE.actionLabel})`,
     fontWeight: 600,
-    color: 'var(--text-secondary)',
-    textDecoration: 'underline',
-    textUnderlineOffset: 3,
+    color: 'var(--post-vibe-text)',
     minHeight: 'var(--margo-touch-min)',
     display: 'inline-flex',
     alignItems: 'center',
     boxSizing: 'border-box',
   }
 
-  if (!expanded) {
-    return (
-      <div data-no-card-nav>
-        <button type="button" onClick={handleOpen} style={triggerStyle}>
-          See Lyric Back suggestions
-        </button>
-      </div>
-    )
-  }
-
-  const showEmpty = fetched && !loading && !error && (picks?.length ?? 0) === 0
-  const showPicks = !loading && !error && (picks?.length ?? 0) > 0
-
   return (
-    <div
-      data-no-card-nav
-      style={{
-        marginBottom: 16,
-        padding: '12px 0 4px',
-      }}
-    >
-      <p
-        style={{
-          fontFamily: UI_FONT,
-          fontSize: '0.72rem',
-          fontWeight: 600,
-          color: 'var(--text-secondary)',
-          margin: '0 0 10px',
-          textDecoration: 'underline',
-          textUnderlineOffset: 3,
-        }}
-      >
-        See Lyric Back suggestions
-      </p>
-
+    <div data-no-card-nav className="margo-post-card__suggestions">
       {loading && (
-        <p
-          style={{
-            fontFamily: LYRIC_FONT,
-            fontStyle: 'italic',
-            fontSize: '0.82rem',
-            color: 'var(--text-muted)',
-            margin: '0 0 8px',
-          }}
-        >
-          Finding a line that answers this…
-        </p>
+        <p className="margo-post-card__suggestions-status">Finding lines that answer this…</p>
       )}
 
       {error && (
-        <div style={{ marginBottom: 8 }}>
-          <p
-            style={{
-              fontFamily: LYRIC_FONT,
-              fontStyle: 'italic',
-              fontSize: '0.82rem',
-              color: 'var(--text-muted)',
-              margin: '0 0 8px',
-            }}
-          >
-            {error}. Try again, or search the catalog.
-          </p>
-          <button
-            type="button"
-            onClick={handleRetry}
-            style={{
-              ...triggerStyle,
-              margin: 0,
-              color: 'var(--gold)',
-            }}
-          >
+        <div className="margo-post-card__suggestions-error">
+          <p className="margo-post-card__suggestions-status">{error}</p>
+          <button type="button" onClick={() => void loadSuggestions()} style={linkBtnStyle}>
             Retry
           </button>
         </div>
       )}
 
       {showEmpty && (
-        <p
-          style={{
-            fontFamily: LYRIC_FONT,
-            fontStyle: 'italic',
-            fontSize: '0.82rem',
-            color: 'var(--text-muted)',
-            margin: '0 0 8px',
-          }}
-        >
+        <p className="margo-post-card__suggestions-status">
           No strong Lyric Back match in Margo&apos;s music right now.
         </p>
       )}
 
       {showPicks && picks && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="margo-post-card__suggestions-list">
           {picks.map((s) => (
             <SuggestionRow
               key={`${s.songId}_${s.lineIndex}_${s.startSec}`}
@@ -191,14 +111,7 @@ export function PostCardSuggestedReply({
       )}
 
       {onOpenSuggestedSearch && !loading && (
-        <button
-          type="button"
-          onClick={onOpenSuggestedSearch}
-          style={{
-            ...triggerStyle,
-            marginTop: 12,
-          }}
-        >
+        <button type="button" onClick={onOpenSuggestedSearch} style={linkBtnStyle}>
           Search the catalog
         </button>
       )}
@@ -224,57 +137,10 @@ function SuggestionRow({
   const isBuffering = isPlaying && engine.buffering
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: 10,
-        padding: '10px 10px',
-        borderRadius: 12,
-        background: 'rgba(255,255,255,0.03)',
-        border: '1px solid rgba(255,255,255,0.06)',
-      }}
-    >
-      <button
-        type="button"
-        onClick={onAccept}
-        style={{
-          flex: 1,
-          minWidth: 0,
-          background: 'none',
-          border: 'none',
-          padding: 0,
-          cursor: 'pointer',
-          textAlign: 'left',
-        }}
-      >
-        <p
-          style={{
-            fontFamily: LYRIC_FONT,
-            fontStyle: 'italic',
-            fontSize: '0.88rem',
-            color: 'var(--text)',
-            lineHeight: 1.45,
-            margin: '0 0 6px',
-            whiteSpace: 'pre-line',
-          }}
-        >
-          &ldquo;{suggestion.text}&rdquo;
-        </p>
-        <p
-          style={{
-            fontFamily: UI_FONT,
-            fontSize: '0.62rem',
-            fontWeight: 600,
-            letterSpacing: '0.6px',
-            textTransform: 'uppercase',
-            color: 'var(--text-muted)',
-            margin: 0,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
+    <div className="margo-post-card__suggestion-row">
+      <button type="button" onClick={onAccept} className="margo-post-card__suggestion-body">
+        <p className="margo-post-card__suggestion-lyric">&ldquo;{suggestion.text}&rdquo;</p>
+        <p className="margo-post-card__suggestion-meta">
           {suggestion.songTitle} · {suggestion.artistName}
         </p>
       </button>
@@ -283,6 +149,7 @@ function SuggestionRow({
         <button
           type="button"
           aria-label={isPlaying ? 'Pause suggestion' : 'Play suggestion'}
+          className="margo-post-card__suggestion-play"
           onClick={() => {
             if (isPlaying) {
               togglePlayPause()
@@ -303,22 +170,8 @@ function SuggestionRow({
               source: 'feed',
             })
           }}
-          style={{
-            width: 'var(--margo-touch-min)',
-            height: 'var(--margo-touch-min)',
-            borderRadius: '50%',
-            flexShrink: 0,
-            background: isPlaying ? 'rgba(232,197,71,0.2)' : 'rgba(232,197,71,0.1)',
-            border: '1px solid rgba(232,197,71,0.25)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 0,
-            boxSizing: 'border-box',
-          }}
         >
-          <PlayPauseIcon playing={isPlaying} buffering={isBuffering} size={15} color="var(--gold)" />
+          <PlayPauseIcon playing={isPlaying} buffering={isBuffering} size={18} color="var(--post-vibe-fill)" />
         </button>
       )}
     </div>

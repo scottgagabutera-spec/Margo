@@ -22,7 +22,7 @@ export const TYPE = {
   label: '0.6rem',
 } as const
 
-/** Feed post card typography scale (min size 0.625rem on card). */
+/** Feed post card typography scale (min size 0.6875rem / 11px on card). */
 export const FEED_TYPE_SCALE = {
   lyric: '1.0625rem',
   lyricLineHeight: '1.5',
@@ -32,9 +32,10 @@ export const FEED_TYPE_SCALE = {
   handle: '0.75rem',
   date: '0.6875rem',
   actionLabel: '0.6875rem',
-  actionBadge: '0.625rem',
-  moodChip: '0.625rem',
-  sectionLabel: '0.625rem',
+  actionBadge: '0.6875rem',
+  moodChip: '0.6875rem',
+  sectionLabel: '0.6875rem',
+  aiLabel: '0.6875rem',
   lyricHero: '1.5rem',
   lyricShort: '1.25rem',
   lyricMedium: '1.0625rem',
@@ -55,6 +56,7 @@ export const FEED_TYPE = {
   actionBadge: '--feed-type-action-badge',
   moodChip: '--feed-type-mood-chip',
   sectionLabel: '--feed-type-section-label',
+  aiLabel: '--feed-type-ai-label',
   lyricHero: '--feed-type-lyric-hero',
   lyricShort: '--feed-type-lyric-short',
   lyricMedium: '--feed-type-lyric-medium',

@@ -65,9 +65,11 @@
   --feed-type-handle: 0.75rem;
   --feed-type-date: 0.6875rem;
   --feed-type-action-label: 0.6875rem;
-  --feed-type-action-badge: 0.625rem;
-  --feed-type-mood-chip: 0.625rem;
-  --feed-type-section-label: 0.625rem;
+  --feed-type-action-badge: 0.6875rem;
+  --feed-type-mood-chip: 0.6875rem;
+  --feed-type-section-label: 0.6875rem;
+  --feed-type-ai-label: 0.6875rem;
+  --margo-post-card-pad: 16px;
   --feed-type-lyric-hero: 1.5rem;
   --feed-type-lyric-short: 1.25rem;
   --feed-type-lyric-medium: 1.0625rem;
@@ -445,15 +447,25 @@ html[data-margo-stage-idle] .margo-stage-zone {
 }
 
 .margo-post-card {
-  --post-vibe-fill: var(--gold);
-  --post-vibe-text: #f2dd94;
-  --post-vibe-glow: rgba(232, 197, 71, 0.14);
-  --post-vibe-faint: rgba(232, 197, 71, 0.1);
-  --post-vibe-border: rgba(232, 197, 71, 0.32);
+  --post-vibe-fill: #E8E4DC;
+  --post-vibe-text: #f5f2ea;
+  --post-vibe-glow: rgba(232, 228, 220, 0.12);
+  --post-vibe-faint: rgba(232, 228, 220, 0.1);
+  --post-vibe-border: rgba(232, 228, 220, 0.22);
+  box-sizing: border-box;
+  padding: var(--margo-post-card-pad);
   background:
-    linear-gradient(155deg, var(--post-vibe-glow) 0%, transparent 38%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0%, rgba(255, 255, 255, 0.03) 100%);
-  background-color: rgba(12, 11, 16, 0.92);
+    radial-gradient(ellipse 120% 90% at 0% 0%, var(--post-vibe-glow) 0%, transparent 45%),
+    rgba(12, 11, 16, 0.97);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.margo-post-card__truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  max-width: 100%;
 }
 .margo-post-card--tier1 {
   border-color: var(--gold-border) !important;
@@ -467,18 +479,25 @@ html[data-margo-stage-idle] .margo-stage-zone {
   display: grid;
   grid-template-columns: 40px 1fr auto auto;
   grid-template-rows: auto auto;
-  column-gap: 10px;
+  column-gap: 12px;
   row-gap: 4px;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
+}
+.margo-post-card__header-tools {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  grid-column: 4;
+  grid-row: 1 / span 2;
+  align-self: center;
 }
 .margo-post-card__mood {
   grid-column: 3;
   grid-row: 1 / span 2;
-  align-self: start;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.6875rem;
-  font-weight: 700;
+  font-size: var(--feed-type-mood-chip);
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   padding: 4px 8px;
@@ -489,6 +508,35 @@ html[data-margo-stage-idle] .margo-stage-zone {
   white-space: nowrap;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  min-height: var(--margo-touch-min);
+  align-self: center;
+}
+.margo-post-card__icon-btn {
+  width: var(--margo-touch-min);
+  height: var(--margo-touch-min);
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+.margo-post-card__icon-btn:focus-visible {
+  outline: 2px solid var(--post-vibe-text);
+  outline-offset: 2px;
+}
+.margo-post-card__icon-btn:active:not(:disabled) {
+  opacity: 0.72;
+}
+.margo-post-card__icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 @media (max-width: 360px) {
   .margo-post-card__header {
@@ -502,16 +550,17 @@ html[data-margo-stage-idle] .margo-stage-zone {
   }
 }
 .margo-post-card__lyric-zone {
-  margin: 0 0 10px;
+  margin: 0 0 8px;
   text-align: left;
+  padding: 0;
 }
 .margo-post-card__lyric-zone--hero {
-  padding: 12px 2px 14px;
+  padding: 4px 0 8px;
   min-height: 88px;
 }
 .margo-post-card__lyric-zone--compact {
   min-height: 99px;
-  padding: 0 2px;
+  padding: 0;
 }
 .margo-post-card__lyric-more {
   color: var(--post-vibe-text);
@@ -521,8 +570,8 @@ html[data-margo-stage-idle] .margo-stage-zone {
 }
 .margo-post-card__song-block {
   border-top: 1px solid var(--border);
-  padding-top: 10px;
-  margin-top: 2px;
+  padding-top: 8px;
+  margin-top: 0;
 }
 .margo-post-card__song-row {
   display: grid;
@@ -542,6 +591,20 @@ html[data-margo-stage-idle] .margo-stage-zone {
   box-sizing: border-box;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  background: var(--post-vibe-fill);
+  color: var(--bg);
+  border: none;
+}
+.margo-post-card__moment-btn:focus-visible {
+  outline: 2px solid var(--post-vibe-text);
+  outline-offset: 2px;
+}
+.margo-post-card__moment-btn:active:not(:disabled) {
+  opacity: 0.88;
+}
+.margo-post-card__moment-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .margo-post-card__moment-meta {
   display: flex;
@@ -573,18 +636,47 @@ html[data-margo-stage-idle] .margo-stage-zone {
   border-radius: inherit;
   transition: width 200ms linear;
 }
-.margo-post-card__full-song-link {
-  display: inline-flex;
+.margo-post-card__full-song-pill {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
   min-height: var(--margo-touch-min);
   margin-top: 8px;
-  padding: 0 4px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--post-vibe-border);
+  background: transparent;
+  color: var(--post-vibe-text);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: var(--feed-type-action-label);
-  font-weight: 500;
-  color: var(--text-muted);
+  font-weight: 600;
   text-decoration: none;
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+.margo-post-card__full-song-pill:focus-visible {
+  outline: 2px solid var(--post-vibe-text);
+  outline-offset: 2px;
+}
+.margo-post-card__full-song-pill:active {
+  background: var(--post-vibe-faint);
+}
+.margo-post-card__full-song-pill-label {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.margo-post-card__full-song-pill-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  color: var(--post-vibe-fill);
 }
 .margo-post-card__listen-external {
   display: flex;
@@ -776,8 +868,90 @@ html[data-margo-stage-idle] .margo-stage-zone {
   border-radius: 50px;
   background: var(--surface-2);
   border: 1px solid var(--border);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   pointer-events: none;
+}
+.margo-feed-action__suggest-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--post-vibe-fill);
+  border: 1.5px solid var(--bg);
+  pointer-events: none;
+}
+.margo-feed-action:focus-visible {
+  outline: 2px solid var(--post-vibe-text);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+.margo-feed-action:active:not(:disabled) {
+  opacity: 0.75;
+}
+.margo-post-card__suggestions {
+  margin: 0 0 8px;
+  padding: 0;
+}
+.margo-post-card__suggestions-status {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-action-label);
+  color: var(--text-muted);
+  margin: 0 0 8px;
+}
+.margo-post-card__suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.margo-post-card__suggestion-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+}
+.margo-post-card__suggestion-body {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.margo-post-card__suggestion-lyric {
+  font-family: var(--font-lora), serif;
+  font-style: italic;
+  font-size: var(--feed-type-lyric-medium);
+  color: var(--text);
+  line-height: var(--feed-type-lyric-lh);
+  margin: 0 0 4px;
+}
+.margo-post-card__suggestion-meta {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-artist);
+  color: var(--text-muted);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.margo-post-card__suggestion-play {
+  width: var(--margo-touch-min);
+  height: var(--margo-touch-min);
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid var(--post-vibe-border);
+  background: var(--post-vibe-faint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
 }
 .margo-feed-action__label {
   display: inline !important;
