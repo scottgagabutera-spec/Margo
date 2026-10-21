@@ -25,6 +25,8 @@ import './globals.css'
 const lora = Lora({
   subsets: ['latin'],
   style: ['normal', 'italic'],
+  weight: ['400', '600', '700'],
+  display: 'swap',
   variable: '--font-lora',
 })
 
