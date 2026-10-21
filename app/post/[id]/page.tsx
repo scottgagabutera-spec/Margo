@@ -300,6 +300,7 @@ export default function PostDetailPage() {
               <LyricBackPanelCompose
                 ref={composeRef}
                 key={replyTargetId}
+                layout="panel"
                 parentPostId={replyTargetId}
                 parentEmotion={post.emotion || 'chill'}
                 onRequireAuth={requireAuth}

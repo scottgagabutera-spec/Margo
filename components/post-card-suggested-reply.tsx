@@ -82,6 +82,7 @@ export function PostCardSuggestedReply({
   const panelRef = useRef<HTMLDivElement>(null)
   const composeRef = useRef<LyricBackPanelComposeHandle>(null)
   const [replyTargetId, setReplyTargetId] = useState(postId)
+  const [replyTargetEcho, setReplyTargetEcho] = useState<Echo | null>(null)
   const [composePrefill, setComposePrefill] = useState<LyricBackPanelPrefill | null>(null)
   const { echoes, loading: echoesLoading, refetch: refetchEchoes } = useEchoes(open ? replyTargetId : null)
 
@@ -100,12 +101,14 @@ export function PostCardSuggestedReply({
       setIdeasFetched(false)
       setComposePrefill(null)
       setReplyTargetId(postId)
+      setReplyTargetEcho(null)
     }
   }, [open, postId])
 
   useEffect(() => {
     if (open) {
       setReplyTargetId(postId)
+      setReplyTargetEcho(null)
       setComposePrefill(null)
     }
   }, [open, postId])
@@ -152,9 +155,20 @@ export function PostCardSuggestedReply({
 
   const focusNestedLyricBack = useCallback((echo: Echo) => {
     setReplyTargetId(echo.id)
+    setReplyTargetEcho(echo)
     setComposePrefill(null)
     requestAnimationFrame(() => composeRef.current?.scrollIntoView())
   }, [])
+
+  const replyToLabel = replyTargetEcho
+    ? (() => {
+      const handle = replyTargetEcho.username?.replace(/^@/, '').trim()
+      const name = replyTargetEcho.displayName?.trim()
+      if (name && handle) return `@${handle}`
+      if (handle) return `@${handle}`
+      return null
+    })()
+    : null
 
   if (!open) return null
 
@@ -179,6 +193,27 @@ export function PostCardSuggestedReply({
         </button>
       </div>
 
+      <div className="margo-post-card__lb-compose-slot">
+        <LyricBackPanelCompose
+          ref={composeRef}
+          key={replyTargetId}
+          layout="panel"
+          parentPostId={replyTargetId}
+          parentEmotion={parentEmotion}
+          onRequireAuth={onRequireAuth}
+          prefill={composePrefill}
+          replyToLabel={replyToLabel}
+          onSent={() => {
+            setComposePrefill(null)
+            if (replyTargetId !== postId) {
+              setReplyTargetId(postId)
+              setReplyTargetEcho(null)
+            }
+            void refetchEchoes()
+          }}
+        />
+      </div>
+
       <div className="margo-post-card__lb-scroll">
         <div className="margo-post-card__lb-context">
           <p className="margo-post-card__lb-context-lyric">
@@ -201,6 +236,7 @@ export function PostCardSuggestedReply({
               className="margo-post-card__lb-focus-back"
               onClick={() => {
                 setReplyTargetId(postId)
+                setReplyTargetEcho(null)
                 setComposePrefill(null)
               }}
             >
@@ -272,19 +308,6 @@ export function PostCardSuggestedReply({
           ) : null}
         </div>
       </div>
-
-      <LyricBackPanelCompose
-        ref={composeRef}
-        key={replyTargetId}
-        parentPostId={replyTargetId}
-        parentEmotion={parentEmotion}
-        onRequireAuth={onRequireAuth}
-        prefill={composePrefill}
-        onSent={() => {
-          setComposePrefill(null)
-          void refetchEchoes()
-        }}
-      />
     </div>
   )
 }

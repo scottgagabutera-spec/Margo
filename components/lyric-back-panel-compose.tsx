@@ -38,6 +38,10 @@ export type LyricBackPanelComposeProps = {
   onRequireAuth?: () => boolean
   onSent?: () => void
   prefill?: LyricBackPanelPrefill | null
+  /** Portaled search dropdown (feed LB panel). Thread page uses inline compose variant. */
+  layout?: 'panel' | 'page'
+  /** Shown when replying to a nested Lyric Back (not the root moment). */
+  replyToLabel?: string | null
 }
 
 type SelectedSong = {
@@ -52,11 +56,21 @@ export const LyricBackPanelCompose = forwardRef<
   LyricBackPanelComposeHandle,
   LyricBackPanelComposeProps
 >(function LyricBackPanelCompose(
-  { parentPostId, parentEmotion, onRequireAuth, onSent, prefill },
+  {
+    parentPostId,
+    parentEmotion,
+    onRequireAuth,
+    onSent,
+    prefill,
+    layout = 'page',
+    replyToLabel,
+  },
   ref,
 ) {
   const rootRef = useRef<HTMLDivElement>(null)
+  const searchAnchorRef = useRef<HTMLDivElement>(null)
   const searchGenRef = useRef(0)
+  const isPanelLayout = layout === 'panel'
 
   const [query, setQuery] = useState('')
   const [hits, setHits] = useState<ComposeSearchHit[]>([])
@@ -320,24 +334,40 @@ export const LyricBackPanelCompose = forwardRef<
   )
   const showLyricField = Boolean(selected && (linePickDone || !selected.catalogSongId))
 
+  const searchOpen = showResults && query.trim().length >= 2
+
   return (
     <div ref={rootRef} className="margo-post-card__lb-compose margo-post-card__lb-compose--inline">
-      <MargoSearchInput
-        value={query}
-        onChange={setQuery}
-        loading={searchLoading}
-        placeholder="Song or artist"
-        ariaLabel="Search songs"
-      />
-      <ComposeSearchDropdown
-        open={showResults && query.trim().length >= 2}
-        loading={searchLoading}
-        results={hits}
-        highlightQuery={query}
-        onSelect={(hit) => void selectHit(hit)}
-        onClose={() => setShowResults(false)}
-        variant="compose"
-      />
+      {replyToLabel ? (
+        <p className="margo-post-card__lb-compose-reply-to">{replyToLabel}</p>
+      ) : null}
+      <div
+        ref={searchAnchorRef}
+        className="margo-post-card__lb-search-anchor"
+        style={isPanelLayout && searchOpen ? { zIndex: 242, position: 'relative' } : undefined}
+      >
+        <MargoSearchInput
+          value={query}
+          onChange={setQuery}
+          loading={searchLoading}
+          placeholder="Song or artist"
+          ariaLabel="Search songs"
+          stackAboveOverlay={isPanelLayout && searchOpen}
+          onFocus={() => {
+            if (query.trim().length >= 2) setShowResults(true)
+          }}
+        />
+        <ComposeSearchDropdown
+          open={searchOpen}
+          loading={searchLoading}
+          results={hits}
+          highlightQuery={query}
+          onSelect={(hit) => void selectHit(hit)}
+          onClose={() => setShowResults(false)}
+          variant={isPanelLayout ? 'panel' : 'compose'}
+          anchorRef={isPanelLayout ? searchAnchorRef : undefined}
+        />
+      </div>
 
       {selected ? (
         <div className="margo-post-card__lb-compose-track margo-post-card__lb-compose-track--picked">
