@@ -1,6 +1,6 @@
 import type { SuggestedLyricBack } from '@/lib/suggest-lyric-back'
 
-/** Same POST as PostCardSuggestedReply — used to prefetch suggestion count. */
+/** POST /api/suggest-lyric-back — on-demand when the Lyric Back panel opens. */
 export async function fetchLyricBackSuggestionsForPost(
   postId: string,
 ): Promise<SuggestedLyricBack[]> {

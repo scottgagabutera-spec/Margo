@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { playSnippet, togglePlayPause } from '@/lib/audio-engine'
 import { useAudioEngine } from '@/hooks/useAudioEngine'
-import { FeedMomentPlaybackIcon } from '@/components/feed-card-icons'
-import { UI_FONT } from '@/lib/fonts'
+import { FeedIconClose, FeedMomentPlaybackIcon } from '@/components/feed-card-icons'
 import type { SuggestedLyricBack } from '@/lib/suggest-lyric-back'
 import { fetchLyricBackSuggestionsForPost } from '@/lib/lyric-back-suggestions'
 
@@ -19,9 +18,21 @@ export type PostCardSuggestedReplyProps = {
   onWriteOwn?: () => void
 }
 
+function LyricBackPanelSkeleton() {
+  return (
+    <div className="margo-post-card__lb-skeleton" aria-hidden>
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="margo-post-card__lb-skeleton-row">
+          <div className="margo-post-card__lb-skeleton-line margo-post-card__lb-skeleton-line--wide" />
+          <div className="margo-post-card__lb-skeleton-line margo-post-card__lb-skeleton-line--narrow" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 /**
- * Inline Lyric Back suggestions panel (no standalone trigger row).
- * Loads when `open` becomes true.
+ * Inline Lyric Back panel (comment-style). Loads only when `open` is true.
  */
 export function PostCardSuggestedReply({
   postId,
@@ -37,7 +48,21 @@ export function PostCardSuggestedReply({
   const [picks, setPicks] = useState<SuggestedLyricBack[] | null>(null)
   const [fetched, setFetched] = useState(false)
 
+  useEffect(() => {
+    setPicks(null)
+    setFetched(false)
+    setError(null)
+    setLoading(false)
+  }, [postId])
+
   const loadSuggestions = useCallback(async () => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setError('You are offline. Connect to load suggestions or search the catalog.')
+      setPicks(null)
+      setFetched(true)
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
     try {
@@ -78,39 +103,56 @@ export function PostCardSuggestedReply({
       ref={panelRef}
       data-no-card-nav
       className="margo-post-card__lb-panel"
+      role="region"
+      aria-label="Lyric Back suggestions"
     >
       <div className="margo-post-card__lb-header">
         <h3 className="margo-post-card__lb-title">Lyric Back</h3>
         <button
           type="button"
           className="margo-post-card__lb-close"
-          aria-label="Close Lyric Back suggestions"
+          aria-label="Close Lyric Back"
           onClick={onClose}
         >
-          ✕
+          <FeedIconClose size={20} />
         </button>
       </div>
 
-      {loading && (
-        <p className="margo-post-card__lb-status">Finding lines that answer this…</p>
-      )}
+      {loading ? <LyricBackPanelSkeleton /> : null}
 
-      {error && (
+      {error && !loading ? (
         <div className="margo-post-card__lb-status-block">
+          <p className="margo-post-card__lb-status-title">Could not load suggestions</p>
           <p className="margo-post-card__lb-status">{error}</p>
-          <button type="button" className="margo-post-card__lb-footer-btn" onClick={() => void loadSuggestions()}>
+          <button
+            type="button"
+            className="margo-post-card__lb-footer-btn margo-post-card__lb-footer-btn--full"
+            onClick={() => void loadSuggestions()}
+          >
             Retry
           </button>
         </div>
-      )}
+      ) : null}
 
-      {showEmpty && (
-        <p className="margo-post-card__lb-status">
-          No strong Lyric Back match in Margo&apos;s music right now.
-        </p>
-      )}
+      {showEmpty ? (
+        <div className="margo-post-card__lb-empty">
+          <p className="margo-post-card__lb-empty-title">No close match in the catalog</p>
+          <p className="margo-post-card__lb-empty-body">
+            Write your own Lyric Back or search Margo music for a line that fits.
+          </p>
+          {onWriteOwn ? (
+            <button
+              type="button"
+              className="margo-post-card__lb-primary-btn"
+              onClick={onWriteOwn}
+            >
+              Write your Lyric Back
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
-      {showPicks && picks && (
+      {showPicks && picks ? (
         <ul className="margo-post-card__lb-list">
           {picks.map((s) => (
             <li key={`${s.songId}_${s.lineIndex}_${s.startSec}`}>
@@ -121,7 +163,7 @@ export function PostCardSuggestedReply({
             </li>
           ))}
         </ul>
-      )}
+      ) : null}
 
       <div className="margo-post-card__lb-footer">
         {onOpenSuggestedSearch ? (

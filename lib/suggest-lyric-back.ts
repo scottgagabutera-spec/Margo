@@ -11,6 +11,11 @@ import {
   buildCatalogLyricUnits,
   type CatalogLyricAtom,
 } from '@/lib/catalog-lyric-unit'
+import { isSuggestLyricBackRankEnabled } from '@/lib/suggest-lyric-back-config'
+import {
+  canSpendOnSuggestRank,
+  recordSuggestRankSpend,
+} from '@/lib/suggest-lyric-back-spend'
 
 export const SHORT_LINE_WORDS = 3
 export const MIN_SUGGEST_UNIT_WORDS = 4
@@ -600,14 +605,27 @@ export async function suggestLyricBacksForPosts(
 
   if (misses.length === 0) return result
 
+  if (!isSuggestLyricBackRankEnabled()) {
+    return result
+  }
+
   if (!process.env.OPENAI_API_KEY) {
     throw new SuggestRankError('OpenAI is not configured')
+  }
+
+  if (!canSpendOnSuggestRank()) {
+    throw new SuggestRankError(
+      'Daily suggestion limit reached. Try again tomorrow or search the catalog.',
+    )
   }
 
   const ranked = await mapPool(misses, LLM_CONCURRENCY, async (post) => {
     const outcome = await rankUnitsForPost(post, units)
     if (!outcome.ok) {
       return { id: post.id, ok: false as const, reason: outcome.reason }
+    }
+    if (outcome.picks.length > 0) {
+      recordSuggestRankSpend()
     }
     await writeCache(supabase, post.id, outcome.picks, fingerprint)
     return { id: post.id, ok: true as const, picks: outcome.picks }
