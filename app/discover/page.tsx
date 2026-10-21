@@ -468,6 +468,7 @@ export default function DiscoverPage() {
   const {
     moments: momentRows,
     songAtomsBySongId,
+    curatedBySongId,
     refetch: refetchMoments,
   } = useLyricMoments({ enabled: discoverLive })
   const { posts: livePosts, reload: reloadPosts } = usePosts({ enabled: discoverLive })
@@ -516,8 +517,8 @@ export default function DiscoverPage() {
   }, [])
 
   useEffect(() => {
-    setAllMoments(buildLyricMomentsFromRows(momentRows, songAtomsBySongId))
-  }, [momentRows, songAtomsBySongId])
+    setAllMoments(buildLyricMomentsFromRows(momentRows, songAtomsBySongId, { curatedBySongId }))
+  }, [momentRows, songAtomsBySongId, curatedBySongId])
 
   useEffect(() => {
     return subscribeAudioEngine(state => {

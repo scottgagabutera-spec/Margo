@@ -11,7 +11,7 @@ import { buildLyricMomentsFromRows, momentPlayingKey, type LyricMoment } from '@
 import { playLyricMomentPool, queueLyricMoment } from '@/lib/lyric-moment-playback'
 
 export default function LyricMomentsCatalogPage() {
-  const { moments: momentRows, songAtomsBySongId, loading } = useLyricMoments()
+  const { moments: momentRows, songAtomsBySongId, curatedBySongId, loading } = useLyricMoments()
   const { requireAuth } = useAuthGate()
   const [vibe, setVibe] = useState('ALL')
   const [playingKey, setPlayingKey] = useState<string | null>(null)
@@ -19,8 +19,8 @@ export default function LyricMomentsCatalogPage() {
   const playingRef = useRef(false)
 
   const allMoments = useMemo(
-    () => buildLyricMomentsFromRows(momentRows, songAtomsBySongId),
-    [momentRows, songAtomsBySongId],
+    () => buildLyricMomentsFromRows(momentRows, songAtomsBySongId, { curatedBySongId }),
+    [momentRows, songAtomsBySongId, curatedBySongId],
   )
 
   const filtered = useMemo(

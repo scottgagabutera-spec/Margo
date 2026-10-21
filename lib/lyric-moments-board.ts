@@ -2,6 +2,8 @@ import { buildCatalogLyricUnits } from '@/lib/catalog-lyric-unit'
 import type { CatalogLyricAtom } from '@/lib/catalog-lyric-unit'
 import type { LyricMomentRow } from '@/lib/primary-tab-prefetch'
 import type { AtmosphereId } from '@/lib/atmosphere'
+import type { CuratedMomentStored } from '@/lib/moments/curated-types'
+import { lyricMomentsFromCurated } from '@/lib/moments/curated-discover'
 
 const MIN_MOMENT_WORDS = 4
 const SHORT_LINE_WORDS = 3
@@ -28,12 +30,39 @@ function wordCount(text: string): number {
 export function buildLyricMomentsFromRows(
   momentRows: LyricMomentRow[],
   songAtomsBySongId: Record<string, CatalogLyricAtom[]>,
-  options?: { shuffle?: boolean },
+  options?: {
+    shuffle?: boolean
+    curatedBySongId?: Record<string, CuratedMomentStored[]>
+  },
 ): LyricMoment[] {
   const moments: LyricMoment[] = []
   const seenRanges = new Set<string>()
+  const songsUsingCurated = new Set<string>()
+
+  const curatedBySongId = options?.curatedBySongId
+  if (curatedBySongId) {
+    for (const [songId, stored] of Object.entries(curatedBySongId)) {
+      if (!stored?.length) continue
+      const metaRow = momentRows.find((r) => r.songId === songId)
+      if (!metaRow) continue
+      songsUsingCurated.add(songId)
+      for (const m of lyricMomentsFromCurated(songId, {
+        songTitle: metaRow.songTitle,
+        artist: metaRow.artist,
+        artwork: metaRow.artwork,
+        audioUrl: metaRow.audioUrl,
+        atmosphere: metaRow.atmosphere,
+      }, stored)) {
+        const rangeKey = `${m.songId}_${m.start}_${m.end}`
+        if (seenRanges.has(rangeKey)) continue
+        seenRanges.add(rangeKey)
+        moments.push(m)
+      }
+    }
+  }
 
   momentRows.forEach((row) => {
+    if (songsUsingCurated.has(row.songId)) return
     if (!row.vibes || row.vibes.length === 0) return
 
     const atoms = songAtomsBySongId[row.songId]

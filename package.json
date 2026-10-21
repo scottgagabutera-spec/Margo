@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test:playback-segments": "node --experimental-strip-types --test lib/moment/playback-segments.test.ts"
+    "test:playback-segments": "node --experimental-strip-types --test lib/moment/playback-segments.test.ts",
+    "test:curated-moments": "node --experimental-strip-types --test lib/moments/validate-curated-moments.test.ts",
+    "test": "npm run test:playback-segments && npm run test:curated-moments"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1136.0",
