@@ -4,21 +4,38 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { playSnippet, togglePlayPause } from '@/lib/audio-engine'
 import { useAudioEngine } from '@/hooks/useAudioEngine'
 import { useEchoes, type Echo } from '@/hooks/useEchoes'
-import { FeedIconClose, FeedIconChevronRight, FeedMomentPlaybackIcon } from '@/components/feed-card-icons'
+import {
+  FeedIconClose,
+  FeedIconChevronRight,
+  FeedIconSend,
+  FeedMomentPlaybackIcon,
+} from '@/components/feed-card-icons'
+import { PendingNavLink } from '@/components/pending-nav-link'
 import type { SuggestedLyricBack } from '@/lib/suggest-lyric-back'
 import { fetchLyricBackSuggestionsForPost } from '@/lib/lyric-back-suggestions'
+import { trackEvent } from '@/lib/analytics/track'
 
 export type { SuggestedLyricBack }
+
+type ComposeDraft = {
+  lyric: string
+  songTitle: string
+  artistName: string
+  songId: string | null
+  startSec: number | null
+  endSec: number | null
+}
 
 export type PostCardSuggestedReplyProps = {
   postId: string
   echoCount: number
   parentUsername?: string | null
+  parentEmotion: string
   open: boolean
   onClose: () => void
-  onAcceptSuggested?: (suggestion: SuggestedLyricBack) => void
+  onRequireAuth?: () => boolean
   onOpenSuggestedSearch?: () => void
-  onWriteOwn?: () => void
+  onOpenFullEditor?: () => void
   onOpenEcho?: (echoId: string) => void
 }
 
@@ -47,27 +64,33 @@ function IdeasSkeleton() {
 }
 
 /**
- * Lyric Back comment sheet: people's Lyric Backs first, catalog ideas opt-in.
+ * Lyric Back comment sheet: echoes first, opt-in ideas, inline compose + send.
  */
 export function PostCardSuggestedReply({
   postId,
   echoCount,
-  parentUsername,
+  parentEmotion,
   open,
   onClose,
-  onAcceptSuggested,
+  onRequireAuth,
   onOpenSuggestedSearch,
-  onWriteOwn,
+  onOpenFullEditor,
   onOpenEcho,
 }: PostCardSuggestedReplyProps) {
   const panelRef = useRef<HTMLDivElement>(null)
-  const { echoes, loading: echoesLoading } = useEchoes(open ? postId : null)
+  const composeRef = useRef<HTMLTextAreaElement>(null)
+  const { echoes, loading: echoesLoading, refetch: refetchEchoes } = useEchoes(open ? postId : null)
 
   const [ideasOpen, setIdeasOpen] = useState(false)
   const [ideasLoading, setIdeasLoading] = useState(false)
   const [ideasError, setIdeasError] = useState<string | null>(null)
   const [picks, setPicks] = useState<SuggestedLyricBack[] | null>(null)
   const [ideasFetched, setIdeasFetched] = useState(false)
+
+  const [draftLyric, setDraftLyric] = useState('')
+  const [draft, setDraft] = useState<ComposeDraft | null>(null)
+  const [posting, setPosting] = useState(false)
+  const [composeError, setComposeError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) {
@@ -76,12 +99,16 @@ export function PostCardSuggestedReply({
       setIdeasError(null)
       setPicks(null)
       setIdeasFetched(false)
+      setDraftLyric('')
+      setDraft(null)
+      setPosting(false)
+      setComposeError(null)
     }
   }, [open, postId])
 
   const loadIdeas = useCallback(async () => {
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      setIdeasError('You are offline. Connect to load ideas or search the catalog.')
+      setIdeasError('Offline. Try catalog search when you are back online.')
       setIdeasFetched(true)
       setIdeasLoading(false)
       return
@@ -107,17 +134,75 @@ export function PostCardSuggestedReply({
     void loadIdeas()
   }, [ideasOpen, ideasFetched, ideasLoading, loadIdeas])
 
-  useEffect(() => {
-    if (!open || !panelRef.current) return
-    const reduced = typeof window !== 'undefined'
-      && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    panelRef.current.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' })
-  }, [open])
+  const applySuggestion = useCallback((s: SuggestedLyricBack) => {
+    setDraftLyric(s.text)
+    setDraft({
+      lyric: s.text,
+      songTitle: s.songTitle,
+      artistName: s.artistName,
+      songId: s.songId,
+      startSec: s.startSec,
+      endSec: s.endSec,
+    })
+    setComposeError(null)
+    composeRef.current?.focus()
+  }, [])
+
+  const canSend = Boolean(
+    draftLyric.trim()
+    && draft?.songTitle
+    && draft?.artistName
+    && !posting,
+  )
+
+  const handleSend = useCallback(async () => {
+    if (onRequireAuth && !onRequireAuth()) return
+    if (!canSend || !draft) return
+    setPosting(true)
+    setComposeError(null)
+    try {
+      const res = await fetch('/api/posts/lyric-back', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          parentPostId: postId,
+          isPrivate: false,
+          text: draftLyric.trim(),
+          emotion: parentEmotion,
+          songId: draft.songId,
+          songTitle: draft.songTitle,
+          artistName: draft.artistName,
+          snippetStartSec: draft.startSec,
+          snippetEndSec: draft.endSec,
+        }),
+      })
+      const payload = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setComposeError(typeof payload.error === 'string' ? payload.error : 'Could not send.')
+        return
+      }
+      trackEvent('lyric_back_sent', { private: false, inline: true })
+      const replyId = typeof payload.id === 'string' ? payload.id : null
+      if (replyId) {
+        fetch('/api/moderate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: draftLyric.trim(), postId: replyId }),
+        }).catch(() => {})
+      }
+      setDraftLyric('')
+      setDraft(null)
+      void refetchEchoes()
+    } catch {
+      setComposeError('Could not send. Try again.')
+    } finally {
+      setPosting(false)
+    }
+  }, [canSend, draft, draftLyric, onRequireAuth, parentEmotion, postId, refetchEchoes])
 
   if (!open) return null
 
   const displayCount = Math.max(echoCount, echoes.length)
-  const parentLabel = parentUsername ? `@${parentUsername.replace(/^@/, '')}` : 'this post'
   const showEchoEmpty = !echoesLoading && echoes.length === 0
   const showIdeasEmpty = ideasFetched && !ideasLoading && !ideasError && (picks?.length ?? 0) === 0
 
@@ -141,107 +226,141 @@ export function PostCardSuggestedReply({
         </button>
       </div>
 
-      {echoesLoading ? <LyricBackPanelSkeleton /> : null}
+      <div className="margo-post-card__lb-scroll">
+        {echoesLoading ? <LyricBackPanelSkeleton /> : null}
 
-      {showEchoEmpty ? (
-        <div className="margo-post-card__lb-empty margo-post-card__lb-empty--thread">
-          <p className="margo-post-card__lb-empty-title">No Lyric Backs yet</p>
-          <p className="margo-post-card__lb-empty-body">
-            Be the first to answer with a lyric from Margo&apos;s music or your own words.
+        {showEchoEmpty ? (
+          <p className="margo-post-card__lb-empty-title margo-post-card__lb-empty-title--solo">
+            No Lyric Backs yet
           </p>
-        </div>
-      ) : null}
-
-      {!echoesLoading && echoes.length > 0 ? (
-        <ul className="margo-post-card__lb-list margo-post-card__lb-list--echoes">
-          {echoes.map((echo) => (
-            <li key={echo.id}>
-              <EchoRow
-                echo={echo}
-                parentLabel={parentLabel}
-                onOpen={() => onOpenEcho?.(echo.id)}
-              />
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      <div className="margo-post-card__lb-ideas-section">
-        <button
-          type="button"
-          className="margo-post-card__lb-ideas-toggle"
-          aria-expanded={ideasOpen}
-          onClick={() => setIdeasOpen((o) => !o)}
-        >
-          <span>See ideas from Margo music</span>
-          <span
-            className="margo-post-card__lb-ideas-chevron"
-            style={{ transform: ideasOpen ? 'rotate(90deg)' : 'none' }}
-          >
-            <FeedIconChevronRight size={16} />
-          </span>
-        </button>
-
-        {ideasOpen ? (
-          <div className="margo-post-card__lb-ideas-body">
-            {ideasLoading ? <IdeasSkeleton /> : null}
-            {ideasError && !ideasLoading ? (
-              <div className="margo-post-card__lb-status-block">
-                <p className="margo-post-card__lb-status-title">Could not load ideas</p>
-                <p className="margo-post-card__lb-status">{ideasError}</p>
-                <button
-                  type="button"
-                  className="margo-post-card__lb-footer-btn margo-post-card__lb-footer-btn--full"
-                  onClick={() => void loadIdeas()}
-                >
-                  Retry
-                </button>
-              </div>
-            ) : null}
-            {showIdeasEmpty ? (
-              <p className="margo-post-card__lb-status">
-                No close catalog match right now. Write your own or search the catalog.
-              </p>
-            ) : null}
-            {!ideasLoading && !ideasError && (picks?.length ?? 0) > 0 && picks ? (
-              <ul className="margo-post-card__lb-list">
-                {picks.map((s) => (
-                  <li key={`${s.songId}_${s.lineIndex}_${s.startSec}`}>
-                    <SuggestionRow
-                      suggestion={s}
-                      onAccept={() => onAcceptSuggested?.(s)}
-                    />
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
         ) : null}
+
+        {!echoesLoading && echoes.length > 0 ? (
+          <ul className="margo-post-card__lb-list margo-post-card__lb-list--echoes">
+            {echoes.map((echo) => (
+              <li key={echo.id}>
+                <EchoRow echo={echo} onOpen={() => onOpenEcho?.(echo.id)} />
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        <div className="margo-post-card__lb-ideas-section">
+          <button
+            type="button"
+            className="margo-post-card__lb-ideas-toggle"
+            aria-expanded={ideasOpen}
+            onClick={() => setIdeasOpen((o) => !o)}
+          >
+            <span>See ideas from Margo music</span>
+            <span
+              className="margo-post-card__lb-ideas-chevron"
+              style={{ transform: ideasOpen ? 'rotate(90deg)' : 'none' }}
+            >
+              <FeedIconChevronRight size={16} />
+            </span>
+          </button>
+
+          {ideasOpen ? (
+            <div className="margo-post-card__lb-ideas-body">
+              {ideasLoading ? <IdeasSkeleton /> : null}
+              {ideasError && !ideasLoading ? (
+                <div className="margo-post-card__lb-status-block">
+                  <p className="margo-post-card__lb-status-title">Could not load ideas</p>
+                  <p className="margo-post-card__lb-status">{ideasError}</p>
+                  <button
+                    type="button"
+                    className="margo-post-card__lb-footer-btn margo-post-card__lb-footer-btn--full"
+                    onClick={() => void loadIdeas()}
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : null}
+              {showIdeasEmpty ? (
+                <p className="margo-post-card__lb-status">No catalog match. Search or type below.</p>
+              ) : null}
+              {!ideasLoading && !ideasError && (picks?.length ?? 0) > 0 && picks ? (
+                <ul className="margo-post-card__lb-list">
+                  {picks.map((s) => (
+                    <li key={`${s.songId}_${s.lineIndex}_${s.startSec}`}>
+                      <SuggestionRow suggestion={s} onAccept={() => applySuggestion(s)} />
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       </div>
 
-      <div className="margo-post-card__lb-footer">
-        {onWriteOwn ? (
-          <button type="button" className="margo-post-card__lb-primary-btn" onClick={onWriteOwn}>
-            Write your Lyric Back
-          </button>
+      <div className="margo-post-card__lb-compose">
+        {draft?.songTitle ? (
+          <p className="margo-post-card__lb-compose-track">
+            {draft.songTitle}{draft.artistName ? ` · ${draft.artistName}` : ''}
+          </p>
+        ) : (
+          <p className="margo-post-card__lb-compose-hint">Pick a song from catalog to send</p>
+        )}
+        <textarea
+          ref={composeRef}
+          className="margo-post-card__lb-compose-input"
+          rows={2}
+          placeholder="Reply with a lyric…"
+          value={draftLyric}
+          onChange={(e) => {
+            setDraftLyric(e.target.value)
+            setComposeError(null)
+          }}
+        />
+        {composeError ? (
+          <p className="margo-post-card__lb-compose-error" role="alert">{composeError}</p>
         ) : null}
-        {onOpenSuggestedSearch ? (
-          <button type="button" className="margo-post-card__lb-footer-btn margo-post-card__lb-footer-btn--full" onClick={onOpenSuggestedSearch}>
-            Search catalog
+        <div className="margo-post-card__lb-compose-bar">
+          {onOpenSuggestedSearch ? (
+            <button
+              type="button"
+              className="margo-post-card__lb-compose-catalog"
+              onClick={onOpenSuggestedSearch}
+            >
+              Catalog
+            </button>
+          ) : null}
+          {onOpenFullEditor ? (
+            <button
+              type="button"
+              className="margo-post-card__lb-compose-more"
+              onClick={onOpenFullEditor}
+            >
+              More
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="margo-post-card__lb-compose-send"
+            aria-label="Send Lyric Back"
+            disabled={!canSend}
+            onClick={() => void handleSend()}
+          >
+            <FeedIconSend size={20} />
           </button>
-        ) : null}
+        </div>
       </div>
     </div>
   )
 }
 
+function profileHrefForEcho(echo: Echo): string | null {
+  const handle = (echo.username || '').replace(/^@/, '').trim()
+  if (!handle) return null
+  return `/profile/${encodeURIComponent(handle)}`
+}
+
 function EchoRow({
   echo,
-  parentLabel,
   onOpen,
 }: {
   echo: Echo
-  parentLabel: string
   onOpen: () => void
 }) {
   const engine = useAudioEngine()
@@ -254,26 +373,35 @@ function EchoRow({
     && echo.snippetStart != null
     && Math.abs((engine.snippet?.startSec ?? 0) - echo.snippetStart) < 0.5
 
+  const profileHref = profileHrefForEcho(echo)
+  const handle = echo.username ? `@${echo.username.replace(/^@/, '')}` : null
+
   return (
     <div className="margo-post-card__lb-echo-row">
       <div className="margo-post-card__lb-echo-thread" aria-hidden />
       <div className="margo-post-card__lb-echo-main">
         <div className="margo-post-card__lb-echo-content">
-          <p className="margo-post-card__lb-echo-label">
-            Lyric Back to {parentLabel}
-          </p>
-          <button type="button" className="margo-post-card__lb-row-body" onClick={onOpen}>
-            <p className="margo-post-card__lb-row-lyric">&ldquo;{echo.lyric}&rdquo;</p>
+          <div className="margo-post-card__lb-echo-head">
+            {handle && profileHref ? (
+              <PendingNavLink
+                href={profileHref}
+                indicator="subtle"
+                className="margo-post-card__lb-echo-user"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {handle}
+              </PendingNavLink>
+            ) : handle ? (
+              <span className="margo-post-card__lb-echo-user">{handle}</span>
+            ) : null}
             {(echo.song || echo.artist) ? (
-              <p className="margo-post-card__lb-row-meta">
-                {echo.username ? `@${echo.username.replace(/^@/, '')} · ` : ''}
+              <p className="margo-post-card__lb-echo-track">
                 {echo.song}{echo.artist ? ` · ${echo.artist}` : ''}
               </p>
-            ) : (
-              <p className="margo-post-card__lb-row-meta">
-                {echo.username ? `@${echo.username.replace(/^@/, '')}` : 'Lyric Back'}
-              </p>
-            )}
+            ) : null}
+          </div>
+          <button type="button" className="margo-post-card__lb-echo-bubble" onClick={onOpen}>
+            <span className="margo-post-card__lb-echo-lyric">&ldquo;{echo.lyric}&rdquo;</span>
           </button>
         </div>
         {canPlay ? (

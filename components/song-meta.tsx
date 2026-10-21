@@ -42,13 +42,8 @@ function ArtistCreditLine({
   )
 }
 
-function titleWithAiSuffix(title: string, aiGenerated: boolean): string {
-  if (!aiGenerated) return title
-  return `${title} [AI]`
-}
-
 /**
- * Song title + optional [AI] suffix ellipsize as one unit; artist on the next line.
+ * Song title ellipsizes; optional muted AI chip (does not compete with title).
  */
 export function SongMeta({
   title,
@@ -63,8 +58,6 @@ export function SongMeta({
   const t = (title || '').trim()
   const a = (artist || '').trim()
   if (!t && !a && !aiGenerated) return null
-
-  const titleLine = t ? titleWithAiSuffix(t, aiGenerated) : (aiGenerated ? '[AI]' : '')
 
   if (layout === 'inline') {
     const node = (
@@ -81,7 +74,9 @@ export function SongMeta({
         ...style,
         ...titleStyle,
       }}>
-        {titleLine}{a ? ` · ${a}` : ''}
+        {t}{aiGenerated ? (
+          <span className="margo-feed-ai-tag margo-feed-ai-tag--inline" aria-label="AI generated">AI</span>
+        ) : null}{a ? ` · ${a}` : ''}
       </span>
     )
     if (href) {
@@ -92,7 +87,7 @@ export function SongMeta({
 
   const body = (
     <div style={{ minWidth: 0, ...style }}>
-      {titleLine ? (
+      {t || aiGenerated ? (
         <p
           className="margo-song-meta__title-line"
           style={{
@@ -105,16 +100,21 @@ export function SongMeta({
             minWidth: 0,
             ...titleStyle,
           }}
-          title={titleLine}
+          title={t || undefined}
         >
-          {titleLine}
+          {t ? (
+            <span className="margo-song-meta__title-text">{t}</span>
+          ) : null}
+          {aiGenerated ? (
+            <span className="margo-feed-ai-tag" aria-label="AI generated">AI</span>
+          ) : null}
         </p>
       ) : null}
       {a ? (
         <ArtistCreditLine
           artist={a}
           style={{
-            margin: titleLine ? '2px 0 0' : 0,
+            margin: t || aiGenerated ? '2px 0 0' : 0,
             ...artistStyle,
           }}
         />

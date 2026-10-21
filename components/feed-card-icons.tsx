@@ -53,6 +53,14 @@ export function FeedIconReplay({ size = 20, className }: Props) {
   )
 }
 
+export function FeedIconSend({ size = 20, className }: Props) {
+  return (
+    <svg width={size} height={size} className={className} aria-hidden {...vb}>
+      <path d="M5 12l14-7-4 14-4-5-6-2z" />
+    </svg>
+  )
+}
+
 export function FeedIconClose({ size = 20, className }: Props) {
   return (
     <svg width={size} height={size} className={className} aria-hidden {...vb}>

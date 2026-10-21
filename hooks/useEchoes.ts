@@ -145,5 +145,10 @@ export function useEchoes(postId: string | null) {
     }
   }, [postId, load])
 
-  return { echoes, loading }
+  const refetch = useCallback(() => {
+    if (!postId) return
+    void load(postId)
+  }, [postId, load])
+
+  return { echoes, loading, refetch }
 }

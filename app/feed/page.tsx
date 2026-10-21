@@ -665,7 +665,7 @@ function FeedPageInner() {
           </div>
         )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div className="margo-feed-post-list">
           {listReady && feedItems.map(item => {
             const post = item.post
             const cardProps = {

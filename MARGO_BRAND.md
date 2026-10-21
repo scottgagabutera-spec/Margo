@@ -359,10 +359,10 @@ Empty states are invitations, not errors.
 ### Feed post card (v2 — PR #252)
 
 - **Vibe gradient** = post mood only (`--post-vibe-*` from `lib/vibe-theme.ts`). **Gold** = brand, play control, primary CTAs — not the card fill.
-- **Lyric** = Lora, neutral `--text`, max ~36ch. **Song row** = 56px: artwork, `Song Title [AI]` (one ellipsizing line), artist below, gold play.
-- **AI tag:** suffix on catalog **song title** only: `Title [AI]`. Never on lyric, username, or vibe chip. Set by artist on upload (`songs.is_ai_generated`).
-- **Atmosphere (artist “effect”):** `songs.atmosphere` (breath/drift/pulse/weight). Visual overlay in **lyric zone only** while **this card’s snippet** plays; respects `prefers-reduced-motion`. Engine always receives atmosphere on play.
-- **Lyric Back panel:** comment sheet — **Lyric Backs · N** (people’s replies first), empty state, then collapsed **See ideas from Margo music** (catalog rank only when expanded). Footer: **Write your Lyric Back**, **Search catalog**. No scroll prefetch.
+- **Lyric** = Lora, neutral `--text`, max ~36ch. **Song row** = 56px: artwork, title line + muted **AI** chip (small, low contrast), artist below, gold play.
+- **AI tag:** catalog **song title** only (`.margo-feed-ai-tag`). Never on lyric, username, or vibe chip. Set by artist on upload (`songs.is_ai_generated`).
+- **Atmosphere (artist “effect”):** `songs.atmosphere` (breath/drift/pulse/weight). **Moment stage** (tall lyric well, min ~128px) while **this card’s snippet** plays — not a single-line strip. Song row stays below the stage. Respects `prefers-reduced-motion`.
+- **Lyric Back panel:** **Lyric Backs · N**, scrollable echo bubbles (@ → profile, song line separate from Lora lyric), collapsed ideas, **inline compose** (catalog + send). Closes when card scrolls off-screen. No scroll prefetch.
 
 ### Feed action row (Resonate / Lyric Back / Card / Replay)
 - **Hard requirement:** one horizontal row at 375px — never wrap the four actions onto a second line. Test against the longest label (**LYRIC BACK**) plus real double-digit counts.

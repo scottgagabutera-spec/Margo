@@ -126,11 +126,13 @@ function PostMomentBody({
 }) {
   return (
     <div className="margo-post-card__body">
-      <div className="margo-post-card__lyric-atmosphere">
+      <div className="margo-post-card__moment-stage">
         {atmosphereRooms.length > 0 ? (
           <AtmosphereLayer variant="card" rooms={atmosphereRooms} />
         ) : null}
-        <PostCardLyricSection post={post} />
+        <div className="margo-post-card__moment-stage-inner">
+          <PostCardLyricSection post={post} />
+        </div>
       </div>
       <PostCardSongSection post={post} showMomentControls />
     </div>
@@ -258,6 +260,24 @@ export function PostCard({
     obs.observe(el)
     return () => obs.disconnect()
   }, [audioUrl, isTier1, snippetWarmSec, playbackSegments])
+
+  useEffect(() => {
+    if (!suggestionsOpen) return
+    const el = cardRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0]
+        if (!entry) return
+        if (entry.intersectionRatio < 0.15) {
+          setSuggestionsOpen(false)
+        }
+      },
+      { threshold: [0, 0.15, 0.5] },
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [suggestionsOpen])
 
   useEffect(() => {
     if (viewedRef.current) return
@@ -480,7 +500,7 @@ export function PostCard({
           ) : profileHref ? (
             <PendingNavLink
               href={profileHref}
-              indicator="overlay"
+              indicator="subtle"
               ringSize={20}
               onClick={(e) => e.stopPropagation()}
               aria-label={`View profile @${profileUsername}`}
@@ -519,7 +539,7 @@ export function PostCard({
                 {profileHref ? (
                   <PendingNavLink
                     href={profileHref}
-                    indicator="overlay"
+                    indicator="subtle"
                     ringSize={22}
                     onClick={(e) => e.stopPropagation()}
                     aria-label={`View profile @${profileUsername}`}
@@ -730,32 +750,18 @@ export function PostCard({
           postId={post.id}
           echoCount={echoCount}
           parentUsername={post.username}
+          parentEmotion={post.emotion || 'chill'}
           open={suggestionsOpen}
           onClose={() => setSuggestionsOpen(false)}
+          onRequireAuth={requireAuth}
           onOpenEcho={(echoId) => {
             persistActivePrimaryScroll()
             router.push(`/post/${echoId}`)
           }}
-          onWriteOwn={() => {
+          onOpenFullEditor={() => {
             if (!requireAuth()) return
             persistActivePrimaryScroll()
             router.push(lyricBackHref)
-          }}
-          onAcceptSuggested={(s) => {
-            if (!requireAuth()) return
-            const q = new URLSearchParams({
-              postId: post.id,
-              lyric: s.text,
-              song: s.songTitle,
-              artist: s.artistName,
-              songId: s.songId,
-              start: String(s.startSec),
-              end: String(s.endSec),
-            })
-            if (s.artworkUrl) q.set('artwork', s.artworkUrl)
-            if (s.audioUrl) q.set('audioUrl', s.audioUrl)
-            persistActivePrimaryScroll()
-            router.push(`/lyric-back?${q.toString()}`)
           }}
           onOpenSuggestedSearch={() => {
             if (!requireAuth()) return
