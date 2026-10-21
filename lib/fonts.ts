@@ -22,44 +22,37 @@ export const TYPE = {
   label: '0.6rem',
 } as const
 
-/** Feed post card typography scale (min size 0.6875rem / 11px on card). */
+/** Feed post card typography scale (min 0.75rem on card). */
 export const FEED_TYPE_SCALE = {
-  lyric: '1.0625rem',
+  lyric: '1rem',
   lyricLineHeight: '1.5',
+  displayName: '0.9375rem',
+  handle: '0.8125rem',
+  date: '0.8125rem',
   songTitle: '0.875rem',
-  artist: '0.75rem',
-  displayName: '0.875rem',
-  handle: '0.75rem',
-  date: '0.6875rem',
-  actionLabel: '0.6875rem',
-  actionBadge: '0.6875rem',
-  moodChip: '0.6875rem',
-  sectionLabel: '0.6875rem',
-  aiLabel: '0.6875rem',
+  artist: '0.8125rem',
+  actionLabel: '0.875rem',
+  actionCount: '0.8125rem',
+  moodChip: '0.75rem',
+  sectionLabel: '0.75rem',
+  aiLabel: '0.75rem',
+  /** Export / Discover hero lyric — not used on feed cards. */
   lyricHero: '1.5rem',
-  lyricShort: '1.25rem',
-  lyricMedium: '1.0625rem',
-  lyricLong: '1rem',
-  lyricVeryLong: '0.9375rem',
 } as const
 
 /** Maps feed type tokens to CSS custom property names (values in :root). */
 export const FEED_TYPE = {
   lyric: '--feed-type-lyric',
   lyricLineHeight: '--feed-type-lyric-lh',
-  songTitle: '--feed-type-song-title',
-  artist: '--feed-type-artist',
   displayName: '--feed-type-display-name',
   handle: '--feed-type-handle',
   date: '--feed-type-date',
+  songTitle: '--feed-type-song-title',
+  artist: '--feed-type-artist',
   actionLabel: '--feed-type-action-label',
-  actionBadge: '--feed-type-action-badge',
+  actionCount: '--feed-type-action-count',
   moodChip: '--feed-type-mood-chip',
   sectionLabel: '--feed-type-section-label',
   aiLabel: '--feed-type-ai-label',
   lyricHero: '--feed-type-lyric-hero',
-  lyricShort: '--feed-type-lyric-short',
-  lyricMedium: '--feed-type-lyric-medium',
-  lyricLong: '--feed-type-lyric-long',
-  lyricVeryLong: '--feed-type-lyric-very-long',
 } as const

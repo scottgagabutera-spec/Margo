@@ -9,5 +9,5 @@
  * Centralizing mark paths is deferred to avoid destabilizing export rendering.
  */
 
-/** Inline artwork thumb in Feed cards (matches Stage ref artwork at ~400px scale). */
-export const FEED_ARTWORK_THUMB_PX = 56
+/** Inline artwork thumb in Feed cards. */
+export const FEED_ARTWORK_THUMB_PX = 44

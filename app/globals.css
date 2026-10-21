@@ -57,24 +57,22 @@
   --stage-moment-to-actions: 22px;
   --margo-feed-max-width: 720px;
   /* Feed post card type scale (lib/fonts.ts FEED_TYPE_SCALE) */
-  --feed-type-lyric: 1.0625rem;
+  --feed-type-lyric: 1rem;
   --feed-type-lyric-lh: 1.5;
+  --feed-type-display-name: 0.9375rem;
+  --feed-type-handle: 0.8125rem;
+  --feed-type-date: 0.8125rem;
   --feed-type-song-title: 0.875rem;
-  --feed-type-artist: 0.75rem;
-  --feed-type-display-name: 0.875rem;
-  --feed-type-handle: 0.75rem;
-  --feed-type-date: 0.6875rem;
-  --feed-type-action-label: 0.6875rem;
-  --feed-type-action-badge: 0.6875rem;
-  --feed-type-mood-chip: 0.6875rem;
-  --feed-type-section-label: 0.6875rem;
-  --feed-type-ai-label: 0.6875rem;
+  --feed-type-artist: 0.8125rem;
+  --feed-type-action-label: 0.875rem;
+  --feed-type-action-count: 0.8125rem;
+  --feed-type-mood-chip: 0.75rem;
+  --feed-type-section-label: 0.75rem;
+  --feed-type-ai-label: 0.75rem;
   --margo-post-card-pad: 16px;
+  --margo-post-card-gap: 12px;
   --feed-type-lyric-hero: 1.5rem;
-  --feed-type-lyric-short: 1.25rem;
-  --feed-type-lyric-medium: 1.0625rem;
-  --feed-type-lyric-long: 1rem;
-  --feed-type-lyric-very-long: 0.9375rem;
+  --margo-feed-vibe-bar-h: 40px;
 }
 @media (min-width: 640px) {
   :root {
@@ -346,88 +344,51 @@ html[data-margo-stage-idle] .margo-stage-zone {
   }
 }
 
-/* Feed lyric — length-aware scale; row/compact use same tokens */
+/* Feed lyric — one size on feed (export/Discover may use --feed-type-lyric-hero). */
 .margo-feed-lyric {
   font-family: var(--font-lora), serif;
   font-style: italic;
   color: var(--text);
   line-height: var(--feed-type-lyric-lh);
   margin: 0;
-  font-size: var(--feed-type-lyric-medium);
+  font-size: var(--feed-type-lyric);
   white-space: pre-line;
 }
-.margo-feed-lyric--len-short {
-  font-size: var(--feed-type-lyric-short);
-}
-.margo-feed-lyric--len-medium {
-  font-size: var(--feed-type-lyric-medium);
-}
-.margo-feed-lyric--len-long {
-  font-size: var(--feed-type-lyric-long);
-}
-.margo-feed-lyric--len-very-long {
-  font-size: var(--feed-type-lyric-very-long);
-}
-.margo-feed-lyric--balance {
-  max-width: 34ch;
-  text-wrap: balance;
-  text-wrap: pretty;
-}
-.margo-feed-lyric--collapsed {
-  display: -webkit-box;
-  -webkit-line-clamp: 6;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.margo-feed-lyric--row {
+  font-size: var(--feed-type-lyric);
 }
 .margo-feed-lyric__more {
   display: inline-block;
   margin-top: 4px;
-  padding: 4px 0;
+  padding: 0;
   min-height: var(--margo-touch-min);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: var(--feed-type-action-label);
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
   color: var(--text-muted);
   background: none;
   border: none;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.margo-feed-lyric__more:hover {
-  color: var(--text-secondary);
+.margo-feed-lyric__more:active {
+  opacity: 0.75;
 }
-.margo-feed-lyric--compact,
-.margo-feed-lyric--row {
-  font-size: var(--feed-type-lyric-medium);
-}
-.margo-feed-lyric--row.margo-feed-lyric--len-short {
-  font-size: var(--feed-type-lyric-short);
-}
-.margo-feed-lyric--row.margo-feed-lyric--len-long {
-  font-size: var(--feed-type-lyric-long);
-}
-.margo-feed-lyric--row.margo-feed-lyric--len-very-long {
-  font-size: var(--feed-type-lyric-very-long);
+.margo-feed-lyric__more:focus-visible {
+  outline: 2px solid var(--post-vibe-text);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 .margo-feed-stitch {
-  margin: 8px 0 4px;
+  margin: 4px 0;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: var(--feed-type-section-label);
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-muted);
   text-align: left;
-  opacity: 0.85;
-}
-.margo-feed-lyric--hero {
-  font-size: var(--feed-type-lyric-hero);
-  line-height: 1.45;
-}
-.margo-feed-lyric--compact {
-  font-size: var(--feed-type-lyric-medium);
 }
 .margo-feed-lyric--clamp-4 {
   display: -webkit-box;
@@ -435,8 +396,9 @@ html[data-margo-stage-idle] .margo-stage-zone {
   -webkit-line-clamp: 4;
   overflow: hidden;
 }
-.margo-post-card__stitch {
-  font-size: 0.6875rem;
+.margo-feed-lyric--hero {
+  font-size: var(--feed-type-lyric-hero);
+  line-height: 1.45;
 }
 @media (prefers-reduced-motion: reduce) {
   .margo-feed-lyric__more,
@@ -458,19 +420,99 @@ html[data-margo-stage-idle] .margo-stage-zone {
   animation: margo-feed-moment-spin 1s linear infinite;
 }
 
+.margo-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.margo-feed-vibe-bar {
+  position: fixed;
+  top: var(--nav-height, 72px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  height: var(--margo-feed-vibe-bar-h);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+.margo-feed-vibe-bar__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.margo-feed-vibe-bar__label {
+  font-size: var(--feed-type-action-label);
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.margo-feed-vibe-bar__count {
+  font-size: var(--feed-type-action-count);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.margo-feed-vibe-bar__clear {
+  width: var(--margo-touch-min);
+  height: var(--margo-touch-min);
+  margin: 0 -8px 0 0;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--feed-type-action-label);
+  cursor: pointer;
+  border-radius: 8px;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.margo-feed-vibe-bar__clear:active {
+  opacity: 0.72;
+}
+.margo-feed-vibe-bar__clear:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
 .margo-post-card {
   --post-vibe-fill: #E8E4DC;
-  --post-vibe-text: #f5f2ea;
-  --post-vibe-glow: rgba(232, 228, 220, 0.12);
-  --post-vibe-faint: rgba(232, 228, 220, 0.1);
+  --post-vibe-text: #eeebe5;
+  --post-vibe-chip-text: #C8C4BC;
+  --post-vibe-faint: rgba(232, 228, 220, 0.08);
   --post-vibe-border: rgba(232, 228, 220, 0.22);
   box-sizing: border-box;
   padding: var(--margo-post-card-pad);
-  background:
-    radial-gradient(ellipse 120% 90% at 0% 0%, var(--post-vibe-glow) 0%, transparent 45%),
-    rgba(12, 11, 16, 0.97);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
   overflow-wrap: anywhere;
   word-break: break-word;
+  position: relative;
+}
+.margo-post-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--post-vibe-fill);
+  pointer-events: none;
 }
 .margo-post-card__truncate {
   overflow: hidden;
@@ -481,11 +523,9 @@ html[data-margo-stage-idle] .margo-stage-zone {
 }
 .margo-post-card--tier1 {
   border-color: var(--gold-border) !important;
-  box-shadow: 0 0 0 1px rgba(232, 197, 71, 0.06);
 }
 .margo-post-card--external {
-  border-style: dashed !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
+  border-color: var(--border) !important;
 }
 .margo-post-card__header {
   display: grid;
@@ -494,7 +534,7 @@ html[data-margo-stage-idle] .margo-stage-zone {
   column-gap: 12px;
   row-gap: 4px;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: var(--margo-post-card-gap);
 }
 .margo-post-card__header-tools {
   display: flex;
@@ -507,21 +547,38 @@ html[data-margo-stage-idle] .margo-stage-zone {
 .margo-post-card__mood {
   grid-column: 3;
   grid-row: 1 / span 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 8px;
+  box-sizing: border-box;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: var(--feed-type-mood-chip);
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  padding: 4px 8px;
   border-radius: 999px;
   background: var(--post-vibe-faint);
   border: 1px solid var(--post-vibe-border);
-  color: var(--post-vibe-text);
+  color: var(--post-vibe-chip-text);
   white-space: nowrap;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  min-height: var(--margo-touch-min);
   align-self: center;
+  max-width: 100%;
+  min-width: 0;
+}
+.margo-post-card__mood:active {
+  opacity: 0.82;
+}
+.margo-post-card__mood:focus-visible {
+  outline: 2px solid var(--post-vibe-text);
+  outline-offset: 2px;
+}
+.margo-post-card__mood-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .margo-post-card__icon-btn {
   width: var(--margo-touch-min);
@@ -562,33 +619,22 @@ html[data-margo-stage-idle] .margo-stage-zone {
   }
 }
 .margo-post-card__lyric-zone {
-  margin: 0 0 8px;
+  margin: 0 0 var(--margo-post-card-gap);
   text-align: left;
   padding: 0;
 }
-.margo-post-card__lyric-zone--hero {
-  padding: 4px 0 8px;
-  min-height: 88px;
-}
-.margo-post-card__lyric-zone--compact {
-  min-height: 99px;
-  padding: 0;
-}
 .margo-post-card__lyric-more {
-  color: var(--post-vibe-text);
-  text-transform: none;
-  letter-spacing: 0;
-  font-size: var(--feed-type-action-label);
+  color: var(--text-muted);
 }
 .margo-post-card__song-block {
   border-top: 1px solid var(--border);
-  padding-top: 8px;
+  padding-top: var(--margo-post-card-gap);
   margin-top: 0;
 }
 .margo-post-card__song-row {
   display: grid;
-  grid-template-columns: 48px 1fr auto;
-  gap: 12px;
+  grid-template-columns: 44px 1fr auto;
+  gap: var(--margo-post-card-gap);
   align-items: center;
 }
 .margo-post-card__moment-btn {
@@ -603,9 +649,18 @@ html[data-margo-stage-idle] .margo-stage-zone {
   box-sizing: border-box;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  background: var(--post-vibe-fill);
+  background: transparent;
   color: var(--bg);
   border: none;
+}
+.margo-post-card__moment-btn-inner {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--post-vibe-fill);
 }
 .margo-post-card__moment-btn:focus-visible {
   outline: 2px solid var(--post-vibe-text);
@@ -649,14 +704,15 @@ html[data-margo-stage-idle] .margo-stage-zone {
   transition: width 200ms linear;
 }
 .margo-post-card__full-song-pill {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px;
-  width: 100%;
+  width: auto;
+  max-width: 100%;
   min-height: var(--margo-touch-min);
-  margin-top: 8px;
-  padding: 0 14px;
+  margin-top: var(--margo-post-card-gap);
+  padding: 4px 12px;
   border-radius: 999px;
   border: 1px solid var(--post-vibe-border);
   background: transparent;
@@ -667,6 +723,12 @@ html[data-margo-stage-idle] .margo-stage-zone {
   text-decoration: none;
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
+}
+.margo-post-card__full-song-pill .margo-post-card__full-song-pill-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
 }
 .margo-post-card__full-song-pill:focus-visible {
   outline: 2px solid var(--post-vibe-text);
@@ -691,14 +753,16 @@ html[data-margo-stage-idle] .margo-stage-zone {
   color: var(--post-vibe-fill);
 }
 .margo-post-card__listen-external {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  width: 100%;
+  width: auto;
+  max-width: 100%;
   min-height: var(--margo-touch-min);
-  margin-top: 10px;
-  border-radius: 12px;
+  margin-top: var(--margo-post-card-gap);
+  padding: 4px 14px;
+  border-radius: 999px;
   border: 1px solid var(--post-vibe-border);
   background: var(--post-vibe-faint);
   color: var(--post-vibe-text);
@@ -708,15 +772,21 @@ html[data-margo-stage-idle] .margo-stage-zone {
   text-decoration: none;
   box-sizing: border-box;
 }
+.margo-post-card__listen-external-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+}
 .margo-post-card__external-pill {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.6875rem;
+  font-size: var(--feed-type-section-label);
   font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
   color: var(--text-muted);
   margin-bottom: 8px;
 }
@@ -811,9 +881,20 @@ html[data-margo-stage-idle] .margo-stage-zone {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: center;
   width: 100%;
-  margin-top: 8px;
-  padding-top: 10px;
+  margin-top: var(--margo-post-card-gap);
+  padding-top: var(--margo-post-card-gap);
   border-top: 1px solid var(--border);
+}
+.margo-feed-actions--icons .margo-feed-action__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 .margo-feed-actions--cols-3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -844,20 +925,14 @@ html[data-margo-stage-idle] .margo-stage-zone {
   height: 20px;
   flex-shrink: 0;
 }
-@keyframes margo-feed-shared-glow {
-  0% {
-    box-shadow: 0 0 0 0 rgba(232, 197, 71, 0.45);
-    border-color: var(--gold-border);
-  }
-  35% {
-    box-shadow: 0 0 0 3px rgba(232, 197, 71, 0.28);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(232, 197, 71, 0);
+@media (prefers-reduced-motion: no-preference) {
+  .margo-feed-post--shared {
+    animation: margo-feed-shared-border 2s ease-out;
   }
 }
-.margo-feed-post--shared {
-  animation: margo-feed-shared-glow 2.8s ease-out;
+@keyframes margo-feed-shared-border {
+  0%, 100% { border-color: var(--border); }
+  20% { border-color: var(--gold-border); }
 }
 
 .margo-feed-action__badge {
@@ -872,7 +947,7 @@ html[data-margo-stage-idle] .margo-stage-zone {
   align-items: center;
   justify-content: center;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: var(--feed-type-action-badge);
+  font-size: var(--feed-type-action-count);
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0;
@@ -938,7 +1013,7 @@ html[data-margo-stage-idle] .margo-stage-zone {
 .margo-post-card__suggestion-lyric {
   font-family: var(--font-lora), serif;
   font-style: italic;
-  font-size: var(--feed-type-lyric-medium);
+  font-size: var(--feed-type-lyric);
   color: var(--text);
   line-height: var(--feed-type-lyric-lh);
   margin: 0 0 4px;

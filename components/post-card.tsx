@@ -34,7 +34,9 @@ import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 import { UI_FONT, LYRIC_FONT, FEED_TYPE } from '@/lib/fonts'
 import { getVibeTheme, vibeThemeStyleVars } from '@/lib/vibe-theme'
-import { feedLyricLayoutMode, formatEchoBadge } from '@/lib/post-card-lyric-layout'
+import { formatEchoBadge } from '@/lib/post-card-lyric-layout'
+import { FEED_HUE_GLYPH } from '@/lib/feed-vibe-map'
+import { FeedVibeGlyph } from '@/components/feed-vibe-glyph'
 import { PostCardLyricSection, PostCardSongSection } from '@/components/post-card-feed-layout'
 import { resolveMomentLines } from '@/lib/post-lines'
 import { PostCardSuggestedReply } from '@/components/post-card-suggested-reply'
@@ -45,16 +47,6 @@ const supabase = createClient()
 export type PostCardVariant = 'feed' | 'compact' | 'row'
 
 const REPORT_REASONS = ['Spam', 'Harassment', 'Inappropriate', 'Other'] as const
-
-function feedLyricLengthClass(text: string): string {
-  const trimmed = text.trim()
-  const compactLen = trimmed.replace(/\s/g, '').length
-  const lineBreaks = trimmed.split('\n').length
-  if (compactLen <= 36 && lineBreaks <= 1) return 'margo-feed-lyric--len-short'
-  if (compactLen <= 100 && lineBreaks <= 2) return 'margo-feed-lyric--len-medium'
-  if (compactLen <= 200) return 'margo-feed-lyric--len-long'
-  return 'margo-feed-lyric--len-very-long'
-}
 
 function isLyricBackAllowed(post: Post): boolean {
   return (post.status ?? 'active') === 'active'
@@ -122,16 +114,10 @@ export function normalizeEmotion(e: string) {
     .toUpperCase()
 }
 
-function PostMomentBody({
-  post,
-  layoutMode,
-}: {
-  post: Post
-  layoutMode: 'hero' | 'compact'
-}) {
+function PostMomentBody({ post }: { post: Post }) {
   return (
     <div className="margo-post-card__body">
-      <PostCardLyricSection post={post} layoutMode={layoutMode} />
+      <PostCardLyricSection post={post} />
       <PostCardSongSection post={post} showMomentControls />
     </div>
   )
@@ -219,11 +205,7 @@ export function PostCard({
   const avatarPx = isCompact ? '32px' : '40px'
 
   const lines = resolveMomentLines(post)
-  const lyricLayoutMode: 'hero' | 'compact' =
-    isCompact || (isRow && rowExpanded) ? 'compact' : feedLyricLayoutMode(lines)
-  const vibeTheme = getVibeTheme(emotion || post.emotion, {
-    layout: lyricLayoutMode === 'hero' ? 'hero' : 'compact',
-  })
+  const vibeTheme = getVibeTheme(emotion || post.emotion)
   const catalogLines = lines.filter(
     (line) => line.source !== 'external' && !!(line.songId && line.audioUrl),
   )
@@ -336,11 +318,7 @@ export function PostCard({
         }}
       >
         <p
-          className={[
-            'margo-feed-lyric',
-            'margo-feed-lyric--row',
-            feedLyricLengthClass(post.text || ''),
-          ].join(' ')}
+          className="margo-feed-lyric margo-feed-lyric--row"
           style={{
             margin: 0,
             display: '-webkit-box',
@@ -384,15 +362,13 @@ export function PostCard({
         externalCardLayout ? 'margo-post-card--external' : '',
         highlightShared ? 'margo-feed-post--shared' : '',
       ].filter(Boolean).join(' ')}
-      data-lyric-layout={lyricLayoutMode}
       onClick={goToPost}
       onPointerDown={() => {
         if (!disableCardNav && !isRow) persistActivePrimaryScroll()
       }}
       style={{
         ...vibeThemeStyleVars(vibeTheme),
-        border: `1px solid ${isTier1 ? 'var(--gold-border)' : 'rgba(255,255,255,0.06)'}`,
-        borderRadius: '16px',
+        ...(isTier1 ? { borderColor: 'var(--gold-border)' } : null),
         position: 'relative', overflow: 'visible',
         isolation: 'isolate',
         cursor: disableCardNav || isRow ? 'default' : 'pointer',
@@ -597,7 +573,8 @@ export function PostCard({
               onSelectVibe?.(emotion.toUpperCase())
             }}
           >
-            {label}
+            <FeedVibeGlyph id={FEED_HUE_GLYPH[vibeTheme.hue]} size={12} />
+            <span className="margo-post-card__mood-label">{label}</span>
           </button>
         ) : null}
         <div className="margo-post-card__header-tools">
@@ -767,7 +744,7 @@ export function PostCard({
         />
       )}
 
-      <PostMomentBody post={post} layoutMode={lyricLayoutMode} />
+      <PostMomentBody post={post} />
 
       {lyricBackAllowed ? (
         <PostCardSuggestedReply
@@ -820,9 +797,9 @@ export function PostCard({
       <div data-no-card-nav>
       <div className={(() => {
         const actionCount = 2 + (!threadDetail && lyricBackAllowed ? 1 : 0) + (onReplay ? 1 : 0)
-        return actionCount === 3
-          ? 'margo-feed-actions margo-feed-actions--cols-3'
-          : 'margo-feed-actions'
+        const cols = actionCount === 3 ? ' margo-feed-actions--cols-3' : ''
+        const icons = variant === 'feed' && !threadDetail ? ' margo-feed-actions--icons' : ''
+        return `margo-feed-actions${cols}${icons}`
       })()}>
         <button
           type="button"

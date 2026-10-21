@@ -30,6 +30,7 @@ import { StoryRing } from '@/components/stories/story-ring'
 import { StoriesPortalDock } from '@/components/stories/stories-portal-dock'
 import { useMargoMobileViewport } from '@/components/stories/stories-dock'
 import { StoryFeedAuthorSync, StoryRingProvider } from '@/components/stories/story-ring-context'
+import { FeedFilterLiveRegion, FeedVibeFilterBar } from '@/components/feed-vibe-filter-bar'
 
 const supabase = createClient()
 
@@ -75,8 +76,8 @@ function FeedPageInner() {
   const { user, identity } = useIdentity()
   const { refetch: refetchNotifications } = useNotifications()
   const { refetch: refetchMessages } = useMessaging()
-  const [selectedVibe, setSelectedVibe] = useState('ALL')
   const [selectedSort, setSelectedSort] = useState('NEW')
+  const [filterAnnouncement, setFilterAnnouncement] = useState('')
   const [resonated, setResonated] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set()
     try {
@@ -229,6 +230,12 @@ function FeedPageInner() {
     () => feedRankIds(posts, postStats),
     [posts, postStats],
   )
+
+  const selectedVibe = useMemo(() => {
+    const raw = searchParams.get('vibe')?.trim()
+    if (!raw) return 'ALL'
+    return normalizeEmotion(raw)
+  }, [searchParams])
 
   const matchesFeedFilters = (p: Post) => {
     const norm = normalizeEmotion(p.emotion || '')
@@ -453,7 +460,23 @@ function FeedPageInner() {
   }
 
   const handleSelectVibe = (vibe: string) => {
-    setSelectedVibe(prev => (prev === vibe ? 'ALL' : vibe))
+    const next = selectedVibe === vibe ? 'ALL' : vibe
+    const params = new URLSearchParams(searchParams.toString())
+    if (next === 'ALL') {
+      params.delete('vibe')
+      setFilterAnnouncement('Showing all Moments')
+      const qs = params.toString()
+      router.push(qs ? `/feed?${qs}` : '/feed', { scroll: false })
+      return
+    }
+    params.set('vibe', next.toLowerCase())
+    setFilterAnnouncement(`Filtering by ${next.toLowerCase()}`)
+    router.push(`/feed?${params.toString()}`, { scroll: false })
+  }
+
+  const clearVibeFilter = () => {
+    if (selectedVibe === 'ALL') return
+    handleSelectVibe(selectedVibe)
   }
 
   const handleSelectRank = (rank: 'NEW' | 'TRENDING' | 'TOP') => {
@@ -549,7 +572,22 @@ function FeedPageInner() {
         applyImmediate(latest)
       }}
     >
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative', paddingTop: 'var(--nav-height, 72px)' }}>
+    <div style={{
+      minHeight: '100vh',
+      background: 'var(--bg)',
+      position: 'relative',
+      paddingTop: selectedVibe !== 'ALL'
+        ? 'calc(var(--nav-height, 72px) + var(--margo-feed-vibe-bar-h))'
+        : 'var(--nav-height, 72px)',
+    }}>
+      <FeedFilterLiveRegion message={filterAnnouncement} />
+      {selectedVibe !== 'ALL' && (
+        <FeedVibeFilterBar
+          vibeKey={selectedVibe}
+          resultCount={listReady ? feedItems.length : null}
+          onClear={clearVibeFilter}
+        />
+      )}
       {!ptrBusy && feedLive && pendingCount > 0 && (
         <FeedNewMomentsPill visible onReveal={flushPending} />
       )}
@@ -580,20 +618,6 @@ function FeedPageInner() {
 
         {hasActiveFilter && (
           <div style={{ display: 'flex', gap: '6px', padding: '4px 0 16px' }}>
-            {selectedVibe !== 'ALL' && (
-              <button
-                type="button"
-                onClick={() => setSelectedVibe('ALL')}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '6px',
-                  minHeight: 'var(--margo-touch-min)',
-                  padding: '4px 10px', borderRadius: '50px',
-                  background: 'var(--gold)', border: 'none', cursor: 'pointer',
-                  fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.55rem', fontWeight: 700,
-                  letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--bg)',
-                }}
-              >Filtering: {selectedVibe} <CloseIcon size={10} color="var(--bg)" /></button>
-            )}
             {selectedSort !== 'NEW' && (
               <button
                 type="button"

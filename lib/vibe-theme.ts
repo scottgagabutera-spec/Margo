@@ -3,20 +3,23 @@
  * Gold (#E8C547) is reserved for Margo brand + tier-1 card chrome, not unknown vibes.
  */
 
+import { feedHueForEmotion, type FeedHueKey } from '@/lib/feed-vibe-map'
+
 export type VibeTheme = {
+  hue: FeedHueKey
   fill: string
+  /** Accent text (progress, full-song label, moment strong). */
   text: string
-  glow: string
+  /** Chip label — meets 4.5:1 on chip fill. */
+  chipText: string
   faint: string
   border: string
 }
 
-export type FeedVibeLayoutGlow = 'hero' | 'compact'
-
 const IVORY_FILL = '#E8E4DC'
 
-/** Feed card palette (PR #252 quality pass). */
-export const FEED_VIBE_FILL: Record<string, string> = {
+/** Feed card palette (PR #252). */
+export const FEED_VIBE_FILL: Record<FeedHueKey, string> = {
   hype: '#FF5A36',
   proud: '#F5B83A',
   hope: '#3DDC97',
@@ -25,8 +28,6 @@ export const FEED_VIBE_FILL: Record<string, string> = {
   love: '#FF5C9E',
   ivory: IVORY_FILL,
 }
-
-const FEED_VIBE_KEYS = new Set(['hype', 'pain', 'proud', 'love', 'chill', 'hope'])
 
 function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace('#', '')
@@ -49,42 +50,35 @@ function rgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
-/** Normalize feed emotion to one of six vibes or ivory (unknown). */
+/** @deprecated use feedHueForEmotion — kept for filter comparisons */
 export function normalizeVibeKey(emotion: string | null | undefined): string {
-  const raw = (emotion || '').trim().toLowerCase()
-  if (!raw) return 'ivory'
-  if (raw === 'pain' || raw === 'heartbreak') return 'pain'
-  if (FEED_VIBE_KEYS.has(raw)) return raw
-  return 'ivory'
+  return feedHueForEmotion(emotion)
 }
 
-function fillForKey(key: string): string {
+function fillForKey(key: FeedHueKey): string {
   return FEED_VIBE_FILL[key] ?? IVORY_FILL
 }
 
-/** WCAG-friendly theme tokens for feed cards. */
-export function getVibeTheme(
-  emotion: string | null | undefined,
-  options?: { layout?: FeedVibeLayoutGlow },
-): VibeTheme {
-  const key = normalizeVibeKey(emotion)
-  const fill = fillForKey(key)
-  const glowAlpha = options?.layout === 'hero' ? 0.22 : 0.12
-  const textMix = key === 'ivory' ? 0.25 : 0.42
+/** WCAG-friendly theme tokens for feed cards (no card glow). */
+export function getVibeTheme(emotion: string | null | undefined): VibeTheme {
+  const hue = feedHueForEmotion(emotion)
+  const fill = fillForKey(hue)
+  const textMix = hue === 'ivory' ? 0.2 : 0.38
+  const chipText = hue === 'ivory' ? '#C8C4BC' : mixWhite(fill, 0.12)
   return {
+    hue,
     fill,
     text: mixWhite(fill, textMix),
-    glow: rgba(fill, glowAlpha),
-    faint: rgba(fill, 0.11),
-    border: rgba(fill, key === 'ivory' ? 0.22 : 0.32),
+    chipText,
+    faint: rgba(fill, hue === 'ivory' ? 0.08 : 0.14),
+    border: rgba(fill, hue === 'ivory' ? 0.22 : 0.38),
   }
 }
 
 /** Tier-1 / brand gold tokens (border only on card shell — not unknown vibe). */
-export const TIER1_GOLD_THEME: VibeTheme = {
+export const TIER1_GOLD_THEME: Pick<VibeTheme, 'fill' | 'text' | 'faint' | 'border'> = {
   fill: '#E8C547',
   text: mixWhite('#E8C547', 0.38),
-  glow: rgba('#E8C547', 0.12),
   faint: rgba('#E8C547', 0.1),
   border: rgba('#E8C547', 0.32),
 }
@@ -93,7 +87,7 @@ export function vibeThemeStyleVars(theme: VibeTheme): Record<string, string> {
   return {
     ['--post-vibe-fill' as string]: theme.fill,
     ['--post-vibe-text' as string]: theme.text,
-    ['--post-vibe-glow' as string]: theme.glow,
+    ['--post-vibe-chip-text' as string]: theme.chipText,
     ['--post-vibe-faint' as string]: theme.faint,
     ['--post-vibe-border' as string]: theme.border,
   }

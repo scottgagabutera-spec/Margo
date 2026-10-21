@@ -7,7 +7,6 @@ import { resolveMomentLines } from '@/lib/post-lines'
 import { FEED_ARTWORK_THUMB_PX } from '@/lib/feed/layout'
 import { PostThumbnail } from '@/components/post-thumbnail'
 import { SongMeta } from '@/components/song-meta'
-import { FeedMomentPlaybackIcon } from '@/components/feed-card-icons'
 import { FEED_TYPE } from '@/lib/fonts'
 import {
   computePlaybackSegments,
@@ -22,8 +21,7 @@ import { usePostMomentPlaybackUi, usePostMomentPlaybackMetrics } from '@/hooks/u
 import { useWarmAudioUrlOnVisible } from '@/hooks/useWarmAudioUrl'
 import { livingAtmosphereOrNull } from '@/lib/atmosphere'
 import {
-  feedLyricLayoutMode,
-  feedLyricNeedsClamp,
+  feedLyricNeedsExpand,
   formatMomentClock,
   readLyricExpandedSession,
   sumSegmentDuration,
@@ -31,7 +29,7 @@ import {
 } from '@/lib/post-card-lyric-layout'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { trackEvent } from '@/lib/analytics/track'
-import { FeedIconChevronRight, FeedIconExternal, FeedIconLyricsLines } from '@/components/feed-card-icons'
+import { FeedIconChevronRight, FeedIconExternal, FeedIconLyricsLines, FeedMomentPlaybackIcon } from '@/components/feed-card-icons'
 
 function MomentPlayControl({
   postId,
@@ -85,18 +83,14 @@ function MomentPlayControl({
       aria-label={ariaPlay}
       className="margo-post-card__moment-btn"
     >
-      <FeedMomentPlaybackIcon playing={playing} buffering={buffering} size={18} color="var(--bg)" />
+      <span className="margo-post-card__moment-btn-inner">
+        <FeedMomentPlaybackIcon playing={playing} buffering={buffering} size={18} color="var(--bg)" />
+      </span>
     </button>
   )
 }
 
-export function PostCardLyricSection({
-  post,
-  layoutMode,
-}: {
-  post: Post
-  layoutMode: 'hero' | 'compact'
-}) {
+export function PostCardLyricSection({ post }: { post: Post }) {
   const lines = resolveMomentLines(post)
   const multi = lines.length > 1
   const [expanded, setExpanded] = useState(() => readLyricExpandedSession(post.id))
@@ -107,46 +101,63 @@ export function PostCardLyricSection({
   }
 
   if (multi) {
+    const combined = lines.map((l) => l.text.trim()).filter(Boolean).join('\n\n')
+    const needsExpand = feedLyricNeedsExpand(combined)
     return (
-      <div className={`margo-post-card__lyric-zone margo-post-card__lyric-zone--compact`}>
-        {lines.map((line, i) => (
-          <div key={line.id || `line-${line.position}-${i}`}>
-            {i > 0 ? (
-              <p className="margo-feed-stitch margo-post-card__stitch" aria-hidden>
-                stitch
-              </p>
-            ) : null}
-            <p className="margo-feed-lyric margo-feed-lyric--compact margo-post-card__lyric">
-              &ldquo;{line.text}&rdquo;
-            </p>
+      <div className="margo-post-card__lyric-zone">
+        {!expanded && needsExpand ? (
+          <div className="margo-feed-lyric margo-post-card__lyric margo-feed-lyric--clamp-4">
+            {lines.map((line, i) => (
+              <span key={line.id || `line-${line.position}-${i}`}>
+                {i > 0 ? (
+                  <span className="margo-feed-stitch margo-post-card__stitch" aria-hidden> stitch </span>
+                ) : null}
+                &ldquo;{line.text}&rdquo;
+              </span>
+            ))}
           </div>
-        ))}
+        ) : (
+          lines.map((line, i) => (
+            <div key={line.id || `line-${line.position}-${i}`}>
+              {i > 0 ? (
+                <p className="margo-feed-stitch margo-post-card__stitch" aria-hidden>stitch</p>
+              ) : null}
+              <p className="margo-feed-lyric margo-post-card__lyric">&ldquo;{line.text}&rdquo;</p>
+            </div>
+          ))
+        )}
+        {needsExpand ? (
+          <button
+            type="button"
+            className="margo-feed-lyric__more margo-post-card__lyric-more"
+            data-no-card-nav
+            onClick={(e) => {
+              e.stopPropagation()
+              setExpandedPersist(!expanded)
+            }}
+          >
+            {expanded ? 'less' : 'more'}
+          </button>
+        ) : null}
       </div>
     )
   }
 
   const text = lines[0]?.text || post.text || ''
-  const needsClamp = layoutMode === 'compact' && feedLyricNeedsClamp(text)
-  const hero = layoutMode === 'hero'
+  const needsExpand = feedLyricNeedsExpand(text)
 
   return (
-    <div
-      className={[
-        'margo-post-card__lyric-zone',
-        hero ? 'margo-post-card__lyric-zone--hero' : 'margo-post-card__lyric-zone--compact',
-      ].join(' ')}
-    >
+    <div className="margo-post-card__lyric-zone">
       <p
         className={[
           'margo-feed-lyric',
           'margo-post-card__lyric',
-          hero ? 'margo-feed-lyric--hero' : 'margo-feed-lyric--compact',
-          needsClamp && !expanded ? 'margo-feed-lyric--clamp-4' : '',
+          needsExpand && !expanded ? 'margo-feed-lyric--clamp-4' : '',
         ].filter(Boolean).join(' ')}
       >
         &ldquo;{text}&rdquo;
       </p>
-      {needsClamp ? (
+      {needsExpand ? (
         <button
           type="button"
           className="margo-feed-lyric__more margo-post-card__lyric-more"
@@ -205,7 +216,7 @@ export function PostCardSongSection({
     <section className="margo-post-card__song-block" data-no-card-nav>
       {isExternalCard ? (
         <span className="margo-post-card__external-pill">
-          <FeedIconExternal size={16} />
+          <FeedIconExternal size={14} />
           External song · not on Margo
         </span>
       ) : null}
@@ -234,7 +245,7 @@ export function PostCardSongSection({
               borderRadius: '8px',
               flexShrink: 0,
               border: '1px solid var(--border)',
-              background: 'linear-gradient(145deg, #2a2838, #15141c)',
+              background: 'linear-gradient(145deg, var(--surface-2), var(--surface-3))',
             }}
           />
         )}
@@ -286,8 +297,10 @@ export function PostCardSongSection({
           aria-label={externalListenAriaLabel(externalHref)}
           onClick={(e) => e.stopPropagation()}
         >
-          <FeedIconExternal size={18} aria-hidden />
-          Listen on Apple Music
+          <span className="margo-post-card__listen-external-inner">
+            <FeedIconExternal size={18} aria-hidden />
+            Listen on Apple Music
+          </span>
         </a>
       ) : null}
       {hasUnifiedPlay && songId ? (
@@ -305,12 +318,14 @@ export function PostCardSongSection({
             })
           }}
         >
-          <span className="margo-post-card__full-song-pill-icons" aria-hidden>
-            <FeedIconLyricsLines size={18} />
-          </span>
-          <span className="margo-post-card__full-song-pill-label">Read along · full song</span>
-          <span className="margo-post-card__full-song-pill-icons" aria-hidden>
-            <FeedIconChevronRight size={18} />
+          <span className="margo-post-card__full-song-pill-inner">
+            <span className="margo-post-card__full-song-pill-icons" aria-hidden>
+              <FeedIconLyricsLines size={18} />
+            </span>
+            <span className="margo-post-card__full-song-pill-label">Read along · full song</span>
+            <span className="margo-post-card__full-song-pill-icons" aria-hidden>
+              <FeedIconChevronRight size={18} />
+            </span>
           </span>
         </PendingNavLink>
       ) : null}

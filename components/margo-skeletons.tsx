@@ -55,12 +55,13 @@ export function FeedPostSkeletonList({ count = 4 }: { count?: number }) {
               <div style={bone({ height: 8, width: '28%', borderRadius: 4, border: 'none' }, i * 60 + 80)} />
             </div>
           </div>
-          <div className="margo-post-card__lyric-zone margo-post-card__lyric-zone--hero">
-            <div style={bone({ height: 22, width: '78%', borderRadius: 4, border: 'none' }, i * 60 + 100)} />
+          <div className="margo-post-card__lyric-zone">
+            <div style={bone({ height: 14, width: '78%', borderRadius: 4, border: 'none' }, i * 60 + 100)} />
+            <div style={bone({ height: 14, width: '62%', borderRadius: 4, border: 'none', marginTop: 8 }, i * 60 + 110)} />
           </div>
           <div className="margo-post-card__song-block">
             <div className="margo-post-card__song-row">
-              <div style={bone({ width: 48, height: 48, borderRadius: 8, border: 'none' }, i * 60 + 120)} />
+              <div style={bone({ width: 44, height: 44, borderRadius: 8, border: 'none' }, i * 60 + 120)} />
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={bone({ height: 10, width: '55%', borderRadius: 4, border: 'none' }, i * 60 + 140)} />
                 <div style={bone({ height: 8, width: '35%', borderRadius: 4, border: 'none' }, i * 60 + 160)} />
