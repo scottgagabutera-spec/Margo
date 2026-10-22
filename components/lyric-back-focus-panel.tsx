@@ -193,22 +193,8 @@ export function LyricBackFocusBody({
 
       {composeOpen ? <LyricBackReplyContext username={replyToUsername} /> : null}
 
-      {isNested && focusedEcho ? (
-        <div className="margo-post-card__lb-focused-anchor">
-          <LyricBackThreadRow
-            echo={focusedEcho}
-            tone="anchor"
-            onLyricBack={() => onFocusEcho(focusedEcho)}
-            onOpenThread={onOpenThread}
-            onExport={onExportEcho}
-            onReplay={onReplayEcho}
-            {...(getRowExtras?.(focusedEcho) ?? {})}
-          />
-        </div>
-      ) : null}
-
       {composeOpen && focusId ? (
-        <div className="margo-post-card__lb-compose-slot">
+        <div className="margo-post-card__lb-compose-slot margo-post-card__lb-compose-slot--focus">
           <LyricBackPanelCompose
             ref={composeRef}
             key={focusId}
@@ -222,6 +208,21 @@ export function LyricBackFocusBody({
               onSent()
               void refetchEchoes()
             }}
+          />
+        </div>
+      ) : null}
+
+      {isNested && focusedEcho ? (
+        <div className="margo-post-card__lb-focused-anchor">
+          <LyricBackThreadRow
+            echo={focusedEcho}
+            tone="anchor"
+            onLyricBack={() => onFocusEcho(focusedEcho)}
+            onOpenThread={onOpenThread}
+            onExport={onExportEcho}
+            onReplay={onReplayEcho}
+            {...(getRowExtras?.(focusedEcho) ?? {})}
+            lyricBackSessionActive={composeOpen}
           />
         </div>
       ) : null}

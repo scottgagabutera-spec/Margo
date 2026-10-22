@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { usePost, usePostAncestors } from '@/hooks/usePost'
@@ -11,7 +11,6 @@ import {
   PostDetailLyricSection,
   usePostDetailLyricBack,
 } from '@/components/post-detail-lyric-section'
-import { LyricBackErrorBoundary } from '@/components/lyric-back-error-boundary'
 import type { LyricBackThreadRowExtras } from '@/components/lyric-back-focus-panel'
 import { CardExportModal } from '@/components/card-export-modal'
 import { resolveMargoMomentFromPost } from '@/lib/moment'
@@ -33,7 +32,7 @@ export default function PostDetailPage() {
   const postId = params.id || null
   const { post, loading } = usePost(postId)
   const { ancestors } = usePostAncestors(post?.parentPostId)
-  const { echoes, refetch: refetchEchoes } = useEchoes(postId)
+  const { echoes, loading: echoesLoading, refetch: refetchEchoes } = useEchoes(postId)
 
   const {
     stackApi,
@@ -47,7 +46,11 @@ export default function PostDetailPage() {
   const { isNested, drillInto, resetStack, backOneLevel } = stackApi
 
   const [composeOpen, setComposeOpen] = useState(false)
-  const [lbResetKey, setLbResetKey] = useState(0)
+
+  useEffect(() => {
+    setComposeOpen(false)
+    resetStack()
+  }, [postId, resetStack])
 
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
@@ -295,31 +298,25 @@ export default function PostDetailPage() {
           )}
 
           {showLbSection ? (
-            <LyricBackErrorBoundary
-              key={lbResetKey}
-              onReset={() => {
-                setComposeOpen(false)
-                resetStack()
-                setLbResetKey((k) => k + 1)
-              }}
-            >
-              <PostDetailLyricSection
-                post={post}
-                echoCount={echoCount}
-                composeOpen={composeOpen}
-                composeRef={composeRef}
-                sectionRef={sectionRef}
-                onRequireAuth={requireAuth}
-                onSent={() => { void refetchEchoes() }}
-                getRowExtras={getRowExtras}
-                onExportEcho={handleExportEcho}
-                onReplayEcho={toggleReplay}
-                onOpenThread={(id) => router.push(`/post/${id}`)}
-                onFocusEcho={(echo) => openComposer(echo.id, echo)}
-                onBackOneLevel={handleBackOneLevel}
-                stackApi={stackApi}
-              />
-            </LyricBackErrorBoundary>
+            <PostDetailLyricSection
+              key={post.id}
+              post={post}
+              echoCount={echoCount}
+              rootEchoes={echoes}
+              rootEchoesLoading={echoesLoading}
+              composeOpen={composeOpen}
+              composeRef={composeRef}
+              sectionRef={sectionRef}
+              onRequireAuth={requireAuth}
+              onSent={() => { void refetchEchoes() }}
+              getRowExtras={getRowExtras}
+              onExportEcho={handleExportEcho}
+              onReplayEcho={toggleReplay}
+              onOpenThread={(id) => router.push(`/post/${id}`)}
+              onFocusEcho={(echo) => openComposer(echo.id, echo)}
+              onBackOneLevel={handleBackOneLevel}
+              stackApi={stackApi}
+            />
           ) : null}
         </div>
       )}

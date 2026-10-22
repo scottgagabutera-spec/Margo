@@ -18,6 +18,8 @@ export type FeedPostActionsProps = {
   onResonate: (postId: string) => void
   lyricBackAllowed?: boolean
   lyricBackOpen?: boolean
+  /** Nested/thread focus: session active but not a toggle highlight (muted). */
+  lyricBackSessionActive?: boolean
   echoCount?: number
   onLyricBack?: () => void
   onCard: () => void
@@ -36,6 +38,7 @@ export function FeedPostActions({
   onResonate,
   lyricBackAllowed = true,
   lyricBackOpen = false,
+  lyricBackSessionActive = false,
   echoCount = 0,
   onLyricBack,
   onCard,
@@ -74,14 +77,26 @@ export function FeedPostActions({
       {lyricBackAllowed && onLyricBack ? (
         <button
           type="button"
-          className="margo-feed-action"
-          aria-label={lyricBackOpen ? 'Close Lyric Back' : 'Open Lyric Back'}
-          aria-expanded={lyricBackOpen}
+          className={`margo-feed-action${lyricBackSessionActive ? ' margo-feed-action--lb-session' : ''}`}
+          aria-label={
+            lyricBackSessionActive
+              ? 'Lyric Back — replying here'
+              : lyricBackOpen
+                ? 'Close Lyric Back'
+                : 'Open Lyric Back'
+          }
+          aria-expanded={lyricBackOpen || lyricBackSessionActive}
           onClick={(e) => {
             e.stopPropagation()
             onLyricBack()
           }}
-          style={{ color: lyricBackOpen ? 'var(--post-vibe-text)' : 'var(--text-secondary)' }}
+          style={{
+            color: lyricBackSessionActive
+              ? 'var(--text-muted)'
+              : lyricBackOpen
+                ? 'var(--post-vibe-text)'
+                : 'var(--text-secondary)',
+          }}
         >
           <span className="margo-feed-action__icon-wrap">
             <FeedIconLyricBack size={compact ? 18 : 20} />

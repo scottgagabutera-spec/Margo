@@ -433,7 +433,7 @@ export const LyricBackPanelCompose = forwardRef<
             className="margo-post-card__lb-compose-input"
             value={lyric}
             onChange={(e) => setLyric(e.target.value.slice(0, 140))}
-            placeholder="Your line"
+            placeholder="Write your line…"
             rows={3}
             aria-label="Lyric Back text"
           />

@@ -37,6 +37,8 @@ export type LyricBackThreadRowProps = {
   tone?: 'reply' | 'anchor'
   /** Hide Lyric Back action (focused item at thread root). */
   hideLyricBackAction?: boolean
+  /** Thread focus: user is already composing a Lyric Back to this row. */
+  lyricBackSessionActive?: boolean
 }
 
 function profileHref(echo: Echo): string | null {
@@ -100,6 +102,7 @@ export function LyricBackThreadRow({
   replayCount = 0,
   tone = 'reply',
   hideLyricBackAction = false,
+  lyricBackSessionActive = false,
 }: LyricBackThreadRowProps) {
   const engine = useAudioEngine()
   const { requireAuth } = useAuthGate()
@@ -293,6 +296,8 @@ export function LyricBackThreadRow({
         resonateCount={resonateCount}
         onResonate={toggleResonate}
         lyricBackAllowed={!hideLyricBackAction && Boolean(onLyricBack)}
+        lyricBackOpen={false}
+        lyricBackSessionActive={lyricBackSessionActive}
         echoCount={lbCount}
         onLyricBack={onLyricBack ? () => onLyricBack(echo.id) : undefined}
         onCard={() => onExport?.(echo)}

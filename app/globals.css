@@ -1241,16 +1241,42 @@ html[data-margo-stage-idle] .margo-stage-zone {
   width: 100%;
   box-sizing: border-box;
   resize: none;
-  min-height: 52px;
-  padding: 10px 12px;
-  border-radius: 10px;
+  min-height: 72px;
+  padding: 12px 14px;
+  border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
   font-family: var(--font-lora), serif;
-  font-size: var(--feed-type-suggestion-lyric);
+  font-style: italic;
+  font-size: clamp(1.05rem, 2.4vw, 1.35rem);
   line-height: 1.45;
   outline: none;
+}
+.margo-post-card__lb-compose-input::placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+}
+.margo-feed-action--lb-session {
+  cursor: default;
+}
+.margo-post-card__lb-compose-slot--focus {
+  position: relative;
+  z-index: 30;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  isolation: isolate;
+}
+.margo-post-card__lb-panel--thread-focus .margo-post-card__lb-focused-anchor {
+  position: relative;
+  z-index: 1;
+  margin-top: 4px;
+}
+.margo-post-card__lb-panel--thread-focus .margo-post-card__lb-line-picker {
+  max-height: min(220px, 40vh);
+  overflow-y: auto;
 }
 .margo-post-card__lb-compose-input:focus-visible {
   border-color: var(--post-vibe-border);

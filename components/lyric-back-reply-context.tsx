@@ -7,12 +7,12 @@ function formatHandle(username: string): string {
 
 export type LyricBackReplyContextProps = {
   /** Author of the post being answered (handle with or without @). */
-  username: string
+  username?: string | null
 }
 
 /** One-line compose target — lyric/song for nested focus live in the anchor row, not here. */
 export function LyricBackReplyContext({ username }: LyricBackReplyContextProps) {
-  const handle = formatHandle(username)
+  const handle = formatHandle(typeof username === 'string' ? username : '')
   return (
     <p className="margo-lb-reply-context margo-lb-reply-context--root">
       Replying to {handle}

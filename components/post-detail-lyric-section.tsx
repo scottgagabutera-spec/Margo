@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useRef, type RefObject } from 'react'
-import { useEchoes, type Echo } from '@/hooks/useEchoes'
 import { useLyricBackFocusStack } from '@/hooks/useLyricBackFocusStack'
 import { LyricBackThreadRow } from '@/components/lyric-back-thread-row'
 import { LyricBackReplyContext } from '@/components/lyric-back-reply-context'
@@ -14,10 +13,13 @@ import {
   type LyricBackPanelComposeHandle,
 } from '@/components/lyric-back-panel-compose'
 import type { Post } from '@/hooks/usePosts'
+import type { Echo } from '@/hooks/useEchoes'
 
 export type PostDetailLyricSectionProps = {
   post: Post
   echoCount: number
+  rootEchoes: Echo[]
+  rootEchoesLoading: boolean
   composeOpen: boolean
   composeRef: RefObject<LyricBackPanelComposeHandle | null>
   sectionRef: RefObject<HTMLElement | null>
@@ -36,6 +38,8 @@ export type PostDetailLyricSectionProps = {
 export function PostDetailLyricSection({
   post,
   echoCount,
+  rootEchoes,
+  rootEchoesLoading,
   composeOpen,
   composeRef,
   sectionRef,
@@ -57,7 +61,6 @@ export function PostDetailLyricSection({
     replyToUsername,
   } = stackApi
 
-  const { echoes: rootEchoes, loading: rootLoading } = useEchoes(post.id)
   const displayCount = Math.max(echoCount, rootEchoes.length)
 
   if (isNested && focusedEcho) {
@@ -101,7 +104,7 @@ export function PostDetailLyricSection({
     >
       {composeOpen ? (
         <>
-          <LyricBackReplyContext username={replyToUsername} />
+          <LyricBackReplyContext username={replyToUsername || post.username} />
           <div className="margo-post-detail-lb__compose">
             <LyricBackPanelCompose
               ref={composeRef}
@@ -126,11 +129,11 @@ export function PostDetailLyricSection({
         </>
       ) : null}
 
-      {rootLoading ? (
+      {rootEchoesLoading ? (
         <p className="margo-post-detail-lb__loading" aria-live="polite">Loading Lyric Backs…</p>
       ) : null}
 
-      {!rootLoading && rootEchoes.length > 0 ? (
+      {!rootEchoesLoading && rootEchoes.length > 0 ? (
         <ul className="margo-post-thread-list">
           {rootEchoes.map((echo) => (
             <li key={echo.id}>
@@ -148,7 +151,7 @@ export function PostDetailLyricSection({
         </ul>
       ) : null}
 
-      {composeOpen && !rootLoading && rootEchoes.length === 0 ? (
+      {composeOpen && !rootEchoesLoading && rootEchoes.length === 0 ? (
         <p className="margo-post-detail-lb__empty-hint">
           Be the first Lyric Back on this moment.
         </p>
@@ -158,7 +161,8 @@ export function PostDetailLyricSection({
 }
 
 export function usePostDetailLyricBack(post: Post | null) {
-  const stackApi = useLyricBackFocusStack(post?.id ?? 'unset', post?.username ?? '')
+  const authorHandle = typeof post?.username === 'string' ? post.username : ''
+  const stackApi = useLyricBackFocusStack(post?.id ?? 'unset', authorHandle)
   const composeRef = useRef<LyricBackPanelComposeHandle>(null)
   const sectionRef = useRef<HTMLElement>(null)
   const mainCardRef = useRef<HTMLElement>(null)
