@@ -498,8 +498,9 @@ function FeedPageInner() {
           loading={shortsLoading}
           meetsMinimum={shortsMeetsMinimum}
           signedIn={!!user?.id}
-          onRequireSignIn={requireAuth}
+          onRequireSignIn={() => requireAuth({ returnTo: '/feed?tab=shorts' })}
           vibeFilterActive={vibeFilterActive}
+          tabActive={feedLive && feedContentTab === 'shorts'}
         />
       )}
 

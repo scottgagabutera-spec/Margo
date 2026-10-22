@@ -2,7 +2,6 @@ import type { LyricMoment } from '@/lib/lyric-moments-board'
 
 export const SHORTS_MIN_ELIGIBLE_SONGS = 5
 export const SHORTS_BATCH_SIZE = 20
-export const SHORTS_MAX_PER_ARTIST = 2
 
 /** Stable unsigned 32-bit hash for rotation keys. */
 export function stableHash32(input: string): number {
@@ -23,6 +22,10 @@ export function utcHourSlot(date: Date): number {
 }
 
 export type ShortsClipCandidate = LyricMoment
+
+export function artistKeyForClip(clip: ShortsClipCandidate): string {
+  return (clip.artist || '').trim().toLowerCase() || clip.songId
+}
 
 /** One moment per song for the UTC day. */
 export function pickDailyMomentForSong(
@@ -63,31 +66,51 @@ export function meetsShortsMinimum(eligibleSongCount: number, min = SHORTS_MIN_E
   return eligibleSongCount >= min
 }
 
-/** Hourly order + artist cap + batch size. */
+export function computeMaxPerArtist(artistCount: number, batchSize = SHORTS_BATCH_SIZE): number {
+  if (artistCount <= 0) return 1
+  if (artistCount === 1) return batchSize
+  return Math.min(2, Math.max(1, Math.ceil(batchSize / artistCount)))
+}
+
+/**
+ * Round-robin by artist: one song per artist per round, hourly rotation offset.
+ */
 export function rotateShortsBatch(
   dailyClips: ShortsClipCandidate[],
   utcHour: number,
-  options?: {
-    batchSize?: number
-    maxPerArtist?: number
-  },
+  options?: { batchSize?: number },
 ): ShortsClipCandidate[] {
   const batchSize = options?.batchSize ?? SHORTS_BATCH_SIZE
-  const maxPerArtist = options?.maxPerArtist ?? SHORTS_MAX_PER_ARTIST
-  const sorted = [...dailyClips].sort((a, b) => {
-    const ha = stableHash32(`${a.songId}:${utcHour}`)
-    const hb = stableHash32(`${b.songId}:${utcHour}`)
-    return ha - hb
-  })
+  const byArtist = new Map<string, ShortsClipCandidate[]>()
+  for (const clip of dailyClips) {
+    const key = artistKeyForClip(clip)
+    const list = byArtist.get(key) ?? []
+    list.push(clip)
+    byArtist.set(key, list)
+  }
+  for (const [key, list] of byArtist) {
+    list.sort((a, b) => stableHash32(a.songId) - stableHash32(b.songId))
+    byArtist.set(key, list)
+  }
+
+  const artists = [...byArtist.keys()].sort()
+  const artistCount = artists.length
+  if (artistCount === 0) return []
+
+  const maxPerArtist = computeMaxPerArtist(artistCount, batchSize)
+  const start = stableHash32(String(utcHour)) % artistCount
   const out: ShortsClipCandidate[] = []
-  const perArtist = new Map<string, number>()
-  for (const clip of sorted) {
-    if (out.length >= batchSize) break
-    const artistKey = (clip.artist || '').trim().toLowerCase() || clip.songId
-    const n = perArtist.get(artistKey) ?? 0
-    if (n >= maxPerArtist) continue
-    perArtist.set(artistKey, n + 1)
-    out.push(clip)
+  const indexByArtist = new Map<string, number>()
+
+  for (let round = 0; round < maxPerArtist && out.length < batchSize; round++) {
+    for (let step = 0; step < artistCount && out.length < batchSize; step++) {
+      const artist = artists[(start + step) % artistCount]
+      const list = byArtist.get(artist)!
+      const idx = indexByArtist.get(artist) ?? 0
+      if (idx >= list.length) continue
+      out.push(list[idx])
+      indexByArtist.set(artist, idx + 1)
+    }
   }
   return out
 }

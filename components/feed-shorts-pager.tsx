@@ -5,9 +5,19 @@ import Link from 'next/link'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
 import { emotionToVibeLabel } from '@/lib/moment/vibe'
+import { isLivingAtmosphere } from '@/lib/atmosphere'
 import type { LyricMoment } from '@/lib/lyric-moments-board'
 import { playLyricMomentPool } from '@/lib/lyric-moment-playback'
-import { subscribeAudioEngine, warmUrls } from '@/lib/audio-engine'
+import {
+  getAudioEngineState,
+  stop,
+  subscribeAudioEngine,
+  warmUrls,
+} from '@/lib/audio-engine'
+import { pickShortsLook } from '@/lib/shorts-looks'
+import { utcDayKey } from '@/lib/shorts-shelf-rotation'
+
+const ANON_PLAYS_BEFORE_SIGNUP = 5
 
 type Props = {
   clips: LyricMoment[]
@@ -16,6 +26,7 @@ type Props = {
   signedIn: boolean
   onRequireSignIn: () => boolean
   vibeFilterActive?: boolean
+  tabActive: boolean
 }
 
 export function FeedShortsPager({
@@ -25,21 +36,57 @@ export function FeedShortsPager({
   signedIn,
   onRequireSignIn,
   vibeFilterActive = false,
+  tabActive,
 }: Props) {
   const withVibeClass = vibeFilterActive ? ' margo-feed-shorts-pager--with-vibe' : ''
   const emptyWithVibe = vibeFilterActive ? ' margo-feed-shorts-empty--with-vibe' : ''
   const scrollerRef = useRef<HTMLDivElement>(null)
   const [activeIndex, setActiveIndex] = useState(0)
   const [playingKey, setPlayingKey] = useState<string | null>(null)
+  const [audioUnlocked, setAudioUnlocked] = useState(false)
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false)
+  const [anonPlaysCompleted, setAnonPlaysCompleted] = useState(0)
+  const anonPlayedKeysRef = useRef(new Set<string>())
+  const signedInRef = useRef(signedIn)
+  const lastAutoIndexRef = useRef<number>(-1)
+  const utcDay = utcDayKey(new Date())
+
+  useEffect(() => {
+    signedInRef.current = signedIn
+    if (signedIn) {
+      anonPlayedKeysRef.current = new Set()
+      setAnonPlaysCompleted(0)
+    }
+  }, [signedIn])
+
+  useEffect(() => {
+    if (!tabActive) {
+      stop()
+      setPlayingKey(null)
+      lastAutoIndexRef.current = -1
+    }
+  }, [tabActive])
 
   useEffect(() => {
     return subscribeAudioEngine((state) => {
+      if (state.error?.includes('Play blocked')) {
+        setAutoplayBlocked(true)
+      }
       if (!state.playing || state.mode === 'idle' || state.mode === 'full') {
         setPlayingKey(null)
         return
       }
       if (state.snippet) {
-        setPlayingKey(`${state.songId}_${state.snippet.lineIndex}`)
+        const playKey = `${state.songId}_${state.snippet.lineIndex}`
+        setPlayingKey(playKey)
+        setAutoplayBlocked(false)
+        if (!signedInRef.current && state.playing) {
+          const played = anonPlayedKeysRef.current
+          if (!played.has(playKey)) {
+            played.add(playKey)
+            setAnonPlaysCompleted(played.size)
+          }
+        }
       }
     })
   }, [])
@@ -71,23 +118,35 @@ export function FeedShortsPager({
   }, [clips.length])
 
   const playClip = useCallback(
-    (moment: LyricMoment) => {
-      if (!signedIn) {
-        onRequireSignIn()
-        return
-      }
+    (moment: LyricMoment, fromUserGesture: boolean) => {
+      if (!moment.audioUrl) return
       playLyricMomentPool(moment, clips)
+      if (fromUserGesture) setAudioUnlocked(true)
     },
-    [clips, onRequireSignIn, signedIn],
+    [clips],
   )
 
-  if (!signedIn) {
-    return (
-      <div className={`margo-feed-shorts-empty${emptyWithVibe}`}>
-        <p className="margo-feed-shorts-empty__title">Sign in for Shorts</p>
-      </div>
-    )
-  }
+  useEffect(() => {
+    if (!tabActive || !audioUnlocked || autoplayBlocked) return
+    if (activeIndex === lastAutoIndexRef.current) return
+    const clip = clips[activeIndex]
+    if (!clip?.audioUrl) return
+    const clipKey = `${clip.songId}_${clip.lineId}`
+    if (
+      !signedIn
+      && anonPlaysCompleted >= ANON_PLAYS_BEFORE_SIGNUP
+      && !anonPlayedKeysRef.current.has(clipKey)
+    ) {
+      return
+    }
+    lastAutoIndexRef.current = activeIndex
+    playLyricMomentPool(clip, clips)
+    const t = window.setTimeout(() => {
+      const err = getAudioEngineState().error
+      if (err?.includes('Play blocked')) setAutoplayBlocked(true)
+    }, 400)
+    return () => window.clearTimeout(t)
+  }, [activeIndex, anonPlaysCompleted, audioUnlocked, autoplayBlocked, clips, signedIn, tabActive])
 
   if (loading) {
     return (
@@ -114,6 +173,15 @@ export function FeedShortsPager({
         const key = `${clip.songId}_${clip.lineId}`
         const vibeLabel = emotionToVibeLabel(clip.vibes[0]) || clip.vibes[0] || null
         const isPlaying = playingKey === key
+        const isActive = index === activeIndex
+        const look = pickShortsLook(clip.songId, clip.vibes[0], utcDay)
+        const motionAtmosphere = isActive ? look.atmosphereId : 'still'
+        const clipNeedsSignup =
+          !signedIn
+          && anonPlaysCompleted >= ANON_PLAYS_BEFORE_SIGNUP
+          && !anonPlayedKeysRef.current.has(key)
+        const showBlockedPlay = isActive && autoplayBlocked && !isPlaying && !clipNeedsSignup
+        const showSignupOnPlay = clipNeedsSignup && isActive
         return (
           <section
             key={key}
@@ -129,13 +197,22 @@ export function FeedShortsPager({
                   artistName={clip.artist}
                   artwork={clip.artwork}
                   vibeLabel={vibeLabel}
-                  cardThemeId="gold"
-                  atmosphereId="still"
+                  cardThemeId={look.stageThemeId}
+                  atmosphereId={motionAtmosphere}
+                  effectOwnsFill={isActive && isLivingAtmosphere(motionAtmosphere)}
                   shapeId="vertical"
                   hideVibeChrome
                   canPlay={!!clip.audioUrl}
                   playing={isPlaying}
-                  onPlay={() => playClip(clip)}
+                  playControlLabel={showSignupOnPlay ? 'Sign up' : showBlockedPlay ? 'Play' : null}
+                  onPlay={() => {
+                    if (showSignupOnPlay) {
+                      onRequireSignIn()
+                      return
+                    }
+                    setAutoplayBlocked(false)
+                    playClip(clip, true)
+                  }}
                   style={{ height: '100%', minHeight: '100%' }}
                 />
               </MomentExportPreviewFrame>
