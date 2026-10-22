@@ -9,10 +9,6 @@ import {
   reduceLyricBackStack,
 } from '@/lib/lyric-back-depth'
 
-function stripHandle(username: string): string {
-  return username.replace(/^@/, '').trim() || 'member'
-}
-
 /** A second Back from the same tap is ignored until this elapses. */
 const BACK_GESTURE_LOCK_MS = 400
 
@@ -79,12 +75,6 @@ export function useLyricBackFocusStack(
   const depth = lyricBackDepth(depthOffset, stack.length)
   const canReply = lyricBackCanReply(depth)
   const visualStep = lyricBackVisualStep(stack.length)
-
-  const backToHandle = useMemo(() => {
-    if (stack.length === 0) return null
-    if (stack.length === 1) return stripHandle(rootAuthorUsername)
-    return stripHandle(stack[stack.length - 2].username || '')
-  }, [rootAuthorUsername, stack])
 
   const replyToUsername = useMemo(() => {
     if (focusedEcho) return focusedEcho.username || ''
@@ -211,7 +201,6 @@ export function useLyricBackFocusStack(
     depth,
     canReply,
     visualStep,
-    backToHandle,
     replyToUsername,
     drillInto,
     backOneLevel,

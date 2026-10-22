@@ -47,8 +47,6 @@ export type LyricBackFocusBodyProps = {
   rootPostId: string
   focusId: string
   focusedEcho: Echo | null
-  /** Parent one level up (@handle without @). Null at root. */
-  backToHandle: string | null
   replyToUsername: string
   parentEmotion: string
   echoCountHint: number
@@ -580,7 +578,6 @@ export function LyricBackFeedPanel({
     isNested,
     canReply,
     visualStep,
-    backToHandle,
     replyToUsername,
     drillInto,
     requestBack,
@@ -652,7 +649,6 @@ export function LyricBackFeedPanel({
         rootPostId={postId}
         focusId={focusId}
         focusedEcho={focusedEcho}
-        backToHandle={backToHandle}
         replyToUsername={replyToUsername}
         parentEmotion={parentEmotion}
         echoCountHint={echoCount}

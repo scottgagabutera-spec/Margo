@@ -1020,23 +1020,6 @@ html[data-margo-stage-idle] .margo-stage-zone {
   scroll-margin-top: calc(var(--nav-height, 72px) + 12px);
   margin-bottom: 10px;
 }
-.margo-post-card__lb-feed-head-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin: 10px 0 6px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.margo-post-card__lb-feed-head-row .margo-post-card__lb-title--below-compose {
-  margin: 0;
-}
-.margo-post-card__lb-title--below-compose {
-  margin: 0 0 8px;
-  flex-shrink: 0;
-}
 .margo-post-card__lb-search-anchor {
   position: relative;
   overflow: visible;
@@ -1092,9 +1075,10 @@ html[data-margo-stage-idle] .margo-stage-zone {
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   overflow-anchor: none;
+  scrollbar-gutter: stable;
 }
 .margo-lb-focus__end {
-  height: 16px;
+  height: 28px;
   flex-shrink: 0;
 }
 .margo-post-card__lb-panel[data-lb-keyboard='1'],
@@ -1213,13 +1197,6 @@ html.margo-keyboard-open .margo-mobile-tabbar {
   flex-shrink: 0;
 }
 
-.margo-post-card__lb-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-  flex-shrink: 0;
-}
 .margo-post-card__lb-title {
   margin: 0;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
@@ -1503,8 +1480,9 @@ html.margo-keyboard-open .margo-mobile-tabbar {
   isolation: isolate;
 }
 .margo-post-card__lb-panel--thread-focus .margo-post-card__lb-focused-anchor {
-  position: relative;
-  z-index: 1;
+  position: sticky;
+  top: 0;
+  z-index: 2;
   margin-top: 4px;
 }
 .margo-post-card__lb-panel--thread-focus .margo-post-card__lb-line-picker {
@@ -2567,20 +2545,13 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   line-height: 1.4;
 }
 .margo-lb-thread-row__badge {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 0.55rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-muted);
-}
-.margo-lb-thread-row__author {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-  min-width: 0;
 }
 .margo-lb-thread-row__avatar {
   flex-shrink: 0;
@@ -2605,22 +2576,6 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--post-vibe-text);
-}
-.margo-lb-thread-row__author-text {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-.margo-lb-thread-row__name {
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: var(--feed-type-control-label);
-  font-weight: 600;
-  color: var(--text);
-  text-decoration: none;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .margo-lb-thread-row__handle {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
@@ -2806,11 +2761,6 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 .margo-feed-actions--compact .margo-feed-action {
   min-height: var(--margo-touch-min);
 }
-.margo-post-detail-lb__divider {
-  height: 1px;
-  background: var(--border);
-  margin: 24px 0 0;
-}
 .margo-post-detail-lb__heading {
   margin: 24px 0 16px;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
@@ -2853,9 +2803,9 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding-top: 2px;
-  padding-bottom: 4px;
+  gap: 12px;
+  padding-top: 4px;
+  padding-bottom: 8px;
 }
 .margo-post-card__lb-list--echoes > li + li {
   border-top: none;
@@ -2873,18 +2823,14 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   min-height: var(--margo-touch-min);
   text-align: left;
 }
-.margo-post-card__lb-header--nested {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-}
-.margo-post-card__lb-header--nested .margo-post-card__lb-title {
-  margin: 0;
-}
 .margo-post-card__lb-focused-anchor {
-  margin-bottom: 8px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin-bottom: 12px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
 }
 .margo-post-card__lb-panel--thread-focus {
   max-height: var(--lb-panel-vvh, min(640px, 85vh));

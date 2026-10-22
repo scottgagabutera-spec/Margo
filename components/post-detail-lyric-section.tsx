@@ -54,7 +54,6 @@ export function PostDetailLyricSection({
   const {
     focusId,
     focusedEcho,
-    backToHandle,
     replyToUsername,
     canReply,
     visualStep,
@@ -111,7 +110,6 @@ export function PostDetailLyricSection({
         rootPostId={post.id}
         focusId={focusId}
         focusedEcho={focusedEcho}
-        backToHandle={backToHandle}
         replyToUsername={replyToUsername || post.username || ''}
         parentEmotion={post.emotion || 'chill'}
         echoCountHint={echoCount}
