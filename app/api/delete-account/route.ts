@@ -6,17 +6,18 @@
 // A failed step returns 500 with detail — never silent partial success.
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
+import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import {
   purgeUserAccountDataJs,
   removeUserStoragePrefix,
 } from '@/lib/purge-user-account'
 
 export async function POST(req: NextRequest) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!supabaseUrl || !serviceKey) {
+  let admin
+  try {
+    admin = getSupabaseAdmin()
+  } catch {
     console.error('[delete-account] Missing Supabase env vars')
     return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
   }
@@ -35,10 +36,6 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
-
-  const admin = createClient(supabaseUrl, serviceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
 
   const { data: profile, error: profileError } = await admin
     .from('profiles')
