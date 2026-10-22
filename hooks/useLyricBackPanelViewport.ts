@@ -2,10 +2,17 @@
 
 import { useEffect, type RefObject } from 'react'
 import {
+  LYRIC_BACK_KEYBOARD_MIN_PANEL_PX,
   LYRIC_BACK_KEYBOARD_THRESHOLD_PX,
-  lyricBackPanelCapPx,
+  lyricBackPinnedPanelCapPx,
   visualKeyboardInsetPx,
 } from '@/lib/lyric-back-keyboard'
+import {
+  feedLyricBackHeadroomTop,
+  readFeedLyricBackChromeHeights,
+  scrollFeedLyricBackPanelIntoView,
+  scrollPostLyricBackSectionIntoView,
+} from '@/lib/lyric-back-panel-scroll'
 
 export function clearLyricBackKeyboardChrome(): void {
   const root = document.documentElement
@@ -31,13 +38,36 @@ function setLyricBackKeyboardChrome(active: boolean): void {
   else root.removeAttribute('data-margo-keyboard')
 }
 
+function readPxVar(name: string, fallback: number): number {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(name)
+  const n = Number.parseFloat(raw)
+  return Number.isFinite(n) ? n : fallback
+}
+
+function pinnedTopForPanel(isFeed: boolean, offsetTop: number): number {
+  if (isFeed) return offsetTop + feedLyricBackHeadroomTop(readFeedLyricBackChromeHeights())
+  return offsetTop + readPxVar('--nav-height', 72) + 8
+}
+
+function clearPanelPin(el: HTMLElement): void {
+  el.style.removeProperty('--lb-panel-vvh')
+  el.style.removeProperty('height')
+  el.style.removeProperty('top')
+  el.style.removeProperty('left')
+  el.style.removeProperty('width')
+  el.style.removeProperty('max-height')
+  el.removeAttribute('data-lb-keyboard')
+  el.removeAttribute('data-lb-pinned')
+}
+
 /**
- * Feed LB panel: cap height to the visual viewport while the keyboard is open.
- * Resize only — do not listen to visualViewport scroll, and do not touch scrollTop.
+ * Cap / pin the Lyric Back panel to the visual viewport while the keyboard is open.
+ * Resize + visualViewport scroll — do not mutate feed scrollTop here.
  */
 export function useLyricBackPanelViewport(
   panelRef: RefObject<HTMLElement | null>,
   enabled: boolean,
+  options?: { variant?: 'feed' | 'post' },
 ) {
   useEffect(() => {
     if (!enabled) return
@@ -45,6 +75,8 @@ export function useLyricBackPanelViewport(
     const panel = panelRef.current
     if (!panel) return
 
+    const variant = options?.variant ?? (panel.classList.contains('margo-post-detail-lb') ? 'post' : 'feed')
+    const isFeed = variant === 'feed'
     const vv = window.visualViewport
     let disposed = false
     let focusFrame = 0
@@ -65,27 +97,35 @@ export function useLyricBackPanelViewport(
       setLyricBackKeyboardChrome(keyboardOpen || textFocused)
 
       if (!keyboardOpen) {
-        el.style.removeProperty('--lb-panel-vvh')
-        el.style.removeProperty('height')
-        el.removeAttribute('data-lb-keyboard')
+        clearPanelPin(el)
         return
       }
 
-      const cap = lyricBackPanelCapPx({
-        elementTop: el.getBoundingClientRect().top,
+      if (isFeed) scrollFeedLyricBackPanelIntoView(el)
+      else scrollPostLyricBackSectionIntoView(el)
+
+      const rect = el.getBoundingClientRect()
+      const pinnedTop = pinnedTopForPanel(isFeed, offsetTop)
+      const cap = lyricBackPinnedPanelCapPx({
+        pinnedTop,
         offsetTop,
         viewportHeight,
         bottomPad: 8,
+        minHeight: LYRIC_BACK_KEYBOARD_MIN_PANEL_PX,
       })
       if (cap <= 0) {
-        el.style.removeProperty('--lb-panel-vvh')
-        el.style.removeProperty('height')
-        el.removeAttribute('data-lb-keyboard')
+        clearPanelPin(el)
         return
       }
+
       el.style.setProperty('--lb-panel-vvh', `${cap}px`)
       el.style.height = `${cap}px`
+      el.style.maxHeight = `${cap}px`
+      el.style.top = `${pinnedTop}px`
+      el.style.left = `${rect.left}px`
+      el.style.width = `${rect.width}px`
       el.setAttribute('data-lb-keyboard', '1')
+      el.setAttribute('data-lb-pinned', '1')
     }
 
     update()
@@ -101,6 +141,7 @@ export function useLyricBackPanelViewport(
     }
 
     vv?.addEventListener('resize', update)
+    vv?.addEventListener('scroll', update)
     window.addEventListener('resize', update)
     window.addEventListener('pagehide', onPageHide)
     document.addEventListener('visibilitychange', onVis)
@@ -111,6 +152,7 @@ export function useLyricBackPanelViewport(
       disposed = true
       window.cancelAnimationFrame(focusFrame)
       vv?.removeEventListener('resize', update)
+      vv?.removeEventListener('scroll', update)
       window.removeEventListener('resize', update)
       window.removeEventListener('pagehide', onPageHide)
       document.removeEventListener('visibilitychange', onVis)
@@ -118,9 +160,7 @@ export function useLyricBackPanelViewport(
       document.removeEventListener('focusout', onFocus)
       clearLyricBackKeyboardChrome()
       const el = panelRef.current
-      el?.style.removeProperty('--lb-panel-vvh')
-      el?.style.removeProperty('height')
-      el?.removeAttribute('data-lb-keyboard')
+      if (el) clearPanelPin(el)
     }
-  }, [enabled, panelRef])
+  }, [enabled, panelRef, options?.variant])
 }

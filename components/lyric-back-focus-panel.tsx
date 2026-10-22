@@ -1,6 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import {
+  captureFeedScrollSnapshot,
+  restoreFeedScrollSnapshot,
+  scrollFeedLyricBackPanelIntoView,
+  type FeedScrollSnapshot,
+} from '@/lib/lyric-back-panel-scroll'
 import { usePathname } from 'next/navigation'
 import { LyricBackTrackListenControl } from '@/components/lyric-back-track-listen-control'
 import { LyricBackTrackStripPlaceholder } from '@/components/lyric-back-thread-row-skeleton'
@@ -600,7 +606,30 @@ export function LyricBackFeedPanel({
   const pathname = usePathname()
   const onFeed = pathname === '/feed'
   const wasOpenRef = useRef(open)
-  useLyricBackPanelViewport(panelRef, open && onFeed)
+  useLyricBackPanelViewport(panelRef, open, { variant: onFeed ? 'feed' : 'post' })
+  const feedScrollSnapshot = useRef<FeedScrollSnapshot | null>(null)
+
+  useLayoutEffect(() => {
+    if (!open || !onFeed) return
+    const panel = panelRef.current
+    if (!panel) return
+    if (!feedScrollSnapshot.current) {
+      feedScrollSnapshot.current = captureFeedScrollSnapshot(panel)
+    }
+    scrollFeedLyricBackPanelIntoView(panel)
+    const frame = window.requestAnimationFrame(() => {
+      scrollFeedLyricBackPanelIntoView(panelRef.current)
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [open, onFeed, focusId])
+
+  useEffect(() => {
+    if (open) return
+    if (feedScrollSnapshot.current) {
+      restoreFeedScrollSnapshot(feedScrollSnapshot.current)
+      feedScrollSnapshot.current = null
+    }
+  }, [open])
 
   useEffect(() => {
     if (!open) {

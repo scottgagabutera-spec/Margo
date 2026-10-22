@@ -4,9 +4,15 @@ import fs from 'node:fs'
 import {
   feedSearchScrollDelta,
   lyricBackPanelCapPx,
+  lyricBackPinnedPanelCapPx,
+  LYRIC_BACK_KEYBOARD_MIN_PANEL_PX,
   panelSearchDropdownFrame,
   visualKeyboardInsetPx,
 } from './lyric-back-keyboard.ts'
+import {
+  feedLyricBackHeadroomTop,
+  feedLyricBackPanelBarScrollDelta,
+} from './lyric-back-panel-scroll.ts'
 import {
   LYRIC_BACK_DEPTH_CAP,
   lyricBackCanReply,
@@ -70,6 +76,44 @@ describe('lyric back keyboard geometry', () => {
     assert.ok(frame.maxHeight < 160)
     assert.ok(frame.top >= 100)
     assert.ok(frame.top + frame.maxHeight <= visibleBottom)
+  })
+
+  it('pins panel height from a fixed top with a keyboard minimum', () => {
+    assert.equal(LYRIC_BACK_KEYBOARD_MIN_PANEL_PX, 200)
+    assert.equal(
+      lyricBackPinnedPanelCapPx({
+        pinnedTop: 124,
+        offsetTop: 0,
+        viewportHeight: 380,
+        bottomPad: 8,
+        minHeight: LYRIC_BACK_KEYBOARD_MIN_PANEL_PX,
+      }),
+      248,
+    )
+    assert.equal(
+      lyricBackPinnedPanelCapPx({
+        pinnedTop: 340,
+        offsetTop: 0,
+        viewportHeight: 400,
+        bottomPad: 8,
+        minHeight: LYRIC_BACK_KEYBOARD_MIN_PANEL_PX,
+      }),
+      LYRIC_BACK_KEYBOARD_MIN_PANEL_PX,
+    )
+  })
+
+  it('scrolls the feed pane so the panel bar sits under Lyrics/Shorts', () => {
+    const headroom = feedLyricBackHeadroomTop({
+      navHeight: 72,
+      tabBarHeight: 44,
+      vibeBarHeight: 0,
+    })
+    assert.equal(headroom, 72 + 44 + 8)
+    assert.equal(feedLyricBackPanelBarScrollDelta(300, {
+      navHeight: 72,
+      tabBarHeight: 44,
+      vibeBarHeight: 0,
+    }), 300 - headroom)
   })
 
   it('keyboard inset never goes negative', () => {
@@ -185,11 +229,14 @@ describe('lyric back keyboard wiring', () => {
     assert.equal(panel.split('focusSearch(true)').length - 1, 1)
     assert.match(panel, /activeElement === field/)
     assert.match(panel, /field\.blur\(\)/)
-    assert.doesNotMatch(card, /scrollFeedLyricBackPanelIntoView/)
     assert.doesNotMatch(card, /scrollIntoView/)
-    assert.doesNotMatch(scroll, /scrollFeedLyricBackPanelIntoView/)
+    assert.match(scroll, /scrollFeedLyricBackPanelIntoView/)
     assert.doesNotMatch(scroll, /scrollFeedLyricBackSearchUnderNav/)
-    assert.doesNotMatch(scroll, /pane\.scrollTop/)
+    assert.match(panel, /scrollFeedLyricBackPanelIntoView/)
+    assert.match(panel, /restoreFeedScrollSnapshot/)
+    assert.match(panel, /captureFeedScrollSnapshot/)
+    assert.match(css, /data-lb-panel-open/)
+    assert.match(css, /data-lb-pinned/)
     assert.match(css, /\.margo-lb-focus__scroll \{[^}]*touch-action:\s*pan-y/)
     assert.match(css, /margo-lb-focus__bar--nested/)
     assert.match(
@@ -199,11 +246,13 @@ describe('lyric back keyboard wiring', () => {
     assert.doesNotMatch(css, /margo-lb-thread-row--step-1 \{ margin-left: 12px/)
   })
 
-  it('viewport hook is resize-only and clears data-margo-keyboard', () => {
+  it('viewport hook pins to visualViewport and clears data-margo-keyboard', () => {
     const hook = fs.readFileSync('hooks/useLyricBackPanelViewport.ts', 'utf8')
     assert.match(hook, /addEventListener\('resize', update\)/)
-    assert.doesNotMatch(hook, /addEventListener\('scroll'/)
-    assert.doesNotMatch(hook, /\.scrollTop/)
+    assert.match(hook, /addEventListener\('scroll', update\)/)
+    assert.match(hook, /lyricBackPinnedPanelCapPx/)
+    assert.match(hook, /data-lb-pinned/)
+    assert.doesNotMatch(hook, /\.scrollTop\s*[+=]/)
     assert.doesNotMatch(hook, /Math\.max\(\s*160/)
     assert.match(hook, /removeAttribute\('data-margo-keyboard'\)/)
     assert.match(hook, /setAttribute\('data-margo-keyboard', '1'\)/)
@@ -243,7 +292,9 @@ describe('lyric back keyboard wiring', () => {
     assert.doesNotMatch(postSection, /scrollLbIntoView/)
     assert.doesNotMatch(postSection, /scrollIntoView[\s\S]*focusSearch/)
     assert.doesNotMatch(scroll, /scrollPostLyricBackSearchUnderNav/)
-    assert.doesNotMatch(scroll, /window\.scrollBy/)
+    assert.match(scroll, /scrollPostLyricBackSectionIntoView/)
+    assert.match(postSection, /scrollPostLyricBackSectionIntoView/)
+    assert.match(scroll, /window\.scrollBy/)
     assert.match(panel, /activeElement === field/)
   })
 

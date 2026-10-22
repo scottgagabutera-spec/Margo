@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useRef, type RefObject } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, type RefObject } from 'react'
+import { scrollPostLyricBackSectionIntoView } from '@/lib/lyric-back-panel-scroll'
 import { usePathname } from 'next/navigation'
 import { useLyricBackFocusStack, type LyricBackStackOptions } from '@/hooks/useLyricBackFocusStack'
 import {
@@ -62,7 +63,16 @@ export function PostDetailLyricSection({
   const isNested = Boolean(focusId && post.id && focusId !== post.id && focusedEcho)
   const vibeTheme = getVibeTheme(post.emotion || 'chill')
 
-  useLyricBackPanelViewport(sectionRef, composeOpen)
+  useLyricBackPanelViewport(sectionRef, composeOpen, { variant: 'post' })
+
+  useLayoutEffect(() => {
+    if (!composeOpen) return
+    scrollPostLyricBackSectionIntoView(sectionRef.current)
+    const frame = window.requestAnimationFrame(() => {
+      scrollPostLyricBackSectionIntoView(sectionRef.current)
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [composeOpen, focusId, sectionRef])
 
   useEffect(() => {
     if (!composeOpen) clearLyricBackKeyboardChrome()
