@@ -14,7 +14,8 @@
     "test:lyric-back-row": "node --experimental-strip-types --test lib/lyric-back-thread-row.test.ts",
     "test:lyric-back-keyboard": "node --experimental-strip-types --test lib/lyric-back-keyboard.test.ts",
     "test:repost-count": "node --experimental-strip-types --test lib/repost-count.test.ts",
-    "test": "npm run test:playback-segments && npm run test:curated-moments && npm run test:post-card-lyric && npm run test:post-card-lyric-uniform && npm run test:lyric-back-row && npm run test:lyric-back-keyboard && npm run test:repost-count"
+    "test:feed-vibe-chips": "node --experimental-strip-types --test lib/feed-vibe-chips.test.ts",
+    "test": "npm run test:playback-segments && npm run test:curated-moments && npm run test:post-card-lyric && npm run test:post-card-lyric-uniform && npm run test:lyric-back-row && npm run test:lyric-back-keyboard && npm run test:repost-count && npm run test:feed-vibe-chips"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1136.0",

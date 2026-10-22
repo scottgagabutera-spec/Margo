@@ -27,8 +27,10 @@ export function scrollFeedLyricBackSearchUnderNav(panel: HTMLElement | null): vo
   const pane = panel.closest('[data-margo-primary-tab]')
   if (!(pane instanceof HTMLElement)) return
 
-  const vibe = document.querySelector('.margo-feed-vibe-bar')
-  const chromeBelowNav = vibe instanceof HTMLElement ? vibe.getBoundingClientRect().height : 0
+  const vibeChrome =
+    document.querySelector('.margo-feed-vibe-chip-row')
+    ?? document.querySelector('.margo-feed-vibe-bar')
+  const chromeBelowNav = vibeChrome instanceof HTMLElement ? vibeChrome.getBoundingClientRect().height : 0
   const delta = feedSearchScrollDelta({
     searchTop: searchRect.top,
     navHeight: readPxVar('--nav-height', 72),

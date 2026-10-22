@@ -31,7 +31,10 @@ import { StoryRing } from '@/components/stories/story-ring'
 import { StoriesPortalDock } from '@/components/stories/stories-portal-dock'
 import { useMargoMobileViewport } from '@/components/stories/stories-dock'
 import { StoryFeedAuthorSync, StoryRingProvider } from '@/components/stories/story-ring-context'
-import { FeedFilterLiveRegion, FeedVibeFilterBar } from '@/components/feed-vibe-filter-bar'
+import { FeedFilterLiveRegion } from '@/components/feed-vibe-filter-bar'
+import { FeedVibeChipRow } from '@/components/feed-vibe-chip-row'
+import type { FeedVibeChipKey } from '@/lib/feed-vibe-chips'
+import { emotionToVibeLabel } from '@/lib/moment/vibe'
 
 const supabase = createClient()
 
@@ -315,24 +318,28 @@ function FeedPageInner() {
     setExportPost(post)
   }
 
-  const handleSelectVibe = (vibe: string) => {
-    const next = selectedVibe === vibe ? 'ALL' : vibe
+  const handleSelectVibe = (vibe: string | FeedVibeChipKey) => {
     const params = new URLSearchParams(searchParams.toString())
-    if (next === 'ALL') {
+    const clearFilter = () => {
       params.delete('vibe')
       setFilterAnnouncement('Showing all Moments')
       const qs = params.toString()
       router.push(qs ? `/feed?${qs}` : '/feed', { scroll: false })
+    }
+    if (vibe === 'ALL') {
+      clearFilter()
       return
     }
+    const norm = normalizeEmotion(vibe)
+    const next = selectedVibe === norm ? 'ALL' : norm
+    if (next === 'ALL') {
+      clearFilter()
+      return
+    }
+    const label = emotionToVibeLabel(next) || next
     params.set('vibe', next.toLowerCase())
-    setFilterAnnouncement(`Filtering by ${next.toLowerCase()}`)
+    setFilterAnnouncement(`Filtering by ${label}`)
     router.push(`/feed?${params.toString()}`, { scroll: false })
-  }
-
-  const clearVibeFilter = () => {
-    if (selectedVibe === 'ALL') return
-    handleSelectVibe(selectedVibe)
   }
 
   const handleSelectRank = (rank: 'NEW' | 'TRENDING' | 'TOP') => {
@@ -434,18 +441,10 @@ function FeedPageInner() {
       minHeight: '100vh',
       background: 'var(--bg)',
       position: 'relative',
-      paddingTop: selectedVibe !== 'ALL'
-        ? 'calc(var(--nav-height, 72px) + var(--margo-feed-vibe-bar-h))'
-        : 'var(--nav-height, 72px)',
+      paddingTop: 'calc(var(--nav-height, 72px) + var(--margo-feed-vibe-chip-row-h))',
     }}>
       <FeedFilterLiveRegion message={filterAnnouncement} />
-      {selectedVibe !== 'ALL' && (
-        <FeedVibeFilterBar
-          vibeKey={selectedVibe}
-          resultCount={listReady ? feedItems.length : null}
-          onClear={clearVibeFilter}
-        />
-      )}
+      <FeedVibeChipRow selectedVibe={selectedVibe} onSelectVibe={handleSelectVibe} />
       {!ptrBusy && feedLive && pendingCount > 0 && (
         <FeedNewMomentsPill visible onReveal={flushPending} />
       )}
