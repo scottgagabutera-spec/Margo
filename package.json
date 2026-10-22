@@ -12,7 +12,8 @@
     "test:post-card-lyric": "node --experimental-strip-types --test lib/post-card-lyric-layout.test.ts",
     "test:post-card-lyric-uniform": "node --experimental-strip-types --test lib/post-card-lyric-uniform.test.ts",
     "test:lyric-back-row": "node --experimental-strip-types --test lib/lyric-back-thread-row.test.ts",
-    "test": "npm run test:playback-segments && npm run test:curated-moments && npm run test:post-card-lyric && npm run test:post-card-lyric-uniform && npm run test:lyric-back-row"
+    "test:lyric-back-keyboard": "node --experimental-strip-types --test lib/lyric-back-keyboard.test.ts",
+    "test": "npm run test:playback-segments && npm run test:curated-moments && npm run test:post-card-lyric && npm run test:post-card-lyric-uniform && npm run test:lyric-back-row && npm run test:lyric-back-keyboard"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1136.0",

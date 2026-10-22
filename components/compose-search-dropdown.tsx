@@ -5,6 +5,11 @@ import { createPortal } from 'react-dom'
 import { MusicNoteIcon, PlayIcon } from '@/components/icons'
 import { highlightSearchText } from '@/lib/search-highlight'
 import { UI_FONT } from '@/lib/fonts'
+import {
+  LYRIC_BACK_KEYBOARD_THRESHOLD_PX,
+  panelSearchDropdownFrame,
+  visualKeyboardInsetPx,
+} from '@/lib/lyric-back-keyboard'
 
 export interface ComposeSearchHit {
   id: string
@@ -52,33 +57,53 @@ const STAGE_PLAY_HINT = {
 const PANEL_SCRIM_Z = 240
 const PANEL_LIST_Z = 241
 
+type AnchorMeasure = {
+  rect: DOMRect
+  offsetTop: number
+  height: number
+  innerHeight: number
+}
+
 function useAnchorRect(
   open: boolean,
   enabled: boolean,
   anchorRef?: React.RefObject<HTMLElement | null>,
 ) {
-  const [rect, setRect] = useState<DOMRect | null>(null)
+  const [measure, setMeasure] = useState<AnchorMeasure | null>(null)
 
   useLayoutEffect(() => {
     if (!open || !enabled || !anchorRef?.current) {
-      setRect(null)
+      setMeasure(null)
       return
     }
     const el = anchorRef.current
-    const update = () => setRect(el.getBoundingClientRect())
+    const update = () => {
+      const vv = window.visualViewport
+      setMeasure({
+        rect: el.getBoundingClientRect(),
+        offsetTop: vv?.offsetTop ?? 0,
+        height: vv?.height ?? window.innerHeight,
+        innerHeight: window.innerHeight,
+      })
+    }
     update()
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null
     ro?.observe(el)
     window.addEventListener('scroll', update, true)
     window.addEventListener('resize', update)
+    const vv = window.visualViewport
+    vv?.addEventListener('resize', update)
+    vv?.addEventListener('scroll', update)
     return () => {
       ro?.disconnect()
       window.removeEventListener('scroll', update, true)
       window.removeEventListener('resize', update)
+      vv?.removeEventListener('resize', update)
+      vv?.removeEventListener('scroll', update)
     }
   }, [open, enabled, anchorRef])
 
-  return rect
+  return measure
 }
 
 function ResultsList({
@@ -243,7 +268,7 @@ export function ComposeSearchDropdown({
   const isStage = variant === 'stage'
   const isPanel = variant === 'panel'
   const displayResults = isStage ? results.slice(0, 8) : results
-  const anchorRect = useAnchorRect(open, isPanel, anchorRef)
+  const anchorMeasure = useAnchorRect(open, isPanel, anchorRef)
 
   useEffect(() => {
     setMounted(true)
@@ -264,23 +289,25 @@ export function ComposeSearchDropdown({
       : '0 12px 32px rgba(0,0,0,0.45)',
   }
 
-  if (isPanel && mounted && anchorRect) {
-    const gap = 6
-    const vv = typeof window !== 'undefined' ? window.innerHeight : 640
+  if (isPanel && mounted && anchorMeasure) {
+    const anchorRect = anchorMeasure.rect
     const pageBottomRaw = typeof window !== 'undefined'
       ? getComputedStyle(document.documentElement).getPropertyValue('--margo-page-bottom')
       : ''
     const pageBottom = Number.parseFloat(pageBottomRaw) || 88
-    const spaceBelow = vv - anchorRect.bottom - pageBottom - gap
-    const spaceAbove = anchorRect.top - gap - 12
-    const openUp = spaceBelow < 180 && spaceAbove > spaceBelow
-    const maxHeight = Math.min(
-      420,
-      Math.max(160, openUp ? spaceAbove : spaceBelow),
-    )
-    const top = openUp
-      ? Math.max(12, anchorRect.top - gap - maxHeight)
-      : anchorRect.bottom + gap
+    const keyboardOpen = visualKeyboardInsetPx({
+      innerHeight: anchorMeasure.innerHeight,
+      viewportHeight: anchorMeasure.height,
+      offsetTop: anchorMeasure.offsetTop,
+    }) > LYRIC_BACK_KEYBOARD_THRESHOLD_PX
+    const frame = panelSearchDropdownFrame({
+      anchorTop: anchorRect.top,
+      anchorBottom: anchorRect.bottom,
+      offsetTop: anchorMeasure.offsetTop,
+      viewportHeight: anchorMeasure.height,
+      bottomInset: keyboardOpen ? 8 : pageBottom,
+    })
+    const { top, maxHeight } = frame
 
     const portalNode = (
       <>

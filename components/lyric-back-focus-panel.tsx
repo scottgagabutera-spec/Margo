@@ -1,11 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { usePathname } from 'next/navigation'
 import { LyricBackTrackListenControl } from '@/components/lyric-back-track-listen-control'
 import { LyricBackTrackStripPlaceholder } from '@/components/lyric-back-thread-row-skeleton'
-import { scrollFeedLyricBackPanelIntoView } from '@/lib/lyric-back-panel-scroll'
-import { resetLyricBackPanelScroll } from '@/hooks/useLyricBackPanelViewport'
+import { scrollFeedLyricBackSearchUnderNav } from '@/lib/lyric-back-panel-scroll'
 import { useEchoes, type Echo } from '@/hooks/useEchoes'
 import { LyricBackThreadRow } from '@/components/lyric-back-thread-row'
 import {
@@ -184,7 +183,7 @@ export function LyricBackFocusBody({
           parentEmotion={composeEmotion}
           onRequireAuth={onRequireAuth}
           prefill={composePrefill}
-          focusSearchOnMount
+          focusSearchOnMount={!feedPanel}
           onSent={() => {
             onSent()
             void refetchEchoes()
@@ -212,8 +211,8 @@ export function LyricBackFocusBody({
         </button>
       ) : null}
 
-      {!feedPanel ? replyContext : null}
-      {!feedPanel ? composeSlot : null}
+      {replyContext}
+      {composeSlot}
 
       {!feedPanel && isNested && focusedEcho ? (
         <div className="margo-post-card__lb-focused-anchor">
@@ -269,13 +268,6 @@ export function LyricBackFocusBody({
             : 'margo-post-detail-lb__scroll'
         }
       >
-        {feedPanel && (replyContext || composeSlot) ? (
-          <div className="margo-post-card__lb-sticky-head">
-            {replyContext}
-            {composeSlot}
-          </div>
-        ) : null}
-
         {feedPanel && isNested && focusedEcho ? (
           <div className="margo-post-card__lb-focused-anchor">
             <LyricBackThreadRow
@@ -446,39 +438,40 @@ export function LyricBackFeedPanel({
   } = useLyricBackFocusStack(postId, author)
 
   const pathname = usePathname()
-  useLyricBackPanelViewport(panelRef, open)
-
-  useEffect(() => {
-    clearLyricBackKeyboardChrome()
-  }, [pathname])
+  const onFeed = pathname === '/feed'
+  const wasOpenRef = useRef(open)
+  useLyricBackPanelViewport(panelRef, open && onFeed)
 
   useEffect(() => {
     if (!open) {
-      clearLyricBackKeyboardChrome()
+      if (wasOpenRef.current) clearLyricBackKeyboardChrome()
       resetStack()
       setComposePrefill(null)
     }
+    wasOpenRef.current = open
   }, [open, postId, resetStack])
 
   useEffect(() => {
+    if (onFeed || !open) return
+    clearLyricBackKeyboardChrome()
+    const field = panelRef.current?.querySelector('input, textarea')
+    if (field instanceof HTMLElement) field.blur()
+  }, [onFeed, open])
+
+  useLayoutEffect(() => {
     if (!open) return
-    window.setTimeout(() => {
-      scrollFeedLyricBackPanelIntoView(panelRef.current)
-      resetLyricBackPanelScroll(panelRef.current)
-      composeRef.current?.focusSearch()
-    }, 100)
+    scrollFeedLyricBackSearchUnderNav(panelRef.current)
+    composeRef.current?.focusSearch(true)
   }, [open, focusId])
 
   const focusNested = useCallback((echo: Echo) => {
     drillInto(echo)
     setComposePrefill(null)
-    window.setTimeout(() => composeRef.current?.focusSearch(), 80)
   }, [drillInto])
 
   const handleBack = useCallback(() => {
     backOneLevel()
     setComposePrefill(null)
-    window.setTimeout(() => composeRef.current?.focusSearch(), 80)
   }, [backOneLevel])
 
   if (!open || !postId) return null
@@ -521,7 +514,7 @@ export function LyricBackFeedPanel({
             startSec: s.startSec,
             endSec: s.endSec,
           })
-          window.setTimeout(() => composeRef.current?.focusSearch(), 80)
+          composeRef.current?.focusSearch(true)
         }}
         showSuggestions
         echoesActive

@@ -507,8 +507,9 @@ function FeedPageInner() {
     router.replace('/feed', { scroll: false })
 
     const scrollTimer = window.setTimeout(() => {
+      if (openLbParam) return
       const el = document.getElementById(`feed-post-${highlightParam}`)
-      el?.scrollIntoView({ behavior: 'smooth', block: openLbParam ? 'start' : 'center' })
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }, 120)
 
     const labelTimer = window.setTimeout(() => setSharedLabel(false), 2600)
