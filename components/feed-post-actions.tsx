@@ -1,6 +1,5 @@
 'use client'
 
-import type { ReactNode } from 'react'
 import {
   FeedIconCard,
   FeedIconHeart,
@@ -25,8 +24,6 @@ export type FeedPostActionsProps = {
   onCard: () => void
   replayed?: boolean
   replayCount?: number
-  /** Feed: menu wrapper from PostCard. Compact: direct tap. */
-  replaySlot?: ReactNode
   onReplayTap?: () => void
 }
 
@@ -44,7 +41,6 @@ export function FeedPostActions({
   onCard,
   replayed = false,
   replayCount = 0,
-  replaySlot,
   onReplayTap,
 }: FeedPostActionsProps) {
   const compact = variant === 'compact'
@@ -124,7 +120,7 @@ export function FeedPostActions({
         <span className="margo-feed-action__label">Card</span>
       </button>
 
-      {replaySlot ?? (onReplayTap ? (
+      {onReplayTap ? (
         <button
           type="button"
           className="margo-feed-action"
@@ -146,7 +142,7 @@ export function FeedPostActions({
           </span>
           <span className="margo-feed-action__label">Repost</span>
         </button>
-      ) : null)}
+      ) : null}
     </div>
   )
 }
