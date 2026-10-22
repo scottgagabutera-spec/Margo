@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
+import { requireSessionUserId } from '@/lib/api-route-auth'
 
 async function writeFlagCount(postId: string): Promise<void> {
   try {
@@ -20,8 +21,11 @@ async function writeFlagCount(postId: string): Promise<void> {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await requireSessionUserId()
+    if (!session.ok) return session.res
+
     const body = await request.json()
-    const { text, postId } = body as {
+    const { text, postId: clientPostId } = body as {
       text?: string
       postId?: string
       /** Dev-only: skip OpenAI and force flagged=true to verify flag_count writes. */
@@ -32,8 +36,21 @@ export async function POST(request: NextRequest) {
     const forceFlagged =
       process.env.NODE_ENV === 'development' && body?.forceFlagged === true
 
+    let flagPostId: string | null = null
+    if (typeof clientPostId === 'string' && clientPostId.length > 0) {
+      const admin = getSupabaseAdmin()
+      const { data: post, error: postErr } = await admin
+        .from('posts')
+        .select('author_profile_id')
+        .eq('id', clientPostId)
+        .maybeSingle()
+      if (!postErr && post?.author_profile_id === session.userId) {
+        flagPostId = clientPostId
+      }
+    }
+
     if (forceFlagged) {
-      if (postId) await writeFlagCount(postId)
+      if (flagPostId) await writeFlagCount(flagPostId)
       return NextResponse.json({ flagged: true, categories: {}, scores: {}, forced: true })
     }
 
@@ -56,12 +73,13 @@ export async function POST(request: NextRequest) {
     const categories = result?.categories || {}
     const scores = result?.category_scores || {}
 
-    if (flagged && postId) {
-      await writeFlagCount(postId)
+    if (flagged && flagPostId) {
+      await writeFlagCount(flagPostId)
     }
 
     return NextResponse.json({ flagged, categories, scores })
-  } catch (err: any) {
-    return NextResponse.json({ flagged: false, detail: err.message })
+  } catch (err: unknown) {
+    const detail = err instanceof Error ? err.message : 'Unknown error'
+    return NextResponse.json({ flagged: false, detail })
   }
 }

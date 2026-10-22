@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { consumeHourlyApiRateLimit } from '@/lib/api-rate-limit'
+import { getRequestClientIp, ipRateLimitBucket } from '@/lib/api-request-ip'
 
 const VALID_VIBES = [
   'CHILL','HOPE','HEALING','GRATEFUL','SPIRITUAL','NOSTALGIA','JOY',
@@ -6,10 +8,29 @@ const VALID_VIBES = [
   'RAGE','SENDIT','LETOUT'
 ]
 
+const MAX_LYRIC_LEN = 500
+const RATE_LIMIT_PER_HOUR = 60
+
 export async function POST(request: NextRequest) {
   try {
+    const bucket = ipRateLimitBucket(getRequestClientIp(request))
+    const limited = await consumeHourlyApiRateLimit({
+      route: 'emotion',
+      bucket,
+      limit: RATE_LIMIT_PER_HOUR,
+      failOpenOnDbError: true,
+    })
+    if (!limited.ok) {
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': String(limited.retryAfterSec) } },
+      )
+    }
+
     const { lyric } = await request.json()
     if (!lyric) return NextResponse.json({ error: 'lyric required' }, { status: 400 })
+    const text = typeof lyric === 'string' ? lyric.slice(0, MAX_LYRIC_LEN) : ''
+    if (!text.trim()) return NextResponse.json({ error: 'lyric required' }, { status: 400 })
     if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: 'OpenAI not configured' }, { status: 503 })
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -45,7 +66,7 @@ No other words, no punctuation.`,
           },
           {
             role: 'user',
-            content: lyric,
+            content: text,
           },
         ],
       }),
@@ -58,7 +79,8 @@ No other words, no punctuation.`,
     const emotion = data.choices?.[0]?.message?.content?.trim().toUpperCase()
     if (!VALID_VIBES.includes(emotion)) return NextResponse.json({ emotion: null })
     return NextResponse.json({ emotion })
-  } catch (err: any) {
-    return NextResponse.json({ error: 'Emotion detection failed', detail: err.message }, { status: 500 })
+  } catch (err: unknown) {
+    const detail = err instanceof Error ? err.message : 'Unknown error'
+    return NextResponse.json({ error: 'Emotion detection failed', detail }, { status: 500 })
   }
 }

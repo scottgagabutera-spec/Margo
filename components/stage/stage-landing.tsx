@@ -194,6 +194,7 @@ export function StageLanding() {
         body: JSON.stringify({ lyric: text }),
         signal: controller.signal,
       })
+      if (res.status === 429) return
       const data = await res.json()
       if (data.emotion) {
         const vibe = data.emotion as Vibe
@@ -230,7 +231,7 @@ export function StageLanding() {
       const [margoHits, geniusRes] = await Promise.all([
         searchMargoSongs(supabase, value),
         fetch('/api/genius?song=' + encodeURIComponent(value)).then(async (res) => {
-          if (!res.ok) return { results: [] as Array<Record<string, unknown>> }
+          if (res.status === 429 || !res.ok) return { results: [] as Array<Record<string, unknown>> }
           try {
             const data = await res.json()
             if (data?.error) return { results: [] as Array<Record<string, unknown>> }
