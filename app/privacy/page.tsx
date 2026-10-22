@@ -46,10 +46,10 @@ export default function PrivacyPage() {
             <p style={pStyle}>We collect information in the categories below. Exact fields and systems may change as Margo evolves; this describes the kinds of information involved, not an inventory of databases or columns.</p>
             <p style={pStyle}><strong style={strongStyle}>Account information.</strong> When you create an account, we collect information needed to register and sign you in — typically an email address and authentication credentials, or basic account details shared by a third-party sign-in provider you choose (such as a name or profile photo those providers make available). An account is required to post, message, or interact with content on Margo.</p>
             <p style={pStyle}><strong style={strongStyle}>Profile information.</strong> Information you add to your profile, such as username, display name, avatar, bio, signature lyric, and privacy or messaging preferences.</p>
-            <p style={pStyle}><strong style={strongStyle}>Content you create.</strong> Lyric posts, Lyric Backs, Replays, comments, quotes, reports, and other content you submit.</p>
+            <p style={pStyle}><strong style={strongStyle}>Content you create.</strong> Lyric posts, Lyric Backs, Reposts, comments, quotes, reports, and other content you submit.</p>
             <p style={pStyle}><strong style={strongStyle}>Messages.</strong> Direct messages you send to other users, subject to each person&apos;s messaging settings.</p>
             <p style={pStyle}><strong style={strongStyle}>Artist and application information.</strong> If you apply to become an artist or upload music after approval, we collect application details you provide (for example display name and links you submit for verification), plus audio, artwork, credits, and related metadata you upload through Studio.</p>
-            <p style={pStyle}><strong style={strongStyle}>Usage and engagement data.</strong> How you use Margo — for example what you view, Resonate with, Replay, follow, report, export as a card, or play — used to operate features (counts, feeds, recommendations) and understand how the product is used. Card exports by signed-in users may be logged for product analytics and do not block the export if logging fails.</p>
+            <p style={pStyle}><strong style={strongStyle}>Usage and engagement data.</strong> How you use Margo — for example what you view, Resonate with, Repost, follow, report, export as a card, or play — used to operate features (counts, feeds, recommendations) and understand how the product is used. Card exports by signed-in users may be logged for product analytics and do not block the export if logging fails.</p>
             <p style={pStyle}><strong style={strongStyle}>Device, log, and technical data.</strong> Technical information such as browser or app type, language or region settings, IP address, timestamps, and similar logs generated when you access Margo. We may also use local identifiers on your device to keep the product working (for example to keep you signed in or to avoid double-counting views or plays).</p>
             <p style={pStyle}><strong style={strongStyle}>Information from others.</strong> Other users may mention you, message you, report content, or interact with your posts. Artist verification may also involve fetching public pages or profiles you point us to.</p>
             <p style={pStyle}>We do not currently collect payment card information — Margo does not process payments for listening or posting. If that changes, we will update this policy and describe those practices before they apply.</p>
@@ -58,7 +58,7 @@ export default function PrivacyPage() {
             <h2 style={h2Style}>2. How we use information</h2>
             <p style={pStyle}>We use the information above to:</p>
             <ul style={ulStyle}>
-              <li style={liStyle}>Operate, maintain, and secure your account and Margo&apos;s core features (including posting, Resonate, Lyric Back, Replay, messaging, follows, card export, listening, and Studio where applicable)</li>
+              <li style={liStyle}>Operate, maintain, and secure your account and Margo&apos;s core features (including posting, Resonate, Lyric Back, Repost, messaging, follows, card export, listening, and Studio where applicable)</li>
               <li style={liStyle}>Personalize feeds, recommendations, and related product experiences</li>
               <li style={liStyle}>Analyze emotional tone or similar signals in lyric text you compose or interact with, to power features such as vibe tagging and personalization</li>
               <li style={liStyle}>Moderate content and enforce our Terms — including with AI-assisted tools and human review</li>
@@ -83,7 +83,7 @@ export default function PrivacyPage() {
             <h2 style={h2Style}>4. Public content and shared media</h2>
             <p style={pStyle}>Some information on Margo is public by design:</p>
             <ul style={ulStyle}>
-              <li style={liStyle}>Posts, Lyric Backs, Replays, and similar content you share publicly are visible to other users — or more broadly if your account is not private</li>
+              <li style={liStyle}>Posts, Lyric Backs, Reposts, and similar content you share publicly are visible to other users — or more broadly if your account is not private</li>
               <li style={liStyle}>Profile information you publish (such as username, avatar, and bio) is visible according to your account settings</li>
               <li style={liStyle}>Artist-uploaded audio, artwork, and certain media files, as well as profile avatars, may be delivered through publicly reachable URLs so they can load efficiently. Anyone with a direct link may be able to access those files, even without a Margo account</li>
             </ul>

@@ -63,7 +63,7 @@ From `docs/DESTRUCTIVE_TAP_AUDIT.md` plus gesture ideas:
 | Target | Tap today | Proposed “smart” pattern | Priority |
 |--------|-----------|---------------------------|----------|
 | Own post ⋮ Delete | Menu → dialog | Long-press card chrome **or** hold ⋮ → sheet | Medium |
-| Resonate | Immediate | Keep tap; optional long-press → “Quote replay / Export / …” | Low |
+| Resonate | Immediate | Keep tap; optional long-press → “Repost with a note / Export / …” | Low |
 | Expand lyric row | Opens thread | Keep; long-press lyric → copy / export snippet | Medium |
 | Listen Later remove | Immediate | Hold row → Remove / Cancel | Medium |
 | Settings Promote disconnect | **Immediate API** | **Hold** → disconnect sheet | **High** |

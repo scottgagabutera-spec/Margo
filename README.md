@@ -22,7 +22,7 @@ Live at [trymargo.com](https://trymargo.com)
 1. Search a lyric, song, artist, or person
 2. Pick or confirm the song (catalog-first; Genius for external lookup)
 3. Tag the feeling and post
-4. Others resonate, Replay, or Lyric Back
+4. Others resonate, Repost, or Lyric Back
 5. Export a visual card or share a deep link
 6. Discover Moments and songs on Discover; play full karaoke on `/song/[id]`
 

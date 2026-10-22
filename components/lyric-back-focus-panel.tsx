@@ -31,6 +31,9 @@ export type LyricBackThreadRowExtras = {
   onOpenThread?: (echoId: string) => void
   onExport?: (echo: Echo) => void
   onReplay?: (echoId: string) => void
+  onQuoteReplay?: (echoId: string, note: string) => void
+  onUndoReplay?: (echoId: string) => void
+  replayNote?: string | null
   replayed?: boolean
   replayCount?: number
   resonated?: boolean
@@ -58,6 +61,11 @@ export type LyricBackFocusBodyProps = {
   onOpenThread?: (echoId: string) => void
   onExportEcho?: (echo: Echo) => void
   onReplayEcho?: (echoId: string) => void
+  onQuoteReplayEcho?: (echoId: string, note: string) => void
+  onUndoReplayEcho?: (echoId: string) => void
+  echoReplayed?: (echoId: string) => boolean
+  echoReplayCount?: (echoId: string) => number
+  echoReplayNote?: (echoId: string) => string | null
   getRowExtras?: (echo: Echo) => LyricBackThreadRowExtras
   showSuggestions?: boolean
   onApplySuggestion?: (s: SuggestedLyricBack) => void
@@ -108,6 +116,11 @@ export function LyricBackFocusBody({
   onOpenThread,
   onExportEcho,
   onReplayEcho,
+  onQuoteReplayEcho,
+  onUndoReplayEcho,
+  echoReplayed,
+  echoReplayCount,
+  echoReplayNote,
   getRowExtras,
   showSuggestions = false,
   onApplySuggestion,
@@ -132,6 +145,18 @@ export function LyricBackFocusBody({
     () => Math.max(isNested && focusedEcho ? (focusedEcho.echoCount ?? 0) : echoCountHint, echoes.length),
     [echoCountHint, echoes.length, focusedEcho, isNested],
   )
+
+  const repostFor = (echo: Echo) => {
+    const extras = getRowExtras?.(echo)
+    return {
+      onReplay: extras?.onReplay ?? onReplayEcho,
+      onQuoteReplay: extras?.onQuoteReplay ?? onQuoteReplayEcho,
+      onUndoReplay: extras?.onUndoReplay ?? onUndoReplayEcho,
+      replayed: extras?.replayed != null ? extras.replayed : (echoReplayed?.(echo.id) ?? false),
+      replayCount: extras?.replayCount != null ? extras.replayCount : (echoReplayCount?.(echo.id) ?? 0),
+      replayNote: extras?.replayNote != null ? extras.replayNote : (echoReplayNote?.(echo.id) ?? null),
+    }
+  }
 
   const loadIdeas = useCallback(async () => {
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -222,7 +247,7 @@ export function LyricBackFocusBody({
             onLyricBack={() => onFocusEcho(focusedEcho)}
             onOpenThread={onOpenThread}
             onExport={onExportEcho}
-            onReplay={onReplayEcho}
+            {...repostFor(focusedEcho)}
             {...(getRowExtras?.(focusedEcho) ?? {})}
             lyricBackSessionActive={composeOpen}
           />
@@ -276,7 +301,7 @@ export function LyricBackFocusBody({
               onLyricBack={() => onFocusEcho(focusedEcho)}
               onOpenThread={onOpenThread}
               onExport={onExportEcho}
-              onReplay={onReplayEcho}
+              {...repostFor(focusedEcho)}
               {...(getRowExtras?.(focusedEcho) ?? {})}
               lyricBackSessionActive={composeOpen}
             />
@@ -300,7 +325,7 @@ export function LyricBackFocusBody({
                   onLyricBack={() => onFocusEcho(echo)}
                   onOpenThread={onOpenThread}
                   onExport={onExportEcho}
-                  onReplay={onReplayEcho}
+                  {...repostFor(echo)}
                   {...(getRowExtras?.(echo) ?? {})}
                 />
               </li>
@@ -410,6 +435,11 @@ export function LyricBackFeedPanel({
   onOpenThread,
   onExportEcho,
   onReplayEcho,
+  onQuoteReplayEcho,
+  onUndoReplayEcho,
+  echoReplayed,
+  echoReplayCount,
+  echoReplayNote,
 }: {
   postId: string
   echoCount: number
@@ -421,6 +451,11 @@ export function LyricBackFeedPanel({
   onOpenThread?: (echoId: string) => void
   onExportEcho?: (echo: Echo) => void
   onReplayEcho?: (echoId: string) => void
+  onQuoteReplayEcho?: (echoId: string, note: string) => void
+  onUndoReplayEcho?: (echoId: string) => void
+  echoReplayed?: (echoId: string) => boolean
+  echoReplayCount?: (echoId: string) => number
+  echoReplayNote?: (echoId: string) => string | null
 }) {
   const panelRef = useRef<HTMLDivElement>(null)
   const composeRef = useRef<LyricBackPanelComposeHandle>(null)
@@ -504,6 +539,11 @@ export function LyricBackFeedPanel({
         onOpenThread={onOpenThread}
         onExportEcho={onExportEcho}
         onReplayEcho={onReplayEcho}
+        onQuoteReplayEcho={onQuoteReplayEcho}
+        onUndoReplayEcho={onUndoReplayEcho}
+        echoReplayed={echoReplayed}
+        echoReplayCount={echoReplayCount}
+        echoReplayNote={echoReplayNote}
         onApplySuggestion={(s) => {
           setComposePrefill({
             lyric: s.text,

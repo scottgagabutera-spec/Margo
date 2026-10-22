@@ -118,11 +118,11 @@ Legacy vanilla (`js/`, root `api/*.js`, `index.html`) was removed in hygiene cle
 | `post-card.tsx` | Feed/Discover post card (variants: feed, compact, row, …) |
 | `post-card-suggested-reply.tsx` | On-demand Suggested Lyric Back UI |
 | `post-thumbnail.tsx` | Artwork / YouTube thumb |
-| `replay-attribution.tsx` | Replay wrapper chrome |
+| `replay-attribution.tsx` | Repost wrapper chrome |
 | `edit-post-modal.tsx` | Owner edit |
 | `vibe-tag.tsx`, `relative-time.tsx`, `username-tag.tsx` | Meta chrome |
 
-**Careful:** `post-card-suggested-reply.tsx` — must stay tap-triggered; talks to suggest API/cache contract. `post-card.tsx` — large surface; many variants and action paths (resonate, Lyric Back, Card, Replay).
+**Careful:** `post-card-suggested-reply.tsx` — must stay tap-triggered; talks to suggest API/cache contract. `post-card.tsx` — large surface; many variants and action paths (resonate, Lyric Back, Card, Repost).
 
 ### Card export
 
@@ -161,7 +161,7 @@ Wired from Feed, Compose, Lyric Back, post thread, profile, song player. Analyti
 | `useSongs.ts`, `useSong.ts` | Catalog list / single song + lines |
 | `useSharedLines.ts` | Shared-line signals |
 | `useLyricMoments.ts` | Discover Moments |
-| `useRecentReplays.ts`, `useProfileReplays.ts` | Replay feeds |
+| `useRecentReplays.ts`, `useProfileReplays.ts` | Repost feeds |
 | `useOwnPrivatePosts.ts` | Owner private posts |
 | `useVisibleAuthorIds.ts` | Visibility filter for posts |
 | `useAuthorProfile.ts`, `useAuthorLyricBacks.ts` | Author meta |
@@ -216,7 +216,7 @@ Wired from Feed, Compose, Lyric Back, post thread, profile, song player. Analyti
 | `lib/search-profiles.ts` | Profile search |
 | `lib/post-lines.ts` | Post line timing helpers |
 | `lib/lyric-match.ts` | Snippet/line matching |
-| `lib/feed-replay-map.ts` | `post_replays` → Feed Replay cards |
+| `lib/feed-replay-map.ts` | `post_replays` → Feed Repost cards |
 
 **Careful:** `suggest-lyric-back.ts` — empty results must not poison cache (#82); soft cross-song diversity assemble (#83); file header documents Approach A. Prefer that comment block over duplicating here.
 
@@ -251,7 +251,7 @@ Notable recent:
 | `20260817_suggest_lyric_back_cache.sql` | Suggest cache table |
 | `20260814_profiles_last_seen_at.sql` | Identity heartbeat |
 | `20260810_complete_account_deletion.sql` | Deletion RPCs / policy |
-| `20260808_post_replays.sql` | Replays |
+| `20260808_post_replays.sql` | Reposts (`post_replays`) |
 | `20260807_post_reports.sql` | Reports |
 
 ---

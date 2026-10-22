@@ -14,6 +14,11 @@ export type PostCardSuggestedReplyProps = {
   onOpenThread?: (echoId: string) => void
   onExportEcho?: (echo: Echo) => void
   onReplayEcho?: (echoId: string) => void
+  onQuoteReplayEcho?: (echoId: string, note: string) => void
+  onUndoReplayEcho?: (echoId: string) => void
+  echoReplayed?: (echoId: string) => boolean
+  echoReplayCount?: (echoId: string) => number
+  echoReplayNote?: (echoId: string) => string | null
 }
 
 export function PostCardSuggestedReply(props: PostCardSuggestedReplyProps) {
@@ -28,6 +33,11 @@ export function PostCardSuggestedReply(props: PostCardSuggestedReplyProps) {
     onOpenThread,
     onExportEcho,
     onReplayEcho,
+    onQuoteReplayEcho,
+    onUndoReplayEcho,
+    echoReplayed,
+    echoReplayCount,
+    echoReplayNote,
   } = props
 
   return (
@@ -42,6 +52,11 @@ export function PostCardSuggestedReply(props: PostCardSuggestedReplyProps) {
       onOpenThread={onOpenThread}
       onExportEcho={onExportEcho}
       onReplayEcho={onReplayEcho}
+      onQuoteReplayEcho={onQuoteReplayEcho}
+      onUndoReplayEcho={onUndoReplayEcho}
+      echoReplayed={echoReplayed}
+      echoReplayCount={echoReplayCount}
+      echoReplayNote={echoReplayNote}
     />
   )
 }

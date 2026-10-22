@@ -22,6 +22,7 @@ import { useContentUpdates } from '@/hooks/useContentUpdates'
 import { PostCard, normalizeEmotion } from '@/components/post-card'
 import { ReplayAttribution } from '@/components/replay-attribution'
 import { useRecentReplays } from '@/hooks/useRecentReplays'
+import { usePostReplays } from '@/hooks/usePostReplays'
 import { usePrimaryTab, restoreActivePrimaryScroll } from '@/components/primary-tab-shell'
 import { FeedPostSkeletonList } from '@/components/margo-skeletons'
 import { FeedOceanFooter } from '@/components/feed-ocean-footer'
@@ -88,19 +89,19 @@ function FeedPageInner() {
     } catch { return new Set() }
   })
   const [resonateCounts, setResonateCounts] = useState<Record<string, number>>({})
-  const [replayed, setReplayed] = useState<Set<string>>(() => {
-    if (typeof window === 'undefined') return new Set()
-    try {
-      const saved = localStorage.getItem('margoReplayed')
-      return saved ? new Set(JSON.parse(saved)) : new Set()
-    } catch { return new Set() }
-  })
-  const [replayCounts, setReplayCounts] = useState<Record<string, number>>({})
+  const {
+    replayed,
+    repost,
+    undoRepost,
+    quoteRepost,
+    countFor,
+    quoteFor,
+    reconcile,
+  } = usePostReplays(feedLive)
   const [postStats, setPostStats] = useState<Record<string, { views?: number; resonateCount?: number; echoCount?: number; replayCount?: number }>>({})
   const [exportPost, setExportPost] = useState<Post | null>(null)
   const postStatsLoadedAtRef = useRef(0)
   const resonatesLoadedAtRef = useRef(0)
-  const replaysLoadedAtRef = useRef(0)
   const highlightHandledRef = useRef<string | null>(null)
   const [sharedLabel, setSharedLabel] = useState(false)
   const [highlightPostId, setHighlightPostId] = useState<string | null>(null)
@@ -120,6 +121,9 @@ function FeedPageInner() {
         map[row.post_id] = { views: row.views, resonateCount: row.resonate_count, echoCount: row.echo_count, replayCount: row.replay_count }
       }
       setPostStats(map)
+      const serverCounts: Record<string, number | undefined> = {}
+      for (const id of Object.keys(map)) serverCounts[id] = map[id]?.replayCount
+      reconcile(serverCounts)
       postStatsLoadedAtRef.current = Date.now()
     }
     const neverLoaded = postStatsLoadedAtRef.current === 0
@@ -142,7 +146,7 @@ function FeedPageInner() {
       cancelled = true
       if (channel) void supabase.removeChannel(channel)
     }
-  }, [feedLive])
+  }, [feedLive, reconcile])
 
   useEffect(() => {
     if (!feedLive || !user?.id) return
@@ -176,47 +180,6 @@ function FeedPageInner() {
       channel = next
     } catch (err) {
       console.error('feed-my-resonates realtime failed', err)
-    }
-
-    return () => {
-      cancelled = true
-      if (channel) void supabase.removeChannel(channel)
-    }
-  }, [feedLive, user?.id])
-
-  // Load user's Replays — replayer_id must be auth profile uuid (RLS: auth.uid() = replayer_id).
-  useEffect(() => {
-    if (!feedLive || !user?.id) return
-    const myId = user.id
-    let cancelled = false
-    async function loadMyReplays() {
-      const { data, error } = await supabase
-        .from('post_replays')
-        .select('post_id')
-        .eq('replayer_id', myId)
-      if (cancelled) return
-      if (error) { console.error('Failed to load replays:', error); return }
-      const mine = new Set((data || []).map(r => r.post_id))
-      setReplayed(mine)
-      try { localStorage.setItem('margoReplayed', JSON.stringify([...mine])) } catch {}
-      replaysLoadedAtRef.current = Date.now()
-    }
-    const neverLoaded = replaysLoadedAtRef.current === 0
-    const stale = Date.now() - replaysLoadedAtRef.current > FEED_STALE_MS
-    if (neverLoaded || stale) loadMyReplays()
-
-    let channel: ReturnType<typeof supabase.channel> | null = null
-    try {
-      const next = supabase.channel(`feed-my-replays:${crypto.randomUUID()}`)
-      next.on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'post_replays', filter: `replayer_id=eq.${myId}` },
-        () => { if (!cancelled) loadMyReplays() }
-      )
-      next.subscribe()
-      channel = next
-    } catch (err) {
-      console.error('feed-my-replays realtime failed', err)
     }
 
     return () => {
@@ -267,7 +230,7 @@ function FeedPageInner() {
         sortAt: p.timestamp || 0,
       }))
 
-    // Interleave recent Replays from anyone (global discovery). Originals
+    // Interleave recent reposts from anyone (global discovery). Originals
     // still come from usePosts; this only injects attribution wrappers.
     const replayItems: FeedItem[] = recentReplays
       .filter(r => matchesFeedFilters(r.post))
@@ -344,117 +307,8 @@ function FeedPageInner() {
     }
   }
 
-  const toggleReplay = async (postId: string) => {
-    if (!requireAuth()) return
-    if (!user?.id) return
-    const myId = user.id
-    const already = replayed.has(postId)
-
-    if (already) {
-      setReplayed(prev => {
-        const next = new Set(prev)
-        next.delete(postId)
-        try { localStorage.setItem('margoReplayed', JSON.stringify([...next])) } catch {}
-        return next
-      })
-      setReplayCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) - 1) }))
-      try {
-        const { error } = await supabase
-          .from('post_replays')
-          .delete()
-          .eq('post_id', postId)
-          .eq('replayer_id', myId)
-        if (error) throw error
-        toast('Replay removed')
-      } catch (err) {
-        console.error('Failed to un-replay:', err)
-        setReplayed(prev => {
-          const next = new Set(prev)
-          next.add(postId)
-          try { localStorage.setItem('margoReplayed', JSON.stringify([...next])) } catch {}
-          return next
-        })
-        setReplayCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) + 1) }))
-      }
-      return
-    }
-
-    setReplayed(prev => {
-      const next = new Set(prev)
-      next.add(postId)
-      try { localStorage.setItem('margoReplayed', JSON.stringify([...next])) } catch {}
-      return next
-    })
-    setReplayCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) + 1) }))
-
-    try {
-      const { error } = await supabase.from('post_replays').insert({
-        post_id: postId,
-        replayer_id: myId,
-        quote_text: null,
-      })
-      if (error) throw error
-      toast('Replayed')
-    } catch (err) {
-      console.error('Failed to replay:', err)
-      setReplayed(prev => {
-        const next = new Set(prev)
-        next.delete(postId)
-        try { localStorage.setItem('margoReplayed', JSON.stringify([...next])) } catch {}
-        return next
-      })
-      setReplayCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) - 1) }))
-    }
-  }
-
-  const quoteReplay = async (postId: string, quoteText: string) => {
-    if (!requireAuth()) return
-    if (!user?.id) return
-    const text = quoteText.trim()
-    if (!text) return
-    const myId = user.id
-    const already = replayed.has(postId)
-
-    if (!already) {
-      setReplayed(prev => {
-        const next = new Set(prev)
-        next.add(postId)
-        try { localStorage.setItem('margoReplayed', JSON.stringify([...next])) } catch {}
-        return next
-      })
-      setReplayCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) + 1) }))
-    }
-
-    try {
-      if (already) {
-        const { error } = await supabase
-          .from('post_replays')
-          .update({ quote_text: text })
-          .eq('post_id', postId)
-          .eq('replayer_id', myId)
-        if (error) throw error
-      } else {
-        const { error } = await supabase.from('post_replays').insert({
-          post_id: postId,
-          replayer_id: myId,
-          quote_text: text,
-        })
-        if (error) throw error
-      }
-      toast('Replayed')
-    } catch (err) {
-      console.error('Failed to quote-replay:', err)
-      if (!already) {
-        setReplayed(prev => {
-          const next = new Set(prev)
-          next.delete(postId)
-          try { localStorage.setItem('margoReplayed', JSON.stringify([...next])) } catch {}
-          return next
-        })
-        setReplayCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) - 1) }))
-      }
-    }
-  }
+  const replayBase = (id: string, fallback = 0) =>
+    countFor(id, postStats[id]?.replayCount, fallback)
 
   const handleExport = (post: Post) => {
     if (!requireAuth()) return
@@ -679,9 +533,14 @@ function FeedPageInner() {
               echoCount: postStats[post.id]?.echoCount ?? post.replies ?? 0,
               onResonate: toggleResonate,
               replayed: replayed.has(post.id),
-              replayCount: postStats[post.id]?.replayCount ?? replayCounts[post.id] ?? post.replays ?? 0,
-              onReplay: toggleReplay,
-              onQuoteReplay: quoteReplay,
+              replayCount: replayBase(post.id, post.replays ?? 0),
+              onReplay: (id: string) => repost(id, replayBase(id, id === post.id ? (post.replays ?? 0) : 0)),
+              onQuoteReplay: (id: string, text: string) => quoteRepost(id, text, replayBase(id, id === post.id ? (post.replays ?? 0) : 0)),
+              onUndoReplay: (id: string) => undoRepost(id, replayBase(id, id === post.id ? (post.replays ?? 0) : 0)),
+              echoReplayed: (id: string) => replayed.has(id),
+              echoReplayCount: (id: string) => replayBase(id, 0),
+              replayNote: quoteFor(post.id),
+              echoReplayNote: (id: string) => quoteFor(id),
               onExport: handleExport,
               isNew: newIds.has(post.id),
               isTrending: trendingIds.has(post.id),

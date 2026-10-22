@@ -128,7 +128,8 @@ export function FeedPostActions({
         <button
           type="button"
           className="margo-feed-action"
-          aria-label={replayed ? 'Undo Replay' : 'Replay'}
+          aria-label="Repost"
+          aria-pressed={replayed}
           onClick={(e) => {
             e.stopPropagation()
             onReplayTap()
@@ -143,7 +144,7 @@ export function FeedPostActions({
               <span className="margo-feed-action__badge">{replayCount}</span>
             ) : null}
           </span>
-          <span className="margo-feed-action__label">Replay</span>
+          <span className="margo-feed-action__label">Repost</span>
         </button>
       ) : null)}
     </div>
