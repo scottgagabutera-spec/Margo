@@ -15,7 +15,7 @@ Do not dump per-file gotchas here — those belong in `PROJECT_MAP.md` (sparingl
 
 ## 1. What Margo is
 
-Margo is a **lyric-social** product: people post song lyrics tagged with emotion, resonate, Replay, and reply with another lyric (**Lyric Back**). Discovery is vibe- and moment-oriented; catalog songs support snippet play and full karaoke.
+Margo is a **lyric-social** product: people post song lyrics tagged with emotion, resonate, Repost, and reply with another lyric (**Lyric Back**). Discovery is vibe- and moment-oriented; catalog songs support snippet play and full karaoke.
 
 **Shape of the system**
 
@@ -38,7 +38,7 @@ Margo is a **lyric-social** product: people post song lyrics tagged with emotion
 | Area | Responsibility | Key modules |
 |------|----------------|-------------|
 | Shell / tabs | Global chrome, keepalive panes, tab swipe | `app/layout.tsx`, `components/primary-tab-shell.tsx`, `components/mobile-tab-bar.tsx`, `components/margo-nav.tsx`, `hooks/useTabSwipe.tsx`, `hooks/usePrimaryTabSwipeGesture.ts` |
-| Feed | Lyric posts + Replays | `app/feed/page.tsx`, `components/post-card.tsx`, `hooks/usePosts.ts`, `hooks/useRecentReplays.ts`, `lib/feed-replay-map.ts` |
+| Feed | Lyric posts + Reposts | `app/feed/page.tsx`, `components/post-card.tsx`, `hooks/usePosts.ts`, `hooks/useRecentReplays.ts`, `lib/feed-replay-map.ts` |
 | Discover / catalog | Moments, song grid, karaoke | `app/discover/page.tsx`, `app/discover/songs/page.tsx`, `app/song/[id]/page.tsx`, `hooks/useSongs.ts`, `hooks/useSong.ts`, `hooks/useLyricMoments.ts`, `lib/catalog-lyric-unit.ts`, `components/catalog-grid.tsx` |
 | Compose / Lyric Back | Create posts and replies | `app/compose/page.tsx`, `app/lyric-back/page.tsx`, `lib/search-margo-songs.ts`, `components/compose-line-picker.tsx`, `app/api/genius/route.ts`, `app/api/emotion/route.ts` |
 | Suggested Lyric Back | On-demand catalog reply suggestions | `components/post-card-suggested-reply.tsx`, `app/api/suggest-lyric-back/route.ts`, `lib/suggest-lyric-back.ts` |

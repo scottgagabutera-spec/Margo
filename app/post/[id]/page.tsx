@@ -20,6 +20,7 @@ import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useIdentity } from '@/hooks/useIdentity'
 import { createClient } from '@/lib/supabase/client'
 import { useRegisterNavBack } from '@/components/nav-back'
+import { usePostReplays } from '@/hooks/usePostReplays'
 
 const supabase = createClient()
 
@@ -61,14 +62,16 @@ export default function PostDetailPage() {
   })
   const [resonateCounts, setResonateCounts] = useState<Record<string, number>>({})
   const [exportPost, setExportPost] = useState<Post | null>(null)
-  const [replayed, setReplayed] = useState<Set<string>>(() => {
-    if (typeof window === 'undefined') return new Set()
-    try {
-      const saved = localStorage.getItem('margoReplayed')
-      return saved ? new Set(JSON.parse(saved)) : new Set()
-    } catch { return new Set() }
-  })
-  const [replayCounts, setReplayCounts] = useState<Record<string, number>>({})
+  const {
+    replayed,
+    repost,
+    undoRepost,
+    quoteRepost,
+    countFor,
+    quoteFor,
+    reconcile,
+  } = usePostReplays(true)
+  const [detailReplayCount, setDetailReplayCount] = useState<number | undefined>(undefined)
 
   const openComposer = useCallback((targetId: string, echo?: Echo) => {
     if (!post?.id) return
@@ -143,35 +146,26 @@ export default function PostDetailPage() {
 
   const handleExportEcho = (echo: Echo) => handleExport(echoToPost(echo))
 
-  const toggleReplay = async (id: string) => {
-    if (!requireAuth()) return
-    if (!user?.id) return
-    const myId = user.id
-    const already = replayed.has(id)
-    setReplayed(prev => {
-      const next = new Set(prev)
-      already ? next.delete(id) : next.add(id)
-      try { localStorage.setItem('margoReplayed', JSON.stringify([...next])) } catch {}
-      return next
-    })
-    setReplayCounts(prev => ({ ...prev, [id]: Math.max(0, (prev[id] ?? 0) + (already ? -1 : 1)) }))
-    try {
-      if (already) {
-        const { error } = await supabase.from('post_replays').delete().eq('post_id', id).eq('replayer_id', myId)
-        if (error) throw error
-      } else {
-        const { error } = await supabase.from('post_replays').insert({ post_id: id, replayer_id: myId, quote_text: null })
-        if (error) throw error
-      }
-    } catch {
-      setReplayed(prev => {
-        const next = new Set(prev)
-        already ? next.add(id) : next.delete(id)
-        return next
+  useEffect(() => {
+    if (!post?.id) return
+    const id = post.id
+    let cancelled = false
+    void supabase
+      .from('post_stats')
+      .select('replay_count')
+      .eq('post_id', id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (cancelled || error || !data) return
+        const count = data.replay_count ?? 0
+        setDetailReplayCount(count)
+        reconcile({ [id]: count })
       })
-      setReplayCounts(prev => ({ ...prev, [id]: Math.max(0, (prev[id] ?? 0) + (already ? 1 : -1)) }))
-    }
-  }
+    return () => { cancelled = true }
+  }, [post?.id, reconcile])
+
+  const replayBase = (id: string) =>
+    countFor(id, id === post?.id ? detailReplayCount : undefined, 0)
 
   useRegisterNavBack({
     preferHistory: !post?.parentPostId,
@@ -186,12 +180,15 @@ export default function PostDetailPage() {
     onLyricBack: () => openComposer(echo.id, echo),
     onOpenThread: (id) => router.push(`/post/${id}`),
     onExport: handleExportEcho,
-    onReplay: toggleReplay,
+    onReplay: (id) => repost(id, replayBase(id)),
+    onQuoteReplay: (id, note) => quoteRepost(id, note, replayBase(id)),
+    onUndoReplay: (id) => undoRepost(id, replayBase(id)),
     replayed: replayed.has(echo.id),
-    replayCount: replayCounts[echo.id] ?? 0,
+    replayCount: replayBase(echo.id),
+    replayNote: quoteFor(echo.id),
     resonated: resonated.has(echo.id),
     resonateCount: resonateCounts[echo.id] ?? echo.resonateCount ?? 0,
-  }), [openComposer, replayCounts, replayed, resonateCounts, resonated, router])
+  }), [countFor, detailReplayCount, openComposer, post?.id, quoteFor, quoteRepost, replayed, repost, resonateCounts, resonated, router, undoRepost])
 
   const echoCount = post?.replies ?? 0
   const showLbSection = Boolean(
@@ -284,9 +281,12 @@ export default function PostDetailPage() {
                 echoCount={echoCount}
                 onResonate={toggleResonate}
                 onExport={handleExport}
-                onReplay={toggleReplay}
+                onReplay={(id) => repost(id, replayBase(id))}
+                onQuoteReplay={(id, note) => quoteRepost(id, note, replayBase(id))}
+                onUndoReplay={(id) => undoRepost(id, replayBase(id))}
                 replayed={replayed.has(post.id)}
-                replayCount={replayCounts[post.id] ?? 0}
+                replayCount={replayBase(post.id)}
+                replayNote={quoteFor(post.id)}
                 disableCardNav
                 threadDetail
                 threadLyricBackOpen={composeOpen && !isNested}
@@ -307,7 +307,7 @@ export default function PostDetailPage() {
               onSent={() => {}}
               getRowExtras={getRowExtras}
               onExportEcho={handleExportEcho}
-              onReplayEcho={toggleReplay}
+              onReplayEcho={(id) => repost(id, replayBase(id))}
               onOpenThread={(id) => router.push(`/post/${id}`)}
               onFocusEcho={(echo) => openComposer(echo.id, echo)}
               onBackOneLevel={handleBackOneLevel}

@@ -11,6 +11,8 @@ import { createClient } from '@/lib/supabase/client'
 import { resolveExternalListenUrl } from '@/lib/moment/listen'
 import { FeedPostActions } from '@/components/feed-post-actions'
 import { LyricBackTrackListenControl } from '@/components/lyric-back-track-listen-control'
+import { RepostSheet } from '@/components/repost-sheet'
+import { echoToPost } from '@/lib/echo-to-post'
 
 const supabase = createClient()
 
@@ -24,6 +26,9 @@ export type LyricBackThreadRowProps = {
   onOpenThread?: (echoId: string) => void
   onExport?: (echo: Echo) => void
   onReplay?: (echoId: string) => void
+  onQuoteReplay?: (echoId: string, note: string) => void
+  onUndoReplay?: (echoId: string) => void
+  replayNote?: string | null
   replayed?: boolean
   replayCount?: number
   tone?: 'reply' | 'anchor'
@@ -90,6 +95,9 @@ export function LyricBackThreadRow({
   onOpenThread,
   onExport,
   onReplay,
+  onQuoteReplay,
+  onUndoReplay,
+  replayNote = null,
   replayed = false,
   replayCount = 0,
   tone = 'reply',
@@ -99,6 +107,7 @@ export function LyricBackThreadRow({
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
   const myId = user?.id ?? null
+  const [repostSheetOpen, setRepostSheetOpen] = useState(false)
 
   const [resonatedLocal, setResonatedLocal] = useState(
     () => Boolean(myId && echo.resonates?.[myId]),
@@ -267,8 +276,23 @@ export function LyricBackThreadRow({
         onCard={() => onExport?.(echo)}
         replayed={replayed}
         replayCount={replayCount}
-        onReplayTap={onReplay ? () => onReplay(echo.id) : undefined}
+        onReplayTap={onReplay ? () => {
+          if (!requireAuth()) return
+          setRepostSheetOpen(true)
+        } : undefined}
       />
+      {onReplay ? (
+        <RepostSheet
+          open={repostSheetOpen}
+          onOpenChange={setRepostSheetOpen}
+          post={echoToPost(echo)}
+          replayed={replayed}
+          existingNote={replayNote}
+          onRepost={onReplay}
+          onRepostWithNote={(id, note) => onQuoteReplay?.(id, note)}
+          onUndo={(id) => onUndoReplay?.(id)}
+        />
+      ) : null}
     </article>
   )
 }

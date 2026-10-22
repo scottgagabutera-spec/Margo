@@ -243,7 +243,7 @@ Landing ticker cards are **14px** radius — close enough to 12; prefer **12 or 
 - Top hairline gradient across 60% width
 - Vibe as a **price-tag silhouette** (`VibeTag`), not a rounded pill, on the card edge
 - Lyric: Lora italic ~1.1rem
-- Actions in **one row**: Resonate · Lyric Back · Card · Replay — SVG icons, not emoji
+- Actions in **one row**: Resonate · Lyric Back · Card · Repost — SVG icons, not emoji
 - Earned badges New / Trending / Top: Geist 700, 0.6rem, gold, pill, only if earned
 
 **B. Landing ticker card** (`app/page.tsx`)
@@ -493,7 +493,7 @@ Admin → Overview (`app/admin/page.tsx` / `lib/admin-overview-kpis.ts`). Timezo
 - Company page: **Founded 2025**, privately held, listed **2–10 employees**, Technology / Information / Media. LinkedIn company followers were **7** when checked Aug 2026 — **do not put LinkedIn followers on a traction slide.**
 - Internal docs: **pre-revenue**.
 - Catalog once verified at **10 live songs** during the 2026 Supabase migration — **that number is stale; replace with Admin `liveSongs`.**
-- Product surface area shipped: Feed, Discover (Moments + songs), karaoke, Compose, Lyric Back + Suggested Lyric Back, Replay, card export, profiles, follows, DMs, notifications, Hub/Library, Studio, artist apply, admin, DMCA.
+- Product surface area shipped: Feed, Discover (Moments + songs), karaoke, Compose, Lyric Back + Suggested Lyric Back, Repost, card export, profiles, follows, DMs, notifications, Hub/Library, Studio, artist apply, admin, DMCA.
 
 **How to talk small numbers:**  
 “We’re pre-scale on purpose. Stage 1 is the habit. These are real people posting real lines on a live network I shipped — not a waitlist.” If signups are still tiny, **lead with a real Lyric Back screenshot**, not a vanity chart.
@@ -636,7 +636,7 @@ Existing 12-slide long-form: too much for standing up. If a slide doesn’t answ
 | **1** | **What is Margo?** / “People talk in lyrics.” | Lockup 36px. Gold + dark Lyric Back pair (Mirror / See You Again or a **live** pair). URL | 25 | Hook. Don’t define “platform.” |
 | **2** | **What problem?** / “The habit has no home.” | Left: Maya’s IG screenshot / WhatsApp paste (generic mock). Right: the same line as a Margo card | 40 | Problem + why now in one breath. One IFPI or Genius figure max, as a caption |
 | **3** | **Who is it for?** / “Maya posts a line. Jordan answers in a song.” | 3-up How-it-works: Post a lyric → Get a Lyric Back → Discover the artist (already on the landing) | 45 | Walkthrough. Tap the air as if it’s the phone |
-| **4** | **How it works in the product** | One real feed card (Resonate / Lyric Back / Card / Replay row visible) + tiny karaoke still | 35 | Proof it’s built. No architecture diagram |
+| **4** | **How it works in the product** | One real feed card (Resonate / Lyric Back / Card / Repost row visible) + tiny karaoke still | 35 | Proof it’s built. No architecture diagram |
 | **5** | **Traction** / the four `⟦FILL⟧` numbers | 4 Geist KPIs + optional 30-day Kigali sparkline. If numbers are small, **replace two KPIs with a real Lyric Back screenshot** | 30 | Live, not a waitlist. No hockey stick |
 | **6** | **Why this wins** / “Listen is owned. Talk isn’t.” | Three lines only: Spotify = listen. Instagram = pictures. Margo = lyrics as the message. Tiny Lyric Uses definition | 40 | Market + moat fused. No TAM pyramid |
 | **7** | **Who’s building it** / Scott, Kigali, live product, MNI history | Photo + 3 proof points. Not a fake org chart | 30 | Credibility |

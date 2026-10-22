@@ -12,11 +12,13 @@ export interface ReplayAttributionProps {
   quoteText?: string | null
   /** Props forwarded to the wrapped PostCard (prefer compact for embedded feel). */
   cardProps: PostCardProps
+  /** Preview inside the repost sheet: the card is visible, not tappable. */
+  inertCard?: boolean
 }
 
 /**
  * Embedded Replay wrapper (X/LinkedIn reshare pattern):
- * small replayer avatar + "Replayed by @user", optional quote,
+ * small replayer avatar + "Reposted by @user", optional quote,
  * then compact original PostCard (artwork thumb included via compact).
  */
 export function ReplayAttribution({
@@ -25,6 +27,7 @@ export function ReplayAttribution({
   avatarUrl,
   quoteText,
   cardProps,
+  inertCard = false,
 }: ReplayAttributionProps) {
   const label = username ? `@${username}` : (displayName || 'someone')
   const [avatarBroken, setAvatarBroken] = useState(false)
@@ -70,7 +73,7 @@ export function ReplayAttribution({
           margin: 0, fontFamily: 'var(--font-lora), serif',
           fontSize: '0.72rem', color: 'var(--text-muted)',
         }}>
-          Replayed by{' '}
+          Reposted by{' '}
           {username ? (
             <PendingNavLink
               href={`/profile/${username}`}
@@ -95,7 +98,9 @@ export function ReplayAttribution({
           {quoteText}
         </p>
       ) : null}
-      <PostCard {...cardProps} variant={cardProps.variant || 'compact'} />
+      <div style={inertCard ? { pointerEvents: 'none' } : undefined}>
+        <PostCard {...cardProps} variant={cardProps.variant || 'compact'} />
+      </div>
     </div>
   )
 }

@@ -13,7 +13,7 @@ Verified in code (August 2026). Discover Trending/Top previously stamped the fir
 Computed **client-side** on the posts currently in the Feed buffer (`app/feed/page.tsx`). Not a database leaderboard. Not global all-time.
 
 **Costly score (Feed badges):**  
-`(resonates × 4) + (lyric backs × 5) + (replays × 6)`
+`(resonates × 4) + (lyric backs × 5) + (reposts × 6)`
 
 Views are impressions (not plays) and **do not** unlock Trending/Top. Song plays are karaoke-only and **not** on posts.
 
@@ -21,11 +21,11 @@ There are no last-N-hour counters. Trending velocity is `costly / (ageHours + 2)
 
 | Badge | Qualifies when | Sort if you tap the badge |
 |---|---|---|
-| **New** | Posted within **24 hours**, and did **not** earn Trending or Top. Every such post (no top-N). | Recency (`created_at`, or replay time for injected replay cards) |
-| **Trending** | Costly **≥ 80**, **2 of 3** kinds (resonates ≥ 8, lyric backs ≥ 4, replays ≥ 6), then top **3** by velocity. Can apply in the first 24h. | Same velocity formula |
+| **New** | Posted within **24 hours**, and did **not** earn Trending or Top. Every such post (no top-N). | Recency (`created_at`, or repost time for injected repost cards) |
+| **Trending** | Costly **≥ 80**, **2 of 3** kinds (resonates ≥ 8, lyric backs ≥ 4, reposts ≥ 6), then top **3** by velocity. Can apply in the first 24h. | Same velocity formula |
 | **Top** | Costly **≥ 200**, **all 3** kinds, age **≥ 24h**, then top **3** by lifetime costly. | Lifetime costly |
 
-Badges are mutually exclusive (Top > Trending > New). Compact **replay** cards do not show these pills.
+Badges are mutually exclusive (Top > Trending > New). Compact **repost** cards do not show these pills.
 
 **Does not qualify:** hidden/private/blocked posts (not in the list); posts below the floors / missing kinds; posts still sitting in the “new lyrics” buffer until the user flushes it. Empty is better than a fake badge.
 
@@ -101,15 +101,15 @@ If both would apply, the card shows **Top** (not both).
 
 **Ranks:** Feed Trending/Top (weight **5**).
 
-### Replays
+### Reposts
 
-**Increments when:** signed-in user taps Replay. One row per `(post_id, replayer_id)`; changing the quote updates the row, it does **not** add a second replay.
+**Increments when:** a signed-in user confirms **Repost** or **Repost with a note** in the sheet. Opening the sheet does not count. One row per `(post_id, replayer_id)` in `post_replays`; changing the note updates `quote_text` and does not add a second row. The stored counter is still `post_stats.replay_count`.
 
-**Does not count:** a second replay of the same post by the same user; anonymous users.
+**Does not count:** a second repost of the same post by the same user; anonymous users; the tap that only opens the sheet.
 
-**Shown:** Replay badge on Feed cards; profile Replays tab.
+**Shown:** Repost badge on Feed cards; profile Reposts tab.
 
-**Ranks:** Feed Trending/Top (weight **6**, unique per user). Replay time can also lift a **replay card** in the New **sort** order; the inner card does not get New/Trending/Top pills.
+**Ranks:** Feed Trending/Top (weight **6**, unique per user). Repost time can also lift a **repost card** in the New **sort** order; the inner card does not get New/Trending/Top pills.
 
 ### Lyric uses
 
@@ -145,7 +145,7 @@ Unread notification and message **dots** are inbox unread counts, not engagement
 
 ## What to say if asked
 
-- **“How do you decide Trending on the Feed?”** — Among posts in the current Feed with a real mix of resonates, Lyric Backs, and replays (not impressions), the three with the highest costly engagement divided by a recency penalty. New is “posted in the last day” and has not earned Trending/Top.
+- **“How do you decide Trending on the Feed?”** — Among posts in the current Feed with a real mix of resonates, Lyric Backs, and reposts (not impressions), the three with the highest costly engagement divided by a recency penalty. New is “posted in the last day” and has not earned Trending/Top.
 - **“How do you decide Trending on Discover?”** — Among songs with `plays + 3 × song resonates ≥ 80` (plays are qualified full listens), the highest that score, capped so a small catalog cannot badge every cover. Top songs need at least 25 lyric uses.
 - **“What is a stream?”** — A full-song listen past 30 seconds (or half the track if it’s under a minute), once per device session. Snippets never count.
 - **Feed Trending and Discover Trending are not the same number.**

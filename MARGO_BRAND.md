@@ -365,7 +365,7 @@ Empty states are invitations, not errors.
 - **Lyric Back panel:** **Lyric Backs · N**, scrollable echo bubbles (@ → profile, song line separate from Lora lyric), collapsed ideas, **inline compose** (catalog + send). Closes when card scrolls off-screen. No scroll prefetch.
 - **Thread focus (Lyric Back):** The item at the top of a thread view is always what the user is answering; the composer shows **Replying to @handle** (`LyricBackReplyContext`). Replying to a reply never reuses the root moment’s lyric in context — nested focus shows that reply’s full row (header, Lora lyric, song strip, action row), then **Lyric Backs · N** for its children. **← Back to @{parent}** goes up one level; root **X** closes the feed panel. Post page: replies stay under **Lyric Backs · N** below the moment; Lyric Back opens compose in that section with search focused. Header back arrow = browser history, not thread focus.
 
-### Feed action row (Resonate / Lyric Back / Card / Replay)
+### Feed action row (Resonate / Lyric Back / Card / Repost)
 - **Hard requirement:** one horizontal row at 375px — never wrap the four actions onto a second line. Test against the longest label (**LYRIC BACK**) plus real double-digit counts.
 - **Labels stay visible on mobile** — do not drop to icon-only. Shrink mobile label type (`.margo-feed-action__label`, ~0.4rem) so icon + label fit; increase label size at ≥640px.
 - **Counts are compact badges** tucked on the icon corner (`.margo-feed-action__badge`), not full-size inline numbers competing with the label.
@@ -546,7 +546,7 @@ import { PlayPauseIcon } from '@/components/play-pause-icon'
 
 ### Rule 5 — Feed actions use the same SVG icon set everywhere
 
-**Rule:** Resonate, Lyric Back, Card, Replay, close, search clear, and share must use the same inline SVG (or shared icon components) on feed, lyric-back, Discover, and compose. Do not use Unicode hearts/arrows on one page and SVG on another. On mobile, follow Section 12 **Feed action row** — labels stay visible at reduced size; counts as icon badges; never wrap the row.
+**Rule:** Resonate, Lyric Back, Card, Repost, close, search clear, and share must use the same inline SVG (or shared icon components) on feed, lyric-back, Discover, and compose. Do not use Unicode hearts/arrows on one page and SVG on another. On mobile, follow Section 12 **Feed action row** — labels stay visible at reduced size; counts as icon badges; never wrap the row.
 
 **Standards:** CONSISTENCY · PREMIUM · UNIQUE FOR MARGO · MOBILE FIRST
 

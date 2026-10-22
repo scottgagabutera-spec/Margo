@@ -1184,7 +1184,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
               >
                 {([
                   { id: 'lyrics' as const, label: isOwnProfile ? 'Your Lyrics' : 'Lyrics' },
-                  { id: 'replays' as const, label: 'Replays' },
+                  { id: 'replays' as const, label: 'Reposts' },
                   { id: 'backs' as const, label: 'Lyric Backs' },
                   ...(isOwnProfile ? [{ id: 'private' as const, label: 'Private' }] : []),
                 ]).map(tab => {
@@ -1243,11 +1243,11 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
               ) : contentTab === 'replays' ? (
                 replaysLoading ? (
                   <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-muted)' }}>
-                    Loading replays…
+                    Loading reposts…
                   </p>
                 ) : profileReplays.length === 0 ? (
                   <p style={emptyLyricStyle}>
-                    {isOwnProfile ? 'No replays yet — tap Replay on a lyric in the feed.' : 'No replays yet.'}
+                    {isOwnProfile ? 'No reposts yet — tap Repost on a lyric in the feed.' : 'No reposts yet.'}
                   </p>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

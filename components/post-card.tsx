@@ -3,10 +3,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronRightIcon, EditIcon } from '@/components/icons'
-import {
-  FeedIconMore,
-  FeedIconReplay,
-} from '@/components/feed-card-icons'
+import { FeedIconMore } from '@/components/feed-card-icons'
+import { RepostSheet } from '@/components/repost-sheet'
 import type { Post } from '@/hooks/usePosts'
 import { EditMomentModal } from '@/components/edit-moment-modal'
 import { DeleteMomentDialog } from '@/components/delete-moment-dialog'
@@ -27,7 +25,7 @@ import { RelativeTime } from '@/components/relative-time'
 import { useAuthorProfile } from '@/hooks/useAuthorProfile'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
-import { UI_FONT, LYRIC_FONT, FEED_TYPE } from '@/lib/fonts'
+import { UI_FONT, FEED_TYPE } from '@/lib/fonts'
 import { getVibeTheme, vibeThemeStyleVars } from '@/lib/vibe-theme'
 import { FEED_CARD_LYRIC_ROW_CLASS } from '@/lib/post-card-lyric-class'
 import { FEED_HUE_GLYPH } from '@/lib/feed-vibe-map'
@@ -69,6 +67,13 @@ export interface PostCardProps {
   replayCount?: number
   onReplay?: (id: string) => void
   onQuoteReplay?: (id: string, quoteText: string) => void
+  onUndoReplay?: (id: string) => void
+  /** Saved note on the signed-in user's row, shown in the preview. */
+  replayNote?: string | null
+  /** Lyric Back rows in this card. Falls back to the card's own flags when omitted. */
+  echoReplayed?: (id: string) => boolean
+  echoReplayCount?: (id: string) => number
+  echoReplayNote?: (id: string) => string | null
   /** When true, skip whole-card navigate (e.g. already on /post/[id]). */
   disableCardNav?: boolean
   /** Post thread header on /post/[id] — action row only; page owns LB compose. */
@@ -80,6 +85,8 @@ export interface PostCardProps {
   domId?: string
   /** Brief highlight after the user just published this Moment. */
   highlightShared?: boolean
+  /** Repost preview renders the card without counting another feed impression. */
+  recordImpression?: boolean
   /** One-shot: open Lyric Back panel (e.g. /feed?highlight=&openLb=1). */
   openLyricBack?: boolean
   onLyricBackPanelChange?: (open: boolean) => void
@@ -148,13 +155,15 @@ export function PostCard({
   post, resonated, resonateCount, echoCount, onResonate, onExport,
   isNew = false, isTrending = false, isTop = false, onSelectVibe, onSelectRank,
   variant = 'feed',
-  replayed = false, replayCount = 0, onReplay, onQuoteReplay,
+  replayed = false, replayCount = 0, onReplay, onQuoteReplay, onUndoReplay, replayNote = null,
+  echoReplayed, echoReplayCount, echoReplayNote,
   disableCardNav = false,
   threadDetail = false,
   threadLyricBackOpen = false,
   onThreadLyricBack,
   domId,
   highlightShared = false,
+  recordImpression = true,
   openLyricBack = false,
   onLyricBackPanelChange,
 }: PostCardProps) {
@@ -178,10 +187,7 @@ export function PostCard({
   const [reportOpen, setReportOpen] = useState(false)
   const [reportBusy, setReportBusy] = useState(false)
   const [reportMsg, setReportMsg] = useState<string | null>(null)
-  const [replayMenuOpen, setReplayMenuOpen] = useState(false)
-  const [quoteOpen, setQuoteOpen] = useState(false)
-  const [quoteText, setQuoteText] = useState('')
-  const replayWrapRef = useRef<HTMLDivElement>(null)
+  const [repostSheetOpen, setRepostSheetOpen] = useState(false)
   const moreWrapRef = useRef<HTMLDivElement>(null)
   const [rowExpanded, setRowExpanded] = useState(false)
   const [avatarBroken, setAvatarBroken] = useState(false)
@@ -215,17 +221,11 @@ export function PostCard({
     setLyricBackPanelOpen(true)
   }, [openLyricBack, lyricBackAllowed, setLyricBackPanelOpen])
   useEffect(() => { setAvatarBroken(false) }, [post.authorAvatarUrl, post.authorUid])
-  const closeReplayMenu = useCallback(() => {
-    setReplayMenuOpen(false)
-    setQuoteOpen(false)
-    setQuoteText('')
-  }, [])
   const closeMoreMenu = useCallback(() => {
     setMenuOpen(false)
     setReportOpen(false)
     setReportMsg(null)
   }, [])
-  useDismissibleLayer(replayMenuOpen, closeReplayMenu, replayWrapRef)
   useDismissibleLayer(menuOpen, closeMoreMenu, moreWrapRef)
   // row collapses to a dense one-liner; expand renders the compact card in place
   const isRow = variant === 'row'
@@ -275,7 +275,7 @@ export function PostCard({
   }, [audioUrl, isTier1, snippetWarmSec, playbackSegments])
 
   useEffect(() => {
-    if (viewedRef.current) return
+    if (!recordImpression || viewedRef.current) return
     const el = cardRef.current
     if (!el) return
     const sessionKey = `viewed_${post.id}`
@@ -295,7 +295,7 @@ export function PostCard({
     )
     obs.observe(el)
     return () => obs.disconnect()
-  }, [post.id])
+  }, [post.id, recordImpression])
 
   const rawAvatarUrl = (post.authorAvatarUrl || authorProfile?.avatarUrl || '').trim()
   const avatarUrl = rawAvatarUrl && !avatarBroken ? rawAvatarUrl : null
@@ -754,7 +754,12 @@ export function PostCard({
             router.push(`/post/${echoId}`)
           }}
           onExportEcho={(echo) => onExport(echoToPost(echo))}
-          onReplayEcho={onReplay ? (echoId) => onReplay(echoId) : undefined}
+          onReplayEcho={onReplay}
+          onQuoteReplayEcho={onQuoteReplay}
+          onUndoReplayEcho={onUndoReplay}
+          echoReplayed={echoReplayed}
+          echoReplayCount={echoReplayCount}
+          echoReplayNote={echoReplayNote}
         />
       ) : null}
 
@@ -780,135 +785,23 @@ export function PostCard({
         onCard={() => onExport(post)}
         replayed={replayed}
         replayCount={replayCount}
-        replaySlot={onReplay ? (
-        <div ref={replayWrapRef} style={{ position: 'relative', minWidth: 0 }}>
-          <button
-            type="button"
-            className="margo-feed-action"
-            aria-label={replayed ? 'Undo Replay' : 'Replay'}
-            aria-expanded={replayMenuOpen}
-            onClick={() => {
-              setReplayMenuOpen(o => !o)
-              setQuoteOpen(false)
-              setQuoteText('')
-            }}
-            style={{
-              width: '100%',
-              color: replayed ? 'var(--gold)' : 'var(--text-secondary)',
-              transition: 'color 150ms ease',
-            }}
-          >
-            <span className="margo-feed-action__icon-wrap">
-              <FeedIconReplay size={20} />
-              {replayCount > 0 ? (
-                <span className="margo-feed-action__badge">{replayCount}</span>
-              ) : null}
-            </span>
-            <span className="margo-feed-action__label">Replay</span>
-          </button>
-          {replayMenuOpen && !quoteOpen && (
-            <div
-              role="menu"
-              style={{
-                position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: '6px', zIndex: 20,
-                minWidth: '160px', background: 'var(--bg)',
-                border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px',
-                padding: '6px', boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
-              }}
-            >
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  if (!requireAuth()) return
-                  onReplay?.(post.id)
-                  setReplayMenuOpen(false)
-                }}
-                style={{
-                  display: 'block', width: '100%', textAlign: 'left',
-                  padding: '10px 12px', minHeight: '44px', background: 'none', border: 'none',
-                  color: 'var(--text)', fontFamily: UI_FONT, fontSize: '0.7rem',
-                  cursor: 'pointer', borderRadius: '8px',
-                }}
-              >{replayed ? 'Undo Replay' : 'Replay'}</button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  if (!requireAuth()) return
-                  setQuoteOpen(true)
-                }}
-                style={{
-                  display: 'block', width: '100%', textAlign: 'left',
-                  padding: '10px 12px', minHeight: '44px', background: 'none', border: 'none',
-                  color: 'var(--text)', fontFamily: UI_FONT, fontSize: '0.7rem',
-                  cursor: 'pointer', borderRadius: '8px',
-                }}
-              >Add your take</button>
-            </div>
-          )}
-          {replayMenuOpen && quoteOpen && (
-            <div
-              style={{
-                position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: '6px', zIndex: 20,
-                width: '220px', background: 'var(--bg)',
-                border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px',
-                padding: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
-              }}
-            >
-              <textarea
-                value={quoteText}
-                onChange={(e) => setQuoteText(e.target.value)}
-                placeholder="Add your take…"
-                rows={3}
-                style={{
-                  width: '100%', boxSizing: 'border-box', resize: 'vertical',
-                  fontFamily: LYRIC_FONT, fontSize: '0.82rem',
-                  color: 'var(--text)', background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px',
-                  padding: '10px', outline: 'none', marginBottom: '8px',
-                }}
-              />
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const text = quoteText.trim()
-                    if (!text) return
-                    if (!requireAuth()) return
-                    onQuoteReplay?.(post.id, text)
-                    setReplayMenuOpen(false)
-                    setQuoteOpen(false)
-                    setQuoteText('')
-                  }}
-                  style={{
-                    flex: 1, minHeight: '44px', padding: '0 12px',
-                    background: 'var(--gold)', border: 'none', borderRadius: '8px',
-                    color: 'var(--bg)', fontFamily: UI_FONT,
-                    fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1px',
-                    textTransform: 'uppercase', cursor: 'pointer',
-                  }}
-                >Submit</button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQuoteOpen(false)
-                    setQuoteText('')
-                    setReplayMenuOpen(false)
-                  }}
-                  style={{
-                    flex: 1, minHeight: '44px', padding: '0 12px',
-                    background: 'none', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px',
-                    color: 'var(--text-muted)', fontFamily: UI_FONT,
-                    fontSize: '0.65rem', cursor: 'pointer',
-                  }}
-                >Cancel</button>
-              </div>
-            </div>
-          )}
-        </div>
-        ) : undefined}
+        onReplayTap={onReplay ? () => {
+          if (!requireAuth()) return
+          setRepostSheetOpen(true)
+        } : undefined}
       />
+      {onReplay ? (
+        <RepostSheet
+          open={repostSheetOpen}
+          onOpenChange={setRepostSheetOpen}
+          post={post}
+          replayed={replayed}
+          existingNote={replayNote}
+          onRepost={onReplay}
+          onRepostWithNote={(id, note) => onQuoteReplay?.(id, note)}
+          onUndo={(id) => onUndoReplay?.(id)}
+        />
+      ) : null}
 
     </div>
   )
