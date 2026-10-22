@@ -507,6 +507,7 @@ html[data-margo-stage-idle] .margo-stage-zone {
   outline-offset: 2px;
 }
 .margo-post-card {
+  scroll-margin-top: calc(var(--nav-height, 72px) + 12px);
   --post-vibe-fill: #E8E4DC;
   --post-vibe-text: #eeebe5;
   --post-vibe-chip-text: #C8C4BC;
@@ -960,6 +961,32 @@ html[data-margo-stage-idle] .margo-stage-zone {
   overflow: visible;
   margin-bottom: 12px;
   padding-bottom: 4px;
+}
+.margo-post-card__lb-compose-slot--feed-lead {
+  scroll-margin-top: calc(var(--nav-height, 72px) + 12px);
+  margin-bottom: 10px;
+}
+.margo-post-card__lb-header--feed-focus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+.margo-post-card__lb-feed-focus-label {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-control-label);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.margo-post-card__lb-feed-list-head {
+  height: 1px;
+  background: var(--border);
+  margin: 12px 0 8px;
+}
+.margo-post-card__lb-title--below-compose {
+  margin: 0 0 8px;
+  flex-shrink: 0;
 }
 .margo-post-card__lb-search-anchor {
   position: relative;

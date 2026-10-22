@@ -385,7 +385,7 @@ export function PostCardSongSection({
             href={`/song/${songId}`}
             className="margo-post-card__read-along-chip"
             indicator="tint"
-            aria-label="Read along with full song lyrics"
+            aria-label="Open full song — lyrics and karaoke"
             onClick={(e) => {
               e.stopPropagation()
               trackEvent('song_played', {
@@ -396,7 +396,7 @@ export function PostCardSongSection({
             }}
           >
             <FeedIconLyricsLines size={14} aria-hidden />
-            <span>Read along ›</span>
+            <span>Full song ›</span>
           </PendingNavLink>
         </div>
       ) : null}

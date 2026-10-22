@@ -161,27 +161,32 @@ export function LyricBackFocusBody({
   }, [onApplySuggestion])
 
   const feedPanel = variant === 'feed-panel'
+  const feedRootComposeFirst = feedPanel && !isNested
 
   return (
     <>
-      {feedPanel ? (
-        <div className={`margo-post-card__lb-header${isNested ? ' margo-post-card__lb-header--nested' : ''}`}>
-          {isNested && backToHandle && onBack ? (
+      {feedPanel && isNested ? (
+        <div className="margo-post-card__lb-header margo-post-card__lb-header--nested">
+          {backToHandle && onBack ? (
             <button type="button" className="margo-post-card__lb-focus-back" onClick={onBack}>
               ← Back to @{backToHandle}
             </button>
           ) : null}
           <h3 className="margo-post-card__lb-title">Lyric Backs · {headerCount}</h3>
-          {!isNested && onClose ? (
-            <button
-              type="button"
-              className="margo-post-card__lb-close"
-              aria-label="Close Lyric Backs"
-              onClick={onClose}
-            >
-              <FeedIconClose size={20} />
-            </button>
-          ) : null}
+        </div>
+      ) : null}
+
+      {feedRootComposeFirst && onClose ? (
+        <div className="margo-post-card__lb-header margo-post-card__lb-header--feed-focus">
+          <span className="margo-post-card__lb-feed-focus-label">Lyric Backs</span>
+          <button
+            type="button"
+            className="margo-post-card__lb-close"
+            aria-label="Close Lyric Backs"
+            onClick={onClose}
+          >
+            <FeedIconClose size={20} />
+          </button>
         </div>
       ) : null}
 
@@ -194,7 +199,9 @@ export function LyricBackFocusBody({
       {composeOpen ? <LyricBackReplyContext username={replyToUsername} /> : null}
 
       {composeOpen && focusId ? (
-        <div className="margo-post-card__lb-compose-slot margo-post-card__lb-compose-slot--focus">
+        <div
+          className={`margo-post-card__lb-compose-slot${isNested ? ' margo-post-card__lb-compose-slot--focus' : ' margo-post-card__lb-compose-slot--feed-lead'}`}
+        >
           <LyricBackPanelCompose
             ref={composeRef}
             key={focusId}
@@ -231,6 +238,15 @@ export function LyricBackFocusBody({
         <>
           <div className="margo-post-detail-lb__divider" aria-hidden />
           <h2 className="margo-post-detail-lb__heading">Lyric Backs · {headerCount}</h2>
+        </>
+      ) : null}
+
+      {feedRootComposeFirst ? (
+        <>
+          <div className="margo-post-card__lb-feed-list-head" aria-hidden />
+          <h3 className="margo-post-card__lb-title margo-post-card__lb-title--below-compose">
+            Lyric Backs · {headerCount}
+          </h3>
         </>
       ) : null}
 
@@ -423,9 +439,13 @@ export function LyricBackFeedPanel({
   useEffect(() => {
     if (!open) return
     window.setTimeout(() => {
-      panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      const panel = panelRef.current
+      const composeSlot = panel?.querySelector('.margo-post-card__lb-compose-slot')
+      const searchAnchor = panel?.querySelector('.margo-post-card__lb-search-anchor')
+      const target = (composeSlot ?? searchAnchor ?? panel) as HTMLElement | null
+      target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       composeRef.current?.focusSearch()
-    }, 80)
+    }, 100)
   }, [open, focusId])
 
   const focusNested = useCallback((echo: Echo) => {
