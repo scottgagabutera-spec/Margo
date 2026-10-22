@@ -936,7 +936,7 @@ function ComposeInner() {
   ])
 
   const handleChangeSong = useCallback(() => {
-    if (lyric.trim() && !window.confirm('Change song? Your current line will be cleared.')) return
+    if (lyric.trim() && !window.confirm('Switch songs? Your line will be cleared.')) return
     clearCurrentSongPick()
     setSelectMode(null)
     setPhase('find')
@@ -1299,7 +1299,7 @@ function ComposeInner() {
                   letterSpacing: '1.5px', textTransform: 'uppercase',
                   color: 'var(--gold)', marginBottom: '10px',
                 }}>
-                  Moment so far · {committedLines.length}/{POST_LINES_MAX} lines
+                  Lines so far · {committedLines.length}/{POST_LINES_MAX}
                 </p>
                 {committedLines.map((line, i) => (
                   <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '8px' }}>
@@ -1349,7 +1349,7 @@ function ComposeInner() {
                     fontFamily: font, fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px',
                     textTransform: 'uppercase', cursor: 'pointer', marginBottom: '10px',
                   }}
-                >Continue writing</button>
+                >Continue</button>
                 <button
                   type="button"
                   onClick={clearCurrentSongPick}
@@ -1359,7 +1359,7 @@ function ComposeInner() {
                     color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.6rem',
                     letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
                   }}
-                >Choose a different song</button>
+                >Different song</button>
               </div>
             ) : (
               <>
@@ -1379,7 +1379,7 @@ function ComposeInner() {
               </h1>
               {committedLines.length === 0 ? (
                 <p style={{ fontFamily: UI_FONT, fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.45, margin: '10px 0 0' }}>
-                  Search a song, pick your line, then send when you&apos;re ready.
+                  Find a song, pick your line, send when you&apos;re ready.
                 </p>
               ) : null}
             </div>
@@ -1388,7 +1388,7 @@ function ComposeInner() {
                 value={searchQuery}
                 onChange={handleSearchChange}
                 loading={searchLoading}
-                placeholder="Search by lyric, song or artist…"
+                placeholder="Song, artist, or lyric…"
                 ariaLabel="Search songs"
                 stackAboveOverlay={showResults}
               />
@@ -1479,7 +1479,7 @@ function ComposeInner() {
             {committedLines.length > 0 && (
               <div style={{ margin: '0 0 20px', padding: '12px 14px', border: '1px solid var(--border)', borderRadius: '12px' }}>
                 <p style={{ fontFamily: font, fontSize: '0.58rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--gold)', margin: '0 0 8px' }}>
-                  Moment so far · {committedLines.length}/{POST_LINES_MAX} lines
+                  Lines so far · {committedLines.length}/{POST_LINES_MAX}
                 </p>
                 {committedLines.map((line, i) => (
                   <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '8px' }}>
@@ -1501,7 +1501,7 @@ function ComposeInner() {
                       You&apos;ll share as <strong style={{ color: 'var(--gold)' }}>{identity.displayName}</strong>
                     </p>
                     <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: 1.5 }}>
-                      We gave you this name — it's yours on Margo. You can change how it's shown anytime.
+                      You can change this anytime in settings.
                     </p>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                       <button onClick={() => setBannerDismissed(true)}
@@ -1512,7 +1512,7 @@ function ComposeInner() {
                   </>
                 ) : (
                   <>
-                    <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>Choose how your name appears.</p>
+                    <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>Display name</p>
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                       <input type="text" value={nameInput} onChange={(e) => setNameInput(e.target.value.slice(0, 30))} maxLength={30} autoFocus
                         style={{ flex: 1, height: '44px', padding: '0 16px', background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '12px', color: 'var(--text)', fontFamily: font, fontSize: '0.9rem', outline: 'none' }} />
@@ -1547,7 +1547,7 @@ function ComposeInner() {
               setLinePickComplete(true)
             }}
             style={keyboardSafePrimaryBtnStyle}
-          >Continue without hearing it</button>
+          >Skip preview</button>
         </KeyboardSafeCtaBar>,
         document.body,
       )}
@@ -1710,7 +1710,7 @@ function ComposeInner() {
       <MargoSheet
         open={showExportStudio}
         onOpenChange={setShowExportStudio}
-        title="Export your Moment"
+        title="Export"
         zIndex={200}
         heightMode="auto"
         bottomInset="tabbar-tight"
@@ -1722,7 +1722,7 @@ function ComposeInner() {
         <div role="dialog" aria-modal="true" style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(7,6,10,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '20px', padding: '24px', maxWidth: '360px', width: '100%' }}>
             <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.1rem', color: 'var(--text)', margin: '0 0 8px' }}>Start over?</p>
-            <p style={{ fontFamily: font, fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0 0 20px', lineHeight: 1.45 }}>This will discard your current Moment.</p>
+            <p style={{ fontFamily: font, fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0 0 20px', lineHeight: 1.45 }}>Clears this Moment.</p>
             <div style={{ display: 'flex', gap: '10px' }}>
               <button type="button" onClick={confirmStartOver}
                 style={{ flex: 1, minHeight: 'var(--margo-touch-min)', borderRadius: '50px', border: 'none', background: 'var(--gold)', color: 'var(--bg)', fontFamily: font, fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer' }}>
