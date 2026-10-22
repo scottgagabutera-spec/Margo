@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useRef, type RefObject } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, type RefObject } from 'react'
+import { usePathname } from 'next/navigation'
 import { useLyricBackFocusStack } from '@/hooks/useLyricBackFocusStack'
 import {
   LyricBackFocusBody,
@@ -10,6 +11,11 @@ import type { LyricBackPanelComposeHandle } from '@/components/lyric-back-panel-
 import type { Post } from '@/hooks/usePosts'
 import type { Echo } from '@/hooks/useEchoes'
 import { getVibeTheme, vibeThemeStyleVars } from '@/lib/vibe-theme'
+import {
+  clearLyricBackKeyboardChrome,
+  useLyricBackPanelViewport,
+} from '@/hooks/useLyricBackPanelViewport'
+import { scrollPostLyricBackSearchUnderNav } from '@/lib/lyric-back-panel-scroll'
 
 export type PostDetailLyricSectionProps = {
   post: Post
@@ -52,8 +58,34 @@ export function PostDetailLyricSection({
     replyToUsername,
   } = stackApi
 
+  const pathname = usePathname()
   const isNested = Boolean(focusId && post.id && focusId !== post.id && focusedEcho)
   const vibeTheme = getVibeTheme(post.emotion || 'chill')
+
+  useLyricBackPanelViewport(sectionRef, composeOpen)
+
+  useLayoutEffect(() => {
+    if (!composeOpen) return
+    scrollPostLyricBackSearchUnderNav(sectionRef.current)
+    composeRef.current?.focusSearch(true)
+  }, [composeOpen, focusId, composeRef, sectionRef])
+
+  useEffect(() => {
+    if (!composeOpen) clearLyricBackKeyboardChrome()
+  }, [composeOpen])
+
+  useEffect(() => {
+    clearLyricBackKeyboardChrome()
+  }, [post.id, pathname])
+
+  useEffect(() => {
+    const onPageHide = () => clearLyricBackKeyboardChrome()
+    window.addEventListener('pagehide', onPageHide)
+    return () => {
+      window.removeEventListener('pagehide', onPageHide)
+      clearLyricBackKeyboardChrome()
+    }
+  }, [])
 
   return (
     <section
@@ -95,16 +127,6 @@ export function usePostDetailLyricBack(post: Post | null) {
   const sectionRef = useRef<HTMLElement>(null)
   const mainCardRef = useRef<HTMLElement>(null)
 
-  const scrollLbIntoView = useCallback(() => {
-    window.setTimeout(() => {
-      sectionRef.current?.scrollIntoView({
-        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-        block: 'start',
-      })
-      composeRef.current?.focusSearch()
-    }, 80)
-  }, [])
-
   const scrollMainCardIntoView = useCallback(() => {
     window.setTimeout(() => {
       mainCardRef.current?.scrollIntoView({
@@ -119,7 +141,6 @@ export function usePostDetailLyricBack(post: Post | null) {
     composeRef,
     sectionRef,
     mainCardRef,
-    scrollLbIntoView,
     scrollMainCardIntoView,
   }
 }

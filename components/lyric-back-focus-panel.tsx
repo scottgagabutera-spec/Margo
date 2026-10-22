@@ -208,7 +208,7 @@ export function LyricBackFocusBody({
           parentEmotion={composeEmotion}
           onRequireAuth={onRequireAuth}
           prefill={composePrefill}
-          focusSearchOnMount={!feedPanel}
+          focusSearchOnMount={false}
           onSent={() => {
             onSent()
             void refetchEchoes()

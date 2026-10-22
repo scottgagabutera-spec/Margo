@@ -39,6 +39,27 @@ export function scrollFeedLyricBackSearchUnderNav(panel: HTMLElement | null): vo
   pane.scrollTop += delta
 }
 
+/**
+ * One instant window scroll so the post-page Lyric Back search sits under the nav.
+ * Does not call scrollIntoView.
+ */
+export function scrollPostLyricBackSearchUnderNav(section: HTMLElement | null): void {
+  if (!section || typeof window === 'undefined') return
+  const search = section.querySelector('.margo-post-card__lb-search-anchor')
+  if (!(search instanceof HTMLElement)) return
+  const searchRect = search.getBoundingClientRect()
+  if (searchRect.width === 0 && searchRect.height === 0) return
+
+  const delta = feedSearchScrollDelta({
+    searchTop: searchRect.top,
+    navHeight: readPxVar('--nav-height', 72),
+    chromeBelowNav: 0,
+    gap: SEARCH_UNDER_NAV_GAP_PX,
+  })
+  if (Math.abs(delta) < 1) return
+  window.scrollBy(0, delta)
+}
+
 export function scrollPostCardTopIntoView(card: HTMLElement | null): void {
   if (!card) return
   const behavior = prefersReducedMotion() ? 'auto' : 'smooth'

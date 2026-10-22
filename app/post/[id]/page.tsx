@@ -38,7 +38,6 @@ export default function PostDetailPage() {
     composeRef,
     sectionRef,
     mainCardRef,
-    scrollLbIntoView,
     scrollMainCardIntoView,
   } = usePostDetailLyricBack(post)
 
@@ -81,8 +80,7 @@ export default function PostDetailPage() {
       drillInto(echo)
     }
     setComposeOpen(true)
-    scrollLbIntoView()
-  }, [drillInto, post?.id, resetStack, scrollLbIntoView])
+  }, [drillInto, post?.id, resetStack])
 
   const toggleMainLyricBack = useCallback(() => {
     if (!post?.id) return
@@ -94,14 +92,12 @@ export default function PostDetailPage() {
     }
     resetStack()
     setComposeOpen(true)
-    scrollLbIntoView()
-  }, [composeOpen, isNested, post?.id, resetStack, scrollLbIntoView, scrollMainCardIntoView])
+  }, [composeOpen, isNested, post?.id, resetStack, scrollMainCardIntoView])
 
   const handleBackOneLevel = useCallback(() => {
     backOneLevel()
     setComposeOpen(true)
-    scrollLbIntoView()
-  }, [backOneLevel, scrollLbIntoView])
+  }, [backOneLevel])
 
   const toggleResonate = async (id: string) => {
     if (!requireAuth()) return

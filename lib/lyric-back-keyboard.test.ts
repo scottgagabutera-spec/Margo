@@ -127,4 +127,23 @@ describe('lyric back keyboard wiring', () => {
     assert.doesNotMatch(css, /(?<![\w-])height:\s*var\(--lb-panel-vvh/)
     assert.match(css, /height:\s*auto;/)
   })
+
+  it('post page LB open is one window scroll and one preventScroll focus', () => {
+    const postSection = fs.readFileSync('components/post-detail-lyric-section.tsx', 'utf8')
+    const scroll = fs.readFileSync('lib/lyric-back-panel-scroll.ts', 'utf8')
+    assert.match(postSection, /useLayoutEffect/)
+    assert.match(postSection, /scrollPostLyricBackSearchUnderNav/)
+    assert.match(postSection, /focusSearch\(true\)/)
+    assert.match(postSection, /useLyricBackPanelViewport/)
+    assert.match(postSection, /clearLyricBackKeyboardChrome/)
+    assert.doesNotMatch(postSection, /scrollLbIntoView/)
+    assert.doesNotMatch(postSection, /scrollIntoView[\s\S]*focusSearch\(\)/)
+    assert.match(scroll, /scrollPostLyricBackSearchUnderNav/)
+    assert.match(scroll, /window\.scrollBy/)
+  })
+
+  it('post panel compose does not auto-focus on mount', () => {
+    const panel = fs.readFileSync('components/lyric-back-focus-panel.tsx', 'utf8')
+    assert.match(panel, /focusSearchOnMount=\{false\}/)
+  })
 })
