@@ -12,6 +12,7 @@ import {
   lyricBackCanReply,
   lyricBackDepth,
   lyricBackVisualStep,
+  reduceLyricBackStack,
 } from './lyric-back-depth.ts'
 
 describe('lyric back keyboard geometry', () => {
@@ -96,6 +97,66 @@ describe('lyric back depth', () => {
     assert.equal(lyricBackVisualStep(1), 1)
     assert.equal(lyricBackVisualStep(2), 2)
     assert.equal(lyricBackVisualStep(6), 3)
+  })
+
+  it('walks A > B > C > D and back one level at a time', () => {
+    const level = (id: string) => ({ id })
+    const ids = (stack: readonly { id: string }[]) => stack.map((row) => row.id)
+    let stack: { id: string }[] = []
+
+    assert.deepEqual(ids(stack), [])
+
+    stack = reduceLyricBackStack(stack, { type: 'drill', echo: level('B') })
+    assert.deepEqual(ids(stack), ['B'])
+
+    stack = reduceLyricBackStack(stack, { type: 'drill', echo: level('C') })
+    assert.deepEqual(ids(stack), ['B', 'C'])
+
+    stack = reduceLyricBackStack(stack, { type: 'drill', echo: level('D') })
+    assert.deepEqual(ids(stack), ['B', 'C', 'D'])
+
+    stack = reduceLyricBackStack(stack, { type: 'back' })
+    assert.deepEqual(ids(stack), ['B', 'C'])
+    assert.equal(stack.length, 2)
+
+    stack = reduceLyricBackStack(stack, { type: 'back' })
+    assert.deepEqual(ids(stack), ['B'])
+    assert.equal(stack.length, 1)
+
+    stack = reduceLyricBackStack(stack, { type: 'back' })
+    assert.deepEqual(ids(stack), [])
+    assert.equal(stack.length, 0)
+
+    const atRoot = stack
+    assert.equal(reduceLyricBackStack(atRoot, { type: 'back' }), atRoot)
+
+    let nested = [level('B'), level('C'), level('D')]
+    nested = reduceLyricBackStack(nested, { type: 'truncate', depth: 2 })
+    assert.deepEqual(ids(nested), ['B', 'C'])
+    nested = reduceLyricBackStack(nested, { type: 'truncate', depth: 1 })
+    assert.deepEqual(ids(nested), ['B'])
+    nested = reduceLyricBackStack(nested, { type: 'truncate', depth: 0 })
+    assert.deepEqual(ids(nested), [])
+    assert.equal(
+      reduceLyricBackStack([level('B'), level('C'), level('D')], { type: 'drill', echo: level('D') }).length,
+      3,
+    )
+
+    const hook = fs.readFileSync('hooks/useLyricBackFocusStack.ts', 'utf8')
+    const panel = fs.readFileSync('components/lyric-back-focus-panel.tsx', 'utf8')
+    const post = fs.readFileSync('app/post/[id]/page.tsx', 'utf8')
+    const postSection = fs.readFileSync('components/post-detail-lyric-section.tsx', 'utf8')
+    assert.match(hook, /reduceLyricBackStack/)
+    assert.match(hook, /history\.back\(\)/)
+    assert.match(hook, /if \(backGuardRef\.current\) return/)
+    assert.doesNotMatch(hook, /useEchoes\(/)
+    assert.match(panel, /requestBack/)
+    assert.match(panel, /echoesReady/)
+    assert.doesNotMatch(panel, /backOneLevel/)
+    assert.match(post, /requestBack/)
+    assert.match(post, /collapseToRoot/)
+    assert.doesNotMatch(post, /backOneLevel/)
+    assert.match(postSection, /navDirectionRef/)
   })
 
   it('hides the Lyric Back action at the cap and labels the control Back', () => {

@@ -144,6 +144,14 @@ export function LyricBackFocusBody({
   const { echoes, loading: echoesLoading, refetch: refetchEchoes } = useEchoes(
     echoesActive ? focusId : null,
   )
+  const focusSeenRef = useRef(focusId)
+  const loadedFocusRef = useRef<string | null>(null)
+  if (focusSeenRef.current !== focusId) {
+    focusSeenRef.current = focusId
+    loadedFocusRef.current = null
+  }
+  if (echoesLoading) loadedFocusRef.current = focusId
+  const echoesReady = Boolean(focusId) && !echoesLoading && loadedFocusRef.current === focusId
 
   const [ideasOpen, setIdeasOpen] = useState(false)
   const [ideasLoading, setIdeasLoading] = useState(false)
@@ -152,8 +160,11 @@ export function LyricBackFocusBody({
   const [ideasFetched, setIdeasFetched] = useState(false)
 
   const headerCount = useMemo(
-    () => Math.max(isNested && focusedEcho ? (focusedEcho.echoCount ?? 0) : echoCountHint, echoes.length),
-    [echoCountHint, echoes.length, focusedEcho, isNested],
+    () => Math.max(
+      isNested && focusedEcho ? (focusedEcho.echoCount ?? 0) : echoCountHint,
+      echoesReady ? echoes.length : 0,
+    ),
+    [echoCountHint, echoes.length, echoesReady, focusedEcho, isNested],
   )
 
   const repostFor = (echo: Echo) => {
@@ -205,13 +216,15 @@ export function LyricBackFocusBody({
   const scrollRef = useRef<HTMLDivElement>(null)
   const dockRef = useRef<HTMLDivElement>(null)
   const scrollMemory = useRef<Map<string, number>>(new Map())
-  const restoreFocus = useRef<string | null>(null)
-  const sawLoading = useRef(false)
+  const pendingRestore = useRef<string | null>(null)
+  const restoringScroll = useRef(false)
   const sentSnapshot = useRef<Set<string> | null>(null)
+  const echoesReadyRef = useRef(echoesReady)
+  echoesReadyRef.current = echoesReady
 
   const rememberScroll = useCallback((id: string) => {
     const el = scrollRef.current
-    if (!el || !id) return
+    if (!el || !id || restoringScroll.current || !echoesReadyRef.current) return
     scrollMemory.current.set(id, el.scrollTop)
   }, [])
 
@@ -220,40 +233,43 @@ export function LyricBackFocusBody({
   }, [focusId, rememberScroll])
 
   useLayoutEffect(() => {
+    pendingRestore.current = focusId
     sentSnapshot.current = null
-    restoreFocus.current = focusId
-    sawLoading.current = false
   }, [focusId])
 
   useLayoutEffect(() => {
     const el = scrollRef.current
-    if (!el) return
-    if (echoesLoading) {
-      sawLoading.current = true
-      return
-    }
+    if (!el || !echoesReady) return
 
     const snapshot = sentSnapshot.current
-    if (snapshot) {
+    if (snapshot && pendingRestore.current !== focusId) {
       const fresh = echoes.find((echo) => !snapshot.has(echo.id))
       if (fresh) {
         sentSnapshot.current = null
-        restoreFocus.current = null
         const row = el.querySelector(`[data-echo-id="${CSS.escape(fresh.id)}"]`)
         if (row instanceof HTMLElement) {
+          restoringScroll.current = true
           const delta = row.getBoundingClientRect().top - el.getBoundingClientRect().top
           el.scrollTop += delta - 8
           scrollMemory.current.set(focusId, el.scrollTop)
+          requestAnimationFrame(() => {
+            restoringScroll.current = false
+          })
         }
         return
       }
       sentSnapshot.current = null
     }
 
-    if (restoreFocus.current !== focusId || !sawLoading.current) return
+    if (pendingRestore.current !== focusId) return
+    restoringScroll.current = true
     el.scrollTop = scrollMemory.current.get(focusId) ?? 0
-    restoreFocus.current = null
-  }, [echoes, echoesLoading, focusId])
+    scrollMemory.current.set(focusId, el.scrollTop)
+    pendingRestore.current = null
+    requestAnimationFrame(() => {
+      restoringScroll.current = false
+    })
+  }, [echoes, echoesReady, focusId])
 
   const focusRow = useCallback((echo: Echo) => {
     rememberScroll(focusId)
@@ -290,7 +306,6 @@ export function LyricBackFocusBody({
       >
         <LyricBackPanelCompose
           ref={composeRef}
-          key={focusId}
           layout="panel"
           parentPostId={focusId}
           parentEmotion={composeEmotion}
@@ -315,7 +330,21 @@ export function LyricBackFocusBody({
       {showBar ? (
         <div className={`margo-lb-focus__bar${isNested ? ' margo-lb-focus__bar--nested' : ''}`}>
           {isNested && onBack ? (
-            <button type="button" className="margo-post-card__lb-focus-back" onClick={goBack}>
+            <button
+              type="button"
+              className="margo-post-card__lb-focus-back"
+              onPointerDown={(event) => {
+                if (event.button !== 0) return
+                event.preventDefault()
+                event.stopPropagation()
+                goBack()
+              }}
+              onClick={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                goBack()
+              }}
+            >
               Back
             </button>
           ) : null}
@@ -369,14 +398,14 @@ export function LyricBackFocusBody({
           </div>
         ) : null}
 
-        {echoesLoading ? (
+        {!echoesReady ? (
           <>
             <LyricBackTrackStripPlaceholder />
             <LyricBackPanelSkeleton />
           </>
         ) : null}
 
-        {!echoesLoading && echoes.length > 0 ? (
+        {echoesReady && echoes.length > 0 ? (
           <ul className={feedPanel ? 'margo-post-card__lb-list margo-post-card__lb-list--echoes' : 'margo-post-thread-list'}>
             {echoes.map((echo) => (
               <li key={echo.id}>
@@ -543,6 +572,8 @@ export function LyricBackFeedPanel({
   const composeRef = useRef<LyricBackPanelComposeHandle>(null)
   const [composePrefill, setComposePrefill] = useState<LyricBackPanelPrefill | null>(null)
   const author = parentUsername || ''
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
   const {
     focusId,
     focusedEcho,
@@ -552,9 +583,13 @@ export function LyricBackFeedPanel({
     backToHandle,
     replyToUsername,
     drillInto,
-    backOneLevel,
+    requestBack,
     resetStack,
-  } = useLyricBackFocusStack(postId, author)
+    navDirectionRef,
+  } = useLyricBackFocusStack(postId, author, 0, {
+    history: open,
+    onExit: () => onCloseRef.current(),
+  })
 
   const pathname = usePathname()
   const onFeed = pathname === '/feed'
@@ -585,8 +620,12 @@ export function LyricBackFeedPanel({
 
   useLayoutEffect(() => {
     if (!open) return
+    if (navDirectionRef.current === 'back') {
+      navDirectionRef.current = 'forward'
+      return
+    }
     composeRef.current?.focusSearch(true)
-  }, [open, focusId, composeRef])
+  }, [open, focusId, composeRef, navDirectionRef])
 
   const focusNested = useCallback((echo: Echo) => {
     drillInto(echo)
@@ -594,9 +633,9 @@ export function LyricBackFeedPanel({
   }, [drillInto])
 
   const handleBack = useCallback(() => {
-    backOneLevel()
+    requestBack()
     setComposePrefill(null)
-  }, [backOneLevel])
+  }, [requestBack])
 
   if (!open || !postId) return null
 

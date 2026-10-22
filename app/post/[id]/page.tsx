@@ -35,17 +35,20 @@ export default function PostDetailPage() {
   const { ancestors } = usePostAncestors(post?.parentPostId)
   const depthOffset = post?.parentPostId ? ancestors.length : 0
 
+  const [composeOpen, setComposeOpen] = useState(false)
+
   const {
     stackApi,
     composeRef,
     sectionRef,
     mainCardRef,
     scrollMainCardIntoView,
-  } = usePostDetailLyricBack(post, depthOffset)
+  } = usePostDetailLyricBack(post, depthOffset, {
+    history: composeOpen,
+    onExit: () => setComposeOpen(false),
+  })
 
-  const { isNested, drillInto, resetStack, backOneLevel } = stackApi
-
-  const [composeOpen, setComposeOpen] = useState(false)
+  const { isNested, drillInto, resetStack, requestBack, collapseToRoot } = stackApi
 
   useEffect(() => {
     setComposeOpen(false)
@@ -77,12 +80,12 @@ export default function PostDetailPage() {
   const openComposer = useCallback((targetId: string, echo?: Echo) => {
     if (!post?.id) return
     if (targetId === post.id) {
-      resetStack()
+      collapseToRoot()
     } else if (echo) {
       drillInto(echo)
     }
     setComposeOpen(true)
-  }, [drillInto, post?.id, resetStack])
+  }, [collapseToRoot, drillInto, post?.id])
 
   const toggleMainLyricBack = useCallback(() => {
     if (!post?.id) return
@@ -92,14 +95,14 @@ export default function PostDetailPage() {
       scrollMainCardIntoView()
       return
     }
-    resetStack()
+    collapseToRoot()
     setComposeOpen(true)
-  }, [composeOpen, isNested, post?.id, resetStack, scrollMainCardIntoView])
+  }, [collapseToRoot, composeOpen, isNested, post?.id, resetStack, scrollMainCardIntoView])
 
   const handleBackOneLevel = useCallback(() => {
-    backOneLevel()
+    requestBack()
     setComposeOpen(true)
-  }, [backOneLevel])
+  }, [requestBack])
 
   const toggleResonate = async (id: string) => {
     if (!requireAuth()) return

@@ -127,6 +127,14 @@ export const LyricBackPanelCompose = forwardRef<
   }, [])
 
   useEffect(() => {
+    setQuery('')
+    setHits([])
+    setSearchLoading(false)
+    setShowResults(false)
+    resetSong()
+  }, [parentPostId, resetSong])
+
+  useEffect(() => {
     if (!prefill?.songTitle) return
     setSelected({
       title: prefill.songTitle,
