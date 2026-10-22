@@ -195,20 +195,28 @@ export function PostCard({
     }, 80)
   }, [])
 
+  const scrollCardIntoView = useCallback(() => {
+    window.setTimeout(() => {
+      cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }, 80)
+  }, [])
+
   const setLyricBackPanelOpen = useCallback((next: boolean) => {
     setSuggestionsOpen(next)
     onLyricBackPanelChange?.(next)
     if (next) scrollLyricBackPanelIntoView()
-  }, [onLyricBackPanelChange, scrollLyricBackPanelIntoView])
+    else scrollCardIntoView()
+  }, [onLyricBackPanelChange, scrollCardIntoView, scrollLyricBackPanelIntoView])
 
   const toggleLyricBackPanel = useCallback(() => {
     setSuggestionsOpen((prev) => {
       const next = !prev
       onLyricBackPanelChange?.(next)
       if (next) scrollLyricBackPanelIntoView()
+      else scrollCardIntoView()
       return next
     })
-  }, [onLyricBackPanelChange, scrollLyricBackPanelIntoView])
+  }, [onLyricBackPanelChange, scrollCardIntoView, scrollLyricBackPanelIntoView])
 
   useEffect(() => {
     if (!openLyricBack || openLyricBackHandledRef.current || !lyricBackAllowed) return
@@ -274,24 +282,6 @@ export function PostCard({
     obs.observe(el)
     return () => obs.disconnect()
   }, [audioUrl, isTier1, snippetWarmSec, playbackSegments])
-
-  useEffect(() => {
-    if (!suggestionsOpen) return
-    const el = cardRef.current
-    if (!el) return
-    const obs = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0]
-        if (!entry) return
-        if (entry.intersectionRatio < 0.15) {
-          setSuggestionsOpen(false)
-        }
-      },
-      { threshold: [0, 0.15, 0.5] },
-    )
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [suggestionsOpen])
 
   useEffect(() => {
     if (viewedRef.current) return

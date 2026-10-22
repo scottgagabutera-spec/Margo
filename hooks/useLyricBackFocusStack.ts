@@ -14,6 +14,7 @@ export function useLyricBackFocusStack(rootPostId: string, rootAuthorUsername: s
   const [stack, setStack] = useState<Echo[]>([])
 
   useEffect(() => {
+    if (!rootPostId || rootPostId === 'unset') return
     setStack([])
   }, [rootPostId])
 

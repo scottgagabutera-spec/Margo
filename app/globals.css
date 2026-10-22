@@ -2417,6 +2417,31 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 .margo-post-detail-lb__compose {
   margin-top: 0;
 }
+.margo-post-detail-lb__loading,
+.margo-post-detail-lb__empty-hint {
+  margin: 8px 0 0;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-artist);
+  color: var(--text-muted);
+}
+.margo-post-detail-lb--error {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.margo-post-detail-lb__error-text {
+  margin: 0 0 8px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-artist);
+  color: var(--text-secondary);
+}
+.margo-post-card__lb-panel .margo-post-card__lb-compose-slot {
+  overflow: visible;
+}
+.margo-post-card__lb-panel--thread-focus .margo-post-card__lb-scroll {
+  overflow: visible;
+}
 .margo-post-card__lb-list--echoes {
   position: relative;
   z-index: 1;
