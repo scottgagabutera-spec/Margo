@@ -32,10 +32,12 @@ export type LyricBackThreadRowProps = {
   replayed?: boolean
   replayCount?: number
   tone?: 'reply' | 'anchor'
-  /** Hide Lyric Back action (focused item at thread root). */
+  /** Hide Lyric Back action (depth cap, or a focused row that should not drill). */
   hideLyricBackAction?: boolean
   /** Thread focus: user is already composing a Lyric Back to this row. */
   lyricBackSessionActive?: boolean
+  /** 0–3. Deeper threads stay at step 3. */
+  visualStep?: 0 | 1 | 2 | 3
 }
 
 function profileHref(echo: Echo): string | null {
@@ -103,6 +105,7 @@ export function LyricBackThreadRow({
   tone = 'reply',
   hideLyricBackAction = false,
   lyricBackSessionActive = false,
+  visualStep = 0,
 }: LyricBackThreadRowProps) {
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
@@ -169,10 +172,12 @@ export function LyricBackThreadRow({
     }
   }
 
+  const step = visualStep > 0 && !isAnchor && tone === 'reply' ? visualStep : 0
   const rowClass = [
     'margo-lb-thread-row',
     isAnchor || tone === 'anchor' ? 'margo-lb-thread-row--anchor' : '',
     !isAnchor && tone === 'reply' ? 'margo-lb-thread-row--reply' : '',
+    step > 0 ? `margo-lb-thread-row--step-${step}` : '',
   ].filter(Boolean).join(' ')
 
   return (

@@ -47,11 +47,13 @@ export type LyricBackFocusBodyProps = {
   rootPostId: string
   focusId: string
   focusedEcho: Echo | null
-  /** Parent one level up (@handle without @). Null at root. */
-  backToHandle: string | null
   replyToUsername: string
   parentEmotion: string
   echoCountHint: number
+  /** Focused row is still allowed to take a Lyric Back. */
+  canReply?: boolean
+  /** Panel drill depth, capped at 3 visual steps. */
+  visualStep?: 0 | 1 | 2 | 3
   composeOpen: boolean
   composeRef: RefObject<LyricBackPanelComposeHandle | null>
   onRequireAuth?: () => boolean
@@ -103,10 +105,11 @@ export function LyricBackFocusBody({
   rootPostId,
   focusId,
   focusedEcho,
-  backToHandle,
   replyToUsername,
   parentEmotion,
   echoCountHint,
+  canReply = true,
+  visualStep = 0,
   composeOpen,
   composeRef,
   onRequireAuth,
@@ -139,6 +142,14 @@ export function LyricBackFocusBody({
   const { echoes, loading: echoesLoading, refetch: refetchEchoes } = useEchoes(
     echoesActive ? focusId : null,
   )
+  const focusSeenRef = useRef(focusId)
+  const loadedFocusRef = useRef<string | null>(null)
+  if (focusSeenRef.current !== focusId) {
+    focusSeenRef.current = focusId
+    loadedFocusRef.current = null
+  }
+  if (echoesLoading) loadedFocusRef.current = focusId
+  const echoesReady = Boolean(focusId) && !echoesLoading && loadedFocusRef.current === focusId
 
   const [ideasOpen, setIdeasOpen] = useState(false)
   const [ideasLoading, setIdeasLoading] = useState(false)
@@ -147,8 +158,11 @@ export function LyricBackFocusBody({
   const [ideasFetched, setIdeasFetched] = useState(false)
 
   const headerCount = useMemo(
-    () => Math.max(isNested && focusedEcho ? (focusedEcho.echoCount ?? 0) : echoCountHint, echoes.length),
-    [echoCountHint, echoes.length, focusedEcho, isNested],
+    () => Math.max(
+      isNested && focusedEcho ? (focusedEcho.echoCount ?? 0) : echoCountHint,
+      echoesReady ? echoes.length : 0,
+    ),
+    [echoCountHint, echoes.length, echoesReady, focusedEcho, isNested],
   )
 
   const repostFor = (echo: Echo) => {
@@ -196,18 +210,100 @@ export function LyricBackFocusBody({
   }, [onApplySuggestion])
 
   const feedPanel = variant === 'feed-panel'
-  const feedRootComposeFirst = feedPanel && !isNested
+  const showCompose = composeOpen && canReply && Boolean(focusId)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const dockRef = useRef<HTMLDivElement>(null)
+  const scrollMemory = useRef<Map<string, number>>(new Map())
+  const pendingRestore = useRef<string | null>(null)
+  const restoringScroll = useRef(false)
+  const sentSnapshot = useRef<Set<string> | null>(null)
+  const echoesReadyRef = useRef(echoesReady)
+  echoesReadyRef.current = echoesReady
 
-  const replyContext = composeOpen ? <LyricBackReplyContext username={replyToUsername} /> : null
+  const rememberScroll = useCallback((id: string) => {
+    const el = scrollRef.current
+    if (!el || !id || restoringScroll.current || !echoesReadyRef.current) return
+    scrollMemory.current.set(id, el.scrollTop)
+  }, [])
+
+  const onListScroll = useCallback(() => {
+    rememberScroll(focusId)
+  }, [focusId, rememberScroll])
+
+  useLayoutEffect(() => {
+    pendingRestore.current = focusId
+    sentSnapshot.current = null
+  }, [focusId])
+
+  useLayoutEffect(() => {
+    const el = scrollRef.current
+    if (!el || !echoesReady) return
+
+    const snapshot = sentSnapshot.current
+    if (snapshot && pendingRestore.current !== focusId) {
+      const fresh = echoes.find((echo) => !snapshot.has(echo.id))
+      if (fresh) {
+        sentSnapshot.current = null
+        const row = el.querySelector(`[data-echo-id="${CSS.escape(fresh.id)}"]`)
+        if (row instanceof HTMLElement) {
+          restoringScroll.current = true
+          const delta = row.getBoundingClientRect().top - el.getBoundingClientRect().top
+          el.scrollTop += delta - 8
+          scrollMemory.current.set(focusId, el.scrollTop)
+          requestAnimationFrame(() => {
+            restoringScroll.current = false
+          })
+        }
+        return
+      }
+      sentSnapshot.current = null
+    }
+
+    if (pendingRestore.current !== focusId) return
+    restoringScroll.current = true
+    el.scrollTop = scrollMemory.current.get(focusId) ?? 0
+    scrollMemory.current.set(focusId, el.scrollTop)
+    pendingRestore.current = null
+    requestAnimationFrame(() => {
+      restoringScroll.current = false
+    })
+  }, [echoes, echoesReady, focusId])
+
+  const focusRow = useCallback((echo: Echo) => {
+    rememberScroll(focusId)
+    onFocusEcho(echo)
+  }, [focusId, onFocusEcho, rememberScroll])
+
+  useLayoutEffect(() => {
+    const dock = dockRef.current
+    const root = dock?.closest('.margo-lb-focus')
+    if (!(dock instanceof HTMLElement) || !(root instanceof HTMLElement)) return
+    const apply = () => {
+      root.style.setProperty('--lb-dock-space', `${dock.offsetHeight + 12}px`)
+    }
+    apply()
+    const observer = new ResizeObserver(apply)
+    observer.observe(dock)
+    return () => {
+      observer.disconnect()
+      root.style.removeProperty('--lb-dock-space')
+    }
+  }, [showCompose, focusId])
+
+  const goBack = useCallback(() => {
+    rememberScroll(focusId)
+    onBack?.()
+  }, [focusId, onBack, rememberScroll])
+
+  const replyContext = showCompose ? <LyricBackReplyContext username={replyToUsername} /> : null
 
   const composeSlot =
-    composeOpen && focusId ? (
+    showCompose ? (
       <div
         className={`margo-post-card__lb-compose-slot${isNested ? ' margo-post-card__lb-compose-slot--focus' : ' margo-post-card__lb-compose-slot--feed-lead'}`}
       >
         <LyricBackPanelCompose
           ref={composeRef}
-          key={focusId}
           layout="panel"
           parentPostId={focusId}
           parentEmotion={composeEmotion}
@@ -215,6 +311,7 @@ export function LyricBackFocusBody({
           prefill={composePrefill}
           focusSearchOnMount={false}
           onSent={() => {
+            sentSnapshot.current = new Set(echoes.map((echo) => echo.id))
             onSent()
             void refetchEchoes()
           }}
@@ -222,56 +319,39 @@ export function LyricBackFocusBody({
       </div>
     ) : null
 
+  const showTitle = isNested || headerCount > 0
+  const showBar = showTitle || isNested || Boolean(feedPanel && onClose)
+  const TitleTag = feedPanel ? 'h3' : 'h2'
+
   return (
-    <>
-      {feedPanel && isNested ? (
-        <div className="margo-post-card__lb-header margo-post-card__lb-header--nested">
-          {backToHandle && onBack ? (
-            <button type="button" className="margo-post-card__lb-focus-back" onClick={onBack}>
-              ← Back to @{backToHandle}
+    <div className="margo-lb-focus">
+      {showBar ? (
+        <div className={`margo-lb-focus__bar${isNested ? ' margo-lb-focus__bar--nested' : ''}`}>
+          {isNested && onBack ? (
+            <button
+              type="button"
+              className="margo-post-card__lb-focus-back"
+              onPointerDown={(event) => {
+                if (event.button !== 0) return
+                event.preventDefault()
+                event.stopPropagation()
+                goBack()
+              }}
+              onClick={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                goBack()
+              }}
+            >
+              Back
             </button>
           ) : null}
-          <h3 className="margo-post-card__lb-title">Lyric Backs · {headerCount}</h3>
-        </div>
-      ) : null}
-
-      {!feedPanel && isNested && backToHandle && onBack ? (
-        <button type="button" className="margo-post-card__lb-focus-back" onClick={onBack}>
-          ← Back to @{backToHandle}
-        </button>
-      ) : null}
-
-      {replyContext}
-      {composeSlot}
-
-      {!feedPanel && isNested && focusedEcho ? (
-        <div className="margo-post-card__lb-focused-anchor">
-          <LyricBackThreadRow
-            echo={focusedEcho}
-            tone="anchor"
-            onLyricBack={() => onFocusEcho(focusedEcho)}
-            onOpenThread={onOpenThread}
-            onExport={onExportEcho}
-            {...repostFor(focusedEcho)}
-            {...(getRowExtras?.(focusedEcho) ?? {})}
-            lyricBackSessionActive={composeOpen}
-          />
-        </div>
-      ) : null}
-
-      {!feedPanel && !isNested && (echoes.length > 0 || echoCountHint > 0) ? (
-        <>
-          <div className="margo-post-detail-lb__divider" aria-hidden />
-          <h2 className="margo-post-detail-lb__heading">Lyric Backs · {headerCount}</h2>
-        </>
-      ) : null}
-
-      {feedRootComposeFirst ? (
-        <div className="margo-post-card__lb-feed-head-row">
-          <h3 className="margo-post-card__lb-title margo-post-card__lb-title--below-compose">
-            Lyric Backs · {headerCount}
-          </h3>
-          {onClose ? (
+          {showTitle ? (
+            <TitleTag className={feedPanel ? 'margo-post-card__lb-title' : 'margo-post-detail-lb__heading'}>
+              Lyric Backs · {headerCount}
+            </TitleTag>
+          ) : null}
+          {feedPanel && onClose ? (
             <button
               type="button"
               className="margo-post-card__lb-close"
@@ -284,64 +364,63 @@ export function LyricBackFocusBody({
         </div>
       ) : null}
 
-      {isNested ? (
-        <>
-          <div className="margo-post-detail-lb__divider" aria-hidden />
-          <h2 className="margo-post-detail-lb__heading">Lyric Backs · {headerCount}</h2>
-        </>
+      {showCompose ? (
+        <div className="margo-lb-focus__dock" ref={dockRef}>
+          {replyContext}
+          {composeSlot}
+        </div>
       ) : null}
 
       <div
+        ref={scrollRef}
+        onScroll={onListScroll}
         className={
           feedPanel
-            ? 'margo-post-card__lb-scroll margo-post-card__lb-scroll--feed'
-            : 'margo-post-detail-lb__scroll'
+            ? 'margo-lb-focus__scroll margo-post-card__lb-scroll margo-post-card__lb-scroll--feed'
+            : 'margo-lb-focus__scroll margo-post-detail-lb__scroll'
         }
       >
-        {feedPanel && isNested && focusedEcho ? (
+        {isNested && focusedEcho ? (
           <div className="margo-post-card__lb-focused-anchor">
             <LyricBackThreadRow
               echo={focusedEcho}
               tone="anchor"
-              onLyricBack={() => onFocusEcho(focusedEcho)}
               onOpenThread={onOpenThread}
               onExport={onExportEcho}
               {...repostFor(focusedEcho)}
               {...(getRowExtras?.(focusedEcho) ?? {})}
-              lyricBackSessionActive={composeOpen}
+              hideLyricBackAction={!canReply}
+              onLyricBack={canReply ? () => focusRow(focusedEcho) : undefined}
+              lyricBackSessionActive={showCompose}
             />
           </div>
         ) : null}
 
-        {echoesLoading ? (
+        {!echoesReady ? (
           <>
             <LyricBackTrackStripPlaceholder />
             <LyricBackPanelSkeleton />
           </>
         ) : null}
 
-        {!echoesLoading && echoes.length > 0 ? (
+        {echoesReady && echoes.length > 0 ? (
           <ul className={feedPanel ? 'margo-post-card__lb-list margo-post-card__lb-list--echoes' : 'margo-post-thread-list'}>
             {echoes.map((echo) => (
               <li key={echo.id}>
                 <LyricBackThreadRow
                   echo={echo}
                   tone="reply"
-                  onLyricBack={() => onFocusEcho(echo)}
                   onOpenThread={onOpenThread}
                   onExport={onExportEcho}
                   {...repostFor(echo)}
                   {...(getRowExtras?.(echo) ?? {})}
+                  visualStep={visualStep}
+                  hideLyricBackAction={!canReply}
+                  onLyricBack={canReply ? () => focusRow(echo) : undefined}
                 />
               </li>
             ))}
           </ul>
-        ) : null}
-
-        {!feedPanel && !echoesLoading && echoes.length === 0 && composeOpen ? (
-          <p className="margo-post-detail-lb__empty-hint">
-            Be the first Lyric Back on this moment.
-          </p>
         ) : null}
 
         {showIdeasSignUp ? (
@@ -413,8 +492,9 @@ export function LyricBackFocusBody({
             ) : null}
           </div>
         ) : null}
+        <div className="margo-lb-focus__end" aria-hidden />
       </div>
-    </>
+    </div>
   )
 }
 
@@ -490,16 +570,23 @@ export function LyricBackFeedPanel({
   const composeRef = useRef<LyricBackPanelComposeHandle>(null)
   const [composePrefill, setComposePrefill] = useState<LyricBackPanelPrefill | null>(null)
   const author = parentUsername || ''
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
   const {
     focusId,
     focusedEcho,
     isNested,
-    backToHandle,
+    canReply,
+    visualStep,
     replyToUsername,
     drillInto,
-    backOneLevel,
+    requestBack,
     resetStack,
-  } = useLyricBackFocusStack(postId, author)
+    navDirectionRef,
+  } = useLyricBackFocusStack(postId, author, 0, {
+    history: open,
+    onExit: () => onCloseRef.current(),
+  })
 
   const pathname = usePathname()
   const onFeed = pathname === '/feed'
@@ -526,7 +613,16 @@ export function LyricBackFeedPanel({
     if (!open) return
     scrollFeedLyricBackSearchUnderNav(panelRef.current)
     composeRef.current?.focusSearch(true)
-  }, [open, focusId])
+  }, [open, composeRef])
+
+  useLayoutEffect(() => {
+    if (!open) return
+    if (navDirectionRef.current === 'back') {
+      navDirectionRef.current = 'forward'
+      return
+    }
+    composeRef.current?.focusSearch(true)
+  }, [open, focusId, composeRef, navDirectionRef])
 
   const focusNested = useCallback((echo: Echo) => {
     drillInto(echo)
@@ -534,9 +630,9 @@ export function LyricBackFeedPanel({
   }, [drillInto])
 
   const handleBack = useCallback(() => {
-    backOneLevel()
+    requestBack()
     setComposePrefill(null)
-  }, [backOneLevel])
+  }, [requestBack])
 
   if (!open || !postId) return null
 
@@ -553,10 +649,11 @@ export function LyricBackFeedPanel({
         rootPostId={postId}
         focusId={focusId}
         focusedEcho={focusedEcho}
-        backToHandle={backToHandle}
         replyToUsername={replyToUsername}
         parentEmotion={parentEmotion}
         echoCountHint={echoCount}
+        canReply={canReply}
+        visualStep={visualStep}
         composeOpen
         composeRef={composeRef}
         onRequireAuth={onRequireAuth}

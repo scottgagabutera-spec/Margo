@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { usePost, usePostAncestors } from '@/hooks/usePost'
+import { lyricBackCanReply } from '@/lib/lyric-back-depth'
 import { PostCard } from '@/components/post-card'
 import { LyricBackThreadRow } from '@/components/lyric-back-thread-row'
 import {
@@ -32,6 +33,9 @@ export default function PostDetailPage() {
   const postId = params.id || null
   const { post, loading } = usePost(postId)
   const { ancestors } = usePostAncestors(post?.parentPostId)
+  const depthOffset = post?.parentPostId ? ancestors.length : 0
+
+  const [composeOpen, setComposeOpen] = useState(false)
 
   const {
     stackApi,
@@ -39,11 +43,12 @@ export default function PostDetailPage() {
     sectionRef,
     mainCardRef,
     scrollMainCardIntoView,
-  } = usePostDetailLyricBack(post)
+  } = usePostDetailLyricBack(post, depthOffset, {
+    history: composeOpen,
+    onExit: () => setComposeOpen(false),
+  })
 
-  const { isNested, drillInto, resetStack, backOneLevel } = stackApi
-
-  const [composeOpen, setComposeOpen] = useState(false)
+  const { isNested, drillInto, resetStack, requestBack, collapseToRoot } = stackApi
 
   useEffect(() => {
     setComposeOpen(false)
@@ -75,12 +80,12 @@ export default function PostDetailPage() {
   const openComposer = useCallback((targetId: string, echo?: Echo) => {
     if (!post?.id) return
     if (targetId === post.id) {
-      resetStack()
+      collapseToRoot()
     } else if (echo) {
       drillInto(echo)
     }
     setComposeOpen(true)
-  }, [drillInto, post?.id, resetStack])
+  }, [collapseToRoot, drillInto, post?.id])
 
   const toggleMainLyricBack = useCallback(() => {
     if (!post?.id) return
@@ -90,14 +95,14 @@ export default function PostDetailPage() {
       scrollMainCardIntoView()
       return
     }
-    resetStack()
+    collapseToRoot()
     setComposeOpen(true)
-  }, [composeOpen, isNested, post?.id, resetStack, scrollMainCardIntoView])
+  }, [collapseToRoot, composeOpen, isNested, post?.id, resetStack, scrollMainCardIntoView])
 
   const handleBackOneLevel = useCallback(() => {
-    backOneLevel()
+    requestBack()
     setComposeOpen(true)
-  }, [backOneLevel])
+  }, [requestBack])
 
   const toggleResonate = async (id: string) => {
     if (!requireAuth()) return
@@ -254,7 +259,6 @@ export default function PostDetailPage() {
                 }}
                 isAnchor
                 tone="anchor"
-                hideLyricBackAction
                 {...getRowExtras({
                   id: post.id,
                   lyric: post.text || '',
@@ -265,6 +269,8 @@ export default function PostDetailPage() {
                   timestamp: post.timestamp ?? 0,
                   resonateCount: post.resonates ?? 0,
                 } as Echo)}
+                hideLyricBackAction={!lyricBackCanReply(depthOffset)}
+                lyricBackSessionActive={composeOpen && !isNested}
                 onExport={() => handleExport(post)}
               />
             </section>

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, type RefObject } from 'react'
 import { usePathname } from 'next/navigation'
-import { useLyricBackFocusStack } from '@/hooks/useLyricBackFocusStack'
+import { useLyricBackFocusStack, type LyricBackStackOptions } from '@/hooks/useLyricBackFocusStack'
 import {
   LyricBackFocusBody,
   type LyricBackThreadRowExtras,
@@ -54,8 +54,10 @@ export function PostDetailLyricSection({
   const {
     focusId,
     focusedEcho,
-    backToHandle,
     replyToUsername,
+    canReply,
+    visualStep,
+    navDirectionRef,
   } = stackApi
 
   const pathname = usePathname()
@@ -68,7 +70,16 @@ export function PostDetailLyricSection({
     if (!composeOpen) return
     scrollPostLyricBackSearchUnderNav(sectionRef.current)
     composeRef.current?.focusSearch(true)
-  }, [composeOpen, focusId, composeRef, sectionRef])
+  }, [composeOpen, composeRef, sectionRef])
+
+  useLayoutEffect(() => {
+    if (!composeOpen) return
+    if (navDirectionRef.current === 'back') {
+      navDirectionRef.current = 'forward'
+      return
+    }
+    composeRef.current?.focusSearch(true)
+  }, [composeOpen, focusId, composeRef, navDirectionRef])
 
   useEffect(() => {
     if (!composeOpen) clearLyricBackKeyboardChrome()
@@ -99,10 +110,11 @@ export function PostDetailLyricSection({
         rootPostId={post.id}
         focusId={focusId}
         focusedEcho={focusedEcho}
-        backToHandle={backToHandle}
         replyToUsername={replyToUsername || post.username || ''}
         parentEmotion={post.emotion || 'chill'}
         echoCountHint={echoCount}
+        canReply={canReply}
+        visualStep={visualStep}
         composeOpen={composeOpen}
         composeRef={composeRef}
         onRequireAuth={onRequireAuth}
@@ -120,9 +132,13 @@ export function PostDetailLyricSection({
   )
 }
 
-export function usePostDetailLyricBack(post: Post | null) {
+export function usePostDetailLyricBack(
+  post: Post | null,
+  depthOffset = 0,
+  options?: LyricBackStackOptions,
+) {
   const authorHandle = typeof post?.username === 'string' ? post.username : ''
-  const stackApi = useLyricBackFocusStack(post?.id ?? 'unset', authorHandle)
+  const stackApi = useLyricBackFocusStack(post?.id ?? 'unset', authorHandle, depthOffset, options)
   const composeRef = useRef<LyricBackPanelComposeHandle>(null)
   const sectionRef = useRef<HTMLElement>(null)
   const mainCardRef = useRef<HTMLElement>(null)
