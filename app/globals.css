@@ -2572,31 +2572,6 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 .margo-post-card__lb-scroll:has(.margo-post-card__lb-list--echoes) {
   padding-top: 2px;
 }
-.margo-post-card__lb-context {
-  margin-bottom: 12px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--surface-2) 80%, transparent);
-  border: 1px solid var(--border);
-}
-
-.margo-post-card__lb-context-lyric {
-  margin: 0 0 4px;
-  font-family: var(--font-lora), serif;
-  font-style: italic;
-  font-size: var(--feed-type-artist);
-  color: var(--text-secondary);
-  line-height: 1.4;
-}
-.margo-post-card__lb-context-track,
-.margo-post-card__lb-context-user {
-  margin: 0;
-  font-size: var(--feed-type-artist);
-  color: var(--text-muted);
-}
-.margo-post-card__lb-focus {
-  margin-bottom: 10px;
-}
 .margo-post-card__lb-focus-back {
   display: block;
   margin-bottom: 4px;
