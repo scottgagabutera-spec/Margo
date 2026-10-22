@@ -229,6 +229,12 @@ describe('lyric back keyboard wiring', () => {
     assert.doesNotMatch(panel, /focusSearch\(true\)/)
     assert.match(panel, /margo-lb-focus__chrome/)
     assert.match(panel, /margo-lb-focus__back-chip/)
+    assert.match(panel, /margo-sr-only/)
+    assert.doesNotMatch(panel, /Lyric Backs ·/)
+    assert.doesNotMatch(panel, /margo-lb-focus__reply-to/)
+    assert.doesNotMatch(panel, /Replying to/)
+    assert.match(panel, /data-lb-first-row/)
+    assert.match(panel, /data-lb-pin/)
     assert.match(panel, /activeElement === field/)
     assert.match(panel, /field\.blur\(\)/)
     assert.doesNotMatch(card, /scrollIntoView/)
@@ -242,6 +248,11 @@ describe('lyric back keyboard wiring', () => {
     assert.match(css, /\.margo-lb-focus__scroll \{[^}]*touch-action:\s*pan-y/)
     assert.match(css, /margo-lb-focus__chrome/)
     assert.match(css, /margo-search--lb-panel/)
+    assert.match(css, /--lb-pin-gap/)
+    assert.match(css, /scroll-padding-top:\s*var\(--lb-pin-gap\)/)
+    assert.match(css, /@supports \(-webkit-touch-callout: none\)/)
+    assert.match(css, /margo-post-card__lb-compose-track--chip/)
+    assert.match(css, /margo-post-card__lb-compose-send--infield/)
     assert.match(
       fs.readFileSync('hooks/usePrimaryTabSwipeGesture.ts', 'utf8'),
       /\.margo-post-card__lb-panel/,
@@ -307,6 +318,12 @@ describe('lyric back keyboard wiring', () => {
 
   it('post panel compose does not auto-focus on mount', () => {
     const panel = fs.readFileSync('components/lyric-back-focus-panel.tsx', 'utf8')
+    const compose = fs.readFileSync('components/lyric-back-panel-compose.tsx', 'utf8')
     assert.match(panel, /focusSearchOnMount=\{false\}/)
+    assert.match(compose, /compact=\{isPanelLayout\}/)
+    assert.match(compose, /placeholder=\{isPanelLayout \? 'Search'/)
+    assert.match(compose, /renderBar/)
+    assert.match(compose, /margo-post-card__lb-compose-track--chip/)
+    assert.match(compose, /margo-post-card__lb-compose-send--infield/)
   })
 })

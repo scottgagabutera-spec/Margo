@@ -21,6 +21,8 @@ interface MargoSearchInputProps {
   stackAboveOverlay?: boolean
   id?: string
   autoFocus?: boolean
+  /** Lyric Back panel: 36px field, CSS-owned type size (14px / 16px on iOS WebKit). */
+  compact?: boolean
 }
 
 /** Must exceed ComposeSearchDropdown scrim (54) and listbox (55). */
@@ -44,6 +46,7 @@ export function MargoSearchInput({
   stackAboveOverlay = false,
   id: idProp,
   autoFocus = false,
+  compact = false,
 }: MargoSearchInputProps) {
   const autoId = useId()
   const inputId = idProp ?? autoId
@@ -56,12 +59,18 @@ export function MargoSearchInput({
     inputRef.current?.focus()
   }, [autoFocus])
 
+  const inputClass = compact ? 'margo-search margo-search--lb-panel' : className
+
   return (
-    <div style={{ position: 'relative', width: '100%', zIndex: stackAboveOverlay ? SEARCH_ABOVE_OVERLAY_Z : undefined }}>
+    <div
+      className={compact ? 'margo-search-wrap margo-search-wrap--lb' : undefined}
+      style={{ position: 'relative', width: '100%', zIndex: stackAboveOverlay ? SEARCH_ABOVE_OVERLAY_Z : undefined }}
+    >
       {showLeftIcon ? (
         <span
           aria-hidden
-          style={{
+          className={compact ? 'margo-search-wrap__icon' : undefined}
+          style={compact ? undefined : {
             position: 'absolute',
             left: '14px',
             top: '50%',
@@ -97,7 +106,7 @@ export function MargoSearchInput({
       <input
         id={inputId}
         ref={inputRef}
-        className={className}
+        className={inputClass}
         type="search"
         enterKeyHint="search"
         autoComplete="off"
@@ -118,7 +127,17 @@ export function MargoSearchInput({
         placeholder={placeholder}
         aria-label={ariaLabel || placeholder}
         aria-busy={loading}
-        style={{
+        style={compact ? {
+          width: '100%',
+          color: 'var(--text)',
+          fontFamily: UI_FONT,
+          fontWeight: focused || value.length > 0 ? 500 : 400,
+          letterSpacing: '-0.01em',
+          lineHeight: 1.3,
+          outline: 'none',
+          boxSizing: 'border-box',
+          opacity: disabled ? 0.6 : 1,
+        } : {
           width: '100%',
           height: 'var(--margo-touch-min)',
           padding: showLeftIcon ? '0 44px 0 40px' : '0 44px 0 16px',
@@ -142,7 +161,8 @@ export function MargoSearchInput({
           type="button"
           aria-label="Clear search"
           onClick={() => onChange('')}
-          style={{
+          className={compact ? 'margo-search-wrap__clear' : undefined}
+          style={compact ? undefined : {
             position: 'absolute',
             right: '4px',
             top: '50%',
@@ -163,8 +183,8 @@ export function MargoSearchInput({
         </button>
       ) : null}
       <style>{`
-        .${className}::placeholder { color: var(--text-muted); }
-        .${className}::-webkit-search-cancel-button { display: none; }
+        .margo-search::placeholder, .margo-search--lb-panel::placeholder { color: var(--text-muted); }
+        .margo-search::-webkit-search-cancel-button, .margo-search--lb-panel::-webkit-search-cancel-button { display: none; }
       `}</style>
     </div>
   )

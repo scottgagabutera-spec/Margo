@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import {
   captureFeedScrollSnapshot,
   restoreFeedScrollSnapshot,
@@ -284,55 +284,38 @@ export function LyricBackFocusBody({
     onFocusEcho(echo)
   }, [focusId, onFocusEcho, rememberScroll])
 
-  const scrollToReplyTarget = useCallback(() => {
-    const scroller = scrollRef.current
-    if (!scroller) return
-    const target = scroller.querySelector('[data-lb-anchor="1"]')
-    if (!(target instanceof HTMLElement)) return
-    const delta = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top
-    scroller.scrollTop += delta - 8
-  }, [])
-
   const goBack = useCallback(() => {
     rememberScroll(focusId)
     onBack?.()
   }, [focusId, onBack, rememberScroll])
 
-  const replyHandle = (replyToUsername || '').replace(/^@/, '').trim()
   const TitleTag = feedPanel ? 'h3' : 'h2'
 
-  const composeSlot =
-    showCompose ? (
-      <div className="margo-post-card__lb-compose-slot margo-post-card__lb-compose-slot--panel">
-        <LyricBackPanelCompose
-          ref={composeRef}
-          layout="panel"
-          parentPostId={focusId}
-          parentEmotion={composeEmotion}
-          onRequireAuth={onRequireAuth}
-          prefill={composePrefill}
-          focusSearchOnMount={false}
-          replyToLabel={null}
-          onSent={() => {
-            sentSnapshot.current = new Set(echoes.map((echo) => echo.id))
-            onSent()
-            void refetchEchoes()
-          }}
-        />
-      </div>
-    ) : null
-
-  const toolsRow = showCompose || showIdeasSignUp ? (
-    <div className="margo-lb-focus__tools">
-      {showCompose && replyHandle ? (
+  const renderBar = (search: ReactNode) => (
+    <div className="margo-lb-focus__bar" data-lb-pin="1">
+      {isNested && onBack ? (
         <button
           type="button"
-          className="margo-lb-focus__reply-to"
-          onClick={scrollToReplyTarget}
+          className="margo-lb-focus__back-chip"
+          onPointerDown={(event) => {
+            if (event.button !== 0) return
+            event.preventDefault()
+            event.stopPropagation()
+            goBack()
+          }}
+          onClick={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            goBack()
+          }}
         >
-          @{replyHandle}
+          <span className="margo-lb-focus__back-mark" aria-hidden>
+            <FeedIconChevronRight size={12} />
+          </span>
+          Back
         </button>
       ) : null}
+      {search ? <div className="margo-lb-focus__search-wrap">{search}</div> : null}
       {showIdeas ? (
         <button
           type="button"
@@ -358,55 +341,49 @@ export function LyricBackFocusBody({
           </SignInLink>
         )
       ) : null}
+      <span className="margo-lb-focus__count" aria-hidden>
+        {headerCount}
+      </span>
+      {feedPanel && onClose ? (
+        <button
+          type="button"
+          className="margo-post-card__lb-close"
+          aria-label="Close Lyric Backs"
+          onClick={onClose}
+        >
+          <FeedIconClose size={16} />
+        </button>
+      ) : null}
     </div>
-  ) : null
+  )
 
   return (
     <div className="margo-lb-focus">
+      <TitleTag className="margo-sr-only">
+        Lyric Backs, {headerCount}
+        {replyToUsername ? `, ${String(replyToUsername).replace(/^@/, '')}` : ''}
+      </TitleTag>
       <div className="margo-lb-focus__chrome">
-        <div className="margo-lb-focus__bar">
-          <TitleTag className={feedPanel ? 'margo-post-card__lb-title' : 'margo-post-detail-lb__heading'}>
-            Lyric Backs · {headerCount}
-          </TitleTag>
-          <div className="margo-lb-focus__bar-actions">
-            {isNested && onBack ? (
-              <button
-                type="button"
-                className="margo-lb-focus__back-chip"
-                onPointerDown={(event) => {
-                  if (event.button !== 0) return
-                  event.preventDefault()
-                  event.stopPropagation()
-                  goBack()
-                }}
-                onClick={(event) => {
-                  event.preventDefault()
-                  event.stopPropagation()
-                  goBack()
-                }}
-              >
-                <span className="margo-lb-focus__back-mark" aria-hidden>
-                  <FeedIconChevronRight size={14} />
-                </span>
-                Back
-              </button>
-            ) : null}
-            {feedPanel && onClose ? (
-              <button
-                type="button"
-                className="margo-post-card__lb-close"
-                aria-label="Close Lyric Backs"
-                onClick={onClose}
-              >
-                <FeedIconClose size={20} />
-              </button>
-            ) : null}
-          </div>
-        </div>
-
-        {toolsRow}
-
-        {composeSlot}
+        {showCompose ? (
+          <LyricBackPanelCompose
+            ref={composeRef}
+            layout="panel"
+            parentPostId={focusId}
+            parentEmotion={composeEmotion}
+            onRequireAuth={onRequireAuth}
+            prefill={composePrefill}
+            focusSearchOnMount={false}
+            replyToLabel={null}
+            renderBar={renderBar}
+            onSent={() => {
+              sentSnapshot.current = new Set(echoes.map((echo) => echo.id))
+              onSent()
+              void refetchEchoes()
+            }}
+          />
+        ) : (
+          renderBar(null)
+        )}
 
         {ideasOpen && showIdeas ? (
           <div className="margo-lb-focus__ideas-pop">
@@ -467,8 +444,8 @@ export function LyricBackFocusBody({
 
         {echoesReady && echoes.length > 0 ? (
           <ul className={feedPanel ? 'margo-post-card__lb-list margo-post-card__lb-list--echoes' : 'margo-post-thread-list'}>
-            {echoes.map((echo) => (
-              <li key={echo.id}>
+            {echoes.map((echo, index) => (
+              <li key={echo.id} data-lb-first-row={index === 0 ? '1' : undefined}>
                 <LyricBackThreadRow
                   echo={echo}
                   tone="reply"

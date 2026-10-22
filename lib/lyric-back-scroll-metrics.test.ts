@@ -1,6 +1,11 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { collectScrollAncestors, panelBox } from './lyric-back-scroll-metrics.ts'
+import {
+  collectScrollAncestors,
+  firstRowClearsPinnedBar,
+  LYRIC_BACK_PIN_GAP_PX,
+  panelBox,
+} from './lyric-back-scroll-metrics.ts'
 
 describe('lyric back scroll metrics helpers', () => {
   it('collectScrollAncestors records scrollLeft and scrollTop', () => {
@@ -22,6 +27,13 @@ describe('lyric back scroll metrics helpers', () => {
     const snaps = collectScrollAncestors(child)
     assert.ok(snaps.some((s) => s.scrollTop === 44 && s.className.includes('scroll')))
     assert.ok(snaps.some((s) => s.scrollLeft === 12))
+  })
+
+  it('first row must sit below the pinned bar plus gap', () => {
+    assert.equal(LYRIC_BACK_PIN_GAP_PX, 8)
+    assert.equal(firstRowClearsPinnedBar(120, 128), true)
+    assert.equal(firstRowClearsPinnedBar(120, 127), false)
+    assert.equal(firstRowClearsPinnedBar(52, 60), true)
   })
 
   it('panelBox rounds bounding rect', () => {

@@ -1,3 +1,14 @@
+export const LYRIC_BACK_PIN_GAP_PX = 8
+
+/** True when the first reply sits fully below the pinned bar plus the list gap. */
+export function firstRowClearsPinnedBar(
+  pinnedBottom: number,
+  firstRowTop: number,
+  gap = LYRIC_BACK_PIN_GAP_PX,
+): boolean {
+  return firstRowTop + 0.01 >= pinnedBottom + gap
+}
+
 /** Collect scroll offsets for Lyric Back keyboard regression tests. */
 export type ScrollSnapshot = {
   scrollLeft: number
