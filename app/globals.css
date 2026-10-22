@@ -934,7 +934,7 @@ html[data-margo-stage-idle] .margo-stage-zone {
   outline-offset: 2px;
 }
 .margo-post-card__lb-panel {
-  scroll-margin-top: calc(var(--nav-height, 72px) + 16px);
+  scroll-margin-top: calc(var(--nav-height, 72px) + 8px);
   scroll-margin-bottom: calc(var(--margo-page-bottom, 88px) + 16px);
   margin-top: 16px;
   margin-left: calc(-1 * var(--margo-post-card-pad));
@@ -1003,6 +1003,27 @@ html[data-margo-stage-idle] .margo-stage-zone {
   min-height: 0;
   -webkit-overflow-scrolling: touch;
   padding-right: 2px;
+  overscroll-behavior: contain;
+  overflow-anchor: none;
+}
+.margo-post-card__lb-scroll--feed {
+  max-height: min(420px, calc(100dvh - var(--nav-height, 72px) - var(--margo-page-bottom, 88px) - 200px));
+}
+.margo-post-detail-lb__scroll {
+  overflow-y: auto;
+  max-height: min(560px, calc(100dvh - var(--nav-height, 72px) - var(--margo-page-bottom, 88px) - 220px));
+  min-height: 0;
+  overscroll-behavior: contain;
+  overflow-anchor: none;
+  -webkit-overflow-scrolling: touch;
+}
+.margo-post-card__lb-panel--feed-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.margo-post-card__lb-compose-slot--feed-lead {
+  flex-shrink: 0;
 }
 
 .margo-post-card__lb-header {
@@ -2318,9 +2339,37 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   align-items: center;
   margin-bottom: 8px;
   padding: 8px 10px;
+  min-height: 56px;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+}
+.margo-lb-thread-row__track-row--placeholder {
+  pointer-events: none;
+  opacity: 0.45;
+}
+.margo-lb-thread-row__art--placeholder {
+  background: var(--surface-2);
+}
+.margo-lb-thread-row__song--placeholder,
+.margo-lb-thread-row__artist--placeholder {
+  display: block;
+  height: 10px;
+  border-radius: 4px;
+  background: var(--surface-2);
+}
+.margo-lb-thread-row__song--placeholder {
+  width: 72%;
+  margin-bottom: 6px;
+}
+.margo-lb-thread-row__artist--placeholder {
+  width: 48%;
+}
+.margo-lb-thread-row__snippet-btn--placeholder {
+  width: var(--margo-touch-min);
+  height: var(--margo-touch-min);
+  border-radius: 50%;
+  background: var(--surface-2);
 }
 .margo-lb-thread-row__track-art {
   flex-shrink: 0;

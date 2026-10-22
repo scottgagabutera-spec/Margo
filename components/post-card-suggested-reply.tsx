@@ -8,11 +8,6 @@ export type PostCardSuggestedReplyProps = {
   echoCount: number
   parentUsername?: string | null
   parentEmotion: string
-  parentMoment?: {
-    text?: string
-    song?: string | null
-    artist?: string | null
-  }
   open: boolean
   onClose: () => void
   onRequireAuth?: () => boolean

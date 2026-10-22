@@ -113,7 +113,34 @@ export function useEchoes(postId: string | null) {
       setLoading(false)
       return
     }
-    setEchoes((data ?? []).map(mapRow))
+    let mapped = (data ?? []).map(mapRow)
+    const missingAudioIds = [
+      ...new Set(
+        mapped
+          .filter((e) => e.songId && !e.audioUrl)
+          .map((e) => e.songId as string),
+      ),
+    ]
+    if (missingAudioIds.length > 0) {
+      const { data: songs, error: songsErr } = await supabase
+        .from('songs')
+        .select('id, audio_url, artwork_url')
+        .in('id', missingAudioIds)
+      if (!songsErr && songs?.length) {
+        const byId = new Map(songs.map((s) => [s.id, s]))
+        mapped = mapped.map((e) => {
+          if (!e.songId || e.audioUrl) return e
+          const song = byId.get(e.songId)
+          if (!song) return e
+          return {
+            ...e,
+            audioUrl: song.audio_url ?? e.audioUrl,
+            artwork: e.artwork ?? song.artwork_url ?? null,
+          }
+        })
+      }
+    }
+    setEchoes(mapped)
     setLoading(false)
   }, [])
 

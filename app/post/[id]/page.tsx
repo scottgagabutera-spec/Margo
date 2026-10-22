@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { usePost, usePostAncestors } from '@/hooks/usePost'
-import { useEchoes } from '@/hooks/useEchoes'
 import { PostCard } from '@/components/post-card'
 import { LyricBackThreadRow } from '@/components/lyric-back-thread-row'
 import {
@@ -32,7 +31,6 @@ export default function PostDetailPage() {
   const postId = params.id || null
   const { post, loading } = usePost(postId)
   const { ancestors } = usePostAncestors(post?.parentPostId)
-  const { echoes, loading: echoesLoading, refetch: refetchEchoes } = useEchoes(postId)
 
   const {
     stackApi,
@@ -195,10 +193,10 @@ export default function PostDetailPage() {
     resonateCount: resonateCounts[echo.id] ?? echo.resonateCount ?? 0,
   }), [openComposer, replayCounts, replayed, resonateCounts, resonated, router])
 
-  const echoCount = post?.replies ?? echoes.length
+  const echoCount = post?.replies ?? 0
   const showLbSection = Boolean(
     post?.id
-    && (composeOpen || echoes.length > 0 || isNested),
+    && (composeOpen || echoCount > 0 || isNested),
   )
 
   return (
@@ -254,7 +252,7 @@ export default function PostDetailPage() {
                   authorAvatarUrl: post.authorAvatarUrl,
                   timestamp: post.timestamp ?? 0,
                   resonateCount: resonateCounts[post.id] ?? post.resonates ?? 0,
-                  echoCount: post.replies ?? echoes.length,
+                  echoCount: post.replies ?? 0,
                   songId: post.songId ?? null,
                   snippetStart: post.snippetStart ?? null,
                   snippetEnd: post.snippetEnd ?? null,
@@ -302,13 +300,11 @@ export default function PostDetailPage() {
               key={post.id}
               post={post}
               echoCount={echoCount}
-              rootEchoes={echoes}
-              rootEchoesLoading={echoesLoading}
               composeOpen={composeOpen}
               composeRef={composeRef}
               sectionRef={sectionRef}
               onRequireAuth={requireAuth}
-              onSent={() => { void refetchEchoes() }}
+              onSent={() => {}}
               getRowExtras={getRowExtras}
               onExportEcho={handleExportEcho}
               onReplayEcho={toggleReplay}

@@ -39,6 +39,7 @@ import { FeedPostActions } from '@/components/feed-post-actions'
 import { echoToPost } from '@/lib/echo-to-post'
 import { SongMeta } from '@/components/song-meta'
 import { AtmosphereLayer } from '@/components/atmosphere-layer'
+import { scrollFeedLyricBackPanelIntoView, scrollPostCardTopIntoView } from '@/lib/lyric-back-panel-scroll'
 
 const supabase = createClient()
 
@@ -190,17 +191,17 @@ export function PostCard({
   const scrollLyricBackPanelIntoView = useCallback(() => {
     window.setTimeout(() => {
       const panel = cardRef.current?.querySelector('.margo-post-card__lb-panel') as HTMLElement | null
-      panel?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      scrollFeedLyricBackPanelIntoView(panel)
       window.setTimeout(() => {
         const input = panel?.querySelector('.margo-post-card__lb-search-anchor input')
         if (input instanceof HTMLInputElement) input.focus({ preventScroll: true })
-      }, 160)
+      }, 280)
     }, 100)
   }, [])
 
   const scrollCardIntoView = useCallback(() => {
     window.setTimeout(() => {
-      cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      scrollPostCardTopIntoView(cardRef.current)
     }, 100)
   }, [])
 
@@ -758,11 +759,6 @@ export function PostCard({
           echoCount={echoCount}
           parentUsername={post.username}
           parentEmotion={post.emotion || 'chill'}
-          parentMoment={{
-            text: post.text,
-            song: post.knowledge?.song ?? null,
-            artist: post.knowledge?.artist ?? null,
-          }}
           open={suggestionsOpen}
           onClose={() => setLyricBackPanelOpen(false)}
           onRequireAuth={requireAuth}

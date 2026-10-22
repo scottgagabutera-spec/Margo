@@ -1,24 +1,16 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { playSnippet, togglePlayPause } from '@/lib/audio-engine'
-import { useAudioEngine } from '@/hooks/useAudioEngine'
 import type { Echo } from '@/hooks/useEchoes'
-import {
-  FeedIconExternal,
-  FeedMomentPlaybackIcon,
-} from '@/components/feed-card-icons'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { PostThumbnail } from '@/components/post-thumbnail'
 import { RelativeTime } from '@/components/relative-time'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useIdentity } from '@/hooks/useIdentity'
 import { createClient } from '@/lib/supabase/client'
-import {
-  externalListenAriaLabel,
-  resolveExternalListenUrl,
-} from '@/lib/moment/listen'
+import { resolveExternalListenUrl } from '@/lib/moment/listen'
 import { FeedPostActions } from '@/components/feed-post-actions'
+import { LyricBackTrackListenControl } from '@/components/lyric-back-track-listen-control'
 
 const supabase = createClient()
 
@@ -104,7 +96,6 @@ export function LyricBackThreadRow({
   hideLyricBackAction = false,
   lyricBackSessionActive = false,
 }: LyricBackThreadRowProps) {
-  const engine = useAudioEngine()
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
   const myId = user?.id ?? null
@@ -125,14 +116,6 @@ export function LyricBackThreadRow({
   }, [controlled, echo.id, echo.resonateCount, echo.resonates, myId])
 
   const canPlay = Boolean(echo.audioUrl && echo.songId)
-  const isPlaying =
-    canPlay
-    && engine.playing
-    && engine.mode === 'snippet'
-    && engine.songId === echo.songId
-    && echo.snippetStart != null
-    && Math.abs((engine.snippet?.startSec ?? 0) - echo.snippetStart) < 0.5
-
   const externalHref = !canPlay
     ? resolveExternalListenUrl({
         songTitle: echo.song,
@@ -140,6 +123,14 @@ export function LyricBackThreadRow({
         itunesTrackUrl: echo.externalListenUrl,
       })
     : null
+  const showTrackStrip = Boolean(
+    (echo.song || '').trim()
+    || (echo.artist || '').trim()
+    || echo.songId
+    || echo.externalListenUrl
+    || canPlay
+    || externalHref,
+  )
 
   const href = profileHref(echo)
   const { display, handle } = authorLabels(echo)
@@ -167,27 +158,6 @@ export function LyricBackThreadRow({
       setResonatedLocal(was)
       setCountLocal((c) => Math.max(0, c + (was ? 1 : -1)))
     }
-  }
-
-  const toggleSnippet = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (isPlaying) {
-      togglePlayPause()
-      return
-    }
-    if (!echo.audioUrl || !echo.songId) return
-    void playSnippet({
-      songId: echo.songId,
-      audioUrl: echo.audioUrl,
-      title: echo.song,
-      artist: echo.artist,
-      artwork: echo.artwork ?? null,
-      lineIndex: 0,
-      lineText: echo.lyric,
-      startSec: echo.snippetStart ?? 0,
-      endSec: echo.snippetEnd ?? (echo.snippetStart ?? 0) + 8,
-      source: 'feed',
-    })
   }
 
   const rowClass = [
@@ -236,7 +206,7 @@ export function LyricBackThreadRow({
         &ldquo;{echo.lyric}&rdquo;
       </button>
 
-      {(echo.song || echo.artist || canPlay || externalHref) ? (
+      {showTrackStrip ? (
         <div className="margo-lb-thread-row__track-row">
           <div className="margo-lb-thread-row__track-art">
             {songHref ? (
@@ -260,36 +230,26 @@ export function LyricBackThreadRow({
           <div className="margo-lb-thread-row__track-meta">
             {echo.song ? (
               <span className="margo-lb-thread-row__song">{echo.song}</span>
+            ) : echo.songId ? (
+              <span className="margo-lb-thread-row__song">On Margo</span>
             ) : null}
             {echo.artist ? (
               <span className="margo-lb-thread-row__artist">{echo.artist}</span>
             ) : null}
           </div>
-          {canPlay ? (
-            <button
-              type="button"
-              className="margo-lb-thread-row__snippet-btn"
-              aria-label={isPlaying ? 'Pause line' : 'Play line'}
-              onClick={toggleSnippet}
-            >
-              <span className="margo-lb-thread-row__snippet-btn-inner">
-                <FeedMomentPlaybackIcon playing={isPlaying} size={16} color="var(--bg)" />
-              </span>
-            </button>
-          ) : externalHref ? (
-            <a
-              className="margo-lb-thread-row__snippet-btn margo-lb-thread-row__snippet-btn--external"
-              href={externalHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={externalListenAriaLabel(externalHref) || 'Open in music app'}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <span className="margo-lb-thread-row__snippet-btn-inner margo-lb-thread-row__snippet-btn-inner--external">
-                <FeedIconExternal size={16} />
-              </span>
-            </a>
-          ) : null}
+          <LyricBackTrackListenControl
+            songId={echo.songId}
+            audioUrl={echo.audioUrl}
+            songTitle={echo.song}
+            artistName={echo.artist}
+            externalListenUrl={echo.externalListenUrl}
+            lineIndex={0}
+            lineText={echo.lyric}
+            startSec={echo.snippetStart}
+            endSec={echo.snippetEnd}
+            artwork={echo.artwork}
+            source="feed"
+          />
         </div>
       ) : null}
 

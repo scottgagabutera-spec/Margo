@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { LyricBackTrackListenControl } from '@/components/lyric-back-track-listen-control'
+import { LyricBackTrackStripPlaceholder } from '@/components/lyric-back-thread-row-skeleton'
+import { scrollFeedLyricBackPanelIntoView } from '@/lib/lyric-back-panel-scroll'
 import { useEchoes, type Echo } from '@/hooks/useEchoes'
 import { LyricBackThreadRow } from '@/components/lyric-back-thread-row'
 import {
@@ -218,7 +220,7 @@ export function LyricBackFocusBody({
         </div>
       ) : null}
 
-      {!feedPanel && !isNested && echoes.length > 0 ? (
+      {!feedPanel && !isNested && (echoes.length > 0 || echoCountHint > 0) ? (
         <>
           <div className="margo-post-detail-lb__divider" aria-hidden />
           <h2 className="margo-post-detail-lb__heading">Lyric Backs · {headerCount}</h2>
@@ -250,8 +252,19 @@ export function LyricBackFocusBody({
         </>
       ) : null}
 
-      <div className={feedPanel ? 'margo-post-card__lb-scroll' : undefined}>
-        {echoesLoading ? <LyricBackPanelSkeleton /> : null}
+      <div
+        className={
+          feedPanel
+            ? 'margo-post-card__lb-scroll margo-post-card__lb-scroll--feed'
+            : 'margo-post-detail-lb__scroll'
+        }
+      >
+        {echoesLoading ? (
+          <>
+            <LyricBackTrackStripPlaceholder />
+            <LyricBackPanelSkeleton />
+          </>
+        ) : null}
 
         {!echoesLoading && echoes.length > 0 ? (
           <ul className={feedPanel ? 'margo-post-card__lb-list margo-post-card__lb-list--echoes' : 'margo-post-thread-list'}>
@@ -269,6 +282,12 @@ export function LyricBackFocusBody({
               </li>
             ))}
           </ul>
+        ) : null}
+
+        {!feedPanel && !echoesLoading && echoes.length === 0 && composeOpen ? (
+          <p className="margo-post-detail-lb__empty-hint">
+            Be the first Lyric Back on this moment.
+          </p>
         ) : null}
 
         {showIdeas ? (
@@ -404,7 +423,7 @@ export function LyricBackFeedPanel({
   useEffect(() => {
     if (!open) return
     window.setTimeout(() => {
-      panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      scrollFeedLyricBackPanelIntoView(panelRef.current)
       composeRef.current?.focusSearch()
     }, 100)
   }, [open, focusId])

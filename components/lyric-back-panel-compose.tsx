@@ -317,6 +317,7 @@ export const LyricBackPanelCompose = forwardRef<
           snippetStartSec: snippetStart,
           snippetEndSec: snippetEnd,
           externalListenUrl: selected.externalListenUrl,
+          artworkUrl: selected.artwork || null,
         }),
       })
       const payload = await res.json().catch(() => ({}))
