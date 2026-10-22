@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { playSnippet, togglePlayPause } from '@/lib/audio-engine'
 import { useAudioEngine } from '@/hooks/useAudioEngine'
 import { useEchoes, type Echo } from '@/hooks/useEchoes'
@@ -17,11 +17,11 @@ import {
   type LyricBackPanelComposeHandle,
   type LyricBackPanelPrefill,
 } from '@/components/lyric-back-panel-compose'
+import { LyricBackReplyContext } from '@/components/lyric-back-reply-context'
 
 export type { SuggestedLyricBack }
 
 export type PostCardSuggestedReplyProps = {
-  /** Root feed moment id (thread root). */
   postId: string
   echoCount: number
   parentUsername?: string | null
@@ -63,9 +63,6 @@ function IdeasSkeleton() {
   )
 }
 
-/**
- * Lyric Back comment sheet: echoes first, opt-in ideas, inline compose + send.
- */
 export function PostCardSuggestedReply({
   postId,
   echoCount,
@@ -81,16 +78,19 @@ export function PostCardSuggestedReply({
 }: PostCardSuggestedReplyProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const composeRef = useRef<LyricBackPanelComposeHandle>(null)
-  const [replyTargetId, setReplyTargetId] = useState(postId)
-  const [replyTargetEcho, setReplyTargetEcho] = useState<Echo | null>(null)
+  const [focusId, setFocusId] = useState(postId)
+  const [focusedEcho, setFocusedEcho] = useState<Echo | null>(null)
   const [composePrefill, setComposePrefill] = useState<LyricBackPanelPrefill | null>(null)
-  const { echoes, loading: echoesLoading, refetch: refetchEchoes } = useEchoes(open ? replyTargetId : null)
+  const { echoes, loading: echoesLoading, refetch: refetchEchoes } = useEchoes(open ? focusId : null)
 
   const [ideasOpen, setIdeasOpen] = useState(false)
   const [ideasLoading, setIdeasLoading] = useState(false)
   const [ideasError, setIdeasError] = useState<string | null>(null)
   const [picks, setPicks] = useState<SuggestedLyricBack[] | null>(null)
   const [ideasFetched, setIdeasFetched] = useState(false)
+
+  const isNested = focusId !== postId && focusedEcho != null
+  const rootHandle = (parentUsername || '').replace(/^@/, '').trim() || 'member'
 
   useEffect(() => {
     if (!open) {
@@ -100,18 +100,25 @@ export function PostCardSuggestedReply({
       setPicks(null)
       setIdeasFetched(false)
       setComposePrefill(null)
-      setReplyTargetId(postId)
-      setReplyTargetEcho(null)
+      setFocusId(postId)
+      setFocusedEcho(null)
     }
   }, [open, postId])
 
   useEffect(() => {
     if (open) {
-      setReplyTargetId(postId)
-      setReplyTargetEcho(null)
+      setFocusId(postId)
+      setFocusedEcho(null)
       setComposePrefill(null)
     }
   }, [open, postId])
+
+  useEffect(() => {
+    if (!open) return
+    window.setTimeout(() => {
+      panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 60)
+  }, [open, focusId])
 
   const loadIdeas = useCallback(async () => {
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -153,26 +160,28 @@ export function PostCardSuggestedReply({
     requestAnimationFrame(() => composeRef.current?.scrollIntoView())
   }, [])
 
-  const focusNestedLyricBack = useCallback((echo: Echo) => {
-    setReplyTargetId(echo.id)
-    setReplyTargetEcho(echo)
+  const focusNested = useCallback((echo: Echo) => {
+    setFocusId(echo.id)
+    setFocusedEcho(echo)
     setComposePrefill(null)
     requestAnimationFrame(() => composeRef.current?.scrollIntoView())
   }, [])
 
-  const replyToLabel = replyTargetEcho
-    ? (() => {
-      const handle = replyTargetEcho.username?.replace(/^@/, '').trim()
-      const name = replyTargetEcho.displayName?.trim()
-      if (name && handle) return `@${handle}`
-      if (handle) return `@${handle}`
-      return null
-    })()
-    : null
+  const backOneLevel = useCallback(() => {
+    setFocusId(postId)
+    setFocusedEcho(null)
+    setComposePrefill(null)
+  }, [postId])
+
+  const composeEmotion = isNested ? (focusedEcho.emotion || parentEmotion) : parentEmotion
+
+  const headerCount = useMemo(
+    () => Math.max(isNested ? (focusedEcho.echoCount ?? 0) : echoCount, echoes.length),
+    [echoCount, echoes.length, focusedEcho, isNested],
+  )
 
   if (!open) return null
 
-  const displayCount = Math.max(echoCount, echoes.length)
   return (
     <div
       ref={panelRef}
@@ -181,67 +190,66 @@ export function PostCardSuggestedReply({
       role="region"
       aria-label="Lyric Backs"
     >
-      <div className="margo-post-card__lb-header">
-        <h3 className="margo-post-card__lb-title">Lyric Backs · {displayCount}</h3>
-        <button
-          type="button"
-          className="margo-post-card__lb-close"
-          aria-label="Close Lyric Backs"
-          onClick={onClose}
-        >
-          <FeedIconClose size={20} />
-        </button>
+      <div className={`margo-post-card__lb-header${isNested ? ' margo-post-card__lb-header--nested' : ''}`}>
+        {isNested ? (
+          <button
+            type="button"
+            className="margo-post-card__lb-focus-back"
+            onClick={backOneLevel}
+          >
+            ← Back to @{rootHandle}
+          </button>
+        ) : null}
+        <h3 className="margo-post-card__lb-title">Lyric Backs · {headerCount}</h3>
+        {!isNested ? (
+          <button
+            type="button"
+            className="margo-post-card__lb-close"
+            aria-label="Close Lyric Backs"
+            onClick={onClose}
+          >
+            <FeedIconClose size={20} />
+          </button>
+        ) : null}
       </div>
+
+      <LyricBackReplyContext
+        mode={isNested ? 'nested' : 'root'}
+        username={isNested ? (focusedEcho.username || '') : (parentUsername || '')}
+        displayName={isNested ? focusedEcho.displayName : null}
+        lyric={isNested ? focusedEcho.lyric : parentMoment?.text}
+        song={isNested ? focusedEcho.song : parentMoment?.song}
+        artist={isNested ? focusedEcho.artist : parentMoment?.artist}
+        emotion={composeEmotion}
+      />
 
       <div className="margo-post-card__lb-compose-slot">
         <LyricBackPanelCompose
           ref={composeRef}
-          key={replyTargetId}
+          key={focusId}
           layout="panel"
-          parentPostId={replyTargetId}
-          parentEmotion={parentEmotion}
+          parentPostId={focusId}
+          parentEmotion={composeEmotion}
           onRequireAuth={onRequireAuth}
           prefill={composePrefill}
-          replyToLabel={replyToLabel}
           onSent={() => {
             setComposePrefill(null)
-            if (replyTargetId !== postId) {
-              setReplyTargetId(postId)
-              setReplyTargetEcho(null)
-            }
             void refetchEchoes()
           }}
         />
       </div>
 
       <div className="margo-post-card__lb-scroll">
-        <div className="margo-post-card__lb-context">
-          <p className="margo-post-card__lb-context-lyric">
-            {parentMoment?.text ? `“${parentMoment.text}”` : null}
-          </p>
-          {(parentMoment?.song || parentMoment?.artist) ? (
-            <p className="margo-post-card__lb-context-track">
-              {parentMoment.song}{parentMoment.artist ? ` · ${parentMoment.artist}` : ''}
-            </p>
-          ) : null}
-          {parentUsername ? (
-            <p className="margo-post-card__lb-context-user">@{parentUsername.replace(/^@/, '')}</p>
-          ) : null}
-        </div>
-
-        {replyTargetId !== postId ? (
-          <div className="margo-post-card__lb-focus">
-            <button
-              type="button"
-              className="margo-post-card__lb-focus-back"
-              onClick={() => {
-                setReplyTargetId(postId)
-                setReplyTargetEcho(null)
-                setComposePrefill(null)
-              }}
-            >
-              ← Back
-            </button>
+        {isNested ? (
+          <div className="margo-post-card__lb-focused-anchor">
+            <LyricBackThreadRow
+              echo={focusedEcho}
+              tone="anchor"
+              hideLyricBackAction
+              onOpenThread={(id) => onOpenThread?.(id)}
+              onExport={onExportEcho}
+              onReplay={onReplayEcho}
+            />
           </div>
         ) : null}
 
@@ -254,7 +262,7 @@ export function PostCardSuggestedReply({
                 <LyricBackThreadRow
                   echo={echo}
                   tone="reply"
-                  onLyricBack={() => focusNestedLyricBack(echo)}
+                  onLyricBack={() => focusNested(echo)}
                   onOpenThread={(id) => onOpenThread?.(id)}
                   onExport={onExportEcho}
                   onReplay={onReplayEcho}

@@ -759,7 +759,7 @@ export function PostCard({
 
       <PostMomentBody post={post} atmosphereRooms={atmosphereRooms} />
 
-      {lyricBackAllowed && !threadDetail ? (
+      {lyricBackAllowed && (!threadDetail || threadLyricBackOpen) ? (
         <PostCardSuggestedReply
           postId={post.id}
           echoCount={echoCount}
@@ -770,8 +770,14 @@ export function PostCard({
             song: post.knowledge?.song ?? null,
             artist: post.knowledge?.artist ?? null,
           }}
-          open={suggestionsOpen}
-          onClose={() => setLyricBackPanelOpen(false)}
+          open={threadDetail ? threadLyricBackOpen : suggestionsOpen}
+          onClose={() => {
+            if (threadDetail) {
+              onThreadLyricBack?.()
+              return
+            }
+            setLyricBackPanelOpen(false)
+          }}
           onRequireAuth={requireAuth}
           onOpenThread={(echoId) => {
             persistActivePrimaryScroll()

@@ -2460,8 +2460,85 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   font-size: var(--feed-type-artist);
   font-weight: 600;
   cursor: pointer;
-  min-height: 36px;
+  min-height: var(--margo-touch-min);
   text-align: left;
+}
+.margo-post-card__lb-header--nested {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.margo-post-card__lb-header--nested .margo-post-card__lb-title {
+  margin: 0;
+}
+.margo-post-card__lb-focused-anchor {
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.margo-lb-reply-context {
+  flex-shrink: 0;
+  margin-bottom: 10px;
+}
+.margo-lb-reply-context--root {
+  margin: 0 0 10px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-artist);
+  font-weight: 600;
+  color: var(--post-vibe-text);
+}
+.margo-lb-reply-context--nested .margo-lb-reply-context__line {
+  margin: 0 0 8px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-artist);
+  font-weight: 600;
+  color: var(--post-vibe-text);
+}
+.margo-lb-reply-context__card {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.margo-lb-reply-context__accent {
+  width: 3px;
+  flex-shrink: 0;
+  border-radius: 2px;
+  background: var(--post-vibe-fill);
+}
+.margo-lb-reply-context__body {
+  min-width: 0;
+  flex: 1;
+}
+.margo-lb-reply-context__lyric {
+  margin: 0 0 6px;
+  font-family: var(--font-lora), serif;
+  font-style: italic;
+  font-size: var(--feed-type-suggestion-lyric);
+  line-height: 1.45;
+  white-space: pre-line;
+  color: var(--text);
+}
+.margo-lb-reply-context__track {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.margo-lb-reply-context__song {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-artist);
+  font-weight: 600;
+  color: var(--text);
+}
+.margo-lb-reply-context__artist {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-artist);
+  color: var(--text-muted);
 }
 
 .margo-post-thread-section-label {

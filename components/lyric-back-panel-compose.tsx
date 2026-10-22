@@ -16,6 +16,7 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchUnifiedSongSearchHits } from '@/lib/song-search/unified-song-search'
 import { matchLiveCatalogSong } from '@/lib/search-margo-songs'
 import { trackEvent } from '@/lib/analytics/track'
+import { toastMomentSent } from '@/lib/moment-export/moment-export-toasts'
 
 const supabase = createClient()
 
@@ -298,6 +299,7 @@ export const LyricBackPanelCompose = forwardRef<
         return
       }
       trackEvent('lyric_back_sent', { private: false, inline: true })
+      toastMomentSent()
       const replyId = typeof payload.id === 'string' ? payload.id : null
       if (replyId) {
         fetch('/api/moderate', {
