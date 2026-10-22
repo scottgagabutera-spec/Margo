@@ -7,17 +7,8 @@
 // never trusted from client-supplied post data.
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
-
-function getAdmin() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!supabaseUrl || !serviceKey) return null
-  return createClient(supabaseUrl, serviceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
-}
+import { getSupabaseAdmin } from '@/lib/supabase-admin'
 
 async function requireUserId(): Promise<string | null> {
   const supabase = await createServerSupabase()
@@ -40,8 +31,12 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: 'postId is required' }, { status: 400 })
   }
 
-  const admin = getAdmin()
-  if (!admin) return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
+  let admin
+  try {
+    admin = getSupabaseAdmin()
+  } catch {
+    return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
+  }
 
   const { error } = await admin.rpc('delete_own_post', {
     p_post_id: body.postId,
@@ -123,8 +118,12 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'One of the lines is too long.' }, { status: 400 })
   }
 
-  const admin = getAdmin()
-  if (!admin) return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
+  let admin
+  try {
+    admin = getSupabaseAdmin()
+  } catch {
+    return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
+  }
 
   const { error } = await admin.rpc('update_own_moment', {
     p_post_id: body.postId,
