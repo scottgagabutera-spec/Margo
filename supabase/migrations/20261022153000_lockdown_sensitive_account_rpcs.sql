@@ -261,6 +261,112 @@ begin
 end;
 $$;
 
+-- ── purge_user_account_data_debug (manual/debug only; not used by app) ─
+create or replace function public.purge_user_account_data_debug(
+  p_user_id uuid,
+  p_username text default null
+)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_username text;
+  v_step text := 'start';
+  jwt_role text := coalesce(auth.jwt() ->> 'role', '');
+begin
+  if p_user_id is null then
+    return 'FAIL: p_user_id is required';
+  end if;
+
+  if jwt_role <> 'service_role' and (auth.uid() is null or auth.uid() <> p_user_id) then
+    return 'FAIL: permission denied';
+  end if;
+
+  begin
+    v_step := 'load username';
+    select username into v_username from public.profiles where id = p_user_id;
+
+    v_step := 'create temp';
+    create temporary table if not exists _purge_posts_dbg (id uuid primary key) on commit drop;
+    truncate _purge_posts_dbg;
+
+    v_step := 'fill tree';
+    with recursive tree as (
+      select id from public.posts where author_profile_id = p_user_id
+      union
+      select p.id from public.posts p join tree t on p.parent_post_id = t.id
+    )
+    insert into _purge_posts_dbg (id) select id from tree on conflict do nothing;
+
+    v_step := 'del post_resonates by post';
+    delete from public.post_resonates where post_id in (select id from _purge_posts_dbg);
+
+    v_step := 'del post_reports by post';
+    delete from public.post_reports where post_id in (select id from _purge_posts_dbg);
+
+    v_step := 'del post_replays by post';
+    delete from public.post_replays where post_id in (select id from _purge_posts_dbg);
+
+    v_step := 'del post_stats by post';
+    delete from public.post_stats where post_id in (select id from _purge_posts_dbg);
+
+    v_step := 'del notifications by post';
+    delete from public.notifications where post_id in (select id::text from _purge_posts_dbg);
+
+    v_step := 'del posts leaf';
+    delete from public.posts where id in (select id from _purge_posts_dbg)
+      and not exists (select 1 from public.posts c where c.parent_post_id = posts.id);
+
+    v_step := 'del post_resonates by actor';
+    delete from public.post_resonates
+    where actor_id = p_user_id::text
+       or (p_username is not null and actor_id = p_username);
+
+    v_step := 'del post_replays by replayer';
+    delete from public.post_replays where replayer_id = p_user_id;
+
+    v_step := 'del post_reports by reporter';
+    delete from public.post_reports where reporter_id = p_user_id;
+
+    v_step := 'del song_resonates by actor';
+    delete from public.song_resonates
+    where actor_id = p_user_id::text
+       or (p_username is not null and actor_id = p_username);
+
+    v_step := 'del notifications by user';
+    delete from public.notifications
+    where recipient_id = p_user_id
+       or actor_id = p_user_id;
+
+    v_step := 'del messages';
+    delete from public.messages
+    where sender_id = p_user_id or recipient_id = p_user_id;
+
+    v_step := 'del follows';
+    delete from public.follows
+    where follower_id = p_user_id or followee_id = p_user_id;
+
+    v_step := 'del artist_applications';
+    delete from public.artist_applications where profile_id = p_user_id;
+
+    v_step := 'del queues';
+    delete from public.queues where owner_profile_id = p_user_id;
+
+    v_step := 'del songs';
+    delete from public.songs where owner_profile_id = p_user_id;
+
+    v_step := 'del profiles';
+    delete from public.profiles where id = p_user_id;
+
+    return 'ok';
+  exception when others then
+    return format('FAIL at step=%s sqlstate=%s msg=%s', v_step, sqlstate, sqlerrm);
+  end;
+end;
+$$;
+
 revoke all on function public.purge_user_account_data(uuid, text) from public;
 revoke all on function public.purge_user_account_data(uuid, text) from anon;
 revoke all on function public.purge_user_account_data(uuid, text) from authenticated;
@@ -275,3 +381,8 @@ revoke all on function public.update_own_moment(uuid, uuid, jsonb) from public;
 revoke all on function public.update_own_moment(uuid, uuid, jsonb) from anon;
 revoke all on function public.update_own_moment(uuid, uuid, jsonb) from authenticated;
 grant execute on function public.update_own_moment(uuid, uuid, jsonb) to service_role;
+
+revoke all on function public.purge_user_account_data_debug(uuid, text) from public;
+revoke all on function public.purge_user_account_data_debug(uuid, text) from anon;
+revoke all on function public.purge_user_account_data_debug(uuid, text) from authenticated;
+grant execute on function public.purge_user_account_data_debug(uuid, text) to service_role;
