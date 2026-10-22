@@ -6,6 +6,7 @@ revoke execute on function public.touch_last_seen() from anon;
 revoke execute on function public.profiles_for_my_notification_actors(uuid[]) from anon;
 revoke execute on function public.can_read_sent_moment(uuid) from anon;
 revoke execute on function public.can_reference_story_post(uuid, uuid) from anon;
+revoke execute on function public.is_active_promote_artist(uuid) from public;
 revoke execute on function public.is_active_promote_artist(uuid) from anon;
 
 -- Re-affirm intended grants (idempotent)
