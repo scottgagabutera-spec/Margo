@@ -956,10 +956,10 @@ html[data-margo-stage-idle] .margo-stage-zone {
 .margo-post-card__lb-compose-slot {
   flex-shrink: 0;
   position: relative;
-  z-index: 30;
+  z-index: 20;
   overflow: visible;
-  margin-bottom: 10px;
-  padding-bottom: 2px;
+  margin-bottom: 12px;
+  padding-bottom: 4px;
 }
 .margo-post-card__lb-search-anchor {
   position: relative;
@@ -984,7 +984,8 @@ html[data-margo-stage-idle] .margo-stage-zone {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
 }
 .margo-post-card__lb-title {
   margin: 0;
@@ -2153,13 +2154,9 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   background: color-mix(in srgb, var(--surface-2) 65%, transparent);
   border-radius: 0 8px 8px 0;
 }
-.margo-lb-thread-row--reply .margo-lb-thread-row__bubble {
+.margo-lb-thread-row--reply .margo-lb-thread-row__lyric {
   font-size: calc(var(--feed-type-suggestion-lyric) * 0.92);
   padding: 6px 8px;
-}
-.margo-lb-thread-row--reply .margo-lb-thread-row__action {
-  min-height: 32px;
-  font-size: 0.55rem;
 }
 .margo-lb-thread-row--anchor {
   padding: 14px 12px;
@@ -2169,7 +2166,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   margin-bottom: 10px;
   box-shadow: 0 4px 20px color-mix(in srgb, var(--post-vibe-fill) 12%, transparent);
 }
-.margo-lb-thread-row--anchor .margo-lb-thread-row__bubble {
+.margo-lb-thread-row--anchor .margo-lb-thread-row__lyric {
   border-color: var(--post-vibe-border);
   background: color-mix(in srgb, var(--post-vibe-faint) 80%, var(--surface));
 }
@@ -2341,11 +2338,42 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   outline: 2px solid var(--post-vibe-text);
   outline-offset: 2px;
 }
-.margo-lb-thread-row__bubble {
+.margo-lb-thread-row__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+  min-width: 0;
+}
+.margo-lb-thread-row__header-text {
+  min-width: 0;
+  flex: 1;
+}
+.margo-lb-thread-row__header-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+}
+.margo-lb-thread-row__display {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-control-label);
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+}
+.margo-lb-thread-row__time {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-date);
+  color: var(--text-muted);
+}
+.margo-lb-thread-row__lyric {
   display: block;
   width: 100%;
   text-align: left;
-  margin: 0 0 8px;
+  margin: 0 0 10px;
   padding: 10px 12px;
   border-radius: 10px;
   border: 1px dashed color-mix(in srgb, var(--border) 80%, var(--post-vibe-border));
@@ -2354,31 +2382,48 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   font-style: italic;
   font-size: var(--feed-type-suggestion-lyric);
   line-height: 1.5;
+  white-space: pre-line;
   color: var(--text);
   cursor: pointer;
 }
-.margo-lb-thread-row__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 10px;
-  align-items: center;
+.margo-lb-thread-row__art {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  display: block;
+  border: 1px solid var(--border);
 }
-.margo-lb-thread-row__action {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 36px;
-  padding: 0 6px;
-  border: none;
-  background: none;
-  color: var(--text-secondary);
+.margo-feed-actions--compact {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.margo-feed-actions--compact .margo-feed-action {
+  min-height: var(--margo-touch-min);
+}
+.margo-post-detail-lb__divider {
+  height: 1px;
+  background: var(--border);
+  margin: 24px 0 0;
+}
+.margo-post-detail-lb__heading {
+  margin: 24px 0 12px;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.62rem;
+  font-size: var(--feed-type-control-label);
   font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  cursor: pointer;
-  text-decoration: none;
+  color: var(--text-secondary);
+}
+.margo-post-detail-lb__compose {
+  margin-top: 0;
+}
+.margo-post-card__lb-list--echoes {
+  position: relative;
+  z-index: 1;
+  padding-top: 6px;
+}
+.margo-post-card__lb-scroll:has(.margo-post-card__lb-list--echoes) {
+  padding-top: 2px;
 }
 .margo-post-card__lb-context {
   margin-bottom: 12px;

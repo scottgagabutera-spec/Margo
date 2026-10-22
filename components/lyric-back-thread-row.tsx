@@ -5,16 +5,12 @@ import { playSnippet, togglePlayPause } from '@/lib/audio-engine'
 import { useAudioEngine } from '@/hooks/useAudioEngine'
 import type { Echo } from '@/hooks/useEchoes'
 import {
-  FeedIconCard,
-  FeedIconHeart,
-  FeedIconHeartFilled,
-  FeedIconLyricBack,
-  FeedIconReplay,
   FeedIconExternal,
   FeedMomentPlaybackIcon,
 } from '@/components/feed-card-icons'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { PostThumbnail } from '@/components/post-thumbnail'
+import { RelativeTime } from '@/components/relative-time'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useIdentity } from '@/hooks/useIdentity'
 import { createClient } from '@/lib/supabase/client'
@@ -22,16 +18,15 @@ import {
   externalListenAriaLabel,
   resolveExternalListenUrl,
 } from '@/lib/moment/listen'
+import { FeedPostActions } from '@/components/feed-post-actions'
 
 const supabase = createClient()
 
 export type LyricBackThreadRowProps = {
   echo: Echo
-  /** Highlight when this post is the thread anchor (e.g. on /post/[id]). */
   isAnchor?: boolean
   resonated?: boolean
   resonateCount?: number
-  /** Controlled resonate from parent (thread page). If omitted, row toggles itself. */
   onResonate?: (echoId: string) => void
   onLyricBack?: (echoId: string) => void
   onOpenThread?: (echoId: string) => void
@@ -39,8 +34,9 @@ export type LyricBackThreadRowProps = {
   onReplay?: (echoId: string) => void
   replayed?: boolean
   replayCount?: number
-  /** reply = smaller nested row; anchor = focused post on thread page */
   tone?: 'reply' | 'anchor'
+  /** Hide Lyric Back action (focused item at thread root). */
+  hideLyricBackAction?: boolean
 }
 
 function profileHref(echo: Echo): string | null {
@@ -49,19 +45,19 @@ function profileHref(echo: Echo): string | null {
   return `/profile/${encodeURIComponent(handle)}`
 }
 
-function authorLabels(echo: Echo): { primary: string; handle: string | null } {
+function authorLabels(echo: Echo): { display: string; handle: string | null } {
   const handleRaw = (echo.username || '').replace(/^@/, '').trim()
   const display = (echo.displayName || '').trim()
   if (display) {
     return {
-      primary: display,
+      display,
       handle: handleRaw ? `@${handleRaw}` : null,
     }
   }
   if (handleRaw) {
-    return { primary: `@${handleRaw}`, handle: null }
+    return { display: `@${handleRaw}`, handle: null }
   }
-  return { primary: 'Member', handle: null }
+  return { display: 'Member', handle: null }
 }
 
 function AuthorAvatar({ echo }: { echo: Echo }) {
@@ -103,11 +99,12 @@ export function LyricBackThreadRow({
   replayed = false,
   replayCount = 0,
   tone = 'reply',
+  hideLyricBackAction = false,
 }: LyricBackThreadRowProps) {
   const engine = useAudioEngine()
-  const { user } = useIdentity()
   const { requireAuth } = useAuthGate()
-  const myId = user?.id
+  const { user } = useIdentity()
+  const myId = user?.id ?? null
 
   const [resonatedLocal, setResonatedLocal] = useState(
     () => Boolean(myId && echo.resonates?.[myId]),
@@ -138,14 +135,13 @@ export function LyricBackThreadRow({
     : null
 
   const href = profileHref(echo)
-  const { primary, handle } = authorLabels(echo)
+  const { display, handle } = authorLabels(echo)
   const lbCount = echo.echoCount ?? 0
   const songHref = echo.songId ? `/song/${echo.songId}` : null
 
-  const toggleResonate = async (e: React.MouseEvent) => {
-    e.stopPropagation()
+  const toggleResonate = async (id: string) => {
     if (controlled) {
-      onResonate?.(echo.id)
+      onResonate?.(id)
       return
     }
     if (!requireAuth() || !myId) return
@@ -154,10 +150,10 @@ export function LyricBackThreadRow({
     setCountLocal((c) => Math.max(0, c + (was ? -1 : 1)))
     try {
       if (was) {
-        const { error } = await supabase.from('post_resonates').delete().eq('post_id', echo.id).eq('actor_id', myId)
+        const { error } = await supabase.from('post_resonates').delete().eq('post_id', id).eq('actor_id', myId)
         if (error) throw error
       } else {
-        const { error } = await supabase.from('post_resonates').insert({ post_id: echo.id, actor_id: myId })
+        const { error } = await supabase.from('post_resonates').insert({ post_id: id, actor_id: myId })
         if (error) throw error
       }
     } catch {
@@ -194,31 +190,44 @@ export function LyricBackThreadRow({
   ].filter(Boolean).join(' ')
 
   return (
-    <article
-      className={rowClass}
-      data-echo-id={echo.id}
-    >
+    <article className={rowClass} data-echo-id={echo.id}>
       {isAnchor ? (
         <p className="margo-lb-thread-row__badge">This Lyric Back</p>
       ) : null}
 
-      <div className="margo-lb-thread-row__author">
+      <header className="margo-lb-thread-row__header">
         <div className="margo-lb-thread-row__avatar" aria-hidden>
           <AuthorAvatar echo={echo} />
         </div>
-        <div className="margo-lb-thread-row__author-text">
-          {href ? (
-            <PendingNavLink href={href} indicator="subtle" className="margo-lb-thread-row__name" onClick={(e) => e.stopPropagation()}>
-              {primary}
-            </PendingNavLink>
-          ) : (
-            <span className="margo-lb-thread-row__name">{primary}</span>
-          )}
-          {handle ? (
-            <span className="margo-lb-thread-row__handle">{handle}</span>
+        <div className="margo-lb-thread-row__header-text">
+          <div className="margo-lb-thread-row__header-line">
+            {href ? (
+              <PendingNavLink href={href} indicator="subtle" className="margo-lb-thread-row__display" onClick={(e) => e.stopPropagation()}>
+                {display}
+              </PendingNavLink>
+            ) : (
+              <span className="margo-lb-thread-row__display">{display}</span>
+            )}
+            {handle ? (
+              <span className="margo-lb-thread-row__handle">{handle}</span>
+            ) : null}
+          </div>
+          {echo.timestamp ? (
+            <RelativeTime
+              date={echo.timestamp}
+              className="margo-lb-thread-row__time"
+            />
           ) : null}
         </div>
-      </div>
+      </header>
+
+      <button
+        type="button"
+        className="margo-lb-thread-row__lyric"
+        onClick={() => onOpenThread?.(echo.id)}
+      >
+        &ldquo;{echo.lyric}&rdquo;
+      </button>
 
       {(echo.song || echo.artist || canPlay || externalHref) ? (
         <div className="margo-lb-thread-row__track-row">
@@ -229,14 +238,7 @@ export function LyricBackThreadRow({
                   artwork={echo.artwork}
                   alt=""
                   loading="lazy"
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '8px',
-                    objectFit: 'cover',
-                    display: 'block',
-                    border: '1px solid var(--border)',
-                  }}
+                  className="margo-lb-thread-row__art"
                 />
               </PendingNavLink>
             ) : (
@@ -244,14 +246,7 @@ export function LyricBackThreadRow({
                 artwork={echo.artwork}
                 alt=""
                 loading="lazy"
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '8px',
-                  objectFit: 'cover',
-                  display: 'block',
-                  border: '1px solid var(--border)',
-                }}
+                className="margo-lb-thread-row__art"
               />
             )}
           </div>
@@ -291,47 +286,20 @@ export function LyricBackThreadRow({
         </div>
       ) : null}
 
-      <button
-        type="button"
-        className="margo-lb-thread-row__bubble"
-        onClick={() => onOpenThread?.(echo.id)}
-      >
-        &ldquo;{echo.lyric}&rdquo;
-      </button>
-      <div className="margo-lb-thread-row__actions" data-no-card-nav>
-        <button type="button" className="margo-lb-thread-row__action" aria-label={resonated ? 'Remove resonate' : 'Resonate'} onClick={(e) => void toggleResonate(e)}>
-          {resonated ? <FeedIconHeartFilled size={16} /> : <FeedIconHeart size={16} />}
-          <span>{resonateCount > 0 ? resonateCount : 'Resonate'}</span>
-        </button>
-        <button
-          type="button"
-          className="margo-lb-thread-row__action"
-          aria-label="Lyric Back"
-          onClick={(e) => { e.stopPropagation(); onLyricBack?.(echo.id) }}
-        >
-          <FeedIconLyricBack size={16} />
-          <span>{lbCount > 0 ? lbCount : 'Lyric Back'}</span>
-        </button>
-        <button
-          type="button"
-          className="margo-lb-thread-row__action"
-          aria-label="Replay"
-          onClick={(e) => { e.stopPropagation(); onReplay?.(echo.id) }}
-          style={{ color: replayed ? 'var(--gold)' : undefined }}
-        >
-          <FeedIconReplay size={16} />
-          <span>{replayCount > 0 ? replayCount : 'Replay'}</span>
-        </button>
-        <button
-          type="button"
-          className="margo-lb-thread-row__action"
-          aria-label="Export card"
-          onClick={(e) => { e.stopPropagation(); onExport?.(echo) }}
-        >
-          <FeedIconCard size={16} />
-          <span>Card</span>
-        </button>
-      </div>
+      <FeedPostActions
+        variant="compact"
+        postId={echo.id}
+        resonated={resonated}
+        resonateCount={resonateCount}
+        onResonate={toggleResonate}
+        lyricBackAllowed={!hideLyricBackAction && Boolean(onLyricBack)}
+        echoCount={lbCount}
+        onLyricBack={onLyricBack ? () => onLyricBack(echo.id) : undefined}
+        onCard={() => onExport?.(echo)}
+        replayed={replayed}
+        replayCount={replayCount}
+        onReplayTap={onReplay ? () => onReplay(echo.id) : undefined}
+      />
     </article>
   )
 }

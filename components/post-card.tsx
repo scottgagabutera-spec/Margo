@@ -4,10 +4,6 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronRightIcon, EditIcon } from '@/components/icons'
 import {
-  FeedIconCard,
-  FeedIconHeart,
-  FeedIconHeartFilled,
-  FeedIconLyricBack,
   FeedIconMore,
   FeedIconReplay,
 } from '@/components/feed-card-icons'
@@ -33,13 +29,13 @@ import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 import { UI_FONT, LYRIC_FONT, FEED_TYPE } from '@/lib/fonts'
 import { getVibeTheme, vibeThemeStyleVars } from '@/lib/vibe-theme'
-import { formatEchoBadge } from '@/lib/post-card-lyric-layout'
 import { FEED_CARD_LYRIC_ROW_CLASS } from '@/lib/post-card-lyric-class'
 import { FEED_HUE_GLYPH } from '@/lib/feed-vibe-map'
 import { FeedVibeGlyph } from '@/components/feed-vibe-glyph'
 import { PostCardLyricSection, PostCardSongSection } from '@/components/post-card-feed-layout'
 import { resolveMomentLines } from '@/lib/post-lines'
 import { PostCardSuggestedReply } from '@/components/post-card-suggested-reply'
+import { FeedPostActions } from '@/components/feed-post-actions'
 import { echoToPost } from '@/lib/echo-to-post'
 import { SongMeta } from '@/components/song-meta'
 import { AtmosphereLayer } from '@/components/atmosphere-layer'
@@ -52,27 +48,6 @@ const REPORT_REASONS = ['Spam', 'Harassment', 'Inappropriate', 'Other'] as const
 
 function isLyricBackAllowed(post: Post): boolean {
   return (post.status ?? 'active') === 'active'
-}
-
-const threadLyricBackBtnStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: '100%',
-  minHeight: 'var(--margo-touch-min)',
-  fontFamily: UI_FONT,
-  fontSize: '0.72rem',
-  fontWeight: 600,
-  letterSpacing: '0.06em',
-  textTransform: 'uppercase',
-  color: 'var(--gold)',
-  background: 'var(--surface-2)',
-  border: '1px solid var(--gold-border)',
-  borderRadius: '50px',
-  marginBottom: '12px',
-  boxSizing: 'border-box',
-  cursor: 'pointer',
-  WebkitTapHighlightColor: 'transparent',
 }
 
 export interface PostCardProps {
@@ -95,8 +70,11 @@ export interface PostCardProps {
   onQuoteReplay?: (id: string, quoteText: string) => void
   /** When true, skip whole-card navigate (e.g. already on /post/[id]). */
   disableCardNav?: boolean
-  /** Post thread header on /post/[id] — primary Lyric Back CTA layout. */
+  /** Post thread header on /post/[id] — action row only; page owns LB compose. */
   threadDetail?: boolean
+  /** /post/[id]: parent controls inline compose open state. */
+  threadLyricBackOpen?: boolean
+  onThreadLyricBack?: () => void
   /** Optional DOM id for scroll/highlight (e.g. feed-post-{id}). */
   domId?: string
   /** Brief highlight after the user just published this Moment. */
@@ -172,6 +150,8 @@ export function PostCard({
   replayed = false, replayCount = 0, onReplay, onQuoteReplay,
   disableCardNav = false,
   threadDetail = false,
+  threadLyricBackOpen = false,
+  onThreadLyricBack,
   domId,
   highlightShared = false,
   openLyricBack = false,
@@ -185,7 +165,6 @@ export function PostCard({
   const viewedRef = useRef(false)
   const emotion = normalizeEmotion(post.emotion || '').toLowerCase()
   const label = VIBE_LABELS[emotion] || post.emotion || ''
-  const echoBadge = formatEchoBadge(echoCount)
   const isTier1 = !!(post.songId && post.audioUrl)
   const audioUrl = post.audioUrl || null
   const cardRef = useRef<HTMLDivElement>(null)
@@ -780,7 +759,7 @@ export function PostCard({
 
       <PostMomentBody post={post} atmosphereRooms={atmosphereRooms} />
 
-      {lyricBackAllowed ? (
+      {lyricBackAllowed && !threadDetail ? (
         <PostCardSuggestedReply
           postId={post.id}
           echoCount={echoCount}
@@ -803,82 +782,29 @@ export function PostCard({
         />
       ) : null}
 
-      {threadDetail && lyricBackAllowed ? (
-        <button
-          type="button"
-          data-no-card-nav
-          style={threadLyricBackBtnStyle}
-          aria-expanded={suggestionsOpen}
-          onClick={(e) => {
-            e.stopPropagation()
-            toggleLyricBackPanel()
-          }}
-        >
-          {suggestionsOpen ? 'Close Lyric Back' : 'Add Lyric Back'}
-        </button>
-      ) : null}
-
-      <div data-no-card-nav>
-      <div className={(() => {
-        const actionCount = 2 + (lyricBackAllowed && !threadDetail ? 1 : 0) + (onReplay ? 1 : 0)
-        const cols = actionCount === 3 ? ' margo-feed-actions--cols-3' : ''
-        return `margo-feed-actions${cols}`
-      })()}>
-        <button
-          type="button"
-          className="margo-feed-action"
-          aria-label={resonated ? 'Remove resonate' : 'Resonate'}
-          onClick={(e) => { e.stopPropagation(); onResonate(post.id) }}
-          style={{ color: resonated ? 'var(--gold)' : 'var(--text-secondary)' }}
-        >
-          <span className="margo-feed-action__icon-wrap">
-            {resonated
-              ? <FeedIconHeartFilled size={20} />
-              : <FeedIconHeart size={20} />
-            }
-            {resonateCount > 0 ? (
-              <span className="margo-feed-action__badge">{resonateCount}</span>
-            ) : null}
-          </span>
-          <span className="margo-feed-action__label">Resonate</span>
-        </button>
-
-        {!threadDetail && lyricBackAllowed ? (
-          <button
-            type="button"
-            className="margo-feed-action"
-            aria-label={suggestionsOpen ? 'Close Lyric Back' : 'Open Lyric Back'}
-            aria-expanded={suggestionsOpen}
-            onClick={(e) => {
-              e.stopPropagation()
-              toggleLyricBackPanel()
-            }}
-            style={{ color: suggestionsOpen ? 'var(--post-vibe-text)' : 'var(--text-secondary)' }}
-          >
-            <span className="margo-feed-action__icon-wrap">
-              <FeedIconLyricBack size={20} />
-              {echoBadge ? (
-                <span className="margo-feed-action__badge">{echoBadge}</span>
-              ) : null}
-            </span>
-            <span className="margo-feed-action__label">Lyric Back</span>
-          </button>
-        ) : null}
-
-        <button
-          type="button"
-          className="margo-feed-action"
-          aria-label="Export lyric card"
-          onClick={(e) => { e.stopPropagation(); onExport(post) }}
-          style={{ color: 'var(--text-secondary)' }}
-        >
-          <span className="margo-feed-action__icon-wrap">
-            <FeedIconCard size={20} />
-          </span>
-          <span className="margo-feed-action__label">Card</span>
-        </button>
-
-        {onReplay ? (
+      <FeedPostActions
+        postId={post.id}
+        resonated={resonated}
+        resonateCount={resonateCount}
+        onResonate={onResonate}
+        lyricBackAllowed={lyricBackAllowed}
+        lyricBackOpen={threadDetail ? threadLyricBackOpen : suggestionsOpen}
+        echoCount={echoCount}
+        onLyricBack={
+          lyricBackAllowed
+            ? () => {
+                if (threadDetail) {
+                  onThreadLyricBack?.()
+                  return
+                }
+                toggleLyricBackPanel()
+              }
+            : undefined
+        }
+        onCard={() => onExport(post)}
+        replayed={replayed}
+        replayCount={replayCount}
+        replaySlot={onReplay ? (
         <div ref={replayWrapRef} style={{ position: 'relative', minWidth: 0 }}>
           <button
             type="button"
@@ -1005,10 +931,8 @@ export function PostCard({
             </div>
           )}
         </div>
-        ) : null}
-      </div>
-
-      </div>
+        ) : undefined}
+      />
 
     </div>
   )

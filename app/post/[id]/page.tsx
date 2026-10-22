@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { usePost, usePostAncestors } from '@/hooks/usePost'
@@ -33,6 +33,8 @@ export default function PostDetailPage() {
   const { ancestors } = usePostAncestors(post?.parentPostId)
   const { echoes, refetch: refetchEchoes } = useEchoes(postId)
   const composeRef = useRef<LyricBackPanelComposeHandle>(null)
+  const lbSectionRef = useRef<HTMLElement>(null)
+  const [composeOpen, setComposeOpen] = useState(false)
   const [replyTargetId, setReplyTargetId] = useState<string | null>(null)
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
@@ -54,38 +56,29 @@ export default function PostDetailPage() {
   })
   const [replayCounts, setReplayCounts] = useState<Record<string, number>>({})
 
-  useEffect(() => {
+  const effectiveReplyTarget = replyTargetId ?? post?.id ?? null
+
+  const scrollComposeIntoView = useCallback(() => {
+    window.setTimeout(() => {
+      lbSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      composeRef.current?.scrollIntoView()
+    }, 60)
+  }, [])
+
+  const openComposer = useCallback((targetId: string) => {
+    setReplyTargetId(targetId)
+    setComposeOpen(true)
+    scrollComposeIntoView()
+  }, [scrollComposeIntoView])
+
+  const toggleMainLyricBack = useCallback(() => {
     if (!post?.id) return
-    setReplyTargetId(post.id)
-  }, [post?.id])
-
-  useEffect(() => {
-    if (!post) return
-    setResonateCounts(prev => ({
-      ...prev,
-      [post.id]: prev[post.id] ?? post.resonates ?? 0,
-    }))
-  }, [post])
-
-  useEffect(() => {
-    if (ancestors.length === 0) return
-    setResonateCounts(prev => {
-      const next = { ...prev }
-      for (const ancestor of ancestors) {
-        if (next[ancestor.id] == null) next[ancestor.id] = ancestor.resonates ?? 0
-      }
-      return next
-    })
-  }, [ancestors])
-
-  useEffect(() => {
-    for (const e of echoes) {
-      setResonateCounts(prev => ({
-        ...prev,
-        [e.id]: prev[e.id] ?? e.resonateCount ?? 0,
-      }))
+    if (composeOpen && effectiveReplyTarget === post.id) {
+      setComposeOpen(false)
+      return
     }
-  }, [echoes])
+    openComposer(post.id)
+  }, [composeOpen, effectiveReplyTarget, openComposer, post?.id])
 
   const toggleResonate = async (id: string) => {
     if (!requireAuth()) return
@@ -168,15 +161,9 @@ export default function PostDetailPage() {
   const isLyricBack = Boolean(post?.parentPostId)
   const rootMoment = ancestors[0] ?? null
 
-  const goLyricBack = (targetId: string) => {
-    if (!requireAuth()) return
-    setReplyTargetId(targetId)
-    requestAnimationFrame(() => composeRef.current?.scrollIntoView())
-  }
-
   const threadRowHandlers = (echo: Echo) => ({
     onResonate: toggleResonate,
-    onLyricBack: goLyricBack,
+    onLyricBack: (targetId: string) => openComposer(targetId),
     onOpenThread: (id: string) => router.push(`/post/${id}`),
     onExport: handleExportEcho,
     onReplay: toggleReplay,
@@ -185,6 +172,9 @@ export default function PostDetailPage() {
     resonated: resonated.has(echo.id),
     resonateCount: resonateCounts[echo.id] ?? echo.resonateCount ?? 0,
   })
+
+  const echoCount = post?.replies ?? echoes.length
+  const showLbSection = composeOpen || echoes.length > 0
 
   return (
     <main style={{
@@ -248,6 +238,7 @@ export default function PostDetailPage() {
                 }}
                 isAnchor
                 tone="anchor"
+                hideLyricBackAction
                 {...threadRowHandlers({
                   id: post.id,
                   lyric: post.text || '',
@@ -267,7 +258,7 @@ export default function PostDetailPage() {
                 post={post}
                 resonated={resonated.has(post.id)}
                 resonateCount={resonateCounts[post.id] ?? post.resonates ?? 0}
-                echoCount={post.replies ?? echoes.length}
+                echoCount={echoCount}
                 onResonate={toggleResonate}
                 onExport={handleExport}
                 onReplay={toggleReplay}
@@ -275,37 +266,50 @@ export default function PostDetailPage() {
                 replayCount={replayCounts[post.id] ?? 0}
                 disableCardNav
                 threadDetail
+                threadLyricBackOpen={composeOpen && effectiveReplyTarget === post.id}
+                onThreadLyricBack={toggleMainLyricBack}
               />
             </section>
           )}
 
-          {echoes.length > 0 && (
-            <section>
-              <ul className="margo-post-thread-list">
-                {echoes.map((e) => (
-                  <li key={e.id}>
-                    <LyricBackThreadRow
-                      echo={e}
-                      tone="reply"
-                      {...threadRowHandlers(e)}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
+          {showLbSection ? (
+            <section ref={lbSectionRef} className="margo-post-detail-lb">
+              {composeOpen && effectiveReplyTarget ? (
+                <div className="margo-post-detail-lb__compose">
+                  <LyricBackPanelCompose
+                    ref={composeRef}
+                    key={effectiveReplyTarget}
+                    layout="panel"
+                    parentPostId={effectiveReplyTarget}
+                    parentEmotion={post.emotion || 'chill'}
+                    onRequireAuth={requireAuth}
+                    onSent={() => {
+                      void refetchEchoes()
+                      setReplyTargetId(post.id)
+                    }}
+                  />
+                </div>
+              ) : null}
 
-          {post && replyTargetId ? (
-            <section className="margo-post-thread-compose">
-              <LyricBackPanelCompose
-                ref={composeRef}
-                key={replyTargetId}
-                layout="panel"
-                parentPostId={replyTargetId}
-                parentEmotion={post.emotion || 'chill'}
-                onRequireAuth={requireAuth}
-                onSent={() => void refetchEchoes()}
-              />
+              {echoes.length > 0 ? (
+                <>
+                  <div className="margo-post-detail-lb__divider" aria-hidden />
+                  <h2 className="margo-post-detail-lb__heading">
+                    Lyric Backs · {Math.max(echoCount, echoes.length)}
+                  </h2>
+                  <ul className="margo-post-thread-list">
+                    {echoes.map((e) => (
+                      <li key={e.id}>
+                        <LyricBackThreadRow
+                          echo={e}
+                          tone="reply"
+                          {...threadRowHandlers(e)}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
             </section>
           ) : null}
         </div>
