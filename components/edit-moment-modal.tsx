@@ -1,13 +1,12 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 import { matchLyricLine } from '@/lib/lyric-match'
-import { UI_FONT } from '@/lib/fonts'
+import { useKeyboardSafeChrome } from '@/hooks/useVisualViewport'
 import type { PostLine, PostLineSource } from '@/lib/post-lines'
 
 const supabase = createClient()
-
-const font = 'var(--font-lora), serif'
 
 interface EditMomentModalProps {
   open: boolean
@@ -45,6 +44,19 @@ function toDraft(l: PostLine): DraftLine {
   }
 }
 
+/** Keep the focused field inside the sheet scroller, not the page. */
+function keepFieldInSheet(field: HTMLElement) {
+  const scroller = field.closest('.margo-edit-sheet__scroll')
+  if (!(scroller instanceof HTMLElement)) return
+  const fieldRect = field.getBoundingClientRect()
+  const scrollRect = scroller.getBoundingClientRect()
+  if (fieldRect.top < scrollRect.top) {
+    scroller.scrollTop -= scrollRect.top - fieldRect.top + 8
+  } else if (fieldRect.bottom > scrollRect.bottom) {
+    scroller.scrollTop += fieldRect.bottom - scrollRect.bottom + 8
+  }
+}
+
 /**
  * Edit an entire Moment — one or many lines — rather than the legacy
  * single-lyric-field editor. Loading only post.text (the position-0
@@ -55,36 +67,57 @@ function toDraft(l: PostLine): DraftLine {
  * complete ordered set via update_own_moment (atomic — see the
  * 20260821 migration), so a multi-line Moment stays one post with all
  * its lines, in order, never silently collapsed to one.
+ *
+ * Portaled to document.body so the sheet is outside .margo-post-card
+ * (word-break / overflow-wrap do not inherit) and position:fixed is
+ * the viewport, not a transformed feed pane.
  */
-export function EditMomentModal({
-  open,
+export function EditMomentModal(props: EditMomentModalProps) {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!props.open || !mounted) return null
+  return createPortal(<EditMomentSheet {...props} />, document.body)
+}
+
+function EditMomentSheet({
   onOpenChange,
   postId,
   lines,
   echoCount = 0,
   onSaved,
 }: EditMomentModalProps) {
-  const [drafts, setDrafts] = useState<DraftLine[]>([])
+  const [drafts, setDrafts] = useState<DraftLine[]>(() =>
+    lines.length > 0 ? lines.map(toDraft) : [toDraft({ position: 0, text: '' })],
+  )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { offsetTop, height, chromeHidden } = useKeyboardSafeChrome(true)
 
   useEffect(() => {
-    if (open) {
-      setDrafts(lines.length > 0 ? lines.map(toDraft) : [toDraft({ position: 0, text: '' })])
-      setError(null)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
     }
-  }, [open, lines])
+  }, [])
 
-  if (!open) return null
-
-  const multi = drafts.length > 1
+  useEffect(() => {
+    const el = document.activeElement
+    if (el instanceof HTMLElement && el.closest('.margo-edit-sheet')) {
+      keepFieldInSheet(el)
+    }
+  }, [height, offsetTop, chromeHidden])
 
   const updateLine = (i: number, patch: Partial<DraftLine>) => {
     setDrafts(prev => prev.map((d, idx) => (idx === i ? { ...d, ...patch } : d)))
   }
 
   const removeLine = (i: number) => {
-    if (drafts.length <= 1) return
+    if (drafts.length <= 1 || i < 1) return
     setDrafts(prev => prev.filter((_, idx) => idx !== i))
   }
 
@@ -149,130 +182,114 @@ export function EditMomentModal({
     onOpenChange(false)
   }
 
-  return (
-    <>
-      <div
-        onClick={() => !saving && onOpenChange(false)}
-        style={{
-          position: 'fixed', inset: 0, zIndex: 100,
-          background: 'rgba(7,6,10,0.85)',
-          backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
-        }}
+  const close = () => {
+    if (!saving) onOpenChange(false)
+  }
+
+  const onFieldFocus = (el: HTMLElement) => {
+    window.requestAnimationFrame(() => keepFieldInSheet(el))
+  }
+
+  const sheet = (
+    <div
+      className={`margo-edit-sheet${chromeHidden ? ' margo-edit-sheet--keyboard' : ''}`}
+    >
+      <button
+        type="button"
+        className="margo-edit-sheet__scrim"
+        aria-label="Cancel"
+        disabled={saving}
+        onClick={close}
       />
       <div
-        style={{
-          position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-          zIndex: 101, width: 'min(480px, calc(100vw - 32px))',
-          background: '#0f0e14', border: '1px solid rgba(232,197,71,0.18)',
-          borderRadius: '20px', padding: '24px 20px',
-          maxHeight: '86dvh', overflowY: 'auto', boxSizing: 'border-box',
-        }}
+        className="margo-edit-sheet__band"
+        style={{ top: offsetTop, height }}
       >
-        <p style={{ fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: multi ? '4px' : '16px', textAlign: 'center' }}>
-          {multi ? 'Edit Moment' : 'Edit Lyric'}
-        </p>
-        {multi && (
-          <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '16px' }}>
-            This Moment has {drafts.length} lines.
-          </p>
-        )}
-
-        {echoCount > 0 && (
-          <p style={{
-            fontFamily: font, fontSize: '0.72rem', color: 'var(--text-secondary)',
-            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', lineHeight: 1.5,
-          }}>
-            {echoCount} {echoCount === 1 ? 'person has' : 'people have'} replied to this — they&apos;re still responding to what you originally wrote.
-          </p>
-        )}
-
-        {drafts.map((d, i) => (
-          <div
-            key={i}
-            style={{
-              marginBottom: '16px', paddingBottom: multi && i < drafts.length - 1 ? '16px' : 0,
-              borderBottom: multi && i < drafts.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none',
-            }}
-          >
-            {multi && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontFamily: UI_FONT, fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                  Line {i + 1}
-                </span>
-                {drafts.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeLine(i)}
-                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontFamily: font, fontSize: '0.65rem', cursor: 'pointer', padding: '4px 8px' }}
-                  >Remove</button>
-                )}
-              </div>
-            )}
-            <textarea
-              value={d.text}
-              onChange={(e) => updateLine(i, { text: e.target.value.slice(0, 140), textChanged: true })}
-              rows={multi ? 2 : 3}
-              style={{
-                width: '100%', background: 'rgba(232,197,71,0.04)',
-                border: '1px solid rgba(232,197,71,0.22)', borderRadius: '12px',
-                padding: '14px', fontSize: multi ? '0.95rem' : '1.05rem', fontFamily: font, fontStyle: 'italic',
-                color: 'var(--gold)', lineHeight: 1.6, outline: 'none', resize: 'none',
-                boxSizing: 'border-box', marginBottom: '8px',
-              }}
-            />
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
-              <input
-                value={d.songTitle}
-                onChange={(e) => updateLine(i, { songTitle: e.target.value })}
-                placeholder="Song"
-                style={{ flex: 1, minWidth: 0, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 10px', fontFamily: UI_FONT, fontSize: '0.78rem', color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }}
-              />
-              <input
-                value={d.artistName}
-                onChange={(e) => updateLine(i, { artistName: e.target.value })}
-                placeholder="Artist"
-                style={{ flex: 1, minWidth: 0, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 10px', fontFamily: UI_FONT, fontSize: '0.78rem', color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }}
-              />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <span style={{ fontFamily: font, fontSize: '0.55rem', color: 'var(--text-muted)' }}>{d.text.length}/140</span>
-            </div>
+        <div
+          className="margo-edit-sheet__card"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="margo-edit-sheet-title"
+        >
+          <div className="margo-edit-sheet__head">
+            <p id="margo-edit-sheet-title" className="margo-edit-sheet__title">Edit</p>
+            {echoCount > 0 ? (
+              <p className="margo-edit-sheet__replies">
+                {echoCount === 1 ? '1 reply stays' : `${echoCount} replies stay`}
+              </p>
+            ) : null}
           </div>
-        ))}
 
-        {error && (
-          <p style={{ fontFamily: font, fontSize: '0.75rem', color: '#ff6b6b', textAlign: 'center', marginBottom: '14px' }}>
-            {error}
-          </p>
-        )}
+          <div className="margo-edit-sheet__scroll">
+            {drafts.map((d, i) => (
+              <div key={i} className="margo-edit-sheet__line">
+                {i > 0 ? (
+                  <div className="margo-edit-sheet__line-tools">
+                    <button
+                      type="button"
+                      className="margo-edit-sheet__remove"
+                      onClick={() => removeLine(i)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : null}
+                <textarea
+                  className="margo-edit-sheet__lyric"
+                  value={d.text}
+                  onChange={(e) => updateLine(i, { text: e.target.value.slice(0, 140), textChanged: true })}
+                  onFocus={(e) => onFieldFocus(e.currentTarget)}
+                  rows={drafts.length > 1 ? 2 : 3}
+                  aria-label="Lyric"
+                />
+                <div className="margo-edit-sheet__meta">
+                  <input
+                    className="margo-edit-sheet__field"
+                    value={d.songTitle}
+                    onChange={(e) => updateLine(i, { songTitle: e.target.value })}
+                    onFocus={(e) => onFieldFocus(e.currentTarget)}
+                    placeholder="Song"
+                    aria-label="Song"
+                  />
+                  <input
+                    className="margo-edit-sheet__field"
+                    value={d.artistName}
+                    onChange={(e) => updateLine(i, { artistName: e.target.value })}
+                    onFocus={(e) => onFieldFocus(e.currentTarget)}
+                    placeholder="Artist"
+                    aria-label="Artist"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button
-            onClick={() => onOpenChange(false)}
-            disabled={saving}
-            style={{
-              flex: 1, padding: '12px', minHeight: '44px', boxSizing: 'border-box',
-              background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '50px', color: 'var(--text-secondary)', fontFamily: font,
-              fontSize: '0.58rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase',
-              cursor: saving ? 'not-allowed' : 'pointer',
-            }}
-          >Cancel</button>
-          <button
-            onClick={handleSave}
-            disabled={saving || drafts.some(d => d.text.trim().length === 0)}
-            style={{
-              flex: 1, padding: '12px', minHeight: '44px', boxSizing: 'border-box',
-              background: 'var(--gold)', border: 'none', borderRadius: '50px',
-              color: 'var(--bg)', fontFamily: font, fontWeight: 700,
-              fontSize: '0.58rem', letterSpacing: '1px', textTransform: 'uppercase',
-              cursor: saving ? 'not-allowed' : 'pointer',
-              opacity: saving ? 0.7 : 1,
-            }}
-          >{saving ? 'Saving…' : 'Save'}</button>
+          {error ? (
+            <p className="margo-edit-sheet__error" role="alert">{error}</p>
+          ) : null}
+
+          <div className="margo-edit-sheet__actions">
+            <button
+              type="button"
+              className="margo-edit-sheet__btn margo-edit-sheet__btn--cancel"
+              onClick={close}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="margo-edit-sheet__btn margo-edit-sheet__btn--save"
+              onClick={() => void handleSave()}
+              disabled={saving || drafts.some(d => d.text.trim().length === 0)}
+            >
+              {saving ? 'Saving' : 'Save'}
+            </button>
+          </div>
         </div>
       </div>
-    </>
+    </div>
   )
+
+  return createPortal(sheet, document.body)
 }

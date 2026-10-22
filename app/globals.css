@@ -2837,3 +2837,173 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   white-space: nowrap;
 }
 
+/* Moment edit — bottom sheet, portaled outside the post card. */
+.margo-edit-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+.margo-edit-sheet__scrim {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: var(--bg);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  cursor: pointer;
+}
+.margo-edit-sheet__band {
+  position: fixed;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  pointer-events: none;
+  z-index: 1;
+}
+.margo-edit-sheet__card {
+  pointer-events: auto;
+  width: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg);
+  border-radius: 20px 20px 0 0;
+  border-top: 1px solid var(--border-hi);
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+.margo-edit-sheet__head {
+  flex-shrink: 0;
+  padding: 16px 16px 8px;
+}
+.margo-edit-sheet__title {
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-control-label);
+  font-weight: 600;
+  color: var(--text);
+}
+.margo-edit-sheet__replies {
+  margin: 8px 0 0;
+  text-align: center;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-artist);
+  color: var(--text-secondary);
+}
+.margo-edit-sheet__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 16px 4px;
+}
+.margo-edit-sheet__line + .margo-edit-sheet__line {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.margo-edit-sheet__line-tools {
+  display: flex;
+  justify-content: flex-end;
+}
+.margo-edit-sheet__remove {
+  min-height: var(--margo-touch-min);
+  padding: 0 8px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-artist);
+  cursor: pointer;
+}
+.margo-edit-sheet__lyric {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 8px;
+  padding: 14px;
+  resize: none;
+  border-radius: 12px;
+  border: 1px solid var(--gold-border);
+  background: var(--gold-faint);
+  color: var(--gold);
+  font-family: var(--font-lora), serif;
+  font-style: italic;
+  font-size: var(--feed-type-lyric);
+  line-height: var(--feed-type-lyric-lh);
+  outline: none;
+}
+.margo-edit-sheet__meta {
+  display: flex;
+  gap: 8px;
+}
+.margo-edit-sheet__field {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--margo-touch-min);
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-hi);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-artist);
+  outline: none;
+}
+.margo-edit-sheet__error {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 4px 16px 0;
+  text-align: center;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-artist);
+  color: var(--text-secondary);
+}
+.margo-edit-sheet__actions {
+  flex-shrink: 0;
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px calc(12px + var(--margo-safe-bottom));
+  background: var(--bg);
+}
+.margo-edit-sheet--keyboard .margo-edit-sheet__actions {
+  padding-bottom: 12px;
+}
+.margo-edit-sheet__btn {
+  flex: 1;
+  min-height: var(--margo-touch-min);
+  box-sizing: border-box;
+  border-radius: 50px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-control-label);
+  font-weight: 600;
+  cursor: pointer;
+}
+.margo-edit-sheet__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.margo-edit-sheet__btn--cancel {
+  background: transparent;
+  border: 1px solid var(--border-hi);
+  color: var(--text-secondary);
+}
+.margo-edit-sheet__btn--save {
+  background: var(--gold);
+  border: none;
+  color: var(--text-on-gold);
+}
+
