@@ -966,9 +966,6 @@ html[data-margo-stage-idle] .margo-stage-zone {
   scroll-margin-top: calc(var(--nav-height, 72px) + 12px);
   margin-bottom: 10px;
 }
-.margo-post-card__lb-panel--feed-root {
-  margin-top: 12px;
-}
 .margo-post-card__lb-feed-head-row {
   display: flex;
   align-items: center;
@@ -1007,7 +1004,37 @@ html[data-margo-stage-idle] .margo-stage-zone {
   overflow-anchor: none;
 }
 .margo-post-card__lb-scroll--feed {
-  max-height: min(420px, calc(100dvh - var(--nav-height, 72px) - var(--margo-page-bottom, 88px) - 200px));
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+}
+.margo-post-card__lb-sticky-head {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  flex-shrink: 0;
+  background: var(--surface-2);
+  padding-bottom: 8px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.margo-post-card__lb-panel--feed-root {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: var(--lb-panel-vvh, auto);
+  max-height: var(
+    --lb-panel-vvh,
+    min(520px, calc(100dvh - var(--nav-height, 72px) - var(--margo-page-bottom, 88px) - 24px))
+  );
+  overflow: hidden;
+}
+html.margo-keyboard-open .margo-mobile-tabbar {
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(120%);
+  transition: transform 0.2s ease;
 }
 .margo-post-detail-lb__scroll {
   overflow-y: auto;
@@ -1016,11 +1043,6 @@ html[data-margo-stage-idle] .margo-stage-zone {
   overscroll-behavior: contain;
   overflow-anchor: none;
   -webkit-overflow-scrolling: touch;
-}
-.margo-post-card__lb-panel--feed-root {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
 }
 .margo-post-card__lb-compose-slot--feed-lead {
   flex-shrink: 0;
@@ -2422,16 +2444,16 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--post-vibe-fill);
+  background: var(--post-vibe-fill, var(--gold));
   color: var(--bg);
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--post-vibe-fill) 55%, var(--text)),
-    0 2px 10px color-mix(in srgb, var(--post-vibe-fill) 45%, transparent);
+    0 0 0 1px color-mix(in srgb, var(--post-vibe-fill, var(--gold)) 55%, var(--text)),
+    0 2px 10px color-mix(in srgb, var(--post-vibe-fill, var(--gold)) 45%, transparent);
 }
 .margo-lb-thread-row__snippet-btn-inner--external {
-  background: transparent;
-  border: 1px solid var(--post-vibe-border);
-  color: var(--post-vibe-text);
+  background: var(--gold-faint);
+  border: 1px solid var(--gold-border);
+  color: var(--gold);
   box-shadow: none;
 }
 .margo-lb-thread-row__snippet-btn:focus-visible .margo-lb-thread-row__snippet-btn-inner {
@@ -2508,7 +2530,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   margin: 24px 0 0;
 }
 .margo-post-detail-lb__heading {
-  margin: 24px 0 12px;
+  margin: 24px 0 16px;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: var(--feed-type-control-label);
   font-weight: 600;
@@ -2639,6 +2661,9 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 }
 .margo-post-thread-list .margo-lb-thread-row--reply {
   padding: 14px 0;
+}
+.margo-post-detail-lb__scroll .margo-post-thread-list > li:first-child {
+  padding-top: 10px;
 }
 .margo-lb-reply-context {
   flex-shrink: 0;

@@ -9,6 +9,7 @@ import {
 import type { LyricBackPanelComposeHandle } from '@/components/lyric-back-panel-compose'
 import type { Post } from '@/hooks/usePosts'
 import type { Echo } from '@/hooks/useEchoes'
+import { getVibeTheme, vibeThemeStyleVars } from '@/lib/vibe-theme'
 
 export type PostDetailLyricSectionProps = {
   post: Post
@@ -52,12 +53,14 @@ export function PostDetailLyricSection({
   } = stackApi
 
   const isNested = Boolean(focusId && post.id && focusId !== post.id && focusedEcho)
+  const vibeTheme = getVibeTheme(post.emotion || 'chill')
 
   return (
     <section
       ref={sectionRef}
       className={`margo-post-detail-lb${isNested ? ' margo-post-detail-lb--thread-focus' : ''}`}
       aria-label="Lyric Backs"
+      style={vibeThemeStyleVars(vibeTheme)}
     >
       <LyricBackFocusBody
         variant="post-inline"

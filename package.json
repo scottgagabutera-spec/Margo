@@ -11,7 +11,8 @@
     "test:curated-moments": "node --experimental-strip-types --test lib/moments/validate-curated-moments.test.ts",
     "test:post-card-lyric": "node --experimental-strip-types --test lib/post-card-lyric-layout.test.ts",
     "test:post-card-lyric-uniform": "node --experimental-strip-types --test lib/post-card-lyric-uniform.test.ts",
-    "test": "npm run test:playback-segments && npm run test:curated-moments && npm run test:post-card-lyric && npm run test:post-card-lyric-uniform"
+    "test:lyric-back-row": "node --experimental-strip-types --test lib/lyric-back-thread-row.test.ts",
+    "test": "npm run test:playback-segments && npm run test:curated-moments && npm run test:post-card-lyric && npm run test:post-card-lyric-uniform && npm run test:lyric-back-row"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1136.0",

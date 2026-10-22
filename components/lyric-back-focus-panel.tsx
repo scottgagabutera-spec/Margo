@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } fro
 import { LyricBackTrackListenControl } from '@/components/lyric-back-track-listen-control'
 import { LyricBackTrackStripPlaceholder } from '@/components/lyric-back-thread-row-skeleton'
 import { scrollFeedLyricBackPanelIntoView } from '@/lib/lyric-back-panel-scroll'
+import { resetLyricBackPanelScroll } from '@/hooks/useLyricBackPanelViewport'
 import { useEchoes, type Echo } from '@/hooks/useEchoes'
 import { LyricBackThreadRow } from '@/components/lyric-back-thread-row'
 import {
@@ -19,6 +20,7 @@ import {
 } from '@/components/lyric-back-panel-compose'
 import { LyricBackReplyContext } from '@/components/lyric-back-reply-context'
 import { useLyricBackFocusStack } from '@/hooks/useLyricBackFocusStack'
+import { useLyricBackPanelViewport } from '@/hooks/useLyricBackPanelViewport'
 
 export type LyricBackThreadRowExtras = {
   onResonate?: (echoId: string) => void
@@ -163,6 +165,30 @@ export function LyricBackFocusBody({
   const feedPanel = variant === 'feed-panel'
   const feedRootComposeFirst = feedPanel && !isNested
 
+  const replyContext = composeOpen ? <LyricBackReplyContext username={replyToUsername} /> : null
+
+  const composeSlot =
+    composeOpen && focusId ? (
+      <div
+        className={`margo-post-card__lb-compose-slot${isNested ? ' margo-post-card__lb-compose-slot--focus' : ' margo-post-card__lb-compose-slot--feed-lead'}`}
+      >
+        <LyricBackPanelCompose
+          ref={composeRef}
+          key={focusId}
+          layout="panel"
+          parentPostId={focusId}
+          parentEmotion={composeEmotion}
+          onRequireAuth={onRequireAuth}
+          prefill={composePrefill}
+          focusSearchOnMount
+          onSent={() => {
+            onSent()
+            void refetchEchoes()
+          }}
+        />
+      </div>
+    ) : null
+
   return (
     <>
       {feedPanel && isNested ? (
@@ -182,30 +208,10 @@ export function LyricBackFocusBody({
         </button>
       ) : null}
 
-      {composeOpen ? <LyricBackReplyContext username={replyToUsername} /> : null}
+      {!feedPanel ? replyContext : null}
+      {!feedPanel ? composeSlot : null}
 
-      {composeOpen && focusId ? (
-        <div
-          className={`margo-post-card__lb-compose-slot${isNested ? ' margo-post-card__lb-compose-slot--focus' : ' margo-post-card__lb-compose-slot--feed-lead'}`}
-        >
-          <LyricBackPanelCompose
-            ref={composeRef}
-            key={focusId}
-            layout="panel"
-            parentPostId={focusId}
-            parentEmotion={composeEmotion}
-            onRequireAuth={onRequireAuth}
-            prefill={composePrefill}
-            focusSearchOnMount
-            onSent={() => {
-              onSent()
-              void refetchEchoes()
-            }}
-          />
-        </div>
-      ) : null}
-
-      {isNested && focusedEcho ? (
+      {!feedPanel && isNested && focusedEcho ? (
         <div className="margo-post-card__lb-focused-anchor">
           <LyricBackThreadRow
             echo={focusedEcho}
@@ -259,6 +265,28 @@ export function LyricBackFocusBody({
             : 'margo-post-detail-lb__scroll'
         }
       >
+        {feedPanel && (replyContext || composeSlot) ? (
+          <div className="margo-post-card__lb-sticky-head">
+            {replyContext}
+            {composeSlot}
+          </div>
+        ) : null}
+
+        {feedPanel && isNested && focusedEcho ? (
+          <div className="margo-post-card__lb-focused-anchor">
+            <LyricBackThreadRow
+              echo={focusedEcho}
+              tone="anchor"
+              onLyricBack={() => onFocusEcho(focusedEcho)}
+              onOpenThread={onOpenThread}
+              onExport={onExportEcho}
+              onReplay={onReplayEcho}
+              {...(getRowExtras?.(focusedEcho) ?? {})}
+              lyricBackSessionActive={composeOpen}
+            />
+          </div>
+        ) : null}
+
         {echoesLoading ? (
           <>
             <LyricBackTrackStripPlaceholder />
@@ -413,6 +441,8 @@ export function LyricBackFeedPanel({
     resetStack,
   } = useLyricBackFocusStack(postId, author)
 
+  useLyricBackPanelViewport(panelRef, open)
+
   useEffect(() => {
     if (!open) {
       resetStack()
@@ -424,6 +454,7 @@ export function LyricBackFeedPanel({
     if (!open) return
     window.setTimeout(() => {
       scrollFeedLyricBackPanelIntoView(panelRef.current)
+      resetLyricBackPanelScroll(panelRef.current)
       composeRef.current?.focusSearch()
     }, 100)
   }, [open, focusId])

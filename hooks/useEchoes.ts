@@ -39,7 +39,8 @@ export interface Echo {
 // songs.audio_url so Lyric Backs can render Tier1 audio via shared PostCard.
 // resonateCount/echoCount come from post_stats (same source as the feed).
 
-const ECHO_SELECT = `
+/** Supabase select for Lyric Back reply rows (feed panel + post page). */
+export const ECHO_SELECT = `
   id,
   text,
   song_title,

@@ -7,6 +7,7 @@ import {
   externalListenAriaLabel,
   resolveExternalListenUrl,
 } from '@/lib/moment/listen'
+import { resolveLyricBackListenMode } from '@/lib/lyric-back-listen-mode'
 
 export type LyricBackTrackListenControlProps = {
   songId?: string | null
@@ -50,14 +51,22 @@ export function LyricBackTrackListenControl({
       ? 'margo-post-card__lb-row-play-inner'
       : 'margo-lb-thread-row__snippet-btn-inner margo-lb-thread-row__snippet-btn-inner--external'
   const engine = useAudioEngine()
-  const canPlay = Boolean(audioUrl && songId)
-  const externalHref = !canPlay
-    ? resolveExternalListenUrl({
-        songTitle,
-        artistName,
-        itunesTrackUrl: externalListenUrl,
-      })
-    : null
+  const listenMode = resolveLyricBackListenMode({
+    songId,
+    audioUrl,
+    songTitle,
+    artistName,
+    externalListenUrl,
+  })
+  const canPlay = listenMode === 'play'
+  const externalHref =
+    listenMode === 'external'
+      ? resolveExternalListenUrl({
+          songTitle,
+          artistName,
+          itunesTrackUrl: externalListenUrl,
+        })
+      : null
 
   const isPlaying =
     canPlay
