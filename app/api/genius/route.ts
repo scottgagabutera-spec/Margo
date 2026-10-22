@@ -102,6 +102,7 @@ export async function GET(request: NextRequest) {
     route: 'genius',
     bucket,
     limit: RATE_LIMIT_PER_HOUR,
+    failOpenOnDbError: true,
   })
   if (!limited.ok) {
     return NextResponse.json(

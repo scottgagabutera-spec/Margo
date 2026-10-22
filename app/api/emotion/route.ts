@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
       route: 'emotion',
       bucket,
       limit: RATE_LIMIT_PER_HOUR,
+      failOpenOnDbError: true,
     })
     if (!limited.ok) {
       return NextResponse.json(

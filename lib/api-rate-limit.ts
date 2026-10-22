@@ -11,6 +11,8 @@ export async function consumeHourlyApiRateLimit(opts: {
   route: string
   bucket: string
   limit: number
+  /** Allow request when counter read/write fails (low-cost routes only). */
+  failOpenOnDbError?: boolean
 }): Promise<RateLimitResult> {
   const windowStart = hourStartUtc(new Date())
   const admin = getSupabaseAdmin()
@@ -25,6 +27,7 @@ export async function consumeHourlyApiRateLimit(opts: {
 
   if (readErr) {
     console.error('[api-rate-limit] read failed', readErr.message)
+    if (opts.failOpenOnDbError) return { ok: true }
     return { ok: false, retryAfterSec: 3600 }
   }
 
@@ -46,6 +49,7 @@ export async function consumeHourlyApiRateLimit(opts: {
 
   if (writeErr) {
     console.error('[api-rate-limit] write failed', writeErr.message)
+    if (opts.failOpenOnDbError) return { ok: true }
     return { ok: false, retryAfterSec: 3600 }
   }
 
