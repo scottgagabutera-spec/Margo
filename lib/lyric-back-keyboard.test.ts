@@ -7,6 +7,12 @@ import {
   panelSearchDropdownFrame,
   visualKeyboardInsetPx,
 } from './lyric-back-keyboard.ts'
+import {
+  LYRIC_BACK_DEPTH_CAP,
+  lyricBackCanReply,
+  lyricBackDepth,
+  lyricBackVisualStep,
+} from './lyric-back-depth.ts'
 
 describe('lyric back keyboard geometry', () => {
   it('does not inflate the panel cap when the element top is negative', () => {
@@ -76,6 +82,32 @@ describe('lyric back keyboard geometry', () => {
       viewportHeight: 900,
       offsetTop: 0,
     }), 0)
+  })
+})
+
+describe('lyric back depth', () => {
+  it('caps replies at 8 and visual indent at 3', () => {
+    assert.equal(LYRIC_BACK_DEPTH_CAP, 8)
+    assert.equal(lyricBackDepth(0, 0), 0)
+    assert.equal(lyricBackDepth(1, 7), 8)
+    assert.equal(lyricBackCanReply(7), true)
+    assert.equal(lyricBackCanReply(8), false)
+    assert.equal(lyricBackVisualStep(0), 0)
+    assert.equal(lyricBackVisualStep(1), 1)
+    assert.equal(lyricBackVisualStep(2), 2)
+    assert.equal(lyricBackVisualStep(6), 3)
+  })
+
+  it('hides the Lyric Back action at the cap and labels the control Back', () => {
+    const stack = fs.readFileSync('hooks/useLyricBackFocusStack.ts', 'utf8')
+    const panel = fs.readFileSync('components/lyric-back-focus-panel.tsx', 'utf8')
+    const post = fs.readFileSync('app/post/[id]/page.tsx', 'utf8')
+    assert.match(stack, /lyricBackCanReply/)
+    assert.match(panel, />\s*Back\s*</)
+    assert.doesNotMatch(panel, /Back to @/)
+    assert.match(panel, /hideLyricBackAction=\{!canReply\}/)
+    assert.match(post, /lyricBackCanReply\(depthOffset\)/)
+    assert.doesNotMatch(post, /hideLyricBackAction\s*\n/)
   })
 })
 

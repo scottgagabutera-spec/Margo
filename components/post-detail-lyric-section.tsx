@@ -56,6 +56,8 @@ export function PostDetailLyricSection({
     focusedEcho,
     backToHandle,
     replyToUsername,
+    canReply,
+    visualStep,
   } = stackApi
 
   const pathname = usePathname()
@@ -68,7 +70,12 @@ export function PostDetailLyricSection({
     if (!composeOpen) return
     scrollPostLyricBackSearchUnderNav(sectionRef.current)
     composeRef.current?.focusSearch(true)
-  }, [composeOpen, focusId, composeRef, sectionRef])
+  }, [composeOpen, composeRef, sectionRef])
+
+  useLayoutEffect(() => {
+    if (!composeOpen) return
+    composeRef.current?.focusSearch(true)
+  }, [composeOpen, focusId, composeRef])
 
   useEffect(() => {
     if (!composeOpen) clearLyricBackKeyboardChrome()
@@ -103,6 +110,8 @@ export function PostDetailLyricSection({
         replyToUsername={replyToUsername || post.username || ''}
         parentEmotion={post.emotion || 'chill'}
         echoCountHint={echoCount}
+        canReply={canReply}
+        visualStep={visualStep}
         composeOpen={composeOpen}
         composeRef={composeRef}
         onRequireAuth={onRequireAuth}
@@ -120,9 +129,9 @@ export function PostDetailLyricSection({
   )
 }
 
-export function usePostDetailLyricBack(post: Post | null) {
+export function usePostDetailLyricBack(post: Post | null, depthOffset = 0) {
   const authorHandle = typeof post?.username === 'string' ? post.username : ''
-  const stackApi = useLyricBackFocusStack(post?.id ?? 'unset', authorHandle)
+  const stackApi = useLyricBackFocusStack(post?.id ?? 'unset', authorHandle, depthOffset)
   const composeRef = useRef<LyricBackPanelComposeHandle>(null)
   const sectionRef = useRef<HTMLElement>(null)
   const mainCardRef = useRef<HTMLElement>(null)

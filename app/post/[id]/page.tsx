@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { usePost, usePostAncestors } from '@/hooks/usePost'
+import { lyricBackCanReply } from '@/lib/lyric-back-depth'
 import { PostCard } from '@/components/post-card'
 import { LyricBackThreadRow } from '@/components/lyric-back-thread-row'
 import {
@@ -32,6 +33,7 @@ export default function PostDetailPage() {
   const postId = params.id || null
   const { post, loading } = usePost(postId)
   const { ancestors } = usePostAncestors(post?.parentPostId)
+  const depthOffset = post?.parentPostId ? ancestors.length : 0
 
   const {
     stackApi,
@@ -39,7 +41,7 @@ export default function PostDetailPage() {
     sectionRef,
     mainCardRef,
     scrollMainCardIntoView,
-  } = usePostDetailLyricBack(post)
+  } = usePostDetailLyricBack(post, depthOffset)
 
   const { isNested, drillInto, resetStack, backOneLevel } = stackApi
 
@@ -254,7 +256,6 @@ export default function PostDetailPage() {
                 }}
                 isAnchor
                 tone="anchor"
-                hideLyricBackAction
                 {...getRowExtras({
                   id: post.id,
                   lyric: post.text || '',
@@ -265,6 +266,8 @@ export default function PostDetailPage() {
                   timestamp: post.timestamp ?? 0,
                   resonateCount: post.resonates ?? 0,
                 } as Echo)}
+                hideLyricBackAction={!lyricBackCanReply(depthOffset)}
+                lyricBackSessionActive={composeOpen && !isNested}
                 onExport={() => handleExport(post)}
               />
             </section>

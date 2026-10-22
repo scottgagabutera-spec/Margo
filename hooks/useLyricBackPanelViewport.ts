@@ -66,6 +66,8 @@ export function useLyricBackPanelViewport(
 
       if (!keyboardOpen) {
         el.style.removeProperty('--lb-panel-vvh')
+        el.style.removeProperty('height')
+        el.removeAttribute('data-lb-keyboard')
         return
       }
 
@@ -77,9 +79,13 @@ export function useLyricBackPanelViewport(
       })
       if (cap <= 0) {
         el.style.removeProperty('--lb-panel-vvh')
+        el.style.removeProperty('height')
+        el.removeAttribute('data-lb-keyboard')
         return
       }
       el.style.setProperty('--lb-panel-vvh', `${cap}px`)
+      el.style.height = `${cap}px`
+      el.setAttribute('data-lb-keyboard', '1')
     }
 
     update()
@@ -111,7 +117,10 @@ export function useLyricBackPanelViewport(
       document.removeEventListener('focusin', onFocus)
       document.removeEventListener('focusout', onFocus)
       clearLyricBackKeyboardChrome()
-      panelRef.current?.style.removeProperty('--lb-panel-vvh')
+      const el = panelRef.current
+      el?.style.removeProperty('--lb-panel-vvh')
+      el?.style.removeProperty('height')
+      el?.removeAttribute('data-lb-keyboard')
     }
   }, [enabled, panelRef])
 }
