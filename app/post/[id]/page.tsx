@@ -1,10 +1,11 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { usePost, usePostAncestors } from '@/hooks/usePost'
 import { useEchoes } from '@/hooks/useEchoes'
+import { useLyricBackFocusStack } from '@/hooks/useLyricBackFocusStack'
 import { PostCard } from '@/components/post-card'
 import { LyricBackThreadRow } from '@/components/lyric-back-thread-row'
 import {
@@ -38,9 +39,19 @@ export default function PostDetailPage() {
   const composeRef = useRef<LyricBackPanelComposeHandle>(null)
   const lbSectionRef = useRef<HTMLElement>(null)
   const [composeOpen, setComposeOpen] = useState(false)
-  const [focusId, setFocusId] = useState<string | null>(null)
-  const [focusedEcho, setFocusedEcho] = useState<Echo | null>(null)
-  const [backToHandle, setBackToHandle] = useState<string | null>(null)
+
+  const rootAuthor = post?.username ?? ''
+  const {
+    focusId,
+    focusedEcho,
+    isNested,
+    backToHandle,
+    replyToUsername,
+    drillInto,
+    backOneLevel,
+    resetStack,
+  } = useLyricBackFocusStack(post?.id ?? '', rootAuthor)
+
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
   const [resonated, setResonated] = useState<Set<string>>(() => {
@@ -61,10 +72,6 @@ export default function PostDetailPage() {
   })
   const [replayCounts, setReplayCounts] = useState<Record<string, number>>({})
 
-  const rootPostId = post?.id ?? ''
-  const effectiveFocusId = focusId ?? rootPostId
-  const isNestedFocus = Boolean(post && effectiveFocusId !== post.id && focusedEcho)
-
   const scrollComposeIntoView = useCallback(() => {
     window.setTimeout(() => {
       lbSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -73,45 +80,33 @@ export default function PostDetailPage() {
     }, 60)
   }, [])
 
-  const focusIdRef = useRef(effectiveFocusId)
-  focusIdRef.current = effectiveFocusId
-  const focusedEchoRef = useRef(focusedEcho)
-  focusedEchoRef.current = focusedEcho
-
   const openComposer = useCallback((targetId: string, echo?: Echo) => {
     if (!post?.id) return
     if (targetId === post.id) {
-      setFocusedEcho(null)
-      setBackToHandle(null)
+      resetStack()
     } else if (echo) {
-      const parentHandle = focusIdRef.current === post.id
-        ? (post.username || '').replace(/^@/, '').trim() || 'member'
-        : (focusedEchoRef.current?.username || '').replace(/^@/, '').trim() || 'member'
-      setBackToHandle(parentHandle)
-      setFocusedEcho(echo)
+      drillInto(echo)
     }
-    setFocusId(targetId)
     setComposeOpen(true)
     scrollComposeIntoView()
-  }, [post?.id, post?.username, scrollComposeIntoView])
+  }, [drillInto, post?.id, resetStack, scrollComposeIntoView])
 
   const toggleMainLyricBack = useCallback(() => {
     if (!post?.id) return
-    if (composeOpen && effectiveFocusId === post.id && !isNestedFocus) {
+    if (composeOpen && !isNested) {
       setComposeOpen(false)
+      resetStack()
       return
     }
+    resetStack()
     openComposer(post.id)
-  }, [composeOpen, effectiveFocusId, isNestedFocus, openComposer, post?.id])
+  }, [composeOpen, isNested, openComposer, post?.id, resetStack])
 
-  const backOneLevel = useCallback(() => {
-    if (!post?.id) return
-    setFocusId(post.id)
-    setFocusedEcho(null)
-    setBackToHandle(null)
+  const handleBackOneLevel = useCallback(() => {
+    backOneLevel()
     setComposeOpen(true)
     scrollComposeIntoView()
-  }, [post?.id, scrollComposeIntoView])
+  }, [backOneLevel, scrollComposeIntoView])
 
   const toggleResonate = async (id: string) => {
     if (!requireAuth()) return
@@ -196,7 +191,7 @@ export default function PostDetailPage() {
 
   const getRowExtras = useCallback((echo: Echo): LyricBackThreadRowExtras => ({
     onResonate: toggleResonate,
-    onLyricBack: (targetId) => openComposer(targetId, echo.id === targetId ? echo : echo),
+    onLyricBack: (targetId) => openComposer(targetId, echo),
     onOpenThread: (id) => router.push(`/post/${id}`),
     onExport: handleExportEcho,
     onReplay: toggleReplay,
@@ -204,15 +199,10 @@ export default function PostDetailPage() {
     replayCount: replayCounts[echo.id] ?? 0,
     resonated: resonated.has(echo.id),
     resonateCount: resonateCounts[echo.id] ?? echo.resonateCount ?? 0,
-  }), [echoes, openComposer, replayCounts, replayed, resonateCounts, resonated, router])
+  }), [openComposer, replayCounts, replayed, resonateCounts, resonated, router])
 
   const echoCount = post?.replies ?? echoes.length
-  const showLbSection = Boolean(post && (composeOpen || echoes.length > 0 || isNestedFocus))
-
-  const replyToUsername = useMemo(() => {
-    if (isNestedFocus && focusedEcho) return focusedEcho.username || ''
-    return post?.username || ''
-  }, [focusedEcho, isNestedFocus, post?.username])
+  const showLbSection = Boolean(post?.id && (composeOpen || echoes.length > 0 || isNested))
 
   return (
     <main style={{
@@ -291,7 +281,7 @@ export default function PostDetailPage() {
               />
             </section>
           ) : (
-            <section>
+            <section className="margo-post-detail-main" aria-label="Lyric moment">
               <PostCard
                 post={post}
                 resonated={resonated.has(post.id)}
@@ -304,19 +294,23 @@ export default function PostDetailPage() {
                 replayCount={replayCounts[post.id] ?? 0}
                 disableCardNav
                 threadDetail
-                threadLyricBackOpen={composeOpen && effectiveFocusId === post.id && !isNestedFocus}
+                threadLyricBackOpen={composeOpen && !isNested}
                 onThreadLyricBack={toggleMainLyricBack}
               />
             </section>
           )}
 
-          {showLbSection ? (
-            <section ref={lbSectionRef} className="margo-post-detail-lb">
+          {showLbSection && post.id ? (
+            <section
+              ref={lbSectionRef}
+              className={`margo-post-detail-lb${isNested ? ' margo-post-detail-lb--thread-focus' : ''}`}
+              aria-label="Lyric Backs"
+            >
               <LyricBackFocusBody
                 variant="post-inline"
-                rootPostId={rootPostId}
-                focusId={effectiveFocusId}
-                focusedEcho={isNestedFocus ? focusedEcho : null}
+                rootPostId={post.id}
+                focusId={focusId}
+                focusedEcho={focusedEcho}
                 backToHandle={backToHandle}
                 replyToUsername={replyToUsername}
                 parentEmotion={post.emotion || 'chill'}
@@ -328,7 +322,7 @@ export default function PostDetailPage() {
                 onSent={() => {
                   void refetchEchoes()
                 }}
-                onBack={isNestedFocus ? backOneLevel : undefined}
+                onBack={isNested ? handleBackOneLevel : undefined}
                 onFocusEcho={(echo) => openComposer(echo.id, echo)}
                 onOpenThread={(id) => router.push(`/post/${id}`)}
                 onExportEcho={handleExportEcho}
