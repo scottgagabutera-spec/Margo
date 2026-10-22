@@ -74,6 +74,9 @@ export const SHORTS_LOOKS: ShortsLook[] = [
   },
 ]
 
+/** Shelf only — paid / Studio looks stay in registry for future use. */
+export const SHORTS_FREE_LOOKS = SHORTS_LOOKS.filter((l) => l.tier === 'free')
+
 function normalizeVibeKey(vibe: string | null | undefined): string {
   return (vibe || '').trim().toUpperCase() || 'IVORY'
 }
@@ -89,14 +92,14 @@ export function pickShortsLook(
   day: string = utcDayKey(new Date()),
 ): ShortsLook {
   const vibeKey = normalizeVibeKey(vibe)
-  const scored = SHORTS_LOOKS.map((look) => ({
+  const scored = SHORTS_FREE_LOOKS.map((look) => ({
     look,
     score: scoreLookForVibe(look, vibeKey),
   }))
   const maxScore = Math.max(...scored.map((s) => s.score), 0)
   const pool = maxScore > 0
     ? scored.filter((s) => s.score === maxScore).map((s) => s.look)
-    : SHORTS_LOOKS.filter((l) => l.id === 'gold-still')
+    : SHORTS_FREE_LOOKS.filter((l) => l.id === 'gold-still')
   const idx = stableHash32(`${songId}:${day}:${vibeKey}`) % pool.length
-  return pool[idx] ?? SHORTS_LOOKS[0]
+  return pool[idx] ?? SHORTS_FREE_LOOKS[0]
 }

@@ -17,6 +17,8 @@ import {
 import { pickShortsLook } from '@/lib/shorts-looks'
 import { utcDayKey } from '@/lib/shorts-shelf-rotation'
 
+const ANON_PLAYS_BEFORE_SIGNUP = 5
+
 type Props = {
   clips: LyricMoment[]
   loading: boolean
@@ -43,8 +45,19 @@ export function FeedShortsPager({
   const [playingKey, setPlayingKey] = useState<string | null>(null)
   const [audioUnlocked, setAudioUnlocked] = useState(false)
   const [autoplayBlocked, setAutoplayBlocked] = useState(false)
+  const [anonPlaysCompleted, setAnonPlaysCompleted] = useState(0)
+  const anonPlayedKeysRef = useRef(new Set<string>())
+  const signedInRef = useRef(signedIn)
   const lastAutoIndexRef = useRef<number>(-1)
   const utcDay = utcDayKey(new Date())
+
+  useEffect(() => {
+    signedInRef.current = signedIn
+    if (signedIn) {
+      anonPlayedKeysRef.current = new Set()
+      setAnonPlaysCompleted(0)
+    }
+  }, [signedIn])
 
   useEffect(() => {
     if (!tabActive) {
@@ -64,8 +77,16 @@ export function FeedShortsPager({
         return
       }
       if (state.snippet) {
-        setPlayingKey(`${state.songId}_${state.snippet.lineIndex}`)
+        const playKey = `${state.songId}_${state.snippet.lineIndex}`
+        setPlayingKey(playKey)
         setAutoplayBlocked(false)
+        if (!signedInRef.current && state.playing) {
+          const played = anonPlayedKeysRef.current
+          if (!played.has(playKey)) {
+            played.add(playKey)
+            setAnonPlaysCompleted(played.size)
+          }
+        }
       }
     })
   }, [])
@@ -98,22 +119,26 @@ export function FeedShortsPager({
 
   const playClip = useCallback(
     (moment: LyricMoment, fromUserGesture: boolean) => {
-      if (!signedIn) {
-        onRequireSignIn()
-        return
-      }
       if (!moment.audioUrl) return
       playLyricMomentPool(moment, clips)
       if (fromUserGesture) setAudioUnlocked(true)
     },
-    [clips, onRequireSignIn, signedIn],
+    [clips],
   )
 
   useEffect(() => {
-    if (!tabActive || !signedIn || !audioUnlocked || autoplayBlocked) return
+    if (!tabActive || !audioUnlocked || autoplayBlocked) return
     if (activeIndex === lastAutoIndexRef.current) return
     const clip = clips[activeIndex]
     if (!clip?.audioUrl) return
+    const clipKey = `${clip.songId}_${clip.lineId}`
+    if (
+      !signedIn
+      && anonPlaysCompleted >= ANON_PLAYS_BEFORE_SIGNUP
+      && !anonPlayedKeysRef.current.has(clipKey)
+    ) {
+      return
+    }
     lastAutoIndexRef.current = activeIndex
     playLyricMomentPool(clip, clips)
     const t = window.setTimeout(() => {
@@ -121,7 +146,7 @@ export function FeedShortsPager({
       if (err?.includes('Play blocked')) setAutoplayBlocked(true)
     }, 400)
     return () => window.clearTimeout(t)
-  }, [activeIndex, audioUnlocked, autoplayBlocked, clips, signedIn, tabActive])
+  }, [activeIndex, anonPlaysCompleted, audioUnlocked, autoplayBlocked, clips, signedIn, tabActive])
 
   if (loading) {
     return (
@@ -151,7 +176,12 @@ export function FeedShortsPager({
         const isActive = index === activeIndex
         const look = pickShortsLook(clip.songId, clip.vibes[0], utcDay)
         const motionAtmosphere = isActive ? look.atmosphereId : 'still'
-        const showBlockedPlay = signedIn && isActive && autoplayBlocked && !isPlaying
+        const clipNeedsSignup =
+          !signedIn
+          && anonPlaysCompleted >= ANON_PLAYS_BEFORE_SIGNUP
+          && !anonPlayedKeysRef.current.has(key)
+        const showBlockedPlay = isActive && autoplayBlocked && !isPlaying && !clipNeedsSignup
+        const showSignupOnPlay = clipNeedsSignup && isActive
         return (
           <section
             key={key}
@@ -174,9 +204,9 @@ export function FeedShortsPager({
                   hideVibeChrome
                   canPlay={!!clip.audioUrl}
                   playing={isPlaying}
-                  playControlLabel={signedIn ? (showBlockedPlay ? 'Play' : null) : 'Sign up'}
+                  playControlLabel={showSignupOnPlay ? 'Sign up' : showBlockedPlay ? 'Play' : null}
                   onPlay={() => {
-                    if (!signedIn) {
+                    if (showSignupOnPlay) {
                       onRequireSignIn()
                       return
                     }
