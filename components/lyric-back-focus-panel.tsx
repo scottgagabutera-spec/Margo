@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { usePathname } from 'next/navigation'
 import { LyricBackTrackListenControl } from '@/components/lyric-back-track-listen-control'
 import { LyricBackTrackStripPlaceholder } from '@/components/lyric-back-thread-row-skeleton'
 import { scrollFeedLyricBackPanelIntoView } from '@/lib/lyric-back-panel-scroll'
@@ -20,7 +21,10 @@ import {
 } from '@/components/lyric-back-panel-compose'
 import { LyricBackReplyContext } from '@/components/lyric-back-reply-context'
 import { useLyricBackFocusStack } from '@/hooks/useLyricBackFocusStack'
-import { useLyricBackPanelViewport } from '@/hooks/useLyricBackPanelViewport'
+import {
+  clearLyricBackKeyboardChrome,
+  useLyricBackPanelViewport,
+} from '@/hooks/useLyricBackPanelViewport'
 
 export type LyricBackThreadRowExtras = {
   onResonate?: (echoId: string) => void
@@ -441,10 +445,16 @@ export function LyricBackFeedPanel({
     resetStack,
   } = useLyricBackFocusStack(postId, author)
 
+  const pathname = usePathname()
   useLyricBackPanelViewport(panelRef, open)
 
   useEffect(() => {
+    clearLyricBackKeyboardChrome()
+  }, [pathname])
+
+  useEffect(() => {
     if (!open) {
+      clearLyricBackKeyboardChrome()
       resetStack()
       setComposePrefill(null)
     }

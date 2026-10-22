@@ -4,6 +4,10 @@ import { useEffect, type RefObject } from 'react'
 
 const KEYBOARD_THRESHOLD_PX = 120
 
+export function clearLyricBackKeyboardChrome(): void {
+  document.documentElement.classList.remove('margo-keyboard-open')
+}
+
 function scrollPanelRepliesToTop(panel: HTMLElement) {
   const scroller = panel.querySelector('.margo-post-card__lb-scroll')
   if (scroller instanceof HTMLElement) {
@@ -18,7 +22,7 @@ export function useLyricBackPanelViewport(
 ) {
   useEffect(() => {
     if (!enabled) {
-      document.documentElement.classList.remove('margo-keyboard-open')
+      clearLyricBackKeyboardChrome()
       return
     }
 
@@ -48,15 +52,24 @@ export function useLyricBackPanelViewport(
     update()
     scrollPanelRepliesToTop(panel)
 
+    const onPageHide = () => clearLyricBackKeyboardChrome()
+    const onVis = () => {
+      if (document.visibilityState === 'hidden') clearLyricBackKeyboardChrome()
+    }
+
     vv?.addEventListener('resize', update)
     vv?.addEventListener('scroll', update)
     window.addEventListener('resize', update)
+    window.addEventListener('pagehide', onPageHide)
+    document.addEventListener('visibilitychange', onVis)
 
     return () => {
       vv?.removeEventListener('resize', update)
       vv?.removeEventListener('scroll', update)
       window.removeEventListener('resize', update)
-      document.documentElement.classList.remove('margo-keyboard-open')
+      window.removeEventListener('pagehide', onPageHide)
+      document.removeEventListener('visibilitychange', onVis)
+      clearLyricBackKeyboardChrome()
       panelRef.current?.style.removeProperty('--lb-panel-vvh')
     }
   }, [enabled, panelRef])
