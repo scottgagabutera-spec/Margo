@@ -16,6 +16,7 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchUnifiedSongSearchHits } from '@/lib/song-search/unified-song-search'
 import { matchLiveCatalogSong } from '@/lib/search-margo-songs'
 import { trackEvent } from '@/lib/analytics/track'
+import { toastMomentSent } from '@/lib/moment-export/moment-export-toasts'
 
 const supabase = createClient()
 
@@ -30,6 +31,7 @@ export type LyricBackPanelPrefill = {
 
 export type LyricBackPanelComposeHandle = {
   scrollIntoView: () => void
+  focusSearch: () => void
 }
 
 export type LyricBackPanelComposeProps = {
@@ -42,6 +44,8 @@ export type LyricBackPanelComposeProps = {
   layout?: 'panel' | 'page'
   /** Shown when replying to a nested Lyric Back (not the root moment). */
   replyToLabel?: string | null
+  /** Focus catalog search when compose mounts (post page / panel open). */
+  focusSearchOnMount?: boolean
 }
 
 type SelectedSong = {
@@ -64,6 +68,7 @@ export const LyricBackPanelCompose = forwardRef<
     prefill,
     layout = 'page',
     replyToLabel,
+    focusSearchOnMount = false,
   },
   ref,
 ) {
@@ -92,7 +97,20 @@ export const LyricBackPanelCompose = forwardRef<
     scrollIntoView: () => {
       rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     },
+    focusSearch: () => {
+      const input = rootRef.current?.querySelector('input')
+      if (input instanceof HTMLInputElement) input.focus()
+    },
   }))
+
+  useEffect(() => {
+    if (!focusSearchOnMount) return
+    const t = window.setTimeout(() => {
+      const input = rootRef.current?.querySelector('input')
+      if (input instanceof HTMLInputElement) input.focus()
+    }, 80)
+    return () => window.clearTimeout(t)
+  }, [focusSearchOnMount, parentPostId])
 
   const resetSong = useCallback(() => {
     setSelected(null)
@@ -298,6 +316,7 @@ export const LyricBackPanelCompose = forwardRef<
         return
       }
       trackEvent('lyric_back_sent', { private: false, inline: true })
+      toastMomentSent()
       const replyId = typeof payload.id === 'string' ? payload.id : null
       if (replyId) {
         fetch('/api/moderate', {
@@ -353,6 +372,7 @@ export const LyricBackPanelCompose = forwardRef<
           placeholder="Search by lyric, song or artist…"
           ariaLabel="Search by lyric, song or artist"
           stackAboveOverlay={isPanelLayout && searchOpen}
+          autoFocus={focusSearchOnMount}
           onFocus={() => {
             if (query.trim().length >= 2) setShowResults(true)
           }}
