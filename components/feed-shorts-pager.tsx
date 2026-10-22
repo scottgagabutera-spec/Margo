@@ -85,9 +85,6 @@ export function FeedShortsPager({
     return (
       <div className={`margo-feed-shorts-empty${emptyWithVibe}`}>
         <p className="margo-feed-shorts-empty__title">Sign in for Shorts</p>
-        <p className="margo-feed-shorts-empty__body">
-          Lyric clips from the catalog are available to signed-in members for now.
-        </p>
       </div>
     )
   }
