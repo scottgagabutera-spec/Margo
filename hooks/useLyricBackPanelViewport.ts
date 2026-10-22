@@ -102,20 +102,22 @@ export function useLyricBackPanelViewport(
       if (document.visibilityState === 'hidden') clearLyricBackKeyboardChrome()
       else update()
     }
-    const onFocus = (ev: FocusEvent) => {
+    const onFocusIn = (ev: FocusEvent) => {
       const el = panelRef.current
       if (el && isPanelTextField(el, ev.target)) {
         const input = ev.target
-        if (input instanceof HTMLElement && 'focus' in input) {
+        if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement) {
           try {
-            if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement) {
-              input.focus({ preventScroll: true })
-            }
+            input.focus({ preventScroll: true })
           } catch {
             /* older browsers */
           }
         }
       }
+      window.cancelAnimationFrame(focusFrame)
+      focusFrame = window.requestAnimationFrame(update)
+    }
+    const onFocusOut = () => {
       window.cancelAnimationFrame(focusFrame)
       focusFrame = window.requestAnimationFrame(update)
     }
@@ -125,8 +127,8 @@ export function useLyricBackPanelViewport(
     window.addEventListener('resize', update)
     window.addEventListener('pagehide', onPageHide)
     document.addEventListener('visibilitychange', onVis)
-    document.addEventListener('focusin', onFocus)
-    document.addEventListener('focusout', onFocus)
+    document.addEventListener('focusin', onFocusIn)
+    document.addEventListener('focusout', onFocusOut)
 
     return () => {
       disposed = true
@@ -136,8 +138,8 @@ export function useLyricBackPanelViewport(
       window.removeEventListener('resize', update)
       window.removeEventListener('pagehide', onPageHide)
       document.removeEventListener('visibilitychange', onVis)
-      document.removeEventListener('focusin', onFocus)
-      document.removeEventListener('focusout', onFocus)
+      document.removeEventListener('focusin', onFocusIn)
+      document.removeEventListener('focusout', onFocusOut)
       clearLyricBackKeyboardChrome()
       const el = panelRef.current
       if (el) clearPanelKeyboardStyle(el)

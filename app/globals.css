@@ -1065,19 +1065,68 @@ html[data-margo-stage-idle] .margo-stage-zone {
   flex-direction: column;
   gap: 0;
 }
-.margo-lb-focus__bar {
+.margo-lb-focus__pin {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  min-width: 0;
+}
+.margo-lb-focus__tabs {
+  display: flex;
   align-items: center;
   gap: 6px;
-  flex-shrink: 0;
-  min-height: 0;
-  padding: 8px 0;
-  box-sizing: border-box;
+  height: 30px;
+  min-height: 30px;
+}
+.margo-lb-focus__switch {
+  display: flex;
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 30px;
+  gap: 0;
+}
+.margo-lb-focus__tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  height: 30px;
+  padding: 0 10px;
+  border: none;
+  background: none;
+  color: var(--gold);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  text-decoration: none;
+}
+.margo-lb-focus__tab--on {
+  color: var(--gold);
+}
+.margo-lb-focus__tab--on::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--gold);
+}
+.margo-lb-focus__close,
+.margo-lb-focus__tabs .margo-post-card__lb-close {
+  width: 30px;
+  height: 30px;
+  color: var(--gold);
 }
 .margo-lb-focus__search-wrap {
-  flex: 1 1 140px;
+  width: 100%;
+  flex: none;
   min-width: 0;
+  padding: 4px 0 6px;
 }
 .margo-lb-focus__back-chip {
   display: inline-flex;
@@ -1086,9 +1135,9 @@ html[data-margo-stage-idle] .margo-stage-zone {
   height: 28px;
   padding: 0 8px;
   border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
+  border: 1px solid var(--gold-border);
+  background: color-mix(in srgb, var(--gold) 12%, var(--surface));
+  color: var(--gold);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 0.68rem;
   font-weight: 600;
@@ -1099,49 +1148,8 @@ html[data-margo-stage-idle] .margo-stage-zone {
   display: inline-flex;
   transform: rotate(180deg);
 }
-.margo-lb-focus__count {
-  flex-shrink: 0;
-  min-width: 1.1em;
-  text-align: center;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  line-height: 1;
-}
-.margo-lb-focus__bar .margo-post-card__lb-close {
-  width: 32px;
-  height: 32px;
-}
-.margo-lb-focus__chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 28px;
-  padding: 0 8px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text-secondary);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.68rem;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: none;
-  flex-shrink: 0;
-}
-.margo-lb-focus__chip--gold {
-  border-color: var(--gold-border);
-  color: var(--gold);
-  background: color-mix(in srgb, var(--gold) 12%, var(--surface));
-}
-.margo-lb-focus__ideas-pop {
-  margin-top: 4px;
-  max-height: min(220px, 36vh);
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
+.margo-lb-focus__ideas {
+  min-width: 0;
 }
 .margo-search-wrap--lb .margo-search-wrap__icon {
   position: absolute;
@@ -1227,7 +1235,7 @@ html[data-margo-stage-idle] .margo-stage-zone {
 .margo-post-card__lb-panel[data-lb-keyboard='1'] .margo-lb-focus__chrome,
 .margo-post-detail-lb[data-lb-keyboard='1'] .margo-lb-focus__chrome {
   flex-shrink: 0;
-  max-height: min(52vh, 320px);
+  max-height: min(70vh, 420px);
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -1535,18 +1543,18 @@ html.margo-keyboard-open .margo-mobile-tabbar {
 }
 .margo-post-card__lb-compose-track--chip {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-  min-height: 36px;
-  padding: 2px 4px 2px 2px;
+  min-height: 44px;
+  padding: 4px;
   margin: 0;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--surface);
 }
 .margo-post-card__lb-compose-art {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 7px;
   object-fit: cover;
   display: block;
@@ -1555,20 +1563,37 @@ html.margo-keyboard-open .margo-mobile-tabbar {
 }
 .margo-post-card__lb-compose-art--empty {
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--text-muted) 16%, var(--surface)), var(--surface-2));
+    linear-gradient(180deg, color-mix(in srgb, var(--gold) 18%, var(--surface)), var(--surface-2));
 }
-.margo-post-card__lb-compose-chip-line {
+.margo-post-card__lb-compose-chip-meta {
   flex: 1 1 auto;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 1px;
+}
+.margo-post-card__lb-compose-chip-meta .margo-post-card__lb-compose-song {
+  display: block;
+  width: 100%;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.72rem;
-  color: var(--text);
 }
-.margo-post-card__lb-compose-chip-line .margo-post-card__lb-compose-artist {
+.margo-post-card__lb-compose-chip-meta .margo-post-card__lb-compose-artist {
+  display: block;
+  width: 100%;
+  margin-top: 0;
+  font-size: 12px;
+  line-height: 1.2;
   color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .margo-post-card__lb-compose-track--chip .margo-post-card__lb-compose-clear {
   position: static;
@@ -1634,6 +1659,99 @@ html.margo-keyboard-open .margo-mobile-tabbar {
   align-items: center;
   justify-content: center;
   padding: 0;
+}
+.margo-post-card__lb-compose--panel .margo-post-card__lb-line-picker {
+  flex: 1 1 auto;
+  min-height: 140px;
+  max-height: min(48vh, 360px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-top: 8px;
+  padding-top: 4px;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+}
+.margo-lb-line-row__play {
+  position: relative;
+}
+.margo-lb-line-row__play::before {
+  content: '';
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--gold-border);
+  background: var(--gold-faint);
+}
+.margo-lb-line-row__play > * {
+  position: relative;
+  z-index: 1;
+}
+.compose-search-row--panel {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 10px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  text-align: left;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+.compose-search-row--panel .compose-search-row__art,
+.compose-search-row--panel .compose-search-row__art--empty {
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--gold) 14%, var(--surface)), var(--surface-2));
+}
+.compose-search-row--panel .compose-search-row__meta {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+.compose-search-row--panel .compose-search-row__title {
+  margin: 0;
+  width: 100%;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.compose-search-row--panel .compose-search-row__artist {
+  margin: 0;
+  width: 100%;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.compose-search-row--panel .compose-search-row__margo {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .margo-post-card__lb-line-picker {
   max-height: min(36vh, 280px);

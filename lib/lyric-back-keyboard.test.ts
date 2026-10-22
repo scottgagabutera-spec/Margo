@@ -6,6 +6,7 @@ import {
   lyricBackPanelCapPx,
   lyricBackPinnedPanelCapPx,
   LYRIC_BACK_KEYBOARD_MIN_PANEL_PX,
+  panelSearchDropdownFillBelow,
   panelSearchDropdownFrame,
   visualKeyboardInsetPx,
 } from './lyric-back-keyboard.ts'
@@ -61,6 +62,17 @@ describe('lyric back keyboard geometry', () => {
       feedSearchScrollDelta({ searchTop: 200, navHeight: 72, chromeBelowNav: 40, gap: 12 }),
       200 - 124,
     )
+  })
+
+  it('fills search results from the pin down to the visual viewport', () => {
+    const frame = panelSearchDropdownFillBelow({
+      anchorBottom: 140,
+      offsetTop: 0,
+      viewportHeight: 380,
+      bottomInset: 8,
+    })
+    assert.equal(frame.top, 144)
+    assert.equal(frame.maxHeight, 228)
   })
 
   it('places the panel dropdown inside offsetTop + height without a 160px floor', () => {
@@ -229,8 +241,12 @@ describe('lyric back keyboard wiring', () => {
     assert.doesNotMatch(panel, /focusSearch\(true\)/)
     assert.match(panel, /margo-lb-focus__chrome/)
     assert.match(panel, /margo-lb-focus__back-chip/)
+    assert.match(panel, /margo-lb-focus__switch/)
+    assert.match(panel, />\s*Replies\s*</)
+    assert.match(panel, />\s*Ideas\s*</)
     assert.match(panel, /margo-sr-only/)
     assert.doesNotMatch(panel, /Lyric Backs ·/)
+    assert.doesNotMatch(panel, /margo-lb-focus__count/)
     assert.doesNotMatch(panel, /margo-lb-focus__reply-to/)
     assert.doesNotMatch(panel, /Replying to/)
     assert.match(panel, /data-lb-first-row/)
@@ -248,6 +264,9 @@ describe('lyric back keyboard wiring', () => {
     assert.match(css, /\.margo-lb-focus__scroll \{[^}]*touch-action:\s*pan-y/)
     assert.match(css, /margo-lb-focus__chrome/)
     assert.match(css, /margo-search--lb-panel/)
+    assert.match(css, /margo-lb-focus__tabs/)
+    assert.match(css, /compose-search-row--panel/)
+    assert.match(css, /margo-post-card__lb-compose-chip-meta/)
     assert.match(css, /--lb-pin-gap/)
     assert.match(css, /scroll-padding-top:\s*var\(--lb-pin-gap\)/)
     assert.match(css, /@supports \(-webkit-touch-callout: none\)/)
@@ -272,6 +291,10 @@ describe('lyric back keyboard wiring', () => {
     assert.doesNotMatch(hook, /\.scrollTop\s*[+=]/)
     assert.doesNotMatch(hook, /Math\.max\(\s*160/)
     assert.match(hook, /preventScroll:\s*true/)
+    assert.match(hook, /addEventListener\('focusin', onFocusIn\)/)
+    assert.match(hook, /addEventListener\('focusout', onFocusOut\)/)
+    assert.doesNotMatch(hook, /addEventListener\('focusout', onFocus\)/)
+    assert.doesNotMatch(hook, /const onFocusOut[\s\S]*\.focus\(/)
     assert.match(hook, /removeAttribute\('data-margo-keyboard'\)/)
     assert.match(hook, /setAttribute\('data-margo-keyboard', '1'\)/)
     assert.match(hook, /pagehide/)
@@ -280,7 +303,8 @@ describe('lyric back keyboard wiring', () => {
   it('panel dropdown uses visualViewport offsetTop + height', () => {
     const dropdown = fs.readFileSync('components/compose-search-dropdown.tsx', 'utf8')
     assert.match(dropdown, /offsetTop: vv\?\.offsetTop/)
-    assert.match(dropdown, /panelSearchDropdownFrame/)
+    assert.match(dropdown, /panelSearchDropdownFillBelow/)
+    assert.match(dropdown, /compose-search-row--panel/)
     assert.doesNotMatch(dropdown, /Math\.max\(\s*160/)
     assert.doesNotMatch(dropdown, /window\.innerHeight - anchorRect/)
   })
@@ -325,5 +349,10 @@ describe('lyric back keyboard wiring', () => {
     assert.match(compose, /renderBar/)
     assert.match(compose, /margo-post-card__lb-compose-track--chip/)
     assert.match(compose, /margo-post-card__lb-compose-send--infield/)
+    assert.match(compose, /blurSearch\(\)/)
+    assert.match(compose, /data-lb-lyric/)
+    assert.match(compose, /margo-post-card__lb-compose-chip-meta/)
+    assert.doesNotMatch(compose, /aria-hidden> · /)
+    assert.match(compose, /variant=\{isPanelLayout \? 'panel' : 'compose'\}/)
   })
 })

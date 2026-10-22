@@ -85,3 +85,20 @@ export function panelSearchDropdownFrame(input: {
     : input.anchorBottom + gap
   return { top, maxHeight }
 }
+
+/** Fill every pixel from the search row down to the visual viewport / keyboard. */
+export function panelSearchDropdownFillBelow(input: {
+  anchorBottom: number
+  offsetTop: number
+  viewportHeight: number
+  bottomInset: number
+  gap?: number
+}): { top: number; maxHeight: number } {
+  const gap = input.gap ?? 4
+  const visibleBottom = input.offsetTop + input.viewportHeight
+  const top = input.anchorBottom + gap
+  return {
+    top,
+    maxHeight: Math.max(0, Math.round(visibleBottom - top - input.bottomInset)),
+  }
+}

@@ -292,68 +292,79 @@ export function LyricBackFocusBody({
   const TitleTag = feedPanel ? 'h3' : 'h2'
 
   const renderBar = (search: ReactNode) => (
-    <div className="margo-lb-focus__bar" data-lb-pin="1">
-      {isNested && onBack ? (
-        <button
-          type="button"
-          className="margo-lb-focus__back-chip"
-          onPointerDown={(event) => {
-            if (event.button !== 0) return
-            event.preventDefault()
-            event.stopPropagation()
-            goBack()
-          }}
-          onClick={(event) => {
-            event.preventDefault()
-            event.stopPropagation()
-            goBack()
-          }}
-        >
-          <span className="margo-lb-focus__back-mark" aria-hidden>
-            <FeedIconChevronRight size={12} />
-          </span>
-          Back
-        </button>
-      ) : null}
-      {search ? <div className="margo-lb-focus__search-wrap">{search}</div> : null}
-      {showIdeas ? (
-        <button
-          type="button"
-          className="margo-lb-focus__chip"
-          aria-expanded={ideasOpen}
-          onClick={() => setIdeasOpen((o) => !o)}
-        >
-          Ideas
-        </button>
-      ) : null}
-      {showIdeasSignUp ? (
-        onRequireAuth ? (
+    <div className="margo-lb-focus__pin" data-lb-pin="1">
+      <div className="margo-lb-focus__tabs">
+        {isNested && onBack ? (
           <button
             type="button"
-            className="margo-lb-focus__chip margo-lb-focus__chip--gold"
-            onClick={() => onRequireAuth()}
+            className="margo-lb-focus__back-chip"
+            onPointerDown={(event) => {
+              if (event.button !== 0) return
+              event.preventDefault()
+              event.stopPropagation()
+              goBack()
+            }}
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              goBack()
+            }}
           >
-            Sign in
+            <span className="margo-lb-focus__back-mark" aria-hidden>
+              <FeedIconChevronRight size={12} />
+            </span>
+            Back
           </button>
-        ) : (
-          <SignInLink className="margo-lb-focus__chip margo-lb-focus__chip--gold">
-            Sign in
-          </SignInLink>
-        )
-      ) : null}
-      <span className="margo-lb-focus__count" aria-hidden>
-        {headerCount}
-      </span>
-      {feedPanel && onClose ? (
-        <button
-          type="button"
-          className="margo-post-card__lb-close"
-          aria-label="Close Lyric Backs"
-          onClick={onClose}
-        >
-          <FeedIconClose size={16} />
-        </button>
-      ) : null}
+        ) : null}
+        <div className="margo-lb-focus__switch" role="tablist" aria-label="Lyric Backs">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={!ideasOpen}
+            className={`margo-lb-focus__tab${!ideasOpen ? ' margo-lb-focus__tab--on' : ''}`}
+            onClick={() => setIdeasOpen(false)}
+          >
+            Replies
+          </button>
+          {showIdeas ? (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={ideasOpen}
+              className={`margo-lb-focus__tab${ideasOpen ? ' margo-lb-focus__tab--on' : ''}`}
+              onClick={() => setIdeasOpen(true)}
+            >
+              Ideas
+            </button>
+          ) : null}
+          {showIdeasSignUp ? (
+            onRequireAuth ? (
+              <button
+                type="button"
+                className="margo-lb-focus__tab margo-lb-focus__tab--on"
+                onClick={() => onRequireAuth()}
+              >
+                Sign in
+              </button>
+            ) : (
+              <SignInLink className="margo-lb-focus__tab margo-lb-focus__tab--on">
+                Sign in
+              </SignInLink>
+            )
+          ) : null}
+        </div>
+        {feedPanel && onClose ? (
+          <button
+            type="button"
+            className="margo-post-card__lb-close margo-lb-focus__close"
+            aria-label="Close Lyric Backs"
+            onClick={onClose}
+          >
+            <FeedIconClose size={16} />
+          </button>
+        ) : null}
+      </div>
+      {search ? <div className="margo-lb-focus__search-wrap">{search}</div> : null}
     </div>
   )
 
@@ -384,14 +395,24 @@ export function LyricBackFocusBody({
         ) : (
           renderBar(null)
         )}
+      </div>
 
+      <div
+        ref={scrollRef}
+        onScroll={onListScroll}
+        className={
+          feedPanel
+            ? 'margo-lb-focus__scroll margo-post-card__lb-scroll margo-post-card__lb-scroll--feed'
+            : 'margo-lb-focus__scroll margo-post-detail-lb__scroll'
+        }
+      >
         {ideasOpen && showIdeas ? (
-          <div className="margo-lb-focus__ideas-pop">
+          <div className="margo-lb-focus__ideas">
             {ideasLoading ? <IdeasSkeleton /> : null}
             {ideasError && !ideasLoading ? (
               <button
                 type="button"
-                className="margo-lb-focus__chip"
+                className="margo-lb-focus__tab margo-lb-focus__tab--on"
                 onClick={() => void loadIdeas()}
               >
                 Retry
@@ -408,18 +429,8 @@ export function LyricBackFocusBody({
             ) : null}
           </div>
         ) : null}
-      </div>
 
-      <div
-        ref={scrollRef}
-        onScroll={onListScroll}
-        className={
-          feedPanel
-            ? 'margo-lb-focus__scroll margo-post-card__lb-scroll margo-post-card__lb-scroll--feed'
-            : 'margo-lb-focus__scroll margo-post-detail-lb__scroll'
-        }
-      >
-        {isNested && focusedEcho ? (
+        {!ideasOpen && isNested && focusedEcho ? (
           <div className="margo-post-card__lb-focused-anchor" data-lb-anchor="1">
             <LyricBackThreadRow
               echo={focusedEcho}
@@ -435,14 +446,14 @@ export function LyricBackFocusBody({
           </div>
         ) : null}
 
-        {!echoesReady ? (
+        {!ideasOpen && !echoesReady ? (
           <>
             <LyricBackTrackStripPlaceholder />
             <LyricBackPanelSkeleton />
           </>
         ) : null}
 
-        {echoesReady && echoes.length > 0 ? (
+        {!ideasOpen && echoesReady && echoes.length > 0 ? (
           <ul className={feedPanel ? 'margo-post-card__lb-list margo-post-card__lb-list--echoes' : 'margo-post-thread-list'}>
             {echoes.map((echo, index) => (
               <li key={echo.id} data-lb-first-row={index === 0 ? '1' : undefined}>

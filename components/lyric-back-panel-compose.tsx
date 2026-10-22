@@ -20,6 +20,7 @@ import { fetchUnifiedSongSearchHits } from '@/lib/song-search/unified-song-searc
 import { matchLiveCatalogSong } from '@/lib/search-margo-songs'
 import { trackEvent } from '@/lib/analytics/track'
 import { toastMomentSent } from '@/lib/moment-export/moment-export-toasts'
+import { compactArtworkUrl } from '@/lib/compact-artwork-url'
 
 const supabase = createClient()
 
@@ -120,6 +121,11 @@ export const LyricBackPanelCompose = forwardRef<
     }, 80)
     return () => window.clearTimeout(t)
   }, [focusSearchOnMount, parentPostId])
+
+  const blurSearch = useCallback(() => {
+    const input = rootRef.current?.querySelector('input')
+    if (input instanceof HTMLInputElement) input.blur()
+  }, [])
 
   const resetSong = useCallback(() => {
     setSelected(null)
@@ -247,12 +253,13 @@ export const LyricBackPanelCompose = forwardRef<
       setSelected({
         title: hit.title,
         artist: hit.artist,
-        artwork: hit.artwork || '',
+        artwork: compactArtworkUrl(hit.artwork, 64) || hit.artwork || '',
         catalogSongId: hit.margoSongId,
         audioUrl: hit.audioUrl ?? null,
         externalListenUrl: hit.externalListenUrl ?? null,
       })
       await loadCatalogLines(hit.margoSongId)
+      blurSearch()
       return
     }
 
@@ -262,12 +269,13 @@ export const LyricBackPanelCompose = forwardRef<
         setSelected({
           title: live.title,
           artist: live.artist,
-          artwork: live.artwork || hit.artwork || '',
+          artwork: compactArtworkUrl(live.artwork || hit.artwork, 64) || live.artwork || hit.artwork || '',
           catalogSongId: live.id,
           audioUrl: live.audioUrl ?? null,
           externalListenUrl: hit.externalListenUrl ?? null,
         })
         await loadCatalogLines(live.id)
+        blurSearch()
         return
       }
     } catch {
@@ -277,14 +285,15 @@ export const LyricBackPanelCompose = forwardRef<
     setSelected({
       title: hit.title,
       artist: hit.artist,
-      artwork: hit.artwork || '',
+      artwork: compactArtworkUrl(hit.artwork, 64) || hit.artwork || '',
       catalogSongId: null,
       audioUrl: null,
       externalListenUrl: hit.externalListenUrl ?? null,
     })
     setLines([])
     setLinePickDone(true)
-  }, [loadCatalogLines])
+    blurSearch()
+  }, [blurSearch, loadCatalogLines])
 
   const onPickLine = useCallback((line: ComposeLyricLine) => {
     setLyric(line.text.slice(0, 140))
@@ -414,7 +423,7 @@ export const LyricBackPanelCompose = forwardRef<
     <div className={`margo-post-card__lb-compose-track${isPanelLayout ? ' margo-post-card__lb-compose-track--chip' : ' margo-post-card__lb-compose-track--picked'}`}>
       {selected.artwork ? (
         <PostThumbnail
-          artwork={selected.artwork}
+          artwork={compactArtworkUrl(selected.artwork, 64) || selected.artwork}
           alt=""
           loading="lazy"
           className={isPanelLayout ? 'margo-post-card__lb-compose-art' : 'margo-lb-thread-row__art'}
@@ -422,9 +431,8 @@ export const LyricBackPanelCompose = forwardRef<
       ) : (
         <span className={isPanelLayout ? 'margo-post-card__lb-compose-art margo-post-card__lb-compose-art--empty' : 'margo-lb-thread-row__track-art'} aria-hidden />
       )}
-      <div className={isPanelLayout ? 'margo-post-card__lb-compose-chip-line' : 'margo-post-card__lb-compose-track-text'}>
+      <div className={isPanelLayout ? 'margo-post-card__lb-compose-chip-meta' : 'margo-post-card__lb-compose-track-text'}>
         <span className="margo-post-card__lb-compose-song">{selected.title}</span>
-        {isPanelLayout ? <span aria-hidden> · </span> : null}
         <span className="margo-post-card__lb-compose-artist">{selected.artist}</span>
       </div>
       <LyricBackTrackListenControl
@@ -463,9 +471,9 @@ export const LyricBackPanelCompose = forwardRef<
         artwork={selected.artwork || null}
         enableParagraphPick
         maxParagraphLines={2}
-        hideHeader
-        variant="compose"
-        onPick={onPickLine}
+            hideHeader
+            variant={isPanelLayout ? 'panel' : 'compose'}
+            onPick={onPickLine}
         onPickParagraph={onPickParagraph}
         onBack={() => resetSong()}
       />
@@ -476,6 +484,7 @@ export const LyricBackPanelCompose = forwardRef<
     <div className={isPanelLayout ? 'margo-post-card__lb-compose-lyric' : undefined}>
       <textarea
         className={`margo-post-card__lb-compose-input${isPanelLayout ? ' margo-post-card__lb-compose-input--panel' : ''}`}
+        data-lb-lyric={isPanelLayout ? '1' : undefined}
         value={lyric}
         onChange={(e) => setLyric(e.target.value.slice(0, 140))}
         placeholder="Write your line…"
