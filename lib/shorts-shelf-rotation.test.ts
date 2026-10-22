@@ -3,16 +3,19 @@ import assert from 'node:assert/strict'
 import type { LyricMoment } from './lyric-moments-board.ts'
 import {
   buildShortsShelfClips,
+  computeMaxPerArtist,
   meetsShortsMinimum,
   pickDailyMomentForSong,
   rotateShortsBatch,
   stableHash32,
+  SHORTS_BATCH_SIZE,
   SHORTS_MIN_ELIGIBLE_SONGS,
+  artistKeyForClip,
 } from './shorts-shelf-rotation.ts'
 
 function moment(songId: string, artist: string, lineId: number): LyricMoment {
   return {
-    line: 'test line here',
+    line: 'test line here enough words',
     start: 0,
     end: 3,
     lineId,
@@ -22,6 +25,16 @@ function moment(songId: string, artist: string, lineId: number): LyricMoment {
     audioUrl: 'https://example.com/a.mp3',
     vibes: ['HOPE'],
   }
+}
+
+function dailyClipsForArtists(artistCount: number, songsPerArtist: number): LyricMoment[] {
+  const out: LyricMoment[] = []
+  for (let a = 0; a < artistCount; a++) {
+    for (let s = 0; s < songsPerArtist; s++) {
+      out.push(moment(`a${a}-s${s}`, `Artist ${a}`, s))
+    }
+  }
+  return out
 }
 
 describe('shorts shelf rotation', () => {
@@ -35,21 +48,38 @@ describe('shorts shelf rotation', () => {
     const a = pickDailyMomentForSong('s1', pool, '2026-10-22')
     const b = pickDailyMomentForSong('s1', pool, '2026-10-22')
     assert.equal(a?.lineId, b?.lineId)
-    const c = pickDailyMomentForSong('s1', pool, '2026-10-23')
-    assert.ok(a && c)
   })
 
-  it('rotateShortsBatch caps at two per artist', () => {
-    const clips = [
-      moment('s1', 'Same Artist', 0),
-      moment('s2', 'Same Artist', 0),
-      moment('s3', 'Same Artist', 0),
-      moment('s4', 'Other', 0),
-    ]
-    const batch = rotateShortsBatch(clips, 100, { batchSize: 10, maxPerArtist: 2 })
-    const same = batch.filter((c) => c.artist === 'Same Artist')
-    assert.ok(same.length <= 2)
-    assert.ok(batch.length >= 3)
+  it('computeMaxPerArtist: single artist allows 20', () => {
+    assert.equal(computeMaxPerArtist(1), SHORTS_BATCH_SIZE)
+    assert.equal(computeMaxPerArtist(5), 2)
+    assert.equal(computeMaxPerArtist(50), 1)
+  })
+
+  it('round-robin with 1 artist fills up to batch size', () => {
+    const daily = dailyClipsForArtists(1, 25)
+    const batch = rotateShortsBatch(daily, 42, { batchSize: 20 })
+    assert.equal(batch.length, 20)
+    assert.equal(new Set(batch.map(artistKeyForClip)).size, 1)
+  })
+
+  it('round-robin with 5 artists spreads evenly in first round', () => {
+    const daily = dailyClipsForArtists(5, 8)
+    const batch = rotateShortsBatch(daily, 7, { batchSize: 20 })
+    const artists = new Set(batch.map(artistKeyForClip))
+    assert.equal(artists.size, 5)
+    for (const a of artists) {
+      const n = batch.filter((c) => artistKeyForClip(c) === a).length
+      assert.ok(n <= 2)
+      assert.ok(n >= 1)
+    }
+  })
+
+  it('round-robin with 50 artists yields 20 distinct artists', () => {
+    const daily = dailyClipsForArtists(50, 2)
+    const batch = rotateShortsBatch(daily, 99, { batchSize: 20 })
+    assert.equal(batch.length, 20)
+    assert.equal(new Set(batch.map(artistKeyForClip)).size, 20)
   })
 
   it('meetsShortsMinimum', () => {

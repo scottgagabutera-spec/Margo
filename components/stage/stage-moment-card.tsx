@@ -42,6 +42,8 @@ interface StageMomentCardProps {
   playing?: boolean
   buffering?: boolean
   onPlay?: () => void
+  /** When set, replaces the play icon (e.g. Shorts signed-out "Sign up"). */
+  playControlLabel?: string | null
   listenUrl?: string | null
   /** When true, Vibe chrome is rendered by the parent (never inside a 9:16 clip). */
   hideVibeChrome?: boolean
@@ -123,6 +125,7 @@ export function StageMomentCard({
   playing = false,
   buffering = false,
   onPlay,
+  playControlLabel,
   listenUrl,
   hideVibeChrome = false,
   effectOwnsFill = false,
@@ -437,18 +440,27 @@ export function StageMomentCard({
                 <button
                   type="button"
                   onClick={onPlay}
-                  aria-label={playing ? 'Pause' : 'Play'}
+                  aria-label={playControlLabel ?? (playing ? 'Pause' : 'Play')}
                   style={{
                     ...playControlStyle,
-                    width: isShorts ? 44 : playControlStyle.width,
+                    width: isShorts && playControlLabel ? 'auto' : isShorts ? 44 : playControlStyle.width,
                     height: isShorts ? 44 : playControlStyle.height,
+                    minWidth: playControlLabel ? 44 : undefined,
+                    padding: playControlLabel ? '0 14px' : 0,
                     background: theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.1)' : 'rgba(255,255,255,0.12)',
                     border: `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.14)' : 'rgba(255,255,255,0.16)'}`,
                     cursor: 'pointer',
-                    padding: 0,
+                    fontFamily: UI_FONT,
+                    fontSize: playControlLabel ? '0.65rem' : undefined,
+                    fontWeight: playControlLabel ? 700 : undefined,
+                    letterSpacing: playControlLabel ? '0.5px' : undefined,
+                    textTransform: playControlLabel ? 'uppercase' : undefined,
+                    color: theme.ink,
                   }}
                 >
-                  <PlayPauseIcon playing={playing} buffering={buffering} size={14} color={theme.ink} />
+                  {playControlLabel ? playControlLabel : (
+                    <PlayPauseIcon playing={playing} buffering={buffering} size={14} color={theme.ink} />
+                  )}
                 </button>
               ) : listenUrl ? (
                 <a

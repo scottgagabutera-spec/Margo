@@ -16,7 +16,8 @@
     "test:repost-count": "node --experimental-strip-types --test lib/repost-count.test.ts",
     "test:feed-content-tab": "node --experimental-strip-types --test lib/feed-content-tab.test.ts",
     "test:shorts-shelf-rotation": "node --experimental-strip-types --test lib/shorts-shelf-rotation.test.ts",
-    "test": "npm run test:playback-segments && npm run test:curated-moments && npm run test:post-card-lyric && npm run test:post-card-lyric-uniform && npm run test:lyric-back-row && npm run test:lyric-back-keyboard && npm run test:repost-count && npm run test:feed-content-tab && npm run test:shorts-shelf-rotation"
+    "test:shorts-looks": "node --experimental-strip-types --test lib/shorts-looks.test.ts",
+    "test": "npm run test:playback-segments && npm run test:curated-moments && npm run test:post-card-lyric && npm run test:post-card-lyric-uniform && npm run test:lyric-back-row && npm run test:lyric-back-keyboard && npm run test:repost-count && npm run test:feed-content-tab && npm run test:shorts-shelf-rotation && npm run test:shorts-looks"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1136.0",
