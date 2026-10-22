@@ -63,7 +63,7 @@ export function PostDetailLyricSection({
   const isNested = Boolean(focusId && post.id && focusId !== post.id && focusedEcho)
   const vibeTheme = getVibeTheme(post.emotion || 'chill')
 
-  useLyricBackPanelViewport(sectionRef, composeOpen, { variant: 'post' })
+  useLyricBackPanelViewport(sectionRef, composeOpen)
 
   useLayoutEffect(() => {
     if (!composeOpen) return

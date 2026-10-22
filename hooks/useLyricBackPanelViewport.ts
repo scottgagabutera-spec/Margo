@@ -7,12 +7,6 @@ import {
   lyricBackPinnedPanelCapPx,
   visualKeyboardInsetPx,
 } from '@/lib/lyric-back-keyboard'
-import {
-  feedLyricBackHeadroomTop,
-  readFeedLyricBackChromeHeights,
-  scrollFeedLyricBackPanelIntoView,
-  scrollPostLyricBackSectionIntoView,
-} from '@/lib/lyric-back-panel-scroll'
 
 export function clearLyricBackKeyboardChrome(): void {
   const root = document.documentElement
@@ -38,36 +32,20 @@ function setLyricBackKeyboardChrome(active: boolean): void {
   else root.removeAttribute('data-margo-keyboard')
 }
 
-function readPxVar(name: string, fallback: number): number {
-  const raw = getComputedStyle(document.documentElement).getPropertyValue(name)
-  const n = Number.parseFloat(raw)
-  return Number.isFinite(n) ? n : fallback
-}
-
-function pinnedTopForPanel(isFeed: boolean, offsetTop: number): number {
-  if (isFeed) return offsetTop + feedLyricBackHeadroomTop(readFeedLyricBackChromeHeights())
-  return offsetTop + readPxVar('--nav-height', 72) + 8
-}
-
-function clearPanelPin(el: HTMLElement): void {
+function clearPanelKeyboardStyle(el: HTMLElement): void {
   el.style.removeProperty('--lb-panel-vvh')
-  el.style.removeProperty('height')
-  el.style.removeProperty('top')
-  el.style.removeProperty('left')
-  el.style.removeProperty('width')
   el.style.removeProperty('max-height')
+  el.style.removeProperty('height')
   el.removeAttribute('data-lb-keyboard')
-  el.removeAttribute('data-lb-pinned')
 }
 
 /**
- * Cap / pin the Lyric Back panel to the visual viewport while the keyboard is open.
- * Resize + visualViewport scroll — do not mutate feed scrollTop here.
+ * Cap panel height to visualViewport while the keyboard is open.
+ * Stays in document flow (no position:fixed) so horizontal layout cannot drift.
  */
 export function useLyricBackPanelViewport(
   panelRef: RefObject<HTMLElement | null>,
   enabled: boolean,
-  options?: { variant?: 'feed' | 'post' },
 ) {
   useEffect(() => {
     if (!enabled) return
@@ -75,8 +53,6 @@ export function useLyricBackPanelViewport(
     const panel = panelRef.current
     if (!panel) return
 
-    const variant = options?.variant ?? (panel.classList.contains('margo-post-detail-lb') ? 'post' : 'feed')
-    const isFeed = variant === 'feed'
     const vv = window.visualViewport
     let disposed = false
     let focusFrame = 0
@@ -93,39 +69,30 @@ export function useLyricBackPanelViewport(
         viewportHeight,
         offsetTop,
       }) > LYRIC_BACK_KEYBOARD_THRESHOLD_PX
-      const textFocused = isPanelTextField(el, document.activeElement)
-      setLyricBackKeyboardChrome(keyboardOpen || textFocused)
+
+      setLyricBackKeyboardChrome(keyboardOpen)
 
       if (!keyboardOpen) {
-        clearPanelPin(el)
+        clearPanelKeyboardStyle(el)
         return
       }
 
-      if (isFeed) scrollFeedLyricBackPanelIntoView(el)
-      else scrollPostLyricBackSectionIntoView(el)
-
-      const rect = el.getBoundingClientRect()
-      const pinnedTop = pinnedTopForPanel(isFeed, offsetTop)
+      const panelTop = el.getBoundingClientRect().top
       const cap = lyricBackPinnedPanelCapPx({
-        pinnedTop,
+        pinnedTop: panelTop,
         offsetTop,
         viewportHeight,
         bottomPad: 8,
         minHeight: LYRIC_BACK_KEYBOARD_MIN_PANEL_PX,
       })
       if (cap <= 0) {
-        clearPanelPin(el)
+        clearPanelKeyboardStyle(el)
         return
       }
 
       el.style.setProperty('--lb-panel-vvh', `${cap}px`)
-      el.style.height = `${cap}px`
       el.style.maxHeight = `${cap}px`
-      el.style.top = `${pinnedTop}px`
-      el.style.left = `${rect.left}px`
-      el.style.width = `${rect.width}px`
       el.setAttribute('data-lb-keyboard', '1')
-      el.setAttribute('data-lb-pinned', '1')
     }
 
     update()
@@ -135,7 +102,20 @@ export function useLyricBackPanelViewport(
       if (document.visibilityState === 'hidden') clearLyricBackKeyboardChrome()
       else update()
     }
-    const onFocus = () => {
+    const onFocus = (ev: FocusEvent) => {
+      const el = panelRef.current
+      if (el && isPanelTextField(el, ev.target)) {
+        const input = ev.target
+        if (input instanceof HTMLElement && 'focus' in input) {
+          try {
+            if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement) {
+              input.focus({ preventScroll: true })
+            }
+          } catch {
+            /* older browsers */
+          }
+        }
+      }
       window.cancelAnimationFrame(focusFrame)
       focusFrame = window.requestAnimationFrame(update)
     }
@@ -160,7 +140,7 @@ export function useLyricBackPanelViewport(
       document.removeEventListener('focusout', onFocus)
       clearLyricBackKeyboardChrome()
       const el = panelRef.current
-      if (el) clearPanelPin(el)
+      if (el) clearPanelKeyboardStyle(el)
     }
-  }, [enabled, panelRef, options?.variant])
+  }, [enabled, panelRef])
 }

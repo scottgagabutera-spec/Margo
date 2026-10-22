@@ -23,7 +23,6 @@ import {
   type LyricBackPanelComposeHandle,
   type LyricBackPanelPrefill,
 } from '@/components/lyric-back-panel-compose'
-import { LyricBackReplyContext } from '@/components/lyric-back-reply-context'
 import { useLyricBackFocusStack } from '@/hooks/useLyricBackFocusStack'
 import {
   clearLyricBackKeyboardChrome,
@@ -217,7 +216,6 @@ export function LyricBackFocusBody({
   const feedPanel = variant === 'feed-panel'
   const showCompose = composeOpen && canReply && Boolean(focusId)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const dockRef = useRef<HTMLDivElement>(null)
   const scrollMemory = useRef<Map<string, number>>(new Map())
   const pendingRestore = useRef<string | null>(null)
   const restoringScroll = useRef(false)
@@ -242,8 +240,7 @@ export function LyricBackFocusBody({
 
   // A new level is for looking. The keyboard opens only after a tap on search.
   useLayoutEffect(() => {
-    const root = dockRef.current?.closest('.margo-lb-focus')
-      ?? scrollRef.current?.closest('.margo-lb-focus')
+    const root = scrollRef.current?.closest('.margo-lb-focus')
     const field = root?.querySelector('input, textarea')
     if (field instanceof HTMLElement && document.activeElement === field) field.blur()
   }, [focusId])
@@ -287,34 +284,26 @@ export function LyricBackFocusBody({
     onFocusEcho(echo)
   }, [focusId, onFocusEcho, rememberScroll])
 
-  useLayoutEffect(() => {
-    const dock = dockRef.current
-    const root = dock?.closest('.margo-lb-focus')
-    if (!(dock instanceof HTMLElement) || !(root instanceof HTMLElement)) return
-    const apply = () => {
-      root.style.setProperty('--lb-dock-space', `${dock.offsetHeight + 12}px`)
-    }
-    apply()
-    const observer = new ResizeObserver(apply)
-    observer.observe(dock)
-    return () => {
-      observer.disconnect()
-      root.style.removeProperty('--lb-dock-space')
-    }
-  }, [showCompose, focusId])
+  const scrollToReplyTarget = useCallback(() => {
+    const scroller = scrollRef.current
+    if (!scroller) return
+    const target = scroller.querySelector('[data-lb-anchor="1"]')
+    if (!(target instanceof HTMLElement)) return
+    const delta = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top
+    scroller.scrollTop += delta - 8
+  }, [])
 
   const goBack = useCallback(() => {
     rememberScroll(focusId)
     onBack?.()
   }, [focusId, onBack, rememberScroll])
 
-  const replyContext = showCompose ? <LyricBackReplyContext username={replyToUsername} /> : null
+  const replyHandle = (replyToUsername || '').replace(/^@/, '').trim()
+  const TitleTag = feedPanel ? 'h3' : 'h2'
 
   const composeSlot =
     showCompose ? (
-      <div
-        className={`margo-post-card__lb-compose-slot${isNested ? ' margo-post-card__lb-compose-slot--focus' : ' margo-post-card__lb-compose-slot--feed-lead'}`}
-      >
+      <div className="margo-post-card__lb-compose-slot margo-post-card__lb-compose-slot--panel">
         <LyricBackPanelCompose
           ref={composeRef}
           layout="panel"
@@ -323,6 +312,7 @@ export function LyricBackFocusBody({
           onRequireAuth={onRequireAuth}
           prefill={composePrefill}
           focusSearchOnMount={false}
+          replyToLabel={null}
           onSent={() => {
             sentSnapshot.current = new Set(echoes.map((echo) => echo.id))
             onSent()
@@ -332,60 +322,116 @@ export function LyricBackFocusBody({
       </div>
     ) : null
 
-  const showTitle = isNested || headerCount > 0
-  const showBar = showTitle || isNested || Boolean(feedPanel && onClose)
-  const TitleTag = feedPanel ? 'h3' : 'h2'
+  const toolsRow = showCompose || showIdeasSignUp ? (
+    <div className="margo-lb-focus__tools">
+      {showCompose && replyHandle ? (
+        <button
+          type="button"
+          className="margo-lb-focus__reply-to"
+          onClick={scrollToReplyTarget}
+        >
+          @{replyHandle}
+        </button>
+      ) : null}
+      {showIdeas ? (
+        <button
+          type="button"
+          className="margo-lb-focus__chip"
+          aria-expanded={ideasOpen}
+          onClick={() => setIdeasOpen((o) => !o)}
+        >
+          Ideas
+        </button>
+      ) : null}
+      {showIdeasSignUp ? (
+        onRequireAuth ? (
+          <button
+            type="button"
+            className="margo-lb-focus__chip margo-lb-focus__chip--gold"
+            onClick={() => onRequireAuth()}
+          >
+            Sign in
+          </button>
+        ) : (
+          <SignInLink className="margo-lb-focus__chip margo-lb-focus__chip--gold">
+            Sign in
+          </SignInLink>
+        )
+      ) : null}
+    </div>
+  ) : null
 
   return (
     <div className="margo-lb-focus">
-      {showBar ? (
-        <div className={`margo-lb-focus__bar${isNested ? ' margo-lb-focus__bar--nested' : ''}`}>
-          {isNested && onBack ? (
-            <button
-              type="button"
-              className="margo-post-card__lb-focus-back"
-              onPointerDown={(event) => {
-                if (event.button !== 0) return
-                event.preventDefault()
-                event.stopPropagation()
-                goBack()
-              }}
-              onClick={(event) => {
-                event.preventDefault()
-                event.stopPropagation()
-                goBack()
-              }}
-            >
-              <span className="margo-lb-focus__back-mark" aria-hidden>
-                <FeedIconChevronRight size={18} />
-              </span>
-              Back
-            </button>
-          ) : null}
-          {showTitle ? (
-            <TitleTag className={feedPanel ? 'margo-post-card__lb-title' : 'margo-post-detail-lb__heading'}>
-              Lyric Backs · {headerCount}
-            </TitleTag>
-          ) : null}
-          {feedPanel && onClose ? (
-            <button
-              type="button"
-              className="margo-post-card__lb-close"
-              aria-label="Close Lyric Backs"
-              onClick={onClose}
-            >
-              <FeedIconClose size={20} />
-            </button>
-          ) : null}
+      <div className="margo-lb-focus__chrome">
+        <div className="margo-lb-focus__bar">
+          <TitleTag className={feedPanel ? 'margo-post-card__lb-title' : 'margo-post-detail-lb__heading'}>
+            Lyric Backs · {headerCount}
+          </TitleTag>
+          <div className="margo-lb-focus__bar-actions">
+            {isNested && onBack ? (
+              <button
+                type="button"
+                className="margo-lb-focus__back-chip"
+                onPointerDown={(event) => {
+                  if (event.button !== 0) return
+                  event.preventDefault()
+                  event.stopPropagation()
+                  goBack()
+                }}
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  goBack()
+                }}
+              >
+                <span className="margo-lb-focus__back-mark" aria-hidden>
+                  <FeedIconChevronRight size={14} />
+                </span>
+                Back
+              </button>
+            ) : null}
+            {feedPanel && onClose ? (
+              <button
+                type="button"
+                className="margo-post-card__lb-close"
+                aria-label="Close Lyric Backs"
+                onClick={onClose}
+              >
+                <FeedIconClose size={20} />
+              </button>
+            ) : null}
+          </div>
         </div>
-      ) : null}
 
-      {showCompose ? (
-        <div className="margo-lb-focus__dock" ref={dockRef}>
-          {replyContext}
-          {composeSlot}
-        </div>
-      ) : null}
+        {toolsRow}
+
+        {composeSlot}
+
+        {ideasOpen && showIdeas ? (
+          <div className="margo-lb-focus__ideas-pop">
+            {ideasLoading ? <IdeasSkeleton /> : null}
+            {ideasError && !ideasLoading ? (
+              <button
+                type="button"
+                className="margo-lb-focus__chip"
+                onClick={() => void loadIdeas()}
+              >
+                Retry
+              </button>
+            ) : null}
+            {!ideasLoading && !ideasError && (picks?.length ?? 0) > 0 && picks ? (
+              <ul className="margo-post-card__lb-list">
+                {picks.map((s) => (
+                  <li key={`${s.songId}_${s.lineIndex}_${s.startSec}`}>
+                    <SuggestionRow suggestion={s} onAccept={() => applySuggestion(s)} />
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
 
       <div
         ref={scrollRef}
@@ -397,7 +443,7 @@ export function LyricBackFocusBody({
         }
       >
         {isNested && focusedEcho ? (
-          <div className="margo-post-card__lb-focused-anchor">
+          <div className="margo-post-card__lb-focused-anchor" data-lb-anchor="1">
             <LyricBackThreadRow
               echo={focusedEcho}
               tone="anchor"
@@ -439,75 +485,6 @@ export function LyricBackFocusBody({
           </ul>
         ) : null}
 
-        {showIdeasSignUp ? (
-          <div className="margo-post-card__lb-ideas-section">
-            <p className="margo-post-card__lb-status" style={{ marginBottom: '10px' }}>
-              Sign in for catalog suggestions while you Lyric Back.
-            </p>
-            {onRequireAuth ? (
-              <button
-                type="button"
-                className="margo-post-card__lb-footer-btn margo-post-card__lb-footer-btn--full"
-                onClick={() => onRequireAuth()}
-              >
-                Sign in
-              </button>
-            ) : (
-              <SignInLink
-                className="margo-post-card__lb-footer-btn margo-post-card__lb-footer-btn--full"
-                style={{ display: 'inline-flex', justifyContent: 'center', textDecoration: 'none' }}
-              >
-                Sign in
-              </SignInLink>
-            )}
-          </div>
-        ) : null}
-
-        {showIdeas ? (
-          <div className="margo-post-card__lb-ideas-section">
-            <button
-              type="button"
-              className="margo-post-card__lb-ideas-toggle"
-              aria-expanded={ideasOpen}
-              onClick={() => setIdeasOpen((o) => !o)}
-            >
-              <span>Suggestions</span>
-              <span
-                className="margo-post-card__lb-ideas-chevron"
-                style={{ transform: ideasOpen ? 'rotate(90deg)' : 'none' }}
-              >
-                <FeedIconChevronRight size={16} />
-              </span>
-            </button>
-
-            {ideasOpen ? (
-              <div className="margo-post-card__lb-ideas-body">
-                {ideasLoading ? <IdeasSkeleton /> : null}
-                {ideasError && !ideasLoading ? (
-                  <div className="margo-post-card__lb-status-block">
-                    <p className="margo-post-card__lb-status">{ideasError}</p>
-                    <button
-                      type="button"
-                      className="margo-post-card__lb-footer-btn margo-post-card__lb-footer-btn--full"
-                      onClick={() => void loadIdeas()}
-                    >
-                      Retry
-                    </button>
-                  </div>
-                ) : null}
-                {!ideasLoading && !ideasError && (picks?.length ?? 0) > 0 && picks ? (
-                  <ul className="margo-post-card__lb-list">
-                    {picks.map((s) => (
-                      <li key={`${s.songId}_${s.lineIndex}_${s.startSec}`}>
-                        <SuggestionRow suggestion={s} onAccept={() => applySuggestion(s)} />
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
         <div className="margo-lb-focus__end" aria-hidden />
       </div>
     </div>
@@ -606,7 +583,7 @@ export function LyricBackFeedPanel({
   const pathname = usePathname()
   const onFeed = pathname === '/feed'
   const wasOpenRef = useRef(open)
-  useLyricBackPanelViewport(panelRef, open, { variant: onFeed ? 'feed' : 'post' })
+  useLyricBackPanelViewport(panelRef, open && onFeed)
   const feedScrollSnapshot = useRef<FeedScrollSnapshot | null>(null)
 
   useLayoutEffect(() => {
@@ -703,7 +680,7 @@ export function LyricBackFeedPanel({
             startSec: s.startSec,
             endSec: s.endSec,
           })
-          composeRef.current?.focusSearch(true)
+          composeRef.current?.focusSearch()
         }}
         showSuggestions
         echoesActive

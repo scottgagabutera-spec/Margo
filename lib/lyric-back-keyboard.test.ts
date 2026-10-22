@@ -226,7 +226,9 @@ describe('lyric back keyboard wiring', () => {
     assert.doesNotMatch(panel, /scrollFeedLyricBackSearchUnderNav/)
     assert.doesNotMatch(panel, /scrollIntoView/)
     assert.doesNotMatch(panel, /margo-post-card__lb-sticky-head/)
-    assert.equal(panel.split('focusSearch(true)').length - 1, 1)
+    assert.doesNotMatch(panel, /focusSearch\(true\)/)
+    assert.match(panel, /margo-lb-focus__chrome/)
+    assert.match(panel, /margo-lb-focus__back-chip/)
     assert.match(panel, /activeElement === field/)
     assert.match(panel, /field\.blur\(\)/)
     assert.doesNotMatch(card, /scrollIntoView/)
@@ -236,9 +238,10 @@ describe('lyric back keyboard wiring', () => {
     assert.match(panel, /restoreFeedScrollSnapshot/)
     assert.match(panel, /captureFeedScrollSnapshot/)
     assert.match(css, /data-lb-panel-open/)
-    assert.match(css, /data-lb-pinned/)
+    assert.doesNotMatch(css, /data-lb-pinned/)
     assert.match(css, /\.margo-lb-focus__scroll \{[^}]*touch-action:\s*pan-y/)
-    assert.match(css, /margo-lb-focus__bar--nested/)
+    assert.match(css, /margo-lb-focus__chrome/)
+    assert.match(css, /margo-search--lb-panel/)
     assert.match(
       fs.readFileSync('hooks/usePrimaryTabSwipeGesture.ts', 'utf8'),
       /\.margo-post-card__lb-panel/,
@@ -246,14 +249,18 @@ describe('lyric back keyboard wiring', () => {
     assert.doesNotMatch(css, /margo-lb-thread-row--step-1 \{ margin-left: 12px/)
   })
 
-  it('viewport hook pins to visualViewport and clears data-margo-keyboard', () => {
+  it('viewport hook caps height in flow and clears data-margo-keyboard', () => {
     const hook = fs.readFileSync('hooks/useLyricBackPanelViewport.ts', 'utf8')
     assert.match(hook, /addEventListener\('resize', update\)/)
     assert.match(hook, /addEventListener\('scroll', update\)/)
     assert.match(hook, /lyricBackPinnedPanelCapPx/)
-    assert.match(hook, /data-lb-pinned/)
+    assert.doesNotMatch(hook, /data-lb-pinned/)
+    assert.doesNotMatch(hook, /\.style\.left/)
+    assert.doesNotMatch(hook, /\.style\.width/)
+    assert.doesNotMatch(hook, /\.style\.top/)
     assert.doesNotMatch(hook, /\.scrollTop\s*[+=]/)
     assert.doesNotMatch(hook, /Math\.max\(\s*160/)
+    assert.match(hook, /preventScroll:\s*true/)
     assert.match(hook, /removeAttribute\('data-margo-keyboard'\)/)
     assert.match(hook, /setAttribute\('data-margo-keyboard', '1'\)/)
     assert.match(hook, /pagehide/)

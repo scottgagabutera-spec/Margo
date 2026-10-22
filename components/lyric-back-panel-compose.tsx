@@ -33,8 +33,7 @@ export type LyricBackPanelPrefill = {
 }
 
 export type LyricBackPanelComposeHandle = {
-  /** Feed passes true so opening the keyboard does not scroll the pane. */
-  focusSearch: (preventScroll?: boolean) => void
+  focusSearch: () => void
 }
 
 export type LyricBackPanelComposeProps = {
@@ -98,11 +97,14 @@ export const LyricBackPanelCompose = forwardRef<
   const [postError, setPostError] = useState<string | null>(null)
 
   useImperativeHandle(ref, () => ({
-    focusSearch: (preventScroll = false) => {
+    focusSearch: () => {
       const input = rootRef.current?.querySelector('input')
       if (!(input instanceof HTMLInputElement)) return
-      if (preventScroll) input.focus({ preventScroll: true })
-      else input.focus()
+      try {
+        input.focus({ preventScroll: true })
+      } catch {
+        input.focus()
+      }
     },
   }))
 
@@ -388,6 +390,7 @@ export const LyricBackPanelCompose = forwardRef<
           loading={searchLoading}
           placeholder="Search by lyric, song or artist…"
           ariaLabel="Search by lyric, song or artist"
+          className={isPanelLayout ? 'margo-search margo-search--lb-panel' : 'margo-search'}
           stackAboveOverlay={isPanelLayout && searchOpen}
           autoFocus={focusSearchOnMount}
           onFocus={() => {
