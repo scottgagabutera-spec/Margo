@@ -207,6 +207,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
   const [artistName, setArtistName] = useState(artistDisplayName)
   const [description, setDescription] = useState('')
   const [isAiGenerated, setIsAiGenerated] = useState(false)
+  const [shortsEnabled, setShortsEnabled] = useState(true)
   const [atmosphere, setAtmosphere] = useState<AtmosphereId>('still')
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [artworkFile, setArtworkFile] = useState<File | null>(null)
@@ -247,7 +248,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
       setError('')
       const { data: song, error: songErr } = await supabase
         .from('songs')
-        .select('id, title, artist_display_name, description, artwork_url, audio_url, is_ai_generated, atmosphere, status, youtube_url, spotify_url, apple_music_url, soundcloud_url, audiomack_url, boomplay_url')
+        .select('id, title, artist_display_name, description, artwork_url, audio_url, is_ai_generated, shorts_enabled, atmosphere, status, youtube_url, spotify_url, apple_music_url, soundcloud_url, audiomack_url, boomplay_url')
         .eq('id', songId)
         .single()
       if (cancelled) return
@@ -261,6 +262,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
       setArtistName(song.artist_display_name || artistDisplayName)
       setDescription(song.description || '')
       setIsAiGenerated(song.is_ai_generated ?? false)
+      setShortsEnabled(song.shorts_enabled ?? true)
       setAtmosphere(parseAtmosphere(song.atmosphere))
       setSongStatus(song.status || null)
       setExistingArtworkUrl(song.artwork_url)
@@ -528,6 +530,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
             audiomack_url: audiomackUrl.trim() || null,
             boomplay_url: boomplayUrl.trim() || null,
             is_ai_generated: isAiGenerated,
+            shorts_enabled: shortsEnabled,
             atmosphere: toAtmosphereColumn(atmosphere),
             updated_at: new Date().toISOString(),
           })
@@ -914,6 +917,46 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
           disabled={busy}
         />
       </div>
+
+      {isEdit && (
+        <div style={{
+          marginBottom: '16px',
+          padding: '14px 16px',
+          background: 'var(--surface-2)',
+          border: '1px solid var(--border)',
+          borderRadius: '12px',
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: '16px',
+        }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{
+              fontFamily: font,
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              color: 'var(--text)',
+              margin: '0 0 4px',
+            }}>
+              Feed Shorts
+            </p>
+            <p style={{
+              fontFamily: font,
+              fontSize: '0.75rem',
+              color: 'var(--text-muted)',
+              margin: 0,
+              lineHeight: 1.5,
+            }}>
+              When off, this song will not appear in the feed Shorts shelf. Lyrics posts are unchanged.
+            </p>
+          </div>
+          <AiGeneratedToggle
+            checked={shortsEnabled}
+            onChange={setShortsEnabled}
+            disabled={busy}
+          />
+        </div>
+      )}
 
       {isEdit && (
         <div style={{ marginBottom: '16px' }}>

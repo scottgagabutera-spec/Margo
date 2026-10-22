@@ -32,6 +32,10 @@ import { StoriesPortalDock } from '@/components/stories/stories-portal-dock'
 import { useMargoMobileViewport } from '@/components/stories/stories-dock'
 import { StoryFeedAuthorSync, StoryRingProvider } from '@/components/stories/story-ring-context'
 import { FeedFilterLiveRegion, FeedVibeFilterBar } from '@/components/feed-vibe-filter-bar'
+import { FeedContentTabBar } from '@/components/feed-content-tab-bar'
+import { FeedShortsPager } from '@/components/feed-shorts-pager'
+import { applyFeedContentTab, parseFeedContentTab } from '@/lib/feed-content-tab'
+import { useFeedShortsClips } from '@/hooks/useFeedShortsClips'
 
 const supabase = createClient()
 
@@ -196,11 +200,22 @@ function FeedPageInner() {
     [posts, postStats],
   )
 
+  const feedContentTab = useMemo(
+    () => parseFeedContentTab(searchParams.get('tab')),
+    [searchParams],
+  )
+
   const selectedVibe = useMemo(() => {
     const raw = searchParams.get('vibe')?.trim()
     if (!raw) return 'ALL'
     return normalizeEmotion(raw)
   }, [searchParams])
+
+  const {
+    clips: shortsClips,
+    loading: shortsLoading,
+    meetsMinimum: shortsMeetsMinimum,
+  } = useFeedShortsClips({ enabled: feedLive })
 
   const matchesFeedFilters = (p: Post) => {
     const norm = normalizeEmotion(p.emotion || '')
@@ -315,6 +330,12 @@ function FeedPageInner() {
     setExportPost(post)
   }
 
+  const handleFeedContentTab = (tab: 'lyrics' | 'shorts') => {
+    const params = applyFeedContentTab(new URLSearchParams(searchParams.toString()), tab)
+    const qs = params.toString()
+    router.push(qs ? `/feed?${qs}` : '/feed', { scroll: false })
+  }
+
   const handleSelectVibe = (vibe: string) => {
     const next = selectedVibe === vibe ? 'ALL' : vibe
     const params = new URLSearchParams(searchParams.toString())
@@ -416,6 +437,11 @@ function FeedPageInner() {
     [posts],
   )
 
+  const vibeFilterActive = selectedVibe !== 'ALL'
+  const feedTopChrome = vibeFilterActive
+    ? 'calc(var(--nav-height, 72px) + var(--margo-feed-tab-bar-h) + var(--margo-feed-vibe-bar-h))'
+    : 'calc(var(--nav-height, 72px) + var(--margo-feed-tab-bar-h))'
+
   return (
     <StoryRingProvider enabled={feedLive}>
     <StoryFeedAuthorSync authorIds={feedAuthorIds} />
@@ -434,15 +460,18 @@ function FeedPageInner() {
       minHeight: '100vh',
       background: 'var(--bg)',
       position: 'relative',
-      paddingTop: selectedVibe !== 'ALL'
-        ? 'calc(var(--nav-height, 72px) + var(--margo-feed-vibe-bar-h))'
-        : 'var(--nav-height, 72px)',
+      paddingTop: feedContentTab === 'lyrics' ? feedTopChrome : feedTopChrome,
     }}>
       <FeedFilterLiveRegion message={filterAnnouncement} />
-      {selectedVibe !== 'ALL' && (
+      <FeedContentTabBar
+        active={feedContentTab}
+        onChange={handleFeedContentTab}
+        shortsAvailable={shortsMeetsMinimum}
+      />
+      {vibeFilterActive && (
         <FeedVibeFilterBar
           vibeKey={selectedVibe}
-          resultCount={listReady ? feedItems.length : null}
+          resultCount={feedContentTab === 'lyrics' && listReady ? feedItems.length : null}
           onClear={clearVibeFilter}
         />
       )}
@@ -463,7 +492,22 @@ function FeedPageInner() {
         <div style={{ position: 'absolute', bottom: '-160px', right: '-160px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.03)', borderRadius: '50%', filter: 'blur(80px)' }} />
       </div>
 
-      <main className="margo-feed-column" style={{ position: 'relative', zIndex: 5, padding: '16px 16px var(--margo-page-padding-bottom)' }}>
+      {feedContentTab === 'shorts' && (
+        <FeedShortsPager
+          clips={shortsClips}
+          loading={shortsLoading}
+          meetsMinimum={shortsMeetsMinimum}
+          signedIn={!!user?.id}
+          onRequireSignIn={requireAuth}
+          vibeFilterActive={vibeFilterActive}
+        />
+      )}
+
+      <main
+        className={`margo-feed-column${feedContentTab === 'shorts' ? ' margo-feed-lyrics-pane--hidden' : ''}`}
+        style={{ position: 'relative', zIndex: 5, padding: '16px 16px var(--margo-page-padding-bottom)' }}
+        aria-hidden={feedContentTab === 'shorts'}
+      >
         {feedLive && isMobileViewport !== true && (
           <div className="margo-story-ring-tray">
             <StoryRing
