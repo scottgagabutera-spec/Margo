@@ -5,6 +5,7 @@ import {
   SuggestRankError,
   suggestLyricBacksForPosts,
 } from '@/lib/suggest-lyric-back'
+import { requireSessionUserId } from '@/lib/api-route-auth'
 
 /**
  * POST { postIds: string[] }
@@ -12,6 +13,9 @@ import {
  * Caches successful non-empty picks only (see suggest_lyric_back_cache).
  */
 export async function POST(request: NextRequest) {
+  const session = await requireSessionUserId()
+  if (!session.ok) return session.res
+
   try {
     const body = await request.json().catch(() => null)
     const rawIds: unknown[] = Array.isArray(body?.postIds) ? body.postIds : []

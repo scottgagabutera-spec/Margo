@@ -24,6 +24,8 @@ import {
   clearLyricBackKeyboardChrome,
   useLyricBackPanelViewport,
 } from '@/hooks/useLyricBackPanelViewport'
+import { useIdentity } from '@/hooks/useIdentity'
+import { SignInLink } from '@/components/signin-link'
 
 export type LyricBackThreadRowExtras = {
   onResonate?: (echoId: string) => void
@@ -126,11 +128,14 @@ export function LyricBackFocusBody({
   onApplySuggestion,
   echoesActive,
 }: LyricBackFocusBodyProps) {
+  const { user } = useIdentity()
+  const signedIn = !!user && !user.isAnonymous
   const isNested = Boolean(focusId && rootPostId && focusId !== rootPostId && focusedEcho)
   const composeEmotion = isNested && focusedEcho
     ? (focusedEcho.emotion || parentEmotion)
     : parentEmotion
-  const showIdeas = showSuggestions && !isNested
+  const showIdeas = showSuggestions && !isNested && signedIn
+  const showIdeasSignUp = showSuggestions && !isNested && !signedIn
   const { echoes, loading: echoesLoading, refetch: refetchEchoes } = useEchoes(
     echoesActive ? focusId : null,
   )
@@ -182,9 +187,9 @@ export function LyricBackFocusBody({
   }, [rootPostId])
 
   useEffect(() => {
-    if (!showIdeas || !ideasOpen || ideasFetched || ideasLoading) return
+    if (!signedIn || !showIdeas || !ideasOpen || ideasFetched || ideasLoading) return
     void loadIdeas()
-  }, [ideasOpen, ideasFetched, ideasLoading, loadIdeas, showIdeas])
+  }, [signedIn, ideasOpen, ideasFetched, ideasLoading, loadIdeas, showIdeas])
 
   const applySuggestion = useCallback((s: SuggestedLyricBack) => {
     onApplySuggestion?.(s)
@@ -337,6 +342,30 @@ export function LyricBackFocusBody({
           <p className="margo-post-detail-lb__empty-hint">
             Be the first Lyric Back on this moment.
           </p>
+        ) : null}
+
+        {showIdeasSignUp ? (
+          <div className="margo-post-card__lb-ideas-section">
+            <p className="margo-post-card__lb-status" style={{ marginBottom: '10px' }}>
+              Sign in for catalog suggestions while you Lyric Back.
+            </p>
+            {onRequireAuth ? (
+              <button
+                type="button"
+                className="margo-post-card__lb-footer-btn margo-post-card__lb-footer-btn--full"
+                onClick={() => onRequireAuth()}
+              >
+                Sign in
+              </button>
+            ) : (
+              <SignInLink
+                className="margo-post-card__lb-footer-btn margo-post-card__lb-footer-btn--full"
+                style={{ display: 'inline-flex', justifyContent: 'center', textDecoration: 'none' }}
+              >
+                Sign in
+              </SignInLink>
+            )}
+          </div>
         ) : null}
 
         {showIdeas ? (

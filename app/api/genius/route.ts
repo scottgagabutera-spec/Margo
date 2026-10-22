@@ -1,9 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { consumeHourlyApiRateLimit } from '@/lib/api-rate-limit'
+import { getRequestClientIp, ipRateLimitBucket } from '@/lib/api-request-ip'
 
-const searchCache: Record<string, unknown> = {}
+const MAX_QUERY_LEN = 200
+const RATE_LIMIT_PER_HOUR = 120
+const MAX_CACHE_ENTRIES = 500
+
+/** LRU-ish cache: Map preserves insertion order. */
+const searchCache = new Map<string, unknown>()
 
 function normalize(str: string) {
   return (str || '').toLowerCase().trim().replace(/\s+/g, ' ')
+}
+
+function cacheGet(key: string): unknown | undefined {
+  const hit = searchCache.get(key)
+  if (hit === undefined) return undefined
+  searchCache.delete(key)
+  searchCache.set(key, hit)
+  return hit
+}
+
+function cacheSet(key: string, value: unknown): void {
+  if (searchCache.has(key)) searchCache.delete(key)
+  searchCache.set(key, value)
+  while (searchCache.size > MAX_CACHE_ENTRIES) {
+    const oldest = searchCache.keys().next().value
+    if (oldest === undefined) break
+    searchCache.delete(oldest)
+  }
 }
 
 function dedupe(results: SearchResult[]) {
@@ -72,9 +97,22 @@ async function searchItunes(query: string): Promise<SearchResult[]> {
 }
 
 export async function GET(request: NextRequest) {
+  const bucket = ipRateLimitBucket(getRequestClientIp(request))
+  const limited = await consumeHourlyApiRateLimit({
+    route: 'genius',
+    bucket,
+    limit: RATE_LIMIT_PER_HOUR,
+  })
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: 'Too many requests' },
+      { status: 429, headers: { 'Retry-After': String(limited.retryAfterSec) } },
+    )
+  }
+
   const { searchParams } = new URL(request.url)
-  const lyric = searchParams.get('lyric')
-  const song = searchParams.get('song')
+  const lyric = searchParams.get('lyric')?.slice(0, MAX_QUERY_LEN) ?? null
+  const song = searchParams.get('song')?.slice(0, MAX_QUERY_LEN) ?? null
   const id = searchParams.get('id')
 
   if (id) {
@@ -108,8 +146,9 @@ export async function GET(request: NextRequest) {
   if (!query) return NextResponse.json({ error: 'lyric or song query required' }, { status: 400 })
 
   const cacheKey = normalize(query)
-  if (searchCache[cacheKey]) {
-    return NextResponse.json({ results: searchCache[cacheKey], source: 'cache' })
+  const cached = cacheGet(cacheKey)
+  if (cached) {
+    return NextResponse.json({ results: cached, source: 'cache' })
   }
 
   const geniusKey = process.env.GENIUS_API_KEY
@@ -128,9 +167,10 @@ export async function GET(request: NextRequest) {
         error: geniusKey ? 'No results found' : 'No results found (Genius not configured on this environment)',
       }, { status: 404 })
     }
-    searchCache[cacheKey] = results
+    cacheSet(cacheKey, results)
     return NextResponse.json({ results, geniusConfigured: !!geniusKey })
-  } catch (err: any) {
-    return NextResponse.json({ error: 'Search failed', detail: err.message }, { status: 500 })
+  } catch (err: unknown) {
+    const detail = err instanceof Error ? err.message : 'Unknown error'
+    return NextResponse.json({ error: 'Search failed', detail }, { status: 500 })
   }
 }

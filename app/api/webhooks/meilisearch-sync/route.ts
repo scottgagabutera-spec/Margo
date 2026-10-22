@@ -8,11 +8,16 @@ import { syncMargoSearchFromWebhook } from '@/lib/meilisearch/sync'
  */
 export async function POST(request: NextRequest) {
   const secret = process.env.MEILISEARCH_WEBHOOK_SECRET
-  if (secret) {
-    const header = request.headers.get('x-margo-webhook-secret')
-    if (header !== secret) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  if (!secret) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  const header = request.headers.get('x-margo-webhook-secret')
+  if (header !== secret) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (!process.env.MEILISEARCH_HOST?.trim()) {
+    return NextResponse.json({ error: 'Meilisearch not configured' }, { status: 503 })
   }
 
   try {

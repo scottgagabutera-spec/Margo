@@ -16,7 +16,7 @@ export async function fetchUnifiedSongSearchHits(
   const [margoHits, geniusRes] = await Promise.all([
     searchMargoSongs(supabase, value, limit),
     fetch(`/api/genius?song=${encodeURIComponent(value)}`).then(async (res) => {
-      if (!res.ok) return { results: [] as Record<string, unknown>[] }
+      if (res.status === 429 || !res.ok) return { results: [] as Record<string, unknown>[] }
       try {
         const data = await res.json()
         if (data?.error) return { results: [] as Record<string, unknown>[] }

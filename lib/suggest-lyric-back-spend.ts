@@ -22,7 +22,7 @@ export async function canSpendOnSuggestRank(
 
   if (error) {
     console.error('suggestLyricBack: daily spend read failed', error)
-    return true
+    return false
   }
 
   const spent = Number(data?.spend_usd ?? 0)
