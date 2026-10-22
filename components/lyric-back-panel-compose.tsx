@@ -12,6 +12,8 @@ import { MargoSearchInput } from '@/components/margo-search-input'
 import { ComposeSearchDropdown, type ComposeSearchHit } from '@/components/compose-search-dropdown'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { FeedIconSend, FeedIconClose } from '@/components/feed-card-icons'
+import { LyricBackTrackListenControl } from '@/components/lyric-back-track-listen-control'
+import { PostThumbnail } from '@/components/post-thumbnail'
 import { createClient } from '@/lib/supabase/client'
 import { fetchUnifiedSongSearchHits } from '@/lib/song-search/unified-song-search'
 import { matchLiveCatalogSong } from '@/lib/search-margo-songs'
@@ -25,6 +27,7 @@ export type LyricBackPanelPrefill = {
   songTitle: string
   artistName: string
   songId: string | null
+  audioUrl?: string | null
   startSec: number | null
   endSec: number | null
 }
@@ -54,6 +57,7 @@ type SelectedSong = {
   artwork: string
   catalogSongId: string | null
   audioUrl: string | null
+  externalListenUrl: string | null
 }
 
 export const LyricBackPanelCompose = forwardRef<
@@ -130,7 +134,8 @@ export const LyricBackPanelCompose = forwardRef<
       artist: prefill.artistName,
       artwork: '',
       catalogSongId: prefill.songId,
-      audioUrl: null,
+      audioUrl: prefill.audioUrl ?? null,
+      externalListenUrl: null,
     })
     setLyric(prefill.lyric)
     setSnippetStart(prefill.startSec)
@@ -232,6 +237,7 @@ export const LyricBackPanelCompose = forwardRef<
         artwork: hit.artwork || '',
         catalogSongId: hit.margoSongId,
         audioUrl: hit.audioUrl ?? null,
+        externalListenUrl: hit.externalListenUrl ?? null,
       })
       await loadCatalogLines(hit.margoSongId)
       return
@@ -246,6 +252,7 @@ export const LyricBackPanelCompose = forwardRef<
           artwork: live.artwork || hit.artwork || '',
           catalogSongId: live.id,
           audioUrl: live.audioUrl ?? null,
+          externalListenUrl: hit.externalListenUrl ?? null,
         })
         await loadCatalogLines(live.id)
         return
@@ -260,6 +267,7 @@ export const LyricBackPanelCompose = forwardRef<
       artwork: hit.artwork || '',
       catalogSongId: null,
       audioUrl: null,
+      externalListenUrl: hit.externalListenUrl ?? null,
     })
     setLines([])
     setLinePickDone(true)
@@ -308,6 +316,7 @@ export const LyricBackPanelCompose = forwardRef<
           artistName: selected.artist,
           snippetStartSec: snippetStart,
           snippetEndSec: snippetEnd,
+          externalListenUrl: selected.externalListenUrl,
         }),
       })
       const payload = await res.json().catch(() => ({}))
@@ -391,10 +400,30 @@ export const LyricBackPanelCompose = forwardRef<
 
       {selected ? (
         <div className="margo-post-card__lb-compose-track margo-post-card__lb-compose-track--picked">
+          <div className="margo-lb-thread-row__track-art">
+            <PostThumbnail
+              artwork={selected.artwork}
+              alt=""
+              loading="lazy"
+              className="margo-lb-thread-row__art"
+            />
+          </div>
           <div className="margo-post-card__lb-compose-track-text">
             <span className="margo-post-card__lb-compose-song">{selected.title}</span>
             <span className="margo-post-card__lb-compose-artist">{selected.artist}</span>
           </div>
+          <LyricBackTrackListenControl
+            songId={selected.catalogSongId}
+            audioUrl={selected.audioUrl}
+            songTitle={selected.title}
+            artistName={selected.artist}
+            externalListenUrl={selected.externalListenUrl}
+            startSec={snippetStart}
+            endSec={snippetEnd}
+            lineText={lyric}
+            artwork={selected.artwork || null}
+            source="feed"
+          />
           <button
             type="button"
             className="margo-post-card__lb-compose-clear"

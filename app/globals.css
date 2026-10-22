@@ -947,7 +947,7 @@ html[data-margo-stage-idle] .margo-stage-zone {
   border-radius: 0 0 16px 16px;
   display: flex;
   flex-direction: column;
-  max-height: min(520px, 70vh);
+  max-height: min(520px, calc(100dvh - var(--nav-height, 72px) - var(--margo-page-bottom, 88px) - 24px));
   min-height: 0;
   box-sizing: border-box;
   position: relative;
@@ -966,23 +966,21 @@ html[data-margo-stage-idle] .margo-stage-zone {
   scroll-margin-top: calc(var(--nav-height, 72px) + 12px);
   margin-bottom: 10px;
 }
-.margo-post-card__lb-header--feed-focus {
+.margo-post-card__lb-panel--feed-root {
+  margin-top: 12px;
+}
+.margo-post-card__lb-feed-head-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
+  gap: 8px;
+  margin: 10px 0 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
   flex-shrink: 0;
 }
-.margo-post-card__lb-feed-focus-label {
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: var(--feed-type-control-label);
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-.margo-post-card__lb-feed-list-head {
-  height: 1px;
-  background: var(--border);
-  margin: 12px 0 8px;
+.margo-post-card__lb-feed-head-row .margo-post-card__lb-title--below-compose {
+  margin: 0;
 }
 .margo-post-card__lb-title--below-compose {
   margin: 0 0 8px;
@@ -1211,7 +1209,7 @@ html[data-margo-stage-idle] .margo-stage-zone {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 36px 8px 10px;
+  padding: 8px calc(var(--margo-touch-min) + 4px) 8px 10px;
   margin-top: 4px;
   border-radius: 10px;
   border: 1px solid var(--border);

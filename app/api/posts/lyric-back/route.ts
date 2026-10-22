@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
     artworkUrl?: string | null
     snippetStartSec?: number | null
     snippetEndSec?: number | null
+    externalListenUrl?: string | null
   }
   try {
     body = await req.json()
@@ -97,6 +98,10 @@ export async function POST(req: NextRequest) {
       parent_post_id: parentPostId,
       snippet_start_sec: body.snippetStartSec ?? null,
       snippet_end_sec: body.snippetEndSec ?? null,
+      external_listen_url:
+        typeof body.externalListenUrl === 'string' && body.externalListenUrl.trim()
+          ? body.externalListenUrl.trim()
+          : null,
     })
     .select('id, status')
     .single()

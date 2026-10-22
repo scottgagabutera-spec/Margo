@@ -134,7 +134,11 @@ export function LyricBackThreadRow({
     && Math.abs((engine.snippet?.startSec ?? 0) - echo.snippetStart) < 0.5
 
   const externalHref = !canPlay
-    ? resolveExternalListenUrl({ songTitle: echo.song, artistName: echo.artist })
+    ? resolveExternalListenUrl({
+        songTitle: echo.song,
+        artistName: echo.artist,
+        itunesTrackUrl: echo.externalListenUrl,
+      })
     : null
 
   const href = profileHref(echo)

@@ -189,15 +189,12 @@ export function PostCard({
 
   const scrollLyricBackPanelIntoView = useCallback(() => {
     window.setTimeout(() => {
-      const panel = cardRef.current?.querySelector('.margo-post-card__lb-panel')
-      const composeSlot = panel?.querySelector('.margo-post-card__lb-compose-slot')
-      const searchAnchor = panel?.querySelector('.margo-post-card__lb-search-anchor')
-      const target = (composeSlot ?? searchAnchor ?? panel ?? cardRef.current) as HTMLElement | null
-      target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      const panel = cardRef.current?.querySelector('.margo-post-card__lb-panel') as HTMLElement | null
+      panel?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       window.setTimeout(() => {
         const input = panel?.querySelector('.margo-post-card__lb-search-anchor input')
         if (input instanceof HTMLInputElement) input.focus({ preventScroll: true })
-      }, 120)
+      }, 160)
     }, 100)
   }, [])
 

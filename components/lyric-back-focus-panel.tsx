@@ -1,14 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
-import { playSnippet, togglePlayPause } from '@/lib/audio-engine'
-import { useAudioEngine } from '@/hooks/useAudioEngine'
+import { LyricBackTrackListenControl } from '@/components/lyric-back-track-listen-control'
 import { useEchoes, type Echo } from '@/hooks/useEchoes'
 import { LyricBackThreadRow } from '@/components/lyric-back-thread-row'
 import {
   FeedIconClose,
   FeedIconChevronRight,
-  FeedMomentPlaybackIcon,
 } from '@/components/feed-card-icons'
 import type { SuggestedLyricBack } from '@/lib/suggest-lyric-back'
 import { fetchLyricBackSuggestionsForPost } from '@/lib/lyric-back-suggestions'
@@ -176,20 +174,6 @@ export function LyricBackFocusBody({
         </div>
       ) : null}
 
-      {feedRootComposeFirst && onClose ? (
-        <div className="margo-post-card__lb-header margo-post-card__lb-header--feed-focus">
-          <span className="margo-post-card__lb-feed-focus-label">Lyric Backs</span>
-          <button
-            type="button"
-            className="margo-post-card__lb-close"
-            aria-label="Close Lyric Backs"
-            onClick={onClose}
-          >
-            <FeedIconClose size={20} />
-          </button>
-        </div>
-      ) : null}
-
       {!feedPanel && isNested && backToHandle && onBack ? (
         <button type="button" className="margo-post-card__lb-focus-back" onClick={onBack}>
           ← Back to @{backToHandle}
@@ -242,12 +226,21 @@ export function LyricBackFocusBody({
       ) : null}
 
       {feedRootComposeFirst ? (
-        <>
-          <div className="margo-post-card__lb-feed-list-head" aria-hidden />
+        <div className="margo-post-card__lb-feed-head-row">
           <h3 className="margo-post-card__lb-title margo-post-card__lb-title--below-compose">
             Lyric Backs · {headerCount}
           </h3>
-        </>
+          {onClose ? (
+            <button
+              type="button"
+              className="margo-post-card__lb-close"
+              aria-label="Close Lyric Backs"
+              onClick={onClose}
+            >
+              <FeedIconClose size={20} />
+            </button>
+          ) : null}
+        </div>
       ) : null}
 
       {isNested ? (
@@ -335,16 +328,6 @@ function SuggestionRow({
   suggestion: SuggestedLyricBack
   onAccept: () => void
 }) {
-  const engine = useAudioEngine()
-  const canPlay = Boolean(suggestion.audioUrl)
-  const isPlaying =
-    canPlay
-    && engine.playing
-    && engine.mode === 'snippet'
-    && engine.songId === suggestion.songId
-    && engine.snippet?.lineIndex === suggestion.lineIndex
-  const isBuffering = isPlaying && engine.buffering
-
   return (
     <div className="margo-post-card__lb-row">
       <button type="button" onClick={onAccept} className="margo-post-card__lb-row-body">
@@ -354,38 +337,20 @@ function SuggestionRow({
           <span className="margo-post-card__lb-echo-artist">{suggestion.artistName}</span>
         </p>
       </button>
-      {canPlay ? (
-        <button
-          type="button"
-          aria-label={isPlaying ? 'Pause suggestion' : 'Play suggestion'}
-          className="margo-post-card__lb-row-play"
-          onClick={(e) => {
-            e.stopPropagation()
-            if (isPlaying) {
-              togglePlayPause()
-              return
-            }
-            if (!suggestion.audioUrl) return
-            void playSnippet({
-              songId: suggestion.songId,
-              audioUrl: suggestion.audioUrl,
-              title: suggestion.songTitle,
-              artist: suggestion.artistName,
-              artwork: suggestion.artworkUrl ?? null,
-              lineIndex: suggestion.lineIndex,
-              lineText: suggestion.text,
-              startSec: suggestion.startSec,
-              endSec: suggestion.endSec,
-              vibe: suggestion.vibe,
-              source: 'feed',
-            })
-          }}
-        >
-          <span className="margo-post-card__lb-row-play-inner">
-            <FeedMomentPlaybackIcon playing={isPlaying} buffering={isBuffering} size={16} color="var(--post-vibe-fill)" />
-          </span>
-        </button>
-      ) : null}
+      <LyricBackTrackListenControl
+        className="margo-post-card__lb-row-play"
+        visual="feed-row"
+        songId={suggestion.songId}
+        audioUrl={suggestion.audioUrl}
+        songTitle={suggestion.songTitle}
+        artistName={suggestion.artistName}
+        lineIndex={suggestion.lineIndex}
+        lineText={suggestion.text}
+        startSec={suggestion.startSec}
+        endSec={suggestion.endSec}
+        artwork={suggestion.artworkUrl}
+        source="feed"
+      />
     </div>
   )
 }
@@ -439,11 +404,7 @@ export function LyricBackFeedPanel({
   useEffect(() => {
     if (!open) return
     window.setTimeout(() => {
-      const panel = panelRef.current
-      const composeSlot = panel?.querySelector('.margo-post-card__lb-compose-slot')
-      const searchAnchor = panel?.querySelector('.margo-post-card__lb-search-anchor')
-      const target = (composeSlot ?? searchAnchor ?? panel) as HTMLElement | null
-      target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       composeRef.current?.focusSearch()
     }, 100)
   }, [open, focusId])
@@ -466,7 +427,7 @@ export function LyricBackFeedPanel({
     <div
       ref={panelRef}
       data-no-card-nav
-      className={`margo-post-card__lb-panel${isNested ? ' margo-post-card__lb-panel--thread-focus' : ''}`}
+      className={`margo-post-card__lb-panel${isNested ? ' margo-post-card__lb-panel--thread-focus' : ' margo-post-card__lb-panel--feed-root'}`}
       role="region"
       aria-label="Lyric Backs"
     >
@@ -496,6 +457,7 @@ export function LyricBackFeedPanel({
             songTitle: s.songTitle,
             artistName: s.artistName,
             songId: s.songId,
+            audioUrl: s.audioUrl ?? null,
             startSec: s.startSec,
             endSec: s.endSec,
           })

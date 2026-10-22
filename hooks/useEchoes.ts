@@ -25,6 +25,7 @@ export interface Echo {
   snippetEnd?: number | null
   audioUrl?: string | null
   artwork?: string | null
+  externalListenUrl?: string | null
 }
 
 // ── Migrated Aug 1, 2026 ───────────────────────────────────────────────
@@ -49,6 +50,7 @@ const ECHO_SELECT = `
   song_id,
   snippet_start_sec,
   snippet_end_sec,
+  external_listen_url,
   legacy_author_label,
   author_profile_id,
   created_at,
@@ -86,6 +88,7 @@ function mapRow(row: any): Echo {
     snippetEnd: row.snippet_end_sec ?? null,
     audioUrl: linkedSong?.audio_url ?? null,
     artwork: row.artwork_url ?? linkedSong?.artwork_url ?? null,
+    externalListenUrl: row.external_listen_url ?? null,
   }
 }
 
