@@ -120,7 +120,40 @@ function writeFeedResume(y: number, anchorId?: string | null) {
   }
 }
 
+function anchorIdFromFeedCard(card: Element | null): string | null {
+  if (!(card instanceof HTMLElement)) return null
+  if (!card.id.startsWith('feed-post-')) return null
+  return card.id.slice('feed-post-'.length)
+}
+
 function findFeedAnchorId(pane: HTMLElement): string | null {
+  const panels = pane.querySelectorAll('.margo-post-card__lb-panel')
+  if (panels.length > 0) {
+    const active = document.activeElement
+    let panel: Element | null = null
+    if (active instanceof Node) {
+      for (const candidate of panels) {
+        if (candidate.contains(active)) {
+          panel = candidate
+          break
+        }
+      }
+    }
+    if (!panel) {
+      const navLine = pane.getBoundingClientRect().top + 72
+      let bestDist = Number.POSITIVE_INFINITY
+      for (const candidate of panels) {
+        const dist = Math.abs(candidate.getBoundingClientRect().top - navLine)
+        if (dist < bestDist) {
+          bestDist = dist
+          panel = candidate
+        }
+      }
+    }
+    const openId = panel ? anchorIdFromFeedCard(panel.closest('[id^="feed-post-"]')) : null
+    if (openId) return openId
+  }
+
   const paneTop = pane.getBoundingClientRect().top
   const nodes = pane.querySelectorAll('[id^="feed-post-"]')
   for (const node of nodes) {

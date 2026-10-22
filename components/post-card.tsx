@@ -39,7 +39,7 @@ import { FeedPostActions } from '@/components/feed-post-actions'
 import { echoToPost } from '@/lib/echo-to-post'
 import { SongMeta } from '@/components/song-meta'
 import { AtmosphereLayer } from '@/components/atmosphere-layer'
-import { scrollFeedLyricBackPanelIntoView, scrollPostCardTopIntoView } from '@/lib/lyric-back-panel-scroll'
+import { scrollPostCardTopIntoView } from '@/lib/lyric-back-panel-scroll'
 
 const supabase = createClient()
 
@@ -188,17 +188,6 @@ export function PostCard({
   const [suggestionsOpen, setSuggestionsOpen] = useState(false)
   const openLyricBackHandledRef = useRef(false)
 
-  const scrollLyricBackPanelIntoView = useCallback(() => {
-    window.setTimeout(() => {
-      const panel = cardRef.current?.querySelector('.margo-post-card__lb-panel') as HTMLElement | null
-      scrollFeedLyricBackPanelIntoView(panel)
-      window.setTimeout(() => {
-        const input = panel?.querySelector('.margo-post-card__lb-search-anchor input')
-        if (input instanceof HTMLInputElement) input.focus({ preventScroll: true })
-      }, 280)
-    }, 100)
-  }, [])
-
   const scrollCardIntoView = useCallback(() => {
     window.setTimeout(() => {
       scrollPostCardTopIntoView(cardRef.current)
@@ -208,19 +197,17 @@ export function PostCard({
   const setLyricBackPanelOpen = useCallback((next: boolean) => {
     setSuggestionsOpen(next)
     onLyricBackPanelChange?.(next)
-    if (next) scrollLyricBackPanelIntoView()
-    else scrollCardIntoView()
-  }, [onLyricBackPanelChange, scrollCardIntoView, scrollLyricBackPanelIntoView])
+    if (!next) scrollCardIntoView()
+  }, [onLyricBackPanelChange, scrollCardIntoView])
 
   const toggleLyricBackPanel = useCallback(() => {
     setSuggestionsOpen((prev) => {
       const next = !prev
       onLyricBackPanelChange?.(next)
-      if (next) scrollLyricBackPanelIntoView()
-      else scrollCardIntoView()
+      if (!next) scrollCardIntoView()
       return next
     })
-  }, [onLyricBackPanelChange, scrollCardIntoView, scrollLyricBackPanelIntoView])
+  }, [onLyricBackPanelChange, scrollCardIntoView])
 
   useEffect(() => {
     if (!openLyricBack || openLyricBackHandledRef.current || !lyricBackAllowed) return

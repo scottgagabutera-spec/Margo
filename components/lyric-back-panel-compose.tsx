@@ -34,7 +34,8 @@ export type LyricBackPanelPrefill = {
 
 export type LyricBackPanelComposeHandle = {
   scrollIntoView: () => void
-  focusSearch: () => void
+  /** Feed passes true so opening the keyboard does not scroll the pane. */
+  focusSearch: (preventScroll?: boolean) => void
 }
 
 export type LyricBackPanelComposeProps = {
@@ -101,9 +102,11 @@ export const LyricBackPanelCompose = forwardRef<
     scrollIntoView: () => {
       rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     },
-    focusSearch: () => {
+    focusSearch: (preventScroll = false) => {
       const input = rootRef.current?.querySelector('input')
-      if (input instanceof HTMLInputElement) input.focus()
+      if (!(input instanceof HTMLInputElement)) return
+      if (preventScroll) input.focus({ preventScroll: true })
+      else input.focus()
     },
   }))
 
