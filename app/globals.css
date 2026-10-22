@@ -1050,6 +1050,18 @@ html[data-margo-stage-idle] .margo-stage-zone {
   min-height: var(--margo-touch-min);
   margin-bottom: 8px;
 }
+.margo-lb-focus__bar--nested {
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 4px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.margo-lb-focus__back-mark {
+  display: inline-flex;
+  transform: rotate(180deg);
+}
 .margo-lb-focus__bar .margo-post-card__lb-title,
 .margo-lb-focus__bar .margo-post-detail-lb__heading {
   margin: 0;
@@ -1076,6 +1088,7 @@ html[data-margo-stage-idle] .margo-stage-zone {
   -webkit-overflow-scrolling: touch;
   overflow-anchor: none;
   scrollbar-gutter: stable;
+  touch-action: pan-y;
 }
 .margo-lb-focus__end {
   height: 28px;
@@ -2499,9 +2512,11 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   background: var(--surface);
   border-radius: 12px;
 }
-.margo-lb-thread-row--step-1 { margin-left: 12px; }
-.margo-lb-thread-row--step-2 { margin-left: 22px; }
-.margo-lb-thread-row--step-3 { margin-left: 32px; }
+.margo-lb-thread-row--step-1,
+.margo-lb-thread-row--step-2,
+.margo-lb-thread-row--step-3 {
+  margin-left: 0;
+}
 .margo-lb-thread-row--reply .margo-lb-thread-row__lyric {
   font-size: calc(var(--feed-type-suggestion-lyric) * 0.92);
   padding: 6px 8px;
@@ -2811,17 +2826,22 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   border-top: none;
 }
 .margo-post-card__lb-focus-back {
-  display: block;
-  margin-bottom: 4px;
-  padding: 0;
-  border: none;
-  background: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 0 12px 0 8px;
+  border: 1px solid var(--gold-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--gold) 16%, var(--surface));
   color: var(--gold);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: var(--feed-type-artist);
   font-weight: 600;
   cursor: pointer;
   min-height: var(--margo-touch-min);
   text-align: left;
+  flex-shrink: 0;
 }
 .margo-post-card__lb-focused-anchor {
   position: sticky;

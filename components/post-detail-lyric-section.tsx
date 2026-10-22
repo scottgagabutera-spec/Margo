@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useLayoutEffect, useRef, type RefObject } from 'react'
+import { useCallback, useEffect, useRef, type RefObject } from 'react'
 import { usePathname } from 'next/navigation'
 import { useLyricBackFocusStack, type LyricBackStackOptions } from '@/hooks/useLyricBackFocusStack'
 import {
@@ -15,7 +15,6 @@ import {
   clearLyricBackKeyboardChrome,
   useLyricBackPanelViewport,
 } from '@/hooks/useLyricBackPanelViewport'
-import { scrollPostLyricBackSearchUnderNav } from '@/lib/lyric-back-panel-scroll'
 
 export type PostDetailLyricSectionProps = {
   post: Post
@@ -57,7 +56,6 @@ export function PostDetailLyricSection({
     replyToUsername,
     canReply,
     visualStep,
-    navDirectionRef,
   } = stackApi
 
   const pathname = usePathname()
@@ -65,21 +63,6 @@ export function PostDetailLyricSection({
   const vibeTheme = getVibeTheme(post.emotion || 'chill')
 
   useLyricBackPanelViewport(sectionRef, composeOpen)
-
-  useLayoutEffect(() => {
-    if (!composeOpen) return
-    scrollPostLyricBackSearchUnderNav(sectionRef.current)
-    composeRef.current?.focusSearch(true)
-  }, [composeOpen, composeRef, sectionRef])
-
-  useLayoutEffect(() => {
-    if (!composeOpen) return
-    if (navDirectionRef.current === 'back') {
-      navDirectionRef.current = 'forward'
-      return
-    }
-    composeRef.current?.focusSearch(true)
-  }, [composeOpen, focusId, composeRef, navDirectionRef])
 
   useEffect(() => {
     if (!composeOpen) clearLyricBackKeyboardChrome()

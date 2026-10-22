@@ -156,7 +156,8 @@ describe('lyric back depth', () => {
     assert.match(post, /requestBack/)
     assert.match(post, /collapseToRoot/)
     assert.doesNotMatch(post, /backOneLevel/)
-    assert.match(postSection, /navDirectionRef/)
+    assert.match(hook, /navDirectionRef/)
+    assert.doesNotMatch(postSection, /focusSearch/)
   })
 
   it('hides the Lyric Back action at the cap and labels the control Back', () => {
@@ -173,19 +174,29 @@ describe('lyric back depth', () => {
 })
 
 describe('lyric back keyboard wiring', () => {
-  it('feed open path is one measured scroll and one preventScroll focus', () => {
+  it('feed open path leaves search unfocused until the user taps it', () => {
     const panel = fs.readFileSync('components/lyric-back-focus-panel.tsx', 'utf8')
     const card = fs.readFileSync('components/post-card.tsx', 'utf8')
     const scroll = fs.readFileSync('lib/lyric-back-panel-scroll.ts', 'utf8')
-    assert.match(panel, /scrollFeedLyricBackSearchUnderNav/)
-    assert.match(panel, /focusSearch\(true\)/)
-    assert.doesNotMatch(panel, /margo-post-card__lb-sticky-head/)
+    const css = fs.readFileSync('app/globals.css', 'utf8')
+    assert.doesNotMatch(panel, /scrollFeedLyricBackSearchUnderNav/)
     assert.doesNotMatch(panel, /scrollIntoView/)
+    assert.doesNotMatch(panel, /margo-post-card__lb-sticky-head/)
+    assert.equal(panel.split('focusSearch(true)').length - 1, 1)
+    assert.match(panel, /activeElement === field/)
+    assert.match(panel, /field\.blur\(\)/)
     assert.doesNotMatch(card, /scrollFeedLyricBackPanelIntoView/)
     assert.doesNotMatch(card, /scrollIntoView/)
     assert.doesNotMatch(scroll, /scrollFeedLyricBackPanelIntoView/)
-    assert.match(scroll, /scrollFeedLyricBackSearchUnderNav/)
-    assert.match(scroll, /pane\.scrollTop/)
+    assert.doesNotMatch(scroll, /scrollFeedLyricBackSearchUnderNav/)
+    assert.doesNotMatch(scroll, /pane\.scrollTop/)
+    assert.match(css, /\.margo-lb-focus__scroll \{[^}]*touch-action:\s*pan-y/)
+    assert.match(css, /margo-lb-focus__bar--nested/)
+    assert.match(
+      fs.readFileSync('hooks/usePrimaryTabSwipeGesture.ts', 'utf8'),
+      /\.margo-post-card__lb-panel/,
+    )
+    assert.doesNotMatch(css, /margo-lb-thread-row--step-1 \{ margin-left: 12px/)
   })
 
   it('viewport hook is resize-only and clears data-margo-keyboard', () => {
@@ -221,18 +232,19 @@ describe('lyric back keyboard wiring', () => {
     assert.match(css, /height:\s*auto;/)
   })
 
-  it('post page LB open is one window scroll and one preventScroll focus', () => {
+  it('post page lyric back does not focus search or scroll it under the nav', () => {
     const postSection = fs.readFileSync('components/post-detail-lyric-section.tsx', 'utf8')
     const scroll = fs.readFileSync('lib/lyric-back-panel-scroll.ts', 'utf8')
-    assert.match(postSection, /useLayoutEffect/)
-    assert.match(postSection, /scrollPostLyricBackSearchUnderNav/)
-    assert.match(postSection, /focusSearch\(true\)/)
+    const panel = fs.readFileSync('components/lyric-back-focus-panel.tsx', 'utf8')
+    assert.doesNotMatch(postSection, /scrollPostLyricBackSearchUnderNav/)
+    assert.doesNotMatch(postSection, /focusSearch/)
     assert.match(postSection, /useLyricBackPanelViewport/)
     assert.match(postSection, /clearLyricBackKeyboardChrome/)
     assert.doesNotMatch(postSection, /scrollLbIntoView/)
-    assert.doesNotMatch(postSection, /scrollIntoView[\s\S]*focusSearch\(\)/)
-    assert.match(scroll, /scrollPostLyricBackSearchUnderNav/)
-    assert.match(scroll, /window\.scrollBy/)
+    assert.doesNotMatch(postSection, /scrollIntoView[\s\S]*focusSearch/)
+    assert.doesNotMatch(scroll, /scrollPostLyricBackSearchUnderNav/)
+    assert.doesNotMatch(scroll, /window\.scrollBy/)
+    assert.match(panel, /activeElement === field/)
   })
 
   it('post panel compose does not auto-focus on mount', () => {

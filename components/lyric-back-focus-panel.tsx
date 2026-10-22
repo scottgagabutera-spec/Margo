@@ -4,7 +4,6 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { usePathname } from 'next/navigation'
 import { LyricBackTrackListenControl } from '@/components/lyric-back-track-listen-control'
 import { LyricBackTrackStripPlaceholder } from '@/components/lyric-back-thread-row-skeleton'
-import { scrollFeedLyricBackSearchUnderNav } from '@/lib/lyric-back-panel-scroll'
 import { useEchoes, type Echo } from '@/hooks/useEchoes'
 import { LyricBackThreadRow } from '@/components/lyric-back-thread-row'
 import {
@@ -235,6 +234,14 @@ export function LyricBackFocusBody({
     sentSnapshot.current = null
   }, [focusId])
 
+  // A new level is for looking. The keyboard opens only after a tap on search.
+  useLayoutEffect(() => {
+    const root = dockRef.current?.closest('.margo-lb-focus')
+      ?? scrollRef.current?.closest('.margo-lb-focus')
+    const field = root?.querySelector('input, textarea')
+    if (field instanceof HTMLElement && document.activeElement === field) field.blur()
+  }, [focusId])
+
   useLayoutEffect(() => {
     const el = scrollRef.current
     if (!el || !echoesReady) return
@@ -343,6 +350,9 @@ export function LyricBackFocusBody({
                 goBack()
               }}
             >
+              <span className="margo-lb-focus__back-mark" aria-hidden>
+                <FeedIconChevronRight size={18} />
+              </span>
               Back
             </button>
           ) : null}
@@ -582,7 +592,6 @@ export function LyricBackFeedPanel({
     drillInto,
     requestBack,
     resetStack,
-    navDirectionRef,
   } = useLyricBackFocusStack(postId, author, 0, {
     history: open,
     onExit: () => onCloseRef.current(),
@@ -608,21 +617,6 @@ export function LyricBackFeedPanel({
     const field = panelRef.current?.querySelector('input, textarea')
     if (field instanceof HTMLElement) field.blur()
   }, [onFeed, open])
-
-  useLayoutEffect(() => {
-    if (!open) return
-    scrollFeedLyricBackSearchUnderNav(panelRef.current)
-    composeRef.current?.focusSearch(true)
-  }, [open, composeRef])
-
-  useLayoutEffect(() => {
-    if (!open) return
-    if (navDirectionRef.current === 'back') {
-      navDirectionRef.current = 'forward'
-      return
-    }
-    composeRef.current?.focusSearch(true)
-  }, [open, focusId, composeRef, navDirectionRef])
 
   const focusNested = useCallback((echo: Echo) => {
     drillInto(echo)
