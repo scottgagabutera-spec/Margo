@@ -7,6 +7,7 @@ import {
   useImperativeHandle,
   useRef,
   useState,
+  type ReactNode,
 } from 'react'
 import { MargoSearchInput } from '@/components/margo-search-input'
 import { ComposeSearchDropdown, type ComposeSearchHit } from '@/components/compose-search-dropdown'
@@ -19,6 +20,7 @@ import { fetchUnifiedSongSearchHits } from '@/lib/song-search/unified-song-searc
 import { matchLiveCatalogSong } from '@/lib/search-margo-songs'
 import { trackEvent } from '@/lib/analytics/track'
 import { toastMomentSent } from '@/lib/moment-export/moment-export-toasts'
+import { compactArtworkUrl } from '@/lib/compact-artwork-url'
 
 const supabase = createClient()
 
@@ -33,8 +35,7 @@ export type LyricBackPanelPrefill = {
 }
 
 export type LyricBackPanelComposeHandle = {
-  /** Feed passes true so opening the keyboard does not scroll the pane. */
-  focusSearch: (preventScroll?: boolean) => void
+  focusSearch: () => void
 }
 
 export type LyricBackPanelComposeProps = {
@@ -49,6 +50,8 @@ export type LyricBackPanelComposeProps = {
   replyToLabel?: string | null
   /** Focus catalog search when compose mounts (post page / panel open). */
   focusSearchOnMount?: boolean
+  /** Panel chrome: search sits in the one-row bar. */
+  renderBar?: (search: ReactNode) => ReactNode
 }
 
 type SelectedSong = {
@@ -73,6 +76,7 @@ export const LyricBackPanelCompose = forwardRef<
     layout = 'page',
     replyToLabel,
     focusSearchOnMount = false,
+    renderBar,
   },
   ref,
 ) {
@@ -98,11 +102,14 @@ export const LyricBackPanelCompose = forwardRef<
   const [postError, setPostError] = useState<string | null>(null)
 
   useImperativeHandle(ref, () => ({
-    focusSearch: (preventScroll = false) => {
+    focusSearch: () => {
       const input = rootRef.current?.querySelector('input')
       if (!(input instanceof HTMLInputElement)) return
-      if (preventScroll) input.focus({ preventScroll: true })
-      else input.focus()
+      try {
+        input.focus({ preventScroll: true })
+      } catch {
+        input.focus()
+      }
     },
   }))
 
@@ -114,6 +121,11 @@ export const LyricBackPanelCompose = forwardRef<
     }, 80)
     return () => window.clearTimeout(t)
   }, [focusSearchOnMount, parentPostId])
+
+  const blurSearch = useCallback(() => {
+    const input = rootRef.current?.querySelector('input')
+    if (input instanceof HTMLInputElement) input.blur()
+  }, [])
 
   const resetSong = useCallback(() => {
     setSelected(null)
@@ -241,12 +253,13 @@ export const LyricBackPanelCompose = forwardRef<
       setSelected({
         title: hit.title,
         artist: hit.artist,
-        artwork: hit.artwork || '',
+        artwork: compactArtworkUrl(hit.artwork, 64) || hit.artwork || '',
         catalogSongId: hit.margoSongId,
         audioUrl: hit.audioUrl ?? null,
         externalListenUrl: hit.externalListenUrl ?? null,
       })
       await loadCatalogLines(hit.margoSongId)
+      blurSearch()
       return
     }
 
@@ -256,12 +269,13 @@ export const LyricBackPanelCompose = forwardRef<
         setSelected({
           title: live.title,
           artist: live.artist,
-          artwork: live.artwork || hit.artwork || '',
+          artwork: compactArtworkUrl(live.artwork || hit.artwork, 64) || live.artwork || hit.artwork || '',
           catalogSongId: live.id,
           audioUrl: live.audioUrl ?? null,
           externalListenUrl: hit.externalListenUrl ?? null,
         })
         await loadCatalogLines(live.id)
+        blurSearch()
         return
       }
     } catch {
@@ -271,14 +285,15 @@ export const LyricBackPanelCompose = forwardRef<
     setSelected({
       title: hit.title,
       artist: hit.artist,
-      artwork: hit.artwork || '',
+      artwork: compactArtworkUrl(hit.artwork, 64) || hit.artwork || '',
       catalogSongId: null,
       audioUrl: null,
       externalListenUrl: hit.externalListenUrl ?? null,
     })
     setLines([])
     setLinePickDone(true)
-  }, [loadCatalogLines])
+    blurSearch()
+  }, [blurSearch, loadCatalogLines])
 
   const onPickLine = useCallback((line: ComposeLyricLine) => {
     setLyric(line.text.slice(0, 140))
@@ -372,124 +387,157 @@ export const LyricBackPanelCompose = forwardRef<
 
   const searchOpen = showResults && query.trim().length >= 2
 
-  return (
-    <div ref={rootRef} className="margo-post-card__lb-compose margo-post-card__lb-compose--inline">
-      {replyToLabel ? (
-        <p className="margo-post-card__lb-compose-reply-to">{replyToLabel}</p>
-      ) : null}
-      <div
-        ref={searchAnchorRef}
-        className="margo-post-card__lb-search-anchor"
-        style={isPanelLayout && searchOpen ? { zIndex: 242, position: 'relative' } : undefined}
-      >
-        <MargoSearchInput
-          value={query}
-          onChange={setQuery}
-          loading={searchLoading}
-          placeholder="Search by lyric, song or artist…"
-          ariaLabel="Search by lyric, song or artist"
-          stackAboveOverlay={isPanelLayout && searchOpen}
-          autoFocus={focusSearchOnMount}
-          onFocus={() => {
-            if (query.trim().length >= 2) setShowResults(true)
-          }}
-        />
-        <ComposeSearchDropdown
-          open={searchOpen}
-          loading={searchLoading}
-          results={hits}
-          highlightQuery={query}
-          onSelect={(hit) => void selectHit(hit)}
-          onClose={() => setShowResults(false)}
-          variant={isPanelLayout ? 'panel' : 'compose'}
-          anchorRef={isPanelLayout ? searchAnchorRef : undefined}
-        />
-      </div>
+  const searchField = (
+    <div
+      ref={searchAnchorRef}
+      className="margo-post-card__lb-search-anchor"
+      style={isPanelLayout && searchOpen ? { zIndex: 242, position: 'relative' } : undefined}
+    >
+      <MargoSearchInput
+        value={query}
+        onChange={setQuery}
+        loading={searchLoading}
+        placeholder={isPanelLayout ? 'Search' : 'Search by lyric, song or artist…'}
+        ariaLabel="Search by lyric, song or artist"
+        compact={isPanelLayout}
+        stackAboveOverlay={isPanelLayout && searchOpen}
+        autoFocus={focusSearchOnMount}
+        onFocus={() => {
+          if (query.trim().length >= 2) setShowResults(true)
+        }}
+      />
+      <ComposeSearchDropdown
+        open={searchOpen}
+        loading={searchLoading}
+        results={hits}
+        highlightQuery={query}
+        onSelect={(hit) => void selectHit(hit)}
+        onClose={() => setShowResults(false)}
+        variant={isPanelLayout ? 'panel' : 'compose'}
+        anchorRef={isPanelLayout ? searchAnchorRef : undefined}
+      />
+    </div>
+  )
 
-      {selected ? (
-        <div className="margo-post-card__lb-compose-track margo-post-card__lb-compose-track--picked">
-          <div className="margo-lb-thread-row__track-art">
-            <PostThumbnail
-              artwork={selected.artwork}
-              alt=""
-              loading="lazy"
-              className="margo-lb-thread-row__art"
-            />
-          </div>
-          <div className="margo-post-card__lb-compose-track-text">
-            <span className="margo-post-card__lb-compose-song">{selected.title}</span>
-            <span className="margo-post-card__lb-compose-artist">{selected.artist}</span>
-          </div>
-          <LyricBackTrackListenControl
-            songId={selected.catalogSongId}
-            audioUrl={selected.audioUrl}
-            songTitle={selected.title}
-            artistName={selected.artist}
-            externalListenUrl={selected.externalListenUrl}
-            startSec={snippetStart}
-            endSec={snippetEnd}
-            lineText={lyric}
-            artwork={selected.artwork || null}
-            source="feed"
-          />
+  const songChip = selected ? (
+    <div className={`margo-post-card__lb-compose-track${isPanelLayout ? ' margo-post-card__lb-compose-track--chip' : ' margo-post-card__lb-compose-track--picked'}`}>
+      {selected.artwork ? (
+        <PostThumbnail
+          artwork={compactArtworkUrl(selected.artwork, 64) || selected.artwork}
+          alt=""
+          loading="lazy"
+          className={isPanelLayout ? 'margo-post-card__lb-compose-art' : 'margo-lb-thread-row__art'}
+        />
+      ) : (
+        <span className={isPanelLayout ? 'margo-post-card__lb-compose-art margo-post-card__lb-compose-art--empty' : 'margo-lb-thread-row__track-art'} aria-hidden />
+      )}
+      <div className={isPanelLayout ? 'margo-post-card__lb-compose-chip-meta' : 'margo-post-card__lb-compose-track-text'}>
+        <span className="margo-post-card__lb-compose-song">{selected.title}</span>
+        <span className="margo-post-card__lb-compose-artist">{selected.artist}</span>
+      </div>
+      <LyricBackTrackListenControl
+        className={isPanelLayout ? 'margo-post-card__lb-compose-open' : undefined}
+        songId={selected.catalogSongId}
+        audioUrl={selected.audioUrl}
+        songTitle={selected.title}
+        artistName={selected.artist}
+        externalListenUrl={selected.externalListenUrl}
+        startSec={snippetStart}
+        endSec={snippetEnd}
+        lineText={lyric}
+        artwork={selected.artwork || null}
+        source="feed"
+      />
+      <button
+        type="button"
+        className="margo-post-card__lb-compose-clear"
+        aria-label="Remove song"
+        onClick={resetSong}
+      >
+        <FeedIconClose size={isPanelLayout ? 12 : 14} />
+      </button>
+    </div>
+  ) : null
+
+  const linePicker = showLinePicker && selected?.catalogSongId ? (
+    <div className="margo-post-card__lb-line-picker">
+      <ComposeLinePicker
+        lines={lines}
+        loading={linesLoading}
+        songTitle={selected.title}
+        artistName={selected.artist}
+        audioUrl={selected.audioUrl}
+        songId={selected.catalogSongId}
+        artwork={selected.artwork || null}
+        enableParagraphPick
+        maxParagraphLines={2}
+            hideHeader
+            variant={isPanelLayout ? 'panel' : 'compose'}
+            onPick={onPickLine}
+        onPickParagraph={onPickParagraph}
+        onBack={() => resetSong()}
+      />
+    </div>
+  ) : null
+
+  const lyricBlock = showLyricField ? (
+    <div className={isPanelLayout ? 'margo-post-card__lb-compose-lyric' : undefined}>
+      <textarea
+        className={`margo-post-card__lb-compose-input${isPanelLayout ? ' margo-post-card__lb-compose-input--panel' : ''}`}
+        data-lb-lyric={isPanelLayout ? '1' : undefined}
+        value={lyric}
+        onChange={(e) => setLyric(e.target.value.slice(0, 140))}
+        placeholder="Write your line…"
+        rows={isPanelLayout ? 2 : 3}
+        aria-label="Lyric Back text"
+      />
+      {postError ? (
+        <p className="margo-post-card__lb-compose-error" role="alert">{postError}</p>
+      ) : null}
+      {isPanelLayout ? (
+        <button
+          type="button"
+          className="margo-post-card__lb-compose-send margo-post-card__lb-compose-send--infield"
+          aria-label="Send"
+          disabled={!canSend}
+          onClick={() => void handleSend()}
+        >
+          <FeedIconSend size={16} />
+        </button>
+      ) : (
+        <div className="margo-post-card__lb-compose-bar">
           <button
             type="button"
-            className="margo-post-card__lb-compose-clear"
-            aria-label="Clear song"
-            onClick={resetSong}
+            className="margo-post-card__lb-compose-send"
+            aria-label="Send"
+            disabled={!canSend}
+            onClick={() => void handleSend()}
           >
-            <FeedIconClose size={14} />
+            <FeedIconSend size={18} />
           </button>
         </div>
-      ) : null}
+      )}
+    </div>
+  ) : null
 
-      {showLinePicker && selected?.catalogSongId ? (
-        <div className="margo-post-card__lb-line-picker">
-          <ComposeLinePicker
-            lines={lines}
-            loading={linesLoading}
-            songTitle={selected.title}
-            artistName={selected.artist}
-            audioUrl={selected.audioUrl}
-            songId={selected.catalogSongId}
-            artwork={selected.artwork || null}
-            enableParagraphPick
-            maxParagraphLines={2}
-            hideHeader
-            variant="compose"
-            onPick={onPickLine}
-            onPickParagraph={onPickParagraph}
-            onBack={() => resetSong()}
-          />
-        </div>
-      ) : null}
+  const body = songChip || linePicker || lyricBlock ? (
+    <div className="margo-post-card__lb-compose-body">
+      {songChip}
+      {linePicker}
+      {lyricBlock}
+    </div>
+  ) : null
 
-      {showLyricField ? (
-        <>
-          <textarea
-            className="margo-post-card__lb-compose-input"
-            value={lyric}
-            onChange={(e) => setLyric(e.target.value.slice(0, 140))}
-            placeholder="Write your line…"
-            rows={3}
-            aria-label="Lyric Back text"
-          />
-          {postError ? (
-            <p className="margo-post-card__lb-compose-error" role="alert">{postError}</p>
-          ) : null}
-          <div className="margo-post-card__lb-compose-bar">
-            <button
-              type="button"
-              className="margo-post-card__lb-compose-send"
-              aria-label="Send"
-              disabled={!canSend}
-              onClick={() => void handleSend()}
-            >
-              <FeedIconSend size={18} />
-            </button>
-          </div>
-        </>
+  return (
+    <div
+      ref={rootRef}
+      className={`margo-post-card__lb-compose margo-post-card__lb-compose--inline${isPanelLayout ? ' margo-post-card__lb-compose--panel' : ''}`}
+    >
+      {!isPanelLayout && replyToLabel ? (
+        <p className="margo-post-card__lb-compose-reply-to">{replyToLabel}</p>
       ) : null}
+      {renderBar ? renderBar(searchField) : searchField}
+      {body}
     </div>
   )
 })

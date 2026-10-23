@@ -35,6 +35,8 @@ export const TAB_SWIPE_EXCLUDE_SELECTOR = [
   '.margo-mp-scrim',
   '.margo-preview-scrim',
   '.margo-seek-scrub',
+  '.margo-post-card__lb-panel',
+  '.margo-lb-focus',
   '[data-margo-swipe-exclude]',
 ].join(',')
 

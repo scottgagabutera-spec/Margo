@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useLayoutEffect, useRef, type RefObject } from 'react'
+import { scrollPostLyricBackSectionIntoView } from '@/lib/lyric-back-panel-scroll'
 import { usePathname } from 'next/navigation'
 import { useLyricBackFocusStack, type LyricBackStackOptions } from '@/hooks/useLyricBackFocusStack'
 import {
@@ -15,7 +16,6 @@ import {
   clearLyricBackKeyboardChrome,
   useLyricBackPanelViewport,
 } from '@/hooks/useLyricBackPanelViewport'
-import { scrollPostLyricBackSearchUnderNav } from '@/lib/lyric-back-panel-scroll'
 
 export type PostDetailLyricSectionProps = {
   post: Post
@@ -57,7 +57,6 @@ export function PostDetailLyricSection({
     replyToUsername,
     canReply,
     visualStep,
-    navDirectionRef,
   } = stackApi
 
   const pathname = usePathname()
@@ -68,18 +67,12 @@ export function PostDetailLyricSection({
 
   useLayoutEffect(() => {
     if (!composeOpen) return
-    scrollPostLyricBackSearchUnderNav(sectionRef.current)
-    composeRef.current?.focusSearch(true)
-  }, [composeOpen, composeRef, sectionRef])
-
-  useLayoutEffect(() => {
-    if (!composeOpen) return
-    if (navDirectionRef.current === 'back') {
-      navDirectionRef.current = 'forward'
-      return
-    }
-    composeRef.current?.focusSearch(true)
-  }, [composeOpen, focusId, composeRef, navDirectionRef])
+    scrollPostLyricBackSectionIntoView(sectionRef.current)
+    const frame = window.requestAnimationFrame(() => {
+      scrollPostLyricBackSectionIntoView(sectionRef.current)
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [composeOpen, focusId, sectionRef])
 
   useEffect(() => {
     if (!composeOpen) clearLyricBackKeyboardChrome()

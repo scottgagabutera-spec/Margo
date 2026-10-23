@@ -37,7 +37,6 @@ import { FeedPostActions } from '@/components/feed-post-actions'
 import { echoToPost } from '@/lib/echo-to-post'
 import { SongMeta } from '@/components/song-meta'
 import { AtmosphereLayer } from '@/components/atmosphere-layer'
-import { scrollPostCardTopIntoView } from '@/lib/lyric-back-panel-scroll'
 
 const supabase = createClient()
 
@@ -194,26 +193,18 @@ export function PostCard({
   const [suggestionsOpen, setSuggestionsOpen] = useState(false)
   const openLyricBackHandledRef = useRef(false)
 
-  const scrollCardIntoView = useCallback(() => {
-    window.setTimeout(() => {
-      scrollPostCardTopIntoView(cardRef.current)
-    }, 100)
-  }, [])
-
   const setLyricBackPanelOpen = useCallback((next: boolean) => {
     setSuggestionsOpen(next)
     onLyricBackPanelChange?.(next)
-    if (!next) scrollCardIntoView()
-  }, [onLyricBackPanelChange, scrollCardIntoView])
+  }, [onLyricBackPanelChange])
 
   const toggleLyricBackPanel = useCallback(() => {
     setSuggestionsOpen((prev) => {
       const next = !prev
       onLyricBackPanelChange?.(next)
-      if (!next) scrollCardIntoView()
       return next
     })
-  }, [onLyricBackPanelChange, scrollCardIntoView])
+  }, [onLyricBackPanelChange])
 
   useEffect(() => {
     if (!openLyricBack || openLyricBackHandledRef.current || !lyricBackAllowed) return
@@ -355,7 +346,9 @@ export function PostCard({
         isTier1 ? 'margo-post-card--tier1' : '',
         externalCardLayout ? 'margo-post-card--external' : '',
         highlightShared ? 'margo-feed-post--shared' : '',
+        suggestionsOpen ? 'margo-post-card--lb-panel-open' : '',
       ].filter(Boolean).join(' ')}
+      data-lb-panel-open={suggestionsOpen ? '1' : undefined}
       onClick={goToPost}
       onPointerDown={() => {
         if (!disableCardNav && !isRow) persistActivePrimaryScroll()

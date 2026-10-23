@@ -4,9 +4,17 @@ import fs from 'node:fs'
 import {
   feedSearchScrollDelta,
   lyricBackPanelCapPx,
+  lyricBackPinnedPanelCapPx,
+  LYRIC_BACK_KEYBOARD_MIN_PANEL_PX,
+  panelSearchDropdownFillBelow,
   panelSearchDropdownFrame,
   visualKeyboardInsetPx,
 } from './lyric-back-keyboard.ts'
+import {
+  feedLyricBackHeadroomTop,
+  feedLyricBackPanelBarScrollDelta,
+  lyricBackNestedAnchorScrollTop,
+} from './lyric-back-panel-scroll.ts'
 import {
   LYRIC_BACK_DEPTH_CAP,
   lyricBackCanReply,
@@ -57,6 +65,17 @@ describe('lyric back keyboard geometry', () => {
     )
   })
 
+  it('fills search results from the pin down to the visual viewport', () => {
+    const frame = panelSearchDropdownFillBelow({
+      anchorBottom: 140,
+      offsetTop: 0,
+      viewportHeight: 380,
+      bottomInset: 8,
+    })
+    assert.equal(frame.top, 144)
+    assert.equal(frame.maxHeight, 228)
+  })
+
   it('places the panel dropdown inside offsetTop + height without a 160px floor', () => {
     const frame = panelSearchDropdownFrame({
       anchorTop: 110,
@@ -70,6 +89,44 @@ describe('lyric back keyboard geometry', () => {
     assert.ok(frame.maxHeight < 160)
     assert.ok(frame.top >= 100)
     assert.ok(frame.top + frame.maxHeight <= visibleBottom)
+  })
+
+  it('pins panel height from a fixed top with a keyboard minimum', () => {
+    assert.equal(LYRIC_BACK_KEYBOARD_MIN_PANEL_PX, 200)
+    assert.equal(
+      lyricBackPinnedPanelCapPx({
+        pinnedTop: 124,
+        offsetTop: 0,
+        viewportHeight: 380,
+        bottomPad: 8,
+        minHeight: LYRIC_BACK_KEYBOARD_MIN_PANEL_PX,
+      }),
+      248,
+    )
+    assert.equal(
+      lyricBackPinnedPanelCapPx({
+        pinnedTop: 340,
+        offsetTop: 0,
+        viewportHeight: 400,
+        bottomPad: 8,
+        minHeight: LYRIC_BACK_KEYBOARD_MIN_PANEL_PX,
+      }),
+      LYRIC_BACK_KEYBOARD_MIN_PANEL_PX,
+    )
+  })
+
+  it('scrolls the feed pane so the panel bar sits under Lyrics/Shorts', () => {
+    const headroom = feedLyricBackHeadroomTop({
+      navHeight: 72,
+      tabBarHeight: 44,
+      vibeBarHeight: 0,
+    })
+    assert.equal(headroom, 72 + 44 + 8)
+    assert.equal(feedLyricBackPanelBarScrollDelta(300, {
+      navHeight: 72,
+      tabBarHeight: 44,
+      vibeBarHeight: 0,
+    }), 300 - headroom)
   })
 
   it('keyboard inset never goes negative', () => {
@@ -156,7 +213,8 @@ describe('lyric back depth', () => {
     assert.match(post, /requestBack/)
     assert.match(post, /collapseToRoot/)
     assert.doesNotMatch(post, /backOneLevel/)
-    assert.match(postSection, /navDirectionRef/)
+    assert.match(hook, /navDirectionRef/)
+    assert.doesNotMatch(postSection, /focusSearch/)
   })
 
   it('hides the Lyric Back action at the cap and labels the control Back', () => {
@@ -173,36 +231,101 @@ describe('lyric back depth', () => {
 })
 
 describe('lyric back keyboard wiring', () => {
-  it('feed open path is one measured scroll and one preventScroll focus', () => {
+  it('feed open path leaves search unfocused until the user taps it', () => {
     const panel = fs.readFileSync('components/lyric-back-focus-panel.tsx', 'utf8')
     const card = fs.readFileSync('components/post-card.tsx', 'utf8')
     const scroll = fs.readFileSync('lib/lyric-back-panel-scroll.ts', 'utf8')
-    assert.match(panel, /scrollFeedLyricBackSearchUnderNav/)
-    assert.match(panel, /focusSearch\(true\)/)
-    assert.doesNotMatch(panel, /margo-post-card__lb-sticky-head/)
+    const css = fs.readFileSync('app/globals.css', 'utf8')
+    assert.doesNotMatch(panel, /scrollFeedLyricBackSearchUnderNav/)
     assert.doesNotMatch(panel, /scrollIntoView/)
-    assert.doesNotMatch(card, /scrollFeedLyricBackPanelIntoView/)
+    assert.doesNotMatch(panel, /margo-post-card__lb-sticky-head/)
+    assert.doesNotMatch(panel, /focusSearch\(true\)/)
+    assert.match(panel, /margo-lb-focus__chrome/)
+    assert.match(panel, /margo-lb-focus__back-chip/)
+    assert.match(panel, /margo-lb-focus__switch/)
+    assert.match(panel, />\s*Lyric Backs\s*</)
+    assert.doesNotMatch(panel, />\s*Replies\s*</)
+    assert.match(panel, />\s*Ideas\s*</)
+    assert.match(panel, /margo-sr-only/)
+    assert.doesNotMatch(panel, /Lyric Backs ·/)
+    assert.doesNotMatch(panel, /margo-lb-focus__count/)
+    assert.doesNotMatch(panel, /margo-lb-focus__reply-to/)
+    assert.doesNotMatch(panel, /Replying to/)
+    assert.match(panel, /data-lb-first-row/)
+    assert.match(panel, /data-lb-pin/)
+    assert.match(panel, /activeElement === field/)
+    assert.match(panel, /field\.blur\(\)/)
     assert.doesNotMatch(card, /scrollIntoView/)
-    assert.doesNotMatch(scroll, /scrollFeedLyricBackPanelIntoView/)
-    assert.match(scroll, /scrollFeedLyricBackSearchUnderNav/)
-    assert.match(scroll, /pane\.scrollTop/)
+    assert.match(scroll, /scrollFeedLyricBackPanelIntoView/)
+    assert.doesNotMatch(scroll, /scrollFeedLyricBackSearchUnderNav/)
+    assert.match(panel, /scrollFeedLyricBackPanelIntoView/)
+    assert.match(panel, /restoreFeedScrollSnapshot/)
+    assert.match(panel, /captureFeedScrollSnapshot/)
+    assert.match(css, /data-lb-panel-open/)
+    assert.doesNotMatch(css, /data-lb-pinned/)
+    assert.match(css, /\.margo-lb-focus__scroll \{[^}]*touch-action:\s*pan-y/)
+    assert.match(css, /margo-lb-focus__chrome/)
+    assert.match(css, /margo-search--lb-panel/)
+    assert.match(css, /margo-lb-focus__tabs/)
+    assert.match(css, /compose-search-row--panel/)
+    assert.match(css, /margo-post-card__lb-compose-chip-meta/)
+    assert.match(css, /--lb-pin-gap/)
+    assert.match(css, /scroll-padding-top:\s*var\(--lb-pin-gap\)/)
+    assert.match(css, /@supports \(-webkit-touch-callout: none\)/)
+    assert.match(css, /margo-post-card__lb-compose-track--chip/)
+    assert.match(css, /margo-post-card__lb-compose-send--infield/)
+    assert.match(
+      fs.readFileSync('hooks/usePrimaryTabSwipeGesture.ts', 'utf8'),
+      /\.margo-post-card__lb-panel/,
+    )
+    assert.doesNotMatch(css, /margo-lb-thread-row--step-1 \{ margin-left: 12px/)
   })
 
-  it('viewport hook is resize-only and clears data-margo-keyboard', () => {
+  it('viewport hook caps height in flow without changing page chrome', () => {
     const hook = fs.readFileSync('hooks/useLyricBackPanelViewport.ts', 'utf8')
+    const scroll = fs.readFileSync('lib/lyric-back-panel-scroll.ts', 'utf8')
+    const css = fs.readFileSync('app/globals.css', 'utf8')
     assert.match(hook, /addEventListener\('resize', update\)/)
-    assert.doesNotMatch(hook, /addEventListener\('scroll'/)
-    assert.doesNotMatch(hook, /\.scrollTop/)
+    assert.match(hook, /addEventListener\('scroll', update\)/)
+    assert.match(hook, /lyricBackPinnedPanelCapPx/)
+    assert.doesNotMatch(hook, /data-lb-pinned/)
+    assert.doesNotMatch(hook, /\.style\.left/)
+    assert.doesNotMatch(hook, /\.style\.width/)
+    assert.doesNotMatch(hook, /\.style\.top/)
+    assert.doesNotMatch(hook, /\.scrollTop\s*[+=]/)
     assert.doesNotMatch(hook, /Math\.max\(\s*160/)
-    assert.match(hook, /removeAttribute\('data-margo-keyboard'\)/)
-    assert.match(hook, /setAttribute\('data-margo-keyboard', '1'\)/)
+    assert.match(hook, /preventScroll:\s*true/)
+    assert.match(hook, /addEventListener\('focusin', onFocusIn\)/)
+    assert.match(hook, /addEventListener\('focusout', onFocusOut\)/)
+    assert.doesNotMatch(hook, /addEventListener\('focusout', onFocus\)/)
+    assert.doesNotMatch(hook, /const onFocusOut[\s\S]*\.focus\(/)
+    assert.doesNotMatch(hook, /setAttribute\('data-margo-keyboard', '1'\)/)
+    assert.doesNotMatch(hook, /classList\.toggle\('margo-keyboard-open'/)
+    assert.match(hook, /setAttribute\('data-lb-keyboard', '1'\)/)
     assert.match(hook, /pagehide/)
+    assert.match(scroll, /data-lb-pin/)
+    assert.doesNotMatch(scroll, /margo-lb-focus__bar/)
+    assert.match(scroll, /lyricBackNestedAnchorScrollTop/)
+    assert.doesNotMatch(css, /min\(520px/)
+    assert.match(css, /100dvh - var\(--nav-height, 72px\) - var\(--margo-feed-tab-bar-h, 40px\)/)
+  })
+
+  it('pushes the nested anchor above the list on first entry', () => {
+    assert.equal(
+      lyricBackNestedAnchorScrollTop({ scrollTop: 0, anchorBottom: 420, scrollerTop: 200 }),
+      220,
+    )
+    assert.equal(
+      lyricBackNestedAnchorScrollTop({ scrollTop: 40, anchorBottom: 200, scrollerTop: 200 }),
+      40,
+    )
   })
 
   it('panel dropdown uses visualViewport offsetTop + height', () => {
     const dropdown = fs.readFileSync('components/compose-search-dropdown.tsx', 'utf8')
     assert.match(dropdown, /offsetTop: vv\?\.offsetTop/)
-    assert.match(dropdown, /panelSearchDropdownFrame/)
+    assert.match(dropdown, /panelSearchDropdownFillBelow/)
+    assert.match(dropdown, /compose-search-row--panel/)
     assert.doesNotMatch(dropdown, /Math\.max\(\s*160/)
     assert.doesNotMatch(dropdown, /window\.innerHeight - anchorRect/)
   })
@@ -221,22 +344,45 @@ describe('lyric back keyboard wiring', () => {
     assert.match(css, /height:\s*auto;/)
   })
 
-  it('post page LB open is one window scroll and one preventScroll focus', () => {
+  it('post page lyric back does not focus search or scroll it under the nav', () => {
     const postSection = fs.readFileSync('components/post-detail-lyric-section.tsx', 'utf8')
     const scroll = fs.readFileSync('lib/lyric-back-panel-scroll.ts', 'utf8')
-    assert.match(postSection, /useLayoutEffect/)
-    assert.match(postSection, /scrollPostLyricBackSearchUnderNav/)
-    assert.match(postSection, /focusSearch\(true\)/)
+    const panel = fs.readFileSync('components/lyric-back-focus-panel.tsx', 'utf8')
+    assert.doesNotMatch(postSection, /scrollPostLyricBackSearchUnderNav/)
+    assert.doesNotMatch(postSection, /focusSearch/)
     assert.match(postSection, /useLyricBackPanelViewport/)
     assert.match(postSection, /clearLyricBackKeyboardChrome/)
     assert.doesNotMatch(postSection, /scrollLbIntoView/)
-    assert.doesNotMatch(postSection, /scrollIntoView[\s\S]*focusSearch\(\)/)
-    assert.match(scroll, /scrollPostLyricBackSearchUnderNav/)
+    assert.doesNotMatch(postSection, /scrollIntoView[\s\S]*focusSearch/)
+    assert.doesNotMatch(scroll, /scrollPostLyricBackSearchUnderNav/)
+    assert.match(scroll, /scrollPostLyricBackSectionIntoView/)
+    assert.match(postSection, /scrollPostLyricBackSectionIntoView/)
     assert.match(scroll, /window\.scrollBy/)
+    assert.match(panel, /activeElement === field/)
   })
 
   it('post panel compose does not auto-focus on mount', () => {
     const panel = fs.readFileSync('components/lyric-back-focus-panel.tsx', 'utf8')
+    const compose = fs.readFileSync('components/lyric-back-panel-compose.tsx', 'utf8')
     assert.match(panel, /focusSearchOnMount=\{false\}/)
+    assert.match(compose, /compact=\{isPanelLayout\}/)
+    assert.match(compose, /placeholder=\{isPanelLayout \? 'Search'/)
+    assert.match(compose, /renderBar/)
+    assert.match(compose, /margo-post-card__lb-compose-track--chip/)
+    assert.match(compose, /margo-post-card__lb-compose-send--infield/)
+    assert.match(compose, /blurSearch\(\)/)
+    assert.match(compose, /data-lb-lyric/)
+    assert.match(compose, /margo-post-card__lb-compose-chip-meta/)
+    assert.doesNotMatch(compose, /aria-hidden> · /)
+    assert.match(compose, /variant=\{isPanelLayout \? 'panel' : 'compose'\}/)
+  })
+
+  it('panel line picker is a single touch scroller without header text', () => {
+    const picker = fs.readFileSync('components/compose-line-picker.tsx', 'utf8')
+    const css = fs.readFileSync('app/globals.css', 'utf8')
+    assert.match(picker, /event\.pointerType === 'mouse'/)
+    assert.match(picker, /overflowY: isPanel \? 'visible' : 'auto'/)
+    assert.match(css, /\.margo-lb-line-row \{\s*touch-action: pan-y/)
+    assert.match(css, /lb-line-picker \{\s*flex: 1 1 auto;[^}]*overflow-y: auto/)
   })
 })

@@ -6,6 +6,9 @@
 
 export const LYRIC_BACK_KEYBOARD_THRESHOLD_PX = 120
 
+/** Keep enough room for search + results when the keyboard is open. */
+export const LYRIC_BACK_KEYBOARD_MIN_PANEL_PX = 200
+
 export function visualKeyboardInsetPx(input: {
   innerHeight: number
   viewportHeight: number
@@ -28,6 +31,20 @@ export function lyricBackPanelCapPx(input: {
   const visibleBottom = input.offsetTop + input.viewportHeight
   const top = Math.max(input.elementTop, visibleTop)
   return Math.max(0, Math.round(visibleBottom - top - input.bottomPad))
+}
+
+/** Height for a panel pinned with its top at pinnedTop inside the visual viewport band. */
+export function lyricBackPinnedPanelCapPx(input: {
+  pinnedTop: number
+  offsetTop: number
+  viewportHeight: number
+  bottomPad: number
+  minHeight?: number
+}): number {
+  const visibleBottom = input.offsetTop + input.viewportHeight
+  const raw = Math.max(0, Math.round(visibleBottom - input.pinnedTop - input.bottomPad))
+  const minH = input.minHeight ?? 0
+  return Math.max(minH, raw)
 }
 
 /** How far to scroll the feed pane so the search top lands under the nav. */
@@ -67,4 +84,21 @@ export function panelSearchDropdownFrame(input: {
     ? Math.max(visibleTop + edge, input.anchorTop - gap - maxHeight)
     : input.anchorBottom + gap
   return { top, maxHeight }
+}
+
+/** Fill every pixel from the search row down to the visual viewport / keyboard. */
+export function panelSearchDropdownFillBelow(input: {
+  anchorBottom: number
+  offsetTop: number
+  viewportHeight: number
+  bottomInset: number
+  gap?: number
+}): { top: number; maxHeight: number } {
+  const gap = input.gap ?? 4
+  const visibleBottom = input.offsetTop + input.viewportHeight
+  const top = input.anchorBottom + gap
+  return {
+    top,
+    maxHeight: Math.max(0, Math.round(visibleBottom - top - input.bottomInset)),
+  }
 }

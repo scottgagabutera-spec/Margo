@@ -66,7 +66,7 @@ interface ComposeLinePickerProps {
   audioUrl?: string | null
   songId?: string | null
   artwork?: string | null
-  variant?: 'compose' | 'stage'
+  variant?: 'compose' | 'stage' | 'panel'
   hideHeader?: boolean
 }
 
@@ -84,6 +84,7 @@ function ComposeLineRow({
   selected,
   selectionDisabled,
   stage = false,
+  compact = false,
   isLast = false,
 }: {
   line: ComposeLyricLine
@@ -99,6 +100,7 @@ function ComposeLineRow({
   selected: boolean
   selectionDisabled: boolean
   stage?: boolean
+  compact?: boolean
   isLast?: boolean
 }) {
   const { playing, buffering } = useSnippetPlaybackUi(songId || audioUrl || '', line.lineIndex)
@@ -136,8 +138,9 @@ function ComposeLineRow({
     onPick(line)
   }
 
-  const playSize = stage ? 28 : 44
-  const playIconSize = 14
+  const playSize = compact || stage ? 28 : 44
+  const playHit = compact ? 44 : playSize
+  const playIconSize = compact ? 12 : 14
 
   return (
     <button
@@ -153,10 +156,12 @@ function ComposeLineRow({
         longPressTriggered.current = false
         clearPressTimer()
         if (selectionMode) return
-        try {
-          event.currentTarget.setPointerCapture(event.pointerId)
-        } catch {
-          /* capture is best-effort */
+        if (event.pointerType === 'mouse') {
+          try {
+            event.currentTarget.setPointerCapture(event.pointerId)
+          } catch {
+            /* capture is best-effort */
+          }
         }
         pressOrigin.current = { x: event.clientX, y: event.clientY }
         pressTimer.current = setTimeout(() => {
@@ -180,13 +185,14 @@ function ComposeLineRow({
       }}
       aria-pressed={selectionMode ? selected : undefined}
       aria-disabled={selectionMode && selectionDisabled && !selected ? true : undefined}
+      className={compact ? 'margo-lb-line-row' : undefined}
       style={{
         width: '100%',
         display: 'flex',
         alignItems: 'flex-start',
-        gap: stage ? '12px' : '14px',
-        padding: stage ? '12px 14px' : '14px 16px',
-        minHeight: 'var(--margo-touch-min)',
+        gap: compact ? '8px' : stage ? '12px' : '14px',
+        padding: compact ? '6px 4px' : stage ? '12px 14px' : '14px 16px',
+        minHeight: compact ? '44px' : 'var(--margo-touch-min)',
         background: selected
           ? SELECTED_FILL
           : playing
@@ -237,16 +243,17 @@ function ComposeLineRow({
         </span>
       ) : audioUrl ? (
         <span
+          className={compact ? 'margo-lb-line-row__play' : undefined}
           style={{
-            width: `${playSize}px`,
-            height: `${playSize}px`,
+            width: `${playHit}px`,
+            height: `${playHit}px`,
             borderRadius: '50%',
             flexShrink: 0,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: playing ? 'var(--gold-glow)' : 'var(--gold-faint)',
-            border: '1px solid var(--gold-border)',
+            background: compact ? 'transparent' : (playing ? 'var(--gold-glow)' : 'var(--gold-faint)'),
+            border: compact ? 'none' : '1px solid var(--gold-border)',
             boxSizing: 'border-box',
             marginTop: stage ? '2px' : 0,
           }}
@@ -258,27 +265,29 @@ function ComposeLineRow({
       )}
       {!stage ? (
         <span
+          className={compact ? 'margo-lb-line-row__time' : undefined}
           style={{
-            fontFamily: lyricFont,
-            fontSize: '0.6rem',
+            fontFamily: compact ? UI_FONT : lyricFont,
+            fontSize: compact ? '11px' : '0.6rem',
             color: 'var(--gold)',
             letterSpacing: '0.5px',
             flexShrink: 0,
-            paddingTop: '4px',
-            minWidth: '36px',
+            paddingTop: compact ? '2px' : '4px',
+            minWidth: compact ? '32px' : '36px',
           }}
         >
           {formatTime(line.startSec)}
         </span>
       ) : null}
       <span
+        className={compact ? 'margo-lb-line-row__text' : undefined}
         style={{
-          fontFamily: lyricFont,
-          fontStyle: 'italic',
-          fontSize: '0.95rem',
+          fontFamily: compact ? UI_FONT : lyricFont,
+          fontStyle: compact ? 'normal' : 'italic',
+          fontSize: compact ? '14px' : '0.95rem',
           color: 'var(--text)',
-          lineHeight: 1.45,
-          paddingTop: stage ? '4px' : '2px',
+          lineHeight: compact ? 1.3 : 1.45,
+          paddingTop: compact ? 0 : stage ? '4px' : '2px',
           flex: 1,
           minWidth: 0,
         }}
@@ -329,6 +338,7 @@ export function ComposeLinePicker({
   const [curatedMoments, setCuratedMoments] = useState<CuratedMomentStored[]>([])
   const canHear = !!audioUrl
   const isStage = variant === 'stage'
+  const isPanel = variant === 'panel'
   const paragraphEnabled = enableParagraphPick && !!onPickParagraph
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([])
@@ -485,8 +495,8 @@ export function ComposeLinePicker({
       ><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
       ) : null}
 
+      {!hideHeader ? (
       <div style={{ textAlign: isStage ? 'left' : 'center', marginBottom: isStage ? '20px' : '28px' }}>
-        {!hideHeader ? (
         <h1 style={{
           fontFamily: lyricFont,
           fontStyle: 'italic',
@@ -498,7 +508,6 @@ export function ComposeLinePicker({
         }}>
           {selectionMode ? 'Combine lines' : isStage ? 'Choose a line' : 'Pick the line'}
         </h1>
-        ) : null}
         <p style={{
           fontFamily: isStage ? UI_FONT : lyricFont,
           fontSize: isStage ? '0.78rem' : '0.82rem',
@@ -521,6 +530,7 @@ export function ComposeLinePicker({
           </p>
         ) : null}
       </div>
+      ) : null}
 
       {selectionMode ? (
         <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
@@ -681,15 +691,18 @@ export function ComposeLinePicker({
         ) : null}
         <div
           ref={listRef}
+          className={isPanel ? 'margo-lb-line-list' : undefined}
           style={{
-            maxHeight: 'min(52dvh, calc(var(--margo-vv-height, 100dvh) * 0.48), 420px)',
-            overflowY: 'auto',
+            maxHeight: isPanel ? 'none' : 'min(52dvh, calc(var(--margo-vv-height, 100dvh) * 0.48), 420px)',
+            height: undefined,
+            overflowY: isPanel ? 'visible' : 'auto',
             overscrollBehavior: 'contain',
             touchAction: 'pan-y',
             WebkitOverflowScrolling: 'touch',
-            border: '1px solid var(--border)',
-            borderRadius: isStage ? '14px' : '16px',
+            border: isPanel ? 'none' : '1px solid var(--border)',
+            borderRadius: isPanel ? 0 : isStage ? '14px' : '16px',
             background: isStage ? 'var(--surface-elevated)' : 'var(--surface)',
+            scrollPaddingTop: isPanel ? 8 : undefined,
           }}
         >
           {lines.map((line, index) => (
@@ -708,6 +721,7 @@ export function ComposeLinePicker({
                 selected={selectedIndexes.includes(line.lineIndex)}
                 selectionDisabled={!canToggleLine(selectedIndexes, line.lineIndex)}
                 stage={isStage}
+                compact={isPanel}
                 isLast={index === lines.length - 1}
               />
           ))}

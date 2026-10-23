@@ -7,9 +7,10 @@ import { highlightSearchText } from '@/lib/search-highlight'
 import { UI_FONT } from '@/lib/fonts'
 import {
   LYRIC_BACK_KEYBOARD_THRESHOLD_PX,
-  panelSearchDropdownFrame,
+  panelSearchDropdownFillBelow,
   visualKeyboardInsetPx,
 } from '@/lib/lyric-back-keyboard'
+import { compactArtworkUrl } from '@/lib/compact-artwork-url'
 
 export interface ComposeSearchHit {
   id: string
@@ -111,12 +112,14 @@ function ResultsList({
   displayResults,
   highlightQuery,
   isStage,
+  isPanel,
   onSelect,
 }: {
   loading: boolean
   displayResults: ComposeSearchHit[]
   highlightQuery: string
   isStage: boolean
+  isPanel?: boolean
   onSelect: (result: ComposeSearchHit) => void
 }) {
   return (
@@ -149,9 +152,13 @@ function ResultsList({
             key={result.source + '-' + result.id}
             type="button"
             role="option"
-            className={'compose-search-row' + (isStage ? ' compose-search-row--stage' : '')}
+            className={
+              'compose-search-row'
+              + (isStage ? ' compose-search-row--stage' : '')
+              + (isPanel ? ' compose-search-row--panel' : '')
+            }
             onClick={() => onSelect(result)}
-            style={{
+            style={isPanel ? undefined : {
               width: '100%',
               display: 'flex',
               alignItems: 'center',
@@ -169,9 +176,10 @@ function ResultsList({
           >
             {result.artwork ? (
               <img
-                src={result.artwork}
+                src={compactArtworkUrl(result.artwork, isPanel ? 64 : 100) || result.artwork}
                 alt=""
-                style={{
+                className={isPanel ? 'compose-search-row__art' : undefined}
+                style={isPanel ? undefined : {
                   width: isStage ? '44px' : '48px',
                   height: isStage ? '44px' : '48px',
                   borderRadius: isStage ? '6px' : '8px',
@@ -182,7 +190,8 @@ function ResultsList({
               />
             ) : (
               <div
-                style={{
+                className={isPanel ? 'compose-search-row__art compose-search-row__art--empty' : undefined}
+                style={isPanel ? undefined : {
                   width: isStage ? '44px' : '48px',
                   height: isStage ? '44px' : '48px',
                   borderRadius: isStage ? '6px' : '8px',
@@ -191,27 +200,33 @@ function ResultsList({
                 }}
               />
             )}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{
-                fontFamily: UI_FONT,
-                color: 'var(--text)',
-                fontSize: isStage ? '0.9rem' : '0.95rem',
-                fontWeight: 600,
-                marginBottom: '2px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}>
+            <div className={isPanel ? 'compose-search-row__meta' : undefined} style={isPanel ? undefined : { flex: 1, minWidth: 0 }}>
+              <p
+                className={isPanel ? 'compose-search-row__title' : undefined}
+                style={isPanel ? undefined : {
+                  fontFamily: UI_FONT,
+                  color: 'var(--text)',
+                  fontSize: isStage ? '0.9rem' : '0.95rem',
+                  fontWeight: 600,
+                  marginBottom: '2px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {highlightSearchText(result.title, highlightQuery)}
               </p>
-              <p style={{
-                fontFamily: UI_FONT,
-                color: 'var(--text-secondary)',
-                fontSize: isStage ? '0.78rem' : '0.82rem',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}>
+              <p
+                className={isPanel ? 'compose-search-row__artist' : undefined}
+                style={isPanel ? undefined : {
+                  fontFamily: UI_FONT,
+                  color: 'var(--text-secondary)',
+                  fontSize: isStage ? '0.78rem' : '0.82rem',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {highlightSearchText(result.artist, highlightQuery)}
               </p>
             </div>
@@ -219,6 +234,12 @@ function ResultsList({
               showPlayHint ? (
                 <span style={STAGE_PLAY_HINT} aria-hidden>
                   <PlayIcon size={14} color="var(--gold)" />
+                </span>
+              ) : null
+            ) : isPanel ? (
+              isHosted ? (
+                <span className="compose-search-row__margo" aria-label="On Margo">
+                  <MusicNoteIcon size={11} color="var(--gold)" />
                 </span>
               ) : null
             ) : (
@@ -300,14 +321,19 @@ export function ComposeSearchDropdown({
       viewportHeight: anchorMeasure.height,
       offsetTop: anchorMeasure.offsetTop,
     }) > LYRIC_BACK_KEYBOARD_THRESHOLD_PX
-    const frame = panelSearchDropdownFrame({
-      anchorTop: anchorRect.top,
+    const frame = panelSearchDropdownFillBelow({
       anchorBottom: anchorRect.bottom,
       offsetTop: anchorMeasure.offsetTop,
       viewportHeight: anchorMeasure.height,
       bottomInset: keyboardOpen ? 8 : pageBottom,
     })
     const { top, maxHeight } = frame
+    const panelEl = (anchorRef?.current?.closest('.margo-post-card__lb-panel')
+      || anchorRef?.current?.closest('.margo-post-detail-lb')
+      || anchorRef?.current?.closest('.margo-lb-focus')) as HTMLElement | null
+    const panelRect = panelEl?.getBoundingClientRect()
+    const left = panelRect?.left ?? anchorRect.left
+    const width = panelRect?.width ?? anchorRect.width
 
     const portalNode = (
       <>
@@ -329,14 +355,16 @@ export function ComposeSearchDropdown({
         <div
           role="listbox"
           aria-label="Song search results"
+          data-lb-search-list="1"
           style={{
             ...listboxStyle,
             position: 'fixed',
             zIndex: PANEL_LIST_Z,
-            left: anchorRect.left,
-            width: anchorRect.width,
+            left,
+            width,
             top,
             maxHeight,
+            borderRadius: '12px',
           }}
         >
           <ResultsList
@@ -344,6 +372,7 @@ export function ComposeSearchDropdown({
             displayResults={displayResults}
             highlightQuery={highlightQuery}
             isStage={isStage}
+            isPanel
             onSelect={onSelect}
           />
         </div>
@@ -395,6 +424,7 @@ export function ComposeSearchDropdown({
           displayResults={displayResults}
           highlightQuery={highlightQuery}
           isStage={isStage}
+          isPanel={isPanel}
           onSelect={onSelect}
         />
       </div>

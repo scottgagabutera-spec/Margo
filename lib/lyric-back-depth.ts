@@ -1,7 +1,7 @@
 /** How many Lyric Back levels a thread may contain, including the focused row. */
 export const LYRIC_BACK_DEPTH_CAP = 8
 
-/** Indent stops at three steps so a deep thread stays readable. */
+/** Step cap. Rows stay full width, so a deep level has the same room as the first. */
 export const LYRIC_BACK_VISUAL_STEPS = 3
 
 export function lyricBackDepth(depthOffset: number, stackLength: number): number {

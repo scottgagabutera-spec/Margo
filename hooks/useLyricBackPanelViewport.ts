@@ -2,8 +2,9 @@
 
 import { useEffect, type RefObject } from 'react'
 import {
+  LYRIC_BACK_KEYBOARD_MIN_PANEL_PX,
   LYRIC_BACK_KEYBOARD_THRESHOLD_PX,
-  lyricBackPanelCapPx,
+  lyricBackPinnedPanelCapPx,
   visualKeyboardInsetPx,
 } from '@/lib/lyric-back-keyboard'
 
@@ -24,16 +25,16 @@ function isPanelTextField(panel: HTMLElement, el: EventTarget | null): boolean {
   return el.isContentEditable
 }
 
-function setLyricBackKeyboardChrome(active: boolean): void {
-  const root = document.documentElement
-  root.classList.toggle('margo-keyboard-open', active)
-  if (active) root.setAttribute('data-margo-keyboard', '1')
-  else root.removeAttribute('data-margo-keyboard')
+function clearPanelKeyboardStyle(el: HTMLElement): void {
+  el.style.removeProperty('--lb-panel-vvh')
+  el.style.removeProperty('max-height')
+  el.style.removeProperty('height')
+  el.removeAttribute('data-lb-keyboard')
 }
 
 /**
- * Feed LB panel: cap height to the visual viewport while the keyboard is open.
- * Resize only — do not listen to visualViewport scroll, and do not touch scrollTop.
+ * Cap panel height to visualViewport while the keyboard is open.
+ * Stays in document flow (no position:fixed) so horizontal layout cannot drift.
  */
 export function useLyricBackPanelViewport(
   panelRef: RefObject<HTMLElement | null>,
@@ -61,66 +62,80 @@ export function useLyricBackPanelViewport(
         viewportHeight,
         offsetTop,
       }) > LYRIC_BACK_KEYBOARD_THRESHOLD_PX
-      const textFocused = isPanelTextField(el, document.activeElement)
-      setLyricBackKeyboardChrome(keyboardOpen || textFocused)
 
       if (!keyboardOpen) {
-        el.style.removeProperty('--lb-panel-vvh')
-        el.style.removeProperty('height')
-        el.removeAttribute('data-lb-keyboard')
+        clearPanelKeyboardStyle(el)
         return
       }
 
-      const cap = lyricBackPanelCapPx({
-        elementTop: el.getBoundingClientRect().top,
+      const panelTop = el.getBoundingClientRect().top
+      const cap = lyricBackPinnedPanelCapPx({
+        pinnedTop: panelTop,
         offsetTop,
         viewportHeight,
         bottomPad: 8,
+        minHeight: LYRIC_BACK_KEYBOARD_MIN_PANEL_PX,
       })
       if (cap <= 0) {
-        el.style.removeProperty('--lb-panel-vvh')
-        el.style.removeProperty('height')
-        el.removeAttribute('data-lb-keyboard')
+        clearPanelKeyboardStyle(el)
         return
       }
+
       el.style.setProperty('--lb-panel-vvh', `${cap}px`)
-      el.style.height = `${cap}px`
+      el.style.maxHeight = `${cap}px`
       el.setAttribute('data-lb-keyboard', '1')
     }
 
     update()
 
-    const onPageHide = () => clearLyricBackKeyboardChrome()
+    const onPageHide = () => {
+      const el = panelRef.current
+      if (el) clearPanelKeyboardStyle(el)
+    }
     const onVis = () => {
-      if (document.visibilityState === 'hidden') clearLyricBackKeyboardChrome()
+      if (document.visibilityState === 'hidden') onPageHide()
       else update()
     }
-    const onFocus = () => {
+    const onFocusIn = (ev: FocusEvent) => {
+      const el = panelRef.current
+      if (el && isPanelTextField(el, ev.target)) {
+        const input = ev.target
+        if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement) {
+          try {
+            input.focus({ preventScroll: true })
+          } catch {
+            /* older browsers */
+          }
+        }
+      }
+      window.cancelAnimationFrame(focusFrame)
+      focusFrame = window.requestAnimationFrame(update)
+    }
+    const onFocusOut = () => {
       window.cancelAnimationFrame(focusFrame)
       focusFrame = window.requestAnimationFrame(update)
     }
 
     vv?.addEventListener('resize', update)
+    vv?.addEventListener('scroll', update)
     window.addEventListener('resize', update)
     window.addEventListener('pagehide', onPageHide)
     document.addEventListener('visibilitychange', onVis)
-    document.addEventListener('focusin', onFocus)
-    document.addEventListener('focusout', onFocus)
+    document.addEventListener('focusin', onFocusIn)
+    document.addEventListener('focusout', onFocusOut)
 
     return () => {
       disposed = true
       window.cancelAnimationFrame(focusFrame)
       vv?.removeEventListener('resize', update)
+      vv?.removeEventListener('scroll', update)
       window.removeEventListener('resize', update)
       window.removeEventListener('pagehide', onPageHide)
       document.removeEventListener('visibilitychange', onVis)
-      document.removeEventListener('focusin', onFocus)
-      document.removeEventListener('focusout', onFocus)
-      clearLyricBackKeyboardChrome()
+      document.removeEventListener('focusin', onFocusIn)
+      document.removeEventListener('focusout', onFocusOut)
       const el = panelRef.current
-      el?.style.removeProperty('--lb-panel-vvh')
-      el?.style.removeProperty('height')
-      el?.removeAttribute('data-lb-keyboard')
+      if (el) clearPanelKeyboardStyle(el)
     }
   }, [enabled, panelRef])
 }
