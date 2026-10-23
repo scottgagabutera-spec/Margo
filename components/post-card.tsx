@@ -6,7 +6,7 @@ import { ChevronRightIcon } from '@/components/icons'
 import { RepostSheet } from '@/components/repost-sheet'
 import type { Post } from '@/hooks/usePosts'
 import { PostMomentInlineEdit } from '@/components/post-moment-inline-edit'
-import { DeleteMomentDialog } from '@/components/delete-moment-dialog'
+import { InlineDeleteConfirm } from '@/components/inline-delete-confirm'
 import { warmUrl } from '@/lib/audio-engine'
 import { resolveExternalListenUrl } from '@/lib/moment/listen'
 import {
@@ -185,7 +185,8 @@ export function PostCard({
   const displayPost = editOpen ? postLive : post
   const isOwner = !!user?.id && !!displayPost.authorUid && displayPost.authorUid === user.id
   const canOwnerEdit = isOwner && !displayPost.contentRemovedAt && !displayPost.parentPostId
-  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [deleteBusy, setDeleteBusy] = useState(false)
   const [deletedLocally, setDeletedLocally] = useState(false)
   const [repostSheetOpen, setRepostSheetOpen] = useState(false)
   const [rowExpanded, setRowExpanded] = useState(false)
@@ -618,25 +619,48 @@ export function PostCard({
               {isNew && !isTop && !isTrending && <EarnedTag label="New" onClick={() => onSelectRank?.('NEW')} />}
             </div>
           )}
-          <PostReportMenu
-            postId={post.id}
-            isOwner={isOwner}
-            showOwnerEdit={canOwnerEdit}
-            onOwnerEdit={() => setEditOpen(true)}
-            showOwnerDelete
-            onOwnerDelete={() => setDeleteOpen(true)}
-          />
+          {deleteConfirmOpen && isOwner ? (
+            <InlineDeleteConfirm
+              busy={deleteBusy}
+              onCancel={() => setDeleteConfirmOpen(false)}
+              onConfirm={() => {
+                setDeleteBusy(true)
+                void fetch('/api/posts/moment', {
+                  method: 'DELETE',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ postId: post.id }),
+                })
+                  .then(async (res) => {
+                    if (!res.ok) {
+                      const body = await res.json().catch(() => ({}))
+                      throw new Error(body.error || 'Something went wrong.')
+                    }
+                    setDeletedLocally(true)
+                  })
+                  .catch(() => {
+                    setDeleteBusy(false)
+                  })
+              }}
+            />
+          ) : (
+            <PostReportMenu
+              postId={post.id}
+              isOwner={isOwner}
+              showOwnerEdit={canOwnerEdit}
+              onOwnerEdit={() => setEditOpen(true)}
+              showOwnerDelete
+              onOwnerDelete={() => setDeleteConfirmOpen(true)}
+              reportPresentation="inline"
+            />
+          )}
         </div>
       </div>
 
-      {isOwner && (
-        <DeleteMomentDialog
-          open={deleteOpen}
-          onOpenChange={setDeleteOpen}
-          postId={post.id}
-          onDeleted={() => setDeletedLocally(true)}
-        />
-      )}
+      <div
+        className="margo-post-report-inline-host"
+        data-report-inline-host={post.id}
+        data-no-card-nav
+      />
 
       <PostMomentBody post={post} atmosphereRooms={atmosphereRooms} />
 

@@ -1,17 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   LyricBackPanelCompose,
+  type LyricBackPanelComposeHandle,
   type LyricBackPanelPrefill,
 } from '@/components/lyric-back-panel-compose'
+import { MomentComposeVibePicker } from '@/components/moment-compose-vibe-picker'
 import type { Post } from '@/hooks/usePosts'
 import { resolveMomentLines, type PostLine } from '@/lib/post-lines'
-import {
-  MOMENT_VIBE_PICKER_OPTIONS,
-  emotionToVibeLabel,
-  vibeLabelToEmotion,
-} from '@/lib/moment/vibe'
+import { emotionToVibeLabel, vibeLabelToEmotion } from '@/lib/moment/vibe'
 
 export type PostMomentInlineEditProps = {
   post: Post
@@ -40,6 +38,7 @@ export function PostMomentInlineEdit({
   onSaved,
   onRequireAuth,
 }: PostMomentInlineEditProps) {
+  const composeRef = useRef<LyricBackPanelComposeHandle>(null)
   const lines = resolveMomentLines(post)
   const primary = lines[0] ?? {
     position: 0,
@@ -54,12 +53,13 @@ export function PostMomentInlineEdit({
     source: post.songId ? 'catalog' : 'external',
   }
 
-  const initialVibe =
-    emotionToVibeLabel(post.emotion || 'chill') ?? MOMENT_VIBE_PICKER_OPTIONS[0]
-  const [vibeLabel, setVibeLabel] = useState(initialVibe)
+  const [vibeLabel, setVibeLabel] = useState(
+    () => emotionToVibeLabel(post.emotion || 'chill') ?? 'Chill',
+  )
+  const [posting, setPosting] = useState(false)
 
   useEffect(() => {
-    setVibeLabel(emotionToVibeLabel(post.emotion || 'chill') ?? MOMENT_VIBE_PICKER_OPTIONS[0])
+    setVibeLabel(emotionToVibeLabel(post.emotion || 'chill') ?? 'Chill')
   }, [post.id, post.emotion])
 
   const submitEmotion = vibeLabelToEmotion(vibeLabel) ?? (post.emotion || 'chill')
@@ -72,24 +72,8 @@ export function PostMomentInlineEdit({
           Cancel
         </button>
       </div>
-      <div className="margo-post-moment-edit__vibes" role="listbox" aria-label="Vibe">
-        {MOMENT_VIBE_PICKER_OPTIONS.map((label) => {
-          const selected = label === vibeLabel
-          return (
-            <button
-              key={label}
-              type="button"
-              role="option"
-              aria-selected={selected}
-              className={`margo-post-moment-edit__vibe${selected ? ' margo-post-moment-edit__vibe--on' : ''}`}
-              onClick={() => setVibeLabel(label)}
-            >
-              {label}
-            </button>
-          )
-        })}
-      </div>
       <LyricBackPanelCompose
+        ref={composeRef}
         key={post.id}
         layout="panel"
         mode="edit"
@@ -102,6 +86,20 @@ export function PostMomentInlineEdit({
         prefill={lineToPrefill(primary)}
         onRequireAuth={onRequireAuth}
         focusSearchOnMount={false}
+        onPostingChange={setPosting}
+        panelAfterBody={
+          <>
+            <MomentComposeVibePicker vibeLabel={vibeLabel} onVibeSelect={setVibeLabel} />
+            <button
+              type="button"
+              className="margo-post-moment-edit__save"
+              disabled={posting}
+              onClick={() => composeRef.current?.save()}
+            >
+              {posting ? 'Saving…' : 'Save'}
+            </button>
+          </>
+        }
         onSaved={(payload) => {
           const nextLines = (lines.length > 0 ? lines : [primary]).map((line, idx) =>
             idx === 0

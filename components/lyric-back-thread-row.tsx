@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Echo } from '@/hooks/useEchoes'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { PostThumbnail } from '@/components/post-thumbnail'
@@ -13,17 +13,15 @@ import { FeedPostActions } from '@/components/feed-post-actions'
 import { LyricBackTrackListenControl } from '@/components/lyric-back-track-listen-control'
 import { RepostSheet } from '@/components/repost-sheet'
 import { PostReportMenu } from '@/components/post-report-menu'
-import { LyricBackDeleteSheet } from '@/components/lyric-back-delete-sheet'
+import { InlineDeleteConfirm } from '@/components/inline-delete-confirm'
+import { MomentComposeVibePicker } from '@/components/moment-compose-vibe-picker'
 import {
   LyricBackPanelCompose,
+  type LyricBackPanelComposeHandle,
   type LyricBackPanelPrefill,
 } from '@/components/lyric-back-panel-compose'
 import type { LyricBackEditSavedPatch } from '@/lib/lyric-back-edit-saved'
-import {
-  MOMENT_VIBE_PICKER_OPTIONS,
-  emotionToVibeLabel,
-  vibeLabelToEmotion,
-} from '@/lib/moment/vibe'
+import { emotionToVibeLabel, vibeLabelToEmotion } from '@/lib/moment/vibe'
 import { echoToPost } from '@/lib/echo-to-post'
 
 export type { LyricBackEditSavedPatch } from '@/lib/lyric-back-edit-saved'
@@ -143,16 +141,19 @@ export function LyricBackThreadRow({
   const { user } = useIdentity()
   const myId = user?.id ?? null
   const [repostSheetOpen, setRepostSheetOpen] = useState(false)
-  const [deleteSheetOpen, setDeleteSheetOpen] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [deleteBusy, setDeleteBusy] = useState(false)
+  const composeRef = useRef<LyricBackPanelComposeHandle>(null)
+  const [editPosting, setEditPosting] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const initialVibeLabel =
-    emotionToVibeLabel(echo.emotion) ?? MOMENT_VIBE_PICKER_OPTIONS[0]
+    emotionToVibeLabel(echo.emotion) ?? 'Chill'
   const [editVibeLabel, setEditVibeLabel] = useState(initialVibeLabel)
   const contentRemoved = Boolean(echo.contentRemovedAt)
 
   useEffect(() => {
     if (!editOpen) return
-    setEditVibeLabel(emotionToVibeLabel(echo.emotion) ?? MOMENT_VIBE_PICKER_OPTIONS[0])
+    setEditVibeLabel(emotionToVibeLabel(echo.emotion) ?? 'Chill')
   }, [editOpen, echo.id, echo.emotion])
 
   const [resonatedLocal, setResonatedLocal] = useState(
@@ -250,24 +251,8 @@ export function LyricBackThreadRow({
             Cancel
           </button>
         </header>
-        <div className="margo-lb-thread-row__edit-vibes" role="listbox" aria-label="Vibe">
-          {MOMENT_VIBE_PICKER_OPTIONS.map((label) => {
-            const selected = label === editVibeLabel
-            return (
-              <button
-                key={label}
-                type="button"
-                role="option"
-                aria-selected={selected}
-                className={`margo-lb-thread-row__edit-vibe${selected ? ' margo-lb-thread-row__edit-vibe--on' : ''}`}
-                onClick={() => setEditVibeLabel(label)}
-              >
-                {label}
-              </button>
-            )
-          })}
-        </div>
         <LyricBackPanelCompose
+          ref={composeRef}
           key={`edit-${echo.id}`}
           layout="panel"
           mode="edit"
@@ -278,6 +263,24 @@ export function LyricBackThreadRow({
           prefill={echoToPrefill(echo)}
           onRequireAuth={requireAuth}
           focusSearchOnMount={false}
+          onPostingChange={setEditPosting}
+          panelAfterBody={
+            <>
+              <MomentComposeVibePicker
+                compact
+                vibeLabel={editVibeLabel}
+                onVibeSelect={setEditVibeLabel}
+              />
+              <button
+                type="button"
+                className="margo-lb-thread-row__edit-save"
+                disabled={editPosting}
+                onClick={() => composeRef.current?.save()}
+              >
+                {editPosting ? 'Saving…' : 'Save'}
+              </button>
+            </>
+          }
           onSaved={(payload) => {
             setEditOpen(false)
             onOwnerEdited?.(echo.id, {
@@ -389,24 +392,54 @@ export function LyricBackThreadRow({
             />
           ) : null}
         </div>
-        {showReportMenu ? (
+        {deleteConfirmOpen && showOwnerMenu ? (
+          <InlineDeleteConfirm
+            className="margo-lb-thread-row__inline-delete"
+            busy={deleteBusy}
+            onCancel={() => setDeleteConfirmOpen(false)}
+            onConfirm={() => {
+              setDeleteBusy(true)
+              void fetch('/api/posts/lyric-back', {
+                method: 'DELETE',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ postId: echo.id }),
+              })
+                .then(async (res) => {
+                  const body = (await res.json().catch(() => ({}))) as {
+                    error?: string
+                    outcome?: 'deleted' | 'shelled'
+                  }
+                  if (!res.ok) throw new Error(body.error || 'Could not delete.')
+                  setDeleteConfirmOpen(false)
+                  onOwnerDeleted?.(echo.id, body.outcome === 'shelled' ? 'shelled' : 'deleted')
+                })
+                .catch(() => {
+                  setDeleteBusy(false)
+                })
+            }}
+          />
+        ) : null}
+        {showReportMenu && !deleteConfirmOpen ? (
           <PostReportMenu
             postId={echo.id}
             isOwner={false}
             className="margo-lb-thread-row__more"
             iconSize={18}
+            reportPresentation="inline"
           />
         ) : null}
-        {showOwnerMenu ? (
+        {showOwnerMenu && !deleteConfirmOpen ? (
           <PostReportMenu
             postId={echo.id}
             isOwner
             showOwnerEdit
             onOwnerEdit={() => setEditOpen(true)}
             showOwnerDelete
-            onOwnerDelete={() => setDeleteSheetOpen(true)}
+            onOwnerDelete={() => setDeleteConfirmOpen(true)}
             className="margo-lb-thread-row__more"
             iconSize={18}
+            reportPresentation="inline"
           />
         ) : null}
       </header>
@@ -466,6 +499,11 @@ export function LyricBackThreadRow({
         </div>
       ) : null}
 
+      <div
+        className="margo-post-report-inline-host"
+        data-report-inline-host={echo.id}
+        data-no-card-nav
+      />
       <FeedPostActions
         variant="compact"
         postId={echo.id}
@@ -495,14 +533,6 @@ export function LyricBackThreadRow({
           onRepost={onReplay}
           onRepostWithNote={(id, note) => onQuoteReplay?.(id, note)}
           onUndo={(id) => onUndoReplay?.(id)}
-        />
-      ) : null}
-      {showOwnerMenu ? (
-        <LyricBackDeleteSheet
-          open={deleteSheetOpen}
-          onOpenChange={setDeleteSheetOpen}
-          postId={echo.id}
-          onDeleted={(outcome) => onOwnerDeleted?.(echo.id, outcome)}
         />
       ) : null}
     </article>

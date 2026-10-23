@@ -41,6 +41,8 @@ export type PostReportMenuProps = {
   iconSize?: number
   /** Visible but inert (e.g. content-removed shell row). */
   inactive?: boolean
+  /** Inline expand under the row (feed / LB) instead of MargoReportDialog. */
+  reportPresentation?: 'modal' | 'inline'
 }
 
 function ReportRowIcon() {
@@ -117,6 +119,7 @@ export function PostReportMenu({
   className = '',
   iconSize = 20,
   inactive = false,
+  reportPresentation = 'modal',
 }: PostReportMenuProps) {
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
@@ -327,6 +330,85 @@ export function PostReportMenu({
     }
   }
 
+  const reportForm = (
+    <div className={`margo-post-report-menu__sheet${reportPresentation === 'inline' ? ' margo-post-report-menu__sheet--inline' : ''}`}>
+      {reportStatusLoading ? (
+        <p className="margo-post-report-menu__sheet-muted" aria-live="polite">
+          …
+        </p>
+      ) : alreadyReported && !reportMsg ? (
+        <p className="margo-post-report-menu__sheet-reported" role="status">
+          Reported
+        </p>
+      ) : (
+        <>
+          <div
+            className="margo-post-report-menu__sheet-options"
+            role="radiogroup"
+            aria-label="Report reason"
+          >
+            {POST_REPORT_REASONS.map((reason) => {
+              const selected = selectedReason === reason
+              return (
+                <button
+                  key={reason}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  disabled={reportBusy}
+                  className={`margo-post-report-menu__sheet-row${selected ? ' margo-post-report-menu__sheet-row--selected' : ''}`}
+                  onClick={() => setSelectedReason(reason)}
+                >
+                  <span>{reason}</span>
+                  <ReasonCheckIcon visible={selected} />
+                </button>
+              )
+            })}
+          </div>
+          {selectedReason === 'Other' ? (
+            <label className="margo-post-report-menu__sheet-note-wrap" htmlFor={noteId}>
+              <span className="margo-post-report-menu__sheet-note-label">Note</span>
+              <textarea
+                id={noteId}
+                className="margo-post-report-menu__sheet-note"
+                rows={2}
+                maxLength={MAX_POST_REPORT_NOTE}
+                value={otherNote}
+                disabled={reportBusy}
+                onChange={(e) => setOtherNote(e.target.value)}
+              />
+            </label>
+          ) : null}
+          <div className="margo-post-report-menu__sheet-actions">
+            <button
+              type="button"
+              className="margo-post-report-menu__sheet-submit"
+              disabled={!canSubmit}
+              onClick={() => void submitReport()}
+            >
+              Report
+            </button>
+          </div>
+        </>
+      )}
+      {reportMsg ? (
+        <p className="margo-post-report-menu__sheet-msg" role="status">
+          {reportMsg}
+        </p>
+      ) : null}
+    </div>
+  )
+
+  const inlineHost =
+    mounted && reportPresentation === 'inline' && sheetOpen
+      ? document.querySelector(`[data-report-inline-host="${postId}"]`)
+      : null
+
+  const inlineReportPortal =
+    inlineHost instanceof HTMLElement
+      ? createPortal(reportForm, inlineHost)
+      : null
+
   const popover =
     menuOpen && mounted
       ? createPortal(
@@ -420,81 +502,19 @@ export function PostReportMenu({
         </button>
       </div>
       {popover}
-      <MargoReportDialog
-        open={sheetOpen}
-        onOpenChange={(next) => {
-          if (!next) closeSheet()
-          else setSheetOpen(true)
-        }}
-        closeDisabled={reportBusy}
-      >
-        <div className="margo-post-report-menu__sheet">
-          {reportStatusLoading ? (
-            <p className="margo-post-report-menu__sheet-muted" aria-live="polite">
-              …
-            </p>
-          ) : alreadyReported && !reportMsg ? (
-            <p className="margo-post-report-menu__sheet-reported" role="status">
-              Reported
-            </p>
-          ) : (
-            <>
-              <div
-                className="margo-post-report-menu__sheet-options"
-                role="radiogroup"
-                aria-label="Report reason"
-              >
-                {POST_REPORT_REASONS.map((reason) => {
-                  const selected = selectedReason === reason
-                  return (
-                    <button
-                      key={reason}
-                      type="button"
-                      role="radio"
-                      aria-checked={selected}
-                      disabled={reportBusy}
-                      className={`margo-post-report-menu__sheet-row${selected ? ' margo-post-report-menu__sheet-row--selected' : ''}`}
-                      onClick={() => setSelectedReason(reason)}
-                    >
-                      <span>{reason}</span>
-                      <ReasonCheckIcon visible={selected} />
-                    </button>
-                  )
-                })}
-              </div>
-              {selectedReason === 'Other' ? (
-                <label className="margo-post-report-menu__sheet-note-wrap" htmlFor={noteId}>
-                  <span className="margo-post-report-menu__sheet-note-label">Note</span>
-                  <textarea
-                    id={noteId}
-                    className="margo-post-report-menu__sheet-note"
-                    rows={2}
-                    maxLength={MAX_POST_REPORT_NOTE}
-                    value={otherNote}
-                    disabled={reportBusy}
-                    onChange={(e) => setOtherNote(e.target.value)}
-                  />
-                </label>
-              ) : null}
-              <div className="margo-post-report-menu__sheet-actions">
-                <button
-                  type="button"
-                  className="margo-post-report-menu__sheet-submit"
-                  disabled={!canSubmit}
-                  onClick={() => void submitReport()}
-                >
-                  Report
-                </button>
-              </div>
-            </>
-          )}
-          {reportMsg ? (
-            <p className="margo-post-report-menu__sheet-msg" role="status">
-              {reportMsg}
-            </p>
-          ) : null}
-        </div>
-      </MargoReportDialog>
+      {inlineReportPortal}
+      {reportPresentation === 'modal' ? (
+        <MargoReportDialog
+          open={sheetOpen}
+          onOpenChange={(next) => {
+            if (!next) closeSheet()
+            else setSheetOpen(true)
+          }}
+          closeDisabled={reportBusy}
+        >
+          {reportForm}
+        </MargoReportDialog>
+      ) : null}
     </>
   )
 }

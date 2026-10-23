@@ -41,6 +41,7 @@ export type LyricBackPanelPrefill = {
 
 export type LyricBackPanelComposeHandle = {
   focusSearch: () => void
+  save: () => void
 }
 
 export type LyricBackSavePayload = {
@@ -77,6 +78,9 @@ export type LyricBackPanelComposeProps = {
   focusSearchOnMount?: boolean
   /** Panel chrome: search sits in the one-row bar. */
   renderBar?: (search: ReactNode) => ReactNode
+  /** Rendered after song/line (e.g. vibe + Save). Hides built-in panel send when set. */
+  panelAfterBody?: ReactNode
+  onPostingChange?: (posting: boolean) => void
 }
 
 type SelectedSong = {
@@ -108,6 +112,8 @@ export const LyricBackPanelCompose = forwardRef<
     replyToLabel,
     focusSearchOnMount = false,
     renderBar,
+    panelAfterBody,
+    onPostingChange,
   },
   ref,
 ) {
@@ -131,19 +137,12 @@ export const LyricBackPanelCompose = forwardRef<
   const [snippetStart, setSnippetStart] = useState<number | null>(null)
   const [snippetEnd, setSnippetEnd] = useState<number | null>(null)
   const [posting, setPosting] = useState(false)
+  useEffect(() => {
+    onPostingChange?.(posting)
+  }, [onPostingChange, posting])
   const [postError, setPostError] = useState<string | null>(null)
 
-  useImperativeHandle(ref, () => ({
-    focusSearch: () => {
-      const input = rootRef.current?.querySelector('input')
-      if (!(input instanceof HTMLInputElement)) return
-      try {
-        input.focus({ preventScroll: true })
-      } catch {
-        input.focus()
-      }
-    },
-  }))
+  const handleSendRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     if (!focusSearchOnMount) return
@@ -513,6 +512,25 @@ export const LyricBackPanelCompose = forwardRef<
     submitEmotion,
   ])
 
+  handleSendRef.current = () => {
+    void handleSend()
+  }
+
+  useImperativeHandle(ref, () => ({
+    focusSearch: () => {
+      const input = rootRef.current?.querySelector('input')
+      if (!(input instanceof HTMLInputElement)) return
+      try {
+        input.focus({ preventScroll: true })
+      } catch {
+        input.focus()
+      }
+    },
+    save: () => {
+      handleSendRef.current()
+    },
+  }))
+
   const showLinePicker = Boolean(
     selected?.catalogSongId
     && !linePickDone
@@ -657,7 +675,7 @@ export const LyricBackPanelCompose = forwardRef<
       {postError ? (
         <p className="margo-post-card__lb-compose-error" role="alert">{postError}</p>
       ) : null}
-      {isPanelLayout ? (
+      {isPanelLayout && !panelAfterBody ? (
         <div className="margo-post-card__lb-compose-send-row">
           <button
             type="button"
@@ -673,7 +691,7 @@ export const LyricBackPanelCompose = forwardRef<
             )}
           </button>
         </div>
-      ) : (
+      ) : !isPanelLayout ? (
         <div className="margo-post-card__lb-compose-bar">
           <button
             type="button"
@@ -685,7 +703,7 @@ export const LyricBackPanelCompose = forwardRef<
             <FeedIconSend size={18} />
           </button>
         </div>
-      )}
+      ) : null}
     </div>
   ) : null
 
@@ -707,6 +725,9 @@ export const LyricBackPanelCompose = forwardRef<
       ) : null}
       {renderBar ? renderBar(searchField) : searchField}
       {body}
+      {panelAfterBody ? (
+        <div className="margo-post-card__lb-compose-panel-footer">{panelAfterBody}</div>
+      ) : null}
     </div>
   )
 })
