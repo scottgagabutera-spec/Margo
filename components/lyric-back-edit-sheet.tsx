@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { MargoSheet } from '@/components/margo-sheet'
+import { LyricBackVibeChips } from '@/components/lyric-back-vibe-chips'
 
 const MAX_LYRIC = 500
 
@@ -103,8 +104,12 @@ export function LyricBackEditSheet({
             onChange={(e) => setText(e.target.value)}
           />
         </label>
-        <input type="hidden" name="emotion" value={emotion} readOnly />
-        <input type="hidden" name="parentEmotion" value={parentEmotion} readOnly />
+        <LyricBackVibeChips
+          value={emotion}
+          parentEmotion={parentEmotion}
+          disabled={saving}
+          onChange={setEmotion}
+        />
         {error ? (
           <p className="margo-lb-owner-sheet__error" role="alert">
             {error}
