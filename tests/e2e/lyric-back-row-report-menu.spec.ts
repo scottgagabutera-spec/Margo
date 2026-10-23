@@ -9,17 +9,41 @@ function saveArtifactShot(page: Page, filename: string) {
   return page.screenshot({ path: path.join(ARTIFACT_SHOTS, filename), fullPage: false })
 }
 
-const REPORT_CSS = fs.readFileSync(
-  path.join(process.cwd(), 'app/globals.css'),
-  'utf8',
-).split('\n')
-  .filter((line) =>
-    line.includes('margo-post-report-menu')
-    || line.includes('margo-lb-thread-row__more')
-    || line.includes('margo-sheet-root')
-    || line.includes('margo-sheet__'),
-  )
-  .join('\n')
+const REPORT_MENU_CSS_MARKERS = [
+  'margo-post-report-menu',
+  'margo-lb-thread-row__more',
+  'margo-sheet-root',
+  'margo-sheet__',
+] as const
+
+/** Keep full rule blocks from globals.css (line filters drop min-height/padding). */
+function extractReportMenuCss(source: string): string {
+  const lines = source.split('\n')
+  const out: string[] = []
+  let capturing = false
+  let depth = 0
+  for (const line of lines) {
+    const hitsMarker = REPORT_MENU_CSS_MARKERS.some((m) => line.includes(m))
+    if (!capturing && hitsMarker) {
+      capturing = true
+      depth = 0
+    }
+    if (!capturing) continue
+    out.push(line)
+    for (const ch of line) {
+      if (ch === '{') depth += 1
+      if (ch === '}') depth -= 1
+    }
+    if (capturing && depth <= 0 && line.includes('}')) {
+      capturing = false
+    }
+  }
+  return out.join('\n')
+}
+
+const REPORT_CSS = extractReportMenuCss(
+  fs.readFileSync(path.join(process.cwd(), 'app/globals.css'), 'utf8'),
+)
 
 const FIXTURE = (extraCss = '') => String.raw`<!DOCTYPE html>
 <html lang="en"><head>

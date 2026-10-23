@@ -7,15 +7,20 @@ export type RateLimitResult =
 /**
  * Hour-bucket counter in api_rate_limits (service_role only — no public RLS policies).
  */
-export async function consumeHourlyApiRateLimit(opts: {
+async function readHourlyRateLimitCount(opts: {
   route: string
   bucket: string
-  limit: number
-  /** Allow request when counter read/write fails (low-cost routes only). */
   failOpenOnDbError?: boolean
-}): Promise<RateLimitResult> {
+}): Promise<
+  | { ok: true; count: number; windowStart: string }
+  | { ok: false; retryAfterSec: number }
+> {
   const windowStart = hourStartUtc(new Date())
   const admin = getSupabaseAdmin()
+  if (!admin) {
+    if (opts.failOpenOnDbError) return { ok: true, count: 0, windowStart }
+    return { ok: false, retryAfterSec: 3600 }
+  }
 
   const { data: row, error: readErr } = await admin
     .from('api_rate_limits')
@@ -27,21 +32,55 @@ export async function consumeHourlyApiRateLimit(opts: {
 
   if (readErr) {
     console.error('[api-rate-limit] read failed', readErr.message)
-    if (opts.failOpenOnDbError) return { ok: true }
+    if (opts.failOpenOnDbError) return { ok: true, count: 0, windowStart }
     return { ok: false, retryAfterSec: 3600 }
   }
 
-  const current = Number(row?.count ?? 0)
+  return { ok: true, count: Number(row?.count ?? 0), windowStart }
+}
+
+/** Read-only: under the hourly cap (does not increment). */
+export async function isHourlyApiRateLimitAvailable(opts: {
+  route: string
+  bucket: string
+  limit: number
+  failOpenOnDbError?: boolean
+}): Promise<RateLimitResult> {
+  const read = await readHourlyRateLimitCount(opts)
+  if (!read.ok) return read
+  if (read.count >= opts.limit) {
+    return { ok: false, retryAfterSec: secondsUntilNextHourUtc(new Date()) }
+  }
+  return { ok: true }
+}
+
+export async function consumeHourlyApiRateLimit(opts: {
+  route: string
+  bucket: string
+  limit: number
+  /** Allow request when counter read/write fails (low-cost routes only). */
+  failOpenOnDbError?: boolean
+}): Promise<RateLimitResult> {
+  const read = await readHourlyRateLimitCount(opts)
+  if (!read.ok) return read
+
+  const current = read.count
   if (current >= opts.limit) {
     return { ok: false, retryAfterSec: secondsUntilNextHourUtc(new Date()) }
   }
 
   const next = current + 1
+  const admin = getSupabaseAdmin()
+  if (!admin) {
+    if (opts.failOpenOnDbError) return { ok: true }
+    return { ok: false, retryAfterSec: 3600 }
+  }
+
   const { error: writeErr } = await admin.from('api_rate_limits').upsert(
     {
       route: opts.route,
       bucket: opts.bucket,
-      window_start: windowStart,
+      window_start: read.windowStart,
       count: next,
     },
     { onConflict: 'route,bucket,window_start' },
