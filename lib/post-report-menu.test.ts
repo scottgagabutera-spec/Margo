@@ -3,21 +3,21 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 
 describe('PostReportMenu', () => {
-  it('exports the same report reasons as the legacy PostCard list', () => {
+  it('uses shared reasons and server report route', () => {
     const menu = fs.readFileSync('components/post-report-menu.tsx', 'utf8')
-    assert.match(menu, /POST_REPORT_REASONS = \['Spam', 'Harassment', 'Inappropriate', 'Other'\]/)
-    assert.match(menu, /post_reports/)
-    assert.match(menu, /createPortal/)
-    assert.match(menu, /MargoSheet/)
+    assert.match(menu, /from '@\/lib\/post-report'/)
+    assert.match(menu, /\/api\/posts\/report/)
+    assert.doesNotMatch(menu, /\.from\('post_reports'\)\.insert/)
     assert.match(menu, /Report received\./)
-    assert.doesNotMatch(menu, /margo-post-report-menu__panel/)
+    assert.match(menu, /role="radio"/)
+    assert.match(menu, /margo-post-report-menu__sheet-submit/)
+    assert.match(menu, /Reported/)
   })
 
   it('PostCard uses shared PostReportMenu with owner delete', () => {
     const card = fs.readFileSync('components/post-card.tsx', 'utf8')
     assert.match(card, /<PostReportMenu/)
     assert.match(card, /showOwnerDelete/)
-    assert.doesNotMatch(card, /REPORT_REASONS/)
   })
 
   it('LyricBackThreadRow shows report menu only for signed-in non-owners', () => {
@@ -26,5 +26,18 @@ describe('PostReportMenu', () => {
     assert.match(row, /PostReportMenu/)
     assert.match(row, /myId && !isOwner/)
     assert.doesNotMatch(row, /showOwnerDelete/)
+  })
+})
+
+describe('posts/report API route', () => {
+  it('validates session, rate limit, and email hook placeholder', () => {
+    const route = fs.readFileSync('app/api/posts/report/route.ts', 'utf8')
+    assert.match(route, /consumeHourlyApiRateLimit/)
+    assert.match(route, /failOpenOnDbError: true/)
+    assert.match(route, /parsePostReportBody/)
+    assert.match(route, /author_profile_id === userId/)
+    assert.match(route, /already_reported/)
+    assert.match(route, /TODO\(report-email\)/)
+    assert.match(route, /reason_note/)
   })
 })

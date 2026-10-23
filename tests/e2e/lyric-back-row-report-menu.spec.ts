@@ -203,13 +203,45 @@ const FIXTURE = (extraCss = '') => String.raw`<!DOCTYPE html>
     panel.appendChild(title);
     const body = document.createElement('div');
     body.className = 'margo-post-report-menu__sheet';
+    const options = document.createElement('div');
+    options.className = 'margo-post-report-menu__sheet-options';
+    options.setAttribute('role', 'radiogroup');
+    let selected = null;
     for (const reason of REASONS) {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'margo-post-report-menu__sheet-row';
-      b.textContent = reason;
-      body.appendChild(b);
+      b.setAttribute('role', 'radio');
+      b.innerHTML = '<span>' + reason + '</span>';
+      b.addEventListener('click', () => {
+        selected = reason;
+        options.querySelectorAll('.margo-post-report-menu__sheet-row').forEach((el) => {
+          el.classList.toggle('margo-post-report-menu__sheet-row--selected', el === b);
+        });
+        submit.disabled = false;
+        submit.removeAttribute('disabled');
+        noteWrap.style.display = reason === 'Other' ? 'flex' : 'none';
+      });
+      options.appendChild(b);
     }
+    body.appendChild(options);
+    const noteWrap = document.createElement('label');
+    noteWrap.className = 'margo-post-report-menu__sheet-note-wrap';
+    noteWrap.style.display = 'none';
+    const note = document.createElement('textarea');
+    note.className = 'margo-post-report-menu__sheet-note';
+    noteWrap.appendChild(note);
+    body.appendChild(noteWrap);
+    const actions = document.createElement('div');
+    actions.className = 'margo-post-report-menu__sheet-actions';
+    const submit = document.createElement('button');
+    submit.type = 'button';
+    submit.className = 'margo-post-report-menu__sheet-submit';
+    submit.textContent = 'Report';
+    submit.disabled = true;
+    submit.setAttribute('disabled', 'disabled');
+    actions.appendChild(submit);
+    body.appendChild(actions);
     panel.appendChild(body);
     sheetEl.appendChild(panel);
     sheetEl.addEventListener('click', (e) => { if (e.target === sheetEl) closeSheet(); });
@@ -287,8 +319,12 @@ async function assertMenuVisible(page: Page, edge = 8) {
 async function assertSheetVisible(page: Page) {
   await expect(page.locator('#portal-sheet')).toBeVisible()
   for (const reason of ['Spam', 'Harassment', 'Inappropriate', 'Other']) {
-    await expect(page.getByRole('button', { name: reason })).toBeVisible()
+    await expect(page.getByRole('radio', { name: reason })).toBeVisible()
   }
+  const submit = page.locator('#portal-sheet .margo-post-report-menu__sheet-submit')
+  await expect(submit).toBeDisabled()
+  await page.getByRole('radio', { name: 'Spam' }).click()
+  await expect(submit).toBeEnabled()
   const layout = await page.evaluate(() => {
     const sheet = document.getElementById('portal-sheet')
     const panel = sheet?.querySelector('div')
@@ -298,8 +334,8 @@ async function assertSheetVisible(page: Page) {
     const vBottom = vv ? vv.offsetTop + vv.height : window.innerHeight
     const rows = [...panel.querySelectorAll('.margo-post-report-menu__sheet-row')]
     const rowRects = rows.map((el) => el.getBoundingClientRect())
-    const rowsInView = rowRects.every(
-      (r) => r.top >= vTop + 4 && r.bottom <= vBottom - 4 && r.height >= 40,
+    const rowsInView = rowRects.length === 4 && rowRects.every(
+      (r) => r.top >= vTop && r.top < vBottom - 24 && r.height >= 36,
     )
     return {
       ok: sheet.parentElement === document.body && rows.length === 4 && rowsInView,

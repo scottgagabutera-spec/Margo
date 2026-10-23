@@ -13,12 +13,18 @@ import { FeedIconMore } from '@/components/feed-card-icons'
 import { MargoSheet } from '@/components/margo-sheet'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useIdentity } from '@/hooks/useIdentity'
-import { createClient } from '@/lib/supabase/client'
+import {
+  MAX_POST_REPORT_NOTE,
+  POST_REPORT_REASONS,
+  type PostReportReason,
+  postReportSubmitEnabled,
+} from '@/lib/post-report'
 import { computeReportPopoverPosition } from '@/lib/post-report-menu-position'
+import { createClient } from '@/lib/supabase/client'
 
 const supabase = createClient()
 
-export const POST_REPORT_REASONS = ['Spam', 'Harassment', 'Inappropriate', 'Other'] as const
+export { POST_REPORT_REASONS }
 
 const MENU_W = 168
 const MENU_ROW_H = 36
@@ -61,6 +67,28 @@ function DeleteRowIcon() {
   )
 }
 
+function ReasonCheckIcon({ visible }: { visible: boolean }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+      className="margo-post-report-menu__sheet-check"
+      style={{ opacity: visible ? 1 : 0 }}
+    >
+      <path
+        d="M5 12.5L10 17.5L19 7.5"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 export function PostReportMenu({
   postId,
   isOwner,
@@ -72,6 +100,7 @@ export function PostReportMenu({
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
   const menuId = useId()
+  const noteId = useId()
   const triggerRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const [mounted, setMounted] = useState(false)
@@ -80,12 +109,23 @@ export function PostReportMenu({
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
   const [reportBusy, setReportBusy] = useState(false)
   const [reportMsg, setReportMsg] = useState<string | null>(null)
+  const [selectedReason, setSelectedReason] = useState<PostReportReason | null>(null)
+  const [otherNote, setOtherNote] = useState('')
+  const [alreadyReported, setAlreadyReported] = useState(false)
+  const [reportStatusLoading, setReportStatusLoading] = useState(false)
 
   const showReportItem = !isOwner
   const showDeleteItem = isOwner && showOwnerDelete && typeof onOwnerDelete === 'function'
   const itemCount = (showReportItem ? 1 : 0) + (showDeleteItem ? 1 : 0)
+  const canSubmit = postReportSubmitEnabled(selectedReason) && !reportBusy && !alreadyReported
 
   useEffect(() => setMounted(true), [])
+
+  const resetSheetForm = useCallback(() => {
+    setSelectedReason(null)
+    setOtherNote('')
+    setReportMsg(null)
+  }, [])
 
   const closeMenu = useCallback(() => {
     setMenuOpen(false)
@@ -95,14 +135,39 @@ export function PostReportMenu({
 
   const closeSheet = useCallback(() => {
     setSheetOpen(false)
-    setReportMsg(null)
+    resetSheetForm()
     triggerRef.current?.focus({ preventScroll: true })
-  }, [])
+  }, [resetSheetForm])
 
   const closeAll = useCallback(() => {
     closeMenu()
     closeSheet()
   }, [closeMenu, closeSheet])
+
+  useEffect(() => {
+    if (!sheetOpen || !user?.id) return
+    let cancelled = false
+    setReportStatusLoading(true)
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from('post_reports')
+          .select('id')
+          .eq('post_id', postId)
+          .eq('reporter_id', user.id)
+          .maybeSingle()
+        if (cancelled) return
+        setAlreadyReported(!!data)
+      } catch {
+        /* best-effort */
+      } finally {
+        if (!cancelled) setReportStatusLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [sheetOpen, user?.id, postId])
 
   useLayoutEffect(() => {
     if (!menuOpen || itemCount === 0) {
@@ -172,32 +237,49 @@ export function PostReportMenu({
   const openReportSheet = () => {
     if (!requireAuth()) return
     closeMenu()
+    resetSheetForm()
+    setAlreadyReported(false)
     setSheetOpen(true)
-    setReportMsg(null)
   }
 
-  const submitReport = async (reason: string) => {
-    if (!user?.id || reportBusy) return
+  const submitReport = async () => {
+    if (!user?.id || reportBusy || !selectedReason || alreadyReported) return
     setReportBusy(true)
     setReportMsg(null)
-    const { error } = await supabase.from('post_reports').insert({
-      post_id: postId,
-      reporter_id: user.id,
-      reason,
-    })
-    setReportBusy(false)
-    if (error) {
-      const msg = String(error.message || '')
-      setReportMsg(
-        msg.toLowerCase().includes('duplicate') || msg.includes('unique')
-          ? 'Already reported.'
-          : 'Could not send.',
-      )
-      return
+    try {
+      const res = await fetch('/api/posts/report', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postId,
+          reason: selectedReason,
+          note: selectedReason === 'Other' ? otherNote : null,
+        }),
+      })
+      const json = (await res.json().catch(() => ({}))) as { error?: string; code?: string }
+      if (res.status === 409 || json.code === 'already_reported') {
+        setAlreadyReported(true)
+        setReportMsg(null)
+        return
+      }
+      if (res.status === 403) {
+        setReportMsg('Could not send.')
+        return
+      }
+      if (!res.ok) {
+        setReportMsg(json.error === 'Too many reports. Try again later.' ? json.error : 'Could not send.')
+        return
+      }
+      setAlreadyReported(true)
+      setReportMsg('Report received.')
+      const delay = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 900
+      window.setTimeout(() => closeSheet(), delay)
+    } catch {
+      setReportMsg('Could not send.')
+    } finally {
+      setReportBusy(false)
     }
-    setReportMsg('Report received.')
-    const delay = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 900
-    window.setTimeout(() => closeSheet(), delay)
   }
 
   const popover =
@@ -291,17 +373,65 @@ export function PostReportMenu({
         zIndex={240}
       >
         <div className="margo-post-report-menu__sheet">
-          {POST_REPORT_REASONS.map((reason) => (
-            <button
-              key={reason}
-              type="button"
-              disabled={reportBusy}
-              className="margo-post-report-menu__sheet-row"
-              onClick={() => void submitReport(reason)}
-            >
-              {reason}
-            </button>
-          ))}
+          {reportStatusLoading ? (
+            <p className="margo-post-report-menu__sheet-muted" aria-live="polite">
+              …
+            </p>
+          ) : alreadyReported && !reportMsg ? (
+            <p className="margo-post-report-menu__sheet-reported" role="status">
+              Reported
+            </p>
+          ) : (
+            <>
+              <div
+                className="margo-post-report-menu__sheet-options"
+                role="radiogroup"
+                aria-label="Report reason"
+              >
+                {POST_REPORT_REASONS.map((reason) => {
+                  const selected = selectedReason === reason
+                  return (
+                    <button
+                      key={reason}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      disabled={reportBusy}
+                      className={`margo-post-report-menu__sheet-row${selected ? ' margo-post-report-menu__sheet-row--selected' : ''}`}
+                      onClick={() => setSelectedReason(reason)}
+                    >
+                      <span>{reason}</span>
+                      <ReasonCheckIcon visible={selected} />
+                    </button>
+                  )
+                })}
+              </div>
+              {selectedReason === 'Other' ? (
+                <label className="margo-post-report-menu__sheet-note-wrap" htmlFor={noteId}>
+                  <span className="margo-post-report-menu__sheet-note-label">Note</span>
+                  <textarea
+                    id={noteId}
+                    className="margo-post-report-menu__sheet-note"
+                    rows={2}
+                    maxLength={MAX_POST_REPORT_NOTE}
+                    value={otherNote}
+                    disabled={reportBusy}
+                    onChange={(e) => setOtherNote(e.target.value)}
+                  />
+                </label>
+              ) : null}
+              <div className="margo-post-report-menu__sheet-actions">
+                <button
+                  type="button"
+                  className="margo-post-report-menu__sheet-submit"
+                  disabled={!canSubmit}
+                  onClick={() => void submitReport()}
+                >
+                  Report
+                </button>
+              </div>
+            </>
+          )}
           {reportMsg ? (
             <p className="margo-post-report-menu__sheet-msg" role="status">
               {reportMsg}

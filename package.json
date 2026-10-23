@@ -12,6 +12,8 @@
     "test:post-card-lyric": "node --experimental-strip-types --test lib/post-card-lyric-layout.test.ts",
     "test:post-card-lyric-uniform": "node --experimental-strip-types --test lib/post-card-lyric-uniform.test.ts",
     "test:lyric-back-row": "node --experimental-strip-types --test lib/lyric-back-thread-row.test.ts",
+    "test:post-report": "node --experimental-strip-types --test lib/post-report.test.ts",
+    "test:post-report-api": "node --experimental-strip-types --test lib/post-report-api.test.ts",
     "test:post-report-menu": "node --experimental-strip-types --test lib/post-report-menu.test.ts",
     "test:post-report-menu-position": "node --experimental-strip-types --test lib/post-report-menu-position.test.ts",
     "test:lyric-back-keyboard": "node --experimental-strip-types --test lib/lyric-back-keyboard.test.ts",
@@ -19,11 +21,12 @@
     "test:compact-artwork": "node --experimental-strip-types --test lib/compact-artwork-url.test.ts",
     "test:e2e:lyric-back": "playwright test tests/e2e/lyric-back-keyboard-layout.spec.ts",
     "test:e2e:lb-report-menu": "playwright test tests/e2e/lyric-back-row-report-menu.spec.ts",
+    "test:e2e:post-report-flow": "playwright test tests/e2e/post-report-flow.spec.ts",
     "test:repost-count": "node --experimental-strip-types --test lib/repost-count.test.ts",
     "test:feed-content-tab": "node --experimental-strip-types --test lib/feed-content-tab.test.ts",
     "test:shorts-shelf-rotation": "node --experimental-strip-types --test lib/shorts-shelf-rotation.test.ts",
     "test:shorts-looks": "node --experimental-strip-types --test lib/shorts-looks.test.ts",
-    "test": "npm run test:playback-segments && npm run test:curated-moments && npm run test:post-card-lyric && npm run test:post-card-lyric-uniform && npm run test:lyric-back-row && npm run test:post-report-menu && npm run test:post-report-menu-position && npm run test:lyric-back-keyboard && npm run test:lyric-back-scroll-metrics && npm run test:compact-artwork && npm run test:repost-count && npm run test:feed-content-tab && npm run test:shorts-shelf-rotation && npm run test:shorts-looks"
+    "test": "npm run test:playback-segments && npm run test:curated-moments && npm run test:post-card-lyric && npm run test:post-card-lyric-uniform && npm run test:lyric-back-row && npm run test:post-report && npm run test:post-report-api && npm run test:post-report-menu && npm run test:post-report-menu-position && npm run test:lyric-back-keyboard && npm run test:lyric-back-scroll-metrics && npm run test:compact-artwork && npm run test:repost-count && npm run test:feed-content-tab && npm run test:shorts-shelf-rotation && npm run test:shorts-looks"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1136.0",

@@ -8,6 +8,7 @@ interface ReportRow {
   postId: string
   reporterId: string
   reason: string
+  reasonNote: string | null
   status: 'pending' | 'reviewed' | 'dismissed'
   createdAt: string
   postText: string
@@ -209,6 +210,9 @@ export function PostReportsTab() {
                   )}
                   <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
                     Reason: <span style={{ color: 'var(--text)' }}>{r.reason}</span>
+                    {r.reasonNote ? (
+                      <span style={{ color: 'var(--text-muted)' }}> — {r.reasonNote}</span>
+                    ) : null}
                   </p>
                   <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '14px' }}>
                     Reporter: {r.reporterDisplayName || r.reporterUsername || r.reporterId.slice(0, 8)}
