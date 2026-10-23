@@ -15,10 +15,18 @@ import { RepostSheet } from '@/components/repost-sheet'
 import { PostReportMenu } from '@/components/post-report-menu'
 import { LyricBackDeleteSheet } from '@/components/lyric-back-delete-sheet'
 import {
-  LyricBackEditLayer,
-  type LyricBackEditSavedPatch,
-} from '@/components/lyric-back-edit-layer'
+  LyricBackPanelCompose,
+  type LyricBackPanelPrefill,
+} from '@/components/lyric-back-panel-compose'
+import type { LyricBackEditSavedPatch } from '@/lib/lyric-back-edit-saved'
+import {
+  MOMENT_VIBE_PICKER_OPTIONS,
+  emotionToVibeLabel,
+  vibeLabelToEmotion,
+} from '@/lib/moment/vibe'
 import { echoToPost } from '@/lib/echo-to-post'
+
+export type { LyricBackEditSavedPatch } from '@/lib/lyric-back-edit-saved'
 
 const supabase = createClient()
 
@@ -52,6 +60,20 @@ function profileHref(echo: Echo): string | null {
   const handle = (echo.username || '').replace(/^@/, '').trim()
   if (!handle) return null
   return `/profile/${encodeURIComponent(handle)}`
+}
+
+function echoToPrefill(echo: Echo): LyricBackPanelPrefill {
+  return {
+    lyric: echo.lyric,
+    songTitle: echo.song,
+    artistName: echo.artist,
+    songId: echo.songId ?? null,
+    audioUrl: echo.audioUrl ?? null,
+    externalListenUrl: echo.externalListenUrl ?? null,
+    artwork: echo.artwork ?? null,
+    startSec: echo.snippetStart ?? null,
+    endSec: echo.snippetEnd ?? null,
+  }
 }
 
 function authorLabels(echo: Echo): { display: string; handle: string | null } {
@@ -122,8 +144,16 @@ export function LyricBackThreadRow({
   const myId = user?.id ?? null
   const [repostSheetOpen, setRepostSheetOpen] = useState(false)
   const [deleteSheetOpen, setDeleteSheetOpen] = useState(false)
-  const [editLayerOpen, setEditLayerOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const initialVibeLabel =
+    emotionToVibeLabel(echo.emotion) ?? MOMENT_VIBE_PICKER_OPTIONS[0]
+  const [editVibeLabel, setEditVibeLabel] = useState(initialVibeLabel)
   const contentRemoved = Boolean(echo.contentRemovedAt)
+
+  useEffect(() => {
+    if (!editOpen) return
+    setEditVibeLabel(emotionToVibeLabel(echo.emotion) ?? MOMENT_VIBE_PICKER_OPTIONS[0])
+  }, [editOpen, echo.id, echo.emotion])
 
   const [resonatedLocal, setResonatedLocal] = useState(
     () => Boolean(myId && echo.resonates?.[myId]),
@@ -198,6 +228,75 @@ export function LyricBackThreadRow({
 
   const shellLbAllowed =
     contentRemoved && !hideLyricBackAction && Boolean(onLyricBack)
+
+  const editSubmitEmotion = vibeLabelToEmotion(editVibeLabel) ?? echo.emotion
+
+  if (editOpen && showOwnerMenu) {
+    return (
+      <article
+        className={`${rowClass} margo-lb-thread-row--editing`}
+        data-echo-id={echo.id}
+        data-lb-editing="1"
+      >
+        <header className="margo-lb-thread-row__header">
+          <div className="margo-lb-thread-row__header-text">
+            <span className="margo-lb-thread-row__display">Edit Lyric Back</span>
+          </div>
+          <button
+            type="button"
+            className="margo-lb-thread-row__edit-cancel"
+            onClick={() => setEditOpen(false)}
+          >
+            Cancel
+          </button>
+        </header>
+        <div className="margo-lb-thread-row__edit-vibes" role="listbox" aria-label="Vibe">
+          {MOMENT_VIBE_PICKER_OPTIONS.map((label) => {
+            const selected = label === editVibeLabel
+            return (
+              <button
+                key={label}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                className={`margo-lb-thread-row__edit-vibe${selected ? ' margo-lb-thread-row__edit-vibe--on' : ''}`}
+                onClick={() => setEditVibeLabel(label)}
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
+        <LyricBackPanelCompose
+          key={`edit-${echo.id}`}
+          layout="panel"
+          mode="edit"
+          editPostId={echo.id}
+          parentPostId={`lb-edit-${echo.id}`}
+          parentEmotion={editSubmitEmotion}
+          submitEmotion={editSubmitEmotion}
+          prefill={echoToPrefill(echo)}
+          onRequireAuth={requireAuth}
+          focusSearchOnMount={false}
+          onSaved={(payload) => {
+            setEditOpen(false)
+            onOwnerEdited?.(echo.id, {
+              lyric: payload.text,
+              song: payload.songTitle,
+              artist: payload.artistName,
+              emotion: payload.emotion,
+              songId: payload.songId,
+              snippetStart: payload.snippetStartSec,
+              snippetEnd: payload.snippetEndSec,
+              artwork: payload.artworkUrl,
+              externalListenUrl: payload.externalListenUrl,
+              audioUrl: payload.audioUrl ?? null,
+            })
+          }}
+        />
+      </article>
+    )
+  }
 
   if (contentRemoved) {
     return (
@@ -303,7 +402,7 @@ export function LyricBackThreadRow({
             postId={echo.id}
             isOwner
             showOwnerEdit
-            onOwnerEdit={() => setEditLayerOpen(true)}
+            onOwnerEdit={() => setEditOpen(true)}
             showOwnerDelete
             onOwnerDelete={() => setDeleteSheetOpen(true)}
             className="margo-lb-thread-row__more"
@@ -399,21 +498,12 @@ export function LyricBackThreadRow({
         />
       ) : null}
       {showOwnerMenu ? (
-        <>
-          <LyricBackEditLayer
-            open={editLayerOpen}
-            onOpenChange={setEditLayerOpen}
-            echo={echo}
-            onRequireAuth={requireAuth}
-            onSaved={(patch) => onOwnerEdited?.(echo.id, patch)}
-          />
-          <LyricBackDeleteSheet
-            open={deleteSheetOpen}
-            onOpenChange={setDeleteSheetOpen}
-            postId={echo.id}
-            onDeleted={(outcome) => onOwnerDeleted?.(echo.id, outcome)}
-          />
-        </>
+        <LyricBackDeleteSheet
+          open={deleteSheetOpen}
+          onOpenChange={setDeleteSheetOpen}
+          postId={echo.id}
+          onDeleted={(outcome) => onOwnerDeleted?.(echo.id, outcome)}
+        />
       ) : null}
     </article>
   )

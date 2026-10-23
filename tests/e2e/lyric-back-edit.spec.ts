@@ -4,8 +4,8 @@ import path from 'node:path'
 
 const CSS_MARKERS = [
   'margo-post-report-menu',
-  'margo-lb-edit-layer',
   'margo-lb-thread-row',
+  'margo-post-card__lb-compose',
   'margo-post-card__lb-compose-saving',
 ] as const
 
@@ -36,13 +36,11 @@ const LB_CSS = extractCss(fs.readFileSync(path.join(process.cwd(), 'app/globals.
 type EditScenario = 'full' | 'song' | 'line' | 'vibe'
 
 function fixture(scenario: EditScenario) {
-  const initialVibe = 'Chill'
-  const nextVibe = scenario === 'vibe' ? 'Joy' : initialVibe
   const initialLine = 'Original line'
   const nextLine = scenario === 'line' || scenario === 'full' ? 'Updated line' : initialLine
   const initialSong = 'Song A'
   const nextSong = scenario === 'song' || scenario === 'full' ? 'Song B' : initialSong
-  return String.raw`<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <style>
@@ -55,27 +53,58 @@ function fixture(scenario: EditScenario) {
   <li><article class="margo-lb-thread-row" id="row-parent" data-echo-id="parent">
     <p class="margo-lb-thread-row__lyric" id="lyric-parent">Parent LB</p>
   </article></li>
-  <li><article class="margo-lb-thread-row" id="row-edit" data-echo-id="edit-me">
-    <p class="margo-lb-thread-row__lyric" id="lyric-edit">${initialLine}</p>
-    <span class="margo-lb-thread-row__song" id="song-edit">${initialSong}</span>
-    <span data-vibe="${initialVibe}" id="vibe-edit"></span>
-  </article></li>
+  <li id="edit-slot"></li>
 </ul>
-<div id="edit-layer" hidden class="margo-lb-edit-layer" style="position:fixed;inset:0;background:var(--surface);z-index:245;">
-  <p class="margo-lb-edit-layer__title">Edit Lyric Back</p>
-  <div class="margo-lb-edit-layer__vibes" role="listbox">
-    <button type="button" role="option" data-vibe="Chill">Chill</button>
-    <button type="button" role="option" data-vibe="Joy">Joy</button>
-  </div>
-  <input id="field-song" value="${initialSong}" aria-label="Song"/>
-  <textarea id="field-line">${initialLine}</textarea>
-  <button type="button" id="save" aria-label="Save">Send</button>
-  <p id="layer-err" hidden role="alert"></p>
-</div>
 <script>
   const scenario = ${JSON.stringify(scenario)};
-  let saving = false;
-  let vibe = ${JSON.stringify(initialVibe)};
+  const initialLine = ${JSON.stringify(initialLine)};
+  const nextLine = ${JSON.stringify(nextLine)};
+  const initialSong = ${JSON.stringify(initialSong)};
+  const nextSong = ${JSON.stringify(nextSong)};
+  function renderEdit() {
+    const slot = document.getElementById('edit-slot');
+    slot.innerHTML = '';
+    const article = document.createElement('article');
+    article.className = 'margo-lb-thread-row margo-lb-thread-row--editing';
+    article.id = 'row-edit';
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'margo-lb-thread-row__edit-cancel';
+    cancel.id = 'cancel';
+    cancel.textContent = 'Cancel';
+    cancel.addEventListener('click', () => { document.body.dataset.cancelled = '1'; slot.innerHTML = ''; });
+    const compose = document.createElement('div');
+    compose.className = 'margo-post-card__lb-compose margo-post-card__lb-compose--panel';
+    const songInput = document.createElement('input');
+    songInput.id = 'field-song';
+    songInput.value = scenario === 'song' || scenario === 'full' ? nextSong : initialSong;
+    songInput.setAttribute('aria-label', 'Search');
+    const lineInput = document.createElement('textarea');
+    lineInput.id = 'field-line';
+    lineInput.value = scenario === 'line' || scenario === 'full' ? nextLine : initialLine;
+    const save = document.createElement('button');
+    save.type = 'button';
+    save.id = 'save';
+    save.className = 'margo-post-card__lb-compose-send';
+    save.setAttribute('aria-label', 'Save');
+    save.textContent = 'Save';
+    save.addEventListener('click', () => void saveEdit());
+    const err = document.createElement('p');
+    err.id = 'compose-err';
+    err.hidden = true;
+    err.setAttribute('role', 'alert');
+    compose.append(songInput, lineInput, save, err);
+    const lyric = document.createElement('p');
+    lyric.className = 'margo-lb-thread-row__lyric';
+    lyric.id = 'lyric-edit';
+    lyric.textContent = initialLine;
+    const songSpan = document.createElement('span');
+    songSpan.className = 'margo-lb-thread-row__song';
+    songSpan.id = 'song-edit';
+    songSpan.textContent = initialSong;
+    article.append(cancel, compose, lyric, songSpan);
+    slot.appendChild(article);
+  }
   function openMenu() {
     const menu = document.createElement('div');
     menu.className = 'margo-post-report-menu__popover';
@@ -89,27 +118,17 @@ function fixture(scenario: EditScenario) {
     edit.addEventListener('click', () => {
       document.body.dataset.action = 'edit';
       menu.remove();
-      document.getElementById('edit-layer').hidden = false;
-      document.body.style.overflow = 'hidden';
+      renderEdit();
     });
     menu.appendChild(edit);
     document.body.appendChild(menu);
   }
   document.getElementById('more').addEventListener('click', openMenu);
-  document.querySelectorAll('[data-vibe]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      vibe = btn.getAttribute('data-vibe');
-      document.querySelectorAll('[role=option]').forEach(o => o.setAttribute('aria-selected', o.getAttribute('data-vibe') === vibe ? 'true' : 'false'));
-    });
-  });
-  document.getElementById('save').addEventListener('click', async () => {
-    if (saving) return;
-    saving = true;
+  async function saveEdit() {
     const btn = document.getElementById('save');
     btn.innerHTML = '<span class="margo-post-card__lb-compose-saving">Saving…</span>';
     const song = document.getElementById('field-song').value;
     const line = document.getElementById('field-line').value;
-    const emotion = vibe === 'Joy' ? 'joy' : 'chill';
     const res = await fetch('/api/posts/lyric-back', {
       method: 'PATCH',
       credentials: 'include',
@@ -119,7 +138,7 @@ function fixture(scenario: EditScenario) {
         text: line,
         songTitle: song,
         artistName: 'Artist',
-        emotion,
+        emotion: 'chill',
         songId: null,
         snippetStartSec: null,
         snippetEndSec: null,
@@ -127,56 +146,34 @@ function fixture(scenario: EditScenario) {
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
-      document.getElementById('layer-err').hidden = false;
-      document.getElementById('layer-err').textContent = body.error || 'Could not save.';
-      saving = false;
-      btn.textContent = 'Save';
+      document.getElementById('compose-err').hidden = false;
+      document.getElementById('compose-err').textContent = body.error || 'Could not save.';
       return;
     }
-    document.getElementById('edit-layer').hidden = true;
-    document.body.style.overflow = '';
     document.getElementById('lyric-edit').textContent = line;
     document.getElementById('song-edit').textContent = song;
-    document.getElementById('vibe-edit').setAttribute('data-vibe', vibe);
     document.body.dataset.patchStatus = String(res.status);
     document.body.dataset.childUntouched = document.getElementById('lyric-parent').textContent;
-  });
+  }
   window.fetch = async (input, init) => {
     const url = typeof input === 'string' ? input : input.url;
     if (url.includes('/api/posts/lyric-back') && init?.method === 'PATCH') {
-      const payload = JSON.parse(init.body || '{}');
-      if (scenario === 'song') {
-        if (payload.songTitle === ${JSON.stringify(initialSong)}) {
-          return new Response(JSON.stringify({ error: 'Change song' }), { status: 400 });
-        }
-      }
-      return new Response(JSON.stringify({ id: payload.postId, emotion: payload.emotion }), { status: 200 });
+      return new Response(JSON.stringify({ id: 'edit-me', emotion: 'chill' }), { status: 200 });
     }
     return new Response('{}', { status: 404 });
   };
-  window.addEventListener('DOMContentLoaded', () => {
-    if (scenario === 'line' || scenario === 'full') {
-      document.getElementById('field-line').value = ${JSON.stringify(nextLine)};
-    }
-    if (scenario === 'song' || scenario === 'full') {
-      document.getElementById('field-song').value = ${JSON.stringify(nextSong)};
-    }
-    if (scenario === 'vibe') vibe = ${JSON.stringify(nextVibe)};
-  });
 </script>
 </body></html>`
 }
 
 for (const scenario of ['full', 'song', 'line', 'vibe'] as const) {
-  test(`owner edit ${scenario} flow (390px)`, async ({ page }) => {
+  test(`owner edit in-place ${scenario} (390px)`, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.setContent(fixture(scenario), { waitUntil: 'domcontentloaded' })
     await page.locator('#more').click()
     await page.getByRole('menuitem', { name: 'Edit' }).click()
-    await expect(page.locator('.margo-lb-edit-layer')).toBeVisible()
-    if (scenario === 'vibe') {
-      await page.getByRole('option', { name: 'Joy' }).click()
-    }
+    await expect(page.locator('.margo-lb-thread-row--editing')).toBeVisible()
+    await expect(page.locator('.margo-post-card__lb-compose--panel')).toBeVisible()
     await page.locator('#save').click()
     await expect(page.locator('.margo-post-card__lb-compose-saving')).toHaveText('Saving…')
     await expect.poll(async () => page.evaluate(() => document.body.dataset.patchStatus)).toBe('200')
@@ -189,6 +186,5 @@ for (const scenario of ['full', 'song', 'line', 'vibe'] as const) {
     await expect.poll(async () =>
       page.evaluate(() => document.body.dataset.childUntouched),
     ).toBe('Parent LB')
-    await expect(page.locator('#edit-layer')).toBeHidden()
   })
 }

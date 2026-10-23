@@ -26,7 +26,7 @@ import {
 } from '@/components/lyric-back-panel-compose'
 import { useLyricBackFocusStack } from '@/hooks/useLyricBackFocusStack'
 import type { LyricBackEditPatch } from '@/lib/lyric-back-owner-edit-local'
-import type { LyricBackEditSavedPatch } from '@/components/lyric-back-edit-layer'
+import type { LyricBackEditSavedPatch } from '@/lib/lyric-back-edit-saved'
 import {
   clearLyricBackKeyboardChrome,
   useLyricBackPanelViewport,
