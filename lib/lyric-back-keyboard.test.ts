@@ -273,7 +273,11 @@ describe('lyric back keyboard wiring', () => {
     assert.match(css, /scroll-padding-top:\s*var\(--lb-pin-gap\)/)
     assert.match(css, /@supports \(-webkit-touch-callout: none\)/)
     assert.match(css, /margo-post-card__lb-compose-track--chip/)
-    assert.match(css, /margo-post-card__lb-compose-send--infield/)
+    assert.match(css, /margo-post-card__lb-compose-send--panel/)
+    assert.match(css, /margo-post-card__lb-compose-send-row/)
+    assert.doesNotMatch(css, /margo-post-card__lb-compose-send--infield/)
+    assert.doesNotMatch(css, /\.margo-post-card__lb-compose-slot\b/)
+    assert.doesNotMatch(css, /\.margo-post-card__lb-title\b/)
     assert.match(
       fs.readFileSync('hooks/usePrimaryTabSwipeGesture.ts', 'utf8'),
       /\.margo-post-card__lb-panel/,
@@ -369,7 +373,9 @@ describe('lyric back keyboard wiring', () => {
     assert.match(compose, /placeholder=\{isPanelLayout \? 'Search'/)
     assert.match(compose, /renderBar/)
     assert.match(compose, /margo-post-card__lb-compose-track--chip/)
-    assert.match(compose, /margo-post-card__lb-compose-send--infield/)
+    assert.match(compose, /margo-post-card__lb-compose-send--panel/)
+    assert.match(compose, /margo-post-card__lb-compose-send-row/)
+    assert.doesNotMatch(compose, /margo-post-card__lb-compose-send--infield/)
     assert.match(compose, /blurSearch\(\)/)
     assert.match(compose, /data-lb-lyric/)
     assert.match(compose, /margo-post-card__lb-compose-chip-meta/)
