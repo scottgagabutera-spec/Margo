@@ -18,6 +18,10 @@ Manual pass on **mobile (≤639px) and desktop (≥640px)** while signed in. Tak
 
 **Fix:** Sync initial viewport from `matchMedia`; desktop tray uses `!== true`; mobile dock uses `!== false`.
 
+## Supabase grants and RLS
+
+Before revoking a grant or changing RLS, list every policy, function, trigger, and app caller that touches the object. See **`docs/supabase-grant-rls-checklist.md`**.
+
 ## Automation (follow-up)
 
 - CI: `npx tsc --noEmit` (required today).
