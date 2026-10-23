@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { consumeHourlyApiRateLimit } from '@/lib/api-rate-limit'
 import { parsePostReportBody } from '@/lib/post-report'
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
+import { enqueueReportEmail } from '@/lib/report-email-notify'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 
 const REPORTS_PER_HOUR = 40
@@ -95,9 +96,17 @@ export async function POST(req: NextRequest) {
   }
 
   const reportId = inserted?.id
-
-  // TODO(report-email): enqueue moderation inbox email here (non-blocking).
-  // Example: void notifyModerationReportEmail({ reportId, postId: parsed.postId, reason: parsed.reason, ... })
+  if (reportId) {
+    enqueueReportEmail({
+      admin,
+      reportId,
+      postId: parsed.postId,
+      reason: parsed.reason,
+      reasonNote: parsed.note,
+      reporterId: userId,
+      reportedAtIso: new Date().toISOString(),
+    })
+  }
 
   return NextResponse.json({ ok: true, reportId: reportId ?? null })
 }

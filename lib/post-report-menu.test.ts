@@ -37,7 +37,7 @@ describe('posts/report API route', () => {
     assert.match(route, /parsePostReportBody/)
     assert.match(route, /author_profile_id === userId/)
     assert.match(route, /already_reported/)
-    assert.match(route, /TODO\(report-email\)/)
+    assert.match(route, /enqueueReportEmail/)
     assert.match(route, /reason_note/)
   })
 })
