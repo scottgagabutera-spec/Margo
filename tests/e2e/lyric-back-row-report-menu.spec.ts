@@ -2,6 +2,13 @@ import { test, expect, type Page } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'
 
+const ARTIFACT_SHOTS = '/opt/cursor/artifacts/screenshots'
+
+function saveArtifactShot(page: Page, filename: string) {
+  if (!fs.existsSync(ARTIFACT_SHOTS)) return
+  return page.screenshot({ path: path.join(ARTIFACT_SHOTS, filename), fullPage: false })
+}
+
 const REPORT_CSS = fs.readFileSync(
   path.join(process.cwd(), 'app/globals.css'),
   'utf8',
@@ -312,17 +319,22 @@ for (const width of [360, 390, 430]) {
       await scrollRowIntoView(page, row)
       await page.locator(`[data-more="${row}"]`).click()
       await assertMenuVisible(page)
+      if (width === 390) {
+        const shot =
+          row === 'first'
+            ? 'report-menu-after-lb-first-390-popover.png'
+            : row === 'middle'
+              ? 'report-menu-after-lb-second-390-popover.png'
+              : null
+        if (shot) await saveArtifactShot(page, shot)
+      }
       await page.getByRole('menuitem', { name: 'Report' }).click()
       await assertSheetVisible(page)
       if (row === 'first' && width === 390) {
-        await page.screenshot({
-          path: testInfo.outputPath(`report-menu-after-lb-first-${width}.png`),
-        })
+        await saveArtifactShot(page, 'report-menu-after-lb-first-390-sheet.png')
       }
       if (row === 'middle' && width === 390) {
-        await page.screenshot({
-          path: testInfo.outputPath(`report-menu-after-lb-second-${width}.png`),
-        })
+        await saveArtifactShot(page, 'report-menu-after-lb-second-390-sheet.png')
       }
     })
   }
@@ -333,12 +345,9 @@ for (const width of [360, 390, 430]) {
     await scrollRowIntoView(page, 'feed')
     await page.locator('[data-more="feed"]').click()
     await assertMenuVisible(page)
+    if (width === 390) await saveArtifactShot(page, 'report-menu-after-feed-390-popover.png')
     await page.getByRole('menuitem', { name: 'Report' }).click()
     await assertSheetVisible(page)
-    if (width === 390) {
-      await page.screenshot({
-        path: testInfo.outputPath(`report-menu-after-feed-${width}.png`),
-      })
-    }
+    if (width === 390) await saveArtifactShot(page, 'report-menu-after-feed-390-sheet.png')
   })
 }
