@@ -36,6 +36,11 @@ export default function PostDetailPage() {
   const depthOffset = post?.parentPostId ? ancestors.length : 0
 
   const [composeOpen, setComposeOpen] = useState(false)
+  const [replyCountDelta, setReplyCountDelta] = useState(0)
+
+  useEffect(() => {
+    setReplyCountDelta(0)
+  }, [post?.id])
 
   const {
     stackApi,
@@ -191,7 +196,7 @@ export default function PostDetailPage() {
     resonateCount: resonateCounts[echo.id] ?? echo.resonateCount ?? 0,
   }), [countFor, detailReplayCount, openComposer, post?.id, quoteFor, quoteRepost, replayed, repost, resonateCounts, resonated, router, undoRepost])
 
-  const echoCount = post?.replies ?? 0
+  const echoCount = Math.max(0, (post?.replies ?? 0) + replyCountDelta)
   const showLbSection = Boolean(
     post?.id
     && (composeOpen || echoCount > 0 || isNested),
@@ -321,6 +326,9 @@ export default function PostDetailPage() {
               onFocusEcho={(echo) => openComposer(echo.id, echo)}
               onBackOneLevel={handleBackOneLevel}
               stackApi={stackApi}
+              onEchoCountDelta={(delta) => {
+                setReplyCountDelta((d) => Math.max(0, d + delta))
+              }}
             />
           ) : null}
         </div>

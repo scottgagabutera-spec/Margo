@@ -2,6 +2,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { applyEchoContentRemoved } from '@/lib/post-content-removed'
+import {
+  applyEchoListDeleteOutcome,
+  type LyricBackDeleteOutcome,
+} from '@/lib/lyric-back-owner-delete-local'
 
 const supabase = createClient()
 
@@ -185,5 +189,12 @@ export function useEchoes(postId: string | null) {
     void load(postId)
   }, [postId, load])
 
-  return { echoes, loading, refetch }
+  const applyOwnerDeleteOutcome = useCallback(
+    (echoId: string, outcome: LyricBackDeleteOutcome) => {
+      setEchoes((prev) => applyEchoListDeleteOutcome(prev, echoId, outcome))
+    },
+    [],
+  )
+
+  return { echoes, loading, refetch, applyOwnerDeleteOutcome }
 }

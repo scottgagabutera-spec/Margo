@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { MargoSheet } from '@/components/margo-sheet'
 
 type LyricBackDeleteSheetProps = {
@@ -18,6 +18,13 @@ export function LyricBackDeleteSheet({
 }: LyricBackDeleteSheetProps) {
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (open) {
+      setError(null)
+      setDeleting(false)
+    }
+  }, [open])
 
   const handleDelete = async () => {
     setDeleting(true)

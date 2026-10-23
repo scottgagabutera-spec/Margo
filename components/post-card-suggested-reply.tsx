@@ -19,6 +19,7 @@ export type PostCardSuggestedReplyProps = {
   echoReplayed?: (echoId: string) => boolean
   echoReplayCount?: (echoId: string) => number
   echoReplayNote?: (echoId: string) => string | null
+  onEchoCountDelta?: (delta: number) => void
 }
 
 export function PostCardSuggestedReply(props: PostCardSuggestedReplyProps) {
@@ -38,12 +39,14 @@ export function PostCardSuggestedReply(props: PostCardSuggestedReplyProps) {
     echoReplayed,
     echoReplayCount,
     echoReplayNote,
+    onEchoCountDelta,
   } = props
 
   return (
     <LyricBackFeedPanel
       postId={postId}
       echoCount={echoCount}
+      onEchoCountDelta={onEchoCountDelta}
       parentUsername={parentUsername}
       parentEmotion={parentEmotion}
       open={open}

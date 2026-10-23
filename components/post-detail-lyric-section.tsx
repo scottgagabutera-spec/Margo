@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useLayoutEffect, useRef, type RefObject } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import { scrollPostLyricBackSectionIntoView } from '@/lib/lyric-back-panel-scroll'
 import { usePathname } from 'next/navigation'
 import { useLyricBackFocusStack, type LyricBackStackOptions } from '@/hooks/useLyricBackFocusStack'
@@ -32,6 +32,7 @@ export type PostDetailLyricSectionProps = {
   onFocusEcho: (echo: Echo) => void
   onBackOneLevel: () => void
   stackApi: ReturnType<typeof useLyricBackFocusStack>
+  onEchoCountDelta?: (delta: number) => void
 }
 
 /** Post-page Lyric Backs — same focus body as feed panel (play/listen strips included). */
@@ -50,6 +51,7 @@ export function PostDetailLyricSection({
   onFocusEcho,
   onBackOneLevel,
   stackApi,
+  onEchoCountDelta,
 }: PostDetailLyricSectionProps) {
   const {
     focusId,
@@ -57,7 +59,21 @@ export function PostDetailLyricSection({
     replyToUsername,
     canReply,
     visualStep,
+    applyOwnerDeleteOutcome: applyStackOwnerDelete,
   } = stackApi
+
+  const [echoCountLive, setEchoCountLive] = useState(echoCount)
+  useEffect(() => {
+    setEchoCountLive(echoCount)
+  }, [echoCount, post.id])
+
+  const handleEchoCountDelta = useCallback(
+    (delta: number) => {
+      setEchoCountLive((n) => Math.max(0, n + delta))
+      onEchoCountDelta?.(delta)
+    },
+    [onEchoCountDelta],
+  )
 
   const pathname = usePathname()
   const isNested = Boolean(focusId && post.id && focusId !== post.id && focusedEcho)
@@ -105,7 +121,7 @@ export function PostDetailLyricSection({
         focusedEcho={focusedEcho}
         replyToUsername={replyToUsername || post.username || ''}
         parentEmotion={post.emotion || 'chill'}
-        echoCountHint={echoCount}
+        echoCountHint={echoCountLive}
         canReply={canReply}
         visualStep={visualStep}
         composeOpen={composeOpen}
@@ -120,6 +136,8 @@ export function PostDetailLyricSection({
         onReplayEcho={onReplayEcho}
         getRowExtras={getRowExtras}
         echoesActive
+        onEchoCountDelta={handleEchoCountDelta}
+        onStackOwnerDelete={applyStackOwnerDelete}
       />
     </section>
   )

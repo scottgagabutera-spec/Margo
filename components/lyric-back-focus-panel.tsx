@@ -79,6 +79,9 @@ export type LyricBackFocusBodyProps = {
   showSuggestions?: boolean
   onApplySuggestion?: (s: SuggestedLyricBack) => void
   echoesActive: boolean
+  /** Fired when a direct child is fully removed (updates header + feed badge). */
+  onEchoCountDelta?: (delta: number) => void
+  onStackOwnerDelete?: (echoId: string, outcome: 'deleted' | 'shelled') => void
 }
 
 function LyricBackPanelSkeleton() {
@@ -135,6 +138,8 @@ export function LyricBackFocusBody({
   showSuggestions = false,
   onApplySuggestion,
   echoesActive,
+  onEchoCountDelta,
+  onStackOwnerDelete,
 }: LyricBackFocusBodyProps) {
   const { user } = useIdentity()
   const signedIn = !!user && !user.isAnonymous
@@ -144,9 +149,12 @@ export function LyricBackFocusBody({
     : parentEmotion
   const showIdeas = showSuggestions && !isNested && signedIn
   const showIdeasSignUp = showSuggestions && !isNested && !signedIn
-  const { echoes, loading: echoesLoading, refetch: refetchEchoes } = useEchoes(
-    echoesActive ? focusId : null,
-  )
+  const {
+    echoes,
+    loading: echoesLoading,
+    refetch: refetchEchoes,
+    applyOwnerDeleteOutcome,
+  } = useEchoes(echoesActive ? focusId : null)
   const focusSeenRef = useRef(focusId)
   const loadedFocusRef = useRef<string | null>(null)
   if (focusSeenRef.current !== focusId) {
@@ -158,12 +166,24 @@ export function LyricBackFocusBody({
 
   const handleOwnerDeleted = useCallback(
     (echoId: string, outcome: 'deleted' | 'shelled') => {
-      if (outcome === 'deleted' && echoId === focusId) {
+      applyOwnerDeleteOutcome(echoId, outcome)
+      onStackOwnerDelete?.(echoId, outcome)
+      if (outcome === 'deleted') {
+        onEchoCountDelta?.(-1)
+      }
+      if (outcome === 'deleted' && focusedEcho?.id === echoId) {
         onBack?.()
       }
       refetchEchoes()
     },
-    [focusId, onBack, refetchEchoes],
+    [
+      applyOwnerDeleteOutcome,
+      focusedEcho?.id,
+      onBack,
+      onEchoCountDelta,
+      onStackOwnerDelete,
+      refetchEchoes,
+    ],
   )
 
   const [ideasOpen, setIdeasOpen] = useState(false)
@@ -559,9 +579,11 @@ export function LyricBackFeedPanel({
   echoReplayed,
   echoReplayCount,
   echoReplayNote,
+  onEchoCountDelta,
 }: {
   postId: string
   echoCount: number
+  onEchoCountDelta?: (delta: number) => void
   parentUsername?: string | null
   parentEmotion: string
   open: boolean
@@ -592,6 +614,7 @@ export function LyricBackFeedPanel({
     drillInto,
     requestBack,
     resetStack,
+    applyOwnerDeleteOutcome: applyStackOwnerDelete,
   } = useLyricBackFocusStack(postId, author, 0, {
     history: open,
     onExit: () => onCloseRef.current(),
@@ -651,6 +674,19 @@ export function LyricBackFeedPanel({
     setComposePrefill(null)
   }, [requestBack])
 
+  const [echoCountLive, setEchoCountLive] = useState(echoCount)
+  useEffect(() => {
+    setEchoCountLive(echoCount)
+  }, [echoCount, postId])
+
+  const handleEchoCountDelta = useCallback(
+    (delta: number) => {
+      setEchoCountLive((n) => Math.max(0, n + delta))
+      onEchoCountDelta?.(delta)
+    },
+    [onEchoCountDelta],
+  )
+
   if (!open || !postId) return null
 
   return (
@@ -668,7 +704,9 @@ export function LyricBackFeedPanel({
         focusedEcho={focusedEcho}
         replyToUsername={replyToUsername}
         parentEmotion={parentEmotion}
-        echoCountHint={echoCount}
+        echoCountHint={echoCountLive}
+        onEchoCountDelta={handleEchoCountDelta}
+        onStackOwnerDelete={applyStackOwnerDelete}
         canReply={canReply}
         visualStep={visualStep}
         composeOpen

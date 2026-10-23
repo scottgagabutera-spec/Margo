@@ -183,7 +183,12 @@ export function PostCard({
   const [rowExpanded, setRowExpanded] = useState(false)
   const [avatarBroken, setAvatarBroken] = useState(false)
   const [suggestionsOpen, setSuggestionsOpen] = useState(false)
+  const [echoCountLive, setEchoCountLive] = useState(echoCount)
   const openLyricBackHandledRef = useRef(false)
+
+  useEffect(() => {
+    setEchoCountLive(echoCount)
+  }, [echoCount, post.id])
 
   const setLyricBackPanelOpen = useCallback((next: boolean) => {
     setSuggestionsOpen(next)
@@ -600,7 +605,10 @@ export function PostCard({
       {lyricBackAllowed && !threadDetail ? (
         <PostCardSuggestedReply
           postId={post.id}
-          echoCount={echoCount}
+          echoCount={echoCountLive}
+          onEchoCountDelta={(delta) => {
+            setEchoCountLive((n) => Math.max(0, n + delta))
+          }}
           parentUsername={post.username}
           parentEmotion={post.emotion || 'chill'}
           open={suggestionsOpen}
@@ -627,7 +635,7 @@ export function PostCard({
         onResonate={onResonate}
         lyricBackAllowed={lyricBackAllowed}
         lyricBackOpen={threadDetail ? threadLyricBackOpen : suggestionsOpen}
-        echoCount={echoCount}
+        echoCount={echoCountLive}
         onLyricBack={
           lyricBackAllowed
             ? () => {
