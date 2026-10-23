@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
+import { normalizeEmotionKey } from '@/lib/moment/vibe'
 
 async function requireUserId(): Promise<string | null> {
   const supabase = await createServerSupabase()
@@ -91,7 +92,7 @@ export async function PATCH(req: NextRequest) {
   const userId = await requireUserId()
   if (!userId) return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
 
-  let body: { postId?: string; lines?: Array<Record<string, unknown>> }
+  let body: { postId?: string; lines?: Array<Record<string, unknown>>; emotion?: string }
   try {
     body = await req.json()
   } catch {
@@ -125,6 +126,25 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
   }
 
+  const { data: row, error: loadErr } = await admin
+    .from('posts')
+    .select('id, author_profile_id, content_removed_at, parent_post_id')
+    .eq('id', body.postId)
+    .maybeSingle()
+
+  if (loadErr || !row) {
+    return NextResponse.json({ error: 'This post could not be found.' }, { status: 404 })
+  }
+  if (row.author_profile_id !== userId) {
+    return NextResponse.json({ error: 'You can only edit your own post.' }, { status: 403 })
+  }
+  if (row.content_removed_at) {
+    return NextResponse.json({ error: 'This post can no longer be edited.' }, { status: 400 })
+  }
+  if (row.parent_post_id) {
+    return NextResponse.json({ error: 'Use Lyric Back edit for replies.' }, { status: 400 })
+  }
+
   const { error } = await admin.rpc('update_own_moment', {
     p_post_id: body.postId,
     p_user_id: userId,
@@ -138,5 +158,17 @@ export async function PATCH(req: NextRequest) {
       { status: 500 },
     )
   }
+
+  if (typeof body.emotion === 'string' && body.emotion.trim()) {
+    const emotionKey = normalizeEmotionKey(body.emotion.trim())
+    const allowed = new Set([
+      'chill', 'hope', 'healing', 'grateful', 'spiritual', 'nostalgia', 'joy', 'love',
+      'hype', 'proud', 'heartbreak', 'pain', 'loneliness', 'lost', 'rage', 'sendit', 'letout',
+    ])
+    if (allowed.has(emotionKey)) {
+      await admin.from('posts').update({ emotion: emotionKey }).eq('id', body.postId)
+    }
+  }
+
   return NextResponse.json({ success: true })
 }

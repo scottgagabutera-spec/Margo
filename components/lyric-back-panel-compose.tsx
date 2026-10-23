@@ -22,6 +22,8 @@ import { matchLiveCatalogSong } from '@/lib/search-margo-songs'
 import { trackEvent } from '@/lib/analytics/track'
 import { toastMomentSent } from '@/lib/moment-export/moment-export-toasts'
 import { compactArtworkUrl } from '@/lib/compact-artwork-url'
+import { matchLyricLine } from '@/lib/lyric-match'
+import type { PostLine } from '@/lib/post-lines'
 
 const supabase = createClient()
 
@@ -58,7 +60,10 @@ export type LyricBackPanelComposeProps = {
   parentPostId: string
   parentEmotion: string
   mode?: 'create' | 'edit'
+  /** Default lyric-back PATCH; moment uses /api/posts/moment. */
+  editTarget?: 'lyric-back' | 'moment'
   editPostId?: string
+  momentSourceLines?: PostLine[]
   submitEmotion?: string
   onRequireAuth?: () => boolean
   onSent?: () => void
@@ -91,7 +96,9 @@ export const LyricBackPanelCompose = forwardRef<
     parentPostId,
     parentEmotion,
     mode = 'create',
+    editTarget = 'lyric-back',
     editPostId,
+    momentSourceLines,
     submitEmotion,
     onRequireAuth,
     onSent,
@@ -367,6 +374,69 @@ export const LyricBackPanelCompose = forwardRef<
           setPostError('Could not save.')
           return
         }
+        if (editTarget === 'moment') {
+          const source = momentSourceLines?.length
+            ? momentSourceLines
+            : [{
+                position: 0,
+                text: body.text,
+                songId: selected.catalogSongId,
+                songTitle: body.songTitle,
+                artistName: body.artistName,
+                artworkUrl: body.artworkUrl,
+                snippetStart: snippetStart,
+                snippetEnd: snippetEnd,
+                source: selected.catalogSongId ? 'catalog' as const : 'external' as const,
+              }]
+          let line0 = { ...source[0], text: body.text, songId: selected.catalogSongId, songTitle: body.songTitle, artistName: body.artistName, artworkUrl: body.artworkUrl, snippetStart, snippetEnd }
+          if (line0.songId) {
+            const match = await matchLyricLine(supabase, line0.songId, body.text)
+            if (match) {
+              line0 = { ...line0, snippetStart: match.startSec ?? snippetStart, snippetEnd: match.endSec ?? snippetEnd }
+            }
+          }
+          const payloadLines = source.map((line, idx) => {
+            const row = idx === 0 ? line0 : line
+            return {
+              text: row.text,
+              song_id: row.songId || '',
+              song_title: row.songTitle || '',
+              artist_name: row.artistName || '',
+              artwork_url: row.artworkUrl || '',
+              snippet_start_sec: row.snippetStart ?? '',
+              snippet_end_sec: row.snippetEnd ?? '',
+              source: row.source || (row.songId ? 'catalog' : 'external'),
+            }
+          })
+          const res = await fetch('/api/posts/moment', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ postId: editPostId, lines: payloadLines, emotion }),
+          })
+          const payload = await res.json().catch(() => ({}))
+          if (!res.ok) {
+            setPostError(typeof payload.error === 'string' ? payload.error : 'Could not save.')
+            return
+          }
+          fetch('/api/moderate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: body.text, postId: editPostId }),
+          }).catch(() => {})
+          onSaved?.({
+            text: body.text,
+            songTitle: body.songTitle,
+            artistName: body.artistName,
+            emotion,
+            songId: selected.catalogSongId,
+            snippetStartSec: line0.snippetStart ?? snippetStart,
+            snippetEndSec: line0.snippetEnd ?? snippetEnd,
+            artworkUrl: selected.artwork || null,
+            externalListenUrl: selected.externalListenUrl,
+            audioUrl: selected.audioUrl,
+          })
+          return
+        }
         const res = await fetch('/api/posts/lyric-back', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -427,6 +497,8 @@ export const LyricBackPanelCompose = forwardRef<
   }, [
     canSend,
     editPostId,
+    editTarget,
+    momentSourceLines,
     lyric,
     mode,
     onRequireAuth,

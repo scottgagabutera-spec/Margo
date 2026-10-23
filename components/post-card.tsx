@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronRightIcon, EditIcon } from '@/components/icons'
+import { ChevronRightIcon } from '@/components/icons'
 import { RepostSheet } from '@/components/repost-sheet'
 import type { Post } from '@/hooks/usePosts'
-import { EditMomentModal } from '@/components/edit-moment-modal'
+import { PostMomentInlineEdit } from '@/components/post-moment-inline-edit'
 import { DeleteMomentDialog } from '@/components/delete-moment-dialog'
 import { warmUrl } from '@/lib/audio-engine'
 import { resolveExternalListenUrl } from '@/lib/moment/listen'
@@ -174,9 +174,17 @@ export function PostCard({
   const isTier1 = !!(post.songId && post.audioUrl)
   const audioUrl = post.audioUrl || null
   const cardRef = useRef<HTMLDivElement>(null)
-  const isOwner = !!user?.id && !!post.authorUid && post.authorUid === user.id
-  const lyricBackAllowed = isLyricBackAllowed(post)
   const [editOpen, setEditOpen] = useState(false)
+  const [postLive, setPostLive] = useState(post)
+  const lyricBackAllowed = isLyricBackAllowed(post)
+
+  useEffect(() => {
+    setPostLive(post)
+  }, [post])
+
+  const displayPost = editOpen ? postLive : post
+  const isOwner = !!user?.id && !!displayPost.authorUid && displayPost.authorUid === user.id
+  const canOwnerEdit = isOwner && !displayPost.contentRemovedAt && !displayPost.parentPostId
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deletedLocally, setDeletedLocally] = useState(false)
   const [repostSheetOpen, setRepostSheetOpen] = useState(false)
@@ -287,6 +295,53 @@ export function PostCard({
   // (usePosts/useEchoes already listen for postgres_changes on posts).
   if (deletedLocally) {
     return null
+  }
+
+  if (editOpen && canOwnerEdit) {
+    return (
+      <div
+        id={domId}
+        ref={cardRef}
+        className="margo-post-card margo-post-card--editing"
+        data-no-card-nav
+        style={vibeThemeStyleVars(getVibeTheme(displayPost.emotion || 'chill'))}
+      >
+        <PostMomentInlineEdit
+          post={postLive}
+          onRequireAuth={requireAuth}
+          onCancel={() => setEditOpen(false)}
+          onSaved={(next) => {
+            setPostLive(next)
+            setEditOpen(false)
+          }}
+        />
+        {lyricBackAllowed && !threadDetail ? (
+          <PostCardSuggestedReply
+            postId={post.id}
+            echoCount={echoCountLive}
+            onEchoCountDelta={(delta) => {
+              setEchoCountLive((n) => Math.max(0, n + delta))
+            }}
+            parentUsername={post.username}
+            parentEmotion={post.emotion || 'chill'}
+            open={suggestionsOpen}
+            onClose={() => setLyricBackPanelOpen(false)}
+            onRequireAuth={requireAuth}
+            onOpenThread={(echoId) => {
+              persistActivePrimaryScroll()
+              router.push(`/post/${echoId}`)
+            }}
+            onExportEcho={(echo) => onExport(echoToPost(echo))}
+            onReplayEcho={onReplay}
+            onQuoteReplayEcho={onQuoteReplay}
+            onUndoReplayEcho={onUndoReplay}
+            echoReplayed={echoReplayed}
+            echoReplayCount={echoReplayCount}
+            echoReplayNote={echoReplayNote}
+          />
+        ) : null}
+      </div>
+    )
   }
 
   if (isRow && !rowExpanded) {
@@ -563,34 +618,17 @@ export function PostCard({
               {isNew && !isTop && !isTrending && <EarnedTag label="New" onClick={() => onSelectRank?.('NEW')} />}
             </div>
           )}
-          {isOwner && (
-            <button
-              type="button"
-              className="margo-post-card__icon-btn"
-              aria-label="Edit Moment"
-              onClick={(e) => { e.stopPropagation(); setEditOpen(true) }}
-            >
-              <EditIcon size={20} color="currentColor" />
-            </button>
-          )}
           <PostReportMenu
             postId={post.id}
             isOwner={isOwner}
+            showOwnerEdit={canOwnerEdit}
+            onOwnerEdit={() => setEditOpen(true)}
             showOwnerDelete
             onOwnerDelete={() => setDeleteOpen(true)}
           />
         </div>
       </div>
 
-      {isOwner && (
-        <EditMomentModal
-          open={editOpen}
-          onOpenChange={setEditOpen}
-          postId={post.id}
-          lines={resolveMomentLines(post)}
-          echoCount={echoCount}
-        />
-      )}
       {isOwner && (
         <DeleteMomentDialog
           open={deleteOpen}
