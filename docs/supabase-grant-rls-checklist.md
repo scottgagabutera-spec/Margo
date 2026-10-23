@@ -34,7 +34,7 @@ where routine_schema = 'public' and routine_name = 'can_read_sent_moment';
 | `can_read_sent_moment()` | **Must stay granted to `anon`** for sent-moment RLS (`20261022174500_grant_anon_can_read_sent_moment_rls.sql`). |
 | `increment_post_view` | Feed/post cards call via anon/authenticated client. |
 | `post_stats` SELECT | Public read policy feeds badges and counts. |
-| `delete_own_post` / `update_own_moment` | **service_role only** — app uses session + API routes, not direct client RPC. |
+| `delete_own_post` / `update_own_moment` / `delete_or_shell_own_lyric_back` | **service_role only** — app uses session + API routes, not direct client RPC. |
 
 ## 3. Repo vs production
 
