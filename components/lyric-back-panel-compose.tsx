@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
@@ -81,6 +82,7 @@ export const LyricBackPanelCompose = forwardRef<
   ref,
 ) {
   const rootRef = useRef<HTMLDivElement>(null)
+  const lyricRef = useRef<HTMLTextAreaElement>(null)
   const searchAnchorRef = useRef<HTMLDivElement>(null)
   const searchGenRef = useRef(0)
   const isPanelLayout = layout === 'panel'
@@ -385,6 +387,27 @@ export const LyricBackPanelCompose = forwardRef<
   )
   const showLyricField = Boolean(selected && (linePickDone || !selected.catalogSongId))
 
+  const syncPanelLyricHeight = useCallback(() => {
+    const el = lyricRef.current
+    if (!el || !isPanelLayout) return
+    el.style.height = 'auto'
+    const styles = getComputedStyle(el)
+    const lineHeight = Number.parseFloat(styles.lineHeight) || 20
+    const pad =
+      Number.parseFloat(styles.paddingTop) + Number.parseFloat(styles.paddingBottom)
+    const minH = lineHeight * 2 + pad
+    const maxH = lineHeight * 5 + pad
+    const contentH = el.scrollHeight
+    const next = Math.min(maxH, Math.max(minH, contentH))
+    el.style.height = `${next}px`
+    el.style.overflowY = contentH > maxH ? 'auto' : 'hidden'
+  }, [isPanelLayout])
+
+  useLayoutEffect(() => {
+    if (!showLyricField || !isPanelLayout) return
+    syncPanelLyricHeight()
+  }, [isPanelLayout, lyric, showLyricField, syncPanelLyricHeight])
+
   const searchOpen = showResults && query.trim().length >= 2
 
   const searchField = (
@@ -481,8 +504,15 @@ export const LyricBackPanelCompose = forwardRef<
   ) : null
 
   const lyricBlock = showLyricField ? (
-    <div className={isPanelLayout ? 'margo-post-card__lb-compose-lyric' : undefined}>
+    <div
+      className={
+        isPanelLayout
+          ? 'margo-post-card__lb-compose-lyric margo-post-card__lb-compose-lyric--panel'
+          : undefined
+      }
+    >
       <textarea
+        ref={isPanelLayout ? lyricRef : undefined}
         className={`margo-post-card__lb-compose-input${isPanelLayout ? ' margo-post-card__lb-compose-input--panel' : ''}`}
         data-lb-lyric={isPanelLayout ? '1' : undefined}
         value={lyric}
@@ -495,15 +525,17 @@ export const LyricBackPanelCompose = forwardRef<
         <p className="margo-post-card__lb-compose-error" role="alert">{postError}</p>
       ) : null}
       {isPanelLayout ? (
-        <button
-          type="button"
-          className="margo-post-card__lb-compose-send margo-post-card__lb-compose-send--infield"
-          aria-label="Send"
-          disabled={!canSend}
-          onClick={() => void handleSend()}
-        >
-          <FeedIconSend size={16} />
-        </button>
+        <div className="margo-post-card__lb-compose-send-row">
+          <button
+            type="button"
+            className="margo-post-card__lb-compose-send margo-post-card__lb-compose-send--panel"
+            aria-label="Send"
+            disabled={!canSend}
+            onClick={() => void handleSend()}
+          >
+            <FeedIconSend size={14} />
+          </button>
+        </div>
       ) : (
         <div className="margo-post-card__lb-compose-bar">
           <button

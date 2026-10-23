@@ -38,12 +38,17 @@ const FIXTURE = String.raw`<!DOCTYPE html>
     border: 1px solid #444; border-radius: 10px;
   }
   .art { width: 36px; height: 36px; border-radius: 7px; background: #333; }
-  .margo-post-card__lb-compose-lyric { position: relative; }
+  .margo-post-card__lb-compose-lyric--panel { display: flex; flex-direction: column; gap: 2px; }
   .margo-post-card__lb-compose-input--panel {
-    width: 100%; min-height: 64px; box-sizing: border-box; padding: 8px 40px 8px 10px;
+    width: 100%; min-height: 52px; max-height: 120px; box-sizing: border-box; padding: 8px 10px;
     font-size: 14px; border-radius: 10px; border: 1px solid #444; background: #1a1a1a; color: #eee;
+    resize: none; overflow-y: auto;
   }
-  .send { position: absolute; right: 6px; bottom: 6px; width: 28px; height: 28px; }
+  .margo-post-card__lb-compose-send-row { display: flex; justify-content: flex-end; min-height: 44px; align-items: center; }
+  .margo-post-card__lb-compose-send--panel {
+    width: 44px; height: 44px; border: 0; border-radius: 50%; background: #d4a017; color: #111;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
   .compose-search-row--panel { display: flex; align-items: flex-start; min-height: 44px; padding: 6px 10px; }
   #results { display: none; position: fixed; overflow: auto; background: #1a1a1a; }
 </style>
@@ -70,9 +75,11 @@ const FIXTURE = String.raw`<!DOCTYPE html>
             <span class="art"></span>
             <div><div>Seduce Me</div><div>Alikiba</div></div>
           </div>
-          <div class="margo-post-card__lb-compose-lyric">
+          <div class="margo-post-card__lb-compose-lyric margo-post-card__lb-compose-lyric--panel">
             <textarea id="lyric" class="margo-post-card__lb-compose-input--panel" data-lb-lyric="1" rows="2" placeholder="Write your line…"></textarea>
-            <button class="send" id="send" type="button">S</button>
+            <div class="margo-post-card__lb-compose-send-row">
+              <button class="margo-post-card__lb-compose-send--panel" id="send" type="button" aria-label="Send">S</button>
+            </div>
           </div>
         </div>
       </div>
@@ -252,6 +259,27 @@ for (const width of [360, 390, 430]) {
       })
       await page.locator('#lyric').focus()
       await expect(page.locator('#lyric')).toBeFocused()
+
+      for (const sample of [
+        'Hi',
+        'one\ntwo\nthree\nfour',
+        'One extremely long unbroken lyric line that should wrap inside the field without touching the send control',
+      ]) {
+        await page.locator('#lyric').fill(sample)
+        const layout = await page.evaluate(() => {
+          const ta = document.getElementById('lyric')!.getBoundingClientRect()
+          const send = document.getElementById('send')!.getBoundingClientRect()
+          return {
+            sendW: Math.round(send.width),
+            sendH: Math.round(send.height),
+            sendBelow: send.top >= ta.bottom - 1,
+          }
+        })
+        expect(layout.sendW).toBeLessThanOrEqual(44)
+        expect(layout.sendH).toBeLessThanOrEqual(44)
+        expect(layout.sendBelow).toBeTruthy()
+      }
+
       await page.locator('#lyric').fill('a line from outside')
       await page.locator('#send').click()
       await expect(page.locator('body')).toHaveAttribute('data-sent', '1')
