@@ -341,7 +341,7 @@ export function LyricBackFocusBody({
             className={`margo-lb-focus__tab${!ideasOpen ? ' margo-lb-focus__tab--on' : ''}`}
             onClick={() => setIdeasOpen(false)}
           >
-            Replies
+            Lyric Backs
           </button>
           {showIdeas ? (
             <button

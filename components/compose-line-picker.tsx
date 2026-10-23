@@ -156,10 +156,12 @@ function ComposeLineRow({
         longPressTriggered.current = false
         clearPressTimer()
         if (selectionMode) return
-        try {
-          event.currentTarget.setPointerCapture(event.pointerId)
-        } catch {
-          /* capture is best-effort */
+        if (event.pointerType === 'mouse') {
+          try {
+            event.currentTarget.setPointerCapture(event.pointerId)
+          } catch {
+            /* capture is best-effort */
+          }
         }
         pressOrigin.current = { x: event.clientX, y: event.clientY }
         pressTimer.current = setTimeout(() => {
@@ -493,8 +495,8 @@ export function ComposeLinePicker({
       ><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
       ) : null}
 
+      {!hideHeader ? (
       <div style={{ textAlign: isStage ? 'left' : 'center', marginBottom: isStage ? '20px' : '28px' }}>
-        {!hideHeader ? (
         <h1 style={{
           fontFamily: lyricFont,
           fontStyle: 'italic',
@@ -506,7 +508,6 @@ export function ComposeLinePicker({
         }}>
           {selectionMode ? 'Combine lines' : isStage ? 'Choose a line' : 'Pick the line'}
         </h1>
-        ) : null}
         <p style={{
           fontFamily: isStage ? UI_FONT : lyricFont,
           fontSize: isStage ? '0.78rem' : '0.82rem',
@@ -529,6 +530,7 @@ export function ComposeLinePicker({
           </p>
         ) : null}
       </div>
+      ) : null}
 
       {selectionMode ? (
         <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
@@ -692,8 +694,8 @@ export function ComposeLinePicker({
           className={isPanel ? 'margo-lb-line-list' : undefined}
           style={{
             maxHeight: isPanel ? 'none' : 'min(52dvh, calc(var(--margo-vv-height, 100dvh) * 0.48), 420px)',
-            height: isPanel ? '100%' : undefined,
-            overflowY: 'auto',
+            height: undefined,
+            overflowY: isPanel ? 'visible' : 'auto',
             overscrollBehavior: 'contain',
             touchAction: 'pan-y',
             WebkitOverflowScrolling: 'touch',

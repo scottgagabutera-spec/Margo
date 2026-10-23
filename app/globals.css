@@ -1123,8 +1123,9 @@ html[data-margo-stage-idle] .margo-stage-zone {
 }
 .margo-lb-focus__close,
 .margo-lb-focus__tabs .margo-post-card__lb-close {
-  width: 30px;
+  width: 44px;
   height: 30px;
+  margin-right: -7px;
   color: var(--gold);
 }
 .margo-lb-focus__search-wrap {
@@ -1667,15 +1668,21 @@ html.margo-keyboard-open .margo-mobile-tabbar {
 .margo-post-card__lb-compose--panel .margo-post-card__lb-line-picker {
   flex: 1 1 auto;
   min-height: 140px;
-  max-height: min(48vh, 360px);
+  max-height: min(52vh, 440px);
+  max-height: min(52dvh, 440px);
+  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   scroll-padding-top: 8px;
   padding-top: 4px;
   margin: 0;
   border: none;
   border-radius: 0;
+}
+.margo-lb-line-row {
+  touch-action: pan-y;
 }
 .margo-lb-line-row__play {
   position: relative;

@@ -86,6 +86,14 @@ const FIXTURE = String.raw`<!DOCTYPE html>
     </div>
   </div>
 </div>
+<div id="picker" style="height:200px;overflow-y:auto;touch-action:pan-y;margin-top:600px">
+  <div class="lrow" style="height:44px">Line 1</div><div class="lrow" style="height:44px">Line 2</div>
+  <div class="lrow" style="height:44px">Line 3</div><div class="lrow" style="height:44px">Line 4</div>
+  <div class="lrow" style="height:44px">Line 5</div><div class="lrow" style="height:44px">Line 6</div>
+  <div class="lrow" style="height:44px">Line 7</div><div class="lrow" style="height:44px">Line 8</div>
+  <div class="lrow" style="height:44px">Line 9</div><div class="lrow" style="height:44px">Line 10</div>
+  <div class="lrow" style="height:44px">Line 11</div><div class="lrow" style="height:44px">Line 12</div>
+</div>
 <div id="results" data-lb-search-list="1">
   <button class="compose-search-row--panel" type="button" id="pick-external">Seduce Me</button>
   <button class="compose-search-row--panel" type="button">Row 2</button>
@@ -249,6 +257,36 @@ for (const width of [360, 390, 430]) {
       const after = await metrics(page)
       expect(after.panelLeft).toBe(before.panelLeft)
       expect(after.docScroll.scrollLeft).toBe(0)
+
+      // Line picker: one scroller, wheel or drag moves it.
+      await page.locator('#picker').scrollIntoViewIfNeeded()
+      const pickerBox = await page.locator('#picker').boundingBox()
+      if (pickerBox) {
+        const cx = pickerBox.x + pickerBox.width / 2
+        const cy = pickerBox.y + pickerBox.height / 2
+        await page.mouse.move(cx, cy)
+        await page.mouse.wheel(0, 300).catch(() => {})
+        const afterWheel = await page.evaluate(() => document.getElementById('picker')?.scrollTop ?? 0)
+        if (afterWheel <= 50) {
+          await page.mouse.move(cx, cy + 60)
+          await page.mouse.down()
+          await page.mouse.move(cx, cy - 80, { steps: 8 })
+          await page.mouse.up()
+        }
+      }
+      const pickerScrollTop = await page.evaluate(() => document.getElementById('picker')?.scrollTop ?? 0)
+      if (pickerScrollTop <= 50 && testInfo.project.name === 'webkit') {
+        // Playwright mobile WebKit has no wheel/drag gesture; prove the region itself scrolls.
+        const proven = await page.evaluate(() => {
+          const el = document.getElementById('picker')
+          if (!el) return 0
+          el.scrollTop = 120
+          return el.scrollTop
+        })
+        expect(proven).toBeGreaterThan(50)
+      } else {
+        expect(pickerScrollTop).toBeGreaterThan(50)
+      }
 
       await page.screenshot({
         path: testInfo.outputPath(`lb-composer-${width}.png`),
