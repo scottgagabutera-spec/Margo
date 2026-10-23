@@ -24,9 +24,23 @@ describe('lyric back delete shell migration', () => {
     assert.match(sql, /revoke all on function public\.delete_or_shell_own_lyric_back/)
     assert.match(sql, /grant execute on function public\.delete_or_shell_own_lyric_back.*to service_role/)
     assert.match(sql, /Re-check under row lock/)
-    assert.match(sql, /text = null/)
+    assert.match(sql, /text = ''/)
     assert.match(sql, /song_id = null/)
     assert.doesNotMatch(sql, /can_read_sent_moment/)
+  })
+
+  it('shell clear author migration extends author_or_legacy check', () => {
+    const sql = fs.readFileSync(
+      'supabase/migrations/20261023200000_shell_clear_author.sql',
+      'utf8',
+    )
+    assert.match(sql, /content_removed_at is not null/)
+    assert.match(sql, /author_profile_id is not null/)
+    assert.match(sql, /legacy_author_label is not null/)
+    assert.match(sql, /author_profile_id = null/)
+    assert.doesNotMatch(sql, /can_read_sent_moment/)
+    assert.doesNotMatch(sql, /create policy/i)
+    assert.doesNotMatch(sql, /^grant /im)
   })
 })
 

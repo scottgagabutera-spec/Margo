@@ -102,15 +102,22 @@ export const SHELL_CLEARED_POST_COLUMNS = [
   'snippet_end_sec',
   'external_listen_url',
   'legacy_author_label',
+  'author_profile_id',
 ] as const
 
 export function assertShellRowDbClean(row: Record<string, unknown>): void {
+  if (row.author_profile_id !== null && row.author_profile_id !== undefined) {
+    throw new Error(`shell row still has author_profile_id: ${String(row.author_profile_id)}`)
+  }
   for (const col of SHELL_CLEARED_POST_COLUMNS) {
     const val = row[col]
     if (col === 'text') {
       if (val !== null && val !== undefined && String(val).trim() !== '') {
         throw new Error(`shell row still has text: ${String(val)}`)
       }
+      continue
+    }
+    if (col === 'author_profile_id') {
       continue
     }
     if (val !== null && val !== undefined && val !== '') {

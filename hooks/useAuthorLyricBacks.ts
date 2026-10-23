@@ -43,6 +43,7 @@ export function useAuthorLyricBacks(authorId: string | null, enabled: boolean) {
       `)
       .eq('author_profile_id', authorId)
       .not('parent_post_id', 'is', null)
+      .is('content_removed_at', null)
       .not('status', 'in', '("hidden","private")')
       .order('created_at', { ascending: false })
       .limit(100)
