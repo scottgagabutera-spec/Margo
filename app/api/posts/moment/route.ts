@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
+import { postHasActiveLyricBackChildren } from '@/lib/lyric-back-active-children'
 
 async function requireUserId(): Promise<string | null> {
   const supabase = await createServerSupabase()
@@ -36,6 +37,14 @@ export async function DELETE(req: NextRequest) {
     admin = getSupabaseAdmin()
   } catch {
     return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
+  }
+
+  const hasChildren = await postHasActiveLyricBackChildren(admin, body.postId)
+  if (hasChildren) {
+    return NextResponse.json(
+      { error: 'has_lyric_backs', code: 'has_lyric_backs' },
+      { status: 409 },
+    )
   }
 
   const { error } = await admin.rpc('delete_own_post', {

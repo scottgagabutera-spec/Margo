@@ -35,6 +35,10 @@ export type PostReportMenuProps = {
   isOwner: boolean
   showOwnerDelete?: boolean
   onOwnerDelete?: () => void
+  /** Owner delete blocked (e.g. active Lyric Backs below). */
+  ownerDeleteBlocked?: boolean
+  /** One short line under disabled Delete — no sentences. */
+  ownerDeleteBlockedHint?: string
   className?: string
   iconSize?: number
 }
@@ -94,6 +98,8 @@ export function PostReportMenu({
   isOwner,
   showOwnerDelete = false,
   onOwnerDelete,
+  ownerDeleteBlocked = false,
+  ownerDeleteBlockedHint = 'Lyric Backs below',
   className = '',
   iconSize = 20,
 }: PostReportMenuProps) {
@@ -115,7 +121,8 @@ export function PostReportMenu({
   const [reportStatusLoading, setReportStatusLoading] = useState(false)
 
   const showReportItem = !isOwner
-  const showDeleteItem = isOwner && showOwnerDelete && typeof onOwnerDelete === 'function'
+  const showDeleteItem =
+    isOwner && showOwnerDelete && (typeof onOwnerDelete === 'function' || ownerDeleteBlocked)
   const itemCount = (showReportItem ? 1 : 0) + (showDeleteItem ? 1 : 0)
   const canSubmit = postReportSubmitEnabled(selectedReason) && !reportBusy && !alreadyReported
 
@@ -313,19 +320,27 @@ export function PostReportMenu({
               </button>
             ) : null}
             {showDeleteItem ? (
-              <button
-                type="button"
-                role="menuitem"
-                className="margo-post-report-menu__row margo-post-report-menu__row--muted"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  closeAll()
-                  onOwnerDelete?.()
-                }}
-              >
-                <DeleteRowIcon />
-                <span>Delete</span>
-              </button>
+              <div className="margo-post-report-menu__row-wrap">
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="margo-post-report-menu__row margo-post-report-menu__row--muted"
+                  disabled={ownerDeleteBlocked}
+                  aria-disabled={ownerDeleteBlocked}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (ownerDeleteBlocked) return
+                    closeAll()
+                    onOwnerDelete?.()
+                  }}
+                >
+                  <DeleteRowIcon />
+                  <span>Delete</span>
+                </button>
+                {ownerDeleteBlocked ? (
+                  <p className="margo-post-report-menu__row-hint">{ownerDeleteBlockedHint}</p>
+                ) : null}
+              </div>
             ) : null}
           </div>,
           document.body,
