@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { PostThreadLink } from '@/components/post-thread-link'
+import { navigateToPostThread } from '@/lib/post-thread-nav'
 import { usePost, usePostAncestors } from '@/hooks/usePost'
 import { lyricBackCanReply } from '@/lib/lyric-back-depth'
 import { PostCard } from '@/components/post-card'
@@ -174,8 +175,18 @@ export default function PostDetailPage() {
     countFor(id, id === post?.id ? detailReplayCount : undefined, 0)
 
   useRegisterNavBack({
-    preferHistory: !post?.parentPostId,
-    fallbackHref: post?.parentPostId ? `/post/${post.parentPostId}` : '/feed',
+    preferHistory: true,
+    fallbackHref: '/feed',
+    replace: true,
+    onBack: () => {
+      if (composeOpen) {
+        setComposeOpen(false)
+        resetStack()
+        scrollMainCardIntoView()
+        return true
+      }
+      return false
+    },
   })
 
   const isLyricBack = Boolean(post?.parentPostId)
@@ -184,7 +195,7 @@ export default function PostDetailPage() {
   const getRowExtras = useCallback((echo: Echo): LyricBackThreadRowExtras => ({
     onResonate: toggleResonate,
     onLyricBack: () => openComposer(echo.id, echo),
-    onOpenThread: (id) => router.push(`/post/${id}`),
+    onOpenThread: (id) => navigateToPostThread(router, id),
     onExport: handleExportEcho,
     onReplay: (id) => repost(id, replayBase(id)),
     onQuoteReplay: (id, note) => quoteRepost(id, note, replayBase(id)),
@@ -224,24 +235,24 @@ export default function PostDetailPage() {
       {post && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {isLyricBack && rootMoment ? (
-            <Link href={`/post/${rootMoment.id}`} className="margo-post-thread-root-compact">
+            <PostThreadLink postId={rootMoment.id} className="margo-post-thread-root-compact">
               <p className="margo-post-thread-root-compact__lyric">&ldquo;{rootMoment.text}&rdquo;</p>
-            </Link>
+            </PostThreadLink>
           ) : null}
 
           {isLyricBack && ancestors.length > 1 ? (
             <section className="margo-post-thread-ancestors">
               {ancestors.slice(1).map((ancestor) => (
-                <Link key={ancestor.id} href={`/post/${ancestor.id}`} className="margo-post-thread-ancestor-link">
+                <PostThreadLink key={ancestor.id} postId={ancestor.id} className="margo-post-thread-ancestor-link">
                   {ancestor.contentRemovedAt ? (
-                    <span className="margo-post-thread-ancestor-lyric">Unavailable</span>
+                    <span className="margo-post-thread-ancestor-lyric">Deleted</span>
                   ) : (
                     <>
                       <span className="margo-post-thread-ancestor-user">@{ancestor.username?.replace(/^@/, '') || 'user'}</span>
                       <span className="margo-post-thread-ancestor-lyric">&ldquo;{ancestor.text}&rdquo;</span>
                     </>
                   )}
-                </Link>
+                </PostThreadLink>
               ))}
             </section>
           ) : null}
@@ -322,7 +333,7 @@ export default function PostDetailPage() {
               getRowExtras={getRowExtras}
               onExportEcho={handleExportEcho}
               onReplayEcho={(id) => repost(id, replayBase(id))}
-              onOpenThread={(id) => router.push(`/post/${id}`)}
+              onOpenThread={(id) => navigateToPostThread(router, id)}
               onFocusEcho={(echo) => openComposer(echo.id, echo)}
               onBackOneLevel={handleBackOneLevel}
               stackApi={stackApi}

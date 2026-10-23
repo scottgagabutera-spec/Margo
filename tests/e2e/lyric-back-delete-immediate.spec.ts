@@ -82,7 +82,7 @@ const FIXTURE = (opts: { childEchoCount: number }) => String.raw`<!DOCTYPE html>
     } else {
       row.classList.add('margo-lb-thread-row--content-removed');
       row.dataset.contentRemoved = '1';
-      document.getElementById('lyric-a').textContent = 'Unavailable';
+      document.getElementById('lyric-a').textContent = 'Deleted';
       document.getElementById('lyric-a').classList.add('margo-lb-thread-row__lyric--removed');
     }
     document.body.dataset.updated = '1';
@@ -110,7 +110,7 @@ for (const width of [360, 390]) {
     await expect(page.locator('#confirm')).toHaveText('Deleting…')
     await expect.poll(async () => page.evaluate(() => document.body.dataset.updated)).toBe('1')
     await expect(page.locator('[data-content-removed="1"]')).toBeVisible()
-    await expect(page.locator('#lyric-a')).toHaveText('Unavailable')
+    await expect(page.locator('#lyric-a')).toHaveText('Deleted')
     await expect(page.locator('#header-count')).toHaveAttribute('data-count', '2')
   })
 

@@ -6,7 +6,7 @@ import { ChevronRightIcon } from '@/components/icons'
 import { RepostSheet } from '@/components/repost-sheet'
 import type { Post } from '@/hooks/usePosts'
 import { PostMomentInlineEdit } from '@/components/post-moment-inline-edit'
-import { InlineDeleteConfirm } from '@/components/inline-delete-confirm'
+import { PostFocusedDeleteDialog } from '@/components/post-focused-delete-dialog'
 import { warmUrl } from '@/lib/audio-engine'
 import { resolveExternalListenUrl } from '@/lib/moment/listen'
 import {
@@ -15,6 +15,7 @@ import {
 } from '@/lib/moment/playback-segments'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { persistActivePrimaryScroll } from '@/components/primary-tab-shell'
+import { navigateToPostThread } from '@/lib/post-thread-nav'
 import { PostReportMenu } from '@/components/post-report-menu'
 import { UsernameTag } from '@/components/username-tag'
 import { PendingNavLink } from '@/components/pending-nav-link'
@@ -185,8 +186,7 @@ export function PostCard({
   const displayPost = editOpen ? postLive : post
   const isOwner = !!user?.id && !!displayPost.authorUid && displayPost.authorUid === user.id
   const canOwnerEdit = isOwner && !displayPost.contentRemovedAt && !displayPost.parentPostId
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [deleteBusy, setDeleteBusy] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const [deletedLocally, setDeletedLocally] = useState(false)
   const [repostSheetOpen, setRepostSheetOpen] = useState(false)
   const [rowExpanded, setRowExpanded] = useState(false)
@@ -381,7 +381,7 @@ export function PostCard({
     const t = e.target as HTMLElement | null
     if (t?.closest?.('a, button, textarea, input, [data-no-card-nav]')) return
     persistActivePrimaryScroll()
-    router.push('/post/' + post.id)
+    navigateToPostThread(router, post.id)
   }
 
   return (
@@ -619,40 +619,15 @@ export function PostCard({
               {isNew && !isTop && !isTrending && <EarnedTag label="New" onClick={() => onSelectRank?.('NEW')} />}
             </div>
           )}
-          {deleteConfirmOpen && isOwner ? (
-            <InlineDeleteConfirm
-              busy={deleteBusy}
-              onCancel={() => setDeleteConfirmOpen(false)}
-              onConfirm={() => {
-                setDeleteBusy(true)
-                void fetch('/api/posts/moment', {
-                  method: 'DELETE',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ postId: post.id }),
-                })
-                  .then(async (res) => {
-                    if (!res.ok) {
-                      const body = await res.json().catch(() => ({}))
-                      throw new Error(body.error || 'Something went wrong.')
-                    }
-                    setDeletedLocally(true)
-                  })
-                  .catch(() => {
-                    setDeleteBusy(false)
-                  })
-              }}
-            />
-          ) : (
-            <PostReportMenu
-              postId={post.id}
-              isOwner={isOwner}
-              showOwnerEdit={canOwnerEdit}
-              onOwnerEdit={() => setEditOpen(true)}
-              showOwnerDelete
-              onOwnerDelete={() => setDeleteConfirmOpen(true)}
-              reportPresentation="inline"
-            />
-          )}
+          <PostReportMenu
+            postId={post.id}
+            isOwner={isOwner}
+            showOwnerEdit={canOwnerEdit}
+            onOwnerEdit={() => setEditOpen(true)}
+            showOwnerDelete
+            onOwnerDelete={() => setDeleteOpen(true)}
+            reportPresentation="inline"
+          />
         </div>
       </div>
 
@@ -678,7 +653,7 @@ export function PostCard({
           onRequireAuth={requireAuth}
           onOpenThread={(echoId) => {
             persistActivePrimaryScroll()
-            router.push(`/post/${echoId}`)
+            navigateToPostThread(router, echoId)
           }}
           onExportEcho={(echo) => onExport(echoToPost(echo))}
           onReplayEcho={onReplay}
@@ -727,6 +702,17 @@ export function PostCard({
           onRepost={onReplay}
           onRepostWithNote={(id, note) => onQuoteReplay?.(id, note)}
           onUndo={(id) => onUndoReplay?.(id)}
+        />
+      ) : null}
+
+      {isOwner ? (
+        <PostFocusedDeleteDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          anchorRef={cardRef}
+          postId={post.id}
+          target="moment"
+          onDeleted={() => setDeletedLocally(true)}
         />
       ) : null}
 

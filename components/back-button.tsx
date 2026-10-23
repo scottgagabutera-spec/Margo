@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation'
 import { ArrowLeftIcon } from '@/components/icons'
 import { canPopInAppHistory } from '@/components/nav-back'
+import { navigatePostThreadBack } from '@/lib/post-thread-nav'
 import { PendingNavLink } from '@/components/pending-nav-link'
 
 /**
@@ -61,10 +62,16 @@ export function BackButton({
             event.preventDefault()
             return
           }
+          event.preventDefault()
           if (preferHistory !== false && canPopInAppHistory()) {
-            event.preventDefault()
-            window.history.back()
+            navigatePostThreadBack(router, dest)
+            return
           }
+          if (replace) {
+            router.replace(dest)
+            return
+          }
+          router.push(dest)
         }}
         style={iconStyle}
       >
@@ -75,8 +82,8 @@ export function BackButton({
 
   const handleBack = () => {
     if (onBack?.() === true) return
-    if (preferHistory && typeof window !== 'undefined' && window.history.length > 1) {
-      router.back()
+    if (preferHistory !== false && canPopInAppHistory()) {
+      navigatePostThreadBack(router, dest)
       return
     }
     if (replace) {

@@ -17,6 +17,11 @@ import {
 } from '@/lib/lyric-back-depth-server'
 import { parseLyricBackWriteBody } from '@/lib/lyric-back-request'
 import { moderateOwnedPostText } from '@/lib/server-post-moderation'
+import {
+  guardLyricBackPatchWithChildren,
+  recheckChildLockBeforeWrite,
+} from '@/lib/post-edit-child-lock-server'
+import type { LyricBackWriteSnapshot } from '@/lib/post-edit-child-lock'
 
 const PATCHES_PER_HOUR = 30
 
@@ -220,7 +225,7 @@ export async function PATCH(req: NextRequest) {
 
   const { data: row, error: loadErr } = await admin
     .from('posts')
-    .select('id, author_profile_id, parent_post_id, content_removed_at, status')
+    .select('id, author_profile_id, parent_post_id, content_removed_at, status, text, song_id, song_title, artist_name, snippet_start_sec, snippet_end_sec')
     .eq('id', postId)
     .maybeSingle()
 
@@ -248,6 +253,37 @@ export async function PATCH(req: NextRequest) {
     snippetEndSec,
     externalListenUrl,
   } = parsed.body
+
+  const after: LyricBackWriteSnapshot = {
+    text,
+    songId,
+    songTitle,
+    artistName,
+    snippetStartSec,
+    snippetEndSec,
+  }
+  const before: LyricBackWriteSnapshot = {
+    text: row.text ?? '',
+    songId: row.song_id ?? null,
+    songTitle: row.song_title ?? '',
+    artistName: row.artist_name ?? '',
+    snippetStartSec: row.snippet_start_sec ?? null,
+    snippetEndSec: row.snippet_end_sec ?? null,
+  }
+  const lock = await guardLyricBackPatchWithChildren(admin, postId, before, after)
+  if (!lock.ok) {
+    return NextResponse.json({ error: lock.error, code: 'edit_locked' }, { status: 400 })
+  }
+  const songOrLineChanged = before.text !== after.text
+    || before.songId !== after.songId
+    || before.songTitle !== after.songTitle
+    || before.artistName !== after.artistName
+    || before.snippetStartSec !== after.snippetStartSec
+    || before.snippetEndSec !== after.snippetEndSec
+  const recheck = await recheckChildLockBeforeWrite(admin, postId, songOrLineChanged)
+  if (!recheck.ok) {
+    return NextResponse.json({ error: recheck.error, code: 'edit_locked' }, { status: 400 })
+  }
 
   await moderateOwnedPostText({ text, postId, authorId: userId })
 

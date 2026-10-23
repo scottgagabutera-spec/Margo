@@ -10,6 +10,7 @@ import { MomentComposeVibePicker } from '@/components/moment-compose-vibe-picker
 import type { Post } from '@/hooks/usePosts'
 import { resolveMomentLines, type PostLine } from '@/lib/post-lines'
 import { emotionToVibeLabel, vibeLabelToEmotion } from '@/lib/moment/vibe'
+import { POST_EDIT_CHILD_LOCK_MESSAGE } from '@/lib/post-edit-child-lock'
 
 export type PostMomentInlineEditProps = {
   post: Post
@@ -63,6 +64,7 @@ export function PostMomentInlineEdit({
   }, [post.id, post.emotion])
 
   const submitEmotion = vibeLabelToEmotion(vibeLabel) ?? (post.emotion || 'chill')
+  const lockSongAndLine = (post.replies ?? 0) > 0
 
   return (
     <div className="margo-post-moment-edit" data-no-card-nav>
@@ -86,9 +88,13 @@ export function PostMomentInlineEdit({
         prefill={lineToPrefill(primary)}
         onRequireAuth={onRequireAuth}
         focusSearchOnMount={false}
+        lockSongAndLine={lockSongAndLine}
         onPostingChange={setPosting}
         panelAfterBody={
           <>
+            {lockSongAndLine ? (
+              <p className="margo-post-edit-lock-note" role="status">{POST_EDIT_CHILD_LOCK_MESSAGE}</p>
+            ) : null}
             <MomentComposeVibePicker vibeLabel={vibeLabel} onVibeSelect={setVibeLabel} />
             <button
               type="button"

@@ -13,7 +13,6 @@ import { FeedPostActions } from '@/components/feed-post-actions'
 import { LyricBackTrackListenControl } from '@/components/lyric-back-track-listen-control'
 import { RepostSheet } from '@/components/repost-sheet'
 import { PostReportMenu } from '@/components/post-report-menu'
-import { InlineDeleteConfirm } from '@/components/inline-delete-confirm'
 import { MomentComposeVibePicker } from '@/components/moment-compose-vibe-picker'
 import {
   LyricBackPanelCompose,
@@ -22,6 +21,8 @@ import {
 } from '@/components/lyric-back-panel-compose'
 import type { LyricBackEditSavedPatch } from '@/lib/lyric-back-edit-saved'
 import { emotionToVibeLabel, vibeLabelToEmotion } from '@/lib/moment/vibe'
+import { POST_EDIT_CHILD_LOCK_MESSAGE } from '@/lib/post-edit-child-lock'
+import { PostFocusedDeleteDialog } from '@/components/post-focused-delete-dialog'
 import { echoToPost } from '@/lib/echo-to-post'
 
 export type { LyricBackEditSavedPatch } from '@/lib/lyric-back-edit-saved'
@@ -141,10 +142,11 @@ export function LyricBackThreadRow({
   const { user } = useIdentity()
   const myId = user?.id ?? null
   const [repostSheetOpen, setRepostSheetOpen] = useState(false)
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [deleteBusy, setDeleteBusy] = useState(false)
   const composeRef = useRef<LyricBackPanelComposeHandle>(null)
+  const rowRef = useRef<HTMLElement>(null)
   const [editPosting, setEditPosting] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const lockSongAndLine = (echo.echoCount ?? 0) > 0
   const [editOpen, setEditOpen] = useState(false)
   const initialVibeLabel =
     emotionToVibeLabel(echo.emotion) ?? 'Chill'
@@ -263,9 +265,13 @@ export function LyricBackThreadRow({
           prefill={echoToPrefill(echo)}
           onRequireAuth={requireAuth}
           focusSearchOnMount={false}
+          lockSongAndLine={lockSongAndLine}
           onPostingChange={setEditPosting}
           panelAfterBody={
             <>
+              {lockSongAndLine ? (
+                <p className="margo-post-edit-lock-note" role="status">{POST_EDIT_CHILD_LOCK_MESSAGE}</p>
+              ) : null}
               <MomentComposeVibePicker
                 compact
                 vibeLabel={editVibeLabel}
@@ -335,7 +341,7 @@ export function LyricBackThreadRow({
           ) : null}
         </header>
         <p className="margo-lb-thread-row__lyric margo-lb-thread-row__lyric--removed">
-          Unavailable
+          Deleted
         </p>
         <FeedPostActions
           variant="compact"
@@ -363,7 +369,7 @@ export function LyricBackThreadRow({
   }
 
   return (
-    <article className={rowClass} data-echo-id={echo.id}>
+    <article ref={rowRef} className={rowClass} data-echo-id={echo.id}>
       {isAnchor ? (
         <p className="margo-lb-thread-row__badge">This Lyric Back</p>
       ) : null}
@@ -392,35 +398,7 @@ export function LyricBackThreadRow({
             />
           ) : null}
         </div>
-        {deleteConfirmOpen && showOwnerMenu ? (
-          <InlineDeleteConfirm
-            className="margo-lb-thread-row__inline-delete"
-            busy={deleteBusy}
-            onCancel={() => setDeleteConfirmOpen(false)}
-            onConfirm={() => {
-              setDeleteBusy(true)
-              void fetch('/api/posts/lyric-back', {
-                method: 'DELETE',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ postId: echo.id }),
-              })
-                .then(async (res) => {
-                  const body = (await res.json().catch(() => ({}))) as {
-                    error?: string
-                    outcome?: 'deleted' | 'shelled'
-                  }
-                  if (!res.ok) throw new Error(body.error || 'Could not delete.')
-                  setDeleteConfirmOpen(false)
-                  onOwnerDeleted?.(echo.id, body.outcome === 'shelled' ? 'shelled' : 'deleted')
-                })
-                .catch(() => {
-                  setDeleteBusy(false)
-                })
-            }}
-          />
-        ) : null}
-        {showReportMenu && !deleteConfirmOpen ? (
+        {showReportMenu ? (
           <PostReportMenu
             postId={echo.id}
             isOwner={false}
@@ -429,14 +407,14 @@ export function LyricBackThreadRow({
             reportPresentation="inline"
           />
         ) : null}
-        {showOwnerMenu && !deleteConfirmOpen ? (
+        {showOwnerMenu ? (
           <PostReportMenu
             postId={echo.id}
             isOwner
             showOwnerEdit
             onOwnerEdit={() => setEditOpen(true)}
             showOwnerDelete
-            onOwnerDelete={() => setDeleteConfirmOpen(true)}
+            onOwnerDelete={() => setDeleteOpen(true)}
             className="margo-lb-thread-row__more"
             iconSize={18}
             reportPresentation="inline"
@@ -533,6 +511,18 @@ export function LyricBackThreadRow({
           onRepost={onReplay}
           onRepostWithNote={(id, note) => onQuoteReplay?.(id, note)}
           onUndo={(id) => onUndoReplay?.(id)}
+        />
+      ) : null}
+      {showOwnerMenu ? (
+        <PostFocusedDeleteDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          anchorRef={rowRef}
+          postId={echo.id}
+          target="lyric-back"
+          title="Delete this Lyric Back?"
+          body="This can't be undone. If others replied below, the row may stay as a shell."
+          onDeleted={(outcome) => onOwnerDeleted?.(echo.id, outcome ?? 'deleted')}
         />
       ) : null}
     </article>

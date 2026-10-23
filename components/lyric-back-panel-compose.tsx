@@ -81,6 +81,8 @@ export type LyricBackPanelComposeProps = {
   /** Rendered after song/line (e.g. vibe + Save). Hides built-in panel send when set. */
   panelAfterBody?: ReactNode
   onPostingChange?: (posting: boolean) => void
+  /** When true (edit + active Lyric Backs on parent), song search and line are read-only. */
+  lockSongAndLine?: boolean
 }
 
 type SelectedSong = {
@@ -114,6 +116,7 @@ export const LyricBackPanelCompose = forwardRef<
     renderBar,
     panelAfterBody,
     onPostingChange,
+    lockSongAndLine = false,
   },
   ref,
 ) {
@@ -575,8 +578,10 @@ export const LyricBackPanelCompose = forwardRef<
         ariaLabel="Search by lyric, song or artist"
         compact={isPanelLayout}
         stackAboveOverlay={isPanelLayout && searchOpen}
-        autoFocus={focusSearchOnMount}
+        autoFocus={focusSearchOnMount && !lockSongAndLine}
+        disabled={lockSongAndLine}
         onFocus={() => {
+          if (lockSongAndLine) return
           if (query.trim().length >= 2) setShowResults(true)
         }}
       />
@@ -622,14 +627,16 @@ export const LyricBackPanelCompose = forwardRef<
         artwork={selected.artwork || null}
         source="feed"
       />
-      <button
-        type="button"
-        className="margo-post-card__lb-compose-clear"
-        aria-label="Remove song"
-        onClick={resetSong}
-      >
-        <FeedIconClose size={isPanelLayout ? 12 : 14} />
-      </button>
+      {!lockSongAndLine ? (
+        <button
+          type="button"
+          className="margo-post-card__lb-compose-clear"
+          aria-label="Remove song"
+          onClick={resetSong}
+        >
+          <FeedIconClose size={isPanelLayout ? 12 : 14} />
+        </button>
+      ) : null}
     </div>
   ) : null
 
@@ -671,6 +678,8 @@ export const LyricBackPanelCompose = forwardRef<
         placeholder="Write your line…"
         rows={isPanelLayout ? 2 : 3}
         aria-label="Lyric Back text"
+        readOnly={lockSongAndLine}
+        aria-readonly={lockSongAndLine || undefined}
       />
       {postError ? (
         <p className="margo-post-card__lb-compose-error" role="alert">{postError}</p>

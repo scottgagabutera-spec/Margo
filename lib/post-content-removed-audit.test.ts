@@ -56,7 +56,7 @@ const READ_PATH_CHECKS: Check[] = [
     patterns: [
       /margo-lb-thread-row--content-removed/,
       /margo-lb-thread-row__avatar--removed/,
-      /Unavailable/,
+      /Deleted/,
       /showOwnerMenu/,
       /LyricBackDeleteSheet/,
     ],
