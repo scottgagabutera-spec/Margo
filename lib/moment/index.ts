@@ -27,6 +27,10 @@ export {
   emotionToVibeLabel,
   vibeLabelToEmotion,
   MOMENT_VIBE_PICKER_OPTIONS,
+  MARGO_VIBE_KEYS,
+  isMargoVibeKey,
+  vibeKeyToStoredEmotion,
+  resolveLyricBackStoredEmotion,
 } from '@/lib/moment/vibe'
 
 export type { MomentPersistLine, PersistMomentPostInput } from '@/lib/moment/persist'

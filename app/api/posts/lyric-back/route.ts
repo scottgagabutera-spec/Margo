@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
 import { isNotificationAllowed } from '@/lib/notification-prefs'
+import { resolveLyricBackStoredEmotion } from '@/lib/moment/vibe'
 
 const MAX_TEXT = 500
 const MAX_SONG = 300
@@ -92,10 +93,10 @@ export async function POST(req: NextRequest) {
   const text = typeof body.text === 'string' ? body.text.trim() : ''
   const songTitle = typeof body.songTitle === 'string' ? body.songTitle.trim() : ''
   const artistName = typeof body.artistName === 'string' ? body.artistName.trim() : ''
-  const emotion = typeof body.emotion === 'string' ? body.emotion.trim() : ''
+  const emotionRaw = typeof body.emotion === 'string' ? body.emotion : undefined
 
-  if (!text || !songTitle || !artistName || !emotion) {
-    return NextResponse.json({ error: 'Lyric, song, artist, and vibe are required.' }, { status: 400 })
+  if (!text || !songTitle || !artistName) {
+    return NextResponse.json({ error: 'Lyric, song, and artist are required.' }, { status: 400 })
   }
   if (text.length > MAX_TEXT || songTitle.length > MAX_SONG || artistName.length > MAX_ARTIST) {
     return NextResponse.json({ error: 'One of the fields is too long.' }, { status: 400 })
@@ -112,11 +113,12 @@ export async function POST(req: NextRequest) {
   if (!admin) return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
 
   let parentAuthorId: string | null = null
+  let parentEmotion: string | null = null
 
   if (parentPostId) {
     const { data: parent, error: parentErr } = await admin
       .from('posts')
-      .select('id, status, author_profile_id')
+      .select('id, status, author_profile_id, emotion')
       .eq('id', parentPostId)
       .maybeSingle()
     if (parentErr || !parent) {
@@ -126,7 +128,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'You can only reply to a public Moment.' }, { status: 400 })
     }
     parentAuthorId = parent.author_profile_id ?? null
+    parentEmotion = typeof parent.emotion === 'string' ? parent.emotion : null
   }
+
+  const resolvedEmotion = resolveLyricBackStoredEmotion(emotionRaw, parentEmotion)
+  if (!resolvedEmotion.ok) {
+    return NextResponse.json({ error: 'Invalid vibe.' }, { status: 400 })
+  }
+  const emotion = resolvedEmotion.emotion
 
   const insertRow: Record<string, unknown> = {
     text,

@@ -58,3 +58,44 @@ export const MOMENT_VIBE_PICKER_OPTIONS: string[] = [
   'Joy', 'Love', 'Hype', 'Proud', 'Heartbreak', 'Pain', 'Loneliness',
   'Lost', 'Rage', 'Send It', 'Let Out',
 ]
+
+/** Canonical vibe keys (17) — must match VIBE_LABELS. */
+export const MARGO_VIBE_KEYS = Object.keys(VIBE_LABELS) as (keyof typeof VIBE_LABELS)[]
+
+export function isMargoVibeKey(raw: string | null | undefined): boolean {
+  if (!raw?.trim()) return false
+  const key = normalizeEmotionKey(raw.trim())
+  return key in VIBE_LABELS
+}
+
+/** Stored posts.emotion value for a canonical vibe key. */
+export function vibeKeyToStoredEmotion(raw: string): string {
+  const key = normalizeEmotionKey(raw)
+  if (key === 'sendit') return 'SENDIT'
+  if (key === 'letout') return 'LETOUT'
+  return key.toUpperCase()
+}
+
+export type ResolveLyricBackEmotionResult =
+  | { ok: true; emotion: string }
+  | { ok: false; reason: 'invalid_vibe' | 'missing_vibe' }
+
+/**
+ * Lyric Back create: accept only MARGO_VIBE_KEYS; default to parent vibe when omitted.
+ */
+export function resolveLyricBackStoredEmotion(
+  requested: string | null | undefined,
+  parentEmotion: string | null | undefined,
+): ResolveLyricBackEmotionResult {
+  const parentOk = isMargoVibeKey(parentEmotion)
+  const defaultKey = parentOk ? normalizeEmotionKey(parentEmotion!.trim()) : 'chill'
+
+  const req = typeof requested === 'string' ? requested.trim() : ''
+  if (!req) {
+    return { ok: true, emotion: vibeKeyToStoredEmotion(defaultKey) }
+  }
+  if (!isMargoVibeKey(req)) {
+    return { ok: false, reason: 'invalid_vibe' }
+  }
+  return { ok: true, emotion: vibeKeyToStoredEmotion(req) }
+}
