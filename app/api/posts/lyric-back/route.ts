@@ -181,3 +181,78 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ id: data.id, status: data.status })
 }
+
+export async function PATCH(req: NextRequest) {
+  const userId = await requireUserId()
+  if (!userId) return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
+
+  let body: { postId?: string; text?: string; emotion?: string }
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+  }
+
+  const postId = typeof body.postId === 'string' ? body.postId.trim() : ''
+  if (!postId) {
+    return NextResponse.json({ error: 'postId is required' }, { status: 400 })
+  }
+
+  const text = typeof body.text === 'string' ? body.text.trim() : ''
+  if (!text) {
+    return NextResponse.json({ error: 'Lyric is required.' }, { status: 400 })
+  }
+  if (text.length > MAX_TEXT) {
+    return NextResponse.json({ error: 'One of the fields is too long.' }, { status: 400 })
+  }
+
+  const admin = getAdmin()
+  if (!admin) return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
+
+  const { data: row, error: loadErr } = await admin
+    .from('posts')
+    .select('id, author_profile_id, parent_post_id, emotion')
+    .eq('id', postId)
+    .maybeSingle()
+
+  if (loadErr || !row) {
+    return NextResponse.json({ error: 'Post not found' }, { status: 404 })
+  }
+  if (row.author_profile_id !== userId) {
+    return NextResponse.json({ error: 'Not allowed' }, { status: 403 })
+  }
+  if (!row.parent_post_id) {
+    return NextResponse.json({ error: 'Not a Lyric Back' }, { status: 400 })
+  }
+
+  let parentEmotion: string | null = null
+  const { data: parent } = await admin
+    .from('posts')
+    .select('emotion')
+    .eq('id', row.parent_post_id)
+    .maybeSingle()
+  parentEmotion = typeof parent?.emotion === 'string' ? parent.emotion : null
+
+  const emotionRaw = typeof body.emotion === 'string' ? body.emotion : undefined
+  let emotion = typeof row.emotion === 'string' ? row.emotion : ''
+  if (emotionRaw !== undefined) {
+    const resolved = resolveLyricBackStoredEmotion(emotionRaw, parentEmotion)
+    if (!resolved.ok) {
+      return NextResponse.json({ error: 'Invalid vibe.' }, { status: 400 })
+    }
+    emotion = resolved.emotion
+  }
+
+  const { error: updateErr } = await admin
+    .from('posts')
+    .update({ text, emotion })
+    .eq('id', postId)
+    .eq('author_profile_id', userId)
+
+  if (updateErr) {
+    console.error('[posts/lyric-back PATCH] failed:', updateErr)
+    return NextResponse.json({ error: 'Could not save changes.' }, { status: 500 })
+  }
+
+  return NextResponse.json({ ok: true, id: postId })
+}
