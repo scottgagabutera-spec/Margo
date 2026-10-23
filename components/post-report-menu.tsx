@@ -187,6 +187,7 @@ export function PostReportMenu({
       const viewportTop = vv?.offsetTop ?? 0
       const viewportBottom = vv ? vv.offsetTop + vv.height : window.innerHeight
       const viewportWidth = vv?.width ?? window.innerWidth
+      const viewportOffsetLeft = vv?.offsetLeft ?? 0
       const next = computeReportPopoverPosition({
         triggerRect: r,
         menuWidth: MENU_W,
@@ -194,6 +195,7 @@ export function PostReportMenu({
         viewportTop,
         viewportBottom,
         viewportWidth,
+        viewportOffsetLeft,
       })
       setPos({ top: next.top, left: next.left })
     }
@@ -390,6 +392,7 @@ export function PostReportMenu({
           else setSheetOpen(true)
         }}
         title="Report"
+        anchor="bottom"
         heightMode="auto"
         maxHeight="min(52dvh, 360px)"
         bottomInset="tabbar-tight"
