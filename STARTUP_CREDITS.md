@@ -131,15 +131,15 @@ Other OpenAI uses (moderation, emotion) are separate; do not delete the key unle
 | Field | Detail |
 | --- | --- |
 | **What / why** | Transactional email to Scott when a user reports a post or Lyric Back via the in-app Report flow. Plain-text only; no marketing. |
-| **Activated** | After PR merge for report email (`POST /api/posts/report` fire-and-forget send). |
+| **Activated** | After PR merge for report email (`POST /api/posts/report` sends after insert, up to ~8s, then returns `{ ok: true }`). |
 | **Env vars (Vercel)** | `RESEND_API_KEY` (server). `REPORT_EMAIL_TO` (moderation inbox). `REPORT_EMAIL_FROM` (verified sender on `trymargo.com`, e.g. `reports@trymargo.com`). Set on Production, Preview, and Development as needed. |
-| **Code touchpoints** | `lib/report-email.ts` (subject, body, Resend fetch), `lib/report-email-notify.ts` (load context + enqueue), `app/api/posts/report/route.ts` (`enqueueReportEmail` after insert). Rate limit: `api_rate_limits` route `report-email`, bucket `global`, 20/hour (`failOpenOnDbError: true`). |
+| **Code touchpoints** | `lib/report-email.ts` (subject, body, Resend fetch), `lib/report-email-race.ts` (scheduled/outcome/timeout logs + 8s race), `lib/report-email-notify.ts` (load context + send), `app/api/posts/report/route.ts` (`runReportEmailAfterInsert` after insert). Rate limit: `api_rate_limits` route `report-email`, bucket `global`, 20/hour — **count increments only after Resend 2xx** (`failOpenOnDbError: true`). |
 | **Limitations** | If any required env var is missing, send is skipped (one log line). Failed send never fails the report API. No `emailed_at` column in this phase. |
 
 ### How to remove Resend
 
 1. Remove `RESEND_API_KEY`, `REPORT_EMAIL_TO`, and `REPORT_EMAIL_FROM` from Vercel.
-2. Delete `lib/report-email.ts`, `lib/report-email-notify.ts`, and remove `enqueueReportEmail` from `app/api/posts/report/route.ts`.
+2. Delete `lib/report-email.ts`, `lib/report-email-race.ts`, `lib/report-email-notify.ts`, and remove `runReportEmailAfterInsert` from `app/api/posts/report/route.ts`.
 3. Update this section.
 
 ---
