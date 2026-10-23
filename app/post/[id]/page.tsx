@@ -228,8 +228,14 @@ export default function PostDetailPage() {
             <section className="margo-post-thread-ancestors">
               {ancestors.slice(1).map((ancestor) => (
                 <Link key={ancestor.id} href={`/post/${ancestor.id}`} className="margo-post-thread-ancestor-link">
-                  <span className="margo-post-thread-ancestor-user">@{ancestor.username?.replace(/^@/, '') || 'user'}</span>
-                  <span className="margo-post-thread-ancestor-lyric">&ldquo;{ancestor.text}&rdquo;</span>
+                  {ancestor.contentRemovedAt ? (
+                    <span className="margo-post-thread-ancestor-lyric">Unavailable</span>
+                  ) : (
+                    <>
+                      <span className="margo-post-thread-ancestor-user">@{ancestor.username?.replace(/^@/, '') || 'user'}</span>
+                      <span className="margo-post-thread-ancestor-lyric">&ldquo;{ancestor.text}&rdquo;</span>
+                    </>
+                  )}
                 </Link>
               ))}
             </section>
@@ -256,6 +262,7 @@ export default function PostDetailPage() {
                   snippetEnd: post.snippetEnd ?? null,
                   audioUrl: post.audioUrl ?? null,
                   artwork: post.knowledge?.artwork ?? null,
+                  contentRemovedAt: post.contentRemovedAt ?? null,
                 }}
                 isAnchor
                 tone="anchor"

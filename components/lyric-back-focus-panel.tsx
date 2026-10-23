@@ -156,6 +156,16 @@ export function LyricBackFocusBody({
   if (echoesLoading) loadedFocusRef.current = focusId
   const echoesReady = Boolean(focusId) && !echoesLoading && loadedFocusRef.current === focusId
 
+  const handleOwnerDeleted = useCallback(
+    (echoId: string, outcome: 'deleted' | 'shelled') => {
+      if (outcome === 'deleted' && echoId === focusId) {
+        onBack?.()
+      }
+      refetchEchoes()
+    },
+    [focusId, onBack, refetchEchoes],
+  )
+
   const [ideasOpen, setIdeasOpen] = useState(false)
   const [ideasLoading, setIdeasLoading] = useState(false)
   const [ideasError, setIdeasError] = useState<string | null>(null)
@@ -459,6 +469,7 @@ export function LyricBackFocusBody({
               hideLyricBackAction={!canReply}
               onLyricBack={canReply ? () => focusRow(focusedEcho) : undefined}
               lyricBackSessionActive={showCompose}
+              onOwnerDeleted={handleOwnerDeleted}
             />
           </div>
         ) : null}
@@ -484,6 +495,7 @@ export function LyricBackFocusBody({
                   visualStep={visualStep}
                   hideLyricBackAction={!canReply}
                   onLyricBack={canReply ? () => focusRow(echo) : undefined}
+                  onOwnerDeleted={handleOwnerDeleted}
                 />
               </li>
             ))}

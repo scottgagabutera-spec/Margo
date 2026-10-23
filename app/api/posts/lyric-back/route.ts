@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
+import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { isNotificationAllowed } from '@/lib/notification-prefs'
 
 const MAX_TEXT = 500
@@ -171,4 +172,49 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ id: data.id, status: data.status })
+}
+
+export async function DELETE(req: NextRequest) {
+  const userId = await requireUserId()
+  if (!userId) return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
+
+  let body: { postId?: string }
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+  }
+  if (!body.postId) {
+    return NextResponse.json({ error: 'postId is required' }, { status: 400 })
+  }
+
+  let admin
+  try {
+    admin = getSupabaseAdmin()
+  } catch {
+    return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
+  }
+
+  const { data, error } = await admin.rpc('delete_or_shell_own_lyric_back', {
+    p_post_id: body.postId,
+    p_user_id: userId,
+  })
+
+  if (error) {
+    console.error('[posts/lyric-back DELETE] rpc failed:', error)
+    const msg = `${error.message || ''} ${error.code || ''}`
+    if (/permission denied|42501|does not own|not a Lyric Back/i.test(msg)) {
+      return NextResponse.json({ error: 'Could not delete this Lyric Back.' }, { status: 403 })
+    }
+    if (/not found/i.test(msg)) {
+      return NextResponse.json({ error: 'This Lyric Back could not be found.' }, { status: 404 })
+    }
+    return NextResponse.json({ error: 'Could not delete this Lyric Back.' }, { status: 500 })
+  }
+
+  const outcome =
+    data && typeof data === 'object' && (data as { outcome?: string }).outcome === 'shelled'
+      ? 'shelled'
+      : 'deleted'
+  return NextResponse.json({ success: true, outcome })
 }
