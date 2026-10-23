@@ -189,6 +189,9 @@ export function LyricBackThreadRow({
     step > 0 ? `margo-lb-thread-row--step-${step}` : '',
   ].filter(Boolean).join(' ')
 
+  const shellLbAllowed =
+    contentRemoved && !hideLyricBackAction && Boolean(onLyricBack)
+
   if (contentRemoved) {
     return (
       <article
@@ -212,10 +215,40 @@ export function LyricBackThreadRow({
               />
             ) : null}
           </div>
+          {myId ? (
+            <PostReportMenu
+              postId={echo.id}
+              isOwner={false}
+              inactive
+              className="margo-lb-thread-row__more"
+              iconSize={18}
+            />
+          ) : null}
         </header>
         <p className="margo-lb-thread-row__lyric margo-lb-thread-row__lyric--removed">
           Unavailable
         </p>
+        <FeedPostActions
+          variant="compact"
+          postId={echo.id}
+          resonated={resonated}
+          resonateCount={resonateCount}
+          onResonate={() => {}}
+          secondaryActionsInactive
+          lyricBackAllowed={shellLbAllowed}
+          lyricBackOpen={false}
+          lyricBackSessionActive={lyricBackSessionActive}
+          echoCount={lbCount}
+          onLyricBack={
+            shellLbAllowed && onLyricBack
+              ? () => onLyricBack(echo.id)
+              : undefined
+          }
+          onCard={() => {}}
+          replayed={replayed}
+          replayCount={replayCount}
+          onReplayTap={onReplay ? () => {} : undefined}
+        />
       </article>
     )
   }

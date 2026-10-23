@@ -25,6 +25,8 @@ export type FeedPostActionsProps = {
   replayed?: boolean
   replayCount?: number
   onReplayTap?: () => void
+  /** Shell row: Resonate / Card / Repost visible but inert (not in a11y tree). */
+  secondaryActionsInactive?: boolean
 }
 
 export function FeedPostActions({
@@ -42,21 +44,27 @@ export function FeedPostActions({
   replayed = false,
   replayCount = 0,
   onReplayTap,
+  secondaryActionsInactive = false,
 }: FeedPostActionsProps) {
   const compact = variant === 'compact'
   const rootClass = compact
     ? 'margo-feed-actions margo-feed-actions--compact'
     : 'margo-feed-actions'
   const echoBadge = formatEchoBadge(echoCount)
+  const inert = secondaryActionsInactive
 
   return (
     <div className={rootClass} data-no-card-nav>
       <button
         type="button"
-        className="margo-feed-action"
+        className={`margo-feed-action${inert ? ' margo-feed-action--inactive' : ''}`}
         aria-label={resonated ? 'Remove resonate' : 'Resonate'}
+        aria-hidden={inert ? true : undefined}
+        tabIndex={inert ? -1 : undefined}
+        disabled={inert}
         onClick={(e) => {
           e.stopPropagation()
+          if (inert) return
           onResonate(postId)
         }}
         style={{ color: resonated ? 'var(--gold)' : 'var(--text-secondary)' }}
@@ -106,10 +114,14 @@ export function FeedPostActions({
 
       <button
         type="button"
-        className="margo-feed-action"
+        className={`margo-feed-action${inert ? ' margo-feed-action--inactive' : ''}`}
         aria-label="Export lyric card"
+        aria-hidden={inert ? true : undefined}
+        tabIndex={inert ? -1 : undefined}
+        disabled={inert}
         onClick={(e) => {
           e.stopPropagation()
+          if (inert) return
           onCard()
         }}
         style={{ color: 'var(--text-secondary)' }}
@@ -123,11 +135,15 @@ export function FeedPostActions({
       {onReplayTap ? (
         <button
           type="button"
-          className="margo-feed-action"
+          className={`margo-feed-action${inert ? ' margo-feed-action--inactive' : ''}`}
           aria-label="Repost"
           aria-pressed={replayed}
+          aria-hidden={inert ? true : undefined}
+          tabIndex={inert ? -1 : undefined}
+          disabled={inert}
           onClick={(e) => {
             e.stopPropagation()
+            if (inert) return
             onReplayTap()
           }}
           style={{

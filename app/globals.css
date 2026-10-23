@@ -2349,6 +2349,31 @@ html.margo-keyboard-open .margo-mobile-tabbar {
 .margo-feed-action:active:not(:disabled) {
   opacity: 0.75;
 }
+.margo-feed-action--inactive,
+.margo-feed-action--inactive:disabled {
+  opacity: 0.32;
+  color: var(--text-muted) !important;
+  cursor: default;
+  pointer-events: none;
+}
+.margo-feed-action--inactive:focus-visible {
+  outline: none;
+}
+@media (hover: hover) {
+  .margo-feed-action--inactive:hover {
+    opacity: 0.32;
+  }
+}
+.margo-post-report-menu__trigger--inactive,
+.margo-post-report-menu__trigger--inactive:disabled {
+  opacity: 0.32;
+  color: var(--text-muted);
+  cursor: default;
+  pointer-events: none;
+}
+.margo-post-report-menu__trigger--inactive:focus-visible {
+  outline: none;
+}
 .margo-feed-action__label {
   display: inline !important;
   font-family: var(--font-geist-sans), system-ui, sans-serif;

@@ -23,6 +23,7 @@
     "test:e2e:lyric-back": "playwright test tests/e2e/lyric-back-keyboard-layout.spec.ts",
     "test:e2e:lb-report-menu": "playwright test tests/e2e/lyric-back-row-report-menu.spec.ts",
     "test:e2e:lb-owner-actions": "playwright test tests/e2e/lyric-back-owner-actions.spec.ts",
+    "test:e2e:lb-shell-three-level": "playwright test tests/e2e/lyric-back-shell-three-level.spec.ts",
     "test:e2e:post-report-flow": "playwright test tests/e2e/post-report-flow.spec.ts",
     "test:repost-count": "node --experimental-strip-types --test lib/repost-count.test.ts",
     "test:feed-content-tab": "node --experimental-strip-types --test lib/feed-content-tab.test.ts",
