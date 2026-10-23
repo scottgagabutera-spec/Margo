@@ -37,7 +37,7 @@ describe('PostReportMenu', () => {
     assert.match(row, /showOwnerDelete/)
     assert.match(row, /LyricBackPanelCompose/)
     assert.match(row, /mode="edit"/)
-    assert.match(row, /InlineDeleteConfirm/)
+    assert.match(row, /PostFocusedDeleteDialog/)
     assert.match(row, /reportPresentation="inline"/)
     assert.match(row, /contentRemoved/)
   })
