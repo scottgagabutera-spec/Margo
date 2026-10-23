@@ -9,6 +9,11 @@ import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { isNotificationAllowed } from '@/lib/notification-prefs'
+import {
+  lyricBackChildDepthAllowed,
+  lyricBackDepthCapErrorMessage,
+  lyricBackPostDepth,
+} from '@/lib/lyric-back-depth-server'
 
 const MAX_TEXT = 500
 const MAX_SONG = 300
@@ -127,6 +132,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'You can only reply to a public Moment.' }, { status: 400 })
     }
     parentAuthorId = parent.author_profile_id ?? null
+
+    const parentDepth = await lyricBackPostDepth(admin, parentPostId)
+    if (parentDepth === null) {
+      return NextResponse.json({ error: 'The Moment you are replying to could not be found.' }, { status: 400 })
+    }
+    if (!lyricBackChildDepthAllowed(parentDepth)) {
+      return NextResponse.json({ error: lyricBackDepthCapErrorMessage() }, { status: 400 })
+    }
   }
 
   const insertRow: Record<string, unknown> = {
