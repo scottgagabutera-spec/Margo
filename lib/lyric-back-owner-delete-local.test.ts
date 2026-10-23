@@ -4,8 +4,8 @@ import {
   applyEchoListDeleteOutcome,
   decrementEchoCountField,
   patchStackAfterOwnerDelete,
-} from '@/lib/lyric-back-owner-delete-local'
-import type { Echo } from '@/hooks/useEchoes'
+} from './lyric-back-owner-delete-local.ts'
+import type { Echo } from '../hooks/useEchoes.ts'
 
 const base = (id: string, echoCount = 0): Echo => ({
   id,
