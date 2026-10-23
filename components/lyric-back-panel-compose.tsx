@@ -22,6 +22,8 @@ import { matchLiveCatalogSong } from '@/lib/search-margo-songs'
 import { trackEvent } from '@/lib/analytics/track'
 import { toastMomentSent } from '@/lib/moment-export/moment-export-toasts'
 import { compactArtworkUrl } from '@/lib/compact-artwork-url'
+import { LyricBackVibeChips } from '@/components/lyric-back-vibe-chips'
+import { vibeKeyToStoredEmotion, isMargoVibeKey } from '@/lib/moment/vibe'
 
 const supabase = createClient()
 
@@ -102,6 +104,13 @@ export const LyricBackPanelCompose = forwardRef<
   const [snippetEnd, setSnippetEnd] = useState<number | null>(null)
   const [posting, setPosting] = useState(false)
   const [postError, setPostError] = useState<string | null>(null)
+  const [composeEmotion, setComposeEmotion] = useState(parentEmotion)
+
+  useEffect(() => {
+    setComposeEmotion(
+      isMargoVibeKey(parentEmotion) ? parentEmotion : vibeKeyToStoredEmotion('chill'),
+    )
+  }, [parentEmotion])
 
   useImperativeHandle(ref, () => ({
     focusSearch: () => {
@@ -334,7 +343,7 @@ export const LyricBackPanelCompose = forwardRef<
           parentPostId: parentPostId,
           isPrivate: false,
           text: lyric.trim(),
-          emotion: parentEmotion,
+          emotion: composeEmotion,
           songId: selected.catalogSongId,
           songTitle: selected.title,
           artistName: selected.artist,
@@ -372,7 +381,7 @@ export const LyricBackPanelCompose = forwardRef<
     lyric,
     onRequireAuth,
     onSent,
-    parentEmotion,
+    composeEmotion,
     parentPostId,
     resetSong,
     selected,
@@ -520,6 +529,12 @@ export const LyricBackPanelCompose = forwardRef<
         placeholder="Write your line…"
         rows={isPanelLayout ? 2 : 3}
         aria-label="Lyric Back text"
+      />
+      <LyricBackVibeChips
+        value={composeEmotion}
+        parentEmotion={parentEmotion}
+        disabled={posting}
+        onChange={setComposeEmotion}
       />
       {postError ? (
         <p className="margo-post-card__lb-compose-error" role="alert">{postError}</p>

@@ -13,6 +13,8 @@ import { FeedPostActions } from '@/components/feed-post-actions'
 import { LyricBackTrackListenControl } from '@/components/lyric-back-track-listen-control'
 import { RepostSheet } from '@/components/repost-sheet'
 import { PostReportMenu } from '@/components/post-report-menu'
+import { LyricBackDeleteSheet } from '@/components/lyric-back-delete-sheet'
+import { LyricBackEditSheet } from '@/components/lyric-back-edit-sheet'
 import { echoToPost } from '@/lib/echo-to-post'
 
 const supabase = createClient()
@@ -39,6 +41,10 @@ export type LyricBackThreadRowProps = {
   lyricBackSessionActive?: boolean
   /** 0–3. Deeper threads stay at step 3. */
   visualStep?: 0 | 1 | 2 | 3
+  onOwnerDeleted?: (echoId: string) => void
+  onOwnerEdited?: (echoId: string) => void
+  /** Parent post vibe — edit/compose default. */
+  parentEmotion?: string
 }
 
 function profileHref(echo: Echo): string | null {
@@ -107,11 +113,17 @@ export function LyricBackThreadRow({
   hideLyricBackAction = false,
   lyricBackSessionActive = false,
   visualStep = 0,
+  onOwnerDeleted,
+  onOwnerEdited,
+  parentEmotion = 'chill',
 }: LyricBackThreadRowProps) {
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
   const myId = user?.id ?? null
   const [repostSheetOpen, setRepostSheetOpen] = useState(false)
+  const [deleteSheetOpen, setDeleteSheetOpen] = useState(false)
+  const [editSheetOpen, setEditSheetOpen] = useState(false)
+  const [lyricDisplay, setLyricDisplay] = useState(echo.lyric)
 
   const [resonatedLocal, setResonatedLocal] = useState(
     () => Boolean(myId && echo.resonates?.[myId]),
@@ -127,6 +139,10 @@ export function LyricBackThreadRow({
     setResonatedLocal(Boolean(myId && echo.resonates?.[myId]))
     setCountLocal(echo.resonateCount ?? 0)
   }, [controlled, echo.id, echo.resonateCount, echo.resonates, myId])
+
+  useEffect(() => {
+    setLyricDisplay(echo.lyric)
+  }, [echo.lyric])
 
   const canPlay = Boolean(echo.audioUrl && echo.songId)
   const externalHref = !canPlay
@@ -150,7 +166,9 @@ export function LyricBackThreadRow({
   const lbCount = echo.echoCount ?? 0
   const songHref = echo.songId ? `/song/${echo.songId}` : null
   const isOwner = Boolean(myId && echo.authorUid && echo.authorUid === myId)
+  const showOwnerMenu = Boolean(myId && isOwner)
   const showReportMenu = Boolean(myId && !isOwner)
+  const deleteBlocked = (echo.echoCount ?? 0) > 0
 
   const toggleResonate = async (id: string) => {
     if (controlled) {
@@ -221,6 +239,19 @@ export function LyricBackThreadRow({
             iconSize={18}
           />
         ) : null}
+        {showOwnerMenu ? (
+          <PostReportMenu
+            postId={echo.id}
+            isOwner
+            showOwnerEdit
+            onOwnerEdit={() => setEditSheetOpen(true)}
+            showOwnerDelete
+            ownerDeleteBlocked={deleteBlocked}
+            onOwnerDelete={() => setDeleteSheetOpen(true)}
+            className="margo-lb-thread-row__more"
+            iconSize={18}
+          />
+        ) : null}
       </header>
 
       <button
@@ -228,7 +259,7 @@ export function LyricBackThreadRow({
         className="margo-lb-thread-row__lyric"
         onClick={() => onOpenThread?.(echo.id)}
       >
-        &ldquo;{echo.lyric}&rdquo;
+        &ldquo;{lyricDisplay}&rdquo;
       </button>
 
       {showTrackStrip ? (
@@ -297,6 +328,28 @@ export function LyricBackThreadRow({
           setRepostSheetOpen(true)
         } : undefined}
       />
+      {showOwnerMenu ? (
+        <LyricBackEditSheet
+          open={editSheetOpen}
+          onOpenChange={setEditSheetOpen}
+          postId={echo.id}
+          initialText={lyricDisplay}
+          initialEmotion={echo.emotion || parentEmotion}
+          parentEmotion={parentEmotion}
+          onSaved={(next) => {
+            setLyricDisplay(next.text)
+            onOwnerEdited?.(echo.id)
+          }}
+        />
+      ) : null}
+      {showOwnerMenu ? (
+        <LyricBackDeleteSheet
+          open={deleteSheetOpen}
+          onOpenChange={setDeleteSheetOpen}
+          postId={echo.id}
+          onDeleted={() => onOwnerDeleted?.(echo.id)}
+        />
+      ) : null}
       {onReplay ? (
         <RepostSheet
           open={repostSheetOpen}

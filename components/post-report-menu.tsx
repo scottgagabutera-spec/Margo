@@ -35,6 +35,12 @@ export type PostReportMenuProps = {
   isOwner: boolean
   showOwnerDelete?: boolean
   onOwnerDelete?: () => void
+  /** Owner delete blocked (e.g. active Lyric Backs below). */
+  ownerDeleteBlocked?: boolean
+  /** One short line under disabled Delete — no sentences. */
+  ownerDeleteBlockedHint?: string
+  showOwnerEdit?: boolean
+  onOwnerEdit?: () => void
   className?: string
   iconSize?: number
 }
@@ -44,6 +50,20 @@ function ReportRowIcon() {
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
         d="M4 4v16M4 4h11l3 3v13H4V4z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function EditRowIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M4 20h4l10.5-10.5a1.4 1.4 0 0 0 0-2L16.5 5.5a1.4 1.4 0 0 0-2 0L4 16v4z"
         stroke="currentColor"
         strokeWidth="1.75"
         strokeLinecap="round"
@@ -94,6 +114,10 @@ export function PostReportMenu({
   isOwner,
   showOwnerDelete = false,
   onOwnerDelete,
+  ownerDeleteBlocked = false,
+  ownerDeleteBlockedHint = 'Lyric Backs below',
+  showOwnerEdit = false,
+  onOwnerEdit,
   className = '',
   iconSize = 20,
 }: PostReportMenuProps) {
@@ -115,8 +139,11 @@ export function PostReportMenu({
   const [reportStatusLoading, setReportStatusLoading] = useState(false)
 
   const showReportItem = !isOwner
-  const showDeleteItem = isOwner && showOwnerDelete && typeof onOwnerDelete === 'function'
-  const itemCount = (showReportItem ? 1 : 0) + (showDeleteItem ? 1 : 0)
+  const showEditItem = isOwner && showOwnerEdit && typeof onOwnerEdit === 'function'
+  const showDeleteItem =
+    isOwner && showOwnerDelete && (typeof onOwnerDelete === 'function' || ownerDeleteBlocked)
+  const itemCount =
+    (showReportItem ? 1 : 0) + (showEditItem ? 1 : 0) + (showDeleteItem ? 1 : 0)
   const canSubmit = postReportSubmitEnabled(selectedReason) && !reportBusy && !alreadyReported
 
   useEffect(() => setMounted(true), [])
@@ -312,20 +339,43 @@ export function PostReportMenu({
                 <span>Report</span>
               </button>
             ) : null}
-            {showDeleteItem ? (
+            {showEditItem ? (
               <button
                 type="button"
                 role="menuitem"
-                className="margo-post-report-menu__row margo-post-report-menu__row--muted"
+                className="margo-post-report-menu__row"
                 onClick={(e) => {
                   e.stopPropagation()
                   closeAll()
-                  onOwnerDelete?.()
+                  onOwnerEdit?.()
                 }}
               >
-                <DeleteRowIcon />
-                <span>Delete</span>
+                <EditRowIcon />
+                <span>Edit</span>
               </button>
+            ) : null}
+            {showDeleteItem ? (
+              <div className="margo-post-report-menu__row-wrap">
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="margo-post-report-menu__row margo-post-report-menu__row--muted"
+                  disabled={ownerDeleteBlocked}
+                  aria-disabled={ownerDeleteBlocked}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (ownerDeleteBlocked) return
+                    closeAll()
+                    onOwnerDelete?.()
+                  }}
+                >
+                  <DeleteRowIcon />
+                  <span>Delete</span>
+                </button>
+                {ownerDeleteBlocked ? (
+                  <p className="margo-post-report-menu__row-hint">{ownerDeleteBlockedHint}</p>
+                ) : null}
+              </div>
             ) : null}
           </div>,
           document.body,

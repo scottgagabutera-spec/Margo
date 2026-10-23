@@ -793,6 +793,153 @@ html[data-margo-stage-idle] .margo-stage-zone {
 .margo-post-report-menu__row:active:not(:disabled) {
   background: color-mix(in srgb, var(--surface-2) 88%, var(--text));
 }
+.margo-post-report-menu__row:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.margo-post-report-menu__row-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.margo-post-report-menu__row-hint {
+  margin: 0;
+  padding: 0 10px 4px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.625rem;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--text-secondary);
+}
+.margo-lb-owner-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 0 8px;
+}
+.margo-lb-owner-sheet__lead {
+  margin: 0;
+  padding: 0 16px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.margo-lb-owner-sheet__error {
+  margin: 0;
+  padding: 0 16px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+.margo-lb-owner-sheet__actions {
+  display: flex;
+  gap: 8px;
+  padding: 4px 16px 8px;
+}
+.margo-lb-owner-sheet__btn {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 10px;
+  border: none;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--surface-2);
+  color: var(--text);
+}
+.margo-lb-owner-sheet__btn--ghost {
+  border: 1px solid var(--border);
+}
+.margo-lb-owner-sheet__btn--danger {
+  background: color-mix(in srgb, #ff6060 92%, var(--surface-2));
+  color: var(--bg);
+}
+.margo-lb-owner-sheet__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.margo-lb-edit-sheet__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 16px;
+}
+.margo-lb-edit-sheet__label {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.margo-lb-edit-sheet__textarea {
+  width: 100%;
+  min-height: 72px;
+  max-height: 140px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-lora), serif;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  resize: vertical;
+  box-sizing: border-box;
+}
+@supports (-webkit-touch-callout: none) {
+  .margo-lb-edit-sheet__textarea {
+    font-size: 16px;
+  }
+}
+.margo-lb-vibe-chips {
+  padding: 0 12px 4px;
+  min-width: 0;
+}
+.margo-lb-vibe-chips__scroller {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.margo-lb-vibe-chips__scroller::-webkit-scrollbar {
+  display: none;
+}
+.margo-lb-vibe-chips__chip {
+  flex: 0 0 auto;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.margo-lb-vibe-chips__chip--on {
+  border-color: color-mix(in srgb, var(--gold) 55%, var(--border));
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface-2) 88%, var(--gold));
+}
+.margo-lb-vibe-chips__chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+@media (prefers-reduced-motion: reduce) {
+  .margo-lb-vibe-chips__scroller {
+    scroll-behavior: auto;
+  }
+}
 .margo-post-report-menu__sheet {
   display: flex;
   flex-direction: column;

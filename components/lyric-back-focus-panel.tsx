@@ -459,6 +459,9 @@ export function LyricBackFocusBody({
               hideLyricBackAction={!canReply}
               onLyricBack={canReply ? () => focusRow(focusedEcho) : undefined}
               lyricBackSessionActive={showCompose}
+              onOwnerDeleted={() => void refetchEchoes()}
+              onOwnerEdited={() => void refetchEchoes()}
+              parentEmotion={parentEmotion}
             />
           </div>
         ) : null}
@@ -484,6 +487,9 @@ export function LyricBackFocusBody({
                   visualStep={visualStep}
                   hideLyricBackAction={!canReply}
                   onLyricBack={canReply ? () => focusRow(echo) : undefined}
+                  onOwnerDeleted={() => void refetchEchoes()}
+                  onOwnerEdited={() => void refetchEchoes()}
+                  parentEmotion={parentEmotion}
                 />
               </li>
             ))}
