@@ -56,7 +56,7 @@ const FIXTURE = String.raw`<!DOCTYPE html>
         <div class="margo-lb-focus__pin" id="bar" data-lb-pin="1">
           <div class="margo-lb-focus__tabs">
             <div class="margo-lb-focus__switch">
-              <button class="margo-lb-focus__tab" type="button">Replies</button>
+              <button class="margo-lb-focus__tab" type="button">Lyric Backs</button>
               <button class="margo-lb-focus__tab" type="button">Ideas</button>
             </div>
             <button class="margo-lb-focus__close" type="button" aria-label="Close">×</button>
@@ -218,6 +218,8 @@ for (const width of [360, 390, 430]) {
       })
       expect(nested.anchorBottom).toBeLessThanOrEqual(nested.listTop + 1)
       expect(nested.firstTop).toBeGreaterThanOrEqual(nested.listTop)
+
+      await expect(page.getByRole('button', { name: 'Lyric Backs' })).toBeVisible()
 
       const before = await metrics(page)
       expect(before.barH).toBeLessThanOrEqual(80)
