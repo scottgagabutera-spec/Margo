@@ -4,6 +4,7 @@
  */
 import type { Post } from '@/hooks/usePosts'
 import { mapPostLinesRows } from '@/lib/post-lines'
+import { applyPostContentRemoved } from '@/lib/post-content-removed'
 
 export interface FeedReplay {
   id: string
@@ -42,6 +43,7 @@ export const REPLAY_FEED_SELECT = `
     snippet_start_sec,
     snippet_end_sec,
     parent_post_id,
+    content_removed_at,
     profiles:author_profile_id ( username, display_name, avatar_url ),
     post_stats ( resonate_count, echo_count, replay_count ),
     songs:song_id ( audio_url ),
@@ -63,7 +65,7 @@ export function mapReplayPost(row: any): Post | null {
   const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
   const stats = Array.isArray(row.post_stats) ? row.post_stats[0] : row.post_stats
   const linkedSong = Array.isArray(row.songs) ? row.songs[0] : row.songs
-  return {
+  return applyPostContentRemoved({
     id: row.id,
     text: row.text ?? undefined,
     emotion: row.emotion ?? undefined,
@@ -99,7 +101,8 @@ export function mapReplayPost(row: any): Post | null {
     snippetStart: row.snippet_start_sec ?? null,
     snippetEnd: row.snippet_end_sec ?? null,
     lines: mapPostLinesRows(row.post_lines),
-  }
+    contentRemovedAt: row.content_removed_at ?? null,
+  })
 }
 
 export function mapReplayRows(data: any[] | null | undefined): FeedReplay[] {

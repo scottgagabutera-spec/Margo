@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Post } from '@/hooks/usePosts'
 import { mapPostLinesRows } from '@/lib/post-lines'
 import { parseAtmosphere, SONG_POST_EMBED } from '@/lib/atmosphere'
+import { applyPostContentRemoved } from '@/lib/post-content-removed'
 
 const supabase = createClient()
 
@@ -25,6 +26,7 @@ const POST_SELECT = `
   author_profile_id,
   created_at,
   parent_post_id,
+  content_removed_at,
   snippet_start_sec,
   snippet_end_sec,
   profiles:author_profile_id ( username, avatar_url ),
@@ -50,7 +52,7 @@ function mapRow(row: any): Post {
   const stats = Array.isArray(row.post_stats) ? row.post_stats[0] : row.post_stats
   const linkedSong = Array.isArray(row.songs) ? row.songs[0] : row.songs
 
-  return {
+  return applyPostContentRemoved({
     id: row.id,
     text: row.text ?? undefined,
     emotion: row.emotion ?? undefined,
@@ -87,7 +89,8 @@ function mapRow(row: any): Post {
     atmosphere: parseAtmosphere(linkedSong?.atmosphere),
     lines: mapPostLinesRows(row.post_lines),
     parentPostId: row.parent_post_id ?? null,
-  }
+    contentRemovedAt: row.content_removed_at ?? null,
+  })
 }
 
 async function fetchMappedPost(id: string): Promise<Post | null> {

@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { applyEchoContentRemoved } from '@/lib/post-content-removed'
 
 const supabase = createClient()
 
@@ -26,6 +27,7 @@ export interface Echo {
   audioUrl?: string | null
   artwork?: string | null
   externalListenUrl?: string | null
+  contentRemovedAt?: string | null
 }
 
 // ── Migrated Aug 1, 2026 ───────────────────────────────────────────────
@@ -52,6 +54,7 @@ export const ECHO_SELECT = `
   snippet_start_sec,
   snippet_end_sec,
   external_listen_url,
+  content_removed_at,
   legacy_author_label,
   author_profile_id,
   created_at,
@@ -69,7 +72,7 @@ function mapRow(row: any): Echo {
   const resonates: Record<string, boolean> = {}
   for (const r of resonateRows) resonates[r.actor_id] = true
 
-  return {
+  return applyEchoContentRemoved({
     id: row.id,
     lyric: row.text || '',
     song: row.song_title || '',
@@ -90,7 +93,8 @@ function mapRow(row: any): Echo {
     audioUrl: linkedSong?.audio_url ?? null,
     artwork: row.artwork_url ?? linkedSong?.artwork_url ?? null,
     externalListenUrl: row.external_listen_url ?? null,
-  }
+    contentRemovedAt: row.content_removed_at ?? null,
+  })
 }
 
 export function useEchoes(postId: string | null) {

@@ -46,7 +46,11 @@ export async function syncMargoSearchFromWebhook(payload: WebhookPayload): Promi
       await deleteMargoDocuments([`artist:${row.id}`])
     }
   } else if (table === 'posts') {
-    if ((row as any).status !== 'active' || (row as any).parent_post_id) {
+    if (
+      (row as any).status !== 'active'
+      || (row as any).parent_post_id
+      || (row as any).content_removed_at
+    ) {
       await deleteMargoDocuments([`post:${row.id}`])
       return
     }

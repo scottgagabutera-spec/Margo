@@ -49,6 +49,7 @@ export function profileToArtistDoc(
 
 export function postToLyricDoc(row: {
   id: string
+  content_removed_at?: string | null
   text?: string | null
   emotion?: string | null
   song_title?: string | null
@@ -65,6 +66,7 @@ export function postToLyricDoc(row: {
    * sorts by position itself rather than trusting query order. */
   post_lines?: { position?: number | null; text?: string | null }[] | null
 }): MargoSearchDocument | null {
+  if (row.content_removed_at) return null
   const text = buildMomentSearchText(row.text, row.post_lines)
   if (!text) return null
   const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles

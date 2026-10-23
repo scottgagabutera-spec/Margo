@@ -11,6 +11,7 @@ import { warmProfile } from '@/lib/profile-warm'
 import { embedProfile, resolvePublicArtistCredit } from '@/lib/artist-identity'
 import { parseAtmosphere, SONG_POST_EMBED, type AtmosphereId } from '@/lib/atmosphere'
 import { isMomentsCurationClientEnabled } from '@/lib/moments/curation-config'
+import { applyPostContentRemoved } from '@/lib/post-content-removed'
 import type { CuratedMomentStored } from '@/lib/moments/curated-types'
 
 const supabase = createClient()
@@ -51,6 +52,7 @@ const POST_SELECT = `
   legacy_author_label,
   author_profile_id,
   created_at,
+  content_removed_at,
   snippet_start_sec,
   snippet_end_sec,
   profiles:author_profile_id ( username, display_name, avatar_url ),
@@ -76,7 +78,7 @@ function mapPostRow(row: any): Post {
   const stats = Array.isArray(row.post_stats) ? row.post_stats[0] : row.post_stats
   const linkedSong = Array.isArray(row.songs) ? row.songs[0] : row.songs
 
-  return {
+  return applyPostContentRemoved({
     id: row.id,
     text: row.text ?? undefined,
     emotion: row.emotion ?? undefined,
@@ -114,7 +116,8 @@ function mapPostRow(row: any): Post {
     isAiGenerated: linkedSong?.is_ai_generated ?? false,
     atmosphere: parseAtmosphere(linkedSong?.atmosphere),
     lines: mapPostLinesRows(row.post_lines),
-  }
+    contentRemovedAt: row.content_removed_at ?? null,
+  })
 }
 
 type CacheEntry<T> = {
@@ -133,6 +136,7 @@ export async function fetchFeedPosts(): Promise<Post[]> {
     .from('posts')
     .select(POST_SELECT)
     .is('parent_post_id', null)
+    .is('content_removed_at', null)
     .not('status', 'in', '("hidden","private","sent")')
     .order('created_at', { ascending: false })
     .limit(FEED_PAGE_SIZE)
@@ -150,6 +154,7 @@ export async function fetchFeedPostsOlder(beforeCreatedAtIso: string): Promise<P
     .from('posts')
     .select(POST_SELECT)
     .is('parent_post_id', null)
+    .is('content_removed_at', null)
     .not('status', 'in', '("hidden","private","sent")')
     .lt('created_at', beforeCreatedAtIso)
     .order('created_at', { ascending: false })

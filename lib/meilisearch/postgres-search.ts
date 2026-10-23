@@ -15,7 +15,7 @@ import type {
 } from '@/lib/meilisearch/types'
 
 const POST_SELECT =
-  'id, text, emotion, status, song_title, artist_name, artwork_url, song_id, author_profile_id, legacy_author_label, created_at, profiles:author_profile_id(username, display_name, avatar_url), post_lines(position, text)'
+  'id, text, emotion, status, song_title, artist_name, artwork_url, song_id, author_profile_id, legacy_author_label, content_removed_at, created_at, profiles:author_profile_id(username, display_name, avatar_url), post_lines(position, text)'
 
 const SONG_SELECT = 'id, title, artist_display_name, artwork_url, owner_profile_id, status'
 
@@ -47,6 +47,7 @@ function visiblePosts(supabase: SupabaseClient) {
     .from('posts')
     .select(POST_SELECT)
     .is('parent_post_id', null)
+    .is('content_removed_at', null)
     .not('status', 'in', '("hidden","private","sent")')
 }
 

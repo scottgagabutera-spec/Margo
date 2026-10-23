@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Post } from '@/hooks/usePosts'
+import { applyPostContentRemoved } from '@/lib/post-content-removed'
 
 const supabase = createClient()
 
@@ -34,6 +35,7 @@ export function useAuthorLyricBacks(authorId: string | null, enabled: boolean) {
         created_at,
         snippet_start_sec,
         snippet_end_sec,
+        content_removed_at,
         parent_post_id,
         profiles:author_profile_id ( username, display_name, avatar_url ),
         post_stats ( resonate_count, echo_count, replay_count ),
@@ -57,7 +59,7 @@ export function useAuthorLyricBacks(authorId: string | null, enabled: boolean) {
         const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
         const stats = Array.isArray(row.post_stats) ? row.post_stats[0] : row.post_stats
         const linkedSong = Array.isArray(row.songs) ? row.songs[0] : row.songs
-        return {
+        return applyPostContentRemoved({
           id: row.id,
           text: row.text ?? undefined,
           emotion: row.emotion ?? undefined,
@@ -81,7 +83,8 @@ export function useAuthorLyricBacks(authorId: string | null, enabled: boolean) {
           audioUrl: linkedSong?.audio_url ?? null,
           snippetStart: row.snippet_start_sec ?? null,
           snippetEnd: row.snippet_end_sec ?? null,
-        } satisfies Post
+          contentRemovedAt: row.content_removed_at ?? null,
+        } satisfies Post)
       })
     )
     setLoading(false)
