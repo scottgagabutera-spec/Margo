@@ -743,6 +743,85 @@ html[data-margo-stage-idle] .margo-stage-zone {
   opacity: 0.45;
   cursor: not-allowed;
 }
+.margo-post-report-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+.margo-post-report-menu__panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  z-index: 40;
+  min-width: 160px;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--bg) 55%, transparent);
+  isolation: isolate;
+}
+.margo-post-report-menu__panel--reasons {
+  min-width: 200px;
+  padding: 10px;
+}
+.margo-post-report-menu__heading {
+  margin: 0 0 8px;
+  font-family: var(--font-lora), serif;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.margo-post-report-menu__item {
+  display: block;
+  width: 100%;
+  min-height: var(--margo-touch-min);
+  padding: 12px 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.7rem;
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.margo-post-report-menu__item--muted {
+  color: var(--text-secondary);
+}
+.margo-post-report-menu__item--back {
+  color: var(--text-muted);
+  font-family: var(--font-lora), serif;
+  font-size: 0.75rem;
+}
+.margo-post-report-menu__item:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.margo-post-report-menu__msg {
+  margin: 6px 4px 0;
+  font-family: var(--font-lora), serif;
+  font-size: 0.72rem;
+}
+.margo-post-report-menu__msg--err {
+  color: var(--gold);
+}
+.margo-post-report-menu__msg--ok {
+  color: var(--gold);
+}
+.margo-lb-thread-row__more {
+  align-self: flex-start;
+  margin-left: 4px;
+}
+.margo-lb-thread-row__more .margo-post-report-menu__panel {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 6px;
+}
 @media (max-width: 360px) {
   .margo-post-card__header {
     grid-template-columns: 36px 1fr auto;
