@@ -2,6 +2,17 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 
+describe('report email notify', () => {
+  it('logs structured outcomes without addresses', () => {
+    const notify = fs.readFileSync('lib/report-email-notify.ts', 'utf8')
+    assert.match(notify, /outcome=sent/)
+    assert.match(notify, /missing_resend_api_key/)
+    assert.match(notify, /rate_limit/)
+    assert.match(notify, /outcome=\$\{outcome\.status\}|outcome=failed/)
+    assert.doesNotMatch(notify, /console\.(info|error).*REPORT_EMAIL/)
+  })
+})
+
 describe('post_reports reason_note migration', () => {
   it('adds nullable reason_note with char_length check', () => {
     const sql = fs.readFileSync(

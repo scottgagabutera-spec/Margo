@@ -6,7 +6,6 @@ import {
   buildReportEmailText,
   reportReasonUrgency,
   sanitizeEmailSingleLine,
-  scheduleReportEmailSend,
 } from './report-email.ts'
 
 describe('report-email', () => {
@@ -53,22 +52,15 @@ describe('report-email', () => {
     assert.match(text, /Admin: https:\/\/trymargo.com\/admin\?section=reports/)
   })
 
-  it('scheduleReportEmailSend swallows async failures', async () => {
-    let settled = false
-    scheduleReportEmailSend(async () => {
-      throw new Error('resend down')
-    })
-    await new Promise((r) => setTimeout(r, 20))
-    settled = true
-    assert.equal(settled, true)
-  })
 })
 
 describe('posts/report route email wiring', () => {
-  it('returns success without awaiting email', () => {
+  it('schedules email with after() so Vercel keeps the task alive', () => {
     const route = fs.readFileSync('app/api/posts/report/route.ts', 'utf8')
-    assert.match(route, /enqueueReportEmail/)
-    assert.doesNotMatch(route, /await enqueueReportEmail/)
+    assert.match(route, /after\(/)
+    assert.match(route, /runReportEmailJob/)
+    assert.match(route, /logReportEmailOutcome/)
     assert.doesNotMatch(route, /TODO\(report-email\)/)
+    assert.doesNotMatch(route, /enqueueReportEmail/)
   })
 })

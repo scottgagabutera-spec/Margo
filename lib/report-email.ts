@@ -146,10 +146,3 @@ export async function sendResendPlainEmail(opts: {
   }
 }
 
-/** Never throws — for fire-and-forget from the report route. */
-export function scheduleReportEmailSend(task: () => Promise<void>): void {
-  void task().catch((err) => {
-    const msg = err instanceof Error ? err.message : 'unknown'
-    console.error('[report-email] send task failed:', sanitizeEmailSingleLine(msg, 200))
-  })
-}
