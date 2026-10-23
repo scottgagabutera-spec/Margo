@@ -1,7 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { consumeHourlyApiRateLimit } from '@/lib/api-rate-limit'
+import { consumeHourlyApiRateLimit, isHourlyApiRateLimitAvailable } from '@/lib/api-rate-limit'
 import type { PostReportReason } from '@/lib/post-report'
 import { MARGO_SITE_ORIGIN } from '@/lib/moment/site-origin'
+import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import {
   buildReportEmailSubject,
   buildReportEmailText,
@@ -9,24 +10,23 @@ import {
   sendResendPlainEmail,
   shortPostId,
 } from '@/lib/report-email'
+import {
+  awaitReportEmailJobWithTimeout,
+  type ReportEmailOutcome,
+} from '@/lib/report-email-race'
+
+export type { ReportEmailOutcome, ReportEmailRaceResult } from '@/lib/report-email-race'
+export {
+  logReportEmailOutcome,
+  logReportEmailScheduled,
+  logReportEmailTimeout,
+  raceReportEmailJob,
+  REPORT_EMAIL_TIMEOUT_MS,
+} from '@/lib/report-email-race'
+import { REPORT_EMAIL_TIMEOUT_MS } from '@/lib/report-email-race'
 
 const EMAILS_PER_HOUR = 20
 const DEPTH_CAP = 8
-
-export type ReportEmailOutcome =
-  | { status: 'sent' }
-  | { status: 'skipped'; reason: string }
-  | { status: 'failed'; reason: string }
-
-export function logReportEmailOutcome(reportId: string, outcome: ReportEmailOutcome): void {
-  const rid = sanitizeEmailSingleLine(shortPostId(reportId), 12)
-  if (outcome.status === 'sent') {
-    console.info(`[report-email] outcome=sent reportId=${rid}`)
-    return
-  }
-  const reason = sanitizeEmailSingleLine(outcome.reason, 120)
-  console.error(`[report-email] outcome=${outcome.status} reason=${reason} reportId=${rid}`)
-}
 
 function profileHandle(row: { username?: string | null; display_name?: string | null } | null, fallbackId: string): string {
   const u = (row?.username ?? '').replace(/^@/, '').trim()
@@ -67,17 +67,23 @@ function fromAddressLooksValid(from: string): boolean {
   return domain === 'trymargo.com' || domain.endsWith('.trymargo.com')
 }
 
-/** Runs the full report-email job; never throws (for after() / waitUntil). */
-export async function runReportEmailJob(opts: {
-  admin: SupabaseClient
+export type ReportEmailJobInput = {
   reportId: string
   postId: string
   reason: PostReportReason
   reasonNote: string | null
   reporterId: string
   reportedAtIso: string
-}): Promise<ReportEmailOutcome> {
+}
+
+/** Runs the full report-email job; never throws. Uses a fresh service-role client. */
+export async function runReportEmailJob(opts: ReportEmailJobInput): Promise<ReportEmailOutcome> {
   try {
+    const admin = getSupabaseAdmin()
+    if (!admin) {
+      return { status: 'failed', reason: 'server_misconfigured' }
+    }
+
     const apiKey = process.env.RESEND_API_KEY?.trim()
     const to = process.env.REPORT_EMAIL_TO?.trim()
     const from = process.env.REPORT_EMAIL_FROM?.trim()
@@ -94,7 +100,7 @@ export async function runReportEmailJob(opts: {
       return { status: 'failed', reason: 'from_not_trymargo_domain' }
     }
 
-    const limited = await consumeHourlyApiRateLimit({
+    const limited = await isHourlyApiRateLimitAvailable({
       route: 'report-email',
       bucket: 'global',
       limit: EMAILS_PER_HOUR,
@@ -104,7 +110,7 @@ export async function runReportEmailJob(opts: {
       return { status: 'skipped', reason: 'rate_limit' }
     }
 
-    const { data: post, error: postErr } = await opts.admin
+    const { data: post, error: postErr } = await admin
       .from('posts')
       .select('id, text, parent_post_id, author_profile_id')
       .eq('id', opts.postId)
@@ -114,10 +120,10 @@ export async function runReportEmailJob(opts: {
     }
 
     const [{ data: reporter }, { data: author }, depth, reportCountRes] = await Promise.all([
-      opts.admin.from('profiles').select('username, display_name').eq('id', opts.reporterId).maybeSingle(),
-      opts.admin.from('profiles').select('username, display_name').eq('id', post.author_profile_id).maybeSingle(),
-      lyricBackDepth(opts.admin, post.parent_post_id),
-      opts.admin
+      admin.from('profiles').select('username, display_name').eq('id', opts.reporterId).maybeSingle(),
+      admin.from('profiles').select('username, display_name').eq('id', post.author_profile_id).maybeSingle(),
+      lyricBackDepth(admin, post.parent_post_id),
+      admin
         .from('post_reports')
         .select('id', { count: 'exact', head: true })
         .eq('post_id', opts.postId),
@@ -159,9 +165,22 @@ export async function runReportEmailJob(opts: {
     if (!result.ok) {
       return { status: 'failed', reason: result.reason }
     }
+
+    await consumeHourlyApiRateLimit({
+      route: 'report-email',
+      bucket: 'global',
+      limit: EMAILS_PER_HOUR,
+      failOpenOnDbError: true,
+    })
+
     return { status: 'sent' }
   } catch (err) {
     const name = err instanceof Error ? err.name : 'unknown_error'
     return { status: 'failed', reason: sanitizeEmailSingleLine(name, 40) }
   }
+}
+
+/** Await up to REPORT_EMAIL_TIMEOUT_MS; report API still returns ok if email fails or times out. */
+export async function runReportEmailAfterInsert(opts: ReportEmailJobInput): Promise<void> {
+  await awaitReportEmailJobWithTimeout(opts.reportId, () => runReportEmailJob(opts), REPORT_EMAIL_TIMEOUT_MS)
 }

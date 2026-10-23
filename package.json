@@ -14,7 +14,7 @@
     "test:lyric-back-row": "node --experimental-strip-types --test lib/lyric-back-thread-row.test.ts",
     "test:post-report": "node --experimental-strip-types --test lib/post-report.test.ts",
     "test:post-report-api": "node --experimental-strip-types --test lib/post-report-api.test.ts",
-    "test:report-email": "node --experimental-strip-types --test lib/report-email.test.ts",
+    "test:report-email": "node --experimental-strip-types --test lib/report-email.test.ts lib/report-email-notify.test.ts",
     "test:post-report-menu": "node --experimental-strip-types --test lib/post-report-menu.test.ts",
     "test:post-report-menu-position": "node --experimental-strip-types --test lib/post-report-menu-position.test.ts",
     "test:lyric-back-keyboard": "node --experimental-strip-types --test lib/lyric-back-keyboard.test.ts",

@@ -5,11 +5,27 @@ import fs from 'node:fs'
 describe('report email notify', () => {
   it('logs structured outcomes without addresses', () => {
     const notify = fs.readFileSync('lib/report-email-notify.ts', 'utf8')
-    assert.match(notify, /outcome=sent/)
+    const race = fs.readFileSync('lib/report-email-race.ts', 'utf8')
+    assert.match(race, /outcome=scheduled/)
+    assert.match(race, /outcome=sent/)
+    assert.match(race, /outcome=timeout/)
+    assert.match(notify, /awaitReportEmailJobWithTimeout/)
     assert.match(notify, /missing_resend_api_key/)
     assert.match(notify, /rate_limit/)
-    assert.match(notify, /outcome=\$\{outcome\.status\}|outcome=failed/)
+    assert.match(race, /outcome=\$\{outcome\.status\}|outcome=failed/)
+    assert.match(notify, /isHourlyApiRateLimitAvailable/)
+    assert.match(notify, /getSupabaseAdmin\(\)/)
     assert.doesNotMatch(notify, /console\.(info|error).*REPORT_EMAIL/)
+  })
+})
+
+describe('posts/report route success vs email', () => {
+  it('returns ok:true after email hook without branching on send outcome', () => {
+    const route = fs.readFileSync('app/api/posts/report/route.ts', 'utf8')
+    const emailIdx = route.indexOf('runReportEmailAfterInsert')
+    const okIdx = route.indexOf('ok: true')
+    assert.ok(emailIdx > -1 && okIdx > emailIdx)
+    assert.doesNotMatch(route, /if \(.*outcome.*sent/)
   })
 })
 

@@ -55,11 +55,11 @@ describe('report-email', () => {
 })
 
 describe('posts/report route email wiring', () => {
-  it('schedules email with after() so Vercel keeps the task alive', () => {
+  it('awaits bounded email work then returns ok regardless of send outcome', () => {
     const route = fs.readFileSync('app/api/posts/report/route.ts', 'utf8')
-    assert.match(route, /after\(/)
-    assert.match(route, /runReportEmailJob/)
-    assert.match(route, /logReportEmailOutcome/)
+    assert.doesNotMatch(route, /after\(/)
+    assert.match(route, /runReportEmailAfterInsert/)
+    assert.match(route, /ok: true/)
     assert.doesNotMatch(route, /TODO\(report-email\)/)
     assert.doesNotMatch(route, /enqueueReportEmail/)
   })
