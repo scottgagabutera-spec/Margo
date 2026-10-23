@@ -89,9 +89,15 @@ public/              Static assets
 
 ```bash
 npm install
+cp .env.example .env.local   # fill placeholders; never commit .env.local
 npm run dev        # localhost:3000
 npx tsc --noEmit   # must be zero errors before commit
+npm test           # unit tests (includes Lyric Back layout/keyboard checks)
+npm run build
+npm run test:e2e:lyric-back   # Playwright — LB panel keyboard/layout fixture
 ```
+
+**Env reference:** `.env.example` (Meilisearch, Suggest spend cap, rate-limit table notes). Search index setup: `docs/infra/meilisearch.md`. Supabase grant/RLS changes: `docs/supabase-grant-rls-checklist.md`.
 
 Always branch from `main`. Never commit secrets (`.env`).
 
