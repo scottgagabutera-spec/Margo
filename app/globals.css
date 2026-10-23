@@ -743,6 +743,92 @@ html[data-margo-stage-idle] .margo-stage-zone {
   opacity: 0.45;
   cursor: not-allowed;
 }
+.margo-post-report-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+.margo-post-report-menu__popover {
+  z-index: 230;
+  box-sizing: border-box;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--bg) 62%, transparent);
+  isolation: isolate;
+}
+.margo-post-report-menu__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  margin: 0;
+  border: none;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+  position: relative;
+}
+.margo-post-report-menu__row::before {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+.margo-post-report-menu__row:focus-visible {
+  outline: 2px solid var(--post-vibe-text);
+  outline-offset: 1px;
+}
+.margo-post-report-menu__row--muted {
+  color: var(--text-secondary);
+}
+.margo-post-report-menu__row:active:not(:disabled) {
+  background: color-mix(in srgb, var(--surface-2) 88%, var(--text));
+}
+.margo-post-report-menu__sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0 8px;
+}
+.margo-post-report-menu__sheet-row {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.margo-post-report-menu__sheet-row:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.margo-post-report-menu__sheet-msg {
+  margin: 8px 16px 0;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.75rem;
+  color: var(--gold);
+}
+.margo-lb-thread-row__more {
+  align-self: flex-start;
+  margin-left: 4px;
+}
 @media (max-width: 360px) {
   .margo-post-card__header {
     grid-template-columns: 36px 1fr auto;

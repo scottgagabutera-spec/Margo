@@ -12,6 +12,7 @@ import { resolveExternalListenUrl } from '@/lib/moment/listen'
 import { FeedPostActions } from '@/components/feed-post-actions'
 import { LyricBackTrackListenControl } from '@/components/lyric-back-track-listen-control'
 import { RepostSheet } from '@/components/repost-sheet'
+import { PostReportMenu } from '@/components/post-report-menu'
 import { echoToPost } from '@/lib/echo-to-post'
 
 const supabase = createClient()
@@ -148,6 +149,8 @@ export function LyricBackThreadRow({
   const { display, handle } = authorLabels(echo)
   const lbCount = echo.echoCount ?? 0
   const songHref = echo.songId ? `/song/${echo.songId}` : null
+  const isOwner = Boolean(myId && echo.authorUid && echo.authorUid === myId)
+  const showReportMenu = Boolean(myId && !isOwner)
 
   const toggleResonate = async (id: string) => {
     if (controlled) {
@@ -210,6 +213,14 @@ export function LyricBackThreadRow({
             />
           ) : null}
         </div>
+        {showReportMenu ? (
+          <PostReportMenu
+            postId={echo.id}
+            isOwner={false}
+            className="margo-lb-thread-row__more"
+            iconSize={18}
+          />
+        ) : null}
       </header>
 
       <button
