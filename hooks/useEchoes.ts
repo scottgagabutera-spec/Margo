@@ -6,6 +6,10 @@ import {
   applyEchoListDeleteOutcome,
   type LyricBackDeleteOutcome,
 } from '@/lib/lyric-back-owner-delete-local'
+import {
+  applyEchoListEditPatch,
+  type LyricBackEditPatch,
+} from '@/lib/lyric-back-owner-edit-local'
 
 const supabase = createClient()
 
@@ -196,5 +200,9 @@ export function useEchoes(postId: string | null) {
     [],
   )
 
-  return { echoes, loading, refetch, applyOwnerDeleteOutcome }
+  const applyOwnerEditOutcome = useCallback((echoId: string, patch: LyricBackEditPatch) => {
+    setEchoes((prev) => applyEchoListEditPatch(prev, echoId, patch))
+  }, [])
+
+  return { echoes, loading, refetch, applyOwnerDeleteOutcome, applyOwnerEditOutcome }
 }

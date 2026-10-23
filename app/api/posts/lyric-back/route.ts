@@ -9,10 +9,16 @@ import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { isNotificationAllowed } from '@/lib/notification-prefs'
+import { consumeHourlyApiRateLimit } from '@/lib/api-rate-limit'
+import {
+  lyricBackChildDepthAllowed,
+  lyricBackDepthCapErrorMessage,
+  lyricBackPostDepth,
+} from '@/lib/lyric-back-depth-server'
+import { parseLyricBackWriteBody } from '@/lib/lyric-back-request'
+import { moderateOwnedPostText } from '@/lib/server-post-moderation'
 
-const MAX_TEXT = 500
-const MAX_SONG = 300
-const MAX_ARTIST = 300
+const PATCHES_PER_HOUR = 30
 
 function getAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -60,54 +66,40 @@ async function notifyParentLyricBack(
   }
 }
 
-function trimExternalUrl(raw: unknown): string | null {
-  if (typeof raw !== 'string') return null
-  const s = raw.trim()
-  if (!s.startsWith('http://') && !s.startsWith('https://')) return null
-  return s
-}
-
 export async function POST(req: NextRequest) {
   const userId = await requireUserId()
   if (!userId) return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
 
-  let body: {
-    parentPostId?: string | null
-    isPrivate?: boolean
-    text?: string
-    emotion?: string
-    songId?: string | null
-    songTitle?: string
-    artistName?: string
-    artworkUrl?: string | null
-    snippetStartSec?: number | null
-    snippetEndSec?: number | null
-    externalListenUrl?: string | null
-  }
+  let json: unknown
   try {
-    body = await req.json()
+    json = await req.json()
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
-  const text = typeof body.text === 'string' ? body.text.trim() : ''
-  const songTitle = typeof body.songTitle === 'string' ? body.songTitle.trim() : ''
-  const artistName = typeof body.artistName === 'string' ? body.artistName.trim() : ''
-  const emotion = typeof body.emotion === 'string' ? body.emotion.trim() : ''
-
-  if (!text || !songTitle || !artistName || !emotion) {
-    return NextResponse.json({ error: 'Lyric, song, artist, and vibe are required.' }, { status: 400 })
+  const parsed = parseLyricBackWriteBody(json)
+  if (!parsed.ok) {
+    return NextResponse.json({ error: parsed.error }, { status: parsed.status })
   }
-  if (text.length > MAX_TEXT || songTitle.length > MAX_SONG || artistName.length > MAX_ARTIST) {
-    return NextResponse.json({ error: 'One of the fields is too long.' }, { status: 400 })
-  }
+  const {
+    text,
+    songTitle,
+    artistName,
+    emotion,
+    songId,
+    artworkUrl,
+    snippetStartSec,
+    snippetEndSec,
+    externalListenUrl,
+  } = parsed.body
 
-  const parentPostId = body.parentPostId ?? null
-  const isPrivate = body.isPrivate === true
+  const parentPostId =
+    json && typeof json === 'object' && 'parentPostId' in json
+      ? (json as { parentPostId?: string | null }).parentPostId ?? null
+      : null
+  const isPrivate =
+    json && typeof json === 'object' && (json as { isPrivate?: boolean }).isPrivate === true
   const status = isPrivate ? 'private' : 'active'
-  const artworkUrl =
-    typeof body.artworkUrl === 'string' && body.artworkUrl.trim() ? body.artworkUrl.trim() : null
-  const externalListenUrl = trimExternalUrl(body.externalListenUrl)
 
   const admin = getAdmin()
   if (!admin) return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
@@ -127,20 +119,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'You can only reply to a public Moment.' }, { status: 400 })
     }
     parentAuthorId = parent.author_profile_id ?? null
+
+    const parentDepth = await lyricBackPostDepth(admin, parentPostId)
+    if (parentDepth === null) {
+      return NextResponse.json({ error: 'The Moment you are replying to could not be found.' }, { status: 400 })
+    }
+    if (!lyricBackChildDepthAllowed(parentDepth)) {
+      return NextResponse.json({ error: lyricBackDepthCapErrorMessage() }, { status: 400 })
+    }
   }
 
   const insertRow: Record<string, unknown> = {
     text,
     emotion,
     status,
-    song_id: body.songId || null,
+    song_id: songId,
     song_title: songTitle,
     artist_name: artistName,
     artwork_url: artworkUrl,
     author_profile_id: userId,
     parent_post_id: parentPostId,
-    snippet_start_sec: body.snippetStartSec ?? null,
-    snippet_end_sec: body.snippetEndSec ?? null,
+    snippet_start_sec: snippetStartSec,
+    snippet_end_sec: snippetEndSec,
   }
   if (externalListenUrl) {
     insertRow.external_listen_url = externalListenUrl
@@ -172,6 +172,128 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ id: data.id, status: data.status })
+}
+
+export async function PATCH(req: NextRequest) {
+  const userId = await requireUserId()
+  if (!userId) return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
+
+  const limited = await consumeHourlyApiRateLimit({
+    route: 'posts/lyric-back-patch',
+    bucket: userId,
+    limit: PATCHES_PER_HOUR,
+    failOpenOnDbError: true,
+  })
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: 'Too many edits. Try again later.' },
+      { status: 429, headers: { 'Retry-After': String(limited.retryAfterSec) } },
+    )
+  }
+
+  let json: unknown
+  try {
+    json = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+  }
+
+  const postId =
+    json && typeof json === 'object' && typeof (json as { postId?: string }).postId === 'string'
+      ? (json as { postId: string }).postId
+      : ''
+  if (!postId) {
+    return NextResponse.json({ error: 'postId is required' }, { status: 400 })
+  }
+
+  const parsed = parseLyricBackWriteBody(json)
+  if (!parsed.ok) {
+    return NextResponse.json({ error: parsed.error }, { status: parsed.status })
+  }
+
+  let admin
+  try {
+    admin = getSupabaseAdmin()
+  } catch {
+    return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
+  }
+
+  const { data: row, error: loadErr } = await admin
+    .from('posts')
+    .select('id, author_profile_id, parent_post_id, content_removed_at, status')
+    .eq('id', postId)
+    .maybeSingle()
+
+  if (loadErr || !row) {
+    return NextResponse.json({ error: 'This Lyric Back could not be found.' }, { status: 404 })
+  }
+  if (row.author_profile_id !== userId) {
+    return NextResponse.json({ error: 'You can only edit your own Lyric Back.' }, { status: 403 })
+  }
+  if (row.content_removed_at) {
+    return NextResponse.json({ error: 'This Lyric Back can no longer be edited.' }, { status: 400 })
+  }
+  if (!row.parent_post_id) {
+    return NextResponse.json({ error: 'Only Lyric Backs can be edited here.' }, { status: 400 })
+  }
+
+  const {
+    text,
+    songTitle,
+    artistName,
+    emotion,
+    songId,
+    artworkUrl,
+    snippetStartSec,
+    snippetEndSec,
+    externalListenUrl,
+  } = parsed.body
+
+  await moderateOwnedPostText({ text, postId, authorId: userId })
+
+  const updateRow: Record<string, unknown> = {
+    text,
+    emotion,
+    song_id: songId,
+    song_title: songTitle,
+    artist_name: artistName,
+    artwork_url: artworkUrl,
+    snippet_start_sec: snippetStartSec,
+    snippet_end_sec: snippetEndSec,
+    external_listen_url: externalListenUrl,
+  }
+  if (!externalListenUrl) {
+    updateRow.external_listen_url = null
+  }
+
+  let { error: updateErr } = await admin.from('posts').update(updateRow).eq('id', postId)
+
+  if (updateErr && externalListenUrl && /external_listen_url/.test(updateErr.message || '')) {
+    delete updateRow.external_listen_url
+    const retry = await admin.from('posts').update(updateRow).eq('id', postId)
+    updateErr = retry.error
+  }
+
+  if (updateErr) {
+    console.error('[posts/lyric-back PATCH] failed:', updateErr)
+    return NextResponse.json(
+      { error: 'Could not save your Lyric Back. Please try again.' },
+      { status: 500 },
+    )
+  }
+
+  return NextResponse.json({
+    id: postId,
+    text,
+    emotion,
+    songTitle,
+    artistName,
+    songId,
+    snippetStartSec,
+    snippetEndSec,
+    externalListenUrl,
+    artworkUrl,
+  })
 }
 
 export async function DELETE(req: NextRequest) {

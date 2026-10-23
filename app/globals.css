@@ -957,6 +957,53 @@ html[data-margo-stage-idle] .margo-stage-zone {
   opacity: 0.6;
   cursor: not-allowed;
 }
+.margo-lb-thread-row--editing {
+  padding-bottom: 8px;
+}
+.margo-lb-thread-row__edit-cancel {
+  min-height: 44px;
+  padding: 0 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.margo-lb-thread-row__edit-vibes {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 0 12px 8px;
+  -webkit-overflow-scrolling: touch;
+}
+.margo-lb-thread-row__edit-vibe {
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.margo-lb-thread-row__edit-vibe--on {
+  border-color: var(--gold);
+  color: var(--text);
+}
+.margo-lb-thread-row--editing .margo-post-card__lb-compose--panel {
+  margin: 0 12px;
+}
+.margo-post-card__lb-compose-saving {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
 .margo-lb-thread-row__more {
   align-self: flex-start;
   margin-left: 4px;
