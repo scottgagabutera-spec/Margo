@@ -40,6 +40,8 @@
     "test:e2e:lb-edit": "playwright test tests/e2e/lyric-back-edit.spec.ts",
     "test:e2e:feed-moment-edit": "playwright test tests/e2e/feed-moment-inline-edit.spec.ts",
     "test:e2e:post-thread-back": "playwright test tests/e2e/post-thread-back-nav.spec.ts",
+    "test:e2e:post-thread-open": "playwright test tests/e2e/post-thread-open-nav.spec.ts",
+    "test:e2e:delete-ui-visual": "playwright test tests/e2e/delete-ui-visual.spec.ts",
     "test:in-app-nav-stack": "node --experimental-strip-types --test lib/in-app-nav-stack.test.ts",
     "test:post-edit-child-lock": "node --experimental-strip-types --test lib/post-edit-child-lock.test.ts",
     "test": "npm run test:playback-segments && npm run test:curated-moments && npm run test:post-card-lyric && npm run test:post-card-lyric-uniform && npm run test:lyric-back-row && npm run test:post-report && npm run test:post-report-api && npm run test:report-email && npm run test:post-report-menu && npm run test:post-report-menu-position && npm run test:lyric-back-keyboard && npm run test:lyric-back-scroll-metrics && npm run test:compact-artwork && npm run test:repost-count && npm run test:feed-content-tab && npm run test:shorts-shelf-rotation && npm run test:shorts-looks && npm run test:lyric-back-delete-shell && npm run test:lyric-back-owner-delete-local && npm run test:lyric-back-owner-edit-local && npm run test:lyric-back-depth-server && npm run test:lyric-back-request && npm run test:lyric-back-api-route && npm run test:lyric-back-edit-search && npm run test:in-app-nav-stack && npm run test:post-edit-child-lock"

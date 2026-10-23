@@ -22,7 +22,7 @@ import {
 import type { LyricBackEditSavedPatch } from '@/lib/lyric-back-edit-saved'
 import { emotionToVibeLabel, vibeLabelToEmotion } from '@/lib/moment/vibe'
 import { POST_EDIT_CHILD_LOCK_MESSAGE } from '@/lib/post-edit-child-lock'
-import { PostFocusedDeleteDialog } from '@/components/post-focused-delete-dialog'
+import { LyricBackDeleteSheet } from '@/components/lyric-back-delete-sheet'
 import { echoToPost } from '@/lib/echo-to-post'
 import { getVibeTheme, vibeThemeStyleVars } from '@/lib/vibe-theme'
 
@@ -146,7 +146,7 @@ export function LyricBackThreadRow({
   const composeRef = useRef<LyricBackPanelComposeHandle>(null)
   const rowRef = useRef<HTMLElement>(null)
   const [editPosting, setEditPosting] = useState(false)
-  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteSheetOpen, setDeleteSheetOpen] = useState(false)
   const lockSongAndLine = (echo.echoCount ?? 0) > 0
   const [editOpen, setEditOpen] = useState(false)
   const initialVibeLabel =
@@ -417,7 +417,7 @@ export function LyricBackThreadRow({
             showOwnerEdit
             onOwnerEdit={() => setEditOpen(true)}
             showOwnerDelete
-            onOwnerDelete={() => setDeleteOpen(true)}
+            onOwnerDelete={() => setDeleteSheetOpen(true)}
             className="margo-lb-thread-row__more"
             iconSize={18}
             reportPresentation="inline"
@@ -485,11 +485,6 @@ export function LyricBackThreadRow({
         data-report-inline-host={echo.id}
         data-no-card-nav
       />
-      <div
-        className="margo-post-delete-inline-host"
-        data-delete-inline-host={echo.id}
-        data-no-card-nav
-      />
       <FeedPostActions
         variant="compact"
         postId={echo.id}
@@ -522,15 +517,11 @@ export function LyricBackThreadRow({
         />
       ) : null}
       {showOwnerMenu ? (
-        <PostFocusedDeleteDialog
-          open={deleteOpen}
-          onOpenChange={setDeleteOpen}
-          anchorRef={rowRef}
+        <LyricBackDeleteSheet
+          open={deleteSheetOpen}
+          onOpenChange={setDeleteSheetOpen}
           postId={echo.id}
-          target="lyric-back"
-          title="Delete this Lyric Back?"
-          body="This can't be undone. If others replied below, the row may stay as a shell."
-          onDeleted={(outcome) => onOwnerDeleted?.(echo.id, outcome ?? 'deleted')}
+          onDeleted={(outcome) => onOwnerDeleted?.(echo.id, outcome)}
         />
       ) : null}
     </article>

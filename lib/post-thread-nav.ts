@@ -24,7 +24,8 @@ export function navigateToPostThread(router: AppRouterInstance, postId: string) 
     window.history.back()
     return
   }
-  router.push(href)
+  markNextNavAsReplace()
+  router.replace(href)
 }
 
 /** Chrome Back on /post/* — one step, never re-push parent via Link. */

@@ -6,7 +6,7 @@ import { ChevronRightIcon } from '@/components/icons'
 import { RepostSheet } from '@/components/repost-sheet'
 import type { Post } from '@/hooks/usePosts'
 import { PostMomentInlineEdit } from '@/components/post-moment-inline-edit'
-import { PostFocusedDeleteDialog } from '@/components/post-focused-delete-dialog'
+import { DeleteMomentDialog } from '@/components/delete-moment-dialog'
 import { warmUrl } from '@/lib/audio-engine'
 import { resolveExternalListenUrl } from '@/lib/moment/listen'
 import {
@@ -636,12 +636,6 @@ export function PostCard({
         data-report-inline-host={post.id}
         data-no-card-nav
       />
-      <div
-        className="margo-post-delete-inline-host"
-        data-delete-inline-host={post.id}
-        data-no-card-nav
-      />
-
       <PostMomentBody post={post} atmosphereRooms={atmosphereRooms} />
 
       {lyricBackAllowed && !threadDetail ? (
@@ -711,12 +705,10 @@ export function PostCard({
       ) : null}
 
       {isOwner ? (
-        <PostFocusedDeleteDialog
+        <DeleteMomentDialog
           open={deleteOpen}
           onOpenChange={setDeleteOpen}
-          anchorRef={cardRef}
           postId={post.id}
-          target="moment"
           onDeleted={() => setDeletedLocally(true)}
         />
       ) : null}
