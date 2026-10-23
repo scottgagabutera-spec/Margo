@@ -1007,7 +1007,8 @@ html[data-margo-stage-idle] .margo-stage-zone {
   border-radius: 0 0 16px 16px;
   display: flex;
   flex-direction: column;
-  max-height: min(520px, calc(100dvh - var(--nav-height, 72px) - var(--margo-page-bottom, 88px) - 24px));
+  max-height: calc(100vh - var(--nav-height, 72px) - var(--margo-feed-tab-bar-h, 40px) - var(--margo-page-bottom, 88px) - 8px);
+  max-height: calc(100dvh - var(--nav-height, 72px) - var(--margo-feed-tab-bar-h, 40px) - var(--margo-page-bottom, 88px) - 8px);
   min-height: 0;
   box-sizing: border-box;
   position: relative;
@@ -1069,6 +1070,10 @@ html[data-margo-stage-idle] .margo-stage-zone {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  position: relative;
+  z-index: 5;
+  background: var(--surface-2);
+  overflow-x: hidden;
 }
 .margo-lb-focus__tabs {
   display: flex;
@@ -1298,10 +1303,8 @@ html[data-margo-stage-idle] .margo-stage-zone {
   flex-direction: column;
   min-height: 0;
   height: auto;
-  max-height: var(
-    --lb-panel-vvh,
-    min(520px, calc(100dvh - var(--nav-height, 72px) - var(--margo-page-bottom, 88px) - 24px))
-  );
+  max-height: var(--lb-panel-vvh, calc(100vh - var(--nav-height, 72px) - var(--margo-feed-tab-bar-h, 40px) - var(--margo-page-bottom, 88px) - 8px));
+  max-height: var(--lb-panel-vvh, calc(100dvh - var(--nav-height, 72px) - var(--margo-feed-tab-bar-h, 40px) - var(--margo-page-bottom, 88px) - 8px));
   overflow: hidden;
 }
 html.margo-keyboard-open .margo-mobile-tabbar {
@@ -1315,7 +1318,8 @@ html.margo-keyboard-open .margo-mobile-tabbar {
   flex-direction: column;
   min-height: 0;
   min-width: 0;
-  max-height: min(70dvh, 640px);
+  max-height: var(--lb-panel-vvh, calc(100vh - var(--nav-height, 72px) - var(--margo-page-bottom, 88px) - 16px));
+  max-height: var(--lb-panel-vvh, calc(100dvh - var(--nav-height, 72px) - var(--margo-page-bottom, 88px) - 16px));
   overflow: hidden;
   overscroll-behavior: contain;
   box-sizing: border-box;
@@ -3177,7 +3181,8 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   background: transparent;
 }
 .margo-post-card__lb-panel--thread-focus {
-  max-height: var(--lb-panel-vvh, min(640px, 85vh));
+  max-height: var(--lb-panel-vvh, calc(100vh - var(--nav-height, 72px) - var(--margo-feed-tab-bar-h, 40px) - var(--margo-page-bottom, 88px) - 8px));
+  max-height: var(--lb-panel-vvh, calc(100dvh - var(--nav-height, 72px) - var(--margo-feed-tab-bar-h, 40px) - var(--margo-page-bottom, 88px) - 8px));
 }
 .margo-post-card__lb-panel--thread-focus .margo-post-card__lb-focused-anchor {
   margin-left: calc(-1 * var(--margo-post-card-pad));

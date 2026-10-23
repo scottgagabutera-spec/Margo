@@ -66,10 +66,24 @@ export function restoreFeedScrollSnapshot(snapshot: FeedScrollSnapshot | null): 
   snapshot.pane.scrollTop = snapshot.scrollTop
 }
 
+/** scrollTop that pushes the nested anchor fully above the list top. */
+export function lyricBackNestedAnchorScrollTop(input: {
+  scrollTop: number
+  anchorBottom: number
+  scrollerTop: number
+}): number {
+  return Math.max(0, Math.round(input.scrollTop + input.anchorBottom - input.scrollerTop))
+}
+
+function findLyricBackPin(root: HTMLElement): HTMLElement | null {
+  const el = root.querySelector('[data-lb-pin="1"], .margo-lb-focus__pin')
+  return el instanceof HTMLElement ? el : null
+}
+
 /** Scroll the feed pane so the panel bar sits under Lyrics/Shorts (and vibe bar when shown). */
 export function scrollFeedLyricBackPanelIntoView(panel: HTMLElement | null): boolean {
   if (!panel || typeof document === 'undefined') return false
-  const bar = panel.querySelector('.margo-lb-focus__bar')
+  const bar = findLyricBackPin(panel)
   if (!(bar instanceof HTMLElement)) return false
   const barRect = bar.getBoundingClientRect()
   if (barRect.width === 0 && barRect.height === 0) return false
@@ -90,7 +104,7 @@ export function scrollPostCardTopIntoView(card: HTMLElement | null): void {
 /** Post page: one window scroll so the Lyric Back bar sits under the nav. */
 export function scrollPostLyricBackSectionIntoView(section: HTMLElement | null): boolean {
   if (!section || typeof window === 'undefined') return false
-  const bar = section.querySelector('.margo-lb-focus__bar')
+  const bar = findLyricBackPin(section)
   if (!(bar instanceof HTMLElement)) return false
   const barRect = bar.getBoundingClientRect()
   if (barRect.width === 0 && barRect.height === 0) return false

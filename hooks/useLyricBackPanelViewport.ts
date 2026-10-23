@@ -25,13 +25,6 @@ function isPanelTextField(panel: HTMLElement, el: EventTarget | null): boolean {
   return el.isContentEditable
 }
 
-function setLyricBackKeyboardChrome(active: boolean): void {
-  const root = document.documentElement
-  root.classList.toggle('margo-keyboard-open', active)
-  if (active) root.setAttribute('data-margo-keyboard', '1')
-  else root.removeAttribute('data-margo-keyboard')
-}
-
 function clearPanelKeyboardStyle(el: HTMLElement): void {
   el.style.removeProperty('--lb-panel-vvh')
   el.style.removeProperty('max-height')
@@ -70,8 +63,6 @@ export function useLyricBackPanelViewport(
         offsetTop,
       }) > LYRIC_BACK_KEYBOARD_THRESHOLD_PX
 
-      setLyricBackKeyboardChrome(keyboardOpen)
-
       if (!keyboardOpen) {
         clearPanelKeyboardStyle(el)
         return
@@ -97,9 +88,12 @@ export function useLyricBackPanelViewport(
 
     update()
 
-    const onPageHide = () => clearLyricBackKeyboardChrome()
+    const onPageHide = () => {
+      const el = panelRef.current
+      if (el) clearPanelKeyboardStyle(el)
+    }
     const onVis = () => {
-      if (document.visibilityState === 'hidden') clearLyricBackKeyboardChrome()
+      if (document.visibilityState === 'hidden') onPageHide()
       else update()
     }
     const onFocusIn = (ev: FocusEvent) => {
@@ -140,7 +134,6 @@ export function useLyricBackPanelViewport(
       document.removeEventListener('visibilitychange', onVis)
       document.removeEventListener('focusin', onFocusIn)
       document.removeEventListener('focusout', onFocusOut)
-      clearLyricBackKeyboardChrome()
       const el = panelRef.current
       if (el) clearPanelKeyboardStyle(el)
     }

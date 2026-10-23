@@ -11,7 +11,7 @@ const FIXTURE = String.raw`<!DOCTYPE html>
   .pane { width: 100%; overflow-x: hidden; overflow-y: auto; height: 100vh; }
   .margo-post-card__lb-panel {
     box-sizing: border-box; width: 100%; margin: 0; padding: 8px 12px;
-    background: #222; display: flex; flex-direction: column; max-height: 520px;
+    background: #222; display: flex; flex-direction: column; max-height: calc(100dvh - 208px);
     position: relative; z-index: 12;
   }
   .margo-lb-focus { --lb-pin-gap: 8px; display: flex; flex-direction: column; min-height: 0; flex: 1; overflow: hidden; }
@@ -77,6 +77,7 @@ const FIXTURE = String.raw`<!DOCTYPE html>
         </div>
       </div>
       <div class="margo-lb-focus__scroll" id="list">
+        <div id="anchor" style="height:180px">Anchor reply being answered</div>
         <div class="row" data-lb-first-row="1" id="first">First reply</div>
         <div class="row">Two</div>
         <div class="row">Three</div>
@@ -191,6 +192,24 @@ for (const width of [360, 390, 430]) {
     test('pin, results, and external lyric field stay usable', async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 844 })
       await page.setContent(FIXTURE, { waitUntil: 'domcontentloaded' })
+
+      const panelH = await page.evaluate(() => Math.round(document.getElementById('panel')!.getBoundingClientRect().height))
+      expect(panelH).toBeGreaterThanOrEqual(630)
+
+      // Nested entry: anchor pushed fully above the list, first child at top.
+      await page.evaluate(() => {
+        const list = document.getElementById('list')!
+        const anchor = document.getElementById('anchor')!
+        list.scrollTop = list.scrollTop + anchor.getBoundingClientRect().bottom - list.getBoundingClientRect().top
+      })
+      const nested = await page.evaluate(() => {
+        const list = document.getElementById('list')!.getBoundingClientRect()
+        const anchor = document.getElementById('anchor')!.getBoundingClientRect()
+        const first = document.getElementById('first')!.getBoundingClientRect()
+        return { anchorBottom: anchor.bottom, listTop: list.top, firstTop: first.top }
+      })
+      expect(nested.anchorBottom).toBeLessThanOrEqual(nested.listTop + 1)
+      expect(nested.firstTop).toBeGreaterThanOrEqual(nested.listTop)
 
       const before = await metrics(page)
       expect(before.barH).toBeLessThanOrEqual(80)

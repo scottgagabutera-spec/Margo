@@ -13,6 +13,7 @@ import {
 import {
   feedLyricBackHeadroomTop,
   feedLyricBackPanelBarScrollDelta,
+  lyricBackNestedAnchorScrollTop,
 } from './lyric-back-panel-scroll.ts'
 import {
   LYRIC_BACK_DEPTH_CAP,
@@ -279,8 +280,10 @@ describe('lyric back keyboard wiring', () => {
     assert.doesNotMatch(css, /margo-lb-thread-row--step-1 \{ margin-left: 12px/)
   })
 
-  it('viewport hook caps height in flow and clears data-margo-keyboard', () => {
+  it('viewport hook caps height in flow without changing page chrome', () => {
     const hook = fs.readFileSync('hooks/useLyricBackPanelViewport.ts', 'utf8')
+    const scroll = fs.readFileSync('lib/lyric-back-panel-scroll.ts', 'utf8')
+    const css = fs.readFileSync('app/globals.css', 'utf8')
     assert.match(hook, /addEventListener\('resize', update\)/)
     assert.match(hook, /addEventListener\('scroll', update\)/)
     assert.match(hook, /lyricBackPinnedPanelCapPx/)
@@ -295,9 +298,26 @@ describe('lyric back keyboard wiring', () => {
     assert.match(hook, /addEventListener\('focusout', onFocusOut\)/)
     assert.doesNotMatch(hook, /addEventListener\('focusout', onFocus\)/)
     assert.doesNotMatch(hook, /const onFocusOut[\s\S]*\.focus\(/)
-    assert.match(hook, /removeAttribute\('data-margo-keyboard'\)/)
-    assert.match(hook, /setAttribute\('data-margo-keyboard', '1'\)/)
+    assert.doesNotMatch(hook, /setAttribute\('data-margo-keyboard', '1'\)/)
+    assert.doesNotMatch(hook, /classList\.toggle\('margo-keyboard-open'/)
+    assert.match(hook, /setAttribute\('data-lb-keyboard', '1'\)/)
     assert.match(hook, /pagehide/)
+    assert.match(scroll, /data-lb-pin/)
+    assert.doesNotMatch(scroll, /margo-lb-focus__bar/)
+    assert.match(scroll, /lyricBackNestedAnchorScrollTop/)
+    assert.doesNotMatch(css, /min\(520px/)
+    assert.match(css, /100dvh - var\(--nav-height, 72px\) - var\(--margo-feed-tab-bar-h, 40px\)/)
+  })
+
+  it('pushes the nested anchor above the list on first entry', () => {
+    assert.equal(
+      lyricBackNestedAnchorScrollTop({ scrollTop: 0, anchorBottom: 420, scrollerTop: 200 }),
+      220,
+    )
+    assert.equal(
+      lyricBackNestedAnchorScrollTop({ scrollTop: 40, anchorBottom: 200, scrollerTop: 200 }),
+      40,
+    )
   })
 
   it('panel dropdown uses visualViewport offsetTop + height', () => {

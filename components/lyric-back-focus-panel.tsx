@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import {
   captureFeedScrollSnapshot,
+  lyricBackNestedAnchorScrollTop,
   restoreFeedScrollSnapshot,
   scrollFeedLyricBackPanelIntoView,
   type FeedScrollSnapshot,
@@ -271,13 +272,29 @@ export function LyricBackFocusBody({
 
     if (pendingRestore.current !== focusId) return
     restoringScroll.current = true
-    el.scrollTop = scrollMemory.current.get(focusId) ?? 0
+    const saved = scrollMemory.current.get(focusId)
+    if (saved != null) {
+      el.scrollTop = saved
+    } else if (isNested) {
+      const anchor = el.querySelector('[data-lb-anchor="1"]')
+      if (anchor instanceof HTMLElement) {
+        el.scrollTop = lyricBackNestedAnchorScrollTop({
+          scrollTop: el.scrollTop,
+          anchorBottom: anchor.getBoundingClientRect().bottom,
+          scrollerTop: el.getBoundingClientRect().top,
+        })
+      } else {
+        el.scrollTop = 0
+      }
+    } else {
+      el.scrollTop = 0
+    }
     scrollMemory.current.set(focusId, el.scrollTop)
     pendingRestore.current = null
     requestAnimationFrame(() => {
       restoringScroll.current = false
     })
-  }, [echoes, echoesReady, focusId])
+  }, [echoes, echoesReady, focusId, isNested])
 
   const focusRow = useCallback((echo: Echo) => {
     rememberScroll(focusId)
