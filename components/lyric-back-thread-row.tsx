@@ -13,6 +13,7 @@ import { FeedPostActions } from '@/components/feed-post-actions'
 import { LyricBackTrackListenControl } from '@/components/lyric-back-track-listen-control'
 import { RepostSheet } from '@/components/repost-sheet'
 import { PostReportMenu } from '@/components/post-report-menu'
+import { LyricBackDeleteSheet } from '@/components/lyric-back-delete-sheet'
 import { echoToPost } from '@/lib/echo-to-post'
 
 const supabase = createClient()
@@ -39,6 +40,7 @@ export type LyricBackThreadRowProps = {
   lyricBackSessionActive?: boolean
   /** 0–3. Deeper threads stay at step 3. */
   visualStep?: 0 | 1 | 2 | 3
+  onOwnerDeleted?: (echoId: string, outcome: 'deleted' | 'shelled') => void
 }
 
 function profileHref(echo: Echo): string | null {
@@ -107,11 +109,14 @@ export function LyricBackThreadRow({
   hideLyricBackAction = false,
   lyricBackSessionActive = false,
   visualStep = 0,
+  onOwnerDeleted,
 }: LyricBackThreadRowProps) {
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
   const myId = user?.id ?? null
   const [repostSheetOpen, setRepostSheetOpen] = useState(false)
+  const [deleteSheetOpen, setDeleteSheetOpen] = useState(false)
+  const contentRemoved = Boolean(echo.contentRemovedAt)
 
   const [resonatedLocal, setResonatedLocal] = useState(
     () => Boolean(myId && echo.resonates?.[myId]),
@@ -150,7 +155,8 @@ export function LyricBackThreadRow({
   const lbCount = echo.echoCount ?? 0
   const songHref = echo.songId ? `/song/${echo.songId}` : null
   const isOwner = Boolean(myId && echo.authorUid && echo.authorUid === myId)
-  const showReportMenu = Boolean(myId && !isOwner)
+  const showReportMenu = Boolean(myId && !isOwner && !contentRemoved)
+  const showOwnerMenu = Boolean(myId && isOwner && !contentRemoved)
 
   const toggleResonate = async (id: string) => {
     if (controlled) {
@@ -182,6 +188,70 @@ export function LyricBackThreadRow({
     !isAnchor && tone === 'reply' ? 'margo-lb-thread-row--reply' : '',
     step > 0 ? `margo-lb-thread-row--step-${step}` : '',
   ].filter(Boolean).join(' ')
+
+  const shellLbAllowed =
+    contentRemoved && !hideLyricBackAction && Boolean(onLyricBack)
+
+  if (contentRemoved) {
+    return (
+      <article
+        className={`${rowClass} margo-lb-thread-row--content-removed`}
+        data-echo-id={echo.id}
+        data-content-removed="1"
+      >
+        {isAnchor ? (
+          <p className="margo-lb-thread-row__badge">This Lyric Back</p>
+        ) : null}
+        <header className="margo-lb-thread-row__header">
+          <div
+            className="margo-lb-thread-row__avatar margo-lb-thread-row__avatar--removed"
+            aria-hidden
+          />
+          <div className="margo-lb-thread-row__header-text">
+            {echo.timestamp ? (
+              <RelativeTime
+                date={echo.timestamp}
+                className="margo-lb-thread-row__time"
+              />
+            ) : null}
+          </div>
+          {myId ? (
+            <PostReportMenu
+              postId={echo.id}
+              isOwner={false}
+              inactive
+              className="margo-lb-thread-row__more"
+              iconSize={18}
+            />
+          ) : null}
+        </header>
+        <p className="margo-lb-thread-row__lyric margo-lb-thread-row__lyric--removed">
+          Unavailable
+        </p>
+        <FeedPostActions
+          variant="compact"
+          postId={echo.id}
+          resonated={resonated}
+          resonateCount={resonateCount}
+          onResonate={() => {}}
+          secondaryActionsInactive
+          lyricBackAllowed={shellLbAllowed}
+          lyricBackOpen={false}
+          lyricBackSessionActive={lyricBackSessionActive}
+          echoCount={lbCount}
+          onLyricBack={
+            shellLbAllowed && onLyricBack
+              ? () => onLyricBack(echo.id)
+              : undefined
+          }
+          onCard={() => {}}
+          replayed={replayed}
+          replayCount={replayCount}
+          onReplayTap={onReplay ? () => {} : undefined}
+        />
+      </article>
+    )
+  }
 
   return (
     <article className={rowClass} data-echo-id={echo.id}>
@@ -217,6 +287,16 @@ export function LyricBackThreadRow({
           <PostReportMenu
             postId={echo.id}
             isOwner={false}
+            className="margo-lb-thread-row__more"
+            iconSize={18}
+          />
+        ) : null}
+        {showOwnerMenu ? (
+          <PostReportMenu
+            postId={echo.id}
+            isOwner
+            showOwnerDelete
+            onOwnerDelete={() => setDeleteSheetOpen(true)}
             className="margo-lb-thread-row__more"
             iconSize={18}
           />
@@ -307,6 +387,14 @@ export function LyricBackThreadRow({
           onRepost={onReplay}
           onRepostWithNote={(id, note) => onQuoteReplay?.(id, note)}
           onUndo={(id) => onUndoReplay?.(id)}
+        />
+      ) : null}
+      {showOwnerMenu ? (
+        <LyricBackDeleteSheet
+          open={deleteSheetOpen}
+          onOpenChange={setDeleteSheetOpen}
+          postId={echo.id}
+          onDeleted={(outcome) => onOwnerDeleted?.(echo.id, outcome)}
         />
       ) : null}
     </article>

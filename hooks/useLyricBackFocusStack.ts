@@ -8,6 +8,11 @@ import {
   lyricBackVisualStep,
   reduceLyricBackStack,
 } from '@/lib/lyric-back-depth'
+import {
+  decrementParentEchoCountInStack,
+  patchStackAfterOwnerDelete,
+  type LyricBackDeleteOutcome,
+} from '@/lib/lyric-back-owner-delete-local'
 
 /** A second Back from the same tap is ignored until this elapses. */
 const BACK_GESTURE_LOCK_MS = 400
@@ -177,6 +182,19 @@ export function useLyricBackFocusStack(
     }
   }, [historyOn, rootPostId, commit, syncToDepth])
 
+  const applyOwnerDeleteOutcome = useCallback(
+    (echoId: string, outcome: LyricBackDeleteOutcome) => {
+      const prev = stackRef.current
+      const idx = prev.findIndex((e) => e.id === echoId)
+      let next = patchStackAfterOwnerDelete(prev, echoId, outcome)
+      if (outcome === 'deleted' && idx === -1 && prev.length > 0) {
+        next = decrementParentEchoCountInStack(prev)
+      }
+      if (next !== prev) commit(next)
+    },
+    [commit],
+  )
+
   const requestBack = useCallback(() => {
     if (stackRef.current.length === 0) return
     if (backGuardRef.current) return
@@ -208,5 +226,6 @@ export function useLyricBackFocusStack(
     resetStack,
     collapseToRoot,
     navDirectionRef,
+    applyOwnerDeleteOutcome,
   }
 }

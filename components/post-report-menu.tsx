@@ -37,6 +37,8 @@ export type PostReportMenuProps = {
   onOwnerDelete?: () => void
   className?: string
   iconSize?: number
+  /** Visible but inert (e.g. content-removed shell row). */
+  inactive?: boolean
 }
 
 function ReportRowIcon() {
@@ -96,6 +98,7 @@ export function PostReportMenu({
   onOwnerDelete,
   className = '',
   iconSize = 20,
+  inactive = false,
 }: PostReportMenuProps) {
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
@@ -231,6 +234,26 @@ export function PostReportMenu({
       window.removeEventListener('scroll', onScroll, true)
     }
   }, [menuOpen, closeMenu])
+
+  if (inactive) {
+    return (
+      <div
+        className={`margo-post-report-menu${className ? ` ${className}` : ''}`}
+        data-no-card-nav
+      >
+        <button
+          type="button"
+          className="margo-post-report-menu__trigger margo-post-card__icon-btn margo-post-report-menu__trigger--inactive"
+          aria-label="More actions"
+          aria-hidden
+          tabIndex={-1}
+          disabled
+        >
+          <FeedIconMore size={iconSize} />
+        </button>
+      </div>
+    )
+  }
 
   if (itemCount === 0) return null
 

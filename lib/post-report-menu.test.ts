@@ -20,12 +20,15 @@ describe('PostReportMenu', () => {
     assert.match(card, /showOwnerDelete/)
   })
 
-  it('LyricBackThreadRow shows report menu only for signed-in non-owners', () => {
+  it('LyricBackThreadRow shows report menu for non-owners and delete for owners (not on shells)', () => {
     const row = fs.readFileSync('components/lyric-back-thread-row.tsx', 'utf8')
     assert.match(row, /showReportMenu/)
+    assert.match(row, /showOwnerMenu/)
     assert.match(row, /PostReportMenu/)
-    assert.match(row, /myId && !isOwner/)
-    assert.doesNotMatch(row, /showOwnerDelete/)
+    assert.match(row, /myId && !isOwner && !contentRemoved/)
+    assert.match(row, /showOwnerDelete/)
+    assert.match(row, /LyricBackDeleteSheet/)
+    assert.match(row, /contentRemoved/)
   })
 })
 

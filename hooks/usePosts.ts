@@ -46,6 +46,8 @@ export interface Post {
   lines?: PostLine[]
   /** Immediate parent Lyric Back / Moment. Null on top-level feed posts. */
   parentPostId?: string | null
+  /** Lyric Back shell — content erased in DB; row kept for thread structure. */
+  contentRemovedAt?: string | null
 }
 
 export type UsePostsOptions = {

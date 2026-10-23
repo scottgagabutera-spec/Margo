@@ -36,6 +36,11 @@ export default function PostDetailPage() {
   const depthOffset = post?.parentPostId ? ancestors.length : 0
 
   const [composeOpen, setComposeOpen] = useState(false)
+  const [replyCountDelta, setReplyCountDelta] = useState(0)
+
+  useEffect(() => {
+    setReplyCountDelta(0)
+  }, [post?.id])
 
   const {
     stackApi,
@@ -191,7 +196,7 @@ export default function PostDetailPage() {
     resonateCount: resonateCounts[echo.id] ?? echo.resonateCount ?? 0,
   }), [countFor, detailReplayCount, openComposer, post?.id, quoteFor, quoteRepost, replayed, repost, resonateCounts, resonated, router, undoRepost])
 
-  const echoCount = post?.replies ?? 0
+  const echoCount = Math.max(0, (post?.replies ?? 0) + replyCountDelta)
   const showLbSection = Boolean(
     post?.id
     && (composeOpen || echoCount > 0 || isNested),
@@ -228,8 +233,14 @@ export default function PostDetailPage() {
             <section className="margo-post-thread-ancestors">
               {ancestors.slice(1).map((ancestor) => (
                 <Link key={ancestor.id} href={`/post/${ancestor.id}`} className="margo-post-thread-ancestor-link">
-                  <span className="margo-post-thread-ancestor-user">@{ancestor.username?.replace(/^@/, '') || 'user'}</span>
-                  <span className="margo-post-thread-ancestor-lyric">&ldquo;{ancestor.text}&rdquo;</span>
+                  {ancestor.contentRemovedAt ? (
+                    <span className="margo-post-thread-ancestor-lyric">Unavailable</span>
+                  ) : (
+                    <>
+                      <span className="margo-post-thread-ancestor-user">@{ancestor.username?.replace(/^@/, '') || 'user'}</span>
+                      <span className="margo-post-thread-ancestor-lyric">&ldquo;{ancestor.text}&rdquo;</span>
+                    </>
+                  )}
                 </Link>
               ))}
             </section>
@@ -256,6 +267,7 @@ export default function PostDetailPage() {
                   snippetEnd: post.snippetEnd ?? null,
                   audioUrl: post.audioUrl ?? null,
                   artwork: post.knowledge?.artwork ?? null,
+                  contentRemovedAt: post.contentRemovedAt ?? null,
                 }}
                 isAnchor
                 tone="anchor"
@@ -314,6 +326,9 @@ export default function PostDetailPage() {
               onFocusEcho={(echo) => openComposer(echo.id, echo)}
               onBackOneLevel={handleBackOneLevel}
               stackApi={stackApi}
+              onEchoCountDelta={(delta) => {
+                setReplyCountDelta((d) => Math.max(0, d + delta))
+              }}
             />
           ) : null}
         </div>
