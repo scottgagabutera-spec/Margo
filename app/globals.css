@@ -957,6 +957,74 @@ html[data-margo-stage-idle] .margo-stage-zone {
   opacity: 0.6;
   cursor: not-allowed;
 }
+.margo-lb-edit-layer {
+  overflow: hidden;
+  background: var(--surface, var(--bg));
+}
+.margo-lb-edit-layer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px 8px;
+  flex-shrink: 0;
+}
+.margo-lb-edit-layer__title {
+  margin: 0;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.margo-lb-edit-layer__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  margin: -8px -8px -8px 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+.margo-lb-edit-layer__vibes {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 0 16px 10px;
+  flex-shrink: 0;
+  -webkit-overflow-scrolling: touch;
+}
+.margo-lb-edit-layer__vibe {
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.margo-lb-edit-layer__vibe--on {
+  border-color: var(--gold);
+  color: var(--text);
+}
+.margo-lb-edit-layer__compose {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.margo-post-card__lb-compose-saving {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
 .margo-lb-thread-row__more {
   align-self: flex-start;
   margin-left: 4px;

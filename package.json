@@ -32,7 +32,12 @@
     "test:shorts-looks": "node --experimental-strip-types --test lib/shorts-looks.test.ts",
     "test:lyric-back-delete-shell": "node --experimental-strip-types --test lib/lyric-back-delete-shell.test.ts lib/post-content-removed-audit.test.ts",
     "test:lyric-back-owner-delete-local": "node --experimental-strip-types --test lib/lyric-back-owner-delete-local.test.ts",
-    "test": "npm run test:playback-segments && npm run test:curated-moments && npm run test:post-card-lyric && npm run test:post-card-lyric-uniform && npm run test:lyric-back-row && npm run test:post-report && npm run test:post-report-api && npm run test:report-email && npm run test:post-report-menu && npm run test:post-report-menu-position && npm run test:lyric-back-keyboard && npm run test:lyric-back-scroll-metrics && npm run test:compact-artwork && npm run test:repost-count && npm run test:feed-content-tab && npm run test:shorts-shelf-rotation && npm run test:shorts-looks && npm run test:lyric-back-delete-shell && npm run test:lyric-back-owner-delete-local"
+    "test:lyric-back-owner-edit-local": "node --experimental-strip-types --test lib/lyric-back-owner-edit-local.test.ts",
+    "test:lyric-back-depth-server": "node --experimental-strip-types --test lib/lyric-back-depth-server.test.ts",
+    "test:lyric-back-request": "node --experimental-strip-types --test lib/lyric-back-request.test.ts",
+    "test:lyric-back-api-route": "node --experimental-strip-types --test lib/lyric-back-api-route.test.ts",
+    "test:e2e:lb-edit": "playwright test tests/e2e/lyric-back-edit.spec.ts",
+    "test": "npm run test:playback-segments && npm run test:curated-moments && npm run test:post-card-lyric && npm run test:post-card-lyric-uniform && npm run test:lyric-back-row && npm run test:post-report && npm run test:post-report-api && npm run test:report-email && npm run test:post-report-menu && npm run test:post-report-menu-position && npm run test:lyric-back-keyboard && npm run test:lyric-back-scroll-metrics && npm run test:compact-artwork && npm run test:repost-count && npm run test:feed-content-tab && npm run test:shorts-shelf-rotation && npm run test:shorts-looks && npm run test:lyric-back-delete-shell && npm run test:lyric-back-owner-delete-local && npm run test:lyric-back-owner-edit-local && npm run test:lyric-back-depth-server && npm run test:lyric-back-request && npm run test:lyric-back-api-route"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1136.0",

@@ -60,6 +60,7 @@ export function PostDetailLyricSection({
     canReply,
     visualStep,
     applyOwnerDeleteOutcome: applyStackOwnerDelete,
+    applyOwnerEditOutcome: applyStackOwnerEdit,
   } = stackApi
 
   const [echoCountLive, setEchoCountLive] = useState(echoCount)
@@ -138,6 +139,7 @@ export function PostDetailLyricSection({
         echoesActive
         onEchoCountDelta={handleEchoCountDelta}
         onStackOwnerDelete={applyStackOwnerDelete}
+        onStackOwnerEdit={applyStackOwnerEdit}
       />
     </section>
   )

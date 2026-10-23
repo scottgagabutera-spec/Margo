@@ -35,6 +35,8 @@ export type PostReportMenuProps = {
   isOwner: boolean
   showOwnerDelete?: boolean
   onOwnerDelete?: () => void
+  showOwnerEdit?: boolean
+  onOwnerEdit?: () => void
   className?: string
   iconSize?: number
   /** Visible but inert (e.g. content-removed shell row). */
@@ -46,6 +48,20 @@ function ReportRowIcon() {
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
         d="M4 4v16M4 4h11l3 3v13H4V4z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function EditRowIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3zM14 6l3 3"
         stroke="currentColor"
         strokeWidth="1.75"
         strokeLinecap="round"
@@ -96,6 +112,8 @@ export function PostReportMenu({
   isOwner,
   showOwnerDelete = false,
   onOwnerDelete,
+  showOwnerEdit = false,
+  onOwnerEdit,
   className = '',
   iconSize = 20,
   inactive = false,
@@ -119,7 +137,9 @@ export function PostReportMenu({
 
   const showReportItem = !isOwner
   const showDeleteItem = isOwner && showOwnerDelete && typeof onOwnerDelete === 'function'
-  const itemCount = (showReportItem ? 1 : 0) + (showDeleteItem ? 1 : 0)
+  const showEditItem = isOwner && showOwnerEdit && typeof onOwnerEdit === 'function'
+  const itemCount =
+    (showReportItem ? 1 : 0) + (showEditItem ? 1 : 0) + (showDeleteItem ? 1 : 0)
   const canSubmit = postReportSubmitEnabled(selectedReason) && !reportBusy && !alreadyReported
 
   useEffect(() => setMounted(true), [])
@@ -335,6 +355,21 @@ export function PostReportMenu({
               >
                 <ReportRowIcon />
                 <span>Report</span>
+              </button>
+            ) : null}
+            {showEditItem ? (
+              <button
+                type="button"
+                role="menuitem"
+                className="margo-post-report-menu__row"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  closeAll()
+                  onOwnerEdit?.()
+                }}
+              >
+                <EditRowIcon />
+                <span>Edit</span>
               </button>
             ) : null}
             {showDeleteItem ? (

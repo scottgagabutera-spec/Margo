@@ -31,6 +31,8 @@ export type LyricBackPanelPrefill = {
   artistName: string
   songId: string | null
   audioUrl?: string | null
+  externalListenUrl?: string | null
+  artwork?: string | null
   startSec: number | null
   endSec: number | null
 }
@@ -39,11 +41,28 @@ export type LyricBackPanelComposeHandle = {
   focusSearch: () => void
 }
 
+export type LyricBackSavePayload = {
+  text: string
+  songTitle: string
+  artistName: string
+  emotion: string
+  songId: string | null
+  snippetStartSec: number | null
+  snippetEndSec: number | null
+  artworkUrl: string | null
+  externalListenUrl: string | null
+  audioUrl: string | null
+}
+
 export type LyricBackPanelComposeProps = {
   parentPostId: string
   parentEmotion: string
+  mode?: 'create' | 'edit'
+  editPostId?: string
+  submitEmotion?: string
   onRequireAuth?: () => boolean
   onSent?: () => void
+  onSaved?: (payload: LyricBackSavePayload) => void
   prefill?: LyricBackPanelPrefill | null
   /** Portaled search dropdown (feed LB panel). Thread page uses inline compose variant. */
   layout?: 'panel' | 'page'
@@ -71,8 +90,12 @@ export const LyricBackPanelCompose = forwardRef<
   {
     parentPostId,
     parentEmotion,
+    mode = 'create',
+    editPostId,
+    submitEmotion,
     onRequireAuth,
     onSent,
+    onSaved,
     prefill,
     layout = 'page',
     replyToLabel,
@@ -153,10 +176,10 @@ export const LyricBackPanelCompose = forwardRef<
     setSelected({
       title: prefill.songTitle,
       artist: prefill.artistName,
-      artwork: '',
+      artwork: prefill.artwork ?? '',
       catalogSongId: prefill.songId,
       audioUrl: prefill.audioUrl ?? null,
-      externalListenUrl: null,
+      externalListenUrl: prefill.externalListenUrl ?? null,
     })
     setLyric(prefill.lyric)
     setSnippetStart(prefill.startSec)
@@ -326,22 +349,56 @@ export const LyricBackPanelCompose = forwardRef<
     if (!canSend || !selected) return
     setPosting(true)
     setPostError(null)
+    const emotion = submitEmotion ?? parentEmotion
+    const body = {
+      text: lyric.trim(),
+      emotion,
+      songId: selected.catalogSongId,
+      songTitle: selected.title,
+      artistName: selected.artist,
+      snippetStartSec: snippetStart,
+      snippetEndSec: snippetEnd,
+      externalListenUrl: selected.externalListenUrl,
+      artworkUrl: selected.artwork || null,
+    }
     try {
+      if (mode === 'edit') {
+        if (!editPostId) {
+          setPostError('Could not save.')
+          return
+        }
+        const res = await fetch('/api/posts/lyric-back', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postId: editPostId, ...body }),
+        })
+        const payload = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          setPostError(typeof payload.error === 'string' ? payload.error : 'Could not save.')
+          return
+        }
+        onSaved?.({
+          text: body.text,
+          songTitle: body.songTitle,
+          artistName: body.artistName,
+          emotion: typeof payload.emotion === 'string' ? payload.emotion : emotion,
+          songId: selected.catalogSongId,
+          snippetStartSec: snippetStart,
+          snippetEndSec: snippetEnd,
+          artworkUrl: selected.artwork || null,
+          externalListenUrl: selected.externalListenUrl,
+          audioUrl: selected.audioUrl,
+        })
+        return
+      }
+
       const res = await fetch('/api/posts/lyric-back', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           parentPostId: parentPostId,
           isPrivate: false,
-          text: lyric.trim(),
-          emotion: parentEmotion,
-          songId: selected.catalogSongId,
-          songTitle: selected.title,
-          artistName: selected.artist,
-          snippetStartSec: snippetStart,
-          snippetEndSec: snippetEnd,
-          externalListenUrl: selected.externalListenUrl,
-          artworkUrl: selected.artwork || null,
+          ...body,
         }),
       })
       const payload = await res.json().catch(() => ({}))
@@ -363,14 +420,17 @@ export const LyricBackPanelCompose = forwardRef<
       setQuery('')
       onSent?.()
     } catch {
-      setPostError('Could not send.')
+      setPostError(mode === 'edit' ? 'Could not save.' : 'Could not send.')
     } finally {
       setPosting(false)
     }
   }, [
     canSend,
+    editPostId,
     lyric,
+    mode,
     onRequireAuth,
+    onSaved,
     onSent,
     parentEmotion,
     parentPostId,
@@ -378,6 +438,7 @@ export const LyricBackPanelCompose = forwardRef<
     selected,
     snippetEnd,
     snippetStart,
+    submitEmotion,
   ])
 
   const showLinePicker = Boolean(
@@ -529,11 +590,15 @@ export const LyricBackPanelCompose = forwardRef<
           <button
             type="button"
             className="margo-post-card__lb-compose-send margo-post-card__lb-compose-send--panel"
-            aria-label="Send"
-            disabled={!canSend}
+            aria-label={mode === 'edit' ? (posting ? 'Saving…' : 'Save') : 'Send'}
+            disabled={!canSend || posting}
             onClick={() => void handleSend()}
           >
-            <FeedIconSend size={14} />
+            {mode === 'edit' && posting ? (
+              <span className="margo-post-card__lb-compose-saving">Saving…</span>
+            ) : (
+              <FeedIconSend size={14} />
+            )}
           </button>
         </div>
       ) : (

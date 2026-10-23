@@ -13,6 +13,10 @@ import {
   patchStackAfterOwnerDelete,
   type LyricBackDeleteOutcome,
 } from '@/lib/lyric-back-owner-delete-local'
+import {
+  patchStackEchoEdit,
+  type LyricBackEditPatch,
+} from '@/lib/lyric-back-owner-edit-local'
 
 /** A second Back from the same tap is ignored until this elapses. */
 const BACK_GESTURE_LOCK_MS = 400
@@ -195,6 +199,15 @@ export function useLyricBackFocusStack(
     [commit],
   )
 
+  const applyOwnerEditOutcome = useCallback(
+    (echoId: string, patch: LyricBackEditPatch) => {
+      const prev = stackRef.current
+      const next = patchStackEchoEdit(prev, echoId, patch)
+      if (next !== prev) commit(next)
+    },
+    [commit],
+  )
+
   const requestBack = useCallback(() => {
     if (stackRef.current.length === 0) return
     if (backGuardRef.current) return
@@ -227,5 +240,6 @@ export function useLyricBackFocusStack(
     collapseToRoot,
     navDirectionRef,
     applyOwnerDeleteOutcome,
+    applyOwnerEditOutcome,
   }
 }

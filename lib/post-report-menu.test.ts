@@ -14,6 +14,13 @@ describe('PostReportMenu', () => {
     assert.match(menu, /Reported/)
   })
 
+  it('PostReportMenu exposes owner Edit row when enabled', () => {
+    const menu = fs.readFileSync('components/post-report-menu.tsx', 'utf8')
+    assert.match(menu, /showOwnerEdit/)
+    assert.match(menu, /onOwnerEdit/)
+    assert.match(menu, />Edit</)
+  })
+
   it('PostCard uses shared PostReportMenu with owner delete', () => {
     const card = fs.readFileSync('components/post-card.tsx', 'utf8')
     assert.match(card, /<PostReportMenu/)
@@ -26,7 +33,9 @@ describe('PostReportMenu', () => {
     assert.match(row, /showOwnerMenu/)
     assert.match(row, /PostReportMenu/)
     assert.match(row, /myId && !isOwner && !contentRemoved/)
+    assert.match(row, /showOwnerEdit/)
     assert.match(row, /showOwnerDelete/)
+    assert.match(row, /LyricBackEditLayer/)
     assert.match(row, /LyricBackDeleteSheet/)
     assert.match(row, /contentRemoved/)
   })

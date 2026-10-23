@@ -14,6 +14,10 @@ import { LyricBackTrackListenControl } from '@/components/lyric-back-track-liste
 import { RepostSheet } from '@/components/repost-sheet'
 import { PostReportMenu } from '@/components/post-report-menu'
 import { LyricBackDeleteSheet } from '@/components/lyric-back-delete-sheet'
+import {
+  LyricBackEditLayer,
+  type LyricBackEditSavedPatch,
+} from '@/components/lyric-back-edit-layer'
 import { echoToPost } from '@/lib/echo-to-post'
 
 const supabase = createClient()
@@ -41,6 +45,7 @@ export type LyricBackThreadRowProps = {
   /** 0–3. Deeper threads stay at step 3. */
   visualStep?: 0 | 1 | 2 | 3
   onOwnerDeleted?: (echoId: string, outcome: 'deleted' | 'shelled') => void
+  onOwnerEdited?: (echoId: string, patch: LyricBackEditSavedPatch) => void
 }
 
 function profileHref(echo: Echo): string | null {
@@ -110,12 +115,14 @@ export function LyricBackThreadRow({
   lyricBackSessionActive = false,
   visualStep = 0,
   onOwnerDeleted,
+  onOwnerEdited,
 }: LyricBackThreadRowProps) {
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
   const myId = user?.id ?? null
   const [repostSheetOpen, setRepostSheetOpen] = useState(false)
   const [deleteSheetOpen, setDeleteSheetOpen] = useState(false)
+  const [editLayerOpen, setEditLayerOpen] = useState(false)
   const contentRemoved = Boolean(echo.contentRemovedAt)
 
   const [resonatedLocal, setResonatedLocal] = useState(
@@ -295,6 +302,8 @@ export function LyricBackThreadRow({
           <PostReportMenu
             postId={echo.id}
             isOwner
+            showOwnerEdit
+            onOwnerEdit={() => setEditLayerOpen(true)}
             showOwnerDelete
             onOwnerDelete={() => setDeleteSheetOpen(true)}
             className="margo-lb-thread-row__more"
@@ -390,12 +399,21 @@ export function LyricBackThreadRow({
         />
       ) : null}
       {showOwnerMenu ? (
-        <LyricBackDeleteSheet
-          open={deleteSheetOpen}
-          onOpenChange={setDeleteSheetOpen}
-          postId={echo.id}
-          onDeleted={(outcome) => onOwnerDeleted?.(echo.id, outcome)}
-        />
+        <>
+          <LyricBackEditLayer
+            open={editLayerOpen}
+            onOpenChange={setEditLayerOpen}
+            echo={echo}
+            onRequireAuth={requireAuth}
+            onSaved={(patch) => onOwnerEdited?.(echo.id, patch)}
+          />
+          <LyricBackDeleteSheet
+            open={deleteSheetOpen}
+            onOpenChange={setDeleteSheetOpen}
+            postId={echo.id}
+            onDeleted={(outcome) => onOwnerDeleted?.(echo.id, outcome)}
+          />
+        </>
       ) : null}
     </article>
   )

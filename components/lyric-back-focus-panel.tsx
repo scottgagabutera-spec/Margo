@@ -25,6 +25,8 @@ import {
   type LyricBackPanelPrefill,
 } from '@/components/lyric-back-panel-compose'
 import { useLyricBackFocusStack } from '@/hooks/useLyricBackFocusStack'
+import type { LyricBackEditPatch } from '@/lib/lyric-back-owner-edit-local'
+import type { LyricBackEditSavedPatch } from '@/components/lyric-back-edit-layer'
 import {
   clearLyricBackKeyboardChrome,
   useLyricBackPanelViewport,
@@ -82,6 +84,7 @@ export type LyricBackFocusBodyProps = {
   /** Fired when a direct child is fully removed (updates header + feed badge). */
   onEchoCountDelta?: (delta: number) => void
   onStackOwnerDelete?: (echoId: string, outcome: 'deleted' | 'shelled') => void
+  onStackOwnerEdit?: (echoId: string, patch: LyricBackEditPatch) => void
 }
 
 function LyricBackPanelSkeleton() {
@@ -140,6 +143,7 @@ export function LyricBackFocusBody({
   echoesActive,
   onEchoCountDelta,
   onStackOwnerDelete,
+  onStackOwnerEdit,
 }: LyricBackFocusBodyProps) {
   const { user } = useIdentity()
   const signedIn = !!user && !user.isAnonymous
@@ -154,6 +158,7 @@ export function LyricBackFocusBody({
     loading: echoesLoading,
     refetch: refetchEchoes,
     applyOwnerDeleteOutcome,
+    applyOwnerEditOutcome,
   } = useEchoes(echoesActive ? focusId : null)
   const focusSeenRef = useRef(focusId)
   const loadedFocusRef = useRef<string | null>(null)
@@ -184,6 +189,26 @@ export function LyricBackFocusBody({
       onStackOwnerDelete,
       refetchEchoes,
     ],
+  )
+
+  const handleOwnerEdited = useCallback(
+    (echoId: string, saved: LyricBackEditSavedPatch) => {
+      const patch: LyricBackEditPatch = {
+        lyric: saved.lyric,
+        song: saved.song,
+        artist: saved.artist,
+        emotion: saved.emotion,
+        songId: saved.songId,
+        snippetStart: saved.snippetStart,
+        snippetEnd: saved.snippetEnd,
+        artwork: saved.artwork,
+        externalListenUrl: saved.externalListenUrl,
+        audioUrl: saved.audioUrl,
+      }
+      applyOwnerEditOutcome(echoId, patch)
+      onStackOwnerEdit?.(echoId, patch)
+    },
+    [applyOwnerEditOutcome, onStackOwnerEdit],
   )
 
   const [ideasOpen, setIdeasOpen] = useState(false)
@@ -490,6 +515,7 @@ export function LyricBackFocusBody({
               onLyricBack={canReply ? () => focusRow(focusedEcho) : undefined}
               lyricBackSessionActive={showCompose}
               onOwnerDeleted={handleOwnerDeleted}
+              onOwnerEdited={handleOwnerEdited}
             />
           </div>
         ) : null}
@@ -516,6 +542,7 @@ export function LyricBackFocusBody({
                   hideLyricBackAction={!canReply}
                   onLyricBack={canReply ? () => focusRow(echo) : undefined}
                   onOwnerDeleted={handleOwnerDeleted}
+                  onOwnerEdited={handleOwnerEdited}
                 />
               </li>
             ))}
@@ -615,6 +642,7 @@ export function LyricBackFeedPanel({
     requestBack,
     resetStack,
     applyOwnerDeleteOutcome: applyStackOwnerDelete,
+    applyOwnerEditOutcome: applyStackOwnerEdit,
   } = useLyricBackFocusStack(postId, author, 0, {
     history: open,
     onExit: () => onCloseRef.current(),
@@ -707,6 +735,7 @@ export function LyricBackFeedPanel({
         echoCountHint={echoCountLive}
         onEchoCountDelta={handleEchoCountDelta}
         onStackOwnerDelete={applyStackOwnerDelete}
+        onStackOwnerEdit={applyStackOwnerEdit}
         canReply={canReply}
         visualStep={visualStep}
         composeOpen
