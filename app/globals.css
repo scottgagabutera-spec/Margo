@@ -1137,6 +1137,19 @@ html[data-margo-stage-idle] .margo-stage-zone {
   background: var(--surface-2);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
 }
+.margo-delete-focus-panel--inline {
+  position: relative;
+  z-index: 1;
+  width: auto;
+  margin: 12px 12px 14px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+.margo-post-delete-inline-host:empty {
+  display: none;
+}
+.margo-post-delete-inline-host:not(:empty) {
+  display: block;
+}
 .margo-delete-focus-panel__title {
   margin: 0 0 8px;
   font-family: var(--font-lora), serif;

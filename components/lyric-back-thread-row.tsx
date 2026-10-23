@@ -24,6 +24,7 @@ import { emotionToVibeLabel, vibeLabelToEmotion } from '@/lib/moment/vibe'
 import { POST_EDIT_CHILD_LOCK_MESSAGE } from '@/lib/post-edit-child-lock'
 import { PostFocusedDeleteDialog } from '@/components/post-focused-delete-dialog'
 import { echoToPost } from '@/lib/echo-to-post'
+import { getVibeTheme, vibeThemeStyleVars } from '@/lib/vibe-theme'
 
 export type { LyricBackEditSavedPatch } from '@/lib/lyric-back-edit-saved'
 
@@ -233,6 +234,7 @@ export function LyricBackThreadRow({
     contentRemoved && !hideLyricBackAction && Boolean(onLyricBack)
 
   const editSubmitEmotion = vibeLabelToEmotion(editVibeLabel) ?? echo.emotion
+  const vibeStyle = vibeThemeStyleVars(getVibeTheme(echo.emotion || 'chill'))
 
   if (editOpen && showOwnerMenu) {
     return (
@@ -240,6 +242,7 @@ export function LyricBackThreadRow({
         className={`${rowClass} margo-lb-thread-row--editing`}
         data-echo-id={echo.id}
         data-lb-editing="1"
+        style={vibeStyle}
       >
         <header className="margo-lb-thread-row__header">
           <div className="margo-lb-thread-row__header-text">
@@ -369,7 +372,7 @@ export function LyricBackThreadRow({
   }
 
   return (
-    <article ref={rowRef} className={rowClass} data-echo-id={echo.id}>
+    <article ref={rowRef} className={rowClass} data-echo-id={echo.id} style={vibeStyle}>
       {isAnchor ? (
         <p className="margo-lb-thread-row__badge">This Lyric Back</p>
       ) : null}
@@ -480,6 +483,11 @@ export function LyricBackThreadRow({
       <div
         className="margo-post-report-inline-host"
         data-report-inline-host={echo.id}
+        data-no-card-nav
+      />
+      <div
+        className="margo-post-delete-inline-host"
+        data-delete-inline-host={echo.id}
         data-no-card-nav
       />
       <FeedPostActions

@@ -1,14 +1,12 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useState, type RefObject } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-
-const font = 'var(--font-lora), serif'
 
 export type PostFocusedDeleteDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  anchorRef: RefObject<HTMLElement | null>
+  anchorRef: React.RefObject<HTMLElement | null>
   postId: string
   /** moment → DELETE /api/posts/moment; lyric-back → DELETE /api/posts/lyric-back */
   target: 'moment' | 'lyric-back'
@@ -17,17 +15,9 @@ export type PostFocusedDeleteDialogProps = {
   onDeleted?: (outcome?: 'deleted' | 'shelled') => void
 }
 
-type Box = { top: number; left: number; width: number; height: number }
-
-function measureAnchor(el: HTMLElement | null): Box | null {
-  if (!el) return null
-  const r = el.getBoundingClientRect()
-  return { top: r.top, left: r.left, width: r.width, height: r.height }
-}
-
 /**
- * Delete confirm anchored to the post/row: the card stays visible above the scrim;
- * a small panel matches the post width below it.
+ * Delete confirm while the post/row stays in focus: full-page scrim blurs the feed;
+ * the confirm panel renders inline at the bottom of the anchored card (same slot as inline report).
  */
 export function PostFocusedDeleteDialog({
   open,
@@ -40,27 +30,26 @@ export function PostFocusedDeleteDialog({
   onDeleted,
 }: PostFocusedDeleteDialogProps) {
   const [mounted, setMounted] = useState(false)
-  const [box, setBox] = useState<Box | null>(null)
+  const [host, setHost] = useState<HTMLElement | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => setMounted(true), [])
 
   useLayoutEffect(() => {
-    if (!open) return
-    const update = () => setBox(measureAnchor(anchorRef.current))
-    update()
-    window.addEventListener('resize', update)
-    window.addEventListener('scroll', update, true)
-    const vv = window.visualViewport
-    vv?.addEventListener('resize', update)
-    vv?.addEventListener('scroll', update)
-    return () => {
-      window.removeEventListener('resize', update)
-      window.removeEventListener('scroll', update, true)
-      vv?.removeEventListener('resize', update)
-      vv?.removeEventListener('scroll', update)
+    if (!open) {
+      setHost(null)
+      return
     }
+    const el = anchorRef.current?.querySelector(
+      `[data-delete-inline-host="${postId}"]`,
+    )
+    setHost(el instanceof HTMLElement ? el : null)
+  }, [open, anchorRef, postId])
+
+  useEffect(() => {
+    if (!open) return
+    anchorRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   }, [open, anchorRef])
 
   useEffect(() => {
@@ -74,13 +63,14 @@ export function PostFocusedDeleteDialog({
     }
   }, [open, anchorRef])
 
-  if (!open || !mounted) return null
+  useEffect(() => {
+    if (!open) {
+      setDeleting(false)
+      setError(null)
+    }
+  }, [open])
 
-  const panelWidth = box ? Math.min(Math.max(box.width, 280), 380) : 320
-  const panelLeft = box
-    ? Math.min(Math.max(box.left + (box.width - panelWidth) / 2, 16), window.innerWidth - panelWidth - 16)
-    : (window.innerWidth - panelWidth) / 2
-  const panelTop = box ? box.top + box.height + 10 : window.innerHeight * 0.4
+  if (!open || !mounted) return null
 
   const handleDelete = async () => {
     setDeleting(true)
@@ -107,48 +97,51 @@ export function PostFocusedDeleteDialog({
     }
   }
 
-  return createPortal(
-    <>
-      <div
-        className="margo-delete-focus-scrim"
-        role="presentation"
-        onClick={() => !deleting && onOpenChange(false)}
-      />
-      <div
-        className="margo-delete-focus-panel"
-        role="dialog"
-        aria-modal="true"
-        style={{
-          top: `${panelTop}px`,
-          left: `${panelLeft}px`,
-          width: `${panelWidth}px`,
-        }}
-      >
-        <p className="margo-delete-focus-panel__title">{title}</p>
-        <p className="margo-delete-focus-panel__body">{body}</p>
-        {error ? (
-          <p className="margo-delete-focus-panel__error" role="alert">{error}</p>
-        ) : null}
-        <div className="margo-delete-focus-panel__actions">
-          <button
-            type="button"
-            className="margo-delete-focus-panel__cancel"
-            disabled={deleting}
-            onClick={() => onOpenChange(false)}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="margo-delete-focus-panel__confirm"
-            disabled={deleting}
-            onClick={() => void handleDelete()}
-          >
-            {deleting ? 'Deleting…' : 'Delete'}
-          </button>
-        </div>
+  const panel = (
+    <div
+      className="margo-delete-focus-panel margo-delete-focus-panel--inline"
+      role="dialog"
+      aria-modal="true"
+      data-no-card-nav
+    >
+      <p className="margo-delete-focus-panel__title">{title}</p>
+      <p className="margo-delete-focus-panel__body">{body}</p>
+      {error ? (
+        <p className="margo-delete-focus-panel__error" role="alert">{error}</p>
+      ) : null}
+      <div className="margo-delete-focus-panel__actions">
+        <button
+          type="button"
+          className="margo-delete-focus-panel__cancel"
+          disabled={deleting}
+          onClick={() => onOpenChange(false)}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="margo-delete-focus-panel__confirm"
+          disabled={deleting}
+          onClick={() => void handleDelete()}
+        >
+          {deleting ? 'Deleting…' : 'Delete'}
+        </button>
       </div>
-    </>,
-    document.body,
+    </div>
+  )
+
+  const scrim = (
+    <div
+      className="margo-delete-focus-scrim"
+      role="presentation"
+      onClick={() => !deleting && onOpenChange(false)}
+    />
+  )
+
+  return (
+    <>
+      {createPortal(scrim, document.body)}
+      {host ? createPortal(panel, host) : null}
+    </>
   )
 }

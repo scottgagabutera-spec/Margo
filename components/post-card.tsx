@@ -636,6 +636,11 @@ export function PostCard({
         data-report-inline-host={post.id}
         data-no-card-nav
       />
+      <div
+        className="margo-post-delete-inline-host"
+        data-delete-inline-host={post.id}
+        data-no-card-nav
+      />
 
       <PostMomentBody post={post} atmosphereRooms={atmosphereRooms} />
 
