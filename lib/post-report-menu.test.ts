@@ -7,6 +7,10 @@ describe('PostReportMenu', () => {
     const menu = fs.readFileSync('components/post-report-menu.tsx', 'utf8')
     assert.match(menu, /POST_REPORT_REASONS = \['Spam', 'Harassment', 'Inappropriate', 'Other'\]/)
     assert.match(menu, /post_reports/)
+    assert.match(menu, /createPortal/)
+    assert.match(menu, /MargoSheet/)
+    assert.match(menu, /Report received\./)
+    assert.doesNotMatch(menu, /margo-post-report-menu__panel/)
   })
 
   it('PostCard uses shared PostReportMenu with owner delete', () => {
