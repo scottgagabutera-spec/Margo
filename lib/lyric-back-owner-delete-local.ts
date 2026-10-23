@@ -1,5 +1,5 @@
-import type { Echo } from '@/hooks/useEchoes'
-import { applyEchoContentRemoved } from '@/lib/post-content-removed'
+import type { Echo } from '../hooks/useEchoes.ts'
+import { applyEchoContentRemoved } from './post-content-removed.ts'
 
 export type LyricBackDeleteOutcome = 'deleted' | 'shelled'
 
