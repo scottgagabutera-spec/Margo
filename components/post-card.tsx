@@ -15,6 +15,7 @@ import {
 } from '@/lib/moment/playback-segments'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { persistActivePrimaryScroll } from '@/components/primary-tab-shell'
+import { navigateToPostThread } from '@/lib/post-thread-nav'
 import { PostReportMenu } from '@/components/post-report-menu'
 import { UsernameTag } from '@/components/username-tag'
 import { PendingNavLink } from '@/components/pending-nav-link'
@@ -325,7 +326,7 @@ export function PostCard({
     const t = e.target as HTMLElement | null
     if (t?.closest?.('a, button, textarea, input, [data-no-card-nav]')) return
     persistActivePrimaryScroll()
-    router.push('/post/' + post.id)
+    navigateToPostThread(router, post.id)
   }
 
   return (
@@ -616,7 +617,7 @@ export function PostCard({
           onRequireAuth={requireAuth}
           onOpenThread={(echoId) => {
             persistActivePrimaryScroll()
-            router.push(`/post/${echoId}`)
+            navigateToPostThread(router, echoId)
           }}
           onExportEcho={(echo) => onExport(echoToPost(echo))}
           onReplayEcho={onReplay}

@@ -2,13 +2,22 @@
 
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import {
+  canPopNavStack,
+  consumeNextNavAsReplace,
+  navStackDepth,
+  recordNavPop,
+  recordNavPush,
+  recordNavReplace,
+  resetNavStack,
+} from '@/lib/in-app-nav-stack'
 
-/** Client-side pushes in this tab. 0 on a fresh load / new tab. */
-let inAppDepth = 0
-
+/** @deprecated Use canPopNavStack — kept for callers that imported canPopInAppHistory */
 export function canPopInAppHistory() {
-  return inAppDepth > 0
+  return canPopNavStack()
 }
+
+export { navStackDepth as inAppDepthForTests }
 
 function NavHistoryTracker() {
   const pathname = usePathname()
@@ -24,18 +33,22 @@ function NavHistoryTracker() {
   }, [])
 
   useEffect(() => {
+    const path = pathname.split('?')[0] || '/'
     if (prev.current == null) {
-      prev.current = pathname
+      prev.current = path
+      resetNavStack(path)
       return
     }
-    if (prev.current === pathname) return
+    if (prev.current === path) return
     if (popped.current) {
       popped.current = false
-      inAppDepth = Math.max(0, inAppDepth - 1)
+      recordNavPop()
+    } else if (consumeNextNavAsReplace()) {
+      recordNavReplace(path)
     } else {
-      inAppDepth += 1
+      recordNavPush(path)
     }
-    prev.current = pathname
+    prev.current = path
   }, [pathname])
 
   return null
@@ -83,8 +96,8 @@ export function navBackForPath(pathname: string | null | undefined): NavBackConf
   if (p === '/library') return { fallbackHref: '/discover' }
   if (p.startsWith('/library/')) return { fallbackHref: '/library' }
   if (p.startsWith('/discover/') || p === '/artists') return { fallbackHref: '/discover' }
-  if (p.startsWith('/post/')) return { fallbackHref: '/feed' }
-  if (p === '/lyric-back') return { fallbackHref: '/feed' }
+  if (p.startsWith('/post/')) return { fallbackHref: '/feed', preferHistory: true, replace: true }
+  if (p === '/lyric-back') return { fallbackHref: '/feed', replace: true }
   if (p === '/about' || p === '/contact' || p === '/privacy' || p === '/terms' || p === '/dmca' || p === '/data-deletion' || p === '/help' || p.startsWith('/help/') || p === '/faq') {
     return { fallbackHref: '/' }
   }
