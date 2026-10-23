@@ -66,7 +66,7 @@ begin
 
   update public.posts
   set
-    text = null,
+    text = '',
     emotion = null,
     song_id = null,
     song_title = null,

@@ -107,6 +107,12 @@ export const SHELL_CLEARED_POST_COLUMNS = [
 export function assertShellRowDbClean(row: Record<string, unknown>): void {
   for (const col of SHELL_CLEARED_POST_COLUMNS) {
     const val = row[col]
+    if (col === 'text') {
+      if (val !== null && val !== undefined && String(val).trim() !== '') {
+        throw new Error(`shell row still has text: ${String(val)}`)
+      }
+      continue
+    }
     if (val !== null && val !== undefined && val !== '') {
       throw new Error(`shell row still has ${col}: ${String(val)}`)
     }
