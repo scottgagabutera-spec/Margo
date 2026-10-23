@@ -18,9 +18,12 @@ export interface MargoSheetProps {
   panelOverflow?: 'visible' | 'hidden'
   contentOverflow?: 'visible' | 'hidden' | 'auto'
   bottomInset?: 'tabbar' | 'tabbar-tight'
+  /** top = legacy header sheet; bottom = thumb reach (report, send-to). */
+  anchor?: 'top' | 'bottom'
 }
 
-const SCRIM = 'rgba(7,6,10,0.92)'
+const SCRIM_TOP = 'rgba(7,6,10,0.92)'
+const SCRIM_BOTTOM = 'var(--surface, #0F0E13)'
 const HEADER_APPROX_PX = 70
 
 /**
@@ -39,8 +42,10 @@ export function MargoSheet({
   panelOverflow = 'hidden',
   contentOverflow = 'auto',
   bottomInset = 'tabbar',
+  anchor = 'top',
 }: MargoSheetProps) {
   const [mounted, setMounted] = useState(false)
+  const [viewportBottomPad, setViewportBottomPad] = useState(0)
 
   useEffect(() => setMounted(true), [])
 
@@ -55,16 +60,52 @@ export function MargoSheet({
     }
   }, [open])
 
+  useEffect(() => {
+    if (!open || anchor !== 'bottom') {
+      setViewportBottomPad(0)
+      return
+    }
+    const measure = () => {
+      const vv = window.visualViewport
+      if (!vv) {
+        setViewportBottomPad(0)
+        return
+      }
+      const obscured = Math.max(
+        0,
+        window.innerHeight - vv.height - vv.offsetTop,
+      )
+      setViewportBottomPad(obscured)
+    }
+    measure()
+    const vv = window.visualViewport
+    vv?.addEventListener('resize', measure)
+    vv?.addEventListener('scroll', measure)
+    window.addEventListener('resize', measure)
+    return () => {
+      vv?.removeEventListener('resize', measure)
+      vv?.removeEventListener('scroll', measure)
+      window.removeEventListener('resize', measure)
+    }
+  }, [open, anchor])
+
   if (!open || !mounted) return null
 
-  const bottomPad = bottomInset === 'tabbar-tight'
+  const scrim = anchor === 'bottom' ? SCRIM_BOTTOM : SCRIM_TOP
+
+  const bottomPadBase = bottomInset === 'tabbar-tight'
     ? 'calc(12px + var(--margo-tabbar-h, 64px) + 16px)'
     : 'calc(12px + var(--margo-tabbar-h, 64px) + 28px)'
+  const bottomPad = anchor === 'bottom'
+    ? `calc(${bottomPadBase} + ${viewportBottomPad}px + env(safe-area-inset-bottom, 0px))`
+    : bottomPadBase
 
   const topPad = 'max(16px, env(safe-area-inset-top, 0px))'
   const panelMaxHeight = heightMode === 'fixed'
     ? maxHeight
-    : `min(${maxHeight}, calc(100dvh - ${topPad} - 12px - ${bottomPad}))`
+    : anchor === 'bottom'
+      ? `min(${maxHeight}, calc(100dvh - ${topPad} - 12px - ${bottomPad}))`
+      : `min(${maxHeight}, calc(100dvh - ${topPad} - 12px - ${bottomPad}))`
 
   const bodyMaxHeight = heightMode === 'fixed'
     ? undefined
@@ -89,7 +130,7 @@ export function MargoSheet({
           position: 'absolute',
           inset: 0,
           border: 'none',
-          background: SCRIM,
+          background: scrim,
           cursor: 'default',
         }}
       />
@@ -101,10 +142,10 @@ export function MargoSheet({
           zIndex: 1,
           display: 'flex',
           justifyContent: 'center',
-          alignItems: 'flex-start',
+          alignItems: anchor === 'bottom' ? 'flex-end' : 'flex-start',
           boxSizing: 'border-box',
           padding: '12px',
-          paddingTop: `calc(12px + ${topPad})`,
+          paddingTop: anchor === 'bottom' ? '12px' : `calc(12px + ${topPad})`,
           paddingBottom: bottomPad,
           pointerEvents: 'none',
           overflow: 'hidden',
@@ -120,7 +161,7 @@ export function MargoSheet({
             ...(heightMode === 'fixed' ? { height: panelMaxHeight } : { height: 'fit-content' }),
             background: 'var(--surface, #0F0E13)',
             border: '1px solid var(--border)',
-            borderRadius: '20px',
+            borderRadius: anchor === 'bottom' ? '20px 20px 0 0' : '20px',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',

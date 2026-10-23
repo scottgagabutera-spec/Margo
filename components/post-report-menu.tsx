@@ -10,7 +10,7 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import { FeedIconMore } from '@/components/feed-card-icons'
-import { MargoSheet } from '@/components/margo-sheet'
+import { MargoReportDialog } from '@/components/margo-report-dialog'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useIdentity } from '@/hooks/useIdentity'
 import {
@@ -187,6 +187,7 @@ export function PostReportMenu({
       const viewportTop = vv?.offsetTop ?? 0
       const viewportBottom = vv ? vv.offsetTop + vv.height : window.innerHeight
       const viewportWidth = vv?.width ?? window.innerWidth
+      const viewportOffsetLeft = vv?.offsetLeft ?? 0
       const next = computeReportPopoverPosition({
         triggerRect: r,
         menuWidth: MENU_W,
@@ -194,6 +195,7 @@ export function PostReportMenu({
         viewportTop,
         viewportBottom,
         viewportWidth,
+        viewportOffsetLeft,
       })
       setPos({ top: next.top, left: next.left })
     }
@@ -383,17 +385,13 @@ export function PostReportMenu({
         </button>
       </div>
       {popover}
-      <MargoSheet
+      <MargoReportDialog
         open={sheetOpen}
         onOpenChange={(next) => {
           if (!next) closeSheet()
           else setSheetOpen(true)
         }}
-        title="Report"
-        heightMode="auto"
-        maxHeight="min(52dvh, 360px)"
-        bottomInset="tabbar-tight"
-        zIndex={240}
+        closeDisabled={reportBusy}
       >
         <div className="margo-post-report-menu__sheet">
           {reportStatusLoading ? (
@@ -461,7 +459,7 @@ export function PostReportMenu({
             </p>
           ) : null}
         </div>
-      </MargoSheet>
+      </MargoReportDialog>
     </>
   )
 }

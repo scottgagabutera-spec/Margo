@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { MargoSheet } from '@/components/margo-sheet'
+import { MargoConfirmDialog } from '@/components/margo-confirm-dialog'
 
 type LyricBackDeleteSheetProps = {
   open: boolean
@@ -54,44 +54,23 @@ export function LyricBackDeleteSheet({
   }
 
   return (
-    <MargoSheet
+    <MargoConfirmDialog
       open={open}
       onOpenChange={(next) => {
         if (!deleting) onOpenChange(next)
       }}
-      title="Delete"
-      heightMode="auto"
-      maxHeight="min(40dvh, 280px)"
-      bottomInset="tabbar-tight"
-      zIndex={241}
-      closeDisabled={deleting}
+      title="Delete this Lyric Back?"
+      confirmLabel="Delete"
+      cancelLabel="Cancel"
+      confirmBusyLabel="Deleting…"
+      busy={deleting}
+      onConfirm={handleDelete}
     >
-      <div className="margo-lb-owner-sheet">
-        <p className="margo-lb-owner-sheet__lead">Delete this Lyric Back?</p>
-        {error ? (
-          <p className="margo-lb-owner-sheet__error" role="alert">
-            {error}
-          </p>
-        ) : null}
-        <div className="margo-lb-owner-sheet__actions">
-          <button
-            type="button"
-            className="margo-lb-owner-sheet__btn margo-lb-owner-sheet__btn--ghost"
-            disabled={deleting}
-            onClick={() => onOpenChange(false)}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="margo-lb-owner-sheet__btn margo-lb-owner-sheet__btn--danger"
-            disabled={deleting}
-            onClick={() => void handleDelete()}
-          >
-            {deleting ? 'Deleting…' : 'Delete'}
-          </button>
-        </div>
-      </div>
-    </MargoSheet>
+      {error ? (
+        <p className="margo-lb-owner-sheet__error" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </MargoConfirmDialog>
   )
 }

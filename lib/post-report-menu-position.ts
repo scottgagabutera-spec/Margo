@@ -7,6 +7,7 @@ export function computeReportPopoverPosition(input: {
   viewportTop: number
   viewportBottom: number
   viewportWidth: number
+  viewportOffsetLeft?: number
   edgePad?: number
   gap?: number
 }): { top: number; left: number; openUp: boolean } {
@@ -19,10 +20,11 @@ export function computeReportPopoverPosition(input: {
   const top = openUp
     ? input.triggerRect.top - gap - input.menuHeight
     : input.triggerRect.bottom + gap
-  const leftRaw = input.triggerRect.right - input.menuWidth
+  const offsetLeft = input.viewportOffsetLeft ?? 0
+  const leftRaw = input.triggerRect.right - input.menuWidth + offsetLeft
   const left = Math.min(
-    Math.max(edgePad, leftRaw),
-    Math.max(edgePad, input.viewportWidth - input.menuWidth - edgePad),
+    Math.max(edgePad + offsetLeft, leftRaw),
+    Math.max(edgePad + offsetLeft, offsetLeft + input.viewportWidth - input.menuWidth - edgePad),
   )
   return { top, left, openUp }
 }
