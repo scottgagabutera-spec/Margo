@@ -90,8 +90,9 @@ test.describe('landing stage search footer fade', () => {
     await page.waitForTimeout(900)
     const search = page.locator('.margo-stage-zone input[type="search"], .margo-stage-zone input').first()
     await expect(search).toBeVisible({ timeout: 15000 })
-    await search.focus()
-    await page.waitForTimeout(300)
+    await search.click()
+    await search.fill('love')
+    await page.waitForTimeout(500)
     await expect.poll(() =>
       page.evaluate(() => document.documentElement.hasAttribute('data-margo-stage-search')),
     ).toBe(true)
