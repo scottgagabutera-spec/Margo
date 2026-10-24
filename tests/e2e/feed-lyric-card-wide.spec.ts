@@ -16,7 +16,7 @@ for (const width of DESKTOP) {
       expect(colBox).toBeTruthy()
       if (colBox) {
         expect(colBox.width).toBeLessThanOrEqual(684)
-        expect(colBox.width).toBeGreaterThan(640)
+        expect(colBox.width).toBeGreaterThanOrEqual(Math.min(width, 680))
       }
       const lyric = page.locator('.margo-post-card__lyric-zone').first()
       if ((await lyric.count()) === 0) test.skip()
