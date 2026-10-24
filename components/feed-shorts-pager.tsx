@@ -17,7 +17,7 @@ import {
   toggleMute,
 } from '@/lib/audio-engine'
 import { pickShortsLook } from '@/lib/shorts-looks'
-import { computeShortsFrameLayout } from '@/lib/shorts-frame-layout'
+import { computeShortsFrameLayout, SHORTS_DESKTOP_MIN_WIDTH } from '@/lib/shorts-frame-layout'
 import { utcDayKey } from '@/lib/shorts-shelf-rotation'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 
@@ -53,6 +53,7 @@ type SlideProps = {
   showBlockedPlay: boolean
   showSignupOnPlay: boolean
   soundOn: boolean
+  desktopLayout: boolean
   onToggleSound: () => void
   onPlay: () => void
 }
@@ -69,13 +70,15 @@ function FeedShortsSlide({
   showBlockedPlay,
   showSignupOnPlay,
   soundOn,
+  desktopLayout,
   onToggleSound,
   onPlay,
 }: SlideProps) {
   const [fillMotion, setFillMotion] = useState(false)
+  const motionAtmosphere = isActive ? atmosphereId : 'still'
 
   useEffect(() => {
-    if (!isActive || reduceMotion) {
+    if (!desktopLayout || !isActive || reduceMotion) {
       setFillMotion(false)
       return
     }
@@ -84,7 +87,33 @@ function FeedShortsSlide({
       requestAnimationFrame(() => setFillMotion(true))
     })
     return () => cancelAnimationFrame(id)
-  }, [isActive, clip.songId, clip.lineId, reduceMotion])
+  }, [desktopLayout, isActive, clip.songId, clip.lineId, reduceMotion])
+
+  const effectOwnsFill = desktopLayout
+    ? isActive && fillMotion && !reduceMotion && isLivingAtmosphere(atmosphereId)
+    : isActive && isLivingAtmosphere(motionAtmosphere)
+
+  const cardAtmosphere = desktopLayout ? atmosphereId : motionAtmosphere
+
+  const metaBlock = (
+    <>
+      <Link href={`/song/${clip.songId}`} className="margo-feed-shorts-slide__song">
+        {clip.songTitle}
+      </Link>
+      <span className="margo-feed-shorts-slide__artist">{clip.artist}</span>
+      {desktopLayout && isActive ? (
+        <button
+          type="button"
+          className="margo-feed-shorts-slide__sound"
+          aria-pressed={soundOn}
+          aria-label={soundOn ? 'Mute Short' : 'Unmute Short'}
+          onClick={onToggleSound}
+        >
+          {soundOn ? 'Sound on' : 'Tap for sound'}
+        </button>
+      ) : null}
+    </>
+  )
 
   return (
     <section
@@ -92,10 +121,15 @@ function FeedShortsSlide({
       data-shorts-slide
       data-shorts-index={index}
       data-shorts-active={isActive ? '1' : '0'}
-      data-shorts-fill-motion={isActive && fillMotion ? '1' : '0'}
+      data-shorts-fill-motion={desktopLayout && isActive && fillMotion ? '1' : '0'}
     >
       <div className="margo-feed-shorts-slide__frame">
-        <MomentExportPreviewFrame shapeId="vertical" framed={false} fillParent style={{ height: '100%', width: '100%' }}>
+        <MomentExportPreviewFrame
+          shapeId="vertical"
+          framed={false}
+          fillParent={desktopLayout}
+          style={{ height: '100%', width: '100%' }}
+        >
           <StageMomentCard
             lyric={clip.line}
             songTitle={clip.songTitle}
@@ -103,10 +137,8 @@ function FeedShortsSlide({
             artwork={clip.artwork}
             vibeLabel={vibeLabel}
             cardThemeId={stageThemeId}
-            atmosphereId={atmosphereId}
-            effectOwnsFill={
-              isActive && fillMotion && !reduceMotion && isLivingAtmosphere(atmosphereId)
-            }
+            atmosphereId={cardAtmosphere}
+            effectOwnsFill={effectOwnsFill}
             shapeId="vertical"
             hideVibeChrome
             canPlay={!!clip.audioUrl}
@@ -116,24 +148,13 @@ function FeedShortsSlide({
             style={{ height: '100%', minHeight: '100%' }}
           />
         </MomentExportPreviewFrame>
-        <div className="margo-feed-shorts-slide__meta">
-          <Link href={`/song/${clip.songId}`} className="margo-feed-shorts-slide__song">
-            {clip.songTitle}
-          </Link>
-          <span className="margo-feed-shorts-slide__artist">{clip.artist}</span>
-          {isActive ? (
-            <button
-              type="button"
-              className="margo-feed-shorts-slide__sound"
-              aria-pressed={soundOn}
-              aria-label={soundOn ? 'Mute Short' : 'Unmute Short'}
-              onClick={onToggleSound}
-            >
-              {soundOn ? 'Sound on' : 'Tap for sound'}
-            </button>
-          ) : null}
-        </div>
+        {desktopLayout ? (
+          <div className="margo-feed-shorts-slide__meta">{metaBlock}</div>
+        ) : null}
       </div>
+      {!desktopLayout ? (
+        <div className="margo-feed-shorts-slide__meta">{metaBlock}</div>
+      ) : null}
     </section>
   )
 }
@@ -166,15 +187,31 @@ export function FeedShortsPager({
   const [autoplayBlocked, setAutoplayBlocked] = useState(false)
   const [anonPlaysCompleted, setAnonPlaysCompleted] = useState(0)
   const [reduceMotion, setReduceMotion] = useState(false)
+  const [desktopLayout, setDesktopLayout] = useState(false)
   const anonPlayedKeysRef = useRef(new Set<string>())
   const signedInRef = useRef(signedIn)
   const lastAutoIndexRef = useRef<number>(-1)
   const utcDay = utcDayKey(new Date())
 
   useEffect(() => {
+    const mq = window.matchMedia(`(min-width: ${SHORTS_DESKTOP_MIN_WIDTH}px)`)
+    const sync = () => setDesktopLayout(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+
+  useEffect(() => {
     const root = scrollerRef.current
     if (!root) return
     const syncFrameMetrics = () => {
+      if (window.innerWidth < SHORTS_DESKTOP_MIN_WIDTH) {
+        root.style.removeProperty('--margo-shorts-frame-w')
+        root.style.removeProperty('--margo-shorts-frame-h')
+        root.style.removeProperty('--margo-shorts-slide-min-h')
+        delete root.dataset.shortsCols
+        return
+      }
       const styles = getComputedStyle(document.documentElement)
       const nav = parseFloat(styles.getPropertyValue('--nav-height')) || 72
       const tabBar = parseFloat(styles.getPropertyValue('--margo-feed-tab-bar-h')) || 44
@@ -380,6 +417,7 @@ export function FeedShortsPager({
             showBlockedPlay={showBlockedPlay}
             showSignupOnPlay={showSignupOnPlay}
             soundOn={soundOn}
+            desktopLayout={desktopLayout}
             onToggleSound={toggleSound}
             onPlay={() => {
               if (showSignupOnPlay) {

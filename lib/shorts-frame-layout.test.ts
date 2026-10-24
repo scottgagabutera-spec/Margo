@@ -3,18 +3,11 @@ import assert from 'node:assert/strict'
 import { computeShortsFrameLayout } from './shorts-frame-layout.ts'
 
 describe('computeShortsFrameLayout', () => {
-  it('phone frame uses full width minus padding', () => {
-    const l = computeShortsFrameLayout(390, 844, 120, 88)
-    assert.equal(l.columns, 1)
-    assert.ok(Math.abs(l.frameWidthPx - 358) < 2)
-    assert.ok(Math.abs(l.frameHeightPx / l.frameWidthPx - 16 / 9) < 0.02)
-  })
-
-  it('desktop uses peek stride (~1.5 frame heights visible)', () => {
+  it('desktop frame height never exceeds visible area', () => {
     const l = computeShortsFrameLayout(834, 900, 120, 88)
     assert.equal(l.columns, 1)
-    assert.ok(l.slideStridePx > l.frameHeightPx)
-    assert.ok(l.slideStridePx / l.frameHeightPx < 1.55)
+    assert.ok(l.frameHeightPx <= 900 - 120 - 88 + 1)
+    assert.ok(Math.abs(l.frameWidthPx / l.frameHeightPx - 9 / 16) < 0.02)
   })
 
   it('very wide uses two columns when pair fits', () => {

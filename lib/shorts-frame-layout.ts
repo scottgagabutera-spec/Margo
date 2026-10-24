@@ -1,4 +1,4 @@
-/** Shared Shorts 9:16 frame sizing — phone and desktop use the same math. */
+/** Desktop Shorts (≥640px) 9:16 frame sizing — phone uses main CSS only. */
 
 export type ShortsFrameLayout = {
   frameWidthPx: number
@@ -7,10 +7,9 @@ export type ShortsFrameLayout = {
   slideStridePx: number
 }
 
-const ASPECT = 16 / 9 // height / width for 9:16 portrait
-const PEEK_VISIBLE_RATIO = 0.5 // ~half of next Short visible below
+const PEEK_VISIBLE_RATIO = 0.4 // ~40% of next Short visible
 const COL_GAP_PX = 20
-const MIN_DESKTOP_W = 640
+export const SHORTS_DESKTOP_MIN_WIDTH = 640
 
 export function computeShortsFrameLayout(
   viewportWidth: number,
@@ -18,23 +17,10 @@ export function computeShortsFrameLayout(
   chromeTopPx: number,
   chromeBottomPx: number,
 ): ShortsFrameLayout {
-  const availH = Math.max(320, viewportHeight - chromeTopPx - chromeBottomPx)
-  const isPhone = viewportWidth < MIN_DESKTOP_W
-
-  if (isPhone) {
-    const horizontalPad = 32
-    const frameWidthPx = Math.max(240, viewportWidth - horizontalPad)
-    const frameHeightPx = frameWidthPx * ASPECT
-    const slideStridePx = Math.max(frameHeightPx + 24, availH)
-    return { frameWidthPx, frameHeightPx, columns: 1, slideStridePx }
-  }
-
-  const frameHeightPx = availH / (1 + PEEK_VISIBLE_RATIO)
-  let frameWidthPx = frameHeightPx / ASPECT
-  const maxSingleW = Math.min(viewportWidth - 48, 520)
-  if (frameWidthPx > maxSingleW) {
-    frameWidthPx = maxSingleW
-  }
+  const availH = Math.max(280, viewportHeight - chromeTopPx - chromeBottomPx)
+  const maxFrameH = availH
+  const frameHeightPx = Math.min(maxFrameH, maxFrameH / (1 + PEEK_VISIBLE_RATIO))
+  let frameWidthPx = frameHeightPx * (9 / 16)
 
   const twoFit =
     viewportWidth >= 1180
@@ -46,12 +32,14 @@ export function computeShortsFrameLayout(
     frameWidthPx = Math.min(pairW, frameWidthPx)
   }
 
-  const frameHeightPxFinal = frameWidthPx * ASPECT
-  const slideStridePx = frameHeightPxFinal * (1 + PEEK_VISIBLE_RATIO)
+  const frameHeightPxFinal = frameWidthPx * (16 / 9)
+  const cappedHeight = Math.min(frameHeightPxFinal, maxFrameH)
+  const finalWidth = cappedHeight * (9 / 16)
+  const slideStridePx = cappedHeight * (1 + PEEK_VISIBLE_RATIO)
 
   return {
-    frameWidthPx,
-    frameHeightPx: frameHeightPxFinal,
+    frameWidthPx: finalWidth,
+    frameHeightPx: cappedHeight,
     columns,
     slideStridePx,
   }
