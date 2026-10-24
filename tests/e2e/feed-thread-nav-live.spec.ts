@@ -5,9 +5,8 @@ import { test, expect } from '@playwright/test'
  * Skips when feed has no posts (empty Supabase) or auth redirect blocks feed.
  */
 async function firstFeedPostId(page: import('@playwright/test').Page): Promise<string | null> {
-  await page.waitForLoadState('networkidle', { timeout: 45_000 }).catch(() => {})
   const card = page.locator('.margo-post-card[id^="feed-post-"]').first()
-  if (!(await card.waitFor({ state: 'visible', timeout: 45_000 }).catch(() => null))) return null
+  if (!(await card.waitFor({ state: 'visible', timeout: 60_000 }).catch(() => null))) return null
   const raw = await card.getAttribute('id')
   if (!raw?.startsWith('feed-post-')) return null
   return raw.slice('feed-post-'.length)
