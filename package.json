@@ -30,6 +30,7 @@
     "test:feed-content-tab": "node --experimental-strip-types --test lib/feed-content-tab.test.ts",
     "test:shorts-shelf-rotation": "node --experimental-strip-types --test lib/shorts-shelf-rotation.test.ts",
     "test:shorts-looks": "node --experimental-strip-types --test lib/shorts-looks.test.ts",
+    "test:shorts-frame-layout": "node --experimental-strip-types --test lib/shorts-frame-layout.test.ts",
     "test:lyric-back-delete-shell": "node --experimental-strip-types --test lib/lyric-back-delete-shell.test.ts lib/post-content-removed-audit.test.ts",
     "test:lyric-back-owner-delete-local": "node --experimental-strip-types --test lib/lyric-back-owner-delete-local.test.ts",
     "test:lyric-back-owner-edit-local": "node --experimental-strip-types --test lib/lyric-back-owner-edit-local.test.ts",
