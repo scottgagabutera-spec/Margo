@@ -4,7 +4,7 @@ const BASE = process.env.PLAYWRIGHT_BASE_URL ?? 'https://trymargo.com'
 const WIDTHS = [360, 390, 430, 640, 834, 1180, 1440, 1920]
 
 function shortsUrl(width: number) {
-  const fixture = BASE.includes('vercel.app') && width >= 640
+  const fixture = BASE.includes('vercel.app')
   const q = fixture ? '?tab=shorts&e2eShorts=1' : '?tab=shorts'
   return `${BASE}/feed${q}`
 }
@@ -125,12 +125,72 @@ for (const width of WIDTHS) {
       await expect(tapAfter).toHaveAttribute('aria-pressed', 'true')
     })
 
-    test('inactive slides keep fill-motion off (no off-screen flash)', async ({ page }) => {
-      test.skip(width < 640, 'fill-motion deferral is desktop-only')
+    test('settled Short keeps stable theme attrs during swipe', async ({ page }) => {
+      test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
       await openShortsTab(page, width)
-      const inactive = page.locator('[data-shorts-active="0"]')
-      if ((await inactive.count()) === 0) test.skip()
-      await expect(inactive.first()).toHaveAttribute('data-shorts-fill-motion', '0')
+      const pager = page.locator('.margo-feed-shorts-pager')
+      await expect(pager).toBeVisible({ timeout: 20000 })
+      const firstSlide = page.locator('[data-shorts-index="0"]')
+      const themeBefore = await firstSlide.getAttribute('data-shorts-theme')
+      const atmBefore = await firstSlide.getAttribute('data-shorts-atmosphere')
+      expect(themeBefore).toBeTruthy()
+      await pager.evaluate((el) => {
+        el.scrollTop = el.scrollHeight * 0.35
+      })
+      await page.waitForTimeout(80)
+      expect(await firstSlide.getAttribute('data-shorts-theme')).toBe(themeBefore)
+      expect(await firstSlide.getAttribute('data-shorts-atmosphere')).toBe(atmBefore)
+      await pager.evaluate((el) => {
+        el.dispatchEvent(new Event('scrollend'))
+      })
+      await page.waitForTimeout(200)
+    })
+
+    test('gap under Lyrics/Shorts tabs before first frame', async ({ page }) => {
+      await openShortsTab(page, width)
+      const tabBar = page.locator('.margo-feed-content-tab-bar')
+      const target = width >= 640
+        ? page.locator('.margo-feed-shorts-slide__frame').first()
+        : page.locator('[aria-label="Shorts preview, 9:16"]').first()
+      if ((await target.count()) === 0) test.skip()
+      await expect(tabBar).toBeVisible()
+      await expect(target).toBeVisible({ timeout: 20000 })
+      const tabBox = await tabBar.boundingBox()
+      const frameBox = await target.boundingBox()
+      expect(tabBox && frameBox).toBeTruthy()
+      if (tabBox && frameBox) {
+        const gap = frameBox.y - (tabBox.y + tabBox.height)
+        expect(gap).toBeGreaterThanOrEqual(14)
+      }
+    })
+
+    test('only one settled active marker after scroll settles', async ({ page }) => {
+      test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
+      await openShortsTab(page, width)
+      const pager = page.locator('.margo-feed-shorts-pager')
+      await expect(pager).toBeVisible({ timeout: 20000 })
+      await pager.evaluate((el) => {
+        el.scrollTop = Math.min(el.scrollHeight * 0.5, el.clientHeight * 1.2)
+      })
+      await page.waitForTimeout(400)
+      await pager.evaluate((el) => el.dispatchEvent(new Event('scrollend')))
+      await page.waitForTimeout(300)
+      await expect(page.locator('[data-shorts-active="1"]')).toHaveCount(1)
+    })
+  })
+}
+
+for (const width of [360, 390, 430, 834, 1440]) {
+  test.describe(`shorts settle playback @${width}px`, () => {
+    test.use({ viewport: { width, height: width < 640 ? 844 : 900 } })
+
+    test('first Short is settled active on tab open', async ({ page }) => {
+      test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
+      await page.goto(shortsUrl(width), { waitUntil: 'domcontentloaded', timeout: 45000 })
+      await page.waitForTimeout(1500)
+      const active = page.locator('[data-shorts-active="1"]')
+      await expect(active).toHaveCount(1, { timeout: 15000 })
+      await expect(active).toHaveAttribute('data-shorts-index', '0')
     })
   })
 }

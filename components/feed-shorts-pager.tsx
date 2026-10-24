@@ -8,7 +8,7 @@ import { MomentExportPreviewFrame } from '@/components/moment-export-preview-fra
 import { emotionToVibeLabel } from '@/lib/moment/vibe'
 import { isLivingAtmosphere, type AtmosphereId } from '@/lib/atmosphere'
 import type { LyricMoment } from '@/lib/lyric-moments-board'
-import { playLyricMomentPool } from '@/lib/lyric-moment-playback'
+import { playLyricMomentShort } from '@/lib/lyric-moment-playback'
 import {
   getAudioEngineState,
   stop,
@@ -42,10 +42,29 @@ function persistShortsUnmutePref(unmuted: boolean): void {
   }
 }
 
+function findSettledSlideIndex(scroller: HTMLElement): number {
+  const slides = scroller.querySelectorAll<HTMLElement>('[data-shorts-slide]')
+  if (!slides.length) return 0
+  const rootRect = scroller.getBoundingClientRect()
+  const targetY = rootRect.top + rootRect.height * 0.45
+  let bestIdx = 0
+  let bestDist = Infinity
+  slides.forEach((el) => {
+    const r = el.getBoundingClientRect()
+    const mid = r.top + r.height / 2
+    const dist = Math.abs(mid - targetY)
+    if (dist < bestDist) {
+      bestDist = dist
+      bestIdx = Number(el.dataset.shortsIndex) || 0
+    }
+  })
+  return bestIdx
+}
+
 type SlideProps = {
   clip: LyricMoment
   index: number
-  isActive: boolean
+  isSettled: boolean
   isPlaying: boolean
   atmosphereId: AtmosphereId
   stageThemeId: StageCardThemeId
@@ -62,7 +81,7 @@ type SlideProps = {
 function FeedShortsSlide({
   clip,
   index,
-  isActive,
+  isSettled,
   isPlaying,
   atmosphereId,
   stageThemeId,
@@ -75,27 +94,12 @@ function FeedShortsSlide({
   onPlay,
   onTapToggleSound,
 }: SlideProps) {
-  const [fillMotion, setFillMotion] = useState(false)
   const [soundFlash, setSoundFlash] = useState(false)
-  const motionAtmosphere = isActive ? atmosphereId : 'still'
 
-  useEffect(() => {
-    if (!desktopLayout || !isActive || reduceMotion) {
-      setFillMotion(false)
-      return
-    }
-    setFillMotion(false)
-    const id = requestAnimationFrame(() => {
-      requestAnimationFrame(() => setFillMotion(true))
-    })
-    return () => cancelAnimationFrame(id)
-  }, [desktopLayout, isActive, clip.songId, clip.lineId, reduceMotion])
+  const effectOwnsFill =
+    isSettled && !reduceMotion && isLivingAtmosphere(atmosphereId)
 
-  const effectOwnsFill = desktopLayout
-    ? isActive && fillMotion && !reduceMotion && isLivingAtmosphere(atmosphereId)
-    : isActive && isLivingAtmosphere(motionAtmosphere)
-
-  const cardAtmosphere = desktopLayout ? atmosphereId : motionAtmosphere
+  const cardAtmosphere = atmosphereId
 
   useEffect(() => {
     if (!soundFlash) return
@@ -104,7 +108,7 @@ function FeedShortsSlide({
   }, [soundFlash])
 
   const handleTapSurface = () => {
-    if (!desktopLayout || !isActive) return
+    if (!isSettled) return
     onTapToggleSound()
     if (!reduceMotion) setSoundFlash(true)
   }
@@ -154,11 +158,12 @@ function FeedShortsSlide({
       className="margo-feed-shorts-slide"
       data-shorts-slide
       data-shorts-index={index}
-      data-shorts-active={isActive ? '1' : '0'}
-      data-shorts-fill-motion={desktopLayout && isActive && fillMotion ? '1' : '0'}
+      data-shorts-active={isSettled ? '1' : '0'}
+      data-shorts-theme={stageThemeId}
+      data-shorts-atmosphere={atmosphereId}
     >
       <div className="margo-feed-shorts-slide__frame">
-        {desktopLayout && isActive ? (
+        {isSettled ? (
           <button
             type="button"
             className="margo-feed-shorts-slide__tap-surface"
@@ -167,7 +172,7 @@ function FeedShortsSlide({
             onClick={handleTapSurface}
           />
         ) : null}
-        {desktopLayout && soundFlash ? (
+        {soundFlash ? (
           <span className="margo-feed-shorts-slide__sound-flash" aria-hidden>
             <PlayPauseIcon playing={soundOn} buffering={false} size={22} color="var(--gold)" />
           </span>
@@ -238,8 +243,12 @@ export function FeedShortsPager({
   const withVibeClass = vibeFilterActive ? ' margo-feed-shorts-pager--with-vibe' : ''
   const emptyWithVibe = vibeFilterActive ? ' margo-feed-shorts-empty--with-vibe' : ''
   const scrollerRef = useRef<HTMLDivElement>(null)
-  const [activeIndex, setActiveIndex] = useState(0)
+  const [settledIndex, setSettledIndex] = useState(0)
   const [playingKey, setPlayingKey] = useState<string | null>(null)
+  const isScrollingRef = useRef(false)
+  const settledIndexRef = useRef(0)
+  const tabActiveRef = useRef(tabActive)
+  const loopClipRef = useRef<LyricMoment | null>(null)
   const [soundOn, setSoundOn] = useState(false)
   const [autoplayBlocked, setAutoplayBlocked] = useState(false)
   const [anonPlaysCompleted, setAnonPlaysCompleted] = useState(0)
@@ -318,62 +327,23 @@ export function FeedShortsPager({
   }, [signedIn])
 
   useEffect(() => {
+    tabActiveRef.current = tabActive
     if (!tabActive) {
       stop()
       setPlayingKey(null)
       lastAutoIndexRef.current = -1
+      isScrollingRef.current = false
+    } else {
+      const root = scrollerRef.current
+      if (root) {
+        root.scrollTop = 0
+        const idx = findSettledSlideIndex(root)
+        settledIndexRef.current = idx
+        setSettledIndex(idx)
+        lastAutoIndexRef.current = -1
+      }
     }
   }, [tabActive])
-
-  useEffect(() => {
-    return subscribeAudioEngine((state) => {
-      if (state.error?.includes('Play blocked')) {
-        setAutoplayBlocked(true)
-      }
-      if (!state.playing || state.mode === 'idle' || state.mode === 'full') {
-        setPlayingKey(null)
-        return
-      }
-      if (state.snippet) {
-        const playKey = `${state.songId}_${state.snippet.lineIndex}`
-        setPlayingKey(playKey)
-        setAutoplayBlocked(false)
-        if (!signedInRef.current && state.playing) {
-          const played = anonPlayedKeysRef.current
-          if (!played.has(playKey)) {
-            played.add(playKey)
-            setAnonPlaysCompleted(played.size)
-          }
-        }
-      }
-    })
-  }, [])
-
-  useEffect(() => {
-    const el = scrollerRef.current
-    if (!el || clips.length === 0) return
-    const next = clips[activeIndex + 1]
-    if (next?.audioUrl) warmUrls([next.audioUrl])
-  }, [activeIndex, clips])
-
-  useEffect(() => {
-    const root = scrollerRef.current
-    if (!root) return
-    const slides = root.querySelectorAll('[data-shorts-slide]')
-    if (!slides.length) return
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (!entry.isIntersecting || entry.intersectionRatio < 0.6) continue
-          const idx = Number((entry.target as HTMLElement).dataset.shortsIndex)
-          if (Number.isFinite(idx)) setActiveIndex(idx)
-        }
-      },
-      { root, threshold: [0.6] },
-    )
-    slides.forEach((s) => observer.observe(s))
-    return () => observer.disconnect()
-  }, [clips.length])
 
   const applyShortsVolume = useCallback((wantSound: boolean) => {
     const state = getAudioEngineState()
@@ -389,16 +359,117 @@ export function FeedShortsPager({
     (moment: LyricMoment, fromUserGesture: boolean) => {
       if (!moment.audioUrl) return
       if (fromUserGesture) setAutoplayBlocked(false)
+      loopClipRef.current = moment
       applyShortsVolume(soundOn)
-      playLyricMomentPool(moment, clips)
+      playLyricMomentShort(moment)
     },
-    [applyShortsVolume, clips, soundOn],
+    [applyShortsVolume, soundOn],
   )
 
   useEffect(() => {
-    if (!tabActive || autoplayBlocked) return
-    if (activeIndex === lastAutoIndexRef.current) return
-    const clip = clips[activeIndex]
+    settledIndexRef.current = settledIndex
+  }, [settledIndex])
+
+  useEffect(() => {
+    return subscribeAudioEngine((state) => {
+      if (state.error?.includes('Play blocked')) {
+        setAutoplayBlocked(true)
+      }
+      if (!state.playing || state.mode === 'idle' || state.mode === 'full') {
+        setPlayingKey(null)
+        if (
+          state.mode === 'snippet'
+          && !state.playing
+          && !state.buffering
+          && tabActiveRef.current
+          && !isScrollingRef.current
+          && !state.error
+        ) {
+          const clip = loopClipRef.current
+          const idx = settledIndexRef.current
+          const current = clips[idx]
+          if (
+            clip
+            && current
+            && clip.songId === current.songId
+            && clip.lineId === current.lineId
+            && current.audioUrl
+          ) {
+            window.setTimeout(() => {
+              if (isScrollingRef.current || !tabActiveRef.current) return
+              const wantSound = readShortsUnmutePref()
+              applyShortsVolume(wantSound)
+              playLyricMomentShort(current)
+            }, 40)
+          }
+        }
+        return
+      }
+      if (state.snippet) {
+        const playKey = `${state.songId}_${state.snippet.lineIndex}`
+        setPlayingKey(playKey)
+        setAutoplayBlocked(false)
+        if (!signedInRef.current && state.playing) {
+          const played = anonPlayedKeysRef.current
+          if (!played.has(playKey)) {
+            played.add(playKey)
+            setAnonPlaysCompleted(played.size)
+          }
+        }
+      }
+    })
+  }, [applyShortsVolume, clips])
+
+  useEffect(() => {
+    const el = scrollerRef.current
+    if (!el || clips.length === 0) return
+    const next = clips[settledIndex + 1]
+    if (next?.audioUrl) warmUrls([next.audioUrl])
+  }, [settledIndex, clips])
+
+  useEffect(() => {
+    const root = scrollerRef.current
+    if (!root || clips.length === 0) return
+
+    let settleTimer: ReturnType<typeof setTimeout> | undefined
+
+    const commitSettled = () => {
+      isScrollingRef.current = false
+      const idx = findSettledSlideIndex(root)
+      settledIndexRef.current = idx
+      setSettledIndex(idx)
+    }
+
+    const onScroll = () => {
+      if (!isScrollingRef.current) {
+        isScrollingRef.current = true
+        stop()
+        setPlayingKey(null)
+        lastAutoIndexRef.current = -1
+      }
+      if (settleTimer) clearTimeout(settleTimer)
+      settleTimer = setTimeout(commitSettled, 140)
+    }
+
+    const onScrollEnd = () => {
+      if (settleTimer) clearTimeout(settleTimer)
+      commitSettled()
+    }
+
+    root.addEventListener('scroll', onScroll, { passive: true })
+    root.addEventListener('scrollend', onScrollEnd)
+    commitSettled()
+    return () => {
+      root.removeEventListener('scroll', onScroll)
+      root.removeEventListener('scrollend', onScrollEnd)
+      if (settleTimer) clearTimeout(settleTimer)
+    }
+  }, [clips.length])
+
+  useEffect(() => {
+    if (!tabActive || autoplayBlocked || isScrollingRef.current) return
+    if (settledIndex === lastAutoIndexRef.current) return
+    const clip = clips[settledIndex]
     if (!clip?.audioUrl) return
     const clipKey = `${clip.songId}_${clip.lineId}`
     if (
@@ -408,24 +479,25 @@ export function FeedShortsPager({
     ) {
       return
     }
-    lastAutoIndexRef.current = activeIndex
+    lastAutoIndexRef.current = settledIndex
+    loopClipRef.current = clip
     applyShortsVolume(soundOn)
-    playLyricMomentPool(clip, clips)
+    playLyricMomentShort(clip)
     const t = window.setTimeout(() => {
       const err = getAudioEngineState().error
       if (err?.includes('Play blocked')) setAutoplayBlocked(true)
     }, 400)
     return () => window.clearTimeout(t)
-  }, [activeIndex, anonPlaysCompleted, applyShortsVolume, autoplayBlocked, clips, signedIn, soundOn, tabActive])
+  }, [settledIndex, anonPlaysCompleted, applyShortsVolume, autoplayBlocked, clips, signedIn, soundOn, tabActive])
 
   const toggleSound = useCallback(() => {
     const next = !soundOn
     setSoundOn(next)
     persistShortsUnmutePref(next)
     applyShortsVolume(next)
-    const clip = clips[activeIndex]
+    const clip = clips[settledIndex]
     if (next && clip?.audioUrl) playClip(clip, true)
-  }, [activeIndex, applyShortsVolume, clips, playClip, soundOn])
+  }, [applyShortsVolume, clips, playClip, settledIndex, soundOn])
 
   if (loading) {
     return (
@@ -452,20 +524,20 @@ export function FeedShortsPager({
         const key = `${clip.songId}_${clip.lineId}`
         const vibeLabel = emotionToVibeLabel(clip.vibes[0]) || clip.vibes[0] || null
         const isPlaying = playingKey === key
-        const isActive = index === activeIndex
+        const isSettled = index === settledIndex
         const look = pickShortsLook(clip.songId, clip.vibes[0], utcDay)
         const clipNeedsSignup =
           !signedIn
           && anonPlaysCompleted >= ANON_PLAYS_BEFORE_SIGNUP
           && !anonPlayedKeysRef.current.has(key)
-        const showBlockedPlay = isActive && autoplayBlocked && !isPlaying && !clipNeedsSignup
-        const showSignupOnPlay = clipNeedsSignup && isActive
+        const showBlockedPlay = isSettled && autoplayBlocked && !isPlaying && !clipNeedsSignup
+        const showSignupOnPlay = clipNeedsSignup && isSettled
         return (
           <FeedShortsSlide
             key={key}
             clip={clip}
             index={index}
-            isActive={isActive}
+            isSettled={isSettled}
             isPlaying={isPlaying}
             atmosphereId={look.atmosphereId}
             stageThemeId={look.stageThemeId}

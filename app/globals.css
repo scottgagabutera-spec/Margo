@@ -2853,8 +2853,13 @@ html, body {
   overflow-y: auto;
   overflow-x: hidden;
   scroll-snap-type: y mandatory;
+  scroll-snap-stop: always;
+  scroll-padding-top: 20px;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
+  touch-action: pan-y;
+  padding-top: 20px;
+  box-sizing: border-box;
   background: var(--bg);
   z-index: 4;
 }
@@ -2864,10 +2869,10 @@ html, body {
 .margo-feed-shorts-slide {
   min-height: 100%;
   height: 100%;
-  scroll-snap-align: start;
+  scroll-snap-align: center;
   scroll-snap-stop: always;
   box-sizing: border-box;
-  padding: 12px 16px calc(var(--margo-page-padding-bottom, 88px) + 12px);
+  padding: 8px 16px calc(var(--margo-page-padding-bottom, 88px) + 12px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2875,6 +2880,7 @@ html, body {
   gap: 12px;
 }
 .margo-feed-shorts-slide__frame {
+  position: relative;
   flex: 1;
   width: 100%;
   max-width: min(100%, 420px);
@@ -2882,6 +2888,37 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.margo-feed-shorts-slide__tap-surface {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+.margo-feed-shorts-slide__sound-flash {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  z-index: 4;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0;
+  animation: margo-shorts-sound-flash 0.65s var(--ease-out) forwards;
+}
+@keyframes margo-shorts-sound-flash {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.05); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .margo-feed-shorts-slide__sound-flash {
+    animation: none;
+    opacity: 0;
+  }
 }
 .margo-feed-shorts-slide__meta {
   width: 100%;
@@ -2920,14 +2957,10 @@ html, body {
     padding-right: 24px;
     box-sizing: border-box;
   }
-  .margo-feed-shorts-pager {
-    padding-top: 12px;
-    box-sizing: border-box;
-  }
   .margo-feed-shorts-slide {
     min-height: var(--margo-shorts-slide-min-h, 100%);
     height: auto;
-    padding: 12px 0 12px;
+    padding: 8px 0 12px;
     justify-content: flex-start;
   }
   .margo-feed-shorts-slide__frame {
@@ -2958,37 +2991,6 @@ html, body {
   .margo-feed-shorts-slide__meta a,
   .margo-feed-shorts-slide__meta button {
     pointer-events: auto;
-  }
-  .margo-feed-shorts-slide__tap-surface {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    margin: 0;
-    padding: 0;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-  }
-  .margo-feed-shorts-slide__sound-flash {
-    position: absolute;
-    left: 50%;
-    top: 42%;
-    z-index: 4;
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-    opacity: 0;
-    animation: margo-shorts-sound-flash 0.65s var(--ease-out) forwards;
-  }
-  @keyframes margo-shorts-sound-flash {
-    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
-    25% { opacity: 1; }
-    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.05); }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .margo-feed-shorts-slide__sound-flash {
-      animation: none;
-      opacity: 0;
-    }
   }
   .margo-feed-shorts-slide__meta-row {
     display: flex;
