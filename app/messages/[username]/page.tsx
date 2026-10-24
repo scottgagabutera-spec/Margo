@@ -13,6 +13,7 @@ import { MargoConversationLayout } from '@/components/margo-conversation-layout'
 import { MargoConversationHeader } from '@/components/margo-conversation-header'
 import { MomentMessageCard } from '@/components/moment-message-card'
 import { parseMomentMessageBody } from '@/lib/moment/message-format'
+import { signedOutGateBenefitStyle, signedOutGateSignInStyle } from '@/lib/signed-out-gate-styles'
 import { isPartnerUuid } from '@/lib/messages/partner-key'
 import { TYPE, UI_FONT } from '@/lib/fonts'
 
@@ -111,14 +112,12 @@ export default function ThreadPage() {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center' }}>
-          <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-            Sign in to send messages
+          <p style={signedOutGateBenefitStyle}>
+            Message people who resonate with your lines.
           </p>
-          <SignInLink style={{
-            padding: '10px 24px', border: '1px solid var(--border)', borderRadius: '50px',
-            color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.6rem',
-            letterSpacing: '1px', textTransform: 'uppercase', textDecoration: 'none',
-          }}>Sign In</SignInLink>
+          <SignInLink style={signedOutGateSignInStyle} returnTo="/messages">
+            Sign in
+          </SignInLink>
         </div>
       </div>
     )

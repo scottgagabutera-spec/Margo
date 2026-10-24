@@ -20,6 +20,7 @@ import {
   snippetToQueueItem,
 } from '@/lib/audio-engine'
 import { LYRIC_FONT, UI_FONT } from '@/lib/fonts'
+import { signedOutGateBenefitStyle, signedOutGateSignInStyle } from '@/lib/signed-out-gate-styles'
 
 function isPlayable(item: LibraryPlaylistItem): boolean {
   return !!item.audioUrl && (item.status === 'live' || item.status === 'active' || !item.status)
@@ -110,26 +111,20 @@ export default function LibraryPlaylistPage() {
           <p style={{ fontFamily: UI_FONT, color: 'var(--text-muted)' }}>Loading…</p>
         ) : !user || user.isAnonymous ? (
           <div style={{ textAlign: 'center', padding: '32px 0' }}>
-            <p style={{
+            <h1 style={{
               fontFamily: LYRIC_FONT,
               fontStyle: 'italic',
-              color: 'var(--text-secondary)',
-              marginBottom: '16px',
+              fontSize: '1.5rem',
+              color: 'var(--text)',
+              margin: '0 0 16px',
             }}>
-              Sign in to open your library
+              Library
+            </h1>
+            <p style={signedOutGateBenefitStyle}>
+              Save lines and songs to find them again.
             </p>
-            <SignInLink style={{
-              padding: '10px 24px',
-              border: '1px solid var(--border)',
-              borderRadius: '50px',
-              color: 'var(--text-secondary)',
-              fontFamily: UI_FONT,
-              fontSize: '0.6rem',
-              letterSpacing: '1px',
-              textTransform: 'uppercase',
-              textDecoration: 'none',
-            }}>
-              Sign In
+            <SignInLink style={signedOutGateSignInStyle} returnTo="/library">
+              Sign in
             </SignInLink>
           </div>
         ) : !detail || !isOwner ? (
