@@ -7,7 +7,7 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { useArtistApplication } from '@/hooks/useArtistApplication'
 import { signOutBrowser } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
-import { HubIconButton, LibraryNavLink, SearchNavLink } from '@/components/hub-menu'
+import { HubIconButton, SearchNavLink } from '@/components/hub-menu'
 import { LoadingRing } from '@/components/loading-ring'
 import { usePrimaryTab, usePrimaryTabLinkProps } from '@/components/primary-tab-shell'
 import { hidesAppNav, isMessageThreadPath } from '@/lib/chrome-mode'
@@ -195,7 +195,6 @@ export function MargoNav() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', pointerEvents: 'none' }}>
           <div style={{ pointerEvents: 'auto' }}><SearchNavLink /></div>
-          {isSignedIn ? <div style={{ pointerEvents: 'auto' }}><LibraryNavLink /></div> : null}
 
           <div style={{ display: 'none' }} className="margo-desktop-nav">
             {[
