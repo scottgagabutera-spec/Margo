@@ -84,9 +84,6 @@
     --margo-feed-max-width: 680px;
     --stage-search-h: 52px;
   }
-  .margo-post-card__lyric-zone {
-    max-width: 46ch;
-  }
 }
 @import 'tailwindcss';
 @import 'tw-animate-css';
@@ -1245,6 +1242,11 @@ html[data-margo-stage-idle] .margo-stage-zone {
   text-align: left;
   padding: 0;
   max-width: 36ch;
+}
+@media (min-width: 640px) {
+  .margo-post-card__lyric-zone {
+    max-width: 46ch;
+  }
 }
 .margo-post-card__lyric-more {
   color: var(--text-muted);
