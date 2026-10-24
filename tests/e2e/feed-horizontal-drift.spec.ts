@@ -87,21 +87,48 @@ for (const width of [360, 390, 430]) {
 }
 
 test.describe('feed tab swipe from edge', () => {
-  test.use({ viewport: { width: 390, height: 844 } })
+  test.use({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  })
 
   test('intentional edge swipe can still open Discover peek', async ({ page }) => {
     await page.goto(`${BASE}/discover`, { waitUntil: 'domcontentloaded', timeout: 45000 })
-    await page.waitForTimeout(600)
-    await feedPane(page)
-    const startUrl = page.url()
-    const box = await page.locator('[data-margo-primary-tab="feed"]').boundingBox()
-    const x0 = (box?.x ?? 0) + 12
-    const y0 = (box?.y ?? 0) + 400
-    await page.mouse.move(x0, y0)
-    await page.mouse.down()
-    await page.mouse.move(x0 - 120, y0, { steps: 10 })
-    await page.mouse.up()
+    await page.waitForTimeout(800)
+    // Client nav keeps Discover in the primary-tab cache (full goto /feed would cold-drop it).
+    const feedTab = page.getByRole('link', { name: /^feed$/i })
+    await feedTab.click()
+    await expect(page.locator('[data-margo-primary-tab="feed"]')).toHaveCount(1, { timeout: 15000 })
     await page.waitForTimeout(400)
+    const startUrl = page.url()
+    const w = page.viewportSize()?.width ?? 390
+    const y0 = 420
+    await page.evaluate(
+      async ({ startY, vw }) => {
+        const fire = (type: string, x: number, y: number) => {
+          window.dispatchEvent(
+            new PointerEvent(type, {
+              bubbles: true,
+              cancelable: true,
+              clientX: x,
+              clientY: y,
+              pointerId: 1,
+              pointerType: 'touch',
+              isPrimary: true,
+            }),
+          )
+        }
+        fire('pointerdown', 10, startY)
+        for (let x = 10; x >= vw - 40; x -= 14) {
+          fire('pointermove', x, startY)
+          await new Promise((r) => requestAnimationFrame(r))
+        }
+        fire('pointerup', vw - 40, startY)
+      },
+      { startY: y0, vw: w },
+    )
+    await page.waitForTimeout(600)
     const peek = await page.locator('[data-margo-primary-tab-peek="1"]').count()
     const url = page.url()
     const navigated = url.includes('/discover')
