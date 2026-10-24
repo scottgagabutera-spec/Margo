@@ -183,6 +183,7 @@ type HubContextValue = {
   signedIn: boolean
   pendingHref: string | null
   beginNavigate: (href: string) => boolean
+  setDesktopAnchor: (el: HTMLElement | null) => void
 }
 
 const HubContext = createContext<HubContextValue | null>(null)
@@ -275,8 +276,41 @@ function HubTiles({
 function HubPanel() {
   const { open, close, signedIn, surfaces, pendingHref, beginNavigate } = useHub()
   const [mounted, setMounted] = useState(false)
+  const [desktopPanelStyle, setDesktopPanelStyle] = useState<CSSProperties>({})
 
   useEffect(() => setMounted(true), [])
+
+  useEffect(() => {
+    if (!open) return
+    const mq = window.matchMedia('(min-width: 640px)')
+    const place = () => {
+      if (!mq.matches) {
+        setDesktopPanelStyle({})
+        return
+      }
+      const anchor = document.querySelector('[data-margo-hub-desktop-anchor="1"]') as HTMLElement | null
+      if (!anchor) return
+      const r = anchor.getBoundingClientRect()
+      const panelW = 380
+      const left = Math.min(
+        Math.max(12, r.left + r.width / 2 - panelW / 2),
+        window.innerWidth - panelW - 12,
+      )
+      setDesktopPanelStyle({
+        top: `calc(${r.bottom}px + 8px)`,
+        left: `${left}px`,
+        right: 'auto',
+        width: `${panelW}px`,
+      })
+    }
+    place()
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, true)
+    return () => {
+      window.removeEventListener('resize', place)
+      window.removeEventListener('scroll', place, true)
+    }
+  }, [open])
 
   if (!mounted || !open) return null
 
@@ -290,6 +324,20 @@ function HubPanel() {
 
   return createPortal(
     <>
+      {open ? (
+        <div
+          className="margo-hub-desktop-scrim"
+          aria-hidden
+          onClick={() => close()}
+          style={{
+            display: 'none',
+            position: 'fixed',
+            inset: 0,
+            zIndex: 58,
+            background: 'rgba(0,0,0,0.45)',
+          }}
+        />
+      ) : null}
       {/* Mobile: sheet under nav, above tab bar */}
       <div
         className="margo-hub-sheet"
@@ -338,6 +386,7 @@ function HubPanel() {
           borderRadius: '14px',
           boxShadow: '0 12px 28px rgba(0,0,0,0.45)',
           padding: '12px',
+          ...desktopPanelStyle,
         }}
       >
         <div
@@ -359,6 +408,7 @@ function HubPanel() {
         @media (min-width: 640px) {
           .margo-hub-sheet { display: none !important; }
           .margo-hub-panel { display: block !important; }
+          .margo-hub-desktop-scrim { display: block !important; }
         }
       `}</style>
     </>,
@@ -376,6 +426,10 @@ export function HubProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false)
   const [pendingHref, setPendingHref] = useState<string | null>(null)
   const pendingHrefRef = useRef<string | null>(null)
+  const desktopAnchorRef = useRef<HTMLElement | null>(null)
+  const setDesktopAnchor = useCallback((el: HTMLElement | null) => {
+    desktopAnchorRef.current = el
+  }, [])
   const scrollOriginRef = useRef(0)
   const lastScrollRef = useRef({ y: 0, t: 0 })
 
@@ -484,9 +538,9 @@ export function HubProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       open, setOpen, toggle, close, hubHasUnread: hasActivity, surfaces, signedIn,
-      pendingHref, beginNavigate,
+      pendingHref, beginNavigate, setDesktopAnchor,
     }),
-    [open, toggle, close, hasActivity, surfaces, signedIn, pendingHref, beginNavigate],
+    [open, toggle, close, hasActivity, surfaces, signedIn, pendingHref, beginNavigate, setDesktopAnchor],
   )
 
   return (
@@ -497,13 +551,60 @@ export function HubProvider({ children }: { children: ReactNode }) {
   )
 }
 
-/** Desktop / top-bar icon trigger — 44×44 touch (Brand §14). */
-export function HubIconButton() {
-  const { open, toggle, hubHasUnread } = useHub()
+/** Desktop primary nav Hub control — icon + label, anchors panel. */
+export function HubDesktopNavButton({ labelStyle }: { labelStyle: CSSProperties }) {
+  const { open, toggle, hubHasUnread, setDesktopAnchor } = useHub()
+  const ref = useCallback(
+    (node: HTMLButtonElement | null) => {
+      setDesktopAnchor(node)
+    },
+    [setDesktopAnchor],
+  )
   return (
     <button
+      ref={ref}
       type="button"
       data-margo-hub-root
+      data-margo-hub-desktop-anchor="1"
+      onClick={toggle}
+      aria-label={hubHasUnread ? 'Hub, new activity' : 'Hub'}
+      aria-expanded={open}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '2px',
+        minWidth: TOUCH,
+        minHeight: TOUCH,
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        position: 'relative',
+        boxSizing: 'border-box',
+        padding: '0 6px',
+        color: open ? 'var(--gold)' : 'rgba(255,255,255,0.55)',
+        WebkitTapHighlightColor: 'transparent',
+      }}
+    >
+      <span style={{ position: 'relative', display: 'inline-flex' }}>
+        <HubGridIcon size={20} color="currentColor" />
+        <HubPresenceDot visible={hubHasUnread} top="-2px" right="-2px" />
+      </span>
+      <span style={labelStyle}>Hub</span>
+    </button>
+  )
+}
+
+/** Legacy compact Hub icon (search row). Prefer HubDesktopNavButton in primary nav. */
+export function HubIconButton() {
+  const { open, toggle, hubHasUnread, setDesktopAnchor } = useHub()
+  return (
+    <button
+      ref={setDesktopAnchor}
+      type="button"
+      data-margo-hub-root
+      data-margo-hub-desktop-anchor="1"
       onClick={toggle}
       aria-label={hubHasUnread ? 'Hub, new activity' : 'Hub'}
       aria-expanded={open}

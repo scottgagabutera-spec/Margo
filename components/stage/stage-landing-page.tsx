@@ -16,10 +16,10 @@ import { UI_FONT } from '@/lib/fonts'
 import { useIdentity } from '@/hooks/useIdentity'
 
 const FOOTER_LINKS = [
-  { label: 'Feed', href: '/feed' },
-  { label: 'Discover', href: '/discover' },
   { label: 'About', href: '/about' },
   { label: 'Privacy', href: '/privacy' },
+  { label: 'Terms', href: '/terms' },
+  { label: 'Contact', href: '/contact' },
 ] as const
 
 const FOOTER_SOCIAL = [

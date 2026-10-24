@@ -1,18 +1,14 @@
 'use client'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import MargoLogo from '@/components/MargoLogo'
 import { useIdentity } from '@/hooks/useIdentity'
-import { useArtistApplication } from '@/hooks/useArtistApplication'
-import { signOutBrowser } from '@/lib/supabase/client'
-import { useAuthGate } from '@/components/supabase-auth-provider'
-import { HubIconButton, LibraryNavLink, SearchNavLink } from '@/components/hub-menu'
-import { LoadingRing } from '@/components/loading-ring'
 import { usePrimaryTab, usePrimaryTabLinkProps } from '@/components/primary-tab-shell'
 import { hidesAppNav, isMessageThreadPath } from '@/lib/chrome-mode'
-import { PendingNavLink } from '@/components/pending-nav-link'
-import { SignInLink } from '@/components/signin-link'
+import { SearchNavLink } from '@/components/hub-menu'
+import { PrimaryDesktopNav } from '@/components/primary-desktop-nav'
+import { useSigninHref } from '@/components/signin-link'
 import { BackButton } from '@/components/back-button'
 import { navBackForPath, useNavBackOverride } from '@/components/nav-back'
 
@@ -66,27 +62,21 @@ const font = 'var(--font-geist-sans), system-ui, sans-serif'
  */
 export function MargoNav() {
   const pathname = usePathname()
-  const router = useRouter()
-  const { activeTab, isTabPending, isTabAcked } = usePrimaryTab()
+  const { activeTab, isTabPending } = usePrimaryTab()
   const feedLink = usePrimaryTabLinkProps('/feed', 'feed')
   const discoverLink = usePrimaryTabLinkProps('/discover', 'discover')
   const composeLink = usePrimaryTabLinkProps('/compose', 'compose')
   const youLink = usePrimaryTabLinkProps('/you', 'you')
-  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false)
-  const avatarMenuRef = useRef<HTMLDivElement>(null)
   const navElRef = useRef<HTMLElement>(null)
   const { user, identity } = useIdentity()
-  const { rehydrate } = useAuthGate()
-  const { application } = useArtistApplication()
+  const signinHref = useSigninHref()
   const navBackOverride = useNavBackOverride()
   const pathBack = navBackForPath(pathname)
   const navBack = activeTab === 'you' ? null : (navBackOverride ?? pathBack)
 
+  const isLanding = pathname === '/'
   const isOnFeed = activeTab === 'feed' || (!activeTab && pathname === '/feed')
-  // Full lockup (mark + MARGO) only on Feed home. Landing has its own lockup.
-  // Logo returns to Stage landing (`/`) — expression front door; Feed tab stays in-app home.
-  // Elsewhere: mark/symbol only — tab or page context owns the destination name.
-  const showWordmark = isOnFeed
+  const showWordmark = isOnFeed || isLanding
   const isOnDiscover = activeTab === 'discover' || (!activeTab && !!pathname?.startsWith('/discover'))
   const isOnCompose = activeTab === 'compose' || (!activeTab && pathname === '/compose')
   const isOnSignin = pathname === '/signin'
@@ -99,37 +89,15 @@ export function MargoNav() {
     return () => mq.removeEventListener('change', sync)
   }, [])
   const shellHidden =
-    hidesAppNav(pathname) || (isMobile && isMessageThreadPath(pathname))
+    (hidesAppNav(pathname) && !(isLanding && !isMobile)) ||
+    (isMobile && isMessageThreadPath(pathname))
 
   const isSignedIn = !!user && !user.isAnonymous
-  const applicationStatus = application?.status ?? 'none'
-  const showApplyCTA = isSignedIn && !identity?.isArtist
-  const applyLabel =
-    applicationStatus === 'pending' ? 'Application Pending' :
-    applicationStatus === 'rejected' ? 'Reapply as Artist' :
-    'Apply as an Artist'
-
-  const ownProfileHref = identity ? `/you` : null
-
-  const handleSignOut = async () => {
-    setAvatarMenuOpen(false)
-    await signOutBrowser()
-    await rehydrate()
-    router.push('/')
-  }
-
-  useEffect(() => { setAvatarMenuOpen(false) }, [pathname])
-
-  useEffect(() => {
-    if (!avatarMenuOpen) return
-    const handleClick = (e: MouseEvent) => {
-      if (avatarMenuRef.current && !avatarMenuRef.current.contains(e.target as Node)) {
-        setAvatarMenuOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [avatarMenuOpen])
+  const youHref = isSignedIn ? '/you' : signinHref
+  const isOnProfile =
+    activeTab === 'you' ||
+    pathname === '/you' ||
+    (!!identity && isSignedIn && pathname === `/profile/${identity.username}`)
 
   // Measures the nav's real rendered height (which changes across
   // breakpoints, font load, etc.) and publishes it as a CSS var on
@@ -150,13 +118,6 @@ export function MargoNav() {
     ro.observe(el)
     return () => ro.disconnect()
   }, [shellHidden])
-
-  const avatarDropdownItems = ownProfileHref ? [
-    { href: ownProfileHref, label: 'Profile' },
-    ...(identity?.isArtist ? [{ href: '/studio', label: 'Studio' }] : []),
-    { href: '/settings', label: 'Account Settings' },
-    ...(showApplyCTA ? [{ href: '/apply-artist', label: applyLabel }] : []),
-  ] : []
 
   if (shellHidden) return null
 
@@ -193,200 +154,33 @@ export function MargoNav() {
           </Link>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', pointerEvents: 'none' }}>
-          <div style={{ pointerEvents: 'auto' }}><SearchNavLink /></div>
-          {isSignedIn ? <div style={{ pointerEvents: 'auto' }}><LibraryNavLink /></div> : null}
-
-          <div style={{ display: 'none' }} className="margo-desktop-nav">
-            {[
-              { href: '/feed', label: 'Feed', active: isOnFeed, acked: isTabAcked('feed'), pending: isTabPending('feed'), linkProps: feedLink },
-              { href: '/discover', label: 'Discover', active: isOnDiscover, acked: isTabAcked('discover'), pending: isTabPending('discover'), linkProps: discoverLink },
-            ].map(({ href, label, active, acked, pending, linkProps }) => (
-              <Link key={href} href={href} {...linkProps} style={{
-                fontSize: '0.75rem', fontFamily: font,
-                fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase',
-                textDecoration: 'none',
-                color: acked || pending || active ? 'var(--gold)' : 'rgba(255,255,255,0.5)',
-                background: acked || pending ? 'var(--gold-faint)' : 'transparent',
-                padding: '0 14px', position: 'relative',
-                minHeight: 'var(--margo-touch-min)',
-                display: 'inline-flex', alignItems: 'center', gap: '8px',
-                boxSizing: 'border-box',
-                borderRadius: '8px',
-                transition: 'color 80ms var(--ease-out), background 80ms var(--ease-out)',
-                whiteSpace: 'nowrap',
-                WebkitTapHighlightColor: 'transparent',
-              }}>
-                {pending ? <LoadingRing size={14} strokeWidth={1.5} state="spinning" /> : null}
-                {label}
-                {active && !pending && (
-                  <span style={{
-                    position: 'absolute', bottom: '2px', left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: '18px', height: '2px',
-                    background: 'var(--gold)', borderRadius: '2px',
-                  }} />
-                )}
-              </Link>
-            ))}
-
-            <Link href="/compose" {...composeLink} style={{
-              fontSize: '0.6rem', fontFamily: font,
-              fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase',
-              textDecoration: 'none', color: 'var(--bg)',
-              background: 'var(--gold)', borderRadius: '50px',
-              padding: '0 20px', marginLeft: '8px',
-              minHeight: 'var(--margo-touch-min)',
-              display: 'inline-flex', alignItems: 'center', gap: '8px',
-              boxSizing: 'border-box',
-              transition: 'all 150ms ease', flexShrink: 0, whiteSpace: 'nowrap',
-              opacity: isTabPending('compose') || isTabAcked('compose') ? 0.9 : isOnCompose ? 0.75 : 1,
-              WebkitTapHighlightColor: 'transparent',
-            }}>
-              {isTabPending('compose') ? <LoadingRing size={14} strokeWidth={1.5} state="spinning" color="var(--bg)" /> : null}
-              Send a line
-            </Link>
-
-            <div style={{ marginLeft: '4px' }}>
-              <HubIconButton />
-            </div>
-
-            {!isSignedIn ? (
-              <SignInLink style={{
-                fontSize: '0.65rem', fontFamily: font,
-                fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase',
-                textDecoration: 'none',
-                color: isOnSignin ? 'var(--gold)' : 'rgba(255,255,255,0.35)',
-                padding: '0 14px', marginLeft: '4px',
-                minHeight: 'var(--margo-touch-min)',
-                display: 'inline-flex', alignItems: 'center',
-                boxSizing: 'border-box',
-                transition: 'color 150ms ease', whiteSpace: 'nowrap',
-              }}>Sign In</SignInLink>
-            ) : null}
-
-            {isSignedIn && !identity ? (
-              <span
-                aria-hidden
-                style={{
-                  marginLeft: '8px',
-                  width: 'var(--margo-touch-min)',
-                  height: 'var(--margo-touch-min)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <LoadingRing size={22} strokeWidth={1.5} state="spinning" />
-              </span>
-            ) : null}
-
-            {isSignedIn && identity && ownProfileHref && (
-              <div ref={avatarMenuRef} style={{ position: 'relative', marginLeft: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => setAvatarMenuOpen(o => !o)}
-                  aria-label={`${identity.displayName}'s account menu`}
-                  aria-expanded={avatarMenuOpen}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
-                    flexShrink: 0,
-                    background: 'none', border: 'none',
-                    boxSizing: 'border-box',
-                    cursor: 'pointer', padding: 0,
-                  }}
-                >
-                  <span style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    width: '32px', height: '32px', borderRadius: '50%',
-                    overflow: 'hidden',
-                    background: identity.avatarUrl ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
-                    border: avatarMenuOpen ? '2px solid var(--gold)' : '1px solid rgba(232,197,71,0.2)',
-                    boxSizing: 'border-box', transition: 'border-color 150ms ease',
-                  }}>
-                    {identity.avatarUrl ? (
-                      <img src={identity.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <span style={{ fontFamily: font, fontSize: '0.65rem', fontWeight: 700, color: 'var(--bg)' }}>
-                        {(identity.displayName || '??').slice(0, 2).toUpperCase()}
-                      </span>
-                    )}
-                  </span>
-                </button>
-
-                {avatarMenuOpen && (
-                  <div style={{
-                    position: 'absolute', top: 'calc(100% + 10px)', right: 0,
-                    minWidth: '200px', background: 'var(--bg)',
-                    border: '1px solid var(--border)', borderRadius: '10px',
-                    boxShadow: '0 12px 28px rgba(0,0,0,0.45)',
-                    padding: '6px', zIndex: 60,
-                  }}>
-                    {avatarDropdownItems.map(({ href, label }) => (
-                      <PendingNavLink
-                        key={href}
-                        href={href}
-                        indicator="tint"
-                        {...(href === '/you' ? youLink : {})}
-                        onClick={(event) => {
-                          setAvatarMenuOpen(false)
-                          if (href === '/you') youLink.onClick(event)
-                        }}
-                        style={{
-                          display: 'flex', alignItems: 'center',
-                          minHeight: 'var(--margo-touch-min)',
-                          fontFamily: font, fontSize: '0.8rem',
-                          textDecoration: 'none',
-                          color: pathname === href || (href === '/you' && activeTab === 'you') ? 'var(--gold)' : 'rgba(255,255,255,0.75)',
-                          padding: '0 12px', borderRadius: '6px',
-                          boxSizing: 'border-box',
-                          transition: 'background 120ms ease, color 120ms ease',
-                        }}
-                      >
-                        {label}
-                      </PendingNavLink>
-                    ))}
-                    <div style={{ height: '1px', background: 'var(--border)', margin: '6px 4px' }} />
-                    <button
-                      type="button"
-                      onClick={handleSignOut}
-                      style={{
-                        display: 'flex', alignItems: 'center', width: '100%', textAlign: 'left',
-                        minHeight: 'var(--margo-touch-min)',
-                        fontFamily: font, fontSize: '0.8rem',
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        color: 'rgba(255,255,255,0.5)',
-                        padding: '0 12px', borderRadius: '6px',
-                        boxSizing: 'border-box',
-                      }}
-                    >
-                      Sign Out
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+        <PrimaryDesktopNav
+          isSignedIn={isSignedIn}
+          isOnFeed={isOnFeed}
+          isOnDiscover={isOnDiscover}
+          isOnCompose={isOnCompose}
+          isOnProfile={isOnProfile}
+          isOnSignin={isOnSignin}
+          feedLink={feedLink}
+          discoverLink={discoverLink}
+          composeLink={composeLink}
+          youLink={youLink}
+          youHref={youHref}
+          tabPending={isTabPending}
+        />
+        <div style={{ pointerEvents: 'auto', flexShrink: 0 }}>
+          <SearchNavLink />
         </div>
       </div>
 
       <style>{`
         :root {
-          /* Fallback so nothing snaps/jumps before the ResizeObserver
-             effect above runs on first client paint. Real value takes
-             over immediately after mount and stays in sync on resize. */
           --nav-height: 72px;
         }
-        .margo-desktop-nav {
-          display: none;
-        }
-        @media (min-width: 640px) {
-          .margo-desktop-nav {
-            display: flex !important;
-            align-items: center;
-            gap: 4px;
-          }
+        .margo-nav-bar a:focus-visible,
+        .margo-nav-bar button:focus-visible {
+          outline: 2px solid var(--gold);
+          outline-offset: 2px;
         }
       `}</style>
     </nav>
