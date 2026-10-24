@@ -353,6 +353,16 @@ html[data-margo-stage-idle] .margo-stage-zone {
     display: inline-flex;
     align-items: center;
   }
+  /* App MargoNav replaces the in-flow landing header at tablet/desktop. */
+  .margo-landing-nav {
+    display: none !important;
+  }
+  .margo-landing-page-shell .margo-stage-zone {
+    padding-top: calc(var(--nav-height, 72px) + 24px);
+  }
+  html[data-margo-stage-idle] .margo-landing-page-shell .margo-stage-zone {
+    padding-top: calc(var(--nav-height, 72px) + clamp(24px, 12vh, 80px));
+  }
 }
 
 /* Feed lyric — one size on feed (export/Discover may use --feed-type-lyric-hero). */
