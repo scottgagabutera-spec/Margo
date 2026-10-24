@@ -13,25 +13,32 @@ async function openShortsTab(page: import('@playwright/test').Page) {
   }
 }
 
+async function requireShortsFrame(page: import('@playwright/test').Page) {
+  const frame = page.locator('.margo-feed-shorts-slide__frame').first()
+  if ((await frame.count()) === 0) {
+    test.skip(true, 'Shorts catalog minimum not met on this deploy')
+    return null
+  }
+  await expect(frame).toBeVisible({ timeout: 20000 })
+  return frame
+}
+
 for (const width of WIDTHS) {
   test.describe(`feed shorts @${width}px`, () => {
     test.use({ viewport: { width, height: width < 640 ? 844 : 900 } })
 
-    test('frame width and meta inside frame', async ({ page }) => {
+    test('9:16 frame, meta inside, no horizontal overflow', async ({ page }) => {
       await openShortsTab(page)
-      const frame = page.locator('.margo-feed-shorts-slide__frame').first()
-      if ((await frame.count()) === 0) {
-        test.skip(true, 'Shorts catalog minimum not met on this deploy')
-        return
-      }
-      await expect(frame).toBeVisible({ timeout: 15000 })
+      const frame = await requireShortsFrame(page)
+      if (!frame) return
       const meta = frame.locator('.margo-feed-shorts-slide__meta')
       await expect(meta).toBeVisible()
       const box = await frame.boundingBox()
       expect(box).toBeTruthy()
-      if (width >= 640 && box) {
-        expect(box.width).toBeLessThanOrEqual(421)
-        expect(box.width).toBeGreaterThan(380)
+      if (box && box.width > 0) {
+        const ratio = box.height / box.width
+        expect(ratio).toBeGreaterThan(1.74)
+        expect(ratio).toBeLessThan(1.79)
       }
       const metrics = await page.evaluate(() => ({
         sw: document.documentElement.scrollWidth,
@@ -40,7 +47,39 @@ for (const width of WIDTHS) {
       expect(metrics.sw).toBe(metrics.cw)
     })
 
-    test('active slide exposes sound control', async ({ page }) => {
+    test('overlay typography scales with frame (cqw)', async ({ page }) => {
+      await openShortsTab(page)
+      const frame = await requireShortsFrame(page)
+      if (!frame) return
+      const songSize = await frame.locator('.margo-feed-shorts-slide__song').evaluate((el) =>
+        parseFloat(getComputedStyle(el).fontSize),
+      )
+      const box = await frame.boundingBox()
+      expect(box).toBeTruthy()
+      if (box) {
+        const expected = box.width * 0.046
+        expect(Math.abs(songSize - expected)).toBeLessThan(3)
+      }
+    })
+
+    test('scroll-snap and next-short peek on desktop', async ({ page }) => {
+      test.skip(width < 640, 'peek layout is desktop-only')
+      await openShortsTab(page)
+      const pager = page.locator('.margo-feed-shorts-pager')
+      if ((await pager.count()) === 0) test.skip()
+      const frames = page.locator('.margo-feed-shorts-slide__frame')
+      if ((await frames.count()) < 2) test.skip()
+      const snap = await pager.evaluate((el) => getComputedStyle(el).scrollSnapType)
+      expect(snap).toContain('mandatory')
+      const first = await frames.nth(0).boundingBox()
+      const second = await frames.nth(1).boundingBox()
+      expect(first && second).toBeTruthy()
+      if (first && second) {
+        expect(second.y).toBeLessThan(first.y + first.height)
+      }
+    })
+
+    test('active slide exposes sound control and persists unmute', async ({ page }) => {
       await openShortsTab(page)
       const sound = page.locator('.margo-feed-shorts-slide__sound').first()
       if ((await sound.count()) === 0) {
@@ -73,3 +112,12 @@ for (const width of WIDTHS) {
     })
   })
 }
+
+test('two-column layout when viewport fits pair @1920', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 })
+  await openShortsTab(page)
+  const pager = page.locator('.margo-feed-shorts-pager')
+  if ((await pager.count()) === 0) test.skip()
+  const cols = await pager.getAttribute('data-shorts-cols')
+  expect(cols).toBe('2')
+})

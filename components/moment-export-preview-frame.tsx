@@ -9,6 +9,8 @@ interface MomentExportPreviewFrameProps {
   style?: CSSProperties
   /** When false, drop the preview chrome (border) — used by the Story viewer. */
   framed?: boolean
+  /** Feed Shorts: canvas fills the sized 9:16 shell (no fixed 320px cap). */
+  fillParent?: boolean
 }
 
 /**
@@ -20,9 +22,32 @@ export function MomentExportPreviewFrame({
   children,
   style,
   framed = true,
+  fillParent = false,
 }: MomentExportPreviewFrameProps) {
   if (shapeId !== 'vertical') {
     return <div style={style}>{children}</div>
+  }
+
+  if (fillParent) {
+    return (
+      <div
+        aria-label="Shorts preview, 9:16"
+        className="margo-shorts-canvas"
+        style={{
+          width: '100%',
+          height: '100%',
+          aspectRatio: '9 / 16',
+          border: framed ? '1px solid var(--border-hi)' : 'none',
+          borderRadius: 'inherit',
+          overflow: 'hidden',
+          boxSizing: 'border-box',
+          background: 'var(--bg)',
+          ...style,
+        }}
+      >
+        {children}
+      </div>
+    )
   }
 
   return (

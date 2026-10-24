@@ -31,6 +31,8 @@
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
   --margo-touch-min: 44px;
+  /* Mobile primary tab labels — floor ~11px (Brand §14 readability) */
+  --margo-tab-label-size: 0.6875rem;
   --margo-scrim: rgba(7, 6, 10, 0.97);
   --margo-bar: rgba(10, 9, 13, 0.98);
   --margo-safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -352,6 +354,16 @@ html[data-margo-stage-idle] .margo-stage-zone {
   .margo-landing-nav__account {
     display: inline-flex;
     align-items: center;
+  }
+  /* App MargoNav replaces the in-flow landing header at tablet/desktop. */
+  .margo-landing-nav {
+    display: none !important;
+  }
+  .margo-landing-page-shell .margo-stage-zone {
+    padding-top: calc(var(--nav-height, 72px) + 24px);
+  }
+  html[data-margo-stage-idle] .margo-landing-page-shell .margo-stage-zone {
+    padding-top: calc(var(--nav-height, 72px) + clamp(24px, 12vh, 80px));
   }
 }
 
@@ -2821,6 +2833,9 @@ html, body {
 }
 
 .margo-feed-shorts-pager {
+  --margo-shorts-frame-w: min(100vw - 32px, 360px);
+  --margo-shorts-frame-h: calc(var(--margo-shorts-frame-w) * 16 / 9);
+  --margo-shorts-slide-min-h: max(100%, var(--margo-shorts-frame-h));
   position: fixed;
   top: calc(var(--nav-height, 72px) + var(--margo-feed-tab-bar-h));
   left: 0;
@@ -2834,45 +2849,48 @@ html, body {
   background: var(--bg);
   z-index: 4;
 }
+.margo-feed-shorts-pager[data-shorts-cols='2'] {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 20px;
+  max-width: calc(var(--margo-shorts-frame-w) * 2 + 20px + 48px);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+  box-sizing: border-box;
+}
 .margo-feed-shorts-pager--with-vibe {
   top: calc(var(--nav-height, 72px) + var(--margo-feed-tab-bar-h) + var(--margo-feed-vibe-bar-h));
 }
 .margo-feed-shorts-slide {
-  min-height: 100%;
-  height: 100%;
+  min-height: var(--margo-shorts-slide-min-h);
   scroll-snap-align: start;
   scroll-snap-stop: always;
   box-sizing: border-box;
-  padding: 12px 16px calc(var(--margo-page-padding-bottom, 88px) + 12px);
+  padding: 8px 0 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
+  justify-content: flex-start;
+}
+@media (max-width: 639px) {
+  .margo-feed-shorts-slide {
+    min-height: 100%;
+    padding: 0 16px calc(var(--margo-page-padding-bottom, 88px) + 8px);
+    justify-content: center;
+  }
 }
 .margo-feed-shorts-slide__frame {
   position: relative;
-  flex: 1;
-  width: 100%;
-  max-width: min(100%, 420px);
-  min-height: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-@media (max-width: 639px) {
-  .margo-feed-shorts-slide__frame {
-    max-width: 100%;
-    width: 100%;
-    flex: 1 1 auto;
-    min-height: min(100%, calc(100dvh - var(--nav-height, 72px) - var(--margo-feed-tab-bar-h) - 24px));
-  }
-}
-@media (min-width: 640px) {
-  .margo-feed-shorts-slide__frame {
-    height: 100%;
-    max-height: calc(100dvh - var(--nav-height, 72px) - var(--margo-feed-tab-bar-h) - 48px);
-  }
+  container-type: inline-size;
+  container-name: margo-shorts-frame;
+  width: var(--margo-shorts-frame-w);
+  height: var(--margo-shorts-frame-h);
+  max-width: calc(100vw - 32px);
+  flex-shrink: 0;
+  border-radius: 18px;
+  overflow: hidden;
 }
 .margo-feed-shorts-slide__meta {
   position: absolute;
@@ -2880,7 +2898,7 @@ html, body {
   right: 0;
   bottom: 0;
   z-index: 2;
-  padding: 28px 16px 14px;
+  padding: 18cqw 4.5cqw 3.5cqw;
   text-align: center;
   box-sizing: border-box;
   background: linear-gradient(180deg, transparent 0%, rgba(8, 7, 12, 0.88) 72%);
@@ -2891,32 +2909,32 @@ html, body {
   pointer-events: auto;
 }
 .margo-feed-shorts-slide__sound {
-  margin-top: 8px;
+  margin-top: 2.5cqw;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.6875rem;
+  font-size: 3.4cqw;
   font-weight: 600;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--gold);
   background: transparent;
   border: 1px solid rgba(201, 162, 39, 0.35);
   border-radius: 999px;
   min-height: var(--margo-touch-min);
-  padding: 0 16px;
+  padding: 0 4.5cqw;
   cursor: pointer;
 }
 .margo-feed-shorts-slide__song {
   display: block;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.9375rem;
+  font-size: 4.6cqw;
   font-weight: 600;
   color: var(--gold);
   text-decoration: none;
-  margin-bottom: 4px;
+  margin-bottom: 1cqw;
 }
 .margo-feed-shorts-slide__artist {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.8125rem;
+  font-size: 4cqw;
   color: var(--text-muted);
 }
 .margo-feed-shorts-empty {

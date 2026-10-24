@@ -17,6 +17,7 @@ import {
   toggleMute,
 } from '@/lib/audio-engine'
 import { pickShortsLook } from '@/lib/shorts-looks'
+import { computeShortsFrameLayout } from '@/lib/shorts-frame-layout'
 import { utcDayKey } from '@/lib/shorts-shelf-rotation'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 
@@ -94,7 +95,7 @@ function FeedShortsSlide({
       data-shorts-fill-motion={fillMotion ? '1' : '0'}
     >
       <div className="margo-feed-shorts-slide__frame">
-        <MomentExportPreviewFrame shapeId="vertical" framed={false} style={{ height: '100%', width: '100%' }}>
+        <MomentExportPreviewFrame shapeId="vertical" framed={false} fillParent style={{ height: '100%', width: '100%' }}>
           <StageMomentCard
             lyric={clip.line}
             songTitle={clip.songTitle}
@@ -169,6 +170,41 @@ export function FeedShortsPager({
   const signedInRef = useRef(signedIn)
   const lastAutoIndexRef = useRef<number>(-1)
   const utcDay = utcDayKey(new Date())
+
+  useEffect(() => {
+    const root = scrollerRef.current
+    if (!root) return
+    const syncFrameMetrics = () => {
+      const styles = getComputedStyle(document.documentElement)
+      const nav = parseFloat(styles.getPropertyValue('--nav-height')) || 72
+      const tabBar = parseFloat(styles.getPropertyValue('--margo-feed-tab-bar-h')) || 44
+      const vibeBar = vibeFilterActive
+        ? parseFloat(styles.getPropertyValue('--margo-feed-vibe-bar-h')) || 0
+        : 0
+      const bottom = parseFloat(styles.getPropertyValue('--margo-page-padding-bottom')) || 88
+      const layout = computeShortsFrameLayout(
+        window.innerWidth,
+        window.innerHeight,
+        nav + tabBar + vibeBar,
+        bottom,
+      )
+      root.style.setProperty('--margo-shorts-frame-w', `${layout.frameWidthPx}px`)
+      root.style.setProperty('--margo-shorts-frame-h', `${layout.frameHeightPx}px`)
+      root.style.setProperty('--margo-shorts-slide-min-h', `${layout.slideStridePx}px`)
+      root.dataset.shortsCols = String(layout.columns)
+    }
+    syncFrameMetrics()
+    window.addEventListener('resize', syncFrameMetrics)
+    let ro: ResizeObserver | undefined
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(syncFrameMetrics)
+      ro.observe(root)
+    }
+    return () => {
+      window.removeEventListener('resize', syncFrameMetrics)
+      ro?.disconnect()
+    }
+  }, [vibeFilterActive])
 
   useEffect(() => {
     setSoundOn(readShortsUnmutePref())
