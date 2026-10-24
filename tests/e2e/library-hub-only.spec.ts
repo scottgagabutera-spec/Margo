@@ -32,14 +32,18 @@ for (const width of [834, 1180, 1440]) {
   })
 }
 
-test('signed-out Hub Library goes to sign-in', async ({ page }) => {
+test.describe('signed-out library via Hub', () => {
   test.use({ viewport: { width: 834, height: 900 } })
+
+  test('Hub Library goes to sign-in', async ({ page }) => {
   await page.goto(`${BASE}/feed`, { waitUntil: 'domcontentloaded', timeout: 45000 })
   await page.waitForTimeout(600)
   await clickDesktopHub(page)
   const panel = page.locator('.margo-hub-panel')
   const lib = panel.getByRole('link', { name: /Music Library/i })
   await expect(lib).toBeVisible({ timeout: 10000 })
-  await lib.click()
-  expect(page.url()).toMatch(/signin|sign-in|auth/i)
+  await expect(lib).toHaveAttribute('href', /signin/i)
+  await lib.evaluate((el: HTMLAnchorElement) => el.click())
+  await page.waitForURL(/signin/i, { timeout: 15000 })
+  })
 })
