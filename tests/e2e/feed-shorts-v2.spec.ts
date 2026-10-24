@@ -155,8 +155,12 @@ test('phone canvas matches main at 360x640', async ({ page }) => {
   await page.waitForTimeout(1000)
   const prevCanvas = await page.locator('[aria-label="Shorts preview, 9:16"]').first().boundingBox()
   if (!prevCanvas || !mainCanvas) test.skip()
-  expect(Math.abs(prevCanvas.width - mainCanvas.width)).toBeLessThan(2)
-  expect(Math.abs(prevCanvas.height - mainCanvas.height)).toBeLessThan(4)
+  const pw = prevCanvas!.width
+  const mw = mainCanvas!.width
+  const ph = prevCanvas!.height
+  const mh = mainCanvas!.height
+  expect(Math.abs(pw - mw)).toBeLessThan(2)
+  expect(Math.abs(ph - mh)).toBeLessThan(4)
 })
 
 test('phone canvas matches main at 390x844', async ({ page }) => {
@@ -169,6 +173,10 @@ test('phone canvas matches main at 390x844', async ({ page }) => {
   await page.waitForTimeout(1000)
   const prevCanvas = await page.locator('[aria-label="Shorts preview, 9:16"]').first().boundingBox()
   if (!prevCanvas || !mainCanvas) test.skip()
-  expect(Math.abs(prevCanvas.width - mainCanvas.width)).toBeLessThan(2)
-  expect(Math.abs(prevCanvas.height - mainCanvas.height)).toBeLessThan(4)
+  const pw = prevCanvas!.width
+  const mw = mainCanvas!.width
+  const ph = prevCanvas!.height
+  const mh = mainCanvas!.height
+  expect(Math.abs(pw - mw)).toBeLessThan(2)
+  expect(Math.abs(ph - mh)).toBeLessThan(4)
 })
