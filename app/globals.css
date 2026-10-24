@@ -909,31 +909,6 @@ html[data-margo-stage-idle] .margo-stage-zone {
   font-size: 0.75rem;
   color: var(--gold);
 }
-.margo-lb-owner-sheet {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 4px 0 8px;
-}
-.margo-lb-owner-sheet__lead {
-  margin: 0;
-  padding: 0 16px;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--text);
-}
-.margo-lb-owner-sheet__error {
-  margin: 0;
-  padding: 0 16px;
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-}
-.margo-lb-owner-sheet__actions {
-  display: flex;
-  gap: 8px;
-  padding: 4px 16px 8px;
-}
 .margo-lb-owner-sheet__btn {
   flex: 1;
   min-height: 44px;

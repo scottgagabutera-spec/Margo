@@ -70,8 +70,7 @@ const FIXTURE = (opts: { echoCount: number }) => String.raw`<!DOCTYPE html>
     if (sheetEl) sheetEl.remove();
     sheetEl = document.createElement('div');
     sheetEl.id = 'delete-sheet';
-    sheetEl.className = 'margo-lb-owner-sheet';
-    sheetEl.innerHTML = '<p class="margo-lb-owner-sheet__lead">Delete this Lyric Back?</p><button type="button" class="margo-lb-owner-sheet__btn margo-lb-owner-sheet__btn--danger" id="confirm-del">Delete</button>';
+    sheetEl.innerHTML = '<p id="dlg-title" style="font-style:italic">Delete this Lyric Back?</p><button type="button" id="confirm-del">Delete</button>';
     document.body.appendChild(sheetEl);
     document.getElementById('confirm-del').addEventListener('click', () => {
       fetch('/api/posts/lyric-back', {
@@ -105,7 +104,7 @@ for (const width of [360, 390, 430]) {
     await expect(del).toBeEnabled()
     await expect(page.locator('.margo-post-report-menu__row-hint')).toHaveCount(0)
     await del.click()
-    await expect(page.locator('.margo-lb-owner-sheet__lead')).toHaveText('Delete this Lyric Back?')
+    await expect(page.locator('#dlg-title')).toHaveText('Delete this Lyric Back?')
     await page.locator('#confirm-del').click()
     await expect.poll(async () => page.evaluate(() => document.body.dataset.deleteStatus)).toBe('200')
     await expect.poll(async () => page.evaluate(() => document.body.dataset.deleteOutcome)).toBe('shelled')

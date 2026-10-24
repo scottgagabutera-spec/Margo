@@ -4,49 +4,39 @@ import path from 'node:path'
 
 const OUT = '/opt/cursor/artifacts/screenshots'
 
-/** Matches components/delete-moment-dialog.tsx scrim + panel (pre-#280 feed delete). */
-const FEED_DELETE_ORIGINAL = String.raw`<!DOCTYPE html>
-<html lang="en"><head>
-<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<style>
-  body { margin: 0; background: #07060a; color: #eee; font-family: Georgia, serif; }
-  .feed-bg { padding: 12px; min-height: 120vh; background: linear-gradient(#111,#0a0a0c); }
-  .card { margin: 12px 0; padding: 16px; border-radius: 16px; border: 1px solid #333; background: #151518; }
-  .card--dim { opacity: 0.35; filter: blur(1px); }
-</style></head><body>
-<div class="feed-bg">
-  <div class="card card--dim">Other post above</div>
-  <div class="card" id="target">Target moment — stays in place</div>
-  <div class="card card--dim">Other post below</div>
-</div>
-<div style="position:fixed;inset:0;z-index:100;background:rgba(7,6,10,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);"></div>
-<div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:101;width:min(380px,calc(100vw - 48px));background:#0f0e14;border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:28px 24px;text-align:center;box-sizing:border-box;">
-  <p style="font-style:italic;font-size:1.15rem;margin:0 0 8px;">Delete this Moment?</p>
-  <p style="font-size:0.78rem;color:#aaa;margin:0 0 22px;line-height:1.5;">This can't be undone.</p>
-  <div style="display:flex;gap:10px;"><button style="flex:1;min-height:44px;border-radius:50px;">Cancel</button><button style="flex:1;min-height:44px;border-radius:50px;background:#ff6060;border:none;">Delete</button></div>
-</div>
-</body></html>`
-
-/** Matches de987cc .margo-delete-focus-scrim (removed on #282 restore). */
-const FEED_DELETE_DE987CC = String.raw`<!DOCTYPE html>
-<html lang="en"><head>
-<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<style>
-  body { margin: 0; background: #07060a; color: #eee; font-family: system-ui, sans-serif; }
-  .feed-bg { padding: 12px; min-height: 120vh; }
-  .card { margin: 12px 0; padding: 16px; border-radius: 16px; border: 1px solid #333; background: #151518; }
-  .margo-delete-focus-anchor { position: relative; z-index: 201; }
-  .margo-delete-focus-scrim { position: fixed; inset: 0; z-index: 200; background: rgba(7, 6, 10, 0.88); backdrop-filter: blur(6px); }
-  .panel { margin: 12px; padding: 18px; border-radius: 16px; background: #141318; border: 1px solid #333; }
-</style></head><body>
-<div class="margo-delete-focus-scrim"></div>
-<div class="feed-bg">
-  <div class="card">Other post</div>
-  <div class="card margo-delete-focus-anchor" id="target">
-    Target moment
-    <div class="panel">Delete confirm inline</div>
+/** Shared chrome from components/delete-moment-dialog.tsx (inline styles), scoped to column. */
+function deleteDialogColumn(title: string, body: string): string {
+  return `
+<div style="position:absolute;inset:0;z-index:1;background:rgba(7,6,10,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);"></div>
+<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;width:min(170px,calc(50vw - 24px));background:#0f0e14;border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:20px 14px;text-align:center;box-sizing:border-box;">
+  <p style="font-family:var(--font-lora),Georgia,serif;font-style:italic;font-size:1.05rem;color:#eee;margin:0 0 8px;">${title}</p>
+  <p style="font-family:var(--font-lora),Georgia,serif;font-size:0.72rem;color:#aaa;margin:0 0 16px;line-height:1.45;">${body}</p>
+  <div style="display:flex;gap:8px;">
+    <button type="button" style="flex:1;padding:10px;min-height:44px;box-sizing:border-box;background:transparent;border:1px solid rgba(255,255,255,0.1);border-radius:50px;color:#aaa;font-size:0.55rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Cancel</button>
+    <button type="button" style="flex:1;padding:10px;min-height:44px;box-sizing:border-box;background:#ff6060;border:none;border-radius:50px;color:#07060A;font-size:0.55rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Delete</button>
   </div>
-  <div class="card">Other post</div>
+</div>`
+}
+
+const SIDE_BY_SIDE = (momentBody: string, lbBody: string) => `<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<style>
+  body { margin: 0; background: #07060a; color: #eee; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; width: 390px; min-height: 844px; }
+  .col { position: relative; min-height: 844px; border-right: 1px solid #222; }
+  .col:last-child { border-right: none; }
+  .label { position: absolute; top: 8px; left: 8px; z-index: 102; font: 600 10px system-ui; color: #888; text-transform: uppercase; letter-spacing: 0.06em; }
+</style></head><body>
+<div class="grid">
+  <div class="col" id="feed-col">
+    <span class="label">Feed moment</span>
+    ${deleteDialogColumn('Delete this Moment?', momentBody)}
+  </div>
+  <div class="col" id="lb-col">
+    <span class="label">Lyric Back row</span>
+    ${deleteDialogColumn('Delete this Lyric Back?', lbBody)}
+  </div>
 </div>
 </body></html>`
 
@@ -74,23 +64,14 @@ test.describe('delete UI screenshots @390', () => {
     fs.mkdirSync(OUT, { recursive: true })
   })
 
-  test('feed delete — original pre-#280 (9833c08 DeleteMomentDialog)', async ({ page }) => {
+  test('feed vs LB delete dialogs side by side (same chrome)', async ({ page }) => {
+    const momentBody = 'This can\u2019t be undone. It will be removed from Feed, your profile, and anywhere else it appears.'
+    const lbBody = 'This can\u2019t be undone. If others replied below, the row may stay as a shell.'
     await page.setViewportSize({ width: 390, height: 844 })
-    await page.setContent(FEED_DELETE_ORIGINAL, { waitUntil: 'domcontentloaded' })
-    await page.screenshot({ path: `${OUT}/delete-feed-original-390.png`, fullPage: true })
-    await expect(page.locator('#target')).toBeVisible()
-  })
-
-  test('feed delete — de987cc PostFocusedDeleteDialog (regression reference)', async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 })
-    await page.setContent(FEED_DELETE_DE987CC, { waitUntil: 'domcontentloaded' })
-    await page.screenshot({ path: `${OUT}/delete-feed-de987cc-390.png`, fullPage: true })
-  })
-
-  test('feed delete — restored (same as original fixture)', async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 })
-    await page.setContent(FEED_DELETE_ORIGINAL, { waitUntil: 'domcontentloaded' })
-    await page.screenshot({ path: `${OUT}/delete-feed-restored-390.png`, fullPage: true })
+    await page.setContent(SIDE_BY_SIDE(momentBody, lbBody), { waitUntil: 'domcontentloaded' })
+    await page.screenshot({ path: `${OUT}/delete-feed-vs-lb-side-by-side-390.png`, fullPage: true })
+    await expect(page.locator('#feed-col')).toBeVisible()
+    await expect(page.locator('#lb-col')).toBeVisible()
   })
 
   test('LB vibe rows + neutral shell @390', async ({ page }) => {

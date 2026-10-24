@@ -3,12 +3,16 @@ import { useState } from 'react'
 
 const font = 'var(--font-lora), serif'
 
+type DeletePostTarget = 'moment' | 'lyric-back'
+
 interface DeleteMomentDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   postId: string
-  /** Called after the Moment is confirmed deleted server-side. */
-  onDeleted?: () => void
+  /** moment → DELETE /api/posts/moment; lyric-back → DELETE /api/posts/lyric-back */
+  target?: DeletePostTarget
+  /** Moment: called after delete. Lyric Back: receives server outcome (deleted | shelled). */
+  onDeleted?: (outcome?: 'deleted' | 'shelled') => void
 }
 
 /**
@@ -16,16 +20,47 @@ interface DeleteMomentDialogProps {
  * re-verified server-side (see app/api/posts/moment DELETE) — this
  * component only handles the confirm step and surfaces failures.
  */
-export function DeleteMomentDialog({ open, onOpenChange, postId, onDeleted }: DeleteMomentDialogProps) {
+export function DeleteMomentDialog({
+  open,
+  onOpenChange,
+  postId,
+  target = 'moment',
+  onDeleted,
+}: DeleteMomentDialogProps) {
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   if (!open) return null
 
+  const isLyricBack = target === 'lyric-back'
+  const title = isLyricBack ? 'Delete this Lyric Back?' : 'Delete this Moment?'
+  const body = isLyricBack
+    ? 'This can\u2019t be undone. If others replied below, the row may stay as a shell.'
+    : 'This can\u2019t be undone. It will be removed from Feed, your profile, and anywhere else it appears.'
+
   const handleDelete = async () => {
     setDeleting(true)
     setError(null)
     try {
+      if (isLyricBack) {
+        const res = await fetch('/api/posts/lyric-back', {
+          method: 'DELETE',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postId }),
+        })
+        const payload = (await res.json().catch(() => ({}))) as {
+          error?: string
+          outcome?: 'deleted' | 'shelled'
+        }
+        if (!res.ok) {
+          throw new Error(typeof payload.error === 'string' ? payload.error : 'Something went wrong.')
+        }
+        setDeleting(false)
+        onOpenChange(false)
+        onDeleted?.(payload.outcome === 'shelled' ? 'shelled' : 'deleted')
+        return
+      }
       const res = await fetch('/api/posts/moment', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
@@ -64,10 +99,10 @@ export function DeleteMomentDialog({ open, onOpenChange, postId, onDeleted }: De
         }}
       >
         <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.15rem', color: 'var(--text)', marginBottom: '8px' }}>
-          Delete this Moment?
+          {title}
         </p>
         <p style={{ fontFamily: font, fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '22px', lineHeight: 1.5 }}>
-          This can&apos;t be undone. It will be removed from Feed, your profile, and anywhere else it appears.
+          {body}
         </p>
         {error && (
           <p style={{ fontFamily: font, fontSize: '0.75rem', color: '#ff6b6b', marginBottom: '14px' }}>{error}</p>

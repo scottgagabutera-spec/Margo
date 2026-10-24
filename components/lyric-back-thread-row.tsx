@@ -22,7 +22,7 @@ import {
 import type { LyricBackEditSavedPatch } from '@/lib/lyric-back-edit-saved'
 import { emotionToVibeLabel, vibeLabelToEmotion } from '@/lib/moment/vibe'
 import { POST_EDIT_CHILD_LOCK_MESSAGE } from '@/lib/post-edit-child-lock'
-import { LyricBackDeleteSheet } from '@/components/lyric-back-delete-sheet'
+import { DeleteMomentDialog } from '@/components/delete-moment-dialog'
 import { echoToPost } from '@/lib/echo-to-post'
 import { getVibeTheme, vibeThemeStyleVars } from '@/lib/vibe-theme'
 
@@ -517,11 +517,12 @@ export function LyricBackThreadRow({
         />
       ) : null}
       {showOwnerMenu ? (
-        <LyricBackDeleteSheet
+        <DeleteMomentDialog
           open={deleteSheetOpen}
           onOpenChange={setDeleteSheetOpen}
           postId={echo.id}
-          onDeleted={(outcome) => onOwnerDeleted?.(echo.id, outcome)}
+          target="lyric-back"
+          onDeleted={(outcome) => onOwnerDeleted?.(echo.id, outcome ?? 'deleted')}
         />
       ) : null}
     </article>

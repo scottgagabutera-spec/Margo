@@ -58,7 +58,8 @@ const READ_PATH_CHECKS: Check[] = [
       /margo-lb-thread-row__avatar--removed/,
       /Deleted/,
       /showOwnerMenu/,
-      /LyricBackDeleteSheet/,
+      /DeleteMomentDialog/,
+      /target="lyric-back"/,
     ],
   },
   {
