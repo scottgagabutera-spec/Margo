@@ -96,9 +96,8 @@ test.describe('landing stage search footer fade', () => {
     await expect.poll(() =>
       page.evaluate(() => document.documentElement.hasAttribute('data-margo-stage-search')),
     ).toBe(true)
-    const footerOpacity = await page.locator('.margo-landing-footer').evaluate((el) =>
-      getComputedStyle(el).opacity,
-    )
-    expect(Number(footerOpacity)).toBeLessThan(0.5)
+    await expect.poll(async () =>
+      page.locator('.margo-landing-footer').evaluate((el) => getComputedStyle(el).pointerEvents),
+    ).toBe('none')
   })
 })
