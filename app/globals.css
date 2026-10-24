@@ -1407,6 +1407,8 @@ html[data-margo-stage-idle] .margo-stage-zone {
 .margo-post-card__song-row-shell {
   position: relative;
   min-height: 56px;
+  max-width: 100%;
+  overflow-x: clip;
 }
 .margo-post-card__song-row {
   display: flex;
@@ -2512,11 +2514,12 @@ html.margo-keyboard-open .margo-mobile-tabbar {
 }
 
 .margo-feed-column {
-  max-width: var(--margo-feed-max-width);
+  max-width: min(100%, var(--margo-feed-max-width));
   margin-left: auto;
   margin-right: auto;
   width: 100%;
   box-sizing: border-box;
+  overflow-x: clip;
 }
 
 @media (max-width: 639px) {
