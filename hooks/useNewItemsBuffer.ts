@@ -2,6 +2,7 @@
 
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { readActiveScrollTop, scrollActiveTo } from '@/components/primary-tab-shell'
+import { isFeedPostDeleted } from '@/lib/feed-post-evict'
 
 export interface UseNewItemsBufferResult<T extends { id: string }> {
   /** Stable list shown in the UI (may lag live while scrolled). */
@@ -68,7 +69,7 @@ export function useNewItemsBuffer<T extends { id: string }>(
 
     const prevIds = new Set(prev.map((p) => p.id))
     const liveById = new Map(live.map((item) => [item.id, item]))
-    const brandNew = live.filter((item) => !prevIds.has(item.id))
+    const brandNew = live.filter((item) => !prevIds.has(item.id) && !isFeedPostDeleted(item.id))
 
     const refreshed = prev
       .filter((p) => liveById.has(p.id))

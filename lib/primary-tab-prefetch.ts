@@ -13,6 +13,7 @@ import { parseAtmosphere, SONG_POST_EMBED, type AtmosphereId } from '@/lib/atmos
 import { isMomentsCurationClientEnabled } from '@/lib/moments/curation-config'
 import { applyPostContentRemoved } from '@/lib/post-content-removed'
 import type { CuratedMomentStored } from '@/lib/moments/curated-types'
+import { bindFeedPostsCache, evictFeedPostFromCache, filterOutDeletedPosts } from '@/lib/feed-post-evict'
 
 const supabase = createClient()
 
@@ -127,6 +128,8 @@ type CacheEntry<T> = {
 }
 
 const postsCache: CacheEntry<Post[]> = { data: null, loadedAt: 0, inflight: null }
+bindFeedPostsCache(postsCache)
+export { evictFeedPostFromCache }
 
 const FEED_PAGE_SIZE = 200
 const FEED_OLDER_PAGE_SIZE = 40
@@ -145,7 +148,7 @@ export async function fetchFeedPosts(): Promise<Post[]> {
     console.error('fetchFeedPosts: failed', error)
     return []
   }
-  return (data ?? []).map(mapPostRow)
+  return filterOutDeletedPosts((data ?? []).map(mapPostRow))
 }
 
 /** Older page for feed “ocean” — cursor is ISO timestamp strictly before the oldest visible post. */
@@ -164,7 +167,7 @@ export async function fetchFeedPostsOlder(beforeCreatedAtIso: string): Promise<P
     console.error('fetchFeedPostsOlder: failed', error)
     return []
   }
-  return (data ?? []).map(mapPostRow)
+  return filterOutDeletedPosts((data ?? []).map(mapPostRow))
 }
 
 export function peekFeedPostsCache(): { data: Post[]; loadedAt: number } | null {
@@ -188,10 +191,11 @@ export function warmFeedPosts(opts?: { force?: boolean }): Promise<Post[]> {
       postsCache.inflight = null
       return postsCache.data
     }
-    postsCache.data = rows
+    const filtered = filterOutDeletedPosts(rows)
+    postsCache.data = filtered
     postsCache.loadedAt = Date.now()
     postsCache.inflight = null
-    return rows
+    return filtered
   }).catch((err) => {
     postsCache.inflight = null
     throw err

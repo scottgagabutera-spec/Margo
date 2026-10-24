@@ -19,10 +19,10 @@ export function FeedNewMomentsPill({ visible, onReveal }: FeedNewMomentsPillProp
     <div
       style={{
         position: 'fixed',
-        top: 'calc(var(--nav-height, 72px) + 10px)',
+        top: 'calc(var(--nav-height, 72px) + var(--margo-feed-tab-bar-h, 40px) + 8px)',
         left: 0,
         right: 0,
-        zIndex: 45,
+        zIndex: 40,
         display: 'flex',
         justifyContent: 'center',
         pointerEvents: 'none',
@@ -44,11 +44,9 @@ export function FeedNewMomentsPill({ visible, onReveal }: FeedNewMomentsPillProp
           alignItems: 'center',
           justifyContent: 'center',
           boxSizing: 'border-box',
-          background: 'color-mix(in srgb, var(--surface) 88%, transparent)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          color: 'var(--text-secondary)',
-          border: '1px solid var(--border)',
+          background: 'var(--gold)',
+          color: 'var(--text-on-gold, var(--bg))',
+          border: '1px solid color-mix(in srgb, var(--gold) 70%, var(--bg))',
           borderRadius: '50px',
           fontFamily: font,
           fontWeight: 600,
@@ -61,7 +59,7 @@ export function FeedNewMomentsPill({ visible, onReveal }: FeedNewMomentsPillProp
           WebkitTapHighlightColor: 'transparent',
         }}
       >
-        New moments
+        New
       </button>
     </div>
   )

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { CardOverflowMenu, type CardOverflowItem } from '@/components/card-overflow-menu'
@@ -10,7 +10,7 @@ import { buildSnippetQueueOverflowItems } from '@/components/song-card-actions'
 import { useIdentity } from '@/hooks/useIdentity'
 import { resolveMomentLines, type PostLine } from '@/lib/post-lines'
 import { EditMomentModal } from '@/components/edit-moment-modal'
-import { DeleteMomentDialog } from '@/components/delete-moment-dialog'
+import { MargoDeleteConfirm } from '@/components/margo-delete-confirm'
 import type { Post } from '@/hooks/usePosts'
 import { DISCOVER_VIBES } from '@/lib/discover-vibes'
 import { AtmosphereLayer } from '@/components/atmosphere-layer'
@@ -54,6 +54,7 @@ export function ResonanceCard({
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deletedLocally, setDeletedLocally] = useState(false)
+  const cardRef = useRef<HTMLDivElement>(null)
 
   // Optimistic — the server delete already succeeded by the time this is
   // set. Other surfaces reconcile via their own Realtime subscription.
@@ -74,7 +75,7 @@ export function ResonanceCard({
   ]
 
   return (
-    <>
+    <div ref={cardRef} style={{ position: 'relative' }}>
       <PendingNavLink
         href={`/feed?highlight=${encodeURIComponent(post.id)}&openLb=1`}
         style={{
@@ -147,6 +148,11 @@ export function ResonanceCard({
           )}
         </div>
       </PendingNavLink>
+      <div
+        className="margo-post-delete-inline-host"
+        data-delete-inline-host={post.id}
+        data-no-card-nav
+      />
       {isOwner && (
         <>
           <EditMomentModal
@@ -156,7 +162,8 @@ export function ResonanceCard({
             lines={resolveMomentLines(post)}
             echoCount={post.replies || 0}
           />
-          <DeleteMomentDialog
+          <MargoDeleteConfirm
+            anchorRef={cardRef}
             open={deleteOpen}
             onOpenChange={setDeleteOpen}
             postId={post.id}
@@ -164,6 +171,6 @@ export function ResonanceCard({
           />
         </>
       )}
-    </>
+    </div>
   )
 }

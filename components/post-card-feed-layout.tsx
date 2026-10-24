@@ -57,28 +57,17 @@ function SongArtworkLink({
       youtubeThumbnail={youtubeThumbnail}
       alt=""
       loading="lazy"
+      className="margo-song-row__art"
       style={{
         width: `${FEED_ARTWORK_THUMB_PX}px`,
         height: `${FEED_ARTWORK_THUMB_PX}px`,
-        borderRadius: '8px',
-        objectFit: 'cover',
-        flexShrink: 0,
-        border: '1px solid var(--border)',
-        display: 'block',
       }}
     />
   )
   const placeholder = (
     <div
       aria-hidden
-      style={{
-        width: `${FEED_ARTWORK_THUMB_PX}px`,
-        height: `${FEED_ARTWORK_THUMB_PX}px`,
-        borderRadius: '8px',
-        flexShrink: 0,
-        border: '1px solid var(--border)',
-        background: 'linear-gradient(145deg, var(--surface-2), var(--surface-3))',
-      }}
+      className="margo-song-row__art margo-song-row__art--empty"
     />
   )
   const node = artwork || youtubeThumbnail ? thumb : placeholder
@@ -316,13 +305,13 @@ export function PostCardSongSection({
   return (
     <section className="margo-post-card__song-block" data-no-card-nav>
       <div className="margo-post-card__song-row-shell">
-        <div className="margo-post-card__song-row">
+        <div className="margo-song-row margo-post-card__song-row">
           <SongArtworkLink
             href={isExternalCard ? null : songHref}
             artwork={sharedMetaArtwork}
             youtubeThumbnail={sharedYoutubeThumb ?? undefined}
           />
-          <div className="margo-post-card__song-meta">
+          <div className="margo-post-card__song-meta margo-song-row__meta">
             {showSongMetaOnce && primaryCatalog ? (
               <SongMeta
                 className="margo-song-meta--feed-row"

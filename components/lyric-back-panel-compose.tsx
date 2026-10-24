@@ -22,6 +22,8 @@ import { matchLiveCatalogSong } from '@/lib/search-margo-songs'
 import { trackEvent } from '@/lib/analytics/track'
 import { toastMomentSent } from '@/lib/moment-export/moment-export-toasts'
 import { compactArtworkUrl } from '@/lib/compact-artwork-url'
+import { matchLyricLine } from '@/lib/lyric-match'
+import type { PostLine } from '@/lib/post-lines'
 
 const supabase = createClient()
 
@@ -39,6 +41,7 @@ export type LyricBackPanelPrefill = {
 
 export type LyricBackPanelComposeHandle = {
   focusSearch: () => void
+  save: () => void
 }
 
 export type LyricBackSavePayload = {
@@ -58,7 +61,10 @@ export type LyricBackPanelComposeProps = {
   parentPostId: string
   parentEmotion: string
   mode?: 'create' | 'edit'
+  /** Default lyric-back PATCH; moment uses /api/posts/moment. */
+  editTarget?: 'lyric-back' | 'moment'
   editPostId?: string
+  momentSourceLines?: PostLine[]
   submitEmotion?: string
   onRequireAuth?: () => boolean
   onSent?: () => void
@@ -72,6 +78,11 @@ export type LyricBackPanelComposeProps = {
   focusSearchOnMount?: boolean
   /** Panel chrome: search sits in the one-row bar. */
   renderBar?: (search: ReactNode) => ReactNode
+  /** Rendered after song/line (e.g. vibe + Save). Hides built-in panel send when set. */
+  panelAfterBody?: ReactNode
+  onPostingChange?: (posting: boolean) => void
+  /** When true (edit + active Lyric Backs on parent), song search and line are read-only. */
+  lockSongAndLine?: boolean
 }
 
 type SelectedSong = {
@@ -91,7 +102,9 @@ export const LyricBackPanelCompose = forwardRef<
     parentPostId,
     parentEmotion,
     mode = 'create',
+    editTarget = 'lyric-back',
     editPostId,
+    momentSourceLines,
     submitEmotion,
     onRequireAuth,
     onSent,
@@ -101,6 +114,9 @@ export const LyricBackPanelCompose = forwardRef<
     replyToLabel,
     focusSearchOnMount = false,
     renderBar,
+    panelAfterBody,
+    onPostingChange,
+    lockSongAndLine = false,
   },
   ref,
 ) {
@@ -124,19 +140,12 @@ export const LyricBackPanelCompose = forwardRef<
   const [snippetStart, setSnippetStart] = useState<number | null>(null)
   const [snippetEnd, setSnippetEnd] = useState<number | null>(null)
   const [posting, setPosting] = useState(false)
+  useEffect(() => {
+    onPostingChange?.(posting)
+  }, [onPostingChange, posting])
   const [postError, setPostError] = useState<string | null>(null)
 
-  useImperativeHandle(ref, () => ({
-    focusSearch: () => {
-      const input = rootRef.current?.querySelector('input')
-      if (!(input instanceof HTMLInputElement)) return
-      try {
-        input.focus({ preventScroll: true })
-      } catch {
-        input.focus()
-      }
-    },
-  }))
+  const handleSendRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     if (!focusSearchOnMount) return
@@ -367,6 +376,69 @@ export const LyricBackPanelCompose = forwardRef<
           setPostError('Could not save.')
           return
         }
+        if (editTarget === 'moment') {
+          const source = momentSourceLines?.length
+            ? momentSourceLines
+            : [{
+                position: 0,
+                text: body.text,
+                songId: selected.catalogSongId,
+                songTitle: body.songTitle,
+                artistName: body.artistName,
+                artworkUrl: body.artworkUrl,
+                snippetStart: snippetStart,
+                snippetEnd: snippetEnd,
+                source: selected.catalogSongId ? 'catalog' as const : 'external' as const,
+              }]
+          let line0 = { ...source[0], text: body.text, songId: selected.catalogSongId, songTitle: body.songTitle, artistName: body.artistName, artworkUrl: body.artworkUrl, snippetStart, snippetEnd }
+          if (line0.songId) {
+            const match = await matchLyricLine(supabase, line0.songId, body.text)
+            if (match) {
+              line0 = { ...line0, snippetStart: match.startSec ?? snippetStart, snippetEnd: match.endSec ?? snippetEnd }
+            }
+          }
+          const payloadLines = source.map((line, idx) => {
+            const row = idx === 0 ? line0 : line
+            return {
+              text: row.text,
+              song_id: row.songId || '',
+              song_title: row.songTitle || '',
+              artist_name: row.artistName || '',
+              artwork_url: row.artworkUrl || '',
+              snippet_start_sec: row.snippetStart ?? '',
+              snippet_end_sec: row.snippetEnd ?? '',
+              source: row.source || (row.songId ? 'catalog' : 'external'),
+            }
+          })
+          const res = await fetch('/api/posts/moment', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ postId: editPostId, lines: payloadLines, emotion }),
+          })
+          const payload = await res.json().catch(() => ({}))
+          if (!res.ok) {
+            setPostError(typeof payload.error === 'string' ? payload.error : 'Could not save.')
+            return
+          }
+          fetch('/api/moderate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: body.text, postId: editPostId }),
+          }).catch(() => {})
+          onSaved?.({
+            text: body.text,
+            songTitle: body.songTitle,
+            artistName: body.artistName,
+            emotion,
+            songId: selected.catalogSongId,
+            snippetStartSec: line0.snippetStart ?? snippetStart,
+            snippetEndSec: line0.snippetEnd ?? snippetEnd,
+            artworkUrl: selected.artwork || null,
+            externalListenUrl: selected.externalListenUrl,
+            audioUrl: selected.audioUrl,
+          })
+          return
+        }
         const res = await fetch('/api/posts/lyric-back', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -427,6 +499,8 @@ export const LyricBackPanelCompose = forwardRef<
   }, [
     canSend,
     editPostId,
+    editTarget,
+    momentSourceLines,
     lyric,
     mode,
     onRequireAuth,
@@ -440,6 +514,25 @@ export const LyricBackPanelCompose = forwardRef<
     snippetStart,
     submitEmotion,
   ])
+
+  handleSendRef.current = () => {
+    void handleSend()
+  }
+
+  useImperativeHandle(ref, () => ({
+    focusSearch: () => {
+      const input = rootRef.current?.querySelector('input')
+      if (!(input instanceof HTMLInputElement)) return
+      try {
+        input.focus({ preventScroll: true })
+      } catch {
+        input.focus()
+      }
+    },
+    save: () => {
+      handleSendRef.current()
+    },
+  }))
 
   const showLinePicker = Boolean(
     selected?.catalogSongId
@@ -485,8 +578,10 @@ export const LyricBackPanelCompose = forwardRef<
         ariaLabel="Search by lyric, song or artist"
         compact={isPanelLayout}
         stackAboveOverlay={isPanelLayout && searchOpen}
-        autoFocus={focusSearchOnMount}
+        autoFocus={focusSearchOnMount && !lockSongAndLine}
+        disabled={lockSongAndLine}
         onFocus={() => {
+          if (lockSongAndLine) return
           if (query.trim().length >= 2) setShowResults(true)
         }}
       />
@@ -504,42 +599,61 @@ export const LyricBackPanelCompose = forwardRef<
   )
 
   const songChip = selected ? (
-    <div className={`margo-post-card__lb-compose-track${isPanelLayout ? ' margo-post-card__lb-compose-track--chip' : ' margo-post-card__lb-compose-track--picked'}`}>
+    <div
+      className={`margo-song-row margo-post-card__lb-compose-track${
+        isPanelLayout ? ' margo-post-card__lb-compose-track--chip' : ' margo-post-card__lb-compose-track--picked'
+      }`}
+    >
       {selected.artwork ? (
         <PostThumbnail
           artwork={compactArtworkUrl(selected.artwork, 64) || selected.artwork}
           alt=""
           loading="lazy"
-          className={isPanelLayout ? 'margo-post-card__lb-compose-art' : 'margo-lb-thread-row__art'}
+          className={
+            isPanelLayout
+              ? 'margo-post-card__lb-compose-art margo-song-row__art'
+              : 'margo-song-row__art'
+          }
         />
       ) : (
-        <span className={isPanelLayout ? 'margo-post-card__lb-compose-art margo-post-card__lb-compose-art--empty' : 'margo-lb-thread-row__track-art'} aria-hidden />
+        <span
+          className={
+            isPanelLayout
+              ? 'margo-post-card__lb-compose-art margo-post-card__lb-compose-art--empty margo-song-row__art margo-song-row__art--empty'
+              : 'margo-song-row__art margo-song-row__art--empty'
+          }
+          aria-hidden
+        />
       )}
-      <div className={isPanelLayout ? 'margo-post-card__lb-compose-chip-meta' : 'margo-post-card__lb-compose-track-text'}>
-        <span className="margo-post-card__lb-compose-song">{selected.title}</span>
-        <span className="margo-post-card__lb-compose-artist">{selected.artist}</span>
+      <div className="margo-song-row__meta">
+        <span className="margo-song-row__title margo-post-card__lb-compose-song">{selected.title}</span>
+        <span className="margo-song-row__artist margo-post-card__lb-compose-artist">{selected.artist}</span>
       </div>
-      <LyricBackTrackListenControl
-        className={isPanelLayout ? 'margo-post-card__lb-compose-open' : undefined}
-        songId={selected.catalogSongId}
-        audioUrl={selected.audioUrl}
-        songTitle={selected.title}
-        artistName={selected.artist}
-        externalListenUrl={selected.externalListenUrl}
-        startSec={snippetStart}
-        endSec={snippetEnd}
-        lineText={lyric}
-        artwork={selected.artwork || null}
-        source="feed"
-      />
-      <button
-        type="button"
-        className="margo-post-card__lb-compose-clear"
-        aria-label="Remove song"
-        onClick={resetSong}
-      >
-        <FeedIconClose size={isPanelLayout ? 12 : 14} />
-      </button>
+      <div className="margo-song-row__trail">
+        <LyricBackTrackListenControl
+          className={isPanelLayout ? 'margo-post-card__lb-compose-open' : undefined}
+          songId={selected.catalogSongId}
+          audioUrl={selected.audioUrl}
+          songTitle={selected.title}
+          artistName={selected.artist}
+          externalListenUrl={selected.externalListenUrl}
+          startSec={snippetStart}
+          endSec={snippetEnd}
+          lineText={lyric}
+          artwork={selected.artwork || null}
+          source="feed"
+        />
+        {!lockSongAndLine ? (
+          <button
+            type="button"
+            className="margo-post-card__lb-compose-clear"
+            aria-label="Remove song"
+            onClick={resetSong}
+          >
+            <FeedIconClose size={isPanelLayout ? 12 : 14} />
+          </button>
+        ) : null}
+      </div>
     </div>
   ) : null
 
@@ -581,11 +695,13 @@ export const LyricBackPanelCompose = forwardRef<
         placeholder="Write your line…"
         rows={isPanelLayout ? 2 : 3}
         aria-label="Lyric Back text"
+        readOnly={lockSongAndLine}
+        aria-readonly={lockSongAndLine || undefined}
       />
       {postError ? (
         <p className="margo-post-card__lb-compose-error" role="alert">{postError}</p>
       ) : null}
-      {isPanelLayout ? (
+      {isPanelLayout && !panelAfterBody ? (
         <div className="margo-post-card__lb-compose-send-row">
           <button
             type="button"
@@ -601,7 +717,7 @@ export const LyricBackPanelCompose = forwardRef<
             )}
           </button>
         </div>
-      ) : (
+      ) : !isPanelLayout ? (
         <div className="margo-post-card__lb-compose-bar">
           <button
             type="button"
@@ -613,12 +729,17 @@ export const LyricBackPanelCompose = forwardRef<
             <FeedIconSend size={18} />
           </button>
         </div>
-      )}
+      ) : null}
     </div>
   ) : null
 
   const body = songChip || linePicker || lyricBlock ? (
-    <div className="margo-post-card__lb-compose-body">
+    <div
+      className={
+        'margo-post-card__lb-compose-body'
+        + (lockSongAndLine && isPanelLayout ? ' margo-post-edit-locked-fields' : '')
+      }
+    >
       {songChip}
       {linePicker}
       {lyricBlock}
@@ -635,6 +756,9 @@ export const LyricBackPanelCompose = forwardRef<
       ) : null}
       {renderBar ? renderBar(searchField) : searchField}
       {body}
+      {panelAfterBody ? (
+        <div className="margo-post-card__lb-compose-panel-footer">{panelAfterBody}</div>
+      ) : null}
     </div>
   )
 })

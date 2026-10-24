@@ -40,7 +40,7 @@ const FIXTURE = String.raw`<!DOCTYPE html>
 <div id="level1">
   <p id="level1-label">Level 1 lyric</p>
   <article class="margo-lb-thread-row margo-lb-thread-row--content-removed" data-echo-id="shell-mid" data-content-removed="1">
-    <p class="margo-lb-thread-row__lyric margo-lb-thread-row__lyric--removed">Unavailable</p>
+    <p class="margo-lb-thread-row__lyric margo-lb-thread-row__lyric--removed">Deleted</p>
     <div class="margo-feed-actions margo-feed-actions--compact" data-no-card-nav>
       <button type="button" class="margo-feed-action margo-feed-action--inactive" disabled aria-hidden="true" tabindex="-1"><span class="margo-feed-action__label">Resonate</span></button>
       <button type="button" class="margo-feed-action" id="shell-lb-btn" aria-label="Open Lyric Back">

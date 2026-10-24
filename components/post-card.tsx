@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronRightIcon, EditIcon } from '@/components/icons'
+import { ChevronRightIcon } from '@/components/icons'
 import { RepostSheet } from '@/components/repost-sheet'
 import type { Post } from '@/hooks/usePosts'
-import { EditMomentModal } from '@/components/edit-moment-modal'
-import { DeleteMomentDialog } from '@/components/delete-moment-dialog'
+import { PostMomentInlineEdit } from '@/components/post-moment-inline-edit'
+import { MargoDeleteConfirm } from '@/components/margo-delete-confirm'
 import { warmUrl } from '@/lib/audio-engine'
 import { resolveExternalListenUrl } from '@/lib/moment/listen'
 import {
@@ -16,6 +16,7 @@ import {
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { persistActivePrimaryScroll } from '@/components/primary-tab-shell'
 import { navigateToPostThread } from '@/lib/post-thread-nav'
+import { useFeedPostEvict } from '@/components/feed-post-evict-context'
 import { PostReportMenu } from '@/components/post-report-menu'
 import { UsernameTag } from '@/components/username-tag'
 import { PendingNavLink } from '@/components/pending-nav-link'
@@ -175,9 +176,17 @@ export function PostCard({
   const isTier1 = !!(post.songId && post.audioUrl)
   const audioUrl = post.audioUrl || null
   const cardRef = useRef<HTMLDivElement>(null)
-  const isOwner = !!user?.id && !!post.authorUid && post.authorUid === user.id
-  const lyricBackAllowed = isLyricBackAllowed(post)
   const [editOpen, setEditOpen] = useState(false)
+  const [postLive, setPostLive] = useState(post)
+  const lyricBackAllowed = isLyricBackAllowed(post)
+
+  useEffect(() => {
+    setPostLive(post)
+  }, [post])
+
+  const displayPost = editOpen ? postLive : post
+  const isOwner = !!user?.id && !!displayPost.authorUid && displayPost.authorUid === user.id
+  const canOwnerEdit = isOwner && !displayPost.contentRemovedAt && !displayPost.parentPostId
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deletedLocally, setDeletedLocally] = useState(false)
   const [repostSheetOpen, setRepostSheetOpen] = useState(false)
@@ -290,6 +299,53 @@ export function PostCard({
     return null
   }
 
+  if (editOpen && canOwnerEdit) {
+    return (
+      <div
+        id={domId}
+        ref={cardRef}
+        className="margo-post-card margo-post-card--editing"
+        data-no-card-nav
+        style={vibeThemeStyleVars(getVibeTheme(displayPost.emotion || 'chill'))}
+      >
+        <PostMomentInlineEdit
+          post={postLive}
+          onRequireAuth={requireAuth}
+          onCancel={() => setEditOpen(false)}
+          onSaved={(next) => {
+            setPostLive(next)
+            setEditOpen(false)
+          }}
+        />
+        {lyricBackAllowed && !threadDetail ? (
+          <PostCardSuggestedReply
+            postId={post.id}
+            echoCount={echoCountLive}
+            onEchoCountDelta={(delta) => {
+              setEchoCountLive((n) => Math.max(0, n + delta))
+            }}
+            parentUsername={post.username}
+            parentEmotion={post.emotion || 'chill'}
+            open={suggestionsOpen}
+            onClose={() => setLyricBackPanelOpen(false)}
+            onRequireAuth={requireAuth}
+            onOpenThread={(echoId) => {
+              persistActivePrimaryScroll()
+              router.push(`/post/${echoId}`)
+            }}
+            onExportEcho={(echo) => onExport(echoToPost(echo))}
+            onReplayEcho={onReplay}
+            onQuoteReplayEcho={onQuoteReplay}
+            onUndoReplayEcho={onUndoReplay}
+            echoReplayed={echoReplayed}
+            echoReplayCount={echoReplayCount}
+            echoReplayNote={echoReplayNote}
+          />
+        ) : null}
+      </div>
+    )
+  }
+
   if (isRow && !rowExpanded) {
     return (
       <button
@@ -321,12 +377,14 @@ export function PostCard({
     )
   }
 
+  const evictFeedPost = useFeedPostEvict()
+
   const goToPost = (e: React.MouseEvent) => {
     if (disableCardNav || isRow) return
     const t = e.target as HTMLElement | null
     if (t?.closest?.('a, button, textarea, input, [data-no-card-nav]')) return
     persistActivePrimaryScroll()
-    navigateToPostThread(router, post.id)
+    navigateToPostThread(router, post.id, postLive)
   }
 
   return (
@@ -564,43 +622,28 @@ export function PostCard({
               {isNew && !isTop && !isTrending && <EarnedTag label="New" onClick={() => onSelectRank?.('NEW')} />}
             </div>
           )}
-          {isOwner && (
-            <button
-              type="button"
-              className="margo-post-card__icon-btn"
-              aria-label="Edit Moment"
-              onClick={(e) => { e.stopPropagation(); setEditOpen(true) }}
-            >
-              <EditIcon size={20} color="currentColor" />
-            </button>
-          )}
           <PostReportMenu
             postId={post.id}
             isOwner={isOwner}
+            showOwnerEdit={canOwnerEdit}
+            onOwnerEdit={() => setEditOpen(true)}
             showOwnerDelete
             onOwnerDelete={() => setDeleteOpen(true)}
+            reportPresentation="inline"
           />
         </div>
       </div>
 
-      {isOwner && (
-        <EditMomentModal
-          open={editOpen}
-          onOpenChange={setEditOpen}
-          postId={post.id}
-          lines={resolveMomentLines(post)}
-          echoCount={echoCount}
-        />
-      )}
-      {isOwner && (
-        <DeleteMomentDialog
-          open={deleteOpen}
-          onOpenChange={setDeleteOpen}
-          postId={post.id}
-          onDeleted={() => setDeletedLocally(true)}
-        />
-      )}
-
+      <div
+        className="margo-post-report-inline-host"
+        data-report-inline-host={post.id}
+        data-no-card-nav
+      />
+      <div
+        className="margo-post-delete-inline-host"
+        data-delete-inline-host={post.id}
+        data-no-card-nav
+      />
       <PostMomentBody post={post} atmosphereRooms={atmosphereRooms} />
 
       {lyricBackAllowed && !threadDetail ? (
@@ -666,6 +709,19 @@ export function PostCard({
           onRepost={onReplay}
           onRepostWithNote={(id, note) => onQuoteReplay?.(id, note)}
           onUndo={(id) => onUndoReplay?.(id)}
+        />
+      ) : null}
+
+      {isOwner ? (
+        <MargoDeleteConfirm
+          anchorRef={cardRef}
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          postId={post.id}
+          onDeleted={() => {
+            setDeletedLocally(true)
+            evictFeedPost?.(post.id)
+          }}
         />
       ) : null}
 

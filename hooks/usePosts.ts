@@ -8,6 +8,7 @@ import {
   peekFeedPostsCache,
   warmFeedPosts,
   fetchFeedPostsOlder,
+  evictFeedPostFromCache,
 } from '@/lib/primary-tab-prefetch'
 import type { PostLine } from '@/lib/post-lines'
 import type { AtmosphereId } from '@/lib/atmosphere'
@@ -150,6 +151,11 @@ export function usePosts(options: UsePostsOptions = {}) {
     }
   }, [posts.length])
 
+  const removePost = useCallback((postId: string) => {
+    evictFeedPostFromCache(postId)
+    setPosts((prev) => prev.filter((p) => p.id !== postId))
+  }, [])
+
   const loadOlder = useCallback(async () => {
     const source = posts.length > 0 ? posts : visiblePosts
     const oldest = source[source.length - 1]?.timestamp
@@ -180,5 +186,6 @@ export function usePosts(options: UsePostsOptions = {}) {
     loadOlder,
     loadingOlder,
     hasMoreOlder,
+    removePost,
   }
 }

@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { ComposeLyricCard } from '@/components/compose-lyric-card'
+import { MomentComposeVibePicker } from '@/components/moment-compose-vibe-picker'
 import { MargoSymbol } from '@/components/margo-symbol'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { ShareIcon } from '@/components/icons'
@@ -132,7 +133,6 @@ export function StageMomentCard({
   style,
   brandWatermark = false,
 }: StageMomentCardProps) {
-  const [vibePickerOpen, setVibePickerOpen] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
   const [cardWidth, setCardWidth] = useState<number | null>(null)
   const theme = resolveExportPaintTheme(cardThemeId, effectOwnsFill ? atmosphereId : 'still')
@@ -486,7 +486,7 @@ export function StageMomentCard({
             </div>
           ) : null}
 
-          {showVibeFooter ? (
+          {showVibeFooter && vibeLabel && canPickVibe && onVibeSelect ? (
             <div style={{
               marginTop: isShorts ? 0 : '16px',
               position: isShorts ? 'absolute' : undefined,
@@ -495,109 +495,13 @@ export function StageMomentCard({
               bottom: isShorts && layout && !layout.vibePill ? layout.padding.bottom : undefined,
               zIndex: 4,
             }}>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                  alignItems: 'center',
-                  minHeight: '22px',
-                }}
-              >
-                <button
-                  type="button"
-                  aria-label={canPickVibe ? `Vibe: ${vibeLabel}. Tap to change.` : `Vibe: ${vibeLabel}`}
-                  onClick={canPickVibe ? () => setVibePickerOpen((open) => !open) : undefined}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: 0,
-                    border: 'none',
-                    background: 'none',
-                    cursor: canPickVibe ? 'pointer' : 'default',
-                    WebkitTapHighlightColor: 'transparent',
-                    flexShrink: 0,
-                    maxWidth: '100%',
-                    minWidth: 0,
-                  }}
-                >
-                  <span style={footerLabelStyle(theme.inkMuted)}>Vibe</span>
-                  <span style={footerChipStyle(theme)} title={vibeLabel}>
-                    {vibeLabel}
-                  </span>
-                </button>
-              </div>
-
-              {vibePickerOpen && canPickVibe ? (
-                <div
-                  role="listbox"
-                  aria-label="Choose a vibe"
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                    gap: '8px',
-                    marginTop: '14px',
-                    width: '100%',
-                    paddingBottom: '2px',
-                    borderTop: `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.1)' : 'rgba(255,255,255,0.1)'}`,
-                    paddingTop: '14px',
-                  }}
-                >
-                  {vibeOptions.map((option) => {
-                    const selected = option === vibeLabel
-                    const suggested = option === suggestedVibeLabel && !selected
-                    return (
-                      <button
-                        key={option}
-                        type="button"
-                        role="option"
-                        aria-selected={selected}
-                        onClick={() => {
-                          onVibeSelect?.(option)
-                          setVibePickerOpen(false)
-                        }}
-                        style={{
-                          position: 'relative',
-                          minHeight: 'var(--margo-touch-min)',
-                          padding: '0 8px',
-                          borderRadius: '50px',
-                          border: selected
-                            ? `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.35)' : 'rgba(255,255,255,0.35)'}`
-                            : `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.16)' : 'rgba(255,255,255,0.16)'}`,
-                          background: selected
-                            ? (theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.14)' : 'rgba(255,255,255,0.14)')
-                            : (theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.06)' : 'rgba(255,255,255,0.06)'),
-                          color: theme.ink,
-                          fontFamily: UI_FONT,
-                          fontSize: '0.58rem',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                        }}
-                      >
-                        {option}
-                        {suggested ? (
-                          <span
-                            aria-hidden
-                            style={{
-                              position: 'absolute',
-                              top: '-3px',
-                              right: '-3px',
-                              width: '7px',
-                              height: '7px',
-                              borderRadius: '50%',
-                              background: theme.ink,
-                              border: `1.5px solid ${theme.bg}`,
-                            }}
-                          />
-                        ) : null}
-                      </button>
-                    )
-                  })}
-                </div>
-              ) : null}
+              <MomentComposeVibePicker
+                variant="stage"
+                theme={theme}
+                vibeLabel={vibeLabel}
+                suggestedVibeLabel={suggestedVibeLabel}
+                onVibeSelect={onVibeSelect}
+              />
             </div>
           ) : null}
         </div>

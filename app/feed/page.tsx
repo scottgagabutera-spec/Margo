@@ -1,7 +1,7 @@
 'use client'
 import { toast } from 'sonner'
 import { CloseIcon } from '@/components/icons'
-import { Suspense, useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { Suspense, useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
@@ -20,6 +20,7 @@ import { ContentUpdatesBar } from '@/components/content-updates-bar'
 import { useNewItemsBuffer } from '@/hooks/useNewItemsBuffer'
 import { useContentUpdates } from '@/hooks/useContentUpdates'
 import { PostCard, normalizeEmotion } from '@/components/post-card'
+import { FeedPostEvictProvider } from '@/components/feed-post-evict-context'
 import { ReplayAttribution } from '@/components/replay-attribution'
 import { useRecentReplays } from '@/hooks/useRecentReplays'
 import { usePostReplays } from '@/hooks/usePostReplays'
@@ -66,6 +67,7 @@ function FeedPageInner() {
     loadOlder,
     loadingOlder,
     hasMoreOlder,
+    removePost,
   } = usePosts({ enabled: feedLive })
   const {
     items: posts,
@@ -74,6 +76,13 @@ function FeedPageInner() {
     flushPending,
     applyImmediate,
   } = useNewItemsBuffer(livePosts, { settleEmpty: !loading })
+  const evictFeedPost = useCallback(
+    (postId: string) => {
+      removePost(postId)
+      applyImmediate(livePosts.filter((p) => p.id !== postId))
+    },
+    [removePost, applyImmediate, livePosts],
+  )
   const { songCount, artistCount, openSongs, openArtists } = useContentUpdates({
     enabled: feedLive,
   })
@@ -445,6 +454,7 @@ function FeedPageInner() {
   return (
     <StoryRingProvider enabled={feedLive}>
     <StoryFeedAuthorSync authorIds={feedAuthorIds} />
+    <FeedPostEvictProvider evict={evictFeedPost}>
     <PullToRefresh
       onRefreshingChange={setPtrBusy}
       onRefresh={async () => {
@@ -645,6 +655,7 @@ function FeedPageInner() {
       />
     </div>
     </PullToRefresh>
+    </FeedPostEvictProvider>
       {feedLive && (
         <StoriesPortalDock
           onAddStory={() => {

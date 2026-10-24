@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Echo } from '@/hooks/useEchoes'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { PostThumbnail } from '@/components/post-thumbnail'
@@ -13,18 +13,17 @@ import { FeedPostActions } from '@/components/feed-post-actions'
 import { LyricBackTrackListenControl } from '@/components/lyric-back-track-listen-control'
 import { RepostSheet } from '@/components/repost-sheet'
 import { PostReportMenu } from '@/components/post-report-menu'
-import { LyricBackDeleteSheet } from '@/components/lyric-back-delete-sheet'
+import { MomentComposeVibePicker } from '@/components/moment-compose-vibe-picker'
 import {
   LyricBackPanelCompose,
+  type LyricBackPanelComposeHandle,
   type LyricBackPanelPrefill,
 } from '@/components/lyric-back-panel-compose'
 import type { LyricBackEditSavedPatch } from '@/lib/lyric-back-edit-saved'
-import {
-  MOMENT_VIBE_PICKER_OPTIONS,
-  emotionToVibeLabel,
-  vibeLabelToEmotion,
-} from '@/lib/moment/vibe'
+import { emotionToVibeLabel, vibeLabelToEmotion } from '@/lib/moment/vibe'
+import { MargoDeleteConfirm } from '@/components/margo-delete-confirm'
 import { echoToPost } from '@/lib/echo-to-post'
+import { getVibeTheme, vibeThemeStyleVars } from '@/lib/vibe-theme'
 
 export type { LyricBackEditSavedPatch } from '@/lib/lyric-back-edit-saved'
 
@@ -143,16 +142,20 @@ export function LyricBackThreadRow({
   const { user } = useIdentity()
   const myId = user?.id ?? null
   const [repostSheetOpen, setRepostSheetOpen] = useState(false)
+  const composeRef = useRef<LyricBackPanelComposeHandle>(null)
+  const rowRef = useRef<HTMLElement>(null)
+  const [editPosting, setEditPosting] = useState(false)
   const [deleteSheetOpen, setDeleteSheetOpen] = useState(false)
+  const lockSongAndLine = (echo.echoCount ?? 0) > 0
   const [editOpen, setEditOpen] = useState(false)
   const initialVibeLabel =
-    emotionToVibeLabel(echo.emotion) ?? MOMENT_VIBE_PICKER_OPTIONS[0]
+    emotionToVibeLabel(echo.emotion) ?? 'Chill'
   const [editVibeLabel, setEditVibeLabel] = useState(initialVibeLabel)
   const contentRemoved = Boolean(echo.contentRemovedAt)
 
   useEffect(() => {
     if (!editOpen) return
-    setEditVibeLabel(emotionToVibeLabel(echo.emotion) ?? MOMENT_VIBE_PICKER_OPTIONS[0])
+    setEditVibeLabel(emotionToVibeLabel(echo.emotion) ?? 'Chill')
   }, [editOpen, echo.id, echo.emotion])
 
   const [resonatedLocal, setResonatedLocal] = useState(
@@ -230,6 +233,7 @@ export function LyricBackThreadRow({
     contentRemoved && !hideLyricBackAction && Boolean(onLyricBack)
 
   const editSubmitEmotion = vibeLabelToEmotion(editVibeLabel) ?? echo.emotion
+  const vibeStyle = vibeThemeStyleVars(getVibeTheme(echo.emotion || 'chill'))
 
   if (editOpen && showOwnerMenu) {
     return (
@@ -237,6 +241,7 @@ export function LyricBackThreadRow({
         className={`${rowClass} margo-lb-thread-row--editing`}
         data-echo-id={echo.id}
         data-lb-editing="1"
+        style={vibeStyle}
       >
         <header className="margo-lb-thread-row__header">
           <div className="margo-lb-thread-row__header-text">
@@ -250,24 +255,8 @@ export function LyricBackThreadRow({
             Cancel
           </button>
         </header>
-        <div className="margo-lb-thread-row__edit-vibes" role="listbox" aria-label="Vibe">
-          {MOMENT_VIBE_PICKER_OPTIONS.map((label) => {
-            const selected = label === editVibeLabel
-            return (
-              <button
-                key={label}
-                type="button"
-                role="option"
-                aria-selected={selected}
-                className={`margo-lb-thread-row__edit-vibe${selected ? ' margo-lb-thread-row__edit-vibe--on' : ''}`}
-                onClick={() => setEditVibeLabel(label)}
-              >
-                {label}
-              </button>
-            )
-          })}
-        </div>
         <LyricBackPanelCompose
+          ref={composeRef}
           key={`edit-${echo.id}`}
           layout="panel"
           mode="edit"
@@ -278,6 +267,28 @@ export function LyricBackThreadRow({
           prefill={echoToPrefill(echo)}
           onRequireAuth={requireAuth}
           focusSearchOnMount={false}
+          lockSongAndLine={lockSongAndLine}
+          onPostingChange={setEditPosting}
+          panelAfterBody={
+            <>
+              {lockSongAndLine ? (
+                <span className="margo-post-edit-vibe-only-hint">Vibe only</span>
+              ) : null}
+              <MomentComposeVibePicker
+                compact
+                vibeLabel={editVibeLabel}
+                onVibeSelect={setEditVibeLabel}
+              />
+              <button
+                type="button"
+                className="margo-lb-thread-row__edit-save"
+                disabled={editPosting}
+                onClick={() => composeRef.current?.save()}
+              >
+                {editPosting ? 'Saving…' : 'Save'}
+              </button>
+            </>
+          }
           onSaved={(payload) => {
             setEditOpen(false)
             onOwnerEdited?.(echo.id, {
@@ -332,7 +343,7 @@ export function LyricBackThreadRow({
           ) : null}
         </header>
         <p className="margo-lb-thread-row__lyric margo-lb-thread-row__lyric--removed">
-          Unavailable
+          Deleted
         </p>
         <FeedPostActions
           variant="compact"
@@ -360,7 +371,7 @@ export function LyricBackThreadRow({
   }
 
   return (
-    <article className={rowClass} data-echo-id={echo.id}>
+    <article ref={rowRef} className={rowClass} data-echo-id={echo.id} style={vibeStyle}>
       {isAnchor ? (
         <p className="margo-lb-thread-row__badge">This Lyric Back</p>
       ) : null}
@@ -395,6 +406,7 @@ export function LyricBackThreadRow({
             isOwner={false}
             className="margo-lb-thread-row__more"
             iconSize={18}
+            reportPresentation="inline"
           />
         ) : null}
         {showOwnerMenu ? (
@@ -407,6 +419,7 @@ export function LyricBackThreadRow({
             onOwnerDelete={() => setDeleteSheetOpen(true)}
             className="margo-lb-thread-row__more"
             iconSize={18}
+            reportPresentation="inline"
           />
         ) : null}
       </header>
@@ -420,7 +433,7 @@ export function LyricBackThreadRow({
       </button>
 
       {showTrackStrip ? (
-        <div className="margo-lb-thread-row__track-row">
+        <div className="margo-song-row margo-lb-thread-row__track-row">
           <div className="margo-lb-thread-row__track-art">
             {songHref ? (
               <PendingNavLink href={songHref} indicator="tint" aria-label="Open song" onClick={(e) => e.stopPropagation()}>
@@ -428,7 +441,7 @@ export function LyricBackThreadRow({
                   artwork={echo.artwork}
                   alt=""
                   loading="lazy"
-                  className="margo-lb-thread-row__art"
+                  className="margo-lb-thread-row__art margo-song-row__art"
                 />
               </PendingNavLink>
             ) : (
@@ -436,36 +449,43 @@ export function LyricBackThreadRow({
                 artwork={echo.artwork}
                 alt=""
                 loading="lazy"
-                className="margo-lb-thread-row__art"
+                className="margo-lb-thread-row__art margo-song-row__art"
               />
             )}
           </div>
-          <div className="margo-lb-thread-row__track-meta">
+          <div className="margo-lb-thread-row__track-meta margo-song-row__meta">
             {echo.song ? (
-              <span className="margo-lb-thread-row__song">{echo.song}</span>
+              <span className="margo-lb-thread-row__song margo-song-row__title">{echo.song}</span>
             ) : echo.songId ? (
-              <span className="margo-lb-thread-row__song">On Margo</span>
+              <span className="margo-lb-thread-row__song margo-song-row__title">On Margo</span>
             ) : null}
             {echo.artist ? (
-              <span className="margo-lb-thread-row__artist">{echo.artist}</span>
+              <span className="margo-lb-thread-row__artist margo-song-row__artist">{echo.artist}</span>
             ) : null}
           </div>
-          <LyricBackTrackListenControl
-            songId={echo.songId}
-            audioUrl={echo.audioUrl}
-            songTitle={echo.song}
-            artistName={echo.artist}
-            externalListenUrl={echo.externalListenUrl}
-            lineIndex={0}
-            lineText={echo.lyric}
-            startSec={echo.snippetStart}
-            endSec={echo.snippetEnd}
-            artwork={echo.artwork}
-            source="feed"
-          />
+          <div className="margo-song-row__trail">
+            <LyricBackTrackListenControl
+              songId={echo.songId}
+              audioUrl={echo.audioUrl}
+              songTitle={echo.song}
+              artistName={echo.artist}
+              externalListenUrl={echo.externalListenUrl}
+              lineIndex={0}
+              lineText={echo.lyric}
+              startSec={echo.snippetStart}
+              endSec={echo.snippetEnd}
+              artwork={echo.artwork}
+              source="feed"
+            />
+          </div>
         </div>
       ) : null}
 
+      <div
+        className="margo-post-report-inline-host"
+        data-report-inline-host={echo.id}
+        data-no-card-nav
+      />
       <FeedPostActions
         variant="compact"
         postId={echo.id}
@@ -497,12 +517,19 @@ export function LyricBackThreadRow({
           onUndo={(id) => onUndoReplay?.(id)}
         />
       ) : null}
+      <div
+        className="margo-post-delete-inline-host"
+        data-delete-inline-host={echo.id}
+        data-no-card-nav
+      />
       {showOwnerMenu ? (
-        <LyricBackDeleteSheet
+        <MargoDeleteConfirm
+          anchorRef={rowRef}
           open={deleteSheetOpen}
           onOpenChange={setDeleteSheetOpen}
           postId={echo.id}
-          onDeleted={(outcome) => onOwnerDeleted?.(echo.id, outcome)}
+          target="lyric-back"
+          onDeleted={(outcome) => onOwnerDeleted?.(echo.id, outcome ?? 'deleted')}
         />
       ) : null}
     </article>

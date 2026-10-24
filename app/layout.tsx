@@ -6,6 +6,7 @@ import { NotificationsProvider } from '@/hooks/useNotifications'
 import { MessagingProvider } from '@/hooks/useMessaging'
 import { MiniPlayer } from '@/components/mini-player'
 import { MargoNav } from '@/components/margo-nav'
+import { MargoRouteProgress } from '@/components/margo-route-progress'
 import { MobileTabBar } from '@/components/mobile-tab-bar'
 import { HubProvider } from '@/components/hub-menu'
 import { NavBackProvider } from '@/components/nav-back'
@@ -192,6 +193,7 @@ export default function RootLayout({
                   <TabSwipeProvider
                     chrome={
                       <>
+                        <MargoRouteProgress />
                         <MargoNav />
                         <MobileTabBar />
                       </>

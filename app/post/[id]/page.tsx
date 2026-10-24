@@ -220,8 +220,8 @@ export default function PostDetailPage() {
       maxWidth: '640px', margin: '0 auto',
     }}>
 
-      {loading && (
-        <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-muted)' }}>
+      {loading && !post && (
+        <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-muted)' }} role="status">
           Loading…
         </p>
       )}
@@ -245,7 +245,7 @@ export default function PostDetailPage() {
               {ancestors.slice(1).map((ancestor) => (
                 <PostThreadLink key={ancestor.id} postId={ancestor.id} className="margo-post-thread-ancestor-link">
                   {ancestor.contentRemovedAt ? (
-                    <span className="margo-post-thread-ancestor-lyric">Unavailable</span>
+                    <span className="margo-post-thread-ancestor-lyric">Deleted</span>
                   ) : (
                     <>
                       <span className="margo-post-thread-ancestor-user">@{ancestor.username?.replace(/^@/, '') || 'user'}</span>

@@ -1,9 +1,11 @@
 import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime'
+import type { Post } from '@/hooks/usePosts'
 import {
   canPopNavStack,
-  markNextNavAsReplace,
   navStackPreviousPath,
 } from '@/lib/in-app-nav-stack'
+import { stashPostThreadSeed } from '@/lib/post-thread-seed'
+import { signalNavStart } from '@/lib/margo-nav-intent'
 
 export function postThreadHref(postId: string): string {
   return `/post/${encodeURIComponent(postId)}`
@@ -13,7 +15,11 @@ export function postThreadHref(postId: string): string {
  * Open a post thread without duplicating history when the target is already
  * the previous in-app step (Back would return here).
  */
-export function navigateToPostThread(router: AppRouterInstance, postId: string) {
+export function navigateToPostThread(
+  router: AppRouterInstance,
+  postId: string,
+  seedPost?: Post | null,
+) {
   const href = postThreadHref(postId)
   if (typeof window === 'undefined') {
     router.push(href)
@@ -24,8 +30,11 @@ export function navigateToPostThread(router: AppRouterInstance, postId: string) 
     window.history.back()
     return
   }
-  markNextNavAsReplace()
-  router.replace(href)
+  if (seedPost?.id === postId) {
+    stashPostThreadSeed(postId, seedPost)
+  }
+  signalNavStart()
+  router.push(href)
 }
 
 /** Chrome Back on /post/* — one step, never re-push parent via Link. */
@@ -41,6 +50,5 @@ export function navigatePostThreadBack(
     window.history.back()
     return
   }
-  markNextNavAsReplace()
   router.replace(fallbackHref)
 }
