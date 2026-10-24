@@ -107,23 +107,22 @@ for (const width of WIDTHS) {
       }
     })
 
-    test('active slide exposes sound control and persists unmute', async ({ page }) => {
-      test.skip(width < 640, 'sound control is desktop in-frame')
+    test('desktop: one credit row and tap-surface toggles unmute', async ({ page }) => {
+      test.skip(width < 640, 'desktop-only')
       await openShortsTab(page, width)
-      const sound = page.locator('[data-shorts-active="1"] .margo-feed-shorts-slide__sound')
-      if ((await sound.count()) === 0) {
-        test.skip(true, 'Shorts catalog minimum not met on this deploy')
-        return
-      }
-      await expect(sound).toBeVisible({ timeout: 15000 })
-      await sound.click()
-      await expect(sound).toHaveAttribute('aria-pressed', 'true')
+      await expect(page.locator('.margo-feed-shorts-slide__sound')).toHaveCount(0)
+      const frame = page.locator('[data-shorts-active="1"] .margo-feed-shorts-slide__frame')
+      await expect(frame).toBeVisible({ timeout: 15000 })
+      await expect(frame.locator('.margo-feed-shorts-slide__meta-row')).toHaveCount(1)
+      const tap = frame.locator('.margo-feed-shorts-slide__tap-surface')
+      await expect(tap).toBeVisible()
+      await tap.click()
+      await expect(tap).toHaveAttribute('aria-pressed', 'true')
       await page.reload({ waitUntil: 'domcontentloaded' })
       await page.waitForTimeout(1200)
       await openShortsTab(page, width)
-      const soundAfter = page.locator('[data-shorts-active="1"] .margo-feed-shorts-slide__sound')
-      if ((await soundAfter.count()) === 0) test.skip()
-      await expect(soundAfter).toHaveAttribute('aria-pressed', 'true')
+      const tapAfter = page.locator('[data-shorts-active="1"] .margo-feed-shorts-slide__tap-surface')
+      await expect(tapAfter).toHaveAttribute('aria-pressed', 'true')
     })
 
     test('inactive slides keep fill-motion off (no off-screen flash)', async ({ page }) => {

@@ -48,6 +48,8 @@ interface StageMomentCardProps {
   listenUrl?: string | null
   /** When true, Vibe chrome is rendered by the parent (never inside a 9:16 clip). */
   hideVibeChrome?: boolean
+  /** Feed Shorts desktop: lyric-only inside the frame; credits live in the overlay. */
+  hideShortsCreditRow?: boolean
   /**
    * Export customize: a living Effect replaces Color (platform room).
    * Off for compose/platform preview, where Color is not a user control.
@@ -129,6 +131,7 @@ export function StageMomentCard({
   playControlLabel,
   listenUrl,
   hideVibeChrome = false,
+  hideShortsCreditRow = false,
   effectOwnsFill = false,
   style,
   brandWatermark = false,
@@ -343,7 +346,7 @@ export function StageMomentCard({
               : (layout ? lyricDisplayText(layout) : lyric)}
           </p>
 
-          {(songTitle || artistName) ? (
+          {(songTitle || artistName) && !(isShorts && hideShortsCreditRow) ? (
             <div
               style={isShorts && layout?.meta
                 ? {
@@ -392,7 +395,7 @@ export function StageMomentCard({
             </div>
           ) : null}
 
-          {artwork ? (
+          {artwork && !(isShorts && hideShortsCreditRow) ? (
             <img
               src={artwork}
               alt=""
@@ -414,7 +417,7 @@ export function StageMomentCard({
             />
           ) : null}
 
-          {(canPlay || listenUrl) ? (
+          {(canPlay || listenUrl) && !(isShorts && hideShortsCreditRow) ? (
             <div
               style={{
                 display: 'flex',

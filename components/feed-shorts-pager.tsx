@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
+import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
 import { emotionToVibeLabel } from '@/lib/moment/vibe'
 import { isLivingAtmosphere, type AtmosphereId } from '@/lib/atmosphere'
@@ -54,8 +55,8 @@ type SlideProps = {
   showSignupOnPlay: boolean
   soundOn: boolean
   desktopLayout: boolean
-  onToggleSound: () => void
   onPlay: () => void
+  onTapToggleSound: () => void
 }
 
 function FeedShortsSlide({
@@ -71,10 +72,11 @@ function FeedShortsSlide({
   showSignupOnPlay,
   soundOn,
   desktopLayout,
-  onToggleSound,
   onPlay,
+  onTapToggleSound,
 }: SlideProps) {
   const [fillMotion, setFillMotion] = useState(false)
+  const [soundFlash, setSoundFlash] = useState(false)
   const motionAtmosphere = isActive ? atmosphereId : 'still'
 
   useEffect(() => {
@@ -95,24 +97,56 @@ function FeedShortsSlide({
 
   const cardAtmosphere = desktopLayout ? atmosphereId : motionAtmosphere
 
-  const metaBlock = (
+  useEffect(() => {
+    if (!soundFlash) return
+    const t = window.setTimeout(() => setSoundFlash(false), 700)
+    return () => window.clearTimeout(t)
+  }, [soundFlash])
+
+  const handleTapSurface = () => {
+    if (!desktopLayout || !isActive) return
+    onTapToggleSound()
+    if (!reduceMotion) setSoundFlash(true)
+  }
+
+  const showMetaPlay = !!clip.audioUrl || showSignupOnPlay || showBlockedPlay
+
+  const phoneMeta = (
     <>
       <Link href={`/song/${clip.songId}`} className="margo-feed-shorts-slide__song">
         {clip.songTitle}
       </Link>
       <span className="margo-feed-shorts-slide__artist">{clip.artist}</span>
-      {desktopLayout && isActive ? (
+    </>
+  )
+
+  const desktopMeta = (
+    <div className="margo-feed-shorts-slide__meta-row">
+      {clip.artwork ? (
+        <img src={clip.artwork} alt="" className="margo-feed-shorts-slide__meta-art" />
+      ) : null}
+      <div className="margo-feed-shorts-slide__meta-text">
+        <Link href={`/song/${clip.songId}`} className="margo-feed-shorts-slide__song">
+          {clip.songTitle}
+        </Link>
+        <span className="margo-feed-shorts-slide__artist">{clip.artist}</span>
+      </div>
+      {showMetaPlay ? (
         <button
           type="button"
-          className="margo-feed-shorts-slide__sound"
-          aria-pressed={soundOn}
-          aria-label={soundOn ? 'Mute Short' : 'Unmute Short'}
-          onClick={onToggleSound}
+          className="margo-feed-shorts-slide__meta-play"
+          aria-label={showSignupOnPlay ? 'Sign up to play' : showBlockedPlay ? 'Play Short' : isPlaying ? 'Pause Short' : 'Play Short'}
+          onClick={(e) => {
+            e.stopPropagation()
+            onPlay()
+          }}
         >
-          {soundOn ? 'Sound on' : 'Tap for sound'}
+          {showSignupOnPlay ? 'Sign up' : showBlockedPlay ? 'Play' : (
+            <PlayPauseIcon playing={isPlaying} buffering={false} size={16} color="var(--gold)" />
+          )}
         </button>
       ) : null}
-    </>
+    </div>
   )
 
   return (
@@ -124,6 +158,20 @@ function FeedShortsSlide({
       data-shorts-fill-motion={desktopLayout && isActive && fillMotion ? '1' : '0'}
     >
       <div className="margo-feed-shorts-slide__frame">
+        {desktopLayout && isActive ? (
+          <button
+            type="button"
+            className="margo-feed-shorts-slide__tap-surface"
+            aria-label={soundOn ? 'Mute Short audio' : 'Unmute Short audio'}
+            aria-pressed={soundOn}
+            onClick={handleTapSurface}
+          />
+        ) : null}
+        {desktopLayout && soundFlash ? (
+          <span className="margo-feed-shorts-slide__sound-flash" aria-hidden>
+            <PlayPauseIcon playing={soundOn} buffering={false} size={22} color="var(--gold)" />
+          </span>
+        ) : null}
         <MomentExportPreviewFrame
           shapeId="vertical"
           framed={false}
@@ -141,19 +189,28 @@ function FeedShortsSlide({
             effectOwnsFill={effectOwnsFill}
             shapeId="vertical"
             hideVibeChrome
+            hideShortsCreditRow={desktopLayout}
             canPlay={!!clip.audioUrl}
             playing={isPlaying}
-            playControlLabel={showSignupOnPlay ? 'Sign up' : showBlockedPlay ? 'Play' : null}
+            playControlLabel={
+              desktopLayout
+                ? null
+                : showSignupOnPlay
+                  ? 'Sign up'
+                  : showBlockedPlay
+                    ? 'Play'
+                    : null
+            }
             onPlay={onPlay}
             style={{ height: '100%', minHeight: '100%' }}
           />
         </MomentExportPreviewFrame>
         {desktopLayout ? (
-          <div className="margo-feed-shorts-slide__meta">{metaBlock}</div>
+          <div className="margo-feed-shorts-slide__meta">{desktopMeta}</div>
         ) : null}
       </div>
       {!desktopLayout ? (
-        <div className="margo-feed-shorts-slide__meta">{metaBlock}</div>
+        <div className="margo-feed-shorts-slide__meta">{phoneMeta}</div>
       ) : null}
     </section>
   )
@@ -418,7 +475,7 @@ export function FeedShortsPager({
             showSignupOnPlay={showSignupOnPlay}
             soundOn={soundOn}
             desktopLayout={desktopLayout}
-            onToggleSound={toggleSound}
+            onTapToggleSound={toggleSound}
             onPlay={() => {
               if (showSignupOnPlay) {
                 onRequireSignIn()

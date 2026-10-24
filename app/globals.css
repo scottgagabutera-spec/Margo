@@ -2908,10 +2908,14 @@ html, body {
     padding-right: 24px;
     box-sizing: border-box;
   }
+  .margo-feed-shorts-pager {
+    padding-top: 12px;
+    box-sizing: border-box;
+  }
   .margo-feed-shorts-slide {
     min-height: var(--margo-shorts-slide-min-h, 100%);
     height: auto;
-    padding: 8px 0 12px;
+    padding: 12px 0 12px;
     justify-content: flex-start;
   }
   .margo-feed-shorts-slide__frame {
@@ -2943,19 +2947,73 @@ html, body {
   .margo-feed-shorts-slide__meta button {
     pointer-events: auto;
   }
-  .margo-feed-shorts-slide__sound {
-    margin-top: 2.5cqw;
+  .margo-feed-shorts-slide__tap-surface {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+  }
+  .margo-feed-shorts-slide__sound-flash {
+    position: absolute;
+    left: 50%;
+    top: 42%;
+    z-index: 4;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    opacity: 0;
+    animation: margo-shorts-sound-flash 0.65s var(--ease-out) forwards;
+  }
+  @keyframes margo-shorts-sound-flash {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+    25% { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.05); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .margo-feed-shorts-slide__sound-flash {
+      animation: none;
+      opacity: 0;
+    }
+  }
+  .margo-feed-shorts-slide__meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3.5cqw;
+    pointer-events: auto;
+  }
+  .margo-feed-shorts-slide__meta-art {
+    width: 12cqw;
+    height: 12cqw;
+    border-radius: 2cqw;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+  .margo-feed-shorts-slide__meta-text {
+    min-width: 0;
+    flex: 1;
+    text-align: left;
+  }
+  .margo-feed-shorts-slide__meta-play {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--margo-touch-min);
+    min-height: var(--margo-touch-min);
+    padding: 0 3.5cqw;
+    border-radius: 999px;
+    border: 1px solid rgba(201, 162, 39, 0.35);
+    background: rgba(8, 7, 12, 0.55);
+    color: var(--gold);
     font-family: var(--font-geist-sans), system-ui, sans-serif;
-    font-size: 3.4cqw;
-    font-weight: 600;
+    font-size: 3cqw;
+    font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--gold);
-    background: transparent;
-    border: 1px solid rgba(201, 162, 39, 0.35);
-    border-radius: 999px;
-    min-height: var(--margo-touch-min);
-    padding: 0 4.5cqw;
     cursor: pointer;
   }
   .margo-feed-shorts-slide__meta .margo-feed-shorts-slide__song {
