@@ -12,7 +12,8 @@ const TRAPPED = String.raw`<!DOCTYPE html>
   body { margin: 0; background: #111; font-family: system-ui, sans-serif; }
   .feed { padding: 12px; }
   .card { position: relative; isolation: isolate; z-index: 20; margin-bottom: 12px; padding: 16px; background: #1a1a1e; border-radius: 16px; min-height: 120px; }
-  .card--cover { z-index: 25; background: #252530; min-height: 200px; }
+  /* Later card wins over owner context (z 20) even when dialog is z 101 inside owner */
+  .card--cover { position: fixed; left: 0; right: 0; top: 38%; bottom: 0; z-index: 25; background: #252530; margin: 0; border-radius: 0; }
   .dlg { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 101; width: 280px; padding: 16px; background: #0f0e14; border-radius: 16px; }
   .dlg button { min-height: 44px; width: 100%; margin-top: 8px; }
 </style></head><body>
@@ -25,8 +26,8 @@ const TRAPPED = String.raw`<!DOCTYPE html>
       <button type="button" id="confirm">Delete</button>
     </div>
   </div>
-  <div class="card card--cover" id="cover">Later feed card paints above</div>
 </div>
+<div class="card card--cover" id="cover">Later feed card paints above delete actions</div>
 </body></html>`
 
 const PORTALED = String.raw`<!DOCTYPE html>
