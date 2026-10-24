@@ -5,6 +5,7 @@ import {
   navStackPreviousPath,
 } from '@/lib/in-app-nav-stack'
 import { stashPostThreadSeed } from '@/lib/post-thread-seed'
+import { signalNavStart } from '@/lib/margo-nav-intent'
 
 export function postThreadHref(postId: string): string {
   return `/post/${encodeURIComponent(postId)}`
@@ -32,6 +33,7 @@ export function navigateToPostThread(
   if (seedPost?.id === postId) {
     stashPostThreadSeed(postId, seedPost)
   }
+  signalNavStart()
   router.push(href)
 }
 

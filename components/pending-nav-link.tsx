@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState, type ComponentProps } from 'react'
 import { LoadingRing } from '@/components/loading-ring'
+import { signalNavStart } from '@/lib/margo-nav-intent'
 
 type PendingNavLinkProps = ComponentProps<typeof Link> & {
   /** overlay = gold wash + spinner (tiles/rows). tint = gold fill, no spinner (chips). subtle = opacity only (inline text). */
@@ -56,6 +57,7 @@ export function PendingNavLink({
         }
         pendingRef.current = true
         setPending(true)
+        signalNavStart()
         if (indicator === 'subtle') setPressed(false)
       }}
       style={{

@@ -9,6 +9,11 @@ import {
   useState,
 } from 'react'
 import { createPortal } from 'react-dom'
+import { usePathname } from 'next/navigation'
+import {
+  claimReportMenu,
+  releaseReportMenu,
+} from '@/lib/post-report-menu-coordinator'
 import { FeedIconMore } from '@/components/feed-card-icons'
 import { MargoReportDialog } from '@/components/margo-report-dialog'
 import { useAuthGate } from '@/components/supabase-auth-provider'
@@ -121,6 +126,7 @@ export function PostReportMenu({
   inactive = false,
   reportPresentation = 'modal',
 }: PostReportMenuProps) {
+  const pathname = usePathname()
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
   const menuId = useId()
@@ -238,6 +244,48 @@ export function PostReportMenu({
 
   useEffect(() => {
     if (!menuOpen) return
+    claimReportMenu(closeAll)
+    return () => releaseReportMenu(closeAll)
+  }, [menuOpen, closeAll])
+
+  useEffect(() => {
+    if (sheetOpen) {
+      setMenuOpen(false)
+      setPos(null)
+    }
+  }, [sheetOpen])
+
+  useEffect(() => {
+    closeAll()
+  }, [pathname, closeAll])
+
+  useEffect(() => {
+    if (!sheetOpen || reportPresentation !== 'inline') return
+    const onDoc = (e: Event) => {
+      const t = e.target
+      if (!(t instanceof Node)) return
+      const host = document.querySelector(`[data-report-inline-host="${postId}"]`)
+      if (host?.contains(t) || triggerRef.current?.contains(t)) return
+      closeSheet()
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeSheet()
+    }
+    const onScroll = () => closeSheet()
+    document.addEventListener('mousedown', onDoc)
+    document.addEventListener('touchstart', onDoc, { passive: true })
+    document.addEventListener('keydown', onKey)
+    window.addEventListener('scroll', onScroll, true)
+    return () => {
+      document.removeEventListener('mousedown', onDoc)
+      document.removeEventListener('touchstart', onDoc)
+      document.removeEventListener('keydown', onKey)
+      window.removeEventListener('scroll', onScroll, true)
+    }
+  }, [sheetOpen, reportPresentation, postId, closeSheet])
+
+  useEffect(() => {
+    if (!menuOpen) return
     const onDoc = (e: Event) => {
       const t = e.target
       if (!(t instanceof Node)) return
@@ -332,6 +380,18 @@ export function PostReportMenu({
 
   const reportForm = (
     <div className={`margo-post-report-menu__sheet${reportPresentation === 'inline' ? ' margo-post-report-menu__sheet--inline' : ''}`}>
+      <div className="margo-post-report-menu__sheet-head">
+        <span className="margo-post-report-menu__sheet-head-title">Report</span>
+        <button
+          type="button"
+          className="margo-post-report-menu__sheet-close"
+          aria-label="Close report"
+          disabled={reportBusy}
+          onClick={() => closeSheet()}
+        >
+          ×
+        </button>
+      </div>
       {reportStatusLoading ? (
         <p className="margo-post-report-menu__sheet-muted" aria-live="polite">
           …
@@ -380,6 +440,14 @@ export function PostReportMenu({
             </label>
           ) : null}
           <div className="margo-post-report-menu__sheet-actions">
+            <button
+              type="button"
+              className="margo-post-report-menu__sheet-cancel"
+              disabled={reportBusy}
+              onClick={() => closeSheet()}
+            >
+              Cancel
+            </button>
             <button
               type="button"
               className="margo-post-report-menu__sheet-submit"

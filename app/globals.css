@@ -254,6 +254,12 @@
   }
 }
 
+@keyframes margo-route-progress {
+  0% { transform: translateX(-100%); opacity: 0.4; }
+  50% { opacity: 1; }
+  100% { transform: translateX(100%); opacity: 0.4; }
+}
+
 /* Hide scrollbar globally — modern, clean */
 ::-webkit-scrollbar { display: none; }
 * { scrollbar-width: none; -ms-overflow-style: none; }
@@ -868,11 +874,54 @@ html[data-margo-stage-idle] .margo-stage-zone {
     font-size: 16px;
   }
 }
+.margo-post-report-menu__sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px 4px;
+  gap: 8px;
+}
+.margo-post-report-menu__sheet-head-title {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.margo-post-report-menu__sheet-close {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
 .margo-post-report-menu__sheet-actions {
+  display: flex;
+  gap: 8px;
   padding: 10px 16px 4px;
 }
+.margo-post-report-menu__sheet-cancel {
+  flex: 1;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-sizing: border-box;
+}
 .margo-post-report-menu__sheet-submit {
-  width: 100%;
+  flex: 1;
   min-height: 44px;
   padding: 10px 16px;
   border: none;
@@ -1826,6 +1875,10 @@ html[data-margo-stage-idle] .margo-stage-zone {
     overflow: hidden;
     pointer-events: none;
     opacity: 0.92;
+  }
+  .margo-post-card[data-lb-panel-open='1'] > .margo-post-card__body .margo-post-card__lyric-zone {
+    pointer-events: auto;
+    cursor: pointer;
   }
   .margo-post-card[data-lb-panel-open='1'] > .margo-post-card__body .margo-post-card__moment-stage-inner {
     white-space: nowrap;

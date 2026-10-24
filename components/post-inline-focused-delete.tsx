@@ -117,6 +117,7 @@ export function PostInlineFocusedDelete({
       aria-modal="true"
       aria-labelledby={`margo-inline-delete-title-${postId}`}
       data-no-card-nav
+      data-margo-delete-ui="inline"
     >
       <p id={`margo-inline-delete-title-${postId}`} className="margo-inline-delete-panel__title">
         {title}

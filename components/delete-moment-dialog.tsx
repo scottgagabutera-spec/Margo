@@ -69,6 +69,7 @@ export function DeleteMomentDialog({
       }
       const res = await fetch('/api/posts/moment', {
         method: 'DELETE',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ postId }),
       })

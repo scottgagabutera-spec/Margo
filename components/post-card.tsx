@@ -16,6 +16,7 @@ import {
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { persistActivePrimaryScroll } from '@/components/primary-tab-shell'
 import { navigateToPostThread } from '@/lib/post-thread-nav'
+import { useFeedPostEvict } from '@/components/feed-post-evict-context'
 import { PostReportMenu } from '@/components/post-report-menu'
 import { UsernameTag } from '@/components/username-tag'
 import { PendingNavLink } from '@/components/pending-nav-link'
@@ -376,6 +377,8 @@ export function PostCard({
     )
   }
 
+  const evictFeedPost = useFeedPostEvict()
+
   const goToPost = (e: React.MouseEvent) => {
     if (disableCardNav || isRow) return
     const t = e.target as HTMLElement | null
@@ -715,7 +718,10 @@ export function PostCard({
           open={deleteOpen}
           onOpenChange={setDeleteOpen}
           postId={post.id}
-          onDeleted={() => setDeletedLocally(true)}
+          onDeleted={() => {
+            setDeletedLocally(true)
+            evictFeedPost?.(post.id)
+          }}
         />
       ) : null}
 
