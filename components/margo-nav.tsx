@@ -386,6 +386,9 @@ export function MargoNav() {
             display: flex !important;
             align-items: center;
             gap: 4px;
+            /* Parent row is pointer-events:none so lyrics can receive taps under nav gaps;
+               re-enable hits for Feed/Discover/Post/Hub/avatar in this cluster. */
+            pointer-events: auto;
           }
         }
       `}</style>
