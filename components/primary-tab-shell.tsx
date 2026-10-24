@@ -412,8 +412,10 @@ const paneStyle = (
   position: 'fixed',
   inset: 0,
   overflowY: 'auto',
+  overflowX: 'hidden',
   WebkitOverflowScrolling: 'touch',
   overscrollBehaviorY: 'contain',
+  overscrollBehaviorX: 'none',
   overflowAnchor: 'none',
   boxSizing: 'border-box',
   touchAction: 'pan-y',
@@ -805,6 +807,7 @@ export function PrimaryTabShell({
       if (el.getAttribute('data-margo-primary-tab-active') !== '1') return
       const cs = getComputedStyle(el)
       if (cs.display === 'none' || Number(cs.opacity) === 0) return
+      if (el.scrollLeft !== 0) el.scrollLeft = 0
       persistScroll(
         frozenScrollRef.current,
         tabId,

@@ -470,6 +470,7 @@ function FeedPageInner() {
       minHeight: '100vh',
       background: 'var(--bg)',
       position: 'relative',
+      overflowX: 'hidden',
       paddingTop: feedContentTab === 'lyrics' ? feedTopChrome : feedTopChrome,
     }}>
       <FeedFilterLiveRegion message={filterAnnouncement} />
