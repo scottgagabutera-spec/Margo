@@ -4,7 +4,7 @@ const BASE = process.env.PLAYWRIGHT_BASE_URL ?? 'https://trymargo.com'
 const WIDTHS = [360, 390, 430, 640, 834, 1180, 1440, 1920]
 
 async function openShortsTab(page: import('@playwright/test').Page) {
-  await page.goto(`${BASE}/feed?tab=shorts`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+  await page.goto(`${BASE}/feed?tab=shorts&e2eShorts=1`, { waitUntil: 'domcontentloaded', timeout: 45000 })
   await page.waitForTimeout(1200)
   const shortsTab = page.getByRole('button', { name: /^Shorts$/i })
   if (await shortsTab.count()) {

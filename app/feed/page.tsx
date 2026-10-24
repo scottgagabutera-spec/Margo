@@ -37,6 +37,10 @@ import { FeedContentTabBar } from '@/components/feed-content-tab-bar'
 import { FeedShortsPager } from '@/components/feed-shorts-pager'
 import { applyFeedContentTab, parseFeedContentTab } from '@/lib/feed-content-tab'
 import { useFeedShortsClips } from '@/hooks/useFeedShortsClips'
+import {
+  E2E_SHORTS_FIXTURE_CLIPS,
+  shouldUseE2eShortsFixture,
+} from '@/lib/e2e-shorts-fixture'
 
 const supabase = createClient()
 
@@ -225,6 +229,15 @@ function FeedPageInner() {
     loading: shortsLoading,
     meetsMinimum: shortsMeetsMinimum,
   } = useFeedShortsClips({ enabled: feedLive })
+
+  const e2eShortsFixture = useMemo(() => {
+    if (typeof window === 'undefined') return false
+    return shouldUseE2eShortsFixture(searchParams, window.location.hostname)
+  }, [searchParams])
+
+  const resolvedShortsClips = e2eShortsFixture ? E2E_SHORTS_FIXTURE_CLIPS : shortsClips
+  const resolvedShortsLoading = e2eShortsFixture ? false : shortsLoading
+  const resolvedShortsMeetsMinimum = e2eShortsFixture || shortsMeetsMinimum
 
   const matchesFeedFilters = (p: Post) => {
     const norm = normalizeEmotion(p.emotion || '')
@@ -477,7 +490,7 @@ function FeedPageInner() {
       <FeedContentTabBar
         active={feedContentTab}
         onChange={handleFeedContentTab}
-        shortsAvailable={shortsMeetsMinimum}
+        shortsAvailable={resolvedShortsMeetsMinimum}
       />
       {vibeFilterActive && (
         <FeedVibeFilterBar
@@ -505,9 +518,9 @@ function FeedPageInner() {
 
       {feedContentTab === 'shorts' && (
         <FeedShortsPager
-          clips={shortsClips}
-          loading={shortsLoading}
-          meetsMinimum={shortsMeetsMinimum}
+          clips={resolvedShortsClips}
+          loading={resolvedShortsLoading}
+          meetsMinimum={resolvedShortsMeetsMinimum}
           signedIn={!!user?.id}
           onRequireSignIn={() => requireAuth({ returnTo: '/feed?tab=shorts' })}
           vibeFilterActive={vibeFilterActive}
