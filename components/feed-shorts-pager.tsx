@@ -92,7 +92,7 @@ function FeedShortsSlide({
       data-shorts-slide
       data-shorts-index={index}
       data-shorts-active={isActive ? '1' : '0'}
-      data-shorts-fill-motion={fillMotion ? '1' : '0'}
+      data-shorts-fill-motion={isActive && fillMotion ? '1' : '0'}
     >
       <div className="margo-feed-shorts-slide__frame">
         <MomentExportPreviewFrame shapeId="vertical" framed={false} fillParent style={{ height: '100%', width: '100%' }}>
