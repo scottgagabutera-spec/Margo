@@ -50,6 +50,8 @@ interface StageMomentCardProps {
   hideVibeChrome?: boolean
   /** Feed Shorts desktop: lyric-only inside the frame; credits live in the overlay. */
   hideShortsCreditRow?: boolean
+  /** Feed Shorts: paint + layout use atmosphere from first frame (not gated on effectOwnsFill). */
+  shortsFeedStableLook?: boolean
   /**
    * Export customize: a living Effect replaces Color (platform room).
    * Off for compose/platform preview, where Color is not a user control.
@@ -132,17 +134,22 @@ export function StageMomentCard({
   listenUrl,
   hideVibeChrome = false,
   hideShortsCreditRow = false,
+  shortsFeedStableLook = false,
   effectOwnsFill = false,
   style,
   brandWatermark = false,
 }: StageMomentCardProps) {
   const cardRef = useRef<HTMLDivElement>(null)
   const [cardWidth, setCardWidth] = useState<number | null>(null)
-  const theme = resolveExportPaintTheme(cardThemeId, effectOwnsFill ? atmosphereId : 'still')
+  const isShorts = shapeId === 'vertical'
+  const stableShortsPaint = isShorts && shortsFeedStableLook
+  const paintAtmosphere =
+    effectOwnsFill || stableShortsPaint ? atmosphereId : 'still'
+  const theme = resolveExportPaintTheme(cardThemeId, paintAtmosphere)
   const canPickVibe = vibeOptions.length > 0 && !!onVibeSelect
   const markVariant = theme.markVariant === 'on-light' ? 'ink' : 'gold'
-  const showAtmosphere = isLivingAtmosphere(atmosphereId)
-  const isShorts = shapeId === 'vertical'
+  const showAtmosphere =
+    isLivingAtmosphere(atmosphereId) && (effectOwnsFill || stableShortsPaint)
   const showVibeFooter = !hideVibeChrome && !isShorts && !!vibeLabel
 
   const layout = useStageCardLayout({
@@ -154,7 +161,7 @@ export function StageMomentCard({
     themeId: cardThemeId,
     includeVibePill: false,
     format: isShorts ? 'shorts' : 'feed',
-    exportAtmosphereId: effectOwnsFill ? atmosphereId : 'still',
+    exportAtmosphereId: paintAtmosphere,
   }, cardWidth)
 
   useLayoutEffect(() => {
@@ -204,7 +211,9 @@ export function StageMomentCard({
     border: `1px solid ${theme.border}`,
     boxSizing: 'border-box',
     background: theme.bg,
-    transition: 'background 200ms var(--ease-out), border-color 200ms var(--ease-out)',
+    transition: isShorts && shortsFeedStableLook
+      ? 'none'
+      : 'background 200ms var(--ease-out), border-color 200ms var(--ease-out)',
     ...shellPadding,
     ...style,
   }

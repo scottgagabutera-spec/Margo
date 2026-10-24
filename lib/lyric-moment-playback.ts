@@ -7,6 +7,40 @@ import {
 } from '@/lib/audio-engine'
 import type { LyricMoment } from '@/lib/lyric-moments-board'
 
+/** Shorts: one clip in queue so ending does not advance to the next Short in the pool. */
+export function playLyricMomentShort(moment: LyricMoment): void {
+  if (!moment.audioUrl) return
+  const item = {
+    kind: 'snippet' as const,
+    songId: moment.songId,
+    audioUrl: moment.audioUrl,
+    title: moment.songTitle,
+    artist: moment.artist,
+    artwork: moment.artwork ?? null,
+    lineIndex: moment.lineId,
+    lineText: moment.line,
+    startSec: moment.start,
+    endSec: moment.end,
+    vibe: (moment.vibes && moment.vibes[0]) || null,
+    atmosphere: moment.atmosphere ?? null,
+  }
+  setQueue([item], 0)
+  void enginePlaySnippet({
+    songId: moment.songId,
+    audioUrl: moment.audioUrl,
+    title: moment.songTitle,
+    artist: moment.artist,
+    artwork: moment.artwork ?? null,
+    lineIndex: moment.lineId,
+    lineText: moment.line,
+    startSec: moment.start,
+    endSec: moment.end,
+    vibe: (moment.vibes && moment.vibes[0]) || null,
+    atmosphere: moment.atmosphere ?? null,
+    source: 'music-board',
+  })
+}
+
 export function playLyricMomentPool(
   moment: LyricMoment,
   pool: LyricMoment[],

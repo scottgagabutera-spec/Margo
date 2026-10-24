@@ -7,7 +7,14 @@ const SAMPLE_AUDIO =
 const SAMPLE_ART =
   'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Iconic_image_of_a_record_album.jpg/240px-Iconic_image_of_a_record_album.jpg'
 
-function clip(n: number, songId: string, artist: string, title: string, line: string): LyricMoment {
+function clip(
+  n: number,
+  songId: string,
+  artist: string,
+  title: string,
+  line: string,
+  vibe: string,
+): LyricMoment {
   return {
     line,
     start: 0,
@@ -18,18 +25,18 @@ function clip(n: number, songId: string, artist: string, title: string, line: st
     artist,
     artwork: SAMPLE_ART,
     audioUrl: SAMPLE_AUDIO,
-    vibes: ['reflective'],
+    vibes: [vibe],
   }
 }
 
-/** Six eligible songs — enough for Shorts minimum + peek / two-column tests. */
+/** Six eligible songs — distinct vibes → distinct Shorts looks for e2e colour proof. */
 export const E2E_SHORTS_FIXTURE_CLIPS: LyricMoment[] = [
-  clip(1, 'e2e-song-a', 'Artist One', 'Midnight Echo', 'We were golden in the quiet hours'),
-  clip(2, 'e2e-song-b', 'Artist Two', 'Neon River', 'Hold the line till morning breaks'),
-  clip(3, 'e2e-song-c', 'Artist Three', 'Paper Satellites', 'Write my name in borrowed light'),
-  clip(4, 'e2e-song-d', 'Artist Four', 'Velvet Static', 'Sing it soft so the city listens'),
-  clip(5, 'e2e-song-e', 'Artist Five', 'Harbor Lights', 'Every wave remembers your voice'),
-  clip(6, 'e2e-song-f', 'Artist Six', 'Silver Tongue', 'Meet me where the chorus lands'),
+  clip(1, 'e2e-song-a', 'Artist One', 'Midnight Echo', 'We were golden in the quiet hours', 'LOVE'),
+  clip(2, 'e2e-song-b', 'Artist Two', 'Neon River', 'Hold the line till morning breaks', 'HEARTBREAK'),
+  clip(3, 'e2e-song-c', 'Artist Three', 'Paper Satellites', 'Write my name in borrowed light', 'HOPE'),
+  clip(4, 'e2e-song-d', 'Artist Four', 'Velvet Static', 'Sing it soft so the city listens', 'HYPE'),
+  clip(5, 'e2e-song-e', 'Artist Five', 'Harbor Lights', 'Every wave remembers your voice', 'CHILL'),
+  clip(6, 'e2e-song-f', 'Artist Six', 'Silver Tongue', 'Meet me where the chorus lands', 'RAGE'),
 ]
 
 export function isE2eShortsFixtureHostname(hostname: string): boolean {

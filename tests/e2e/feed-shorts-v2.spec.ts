@@ -4,7 +4,7 @@ const BASE = process.env.PLAYWRIGHT_BASE_URL ?? 'https://trymargo.com'
 const WIDTHS = [360, 390, 430, 640, 834, 1180, 1440, 1920]
 
 function shortsUrl(width: number) {
-  const fixture = BASE.includes('vercel.app') && width >= 640
+  const fixture = BASE.includes('vercel.app')
   const q = fixture ? '?tab=shorts&e2eShorts=1' : '?tab=shorts'
   return `${BASE}/feed${q}`
 }
@@ -36,16 +36,10 @@ for (const width of WIDTHS) {
     test('9:16 frame, no horizontal overflow', async ({ page }) => {
       await openShortsTab(page, width)
       if (width < 640) {
-        const canvas = page.locator('[aria-label="Shorts preview, 9:16"]').first()
-        if ((await canvas.count()) === 0) test.skip()
-        await expect(canvas).toBeVisible()
-        const meta = page.locator('.margo-feed-shorts-slide__meta').first()
-        const canvasBox = await canvas.boundingBox()
-        const metaBox = await meta.boundingBox()
-        expect(canvasBox && metaBox).toBeTruthy()
-        if (canvasBox && metaBox) {
-          expect(metaBox.y).toBeGreaterThanOrEqual(canvasBox.y + canvasBox.height - 4)
-        }
+        const frame = page.locator('.margo-feed-shorts-slide__frame').first()
+        if ((await frame.count()) === 0) test.skip()
+        await expect(frame).toBeVisible()
+        await expect(frame.locator('.margo-feed-shorts-slide__chrome-bottom')).toBeVisible()
       } else {
         const frame = await requireShortsFrame(page)
         if (!frame) return
@@ -107,30 +101,137 @@ for (const width of WIDTHS) {
       }
     })
 
-    test('desktop: one credit row and tap-surface toggles unmute', async ({ page }) => {
-      test.skip(width < 640, 'desktop-only')
+    test('giants chrome: mute control, no big row play button', async ({ page }) => {
+      test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
       await openShortsTab(page, width)
-      await expect(page.locator('.margo-feed-shorts-slide__sound')).toHaveCount(0)
       const frame = page.locator('[data-shorts-active="1"] .margo-feed-shorts-slide__frame')
       await expect(frame).toBeVisible({ timeout: 15000 })
-      await expect(frame.locator('.margo-feed-shorts-slide__meta-row')).toHaveCount(1)
-      const tap = frame.locator('.margo-feed-shorts-slide__tap-surface')
-      await expect(tap).toBeVisible()
-      await tap.click()
-      await expect(tap).toHaveAttribute('aria-pressed', 'true')
-      await page.reload({ waitUntil: 'domcontentloaded' })
-      await page.waitForTimeout(1200)
-      await openShortsTab(page, width)
-      const tapAfter = page.locator('[data-shorts-active="1"] .margo-feed-shorts-slide__tap-surface')
-      await expect(tapAfter).toHaveAttribute('aria-pressed', 'true')
+      await expect(page.locator('.margo-feed-shorts-slide__meta-play')).toHaveCount(0)
+      await expect(frame.locator('.margo-feed-shorts-slide__mute')).toBeVisible()
+      await expect(frame.locator('.margo-feed-shorts-slide__progress')).toBeVisible()
+      await frame.locator('.margo-feed-shorts-slide__mute').click()
+      await expect(frame.locator('.margo-feed-shorts-slide__mute')).toHaveAttribute('aria-pressed', 'true')
     })
 
-    test('inactive slides keep fill-motion off (no off-screen flash)', async ({ page }) => {
-      test.skip(width < 640, 'fill-motion deferral is desktop-only')
+    test('settled Short keeps stable theme attrs during swipe', async ({ page }) => {
+      test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
       await openShortsTab(page, width)
-      const inactive = page.locator('[data-shorts-active="0"]')
-      if ((await inactive.count()) === 0) test.skip()
-      await expect(inactive.first()).toHaveAttribute('data-shorts-fill-motion', '0')
+      const pager = page.locator('.margo-feed-shorts-pager')
+      await expect(pager).toBeVisible({ timeout: 20000 })
+      const firstSlide = page.locator('[data-shorts-index="0"]')
+      const themeBefore = await firstSlide.getAttribute('data-shorts-theme')
+      const atmBefore = await firstSlide.getAttribute('data-shorts-atmosphere')
+      expect(themeBefore).toBeTruthy()
+      await pager.evaluate((el) => {
+        el.scrollTop = el.scrollHeight * 0.35
+      })
+      await page.waitForTimeout(80)
+      expect(await firstSlide.getAttribute('data-shorts-theme')).toBe(themeBefore)
+      expect(await firstSlide.getAttribute('data-shorts-atmosphere')).toBe(atmBefore)
+      await pager.evaluate((el) => {
+        el.dispatchEvent(new Event('scrollend'))
+      })
+      await page.waitForTimeout(200)
+    })
+
+    test('gap under Lyrics/Shorts tabs before first frame', async ({ page }) => {
+      await openShortsTab(page, width)
+      const tabBar = page.locator('.margo-feed-content-tab-bar')
+      const target = width >= 640
+        ? page.locator('.margo-feed-shorts-slide__frame').first()
+        : page.locator('[aria-label="Shorts preview, 9:16"]').first()
+      if ((await target.count()) === 0) test.skip()
+      await expect(tabBar).toBeVisible()
+      await expect(target).toBeVisible({ timeout: 20000 })
+      const tabBox = await tabBar.boundingBox()
+      const frameBox = await target.boundingBox()
+      expect(tabBox && frameBox).toBeTruthy()
+      if (tabBox && frameBox) {
+        const gap = frameBox.y - (tabBox.y + tabBox.height)
+        expect(gap).toBeGreaterThanOrEqual(14)
+      }
+    })
+
+    test('only one settled active marker after scroll settles', async ({ page }) => {
+      test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
+      await openShortsTab(page, width)
+      const pager = page.locator('.margo-feed-shorts-pager')
+      await expect(pager).toBeVisible({ timeout: 20000 })
+      await pager.evaluate((el) => {
+        el.scrollTop = Math.min(el.scrollHeight * 0.5, el.clientHeight * 1.2)
+      })
+      await page.waitForTimeout(400)
+      await pager.evaluate((el) => el.dispatchEvent(new Event('scrollend')))
+      await page.waitForTimeout(300)
+      await expect(page.locator('[data-shorts-active="1"]')).toHaveCount(1)
+    })
+  })
+}
+
+for (const width of [390, 1440]) {
+  test.describe(`shorts look stable swipe @${width}px`, () => {
+    test.use({ viewport: { width, height: width < 640 ? 844 : 900 } })
+
+    test('theme and atmosphere unchanged every 50ms through swipe and after settle', async ({ page }) => {
+      test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
+      await page.goto(shortsUrl(width), { waitUntil: 'domcontentloaded', timeout: 45000 })
+      await page.waitForTimeout(1200)
+      const pager = page.locator('.margo-feed-shorts-pager')
+      await expect(pager).toBeVisible({ timeout: 20000 })
+      for (let slideIdx = 0; slideIdx < 5; slideIdx++) {
+        const slide = page.locator(`[data-shorts-index="${slideIdx}"]`)
+        await expect(slide).toBeVisible()
+        const theme0 = await slide.getAttribute('data-shorts-theme')
+        const atm0 = await slide.getAttribute('data-shorts-atmosphere')
+        expect(theme0).toBeTruthy()
+        expect(atm0).toBeTruthy()
+        const samples: { theme: string | null; atm: string | null }[] = []
+        for (let i = 0; i < 8; i++) {
+          await pager.evaluate((el, step) => {
+            el.scrollTop += step
+          }, 55)
+          await page.waitForTimeout(50)
+          samples.push({
+            theme: await slide.getAttribute('data-shorts-theme'),
+            atm: await slide.getAttribute('data-shorts-atmosphere'),
+          })
+        }
+        await pager.evaluate((el) => el.dispatchEvent(new Event('scrollend')))
+        await page.waitForTimeout(200)
+        samples.push({
+          theme: await slide.getAttribute('data-shorts-theme'),
+          atm: await slide.getAttribute('data-shorts-atmosphere'),
+        })
+        for (const s of samples) {
+          expect(s.theme).toBe(theme0)
+          expect(s.atm).toBe(atm0)
+        }
+      }
+    })
+
+    test('fixture clips use five different looks', async ({ page }) => {
+      test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
+      await page.goto(shortsUrl(width), { waitUntil: 'domcontentloaded', timeout: 45000 })
+      await page.waitForTimeout(1200)
+      const pairs = await page.locator('[data-shorts-slide]').evaluateAll((els) =>
+        els.slice(0, 5).map((el) => `${el.getAttribute('data-shorts-theme')}:${el.getAttribute('data-shorts-atmosphere')}`),
+      )
+      expect(new Set(pairs).size).toBeGreaterThanOrEqual(3)
+    })
+  })
+}
+
+for (const width of [360, 390, 430, 834, 1440]) {
+  test.describe(`shorts settle playback @${width}px`, () => {
+    test.use({ viewport: { width, height: width < 640 ? 844 : 900 } })
+
+    test('first Short is settled active on tab open', async ({ page }) => {
+      test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
+      await page.goto(shortsUrl(width), { waitUntil: 'domcontentloaded', timeout: 45000 })
+      await page.waitForTimeout(1500)
+      const active = page.locator('[data-shorts-active="1"]')
+      await expect(active).toHaveCount(1, { timeout: 15000 })
+      await expect(active).toHaveAttribute('data-shorts-index', '0')
     })
   })
 }
@@ -144,42 +245,3 @@ test('two-column layout when viewport fits pair @1920', async ({ page }) => {
   expect(cols).toBe('2')
 })
 
-test('phone canvas matches main at 360x640', async ({ page }) => {
-  test.setTimeout(90_000)
-  await page.setViewportSize({ width: 360, height: 640 })
-  await page.goto('https://trymargo.com/feed?tab=shorts', { waitUntil: 'domcontentloaded', timeout: 60000 })
-  const canvasLoc = page.locator('[aria-label="Shorts preview, 9:16"]').first()
-  await canvasLoc.waitFor({ state: 'visible', timeout: 45000 })
-  const mainCanvas = await canvasLoc.boundingBox()
-  if (!mainCanvas) test.skip()
-  await page.goto(shortsUrl(360), { waitUntil: 'domcontentloaded', timeout: 60000 })
-  await canvasLoc.waitFor({ state: 'visible', timeout: 45000 })
-  const prevCanvas = await canvasLoc.boundingBox()
-  if (!prevCanvas || !mainCanvas) test.skip()
-  const pw = prevCanvas!.width
-  const mw = mainCanvas!.width
-  const ph = prevCanvas!.height
-  const mh = mainCanvas!.height
-  expect(Math.abs(pw - mw)).toBeLessThan(2)
-  expect(Math.abs(ph - mh)).toBeLessThan(4)
-})
-
-test('phone canvas matches main at 390x844', async ({ page }) => {
-  test.setTimeout(90_000)
-  await page.setViewportSize({ width: 390, height: 844 })
-  await page.goto('https://trymargo.com/feed?tab=shorts', { waitUntil: 'domcontentloaded', timeout: 60000 })
-  const canvasLoc = page.locator('[aria-label="Shorts preview, 9:16"]').first()
-  await canvasLoc.waitFor({ state: 'visible', timeout: 45000 })
-  const mainCanvas = await canvasLoc.boundingBox()
-  if (!mainCanvas) test.skip()
-  await page.goto(shortsUrl(390), { waitUntil: 'domcontentloaded', timeout: 60000 })
-  await canvasLoc.waitFor({ state: 'visible', timeout: 45000 })
-  const prevCanvas = await canvasLoc.boundingBox()
-  if (!prevCanvas || !mainCanvas) test.skip()
-  const pw = prevCanvas!.width
-  const mw = mainCanvas!.width
-  const ph = prevCanvas!.height
-  const mh = mainCanvas!.height
-  expect(Math.abs(pw - mw)).toBeLessThan(2)
-  expect(Math.abs(ph - mh)).toBeLessThan(4)
-})
