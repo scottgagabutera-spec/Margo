@@ -51,13 +51,10 @@
     "test:e2e:feed-thread-nav-live": "playwright test tests/e2e/feed-thread-nav-live.spec.ts --project=chromium",
     "test:e2e:landing-app-nav": "playwright test tests/e2e/landing-app-nav.spec.ts",
     "test:e2e:feed-horizontal-drift": "playwright test tests/e2e/feed-horizontal-drift.spec.ts",
-<<<<<<< HEAD
-    "test:e2e:library-hub-only": "playwright test tests/e2e/library-hub-only.spec.ts",
-=======
     "test:e2e:compose-label-post": "playwright test tests/e2e/compose-label-post.spec.ts",
+    "test:e2e:library-hub-only": "playwright test tests/e2e/library-hub-only.spec.ts",
     "test:e2e:signed-out-gate-cta": "playwright test tests/e2e/signed-out-gate-cta.spec.ts",
     "test:e2e:top-bar-desktop-interaction": "playwright test tests/e2e/top-bar-desktop-interaction.spec.ts",
->>>>>>> origin/main
     "test:in-app-nav-stack": "node --experimental-strip-types --test lib/in-app-nav-stack.test.ts",
     "test:post-thread-nav": "node --experimental-strip-types --test lib/post-thread-nav.test.ts",
     "test:feed-post-evict": "node --experimental-strip-types --test lib/feed-post-evict.test.ts",
