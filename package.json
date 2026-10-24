@@ -52,6 +52,7 @@
     "test:e2e:landing-app-nav": "playwright test tests/e2e/landing-app-nav.spec.ts",
     "test:e2e:feed-horizontal-drift": "playwright test tests/e2e/feed-horizontal-drift.spec.ts",
     "test:e2e:compose-label-post": "playwright test tests/e2e/compose-label-post.spec.ts",
+    "test:e2e:mobile-tab-label-floor": "playwright test tests/e2e/mobile-tab-label-floor.spec.ts",
     "test:e2e:signed-out-gate-cta": "playwright test tests/e2e/signed-out-gate-cta.spec.ts",
     "test:e2e:top-bar-desktop-interaction": "playwright test tests/e2e/top-bar-desktop-interaction.spec.ts",
     "test:in-app-nav-stack": "node --experimental-strip-types --test lib/in-app-nav-stack.test.ts",
