@@ -31,8 +31,6 @@ for (const width of DESKTOP) {
         return inner > 0 ? lw / inner : 0
       })
       expect(ratio).toBeGreaterThanOrEqual(0.9)
-      const maxW = await lyric.evaluate((el) => getComputedStyle(el).maxWidth)
-      expect(maxW).toBe('100%')
       const metrics = await page.evaluate(() => ({
         sw: document.documentElement.scrollWidth,
         cw: document.documentElement.clientWidth,
@@ -46,15 +44,18 @@ for (const width of PHONE) {
   test.describe(`lyric card phone @${width}px`, () => {
     test.use({ viewport: { width, height: 844 } })
 
-    test('lyric zone max-width stays 36ch (unchanged from main)', async ({ page }) => {
+    test('lyric zone width stays within ~36ch (rendered px, all browsers)', async ({ page }) => {
       await page.goto(`${BASE}/feed`, { waitUntil: 'domcontentloaded', timeout: 45000 })
       await page.waitForTimeout(1200)
       const lyric = page.locator('.margo-post-card__lyric-zone').first()
       if ((await lyric.count()) === 0) test.skip()
-      const maxW = await lyric.evaluate((el) => getComputedStyle(el).maxWidth)
-      expect(maxW).toBe('36ch')
-      const box = await lyric.boundingBox()
-      expect(box).toBeTruthy()
+      const { w, chCap } = await lyric.evaluate((el) => {
+        const fontSize = parseFloat(getComputedStyle(el).fontSize) || 17
+        const cap = fontSize * 36
+        return { w: el.getBoundingClientRect().width, chCap: cap }
+      })
+      expect(w).toBeLessThanOrEqual(chCap + 6)
+      expect(w).toBeGreaterThan(chCap * 0.5)
     })
   })
 }

@@ -3,12 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
-import { PlayPauseIcon } from '@/components/play-pause-icon'
-import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
-import { emotionToVibeLabel } from '@/lib/moment/vibe'
-import { isLivingAtmosphere, type AtmosphereId } from '@/lib/atmosphere'
-import type { LyricMoment } from '@/lib/lyric-moments-board'
-import { playLyricMomentShort } from '@/lib/lyric-moment-playback'
+import { ShortsCenterPlayIcon, ShortsMuteIcon } from '@/components/feed-shorts-chrome-icons'
 import {
   getAudioEngineState,
   stop,
@@ -16,7 +11,13 @@ import {
   warmUrls,
   setVolume,
   toggleMute,
+  togglePlayPause,
 } from '@/lib/audio-engine'
+import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
+import { emotionToVibeLabel } from '@/lib/moment/vibe'
+import { isLivingAtmosphere, type AtmosphereId } from '@/lib/atmosphere'
+import type { LyricMoment } from '@/lib/lyric-moments-board'
+import { playLyricMomentShort } from '@/lib/lyric-moment-playback'
 import { pickShortsLook } from '@/lib/shorts-looks'
 import { computeShortsFrameLayout, SHORTS_DESKTOP_MIN_WIDTH } from '@/lib/shorts-frame-layout'
 import { utcDayKey } from '@/lib/shorts-shelf-rotation'
@@ -66,16 +67,18 @@ type SlideProps = {
   index: number
   isSettled: boolean
   isPlaying: boolean
+  progressPct: number
   atmosphereId: AtmosphereId
   stageThemeId: StageCardThemeId
   vibeLabel: string | null
   reduceMotion: boolean
-  showBlockedPlay: boolean
+  showCenterPlay: boolean
   showSignupOnPlay: boolean
   soundOn: boolean
   desktopLayout: boolean
-  onPlay: () => void
-  onTapToggleSound: () => void
+  onTapVideo: () => void
+  onToggleMute: () => void
+  onCenterPlay: () => void
 }
 
 function FeedShortsSlide({
@@ -83,48 +86,22 @@ function FeedShortsSlide({
   index,
   isSettled,
   isPlaying,
+  progressPct,
   atmosphereId,
   stageThemeId,
   vibeLabel,
   reduceMotion,
-  showBlockedPlay,
+  showCenterPlay,
   showSignupOnPlay,
   soundOn,
   desktopLayout,
-  onPlay,
-  onTapToggleSound,
+  onTapVideo,
+  onToggleMute,
+  onCenterPlay,
 }: SlideProps) {
-  const [soundFlash, setSoundFlash] = useState(false)
+  const effectOwnsFill = !reduceMotion && isLivingAtmosphere(atmosphereId)
 
-  const effectOwnsFill =
-    isSettled && !reduceMotion && isLivingAtmosphere(atmosphereId)
-
-  const cardAtmosphere = atmosphereId
-
-  useEffect(() => {
-    if (!soundFlash) return
-    const t = window.setTimeout(() => setSoundFlash(false), 700)
-    return () => window.clearTimeout(t)
-  }, [soundFlash])
-
-  const handleTapSurface = () => {
-    if (!isSettled) return
-    onTapToggleSound()
-    if (!reduceMotion) setSoundFlash(true)
-  }
-
-  const showMetaPlay = !!clip.audioUrl || showSignupOnPlay || showBlockedPlay
-
-  const phoneMeta = (
-    <>
-      <Link href={`/song/${clip.songId}`} className="margo-feed-shorts-slide__song">
-        {clip.songTitle}
-      </Link>
-      <span className="margo-feed-shorts-slide__artist">{clip.artist}</span>
-    </>
-  )
-
-  const desktopMeta = (
+  const songBlock = (
     <div className="margo-feed-shorts-slide__meta-row">
       {clip.artwork ? (
         <img src={clip.artwork} alt="" className="margo-feed-shorts-slide__meta-art" />
@@ -135,21 +112,6 @@ function FeedShortsSlide({
         </Link>
         <span className="margo-feed-shorts-slide__artist">{clip.artist}</span>
       </div>
-      {showMetaPlay ? (
-        <button
-          type="button"
-          className="margo-feed-shorts-slide__meta-play"
-          aria-label={showSignupOnPlay ? 'Sign up to play' : showBlockedPlay ? 'Play Short' : isPlaying ? 'Pause Short' : 'Play Short'}
-          onClick={(e) => {
-            e.stopPropagation()
-            onPlay()
-          }}
-        >
-          {showSignupOnPlay ? 'Sign up' : showBlockedPlay ? 'Play' : (
-            <PlayPauseIcon playing={isPlaying} buffering={false} size={16} color="var(--gold)" />
-          )}
-        </button>
-      ) : null}
     </div>
   )
 
@@ -163,20 +125,6 @@ function FeedShortsSlide({
       data-shorts-atmosphere={atmosphereId}
     >
       <div className="margo-feed-shorts-slide__frame">
-        {isSettled ? (
-          <button
-            type="button"
-            className="margo-feed-shorts-slide__tap-surface"
-            aria-label={soundOn ? 'Mute Short audio' : 'Unmute Short audio'}
-            aria-pressed={soundOn}
-            onClick={handleTapSurface}
-          />
-        ) : null}
-        {soundFlash ? (
-          <span className="margo-feed-shorts-slide__sound-flash" aria-hidden>
-            <PlayPauseIcon playing={soundOn} buffering={false} size={22} color="var(--gold)" />
-          </span>
-        ) : null}
         <MomentExportPreviewFrame
           shapeId="vertical"
           framed={false}
@@ -190,33 +138,73 @@ function FeedShortsSlide({
             artwork={clip.artwork}
             vibeLabel={vibeLabel}
             cardThemeId={stageThemeId}
-            atmosphereId={cardAtmosphere}
+            atmosphereId={atmosphereId}
             effectOwnsFill={effectOwnsFill}
+            shortsFeedStableLook
             shapeId="vertical"
             hideVibeChrome
-            hideShortsCreditRow={desktopLayout}
-            canPlay={!!clip.audioUrl}
+            hideShortsCreditRow
+            canPlay={false}
             playing={isPlaying}
-            playControlLabel={
-              desktopLayout
-                ? null
-                : showSignupOnPlay
-                  ? 'Sign up'
-                  : showBlockedPlay
-                    ? 'Play'
-                    : null
-            }
-            onPlay={onPlay}
             style={{ height: '100%', minHeight: '100%' }}
           />
         </MomentExportPreviewFrame>
-        {desktopLayout ? (
-          <div className="margo-feed-shorts-slide__meta">{desktopMeta}</div>
+        {isSettled ? (
+          <>
+            <button
+              type="button"
+              className="margo-feed-shorts-slide__tap-surface"
+              aria-label={isPlaying ? 'Pause Short' : 'Play Short'}
+              onClick={onTapVideo}
+            />
+            <button
+              type="button"
+              className="margo-feed-shorts-slide__mute"
+              aria-label={soundOn ? 'Mute Short audio' : 'Unmute Short audio'}
+              aria-pressed={soundOn}
+              onClick={(e) => {
+                e.stopPropagation()
+                onToggleMute()
+              }}
+            >
+              <ShortsMuteIcon muted={!soundOn} />
+            </button>
+            {showCenterPlay ? (
+              <button
+                type="button"
+                className="margo-feed-shorts-slide__center-play"
+                aria-label={showSignupOnPlay ? 'Sign up to play Shorts' : 'Play Short'}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onCenterPlay()
+                }}
+              >
+                {showSignupOnPlay ? (
+                  <span className="margo-feed-shorts-slide__center-play-label">Sign up</span>
+                ) : (
+                  <ShortsCenterPlayIcon />
+                )}
+              </button>
+            ) : null}
+            <div className="margo-feed-shorts-slide__chrome-bottom">
+              <div
+                className="margo-feed-shorts-slide__progress"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(progressPct * 100)}
+                aria-label="Short playback progress"
+              >
+                <div
+                  className="margo-feed-shorts-slide__progress-fill"
+                  style={{ width: `${Math.min(100, Math.max(0, progressPct * 100))}%` }}
+                />
+              </div>
+              <div className="margo-feed-shorts-slide__meta">{songBlock}</div>
+            </div>
+          </>
         ) : null}
       </div>
-      {!desktopLayout ? (
-        <div className="margo-feed-shorts-slide__meta">{phoneMeta}</div>
-      ) : null}
     </section>
   )
 }
@@ -249,7 +237,10 @@ export function FeedShortsPager({
   const settledIndexRef = useRef(0)
   const tabActiveRef = useRef(tabActive)
   const loopClipRef = useRef<LyricMoment | null>(null)
+  const userPausedRef = useRef(false)
   const [soundOn, setSoundOn] = useState(false)
+  const [progressPct, setProgressPct] = useState(0)
+  const [userPaused, setUserPaused] = useState(false)
   const [autoplayBlocked, setAutoplayBlocked] = useState(false)
   const [anonPlaysCompleted, setAnonPlaysCompleted] = useState(0)
   const [reduceMotion, setReduceMotion] = useState(false)
@@ -383,6 +374,7 @@ export function FeedShortsPager({
           && !state.buffering
           && tabActiveRef.current
           && !isScrollingRef.current
+          && !userPausedRef.current
           && !state.error
         ) {
           const clip = loopClipRef.current
@@ -409,6 +401,9 @@ export function FeedShortsPager({
         const playKey = `${state.songId}_${state.snippet.lineIndex}`
         setPlayingKey(playKey)
         setAutoplayBlocked(false)
+        const span = Math.max(0.001, state.snippet.endSec - state.snippet.startSec)
+        const pct = Math.min(1, Math.max(0, (state.currentTime - state.snippet.startSec) / span))
+        setProgressPct(pct)
         if (!signedInRef.current && state.playing) {
           const played = anonPlayedKeysRef.current
           if (!played.has(playKey)) {
@@ -443,6 +438,9 @@ export function FeedShortsPager({
     const onScroll = () => {
       if (!isScrollingRef.current) {
         isScrollingRef.current = true
+        userPausedRef.current = false
+        setUserPaused(false)
+        setProgressPct(0)
         stop()
         setPlayingKey(null)
         lastAutoIndexRef.current = -1
@@ -481,6 +479,8 @@ export function FeedShortsPager({
     }
     lastAutoIndexRef.current = settledIndex
     loopClipRef.current = clip
+    userPausedRef.current = false
+    setUserPaused(false)
     applyShortsVolume(soundOn)
     playLyricMomentShort(clip)
     const t = window.setTimeout(() => {
@@ -490,14 +490,50 @@ export function FeedShortsPager({
     return () => window.clearTimeout(t)
   }, [settledIndex, anonPlaysCompleted, applyShortsVolume, autoplayBlocked, clips, signedIn, soundOn, tabActive])
 
-  const toggleSound = useCallback(() => {
+  const toggleMutePref = useCallback(() => {
     const next = !soundOn
     setSoundOn(next)
     persistShortsUnmutePref(next)
     applyShortsVolume(next)
+  }, [applyShortsVolume, soundOn])
+
+  const handleTapVideo = useCallback(() => {
     const clip = clips[settledIndex]
-    if (next && clip?.audioUrl) playClip(clip, true)
-  }, [applyShortsVolume, clips, playClip, settledIndex, soundOn])
+    if (!clip?.audioUrl) return
+    const key = `${clip.songId}_${clip.lineId}`
+    const state = getAudioEngineState()
+    const onThisClip =
+      state.snippet
+      && state.songId === clip.songId
+      && state.snippet.lineIndex === clip.lineId
+    if (onThisClip && state.playing) {
+      togglePlayPause()
+      userPausedRef.current = true
+      setUserPaused(true)
+      return
+    }
+    userPausedRef.current = false
+    setUserPaused(false)
+    setAutoplayBlocked(false)
+    playClip(clip, true)
+  }, [clips, playClip, settledIndex])
+
+  const handleCenterPlay = useCallback(() => {
+    const clip = clips[settledIndex]
+    if (!clip) return
+    if (
+      !signedIn
+      && anonPlaysCompleted >= ANON_PLAYS_BEFORE_SIGNUP
+      && !anonPlayedKeysRef.current.has(`${clip.songId}_${clip.lineId}`)
+    ) {
+      onRequireSignIn()
+      return
+    }
+    userPausedRef.current = false
+    setUserPaused(false)
+    setAutoplayBlocked(false)
+    playClip(clip, true)
+  }, [anonPlaysCompleted, clips, onRequireSignIn, playClip, settledIndex, signedIn])
 
   if (loading) {
     return (
@@ -530,8 +566,12 @@ export function FeedShortsPager({
           !signedIn
           && anonPlaysCompleted >= ANON_PLAYS_BEFORE_SIGNUP
           && !anonPlayedKeysRef.current.has(key)
-        const showBlockedPlay = isSettled && autoplayBlocked && !isPlaying && !clipNeedsSignup
         const showSignupOnPlay = clipNeedsSignup && isSettled
+        const showCenterPlay =
+          isSettled
+          && !isPlaying
+          && (showSignupOnPlay || autoplayBlocked || userPaused)
+        const slideProgress = isSettled && isPlaying ? progressPct : 0
         return (
           <FeedShortsSlide
             key={key}
@@ -539,23 +579,18 @@ export function FeedShortsPager({
             index={index}
             isSettled={isSettled}
             isPlaying={isPlaying}
+            progressPct={slideProgress}
             atmosphereId={look.atmosphereId}
             stageThemeId={look.stageThemeId}
             vibeLabel={vibeLabel}
             reduceMotion={reduceMotion}
-            showBlockedPlay={showBlockedPlay}
+            showCenterPlay={showCenterPlay}
             showSignupOnPlay={showSignupOnPlay}
             soundOn={soundOn}
             desktopLayout={desktopLayout}
-            onTapToggleSound={toggleSound}
-            onPlay={() => {
-              if (showSignupOnPlay) {
-                onRequireSignIn()
-                return
-              }
-              setAutoplayBlocked(false)
-              playClip(clip, true)
-            }}
+            onTapVideo={handleTapVideo}
+            onToggleMute={toggleMutePref}
+            onCenterPlay={handleCenterPlay}
           />
         )
       })}

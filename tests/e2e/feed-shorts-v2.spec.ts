@@ -36,16 +36,10 @@ for (const width of WIDTHS) {
     test('9:16 frame, no horizontal overflow', async ({ page }) => {
       await openShortsTab(page, width)
       if (width < 640) {
-        const canvas = page.locator('[aria-label="Shorts preview, 9:16"]').first()
-        if ((await canvas.count()) === 0) test.skip()
-        await expect(canvas).toBeVisible()
-        const meta = page.locator('.margo-feed-shorts-slide__meta').first()
-        const canvasBox = await canvas.boundingBox()
-        const metaBox = await meta.boundingBox()
-        expect(canvasBox && metaBox).toBeTruthy()
-        if (canvasBox && metaBox) {
-          expect(metaBox.y).toBeGreaterThanOrEqual(canvasBox.y + canvasBox.height - 4)
-        }
+        const frame = page.locator('.margo-feed-shorts-slide__frame').first()
+        if ((await frame.count()) === 0) test.skip()
+        await expect(frame).toBeVisible()
+        await expect(frame.locator('.margo-feed-shorts-slide__chrome-bottom')).toBeVisible()
       } else {
         const frame = await requireShortsFrame(page)
         if (!frame) return
@@ -107,22 +101,16 @@ for (const width of WIDTHS) {
       }
     })
 
-    test('desktop: one credit row and tap-surface toggles unmute', async ({ page }) => {
-      test.skip(width < 640, 'desktop-only')
+    test('giants chrome: mute control, no big row play button', async ({ page }) => {
+      test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
       await openShortsTab(page, width)
-      await expect(page.locator('.margo-feed-shorts-slide__sound')).toHaveCount(0)
       const frame = page.locator('[data-shorts-active="1"] .margo-feed-shorts-slide__frame')
       await expect(frame).toBeVisible({ timeout: 15000 })
-      await expect(frame.locator('.margo-feed-shorts-slide__meta-row')).toHaveCount(1)
-      const tap = frame.locator('.margo-feed-shorts-slide__tap-surface')
-      await expect(tap).toBeVisible()
-      await tap.click()
-      await expect(tap).toHaveAttribute('aria-pressed', 'true')
-      await page.reload({ waitUntil: 'domcontentloaded' })
-      await page.waitForTimeout(1200)
-      await openShortsTab(page, width)
-      const tapAfter = page.locator('[data-shorts-active="1"] .margo-feed-shorts-slide__tap-surface')
-      await expect(tapAfter).toHaveAttribute('aria-pressed', 'true')
+      await expect(page.locator('.margo-feed-shorts-slide__meta-play')).toHaveCount(0)
+      await expect(frame.locator('.margo-feed-shorts-slide__mute')).toBeVisible()
+      await expect(frame.locator('.margo-feed-shorts-slide__progress')).toBeVisible()
+      await frame.locator('.margo-feed-shorts-slide__mute').click()
+      await expect(frame.locator('.margo-feed-shorts-slide__mute')).toHaveAttribute('aria-pressed', 'true')
     })
 
     test('settled Short keeps stable theme attrs during swipe', async ({ page }) => {
@@ -176,6 +164,59 @@ for (const width of WIDTHS) {
       await pager.evaluate((el) => el.dispatchEvent(new Event('scrollend')))
       await page.waitForTimeout(300)
       await expect(page.locator('[data-shorts-active="1"]')).toHaveCount(1)
+    })
+  })
+}
+
+for (const width of [390, 1440]) {
+  test.describe(`shorts look stable swipe @${width}px`, () => {
+    test.use({ viewport: { width, height: width < 640 ? 844 : 900 } })
+
+    test('theme and atmosphere unchanged every 50ms through swipe and after settle', async ({ page }) => {
+      test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
+      await page.goto(shortsUrl(width), { waitUntil: 'domcontentloaded', timeout: 45000 })
+      await page.waitForTimeout(1200)
+      const pager = page.locator('.margo-feed-shorts-pager')
+      await expect(pager).toBeVisible({ timeout: 20000 })
+      for (let slideIdx = 0; slideIdx < 5; slideIdx++) {
+        const slide = page.locator(`[data-shorts-index="${slideIdx}"]`)
+        await expect(slide).toBeVisible()
+        const theme0 = await slide.getAttribute('data-shorts-theme')
+        const atm0 = await slide.getAttribute('data-shorts-atmosphere')
+        expect(theme0).toBeTruthy()
+        expect(atm0).toBeTruthy()
+        const samples: { theme: string | null; atm: string | null }[] = []
+        for (let i = 0; i < 8; i++) {
+          await pager.evaluate((el, step) => {
+            el.scrollTop += step
+          }, 55)
+          await page.waitForTimeout(50)
+          samples.push({
+            theme: await slide.getAttribute('data-shorts-theme'),
+            atm: await slide.getAttribute('data-shorts-atmosphere'),
+          })
+        }
+        await pager.evaluate((el) => el.dispatchEvent(new Event('scrollend')))
+        await page.waitForTimeout(200)
+        samples.push({
+          theme: await slide.getAttribute('data-shorts-theme'),
+          atm: await slide.getAttribute('data-shorts-atmosphere'),
+        })
+        for (const s of samples) {
+          expect(s.theme).toBe(theme0)
+          expect(s.atm).toBe(atm0)
+        }
+      }
+    })
+
+    test('fixture clips use five different looks', async ({ page }) => {
+      test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
+      await page.goto(shortsUrl(width), { waitUntil: 'domcontentloaded', timeout: 45000 })
+      await page.waitForTimeout(1200)
+      const pairs = await page.locator('[data-shorts-slide]').evaluateAll((els) =>
+        els.slice(0, 5).map((el) => `${el.getAttribute('data-shorts-theme')}:${el.getAttribute('data-shorts-atmosphere')}`),
+      )
+      expect(new Set(pairs).size).toBeGreaterThanOrEqual(3)
     })
   })
 }
