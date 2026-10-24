@@ -53,7 +53,6 @@
     "test:e2e:mobile-tab-label-floor": "playwright test tests/e2e/mobile-tab-label-floor.spec.ts",
     "test:e2e:library-hub-only": "playwright test tests/e2e/library-hub-only.spec.ts",
     "test:e2e:five-nav-parity": "playwright test tests/e2e/five-nav-parity.spec.ts",
-    "test:e2e:library-hub-only": "playwright test tests/e2e/library-hub-only.spec.ts",
     "test:in-app-nav-stack": "node --experimental-strip-types --test lib/in-app-nav-stack.test.ts",
     "test:post-thread-nav": "node --experimental-strip-types --test lib/post-thread-nav.test.ts",
     "test:feed-post-evict": "node --experimental-strip-types --test lib/feed-post-evict.test.ts",
