@@ -146,14 +146,16 @@ test('two-column layout when viewport fits pair @1920', async ({ page }) => {
 })
 
 test('phone canvas matches main at 360x640', async ({ page }) => {
+  test.setTimeout(90_000)
   await page.setViewportSize({ width: 360, height: 640 })
-  await page.goto('https://trymargo.com/feed?tab=shorts', { waitUntil: 'networkidle', timeout: 60000 })
-  await page.waitForTimeout(1000)
-  const mainCanvas = await page.locator('[aria-label="Shorts preview, 9:16"]').first().boundingBox()
+  await page.goto('https://trymargo.com/feed?tab=shorts', { waitUntil: 'domcontentloaded', timeout: 60000 })
+  const canvasLoc = page.locator('[aria-label="Shorts preview, 9:16"]').first()
+  await canvasLoc.waitFor({ state: 'visible', timeout: 45000 })
+  const mainCanvas = await canvasLoc.boundingBox()
   if (!mainCanvas) test.skip()
-  await page.goto(shortsUrl(360), { waitUntil: 'networkidle', timeout: 60000 })
-  await page.waitForTimeout(1000)
-  const prevCanvas = await page.locator('[aria-label="Shorts preview, 9:16"]').first().boundingBox()
+  await page.goto(shortsUrl(360), { waitUntil: 'domcontentloaded', timeout: 60000 })
+  await canvasLoc.waitFor({ state: 'visible', timeout: 45000 })
+  const prevCanvas = await canvasLoc.boundingBox()
   if (!prevCanvas || !mainCanvas) test.skip()
   const pw = prevCanvas!.width
   const mw = mainCanvas!.width
@@ -164,14 +166,16 @@ test('phone canvas matches main at 360x640', async ({ page }) => {
 })
 
 test('phone canvas matches main at 390x844', async ({ page }) => {
+  test.setTimeout(90_000)
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.goto('https://trymargo.com/feed?tab=shorts', { waitUntil: 'networkidle', timeout: 60000 })
-  await page.waitForTimeout(1000)
-  const mainCanvas = await page.locator('[aria-label="Shorts preview, 9:16"]').first().boundingBox()
+  await page.goto('https://trymargo.com/feed?tab=shorts', { waitUntil: 'domcontentloaded', timeout: 60000 })
+  const canvasLoc = page.locator('[aria-label="Shorts preview, 9:16"]').first()
+  await canvasLoc.waitFor({ state: 'visible', timeout: 45000 })
+  const mainCanvas = await canvasLoc.boundingBox()
   if (!mainCanvas) test.skip()
-  await page.goto(shortsUrl(390), { waitUntil: 'networkidle', timeout: 60000 })
-  await page.waitForTimeout(1000)
-  const prevCanvas = await page.locator('[aria-label="Shorts preview, 9:16"]').first().boundingBox()
+  await page.goto(shortsUrl(390), { waitUntil: 'domcontentloaded', timeout: 60000 })
+  await canvasLoc.waitFor({ state: 'visible', timeout: 45000 })
+  const prevCanvas = await canvasLoc.boundingBox()
   if (!prevCanvas || !mainCanvas) test.skip()
   const pw = prevCanvas!.width
   const mw = mainCanvas!.width
