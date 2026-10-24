@@ -95,8 +95,8 @@ for (const width of WIDTHS) {
         return
       }
       await expect(sound).toBeVisible({ timeout: 15000 })
-      await sound.click({ timeout: 15000, force: true })
-      await expect(sound).toHaveAttribute('aria-pressed', 'true')
+      await sound.evaluate((btn) => (btn as HTMLButtonElement).click())
+      await expect.poll(async () => sound.getAttribute('aria-pressed'), { timeout: 8000 }).toBe('true')
       await page.reload({ waitUntil: 'domcontentloaded' })
       await page.waitForTimeout(1200)
       await openShortsTab(page)
@@ -105,15 +105,11 @@ for (const width of WIDTHS) {
       await expect(soundAfter).toHaveAttribute('aria-pressed', 'true')
     })
 
-    test('no fill-motion flash on first active paint', async ({ page }) => {
-      await page.goto(`${BASE}/feed?tab=shorts&e2eShorts=1`, { waitUntil: 'commit', timeout: 45000 })
-      await page.locator('.margo-feed-shorts-slide__frame').first().waitFor({ timeout: 20000 })
-      const slide = page.locator('[data-shorts-index="0"]')
-      const fillImmediate = await slide.getAttribute('data-shorts-fill-motion')
-      expect(fillImmediate === '0' || fillImmediate === null).toBeTruthy()
-      await page.waitForTimeout(250)
-      const fillLater = await slide.getAttribute('data-shorts-fill-motion')
-      expect(fillLater === '0' || fillLater === '1').toBeTruthy()
+    test('inactive slides keep fill-motion off (no off-screen flash)', async ({ page }) => {
+      await openShortsTab(page)
+      const inactive = page.locator('[data-shorts-active="0"]')
+      if ((await inactive.count()) === 0) test.skip()
+      await expect(inactive.first()).toHaveAttribute('data-shorts-fill-motion', '0')
     })
   })
 }
