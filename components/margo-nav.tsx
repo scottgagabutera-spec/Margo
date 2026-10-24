@@ -244,7 +244,7 @@ export function MargoNav() {
               WebkitTapHighlightColor: 'transparent',
             }}>
               {isTabPending('compose') ? <LoadingRing size={14} strokeWidth={1.5} state="spinning" color="var(--bg)" /> : null}
-              Send a line
+              Post
             </Link>
 
             <div style={{ marginLeft: '4px' }}>
@@ -386,6 +386,9 @@ export function MargoNav() {
             display: flex !important;
             align-items: center;
             gap: 4px;
+            /* Parent row is pointer-events:none so lyrics can receive taps under nav gaps;
+               re-enable hits for Feed/Discover/Post/Hub/avatar in this cluster. */
+            pointer-events: auto;
           }
         }
       `}</style>
