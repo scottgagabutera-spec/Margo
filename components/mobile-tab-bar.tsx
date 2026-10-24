@@ -138,7 +138,7 @@ export function MobileTabBar() {
 
       <Link
         href="/compose"
-        aria-label="Send a line"
+        aria-label="Post"
         {...composeLink}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -194,13 +194,13 @@ export function MobileTabBar() {
         @media (max-width: 639px) {
           .margo-mobile-tabbar { display: grid !important; }
         }
-        .margo-mobile-tabbar a:active:not([aria-label="Send a line"]) {
+        .margo-mobile-tabbar a:active:not([aria-label="Post"]) {
           color: var(--gold);
         }
-        .margo-mobile-tabbar--landing a:not([aria-label="Send a line"]) {
+        .margo-mobile-tabbar--landing a:not([aria-label="Post"]) {
           color: var(--text-muted);
         }
-        .margo-mobile-tabbar--landing a[aria-label="Send a line"] {
+        .margo-mobile-tabbar--landing a[aria-label="Post"] {
           box-shadow: 0 2px 10px var(--gold-glow);
         }
       `}</style>
