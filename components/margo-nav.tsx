@@ -98,8 +98,11 @@ export function MargoNav() {
     mq.addEventListener('change', sync)
     return () => mq.removeEventListener('change', sync)
   }, [])
+  const isLanding = pathname === '/'
+  // Landing uses app top bar at ≥640px (Stage 3); phone keeps in-page landing nav + bottom tab bar.
   const shellHidden =
-    hidesAppNav(pathname) || (isMobile && isMessageThreadPath(pathname))
+    (hidesAppNav(pathname) && !(isLanding && !isMobile)) ||
+    (isMobile && isMessageThreadPath(pathname))
 
   const isSignedIn = !!user && !user.isAnonymous
   const applicationStatus = application?.status ?? 'none'
@@ -194,7 +197,9 @@ export function MargoNav() {
         )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', pointerEvents: 'none' }}>
-          <div style={{ pointerEvents: 'auto' }}><SearchNavLink /></div>
+          {isLanding ? null : (
+            <div style={{ pointerEvents: 'auto' }}><SearchNavLink /></div>
+          )}
           {isSignedIn ? <div style={{ pointerEvents: 'auto' }}><LibraryNavLink /></div> : null}
 
           <div style={{ display: 'none' }} className="margo-desktop-nav">
