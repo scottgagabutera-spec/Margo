@@ -981,42 +981,65 @@ html[data-margo-stage-idle] .margo-stage-zone {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px 4px;
+  gap: 8px;
+  padding: 6px 12px 4px;
 }
 .margo-post-moment-edit__title {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--text);
+  flex: 1;
 }
-.margo-post-moment-edit__cancel {
-  min-height: 44px;
-  padding: 0 8px;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
+.margo-post-moment-edit__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.margo-post-moment-edit__cancel,
+.margo-post-moment-edit__save {
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 999px;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
+  box-sizing: border-box;
+}
+.margo-post-moment-edit__cancel {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+}
+.margo-post-moment-edit__save {
+  border: none;
+  background: var(--gold);
+  color: var(--text-on-gold);
+}
+.margo-post-moment-edit__save:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 .margo-post-moment-edit .margo-post-card__lb-compose--panel {
   margin: 0 12px;
 }
-.margo-post-moment-edit__save,
 .margo-lb-thread-row__edit-save {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: var(--margo-touch-min);
-  margin: 12px 0 4px;
-  width: 100%;
+  min-height: 40px;
+  margin: 8px 0 4px;
+  padding: 0 14px;
+  width: auto;
+  align-self: flex-end;
   border: none;
   border-radius: 999px;
   background: var(--gold);
   color: var(--text-on-gold);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 700;
   cursor: pointer;
 }
@@ -1233,6 +1256,99 @@ html[data-margo-stage-idle] .margo-stage-zone {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+/* Inline focused delete — light scrim, confirm under post (PostInlineFocusedDelete) */
+.margo-inline-delete-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(7, 6, 10, 0.35);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.margo-inline-delete-focus-anchor {
+  position: relative;
+  z-index: 201;
+  isolation: isolate;
+}
+.margo-post-delete-inline-host:empty {
+  display: none;
+}
+.margo-post-delete-inline-host:not(:empty) {
+  display: block;
+}
+.margo-inline-delete-panel {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  margin: 10px 10px max(10px, env(safe-area-inset-bottom, 0px));
+  padding: 12px 12px 10px;
+  border-radius: 14px;
+  border: 1px solid var(--border-hi);
+  background: var(--surface-2);
+  box-shadow: 0 10px 32px color-mix(in srgb, var(--bg) 55%, transparent);
+}
+.margo-inline-delete-panel__title {
+  margin: 0 0 4px;
+  font-family: var(--font-lora), serif;
+  font-style: italic;
+  font-size: 0.9375rem;
+  line-height: 1.25;
+  color: var(--text);
+}
+.margo-inline-delete-panel__body {
+  margin: 0 0 10px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: var(--text-secondary);
+}
+.margo-inline-delete-panel__error {
+  margin: 0 0 8px;
+  font-size: 0.6875rem;
+  color: #ff6b6b;
+}
+.margo-inline-delete-panel__actions {
+  display: flex;
+  gap: 8px;
+}
+.margo-inline-delete-panel__cancel,
+.margo-inline-delete-panel__confirm {
+  flex: 1;
+  min-height: 42px;
+  max-height: 44px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.margo-inline-delete-panel__cancel {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+}
+.margo-inline-delete-panel__confirm {
+  border: none;
+  background: #ff6060;
+  color: var(--bg);
+}
+.margo-post-edit-locked-fields {
+  opacity: 0.52;
+  pointer-events: none;
+}
+.margo-post-edit-vibe-only-hint {
+  display: block;
+  margin: 0 0 6px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 .margo-post-card__song-block {
   border-top: 1px solid var(--border);

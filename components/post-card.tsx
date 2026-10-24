@@ -6,7 +6,7 @@ import { ChevronRightIcon } from '@/components/icons'
 import { RepostSheet } from '@/components/repost-sheet'
 import type { Post } from '@/hooks/usePosts'
 import { PostMomentInlineEdit } from '@/components/post-moment-inline-edit'
-import { DeleteMomentDialog } from '@/components/delete-moment-dialog'
+import { MargoDeleteConfirm } from '@/components/margo-delete-confirm'
 import { warmUrl } from '@/lib/audio-engine'
 import { resolveExternalListenUrl } from '@/lib/moment/listen'
 import {
@@ -381,7 +381,7 @@ export function PostCard({
     const t = e.target as HTMLElement | null
     if (t?.closest?.('a, button, textarea, input, [data-no-card-nav]')) return
     persistActivePrimaryScroll()
-    navigateToPostThread(router, post.id)
+    navigateToPostThread(router, post.id, postLive)
   }
 
   return (
@@ -636,6 +636,11 @@ export function PostCard({
         data-report-inline-host={post.id}
         data-no-card-nav
       />
+      <div
+        className="margo-post-delete-inline-host"
+        data-delete-inline-host={post.id}
+        data-no-card-nav
+      />
       <PostMomentBody post={post} atmosphereRooms={atmosphereRooms} />
 
       {lyricBackAllowed && !threadDetail ? (
@@ -705,7 +710,8 @@ export function PostCard({
       ) : null}
 
       {isOwner ? (
-        <DeleteMomentDialog
+        <MargoDeleteConfirm
+          anchorRef={cardRef}
           open={deleteOpen}
           onOpenChange={setDeleteOpen}
           postId={post.id}

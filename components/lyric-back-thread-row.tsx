@@ -21,8 +21,7 @@ import {
 } from '@/components/lyric-back-panel-compose'
 import type { LyricBackEditSavedPatch } from '@/lib/lyric-back-edit-saved'
 import { emotionToVibeLabel, vibeLabelToEmotion } from '@/lib/moment/vibe'
-import { POST_EDIT_CHILD_LOCK_MESSAGE } from '@/lib/post-edit-child-lock'
-import { DeleteMomentDialog } from '@/components/delete-moment-dialog'
+import { MargoDeleteConfirm } from '@/components/margo-delete-confirm'
 import { echoToPost } from '@/lib/echo-to-post'
 import { getVibeTheme, vibeThemeStyleVars } from '@/lib/vibe-theme'
 
@@ -273,7 +272,7 @@ export function LyricBackThreadRow({
           panelAfterBody={
             <>
               {lockSongAndLine ? (
-                <p className="margo-post-edit-lock-note" role="status">{POST_EDIT_CHILD_LOCK_MESSAGE}</p>
+                <span className="margo-post-edit-vibe-only-hint">Vibe only</span>
               ) : null}
               <MomentComposeVibePicker
                 compact
@@ -518,8 +517,14 @@ export function LyricBackThreadRow({
           onUndo={(id) => onUndoReplay?.(id)}
         />
       ) : null}
+      <div
+        className="margo-post-delete-inline-host"
+        data-delete-inline-host={echo.id}
+        data-no-card-nav
+      />
       {showOwnerMenu ? (
-        <DeleteMomentDialog
+        <MargoDeleteConfirm
+          anchorRef={rowRef}
           open={deleteSheetOpen}
           onOpenChange={setDeleteSheetOpen}
           postId={echo.id}

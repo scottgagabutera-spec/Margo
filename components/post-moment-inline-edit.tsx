@@ -10,7 +10,6 @@ import { MomentComposeVibePicker } from '@/components/moment-compose-vibe-picker
 import type { Post } from '@/hooks/usePosts'
 import { resolveMomentLines, type PostLine } from '@/lib/post-lines'
 import { emotionToVibeLabel, vibeLabelToEmotion } from '@/lib/moment/vibe'
-import { POST_EDIT_CHILD_LOCK_MESSAGE } from '@/lib/post-edit-child-lock'
 
 export type PostMomentInlineEditProps = {
   post: Post
@@ -70,9 +69,19 @@ export function PostMomentInlineEdit({
     <div className="margo-post-moment-edit" data-no-card-nav>
       <div className="margo-post-moment-edit__head">
         <span className="margo-post-moment-edit__title">Edit</span>
-        <button type="button" className="margo-post-moment-edit__cancel" onClick={onCancel}>
-          Cancel
-        </button>
+        <div className="margo-post-moment-edit__actions">
+          <button type="button" className="margo-post-moment-edit__cancel" onClick={onCancel}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="margo-post-moment-edit__save"
+            disabled={posting}
+            onClick={() => composeRef.current?.save()}
+          >
+            {posting ? 'Saving…' : 'Save'}
+          </button>
+        </div>
       </div>
       <LyricBackPanelCompose
         ref={composeRef}
@@ -93,17 +102,9 @@ export function PostMomentInlineEdit({
         panelAfterBody={
           <>
             {lockSongAndLine ? (
-              <p className="margo-post-edit-lock-note" role="status">{POST_EDIT_CHILD_LOCK_MESSAGE}</p>
+              <span className="margo-post-edit-vibe-only-hint">Vibe only</span>
             ) : null}
             <MomentComposeVibePicker vibeLabel={vibeLabel} onVibeSelect={setVibeLabel} />
-            <button
-              type="button"
-              className="margo-post-moment-edit__save"
-              disabled={posting}
-              onClick={() => composeRef.current?.save()}
-            >
-              {posting ? 'Saving…' : 'Save'}
-            </button>
           </>
         }
         onSaved={(payload) => {

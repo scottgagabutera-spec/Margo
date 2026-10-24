@@ -734,7 +734,12 @@ export const LyricBackPanelCompose = forwardRef<
   ) : null
 
   const body = songChip || linePicker || lyricBlock ? (
-    <div className="margo-post-card__lb-compose-body">
+    <div
+      className={
+        'margo-post-card__lb-compose-body'
+        + (lockSongAndLine && isPanelLayout ? ' margo-post-edit-locked-fields' : '')
+      }
+    >
       {songChip}
       {linePicker}
       {lyricBlock}

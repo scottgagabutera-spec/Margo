@@ -220,8 +220,8 @@ export default function PostDetailPage() {
       maxWidth: '640px', margin: '0 auto',
     }}>
 
-      {loading && (
-        <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-muted)' }}>
+      {loading && !post && (
+        <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-muted)' }} role="status">
           Loading…
         </p>
       )}

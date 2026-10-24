@@ -169,29 +169,33 @@ export function MargoNav() {
       paddingLeft: '24px',
       background: 'var(--bg)',
       boxShadow: '0 1px 24px rgba(0,0,0,0.35)',
+      pointerEvents: 'none',
     }}>
       <div style={{
         display: 'flex', alignItems: 'center',
         justifyContent: 'space-between',
+        pointerEvents: 'none',
       }}>
         {navBack ? (
-          <BackButton
-            variant="chrome"
-            fallbackHref={navBack.fallbackHref}
-            preferHistory={navBack.preferHistory}
-            replace={navBack.replace}
-            onBack={navBack.onBack}
-            label={navBack.label || 'Back'}
-          />
+          <div style={{ pointerEvents: 'auto', flexShrink: 0 }}>
+            <BackButton
+              variant="chrome"
+              fallbackHref={navBack.fallbackHref}
+              preferHistory={navBack.preferHistory}
+              replace={navBack.replace}
+              onBack={navBack.onBack}
+              label={navBack.label || 'Back'}
+            />
+          </div>
         ) : (
-          <Link href="/" aria-label="Margo — expression home" style={{ textDecoration: 'none', flexShrink: 0 }}>
+          <Link href="/" aria-label="Margo — expression home" style={{ textDecoration: 'none', flexShrink: 0, pointerEvents: 'auto' }}>
             <MargoLogo tier="symbol" size={28} wordmark={showWordmark} rings />
           </Link>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <SearchNavLink />
-          {isSignedIn && <LibraryNavLink />}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', pointerEvents: 'none' }}>
+          <div style={{ pointerEvents: 'auto' }}><SearchNavLink /></div>
+          {isSignedIn ? <div style={{ pointerEvents: 'auto' }}><LibraryNavLink /></div> : null}
 
           <div style={{ display: 'none' }} className="margo-desktop-nav">
             {[

@@ -5,6 +5,7 @@ import { Post } from '@/hooks/usePosts'
 import { mapPostLinesRows } from '@/lib/post-lines'
 import { parseAtmosphere, SONG_POST_EMBED } from '@/lib/atmosphere'
 import { applyPostContentRemoved } from '@/lib/post-content-removed'
+import { clearPostThreadSeed, peekPostThreadSeed } from '@/lib/post-thread-seed'
 
 const supabase = createClient()
 
@@ -144,7 +145,7 @@ export function usePost(postId: string | null) {
   const [post, setPost] = useState<Post | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const load = useCallback(async (id: string) => {
+  const load = useCallback(async (id: string): Promise<void> => {
     const { data, error } = await supabase
       .from('posts')
       .select(POST_SELECT)
@@ -167,8 +168,17 @@ export function usePost(postId: string | null) {
       setLoading(false)
       return
     }
-    setLoading(true)
-    load(postId)
+    const seeded = peekPostThreadSeed(postId)
+    if (seeded) {
+      setPost(seeded)
+      setLoading(false)
+    } else {
+      setLoading(true)
+    }
+    void (async () => {
+      await load(postId)
+      clearPostThreadSeed(postId)
+    })()
 
     // Requires Realtime enabled on the `posts` table (Database →
     // Replication) — same caveat as usePosts. Without it this just
