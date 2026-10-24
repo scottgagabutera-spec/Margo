@@ -244,7 +244,7 @@ export function MargoNav() {
               WebkitTapHighlightColor: 'transparent',
             }}>
               {isTabPending('compose') ? <LoadingRing size={14} strokeWidth={1.5} state="spinning" color="var(--bg)" /> : null}
-              Send a line
+              Post
             </Link>
 
             <div style={{ marginLeft: '4px' }}>
