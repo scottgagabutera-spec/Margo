@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
 import { emotionToVibeLabel } from '@/lib/moment/vibe'
-import { isLivingAtmosphere } from '@/lib/atmosphere'
+import { isLivingAtmosphere, type AtmosphereId } from '@/lib/atmosphere'
 import type { LyricMoment } from '@/lib/lyric-moments-board'
 import { playLyricMomentPool } from '@/lib/lyric-moment-playback'
 import {
@@ -13,11 +13,129 @@ import {
   stop,
   subscribeAudioEngine,
   warmUrls,
+  setVolume,
+  toggleMute,
 } from '@/lib/audio-engine'
 import { pickShortsLook } from '@/lib/shorts-looks'
 import { utcDayKey } from '@/lib/shorts-shelf-rotation'
+import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 
 const ANON_PLAYS_BEFORE_SIGNUP = 5
+const SHORTS_UNMUTE_STORAGE_KEY = 'margo-shorts-unmuted'
+
+function readShortsUnmutePref(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return window.localStorage.getItem(SHORTS_UNMUTE_STORAGE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function persistShortsUnmutePref(unmuted: boolean): void {
+  try {
+    window.localStorage.setItem(SHORTS_UNMUTE_STORAGE_KEY, unmuted ? '1' : '0')
+  } catch {
+    /* private mode */
+  }
+}
+
+type SlideProps = {
+  clip: LyricMoment
+  index: number
+  isActive: boolean
+  isPlaying: boolean
+  atmosphereId: AtmosphereId
+  stageThemeId: StageCardThemeId
+  vibeLabel: string | null
+  reduceMotion: boolean
+  showBlockedPlay: boolean
+  showSignupOnPlay: boolean
+  soundOn: boolean
+  onToggleSound: () => void
+  onPlay: () => void
+}
+
+function FeedShortsSlide({
+  clip,
+  index,
+  isActive,
+  isPlaying,
+  atmosphereId,
+  stageThemeId,
+  vibeLabel,
+  reduceMotion,
+  showBlockedPlay,
+  showSignupOnPlay,
+  soundOn,
+  onToggleSound,
+  onPlay,
+}: SlideProps) {
+  const [fillMotion, setFillMotion] = useState(false)
+
+  useEffect(() => {
+    if (!isActive || reduceMotion) {
+      setFillMotion(false)
+      return
+    }
+    setFillMotion(false)
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setFillMotion(true))
+    })
+    return () => cancelAnimationFrame(id)
+  }, [isActive, clip.songId, clip.lineId, reduceMotion])
+
+  return (
+    <section
+      className="margo-feed-shorts-slide"
+      data-shorts-slide
+      data-shorts-index={index}
+      data-shorts-active={isActive ? '1' : '0'}
+      data-shorts-fill-motion={fillMotion ? '1' : '0'}
+    >
+      <div className="margo-feed-shorts-slide__frame">
+        <MomentExportPreviewFrame shapeId="vertical" framed={false} style={{ height: '100%', width: '100%' }}>
+          <StageMomentCard
+            lyric={clip.line}
+            songTitle={clip.songTitle}
+            artistName={clip.artist}
+            artwork={clip.artwork}
+            vibeLabel={vibeLabel}
+            cardThemeId={stageThemeId}
+            atmosphereId={atmosphereId}
+            effectOwnsFill={
+              isActive && fillMotion && !reduceMotion && isLivingAtmosphere(atmosphereId)
+            }
+            shapeId="vertical"
+            hideVibeChrome
+            canPlay={!!clip.audioUrl}
+            playing={isPlaying}
+            playControlLabel={showSignupOnPlay ? 'Sign up' : showBlockedPlay ? 'Play' : null}
+            onPlay={onPlay}
+            style={{ height: '100%', minHeight: '100%' }}
+          />
+        </MomentExportPreviewFrame>
+        <div className="margo-feed-shorts-slide__meta">
+          <Link href={`/song/${clip.songId}`} className="margo-feed-shorts-slide__song">
+            {clip.songTitle}
+          </Link>
+          <span className="margo-feed-shorts-slide__artist">{clip.artist}</span>
+          {isActive ? (
+            <button
+              type="button"
+              className="margo-feed-shorts-slide__sound"
+              aria-pressed={soundOn}
+              aria-label={soundOn ? 'Mute Short' : 'Unmute Short'}
+              onClick={onToggleSound}
+            >
+              {soundOn ? 'Sound on' : 'Tap for sound'}
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </section>
+  )
+}
 
 type Props = {
   clips: LyricMoment[]
@@ -43,13 +161,23 @@ export function FeedShortsPager({
   const scrollerRef = useRef<HTMLDivElement>(null)
   const [activeIndex, setActiveIndex] = useState(0)
   const [playingKey, setPlayingKey] = useState<string | null>(null)
-  const [audioUnlocked, setAudioUnlocked] = useState(false)
+  const [soundOn, setSoundOn] = useState(false)
   const [autoplayBlocked, setAutoplayBlocked] = useState(false)
   const [anonPlaysCompleted, setAnonPlaysCompleted] = useState(0)
+  const [reduceMotion, setReduceMotion] = useState(false)
   const anonPlayedKeysRef = useRef(new Set<string>())
   const signedInRef = useRef(signedIn)
   const lastAutoIndexRef = useRef<number>(-1)
   const utcDay = utcDayKey(new Date())
+
+  useEffect(() => {
+    setSoundOn(readShortsUnmutePref())
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const sync = () => setReduceMotion(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
 
   useEffect(() => {
     signedInRef.current = signedIn
@@ -117,17 +245,28 @@ export function FeedShortsPager({
     return () => observer.disconnect()
   }, [clips.length])
 
+  const applyShortsVolume = useCallback((wantSound: boolean) => {
+    const state = getAudioEngineState()
+    if (wantSound) {
+      if (state.muted) toggleMute()
+      if (state.volume === 0) setVolume(1)
+    } else if (!state.muted || state.volume > 0) {
+      setVolume(0)
+    }
+  }, [])
+
   const playClip = useCallback(
     (moment: LyricMoment, fromUserGesture: boolean) => {
       if (!moment.audioUrl) return
+      if (fromUserGesture) setAutoplayBlocked(false)
+      applyShortsVolume(soundOn)
       playLyricMomentPool(moment, clips)
-      if (fromUserGesture) setAudioUnlocked(true)
     },
-    [clips],
+    [applyShortsVolume, clips, soundOn],
   )
 
   useEffect(() => {
-    if (!tabActive || !audioUnlocked || autoplayBlocked) return
+    if (!tabActive || autoplayBlocked) return
     if (activeIndex === lastAutoIndexRef.current) return
     const clip = clips[activeIndex]
     if (!clip?.audioUrl) return
@@ -140,13 +279,23 @@ export function FeedShortsPager({
       return
     }
     lastAutoIndexRef.current = activeIndex
+    applyShortsVolume(soundOn)
     playLyricMomentPool(clip, clips)
     const t = window.setTimeout(() => {
       const err = getAudioEngineState().error
       if (err?.includes('Play blocked')) setAutoplayBlocked(true)
     }, 400)
     return () => window.clearTimeout(t)
-  }, [activeIndex, anonPlaysCompleted, audioUnlocked, autoplayBlocked, clips, signedIn, tabActive])
+  }, [activeIndex, anonPlaysCompleted, applyShortsVolume, autoplayBlocked, clips, signedIn, soundOn, tabActive])
+
+  const toggleSound = useCallback(() => {
+    const next = !soundOn
+    setSoundOn(next)
+    persistShortsUnmutePref(next)
+    applyShortsVolume(next)
+    const clip = clips[activeIndex]
+    if (next && clip?.audioUrl) playClip(clip, true)
+  }, [activeIndex, applyShortsVolume, clips, playClip, soundOn])
 
   if (loading) {
     return (
@@ -175,7 +324,6 @@ export function FeedShortsPager({
         const isPlaying = playingKey === key
         const isActive = index === activeIndex
         const look = pickShortsLook(clip.songId, clip.vibes[0], utcDay)
-        const motionAtmosphere = isActive ? look.atmosphereId : 'still'
         const clipNeedsSignup =
           !signedIn
           && anonPlaysCompleted >= ANON_PLAYS_BEFORE_SIGNUP
@@ -183,47 +331,29 @@ export function FeedShortsPager({
         const showBlockedPlay = isActive && autoplayBlocked && !isPlaying && !clipNeedsSignup
         const showSignupOnPlay = clipNeedsSignup && isActive
         return (
-          <section
+          <FeedShortsSlide
             key={key}
-            className="margo-feed-shorts-slide"
-            data-shorts-slide
-            data-shorts-index={index}
-          >
-            <div className="margo-feed-shorts-slide__frame">
-              <MomentExportPreviewFrame shapeId="vertical" framed={false} style={{ height: '100%', width: '100%' }}>
-                <StageMomentCard
-                  lyric={clip.line}
-                  songTitle={clip.songTitle}
-                  artistName={clip.artist}
-                  artwork={clip.artwork}
-                  vibeLabel={vibeLabel}
-                  cardThemeId={look.stageThemeId}
-                  atmosphereId={motionAtmosphere}
-                  effectOwnsFill={isActive && isLivingAtmosphere(motionAtmosphere)}
-                  shapeId="vertical"
-                  hideVibeChrome
-                  canPlay={!!clip.audioUrl}
-                  playing={isPlaying}
-                  playControlLabel={showSignupOnPlay ? 'Sign up' : showBlockedPlay ? 'Play' : null}
-                  onPlay={() => {
-                    if (showSignupOnPlay) {
-                      onRequireSignIn()
-                      return
-                    }
-                    setAutoplayBlocked(false)
-                    playClip(clip, true)
-                  }}
-                  style={{ height: '100%', minHeight: '100%' }}
-                />
-              </MomentExportPreviewFrame>
-            </div>
-            <div className="margo-feed-shorts-slide__meta">
-              <Link href={`/song/${clip.songId}`} className="margo-feed-shorts-slide__song">
-                {clip.songTitle}
-              </Link>
-              <span className="margo-feed-shorts-slide__artist">{clip.artist}</span>
-            </div>
-          </section>
+            clip={clip}
+            index={index}
+            isActive={isActive}
+            isPlaying={isPlaying}
+            atmosphereId={look.atmosphereId}
+            stageThemeId={look.stageThemeId}
+            vibeLabel={vibeLabel}
+            reduceMotion={reduceMotion}
+            showBlockedPlay={showBlockedPlay}
+            showSignupOnPlay={showSignupOnPlay}
+            soundOn={soundOn}
+            onToggleSound={toggleSound}
+            onPlay={() => {
+              if (showSignupOnPlay) {
+                onRequireSignIn()
+                return
+              }
+              setAutoplayBlocked(false)
+              playClip(clip, true)
+            }}
+          />
         )
       })}
     </div>
