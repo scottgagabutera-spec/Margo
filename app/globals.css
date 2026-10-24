@@ -349,6 +349,9 @@ html[data-margo-stage-idle] .margo-stage-zone {
   display: none;
 }
 @media (min-width: 640px) {
+  .margo-landing-nav {
+    display: none !important;
+  }
   .margo-landing-nav__account {
     display: inline-flex;
     align-items: center;
