@@ -434,7 +434,7 @@ export function LyricBackThreadRow({
       </button>
 
       {showTrackStrip ? (
-        <div className="margo-lb-thread-row__track-row">
+        <div className="margo-song-row margo-lb-thread-row__track-row">
           <div className="margo-lb-thread-row__track-art">
             {songHref ? (
               <PendingNavLink href={songHref} indicator="tint" aria-label="Open song" onClick={(e) => e.stopPropagation()}>
@@ -442,7 +442,7 @@ export function LyricBackThreadRow({
                   artwork={echo.artwork}
                   alt=""
                   loading="lazy"
-                  className="margo-lb-thread-row__art"
+                  className="margo-lb-thread-row__art margo-song-row__art"
                 />
               </PendingNavLink>
             ) : (
@@ -450,33 +450,35 @@ export function LyricBackThreadRow({
                 artwork={echo.artwork}
                 alt=""
                 loading="lazy"
-                className="margo-lb-thread-row__art"
+                className="margo-lb-thread-row__art margo-song-row__art"
               />
             )}
           </div>
-          <div className="margo-lb-thread-row__track-meta">
+          <div className="margo-lb-thread-row__track-meta margo-song-row__meta">
             {echo.song ? (
-              <span className="margo-lb-thread-row__song">{echo.song}</span>
+              <span className="margo-lb-thread-row__song margo-song-row__title">{echo.song}</span>
             ) : echo.songId ? (
-              <span className="margo-lb-thread-row__song">On Margo</span>
+              <span className="margo-lb-thread-row__song margo-song-row__title">On Margo</span>
             ) : null}
             {echo.artist ? (
-              <span className="margo-lb-thread-row__artist">{echo.artist}</span>
+              <span className="margo-lb-thread-row__artist margo-song-row__artist">{echo.artist}</span>
             ) : null}
           </div>
-          <LyricBackTrackListenControl
-            songId={echo.songId}
-            audioUrl={echo.audioUrl}
-            songTitle={echo.song}
-            artistName={echo.artist}
-            externalListenUrl={echo.externalListenUrl}
-            lineIndex={0}
-            lineText={echo.lyric}
-            startSec={echo.snippetStart}
-            endSec={echo.snippetEnd}
-            artwork={echo.artwork}
-            source="feed"
-          />
+          <div className="margo-song-row__trail">
+            <LyricBackTrackListenControl
+              songId={echo.songId}
+              audioUrl={echo.audioUrl}
+              songTitle={echo.song}
+              artistName={echo.artist}
+              externalListenUrl={echo.externalListenUrl}
+              lineIndex={0}
+              lineText={echo.lyric}
+              startSec={echo.snippetStart}
+              endSec={echo.snippetEnd}
+              artwork={echo.artwork}
+              source="feed"
+            />
+          </div>
         </div>
       ) : null}
 

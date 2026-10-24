@@ -599,44 +599,61 @@ export const LyricBackPanelCompose = forwardRef<
   )
 
   const songChip = selected ? (
-    <div className={`margo-post-card__lb-compose-track${isPanelLayout ? ' margo-post-card__lb-compose-track--chip' : ' margo-post-card__lb-compose-track--picked'}`}>
+    <div
+      className={`margo-song-row margo-post-card__lb-compose-track${
+        isPanelLayout ? ' margo-post-card__lb-compose-track--chip' : ' margo-post-card__lb-compose-track--picked'
+      }`}
+    >
       {selected.artwork ? (
         <PostThumbnail
           artwork={compactArtworkUrl(selected.artwork, 64) || selected.artwork}
           alt=""
           loading="lazy"
-          className={isPanelLayout ? 'margo-post-card__lb-compose-art' : 'margo-lb-thread-row__art'}
+          className={
+            isPanelLayout
+              ? 'margo-post-card__lb-compose-art margo-song-row__art'
+              : 'margo-song-row__art'
+          }
         />
       ) : (
-        <span className={isPanelLayout ? 'margo-post-card__lb-compose-art margo-post-card__lb-compose-art--empty' : 'margo-lb-thread-row__track-art'} aria-hidden />
+        <span
+          className={
+            isPanelLayout
+              ? 'margo-post-card__lb-compose-art margo-post-card__lb-compose-art--empty margo-song-row__art margo-song-row__art--empty'
+              : 'margo-song-row__art margo-song-row__art--empty'
+          }
+          aria-hidden
+        />
       )}
-      <div className={isPanelLayout ? 'margo-post-card__lb-compose-chip-meta' : 'margo-post-card__lb-compose-track-text'}>
-        <span className="margo-post-card__lb-compose-song">{selected.title}</span>
-        <span className="margo-post-card__lb-compose-artist">{selected.artist}</span>
+      <div className="margo-song-row__meta">
+        <span className="margo-song-row__title margo-post-card__lb-compose-song">{selected.title}</span>
+        <span className="margo-song-row__artist margo-post-card__lb-compose-artist">{selected.artist}</span>
       </div>
-      <LyricBackTrackListenControl
-        className={isPanelLayout ? 'margo-post-card__lb-compose-open' : undefined}
-        songId={selected.catalogSongId}
-        audioUrl={selected.audioUrl}
-        songTitle={selected.title}
-        artistName={selected.artist}
-        externalListenUrl={selected.externalListenUrl}
-        startSec={snippetStart}
-        endSec={snippetEnd}
-        lineText={lyric}
-        artwork={selected.artwork || null}
-        source="feed"
-      />
-      {!lockSongAndLine ? (
-        <button
-          type="button"
-          className="margo-post-card__lb-compose-clear"
-          aria-label="Remove song"
-          onClick={resetSong}
-        >
-          <FeedIconClose size={isPanelLayout ? 12 : 14} />
-        </button>
-      ) : null}
+      <div className="margo-song-row__trail">
+        <LyricBackTrackListenControl
+          className={isPanelLayout ? 'margo-post-card__lb-compose-open' : undefined}
+          songId={selected.catalogSongId}
+          audioUrl={selected.audioUrl}
+          songTitle={selected.title}
+          artistName={selected.artist}
+          externalListenUrl={selected.externalListenUrl}
+          startSec={snippetStart}
+          endSec={snippetEnd}
+          lineText={lyric}
+          artwork={selected.artwork || null}
+          source="feed"
+        />
+        {!lockSongAndLine ? (
+          <button
+            type="button"
+            className="margo-post-card__lb-compose-clear"
+            aria-label="Remove song"
+            onClick={resetSong}
+          >
+            <FeedIconClose size={isPanelLayout ? 12 : 14} />
+          </button>
+        ) : null}
+      </div>
     </div>
   ) : null
 

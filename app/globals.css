@@ -1174,6 +1174,66 @@ html[data-margo-stage-idle] .margo-stage-zone {
 .margo-post-card__lyric-more {
   color: var(--text-muted);
 }
+/* Shared song row — compose, LB panel, search, feed post, LB thread */
+.margo-song-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  box-sizing: border-box;
+  min-width: 0;
+}
+.margo-song-row__art,
+.margo-song-row__art--empty {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  object-fit: cover;
+  display: block;
+  border: 1px solid var(--border);
+}
+.margo-song-row__art--empty {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--gold) 18%, var(--surface)), var(--surface-2));
+}
+.margo-song-row__meta {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+}
+.margo-song-row__title {
+  width: 100%;
+  margin: 0;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.margo-song-row__artist {
+  width: 100%;
+  margin: 0;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 12px;
+  line-height: 1.25;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.margo-song-row__trail {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .margo-post-card__song-block {
   border-top: 1px solid var(--border);
   padding-top: var(--margo-post-card-gap);
@@ -1184,13 +1244,13 @@ html[data-margo-stage-idle] .margo-stage-zone {
   min-height: 56px;
 }
 .margo-post-card__song-row {
-  display: grid;
-  grid-template-columns: 40px 1fr auto;
-  gap: 12px;
+  display: flex;
   align-items: center;
+  gap: 12px;
+  padding: 10px;
   min-height: 56px;
-  padding-bottom: 2px;
   box-sizing: border-box;
+  min-width: 0;
 }
 .margo-post-card__song-meta {
   min-width: 0;
@@ -1879,14 +1939,11 @@ html.margo-keyboard-open .margo-mobile-tabbar {
 }
 .margo-post-card__lb-compose-track--picked {
   position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px calc(var(--margo-touch-min) + 4px) 8px 10px;
   margin-top: 4px;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+  padding-right: calc(var(--margo-touch-min) + 4px);
 }
 .margo-post-card__lb-compose-body {
   display: flex;
@@ -1895,58 +1952,33 @@ html.margo-keyboard-open .margo-mobile-tabbar {
   padding: 0 0 8px;
 }
 .margo-post-card__lb-compose-track--chip {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 4px;
   margin: 0;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--surface);
+  min-height: 44px;
 }
-.margo-post-card__lb-compose-art {
+.margo-post-card__lb-compose-track--chip .margo-post-card__lb-compose-art,
+.margo-post-card__lb-compose-track--chip .margo-post-card__lb-compose-art--empty,
+.margo-post-card__lb-compose-track--picked .margo-song-row__art,
+.margo-post-card__lb-compose-track--picked .margo-song-row__art--empty {
   width: 36px;
   height: 36px;
-  border-radius: 7px;
+  border-radius: 8px;
+  flex-shrink: 0;
   object-fit: cover;
   display: block;
-  flex-shrink: 0;
   border: 1px solid var(--border);
 }
-.margo-post-card__lb-compose-art--empty {
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--gold) 18%, var(--surface)), var(--surface-2));
+.margo-post-card__lb-compose-track--chip .margo-post-card__lb-compose-art--empty,
+.margo-post-card__lb-compose-track--picked .margo-song-row__art--empty {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--gold) 18%, var(--surface)), var(--surface-2));
 }
-.margo-post-card__lb-compose-chip-meta {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 1px;
-}
-.margo-post-card__lb-compose-chip-meta .margo-post-card__lb-compose-song {
-  display: block;
-  width: 100%;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.margo-post-card__lb-compose-chip-meta .margo-post-card__lb-compose-artist {
-  display: block;
-  width: 100%;
-  margin-top: 0;
-  font-size: 12px;
-  line-height: 1.2;
-  color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.margo-post-card__lb-compose-track--chip.margo-song-row,
+.margo-post-card__lb-compose-track--picked.margo-song-row {
+  gap: 12px;
+  padding: 10px;
+  align-items: center;
 }
 .margo-post-card__lb-compose-track--chip .margo-post-card__lb-compose-clear {
   position: static;
@@ -2100,58 +2132,24 @@ html.margo-keyboard-open .margo-mobile-tabbar {
 }
 .compose-search-row--panel {
   width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 44px;
-  padding: 6px 10px;
   background: none;
   border: none;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   text-align: left;
-  box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
 }
 .compose-search-row--panel .compose-search-row__art,
-.compose-search-row--panel .compose-search-row__art--empty {
-  width: 34px;
-  height: 34px;
-  border-radius: 7px;
-  object-fit: cover;
-  flex-shrink: 0;
+.compose-search-row--panel .compose-search-row__art--empty,
+.compose-search-row--panel .margo-song-row__art,
+.compose-search-row--panel .margo-song-row__art--empty {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+}
+.compose-search-row--panel .compose-search-row__art--empty,
+.compose-search-row--panel .margo-song-row__art--empty {
   background: linear-gradient(180deg, color-mix(in srgb, var(--gold) 14%, var(--surface)), var(--surface-2));
-}
-.compose-search-row--panel .compose-search-row__meta {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1px;
-}
-.compose-search-row--panel .compose-search-row__title {
-  margin: 0;
-  width: 100%;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.compose-search-row--panel .compose-search-row__artist {
-  margin: 0;
-  width: 100%;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 12px;
-  color: var(--text-muted);
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .compose-search-row--panel .compose-search-row__margo {
   flex-shrink: 0;
@@ -3368,16 +3366,16 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   white-space: nowrap;
 }
 .margo-lb-thread-row__track-row {
-  display: grid;
-  grid-template-columns: 40px 1fr auto;
-  gap: 10px;
-  align-items: center;
   margin-bottom: 8px;
-  padding: 8px 10px;
-  min-height: 56px;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+  min-height: 56px;
+}
+.margo-lb-thread-row__track-row.margo-song-row {
+  gap: 12px;
+  padding: 10px;
+  align-items: center;
 }
 .margo-lb-thread-row__track-row--placeholder {
   pointer-events: none;
@@ -3528,8 +3526,8 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   cursor: pointer;
 }
 .margo-lb-thread-row__art {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 8px;
   object-fit: cover;
   display: block;

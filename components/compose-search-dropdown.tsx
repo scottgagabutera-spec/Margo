@@ -155,7 +155,7 @@ function ResultsList({
             className={
               'compose-search-row'
               + (isStage ? ' compose-search-row--stage' : '')
-              + (isPanel ? ' compose-search-row--panel' : '')
+              + (isPanel ? ' compose-search-row--panel margo-song-row' : '')
             }
             onClick={() => onSelect(result)}
             style={isPanel ? undefined : {
@@ -178,7 +178,7 @@ function ResultsList({
               <img
                 src={compactArtworkUrl(result.artwork, isPanel ? 64 : 100) || result.artwork}
                 alt=""
-                className={isPanel ? 'compose-search-row__art' : undefined}
+                className={isPanel ? 'compose-search-row__art margo-song-row__art' : undefined}
                 style={isPanel ? undefined : {
                   width: isStage ? '44px' : '48px',
                   height: isStage ? '44px' : '48px',
@@ -190,7 +190,7 @@ function ResultsList({
               />
             ) : (
               <div
-                className={isPanel ? 'compose-search-row__art compose-search-row__art--empty' : undefined}
+                className={isPanel ? 'compose-search-row__art compose-search-row__art--empty margo-song-row__art margo-song-row__art--empty' : undefined}
                 style={isPanel ? undefined : {
                   width: isStage ? '44px' : '48px',
                   height: isStage ? '44px' : '48px',
@@ -200,9 +200,9 @@ function ResultsList({
                 }}
               />
             )}
-            <div className={isPanel ? 'compose-search-row__meta' : undefined} style={isPanel ? undefined : { flex: 1, minWidth: 0 }}>
+            <div className={isPanel ? 'compose-search-row__meta margo-song-row__meta' : undefined} style={isPanel ? undefined : { flex: 1, minWidth: 0 }}>
               <p
-                className={isPanel ? 'compose-search-row__title' : undefined}
+                className={isPanel ? 'compose-search-row__title margo-song-row__title' : undefined}
                 style={isPanel ? undefined : {
                   fontFamily: UI_FONT,
                   color: 'var(--text)',
@@ -217,7 +217,7 @@ function ResultsList({
                 {highlightSearchText(result.title, highlightQuery)}
               </p>
               <p
-                className={isPanel ? 'compose-search-row__artist' : undefined}
+                className={isPanel ? 'compose-search-row__artist margo-song-row__artist' : undefined}
                 style={isPanel ? undefined : {
                   fontFamily: UI_FONT,
                   color: 'var(--text-secondary)',
