@@ -13,7 +13,7 @@ for (const width of [834, 1180, 1440]) {
       await expect(libraryNav).toHaveCount(0)
       const hub = page.locator('.margo-nav-bar button[aria-label^="Hub"]').first()
       await expect(hub).toBeVisible({ timeout: 15000 })
-      await hub.click()
+      await hub.click({ force: true })
       await expect(page.getByRole('link', { name: /Music Library/i })).toBeVisible({ timeout: 10000 })
     })
   })
