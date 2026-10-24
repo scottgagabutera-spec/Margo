@@ -50,6 +50,7 @@
     "test:e2e:lb-panel-lyric-nav": "playwright test tests/e2e/lb-panel-lyric-nav.spec.ts",
     "test:e2e:feed-thread-nav-live": "playwright test tests/e2e/feed-thread-nav-live.spec.ts --project=chromium",
     "test:e2e:feed-horizontal-drift": "playwright test tests/e2e/feed-horizontal-drift.spec.ts",
+    "test:e2e:mobile-tab-label-floor": "playwright test tests/e2e/mobile-tab-label-floor.spec.ts",
     "test:in-app-nav-stack": "node --experimental-strip-types --test lib/in-app-nav-stack.test.ts",
     "test:post-thread-nav": "node --experimental-strip-types --test lib/post-thread-nav.test.ts",
     "test:feed-post-evict": "node --experimental-strip-types --test lib/feed-post-evict.test.ts",

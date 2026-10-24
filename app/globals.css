@@ -31,6 +31,8 @@
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
   --margo-touch-min: 44px;
+  /* Mobile primary tab labels — floor ~11px (Brand §14 readability) */
+  --margo-tab-label-size: 0.6875rem;
   --margo-scrim: rgba(7, 6, 10, 0.97);
   --margo-bar: rgba(10, 9, 13, 0.98);
   --margo-safe-bottom: env(safe-area-inset-bottom, 0px);
