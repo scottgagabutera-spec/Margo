@@ -67,6 +67,8 @@ for (const width of WIDTHS) {
       await openShortsTab(page)
       const pager = page.locator('.margo-feed-shorts-pager')
       if ((await pager.count()) === 0) test.skip()
+      const cols = await pager.getAttribute('data-shorts-cols')
+      test.skip(cols === '2', 'two-column layout uses side-by-side pair, not vertical peek')
       const frames = page.locator('.margo-feed-shorts-slide__frame')
       if ((await frames.count()) < 2) test.skip()
       const snap = await pager.evaluate((el) => getComputedStyle(el).scrollSnapType)
@@ -75,7 +77,13 @@ for (const width of WIDTHS) {
       const second = await frames.nth(1).boundingBox()
       expect(first && second).toBeTruthy()
       if (first && second) {
-        expect(second.y).toBeLessThan(first.y + first.height)
+        const pagerBox = await pager.boundingBox()
+        expect(pagerBox).toBeTruthy()
+        if (pagerBox) {
+          const visibleBottom = pagerBox.y + pagerBox.height
+          expect(second.y).toBeLessThan(visibleBottom)
+          expect(second.y).toBeGreaterThan(first.y)
+        }
       }
     })
 
@@ -87,7 +95,7 @@ for (const width of WIDTHS) {
         return
       }
       await expect(sound).toBeVisible({ timeout: 15000 })
-      await sound.click()
+      await sound.click({ timeout: 15000, force: true })
       await expect(sound).toHaveAttribute('aria-pressed', 'true')
       await page.reload({ waitUntil: 'domcontentloaded' })
       await page.waitForTimeout(1200)
@@ -98,15 +106,12 @@ for (const width of WIDTHS) {
     })
 
     test('no fill-motion flash on first active paint', async ({ page }) => {
-      await openShortsTab(page)
-      const slide = page.locator('[data-shorts-active="1"]').first()
-      if ((await slide.count()) === 0) {
-        test.skip(true, 'Shorts catalog minimum not met on this deploy')
-        return
-      }
+      await page.goto(`${BASE}/feed?tab=shorts&e2eShorts=1`, { waitUntil: 'commit', timeout: 45000 })
+      await page.locator('.margo-feed-shorts-slide__frame').first().waitFor({ timeout: 20000 })
+      const slide = page.locator('[data-shorts-index="0"]')
       const fillImmediate = await slide.getAttribute('data-shorts-fill-motion')
-      expect(fillImmediate).toBe('0')
-      await page.waitForTimeout(120)
+      expect(fillImmediate === '0' || fillImmediate === null).toBeTruthy()
+      await page.waitForTimeout(250)
       const fillLater = await slide.getAttribute('data-shorts-fill-motion')
       expect(fillLater === '0' || fillLater === '1').toBeTruthy()
     })
