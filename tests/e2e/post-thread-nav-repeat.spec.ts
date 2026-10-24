@@ -1,5 +1,11 @@
 import { test, expect } from '@playwright/test'
 
+type StackTestResult = {
+  afterOpen: string
+  afterBack: string[]
+  afterSecond: { stack: string[]; prev: string }
+}
+
 /**
  * Simulates feed → post → back → same post again using the same sessionStorage
  * stack rules as NavHistoryTracker + navigateToPostThread (push, not replace).
@@ -22,7 +28,9 @@ test.describe('post thread repeat open', () => {
           return { afterOpen, afterBack, afterSecond: { stack: stack.slice(), prev: prev() } }
         }
       </script></body></html>`, { waitUntil: 'domcontentloaded' })
-      const result = await page.evaluate(() => (window as unknown as { __stackTest: () => unknown }).__stackTest())
+      const result = (await page.evaluate(() =>
+        (window as unknown as { __stackTest: () => StackTestResult }).__stackTest(),
+      )) as StackTestResult
       expect(result.afterOpen).toBe('/feed')
       expect(result.afterBack).toEqual(['/feed'])
       expect(result.afterSecond.prev).toBe('/feed')
