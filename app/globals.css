@@ -31,6 +31,8 @@
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
   --margo-touch-min: 44px;
+  /* Mobile primary tab labels — floor ~11px (Brand §14 readability) */
+  --margo-tab-label-size: 0.6875rem;
   --margo-scrim: rgba(7, 6, 10, 0.97);
   --margo-bar: rgba(10, 9, 13, 0.98);
   --margo-safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -352,6 +354,16 @@ html[data-margo-stage-idle] .margo-stage-zone {
   .margo-landing-nav__account {
     display: inline-flex;
     align-items: center;
+  }
+  /* App MargoNav replaces the in-flow landing header at tablet/desktop. */
+  .margo-landing-nav {
+    display: none !important;
+  }
+  .margo-landing-page-shell .margo-stage-zone {
+    padding-top: calc(var(--nav-height, 72px) + 24px);
+  }
+  html[data-margo-stage-idle] .margo-landing-page-shell .margo-stage-zone {
+    padding-top: calc(var(--nav-height, 72px) + clamp(24px, 12vh, 80px));
   }
 }
 
@@ -1245,7 +1257,14 @@ html[data-margo-stage-idle] .margo-stage-zone {
 }
 @media (min-width: 640px) {
   .margo-post-card__lyric-zone {
-    max-width: 46ch;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+@supports (text-wrap: pretty) {
+  .margo-post-card__lyric-zone .margo-feed-lyric {
+    text-wrap: pretty;
   }
 }
 .margo-post-card__lyric-more {
@@ -2883,6 +2902,139 @@ html, body {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 0.8125rem;
   color: var(--text-muted);
+}
+@media (min-width: 640px) {
+  .margo-feed-shorts-pager {
+    --margo-shorts-safe-top: 10%;
+    --margo-shorts-safe-bottom: 22%;
+    --margo-shorts-safe-side: 7%;
+  }
+  .margo-feed-shorts-pager[data-shorts-cols='2'] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 20px;
+    max-width: calc(var(--margo-shorts-frame-w) * 2 + 20px + 48px);
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 24px;
+    padding-right: 24px;
+    box-sizing: border-box;
+  }
+  .margo-feed-shorts-pager {
+    padding-top: 12px;
+    box-sizing: border-box;
+  }
+  .margo-feed-shorts-slide {
+    min-height: var(--margo-shorts-slide-min-h, 100%);
+    height: auto;
+    padding: 12px 0 12px;
+    justify-content: flex-start;
+  }
+  .margo-feed-shorts-slide__frame {
+    position: relative;
+    container-type: inline-size;
+    container-name: margo-shorts-frame;
+    flex: none;
+    width: var(--margo-shorts-frame-w);
+    height: var(--margo-shorts-frame-h);
+    max-width: min(100%, var(--margo-shorts-frame-w));
+    border-radius: 18px;
+    overflow: hidden;
+  }
+  .margo-feed-shorts-slide__meta {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+    max-width: none;
+    width: auto;
+    padding: var(--margo-shorts-safe-top) var(--margo-shorts-safe-side) var(--margo-shorts-safe-bottom);
+    text-align: center;
+    box-sizing: border-box;
+    background: linear-gradient(180deg, transparent 0%, rgba(8, 7, 12, 0.88) 72%);
+    pointer-events: none;
+  }
+  .margo-feed-shorts-slide__meta a,
+  .margo-feed-shorts-slide__meta button {
+    pointer-events: auto;
+  }
+  .margo-feed-shorts-slide__tap-surface {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+  }
+  .margo-feed-shorts-slide__sound-flash {
+    position: absolute;
+    left: 50%;
+    top: 42%;
+    z-index: 4;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    opacity: 0;
+    animation: margo-shorts-sound-flash 0.65s var(--ease-out) forwards;
+  }
+  @keyframes margo-shorts-sound-flash {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+    25% { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.05); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .margo-feed-shorts-slide__sound-flash {
+      animation: none;
+      opacity: 0;
+    }
+  }
+  .margo-feed-shorts-slide__meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3.5cqw;
+    pointer-events: auto;
+  }
+  .margo-feed-shorts-slide__meta-art {
+    width: 12cqw;
+    height: 12cqw;
+    border-radius: 2cqw;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+  .margo-feed-shorts-slide__meta-text {
+    min-width: 0;
+    flex: 1;
+    text-align: left;
+  }
+  .margo-feed-shorts-slide__meta-play {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--margo-touch-min);
+    min-height: var(--margo-touch-min);
+    padding: 0 3.5cqw;
+    border-radius: 999px;
+    border: 1px solid rgba(201, 162, 39, 0.35);
+    background: rgba(8, 7, 12, 0.55);
+    color: var(--gold);
+    font-family: var(--font-geist-sans), system-ui, sans-serif;
+    font-size: 3cqw;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .margo-feed-shorts-slide__meta .margo-feed-shorts-slide__song {
+    font-size: 4.6cqw;
+    margin-bottom: 1cqw;
+  }
+  .margo-feed-shorts-slide__meta .margo-feed-shorts-slide__artist {
+    font-size: 4cqw;
+  }
 }
 .margo-feed-shorts-empty {
   position: fixed;

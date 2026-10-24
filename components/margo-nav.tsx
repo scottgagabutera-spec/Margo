@@ -7,7 +7,7 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { useArtistApplication } from '@/hooks/useArtistApplication'
 import { signOutBrowser } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
-import { HubIconButton, LibraryNavLink, SearchNavLink } from '@/components/hub-menu'
+import { HubIconButton, SearchNavLink } from '@/components/hub-menu'
 import { LoadingRing } from '@/components/loading-ring'
 import { usePrimaryTab, usePrimaryTabLinkProps } from '@/components/primary-tab-shell'
 import { hidesAppNav, isMessageThreadPath } from '@/lib/chrome-mode'
@@ -98,8 +98,11 @@ export function MargoNav() {
     mq.addEventListener('change', sync)
     return () => mq.removeEventListener('change', sync)
   }, [])
+  const isLanding = pathname === '/'
+  // Landing uses app top bar at ≥640px (Stage 3); phone keeps in-page landing nav + bottom tab bar.
   const shellHidden =
-    hidesAppNav(pathname) || (isMobile && isMessageThreadPath(pathname))
+    (hidesAppNav(pathname) && !(isLanding && !isMobile)) ||
+    (isMobile && isMessageThreadPath(pathname))
 
   const isSignedIn = !!user && !user.isAnonymous
   const applicationStatus = application?.status ?? 'none'
@@ -194,8 +197,9 @@ export function MargoNav() {
         )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', pointerEvents: 'none' }}>
-          <div style={{ pointerEvents: 'auto' }}><SearchNavLink /></div>
-          {isSignedIn ? <div style={{ pointerEvents: 'auto' }}><LibraryNavLink /></div> : null}
+          {isLanding ? null : (
+            <div style={{ pointerEvents: 'auto' }}><SearchNavLink /></div>
+          )}
 
           <div style={{ display: 'none' }} className="margo-desktop-nav">
             {[

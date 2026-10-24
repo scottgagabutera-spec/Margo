@@ -1,0 +1,185 @@
+import { test, expect } from '@playwright/test'
+
+const BASE = process.env.PLAYWRIGHT_BASE_URL ?? 'https://trymargo.com'
+const WIDTHS = [360, 390, 430, 640, 834, 1180, 1440, 1920]
+
+function shortsUrl(width: number) {
+  const fixture = BASE.includes('vercel.app') && width >= 640
+  const q = fixture ? '?tab=shorts&e2eShorts=1' : '?tab=shorts'
+  return `${BASE}/feed${q}`
+}
+
+async function openShortsTab(page: import('@playwright/test').Page, width: number) {
+  await page.goto(shortsUrl(width), { waitUntil: 'domcontentloaded', timeout: 45000 })
+  await page.waitForTimeout(1200)
+  const shortsTab = page.getByRole('button', { name: /^Shorts$/i })
+  if (await shortsTab.count()) {
+    await shortsTab.click()
+    await page.waitForTimeout(800)
+  }
+}
+
+async function requireShortsFrame(page: import('@playwright/test').Page) {
+  const frame = page.locator('.margo-feed-shorts-slide__frame').first()
+  if ((await frame.count()) === 0) {
+    test.skip(true, 'Shorts catalog minimum not met on this deploy')
+    return null
+  }
+  await expect(frame).toBeVisible({ timeout: 20000 })
+  return frame
+}
+
+for (const width of WIDTHS) {
+  test.describe(`feed shorts @${width}px`, () => {
+    test.use({ viewport: { width, height: width < 640 ? 844 : 900 } })
+
+    test('9:16 frame, no horizontal overflow', async ({ page }) => {
+      await openShortsTab(page, width)
+      if (width < 640) {
+        const canvas = page.locator('[aria-label="Shorts preview, 9:16"]').first()
+        if ((await canvas.count()) === 0) test.skip()
+        await expect(canvas).toBeVisible()
+        const meta = page.locator('.margo-feed-shorts-slide__meta').first()
+        const canvasBox = await canvas.boundingBox()
+        const metaBox = await meta.boundingBox()
+        expect(canvasBox && metaBox).toBeTruthy()
+        if (canvasBox && metaBox) {
+          expect(metaBox.y).toBeGreaterThanOrEqual(canvasBox.y + canvasBox.height - 4)
+        }
+      } else {
+        const frame = await requireShortsFrame(page)
+        if (!frame) return
+        const meta = frame.locator('.margo-feed-shorts-slide__meta')
+        await expect(meta).toBeVisible()
+        const box = await frame.boundingBox()
+        expect(box).toBeTruthy()
+        if (box && box.width > 0) {
+          const ratio = box.height / box.width
+          expect(ratio).toBeGreaterThan(1.74)
+          expect(ratio).toBeLessThan(1.79)
+        }
+      }
+      const metrics = await page.evaluate(() => ({
+        sw: document.documentElement.scrollWidth,
+        cw: document.documentElement.clientWidth,
+      }))
+      expect(metrics.sw).toBe(metrics.cw)
+    })
+
+    test('overlay typography scales with frame (cqw)', async ({ page }) => {
+      test.skip(width < 640, 'desktop-only overlay units')
+      await openShortsTab(page, width)
+      const frame = await requireShortsFrame(page)
+      if (!frame) return
+      const songSize = await frame.locator('.margo-feed-shorts-slide__song').evaluate((el) =>
+        parseFloat(getComputedStyle(el).fontSize),
+      )
+      const box = await frame.boundingBox()
+      expect(box).toBeTruthy()
+      if (box) {
+        const expected = box.width * 0.046
+        expect(Math.abs(songSize - expected)).toBeLessThan(3)
+      }
+    })
+
+    test('scroll-snap and next-short peek on desktop', async ({ page }) => {
+      test.skip(width < 640, 'peek layout is desktop-only')
+      await openShortsTab(page, width)
+      const pager = page.locator('.margo-feed-shorts-pager')
+      if ((await pager.count()) === 0) test.skip()
+      const cols = await pager.getAttribute('data-shorts-cols')
+      test.skip(cols === '2', 'two-column layout uses side-by-side pair, not vertical peek')
+      const frames = page.locator('.margo-feed-shorts-slide__frame')
+      if ((await frames.count()) < 2) test.skip()
+      const snap = await pager.evaluate((el) => getComputedStyle(el).scrollSnapType)
+      expect(snap).toContain('mandatory')
+      const first = await frames.nth(0).boundingBox()
+      const second = await frames.nth(1).boundingBox()
+      expect(first && second).toBeTruthy()
+      if (first && second) {
+        const pagerBox = await pager.boundingBox()
+        expect(pagerBox).toBeTruthy()
+        if (pagerBox) {
+          const visibleBottom = pagerBox.y + pagerBox.height
+          expect(second.y).toBeLessThan(visibleBottom)
+          expect(second.y).toBeGreaterThan(first.y)
+        }
+      }
+    })
+
+    test('desktop: one credit row and tap-surface toggles unmute', async ({ page }) => {
+      test.skip(width < 640, 'desktop-only')
+      await openShortsTab(page, width)
+      await expect(page.locator('.margo-feed-shorts-slide__sound')).toHaveCount(0)
+      const frame = page.locator('[data-shorts-active="1"] .margo-feed-shorts-slide__frame')
+      await expect(frame).toBeVisible({ timeout: 15000 })
+      await expect(frame.locator('.margo-feed-shorts-slide__meta-row')).toHaveCount(1)
+      const tap = frame.locator('.margo-feed-shorts-slide__tap-surface')
+      await expect(tap).toBeVisible()
+      await tap.click()
+      await expect(tap).toHaveAttribute('aria-pressed', 'true')
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await page.waitForTimeout(1200)
+      await openShortsTab(page, width)
+      const tapAfter = page.locator('[data-shorts-active="1"] .margo-feed-shorts-slide__tap-surface')
+      await expect(tapAfter).toHaveAttribute('aria-pressed', 'true')
+    })
+
+    test('inactive slides keep fill-motion off (no off-screen flash)', async ({ page }) => {
+      test.skip(width < 640, 'fill-motion deferral is desktop-only')
+      await openShortsTab(page, width)
+      const inactive = page.locator('[data-shorts-active="0"]')
+      if ((await inactive.count()) === 0) test.skip()
+      await expect(inactive.first()).toHaveAttribute('data-shorts-fill-motion', '0')
+    })
+  })
+}
+
+test('two-column layout when viewport fits pair @1920', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 })
+  await openShortsTab(page, 1920)
+  const pager = page.locator('.margo-feed-shorts-pager')
+  if ((await pager.count()) === 0) test.skip()
+  const cols = await pager.getAttribute('data-shorts-cols')
+  expect(cols).toBe('2')
+})
+
+test('phone canvas matches main at 360x640', async ({ page }) => {
+  test.setTimeout(90_000)
+  await page.setViewportSize({ width: 360, height: 640 })
+  await page.goto('https://trymargo.com/feed?tab=shorts', { waitUntil: 'domcontentloaded', timeout: 60000 })
+  const canvasLoc = page.locator('[aria-label="Shorts preview, 9:16"]').first()
+  await canvasLoc.waitFor({ state: 'visible', timeout: 45000 })
+  const mainCanvas = await canvasLoc.boundingBox()
+  if (!mainCanvas) test.skip()
+  await page.goto(shortsUrl(360), { waitUntil: 'domcontentloaded', timeout: 60000 })
+  await canvasLoc.waitFor({ state: 'visible', timeout: 45000 })
+  const prevCanvas = await canvasLoc.boundingBox()
+  if (!prevCanvas || !mainCanvas) test.skip()
+  const pw = prevCanvas!.width
+  const mw = mainCanvas!.width
+  const ph = prevCanvas!.height
+  const mh = mainCanvas!.height
+  expect(Math.abs(pw - mw)).toBeLessThan(2)
+  expect(Math.abs(ph - mh)).toBeLessThan(4)
+})
+
+test('phone canvas matches main at 390x844', async ({ page }) => {
+  test.setTimeout(90_000)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('https://trymargo.com/feed?tab=shorts', { waitUntil: 'domcontentloaded', timeout: 60000 })
+  const canvasLoc = page.locator('[aria-label="Shorts preview, 9:16"]').first()
+  await canvasLoc.waitFor({ state: 'visible', timeout: 45000 })
+  const mainCanvas = await canvasLoc.boundingBox()
+  if (!mainCanvas) test.skip()
+  await page.goto(shortsUrl(390), { waitUntil: 'domcontentloaded', timeout: 60000 })
+  await canvasLoc.waitFor({ state: 'visible', timeout: 45000 })
+  const prevCanvas = await canvasLoc.boundingBox()
+  if (!prevCanvas || !mainCanvas) test.skip()
+  const pw = prevCanvas!.width
+  const mw = mainCanvas!.width
+  const ph = prevCanvas!.height
+  const mh = mainCanvas!.height
+  expect(Math.abs(pw - mw)).toBeLessThan(2)
+  expect(Math.abs(ph - mh)).toBeLessThan(4)
+})

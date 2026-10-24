@@ -93,8 +93,14 @@ export function MobileTabBar() {
   })
 
   const labelStyle: CSSProperties = {
-    fontFamily: font, fontSize: '0.6rem', fontWeight: 600,
-    letterSpacing: '0.5px', textTransform: 'uppercase',
+    fontFamily: font,
+    fontSize: 'var(--margo-tab-label-size)',
+    fontWeight: 600,
+    letterSpacing: '0.35px',
+    textTransform: 'uppercase',
+    whiteSpace: 'nowrap',
+    lineHeight: 1.1,
+    maxWidth: '100%',
   }
 
   if (shellHidden || stageHidden) return null
