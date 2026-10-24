@@ -83,7 +83,7 @@
 }
 @media (min-width: 640px) {
   :root {
-    --margo-feed-max-width: 880px;
+    --margo-feed-max-width: 680px;
     --stage-search-h: 52px;
   }
 }
@@ -1254,6 +1254,18 @@ html[data-margo-stage-idle] .margo-stage-zone {
   text-align: left;
   padding: 0;
   max-width: 36ch;
+}
+@media (min-width: 640px) {
+  .margo-post-card__lyric-zone {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+@supports (text-wrap: pretty) {
+  .margo-post-card__lyric-zone .margo-feed-lyric {
+    text-wrap: pretty;
+  }
 }
 .margo-post-card__lyric-more {
   color: var(--text-muted);

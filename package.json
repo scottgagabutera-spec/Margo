@@ -50,6 +50,7 @@
     "test:e2e:feed-new-moments-pill": "playwright test tests/e2e/feed-new-moments-pill-z.spec.ts",
     "test:e2e:lb-panel-lyric-nav": "playwright test tests/e2e/lb-panel-lyric-nav.spec.ts",
     "test:e2e:feed-thread-nav-live": "playwright test tests/e2e/feed-thread-nav-live.spec.ts --project=chromium",
+    "test:e2e:feed-lyric-card-wide": "playwright test tests/e2e/feed-lyric-card-wide.spec.ts",
     "test:e2e:feed-shorts-v2": "playwright test tests/e2e/feed-shorts-v2.spec.ts",
     "test:e2e:landing-app-nav": "playwright test tests/e2e/landing-app-nav.spec.ts",
     "test:e2e:feed-horizontal-drift": "playwright test tests/e2e/feed-horizontal-drift.spec.ts",
