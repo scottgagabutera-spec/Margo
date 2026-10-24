@@ -197,14 +197,9 @@ export function MargoNav() {
         )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', pointerEvents: 'none' }}>
-<<<<<<< HEAD
-          <div style={{ pointerEvents: 'auto' }}><SearchNavLink /></div>
-=======
           {isLanding ? null : (
             <div style={{ pointerEvents: 'auto' }}><SearchNavLink /></div>
           )}
-          {isSignedIn ? <div style={{ pointerEvents: 'auto' }}><LibraryNavLink /></div> : null}
->>>>>>> origin/main
 
           <div style={{ display: 'none' }} className="margo-desktop-nav">
             {[
