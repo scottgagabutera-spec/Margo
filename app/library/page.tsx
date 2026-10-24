@@ -15,6 +15,7 @@ import {
 } from '@/lib/library/playlists'
 import { SignInLink } from '@/components/signin-link'
 import { LYRIC_FONT, UI_FONT } from '@/lib/fonts'
+import { signedOutGateBenefitStyle, signedOutGateSignInStyle } from '@/lib/signed-out-gate-styles'
 
 function PlayAllButton({
   disabled,
@@ -181,40 +182,15 @@ export default function LibraryPage() {
         }}>
           Library
         </h1>
-        <p style={{
-          fontFamily: UI_FONT,
-          fontSize: '0.85rem',
-          color: 'var(--text-secondary)',
-          margin: '0 0 28px',
-          lineHeight: 1.5,
-        }}>
-          Your saves
-        </p>
-
         {identityLoading ? (
           <p style={{ fontFamily: UI_FONT, color: 'var(--text-muted)' }}>Loading…</p>
         ) : !isSignedIn ? (
           <div style={{ textAlign: 'center', padding: '32px 0' }}>
-            <p style={{
-              fontFamily: LYRIC_FONT,
-              fontStyle: 'italic',
-              color: 'var(--text-secondary)',
-              marginBottom: '16px',
-            }}>
-              Sign in to open your library
+            <p style={signedOutGateBenefitStyle}>
+              Save lines and songs to find them again.
             </p>
-            <SignInLink style={{
-              padding: '10px 24px',
-              border: '1px solid var(--border)',
-              borderRadius: '50px',
-              color: 'var(--text-secondary)',
-              fontFamily: UI_FONT,
-              fontSize: '0.6rem',
-              letterSpacing: '1px',
-              textTransform: 'uppercase',
-              textDecoration: 'none',
-            }}>
-              Sign In
+            <SignInLink style={signedOutGateSignInStyle} returnTo="/library">
+              Sign in
             </SignInLink>
           </div>
         ) : loading ? (

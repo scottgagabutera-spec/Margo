@@ -6,6 +6,7 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { useConversations } from '@/hooks/useConversations'
 import { RelativeTime } from '@/components/relative-time'
 import { formatMessagePreview } from '@/lib/moment/message-format'
+import { signedOutGateBenefitStyle, signedOutGateSignInStyle } from '@/lib/signed-out-gate-styles'
 
 const font = 'var(--font-lora), serif'
 
@@ -26,14 +27,12 @@ export default function MessagesPage() {
 
         {!isSignedIn ? (
           <div style={{ textAlign: 'center', padding: '48px 0' }}>
-            <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-              Sign in to see your messages
+            <p style={signedOutGateBenefitStyle}>
+              Message people who resonate with your lines.
             </p>
-            <SignInLink style={{
-              padding: '10px 24px', border: '1px solid var(--border)', borderRadius: '50px',
-              color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.6rem',
-              letterSpacing: '1px', textTransform: 'uppercase', textDecoration: 'none',
-            }}>Sign In</SignInLink>
+            <SignInLink style={signedOutGateSignInStyle} returnTo="/messages">
+              Sign in
+            </SignInLink>
           </div>
         ) : (
           <>
