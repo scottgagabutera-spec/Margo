@@ -81,8 +81,11 @@
 }
 @media (min-width: 640px) {
   :root {
-    --margo-feed-max-width: 880px;
+    --margo-feed-max-width: 680px;
     --stage-search-h: 52px;
+  }
+  .margo-post-card__lyric-zone {
+    max-width: 46ch;
   }
 }
 @import 'tailwindcss';
