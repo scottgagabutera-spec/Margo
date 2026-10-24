@@ -15,7 +15,7 @@ test.describe('signed-out gate @390', () => {
     test(`gold CTA on ${path}`, async ({ page }) => {
       await page.goto(`${BASE}${path}`, { waitUntil: 'domcontentloaded', timeout: 45000 })
       await expect(page.getByText(benefit, { exact: false })).toBeVisible()
-      const btn = page.getByRole('link', { name: /^Sign in$/i })
+      const btn = page.locator('main').getByRole('link', { name: /^Sign in$/i })
       await expect(btn).toBeVisible()
       const bg = await btn.evaluate((el) => getComputedStyle(el).backgroundColor)
       expect(bg).not.toBe('rgba(0, 0, 0, 0)')
