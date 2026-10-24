@@ -67,7 +67,7 @@ export function StageLandingPage() {
   const profileHref = identity ? `/profile/${identity.username}` : '/feed'
 
   return (
-    <div style={{ position: 'relative', width: '100%', overflow: 'hidden', background: 'var(--bg)' }}>
+    <div className="margo-landing-page-shell" style={{ position: 'relative', width: '100%', overflow: 'hidden', background: 'var(--bg)' }}>
       <nav
         className="margo-landing-nav"
         style={{

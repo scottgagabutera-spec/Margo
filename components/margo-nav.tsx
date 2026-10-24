@@ -98,8 +98,11 @@ export function MargoNav() {
     mq.addEventListener('change', sync)
     return () => mq.removeEventListener('change', sync)
   }, [])
+  const isLanding = pathname === '/'
+  // Landing uses app top bar at ≥640px (Stage 3); phone keeps in-page landing nav + bottom tab bar.
   const shellHidden =
-    hidesAppNav(pathname) || (isMobile && isMessageThreadPath(pathname))
+    (hidesAppNav(pathname) && !(isLanding && !isMobile)) ||
+    (isMobile && isMessageThreadPath(pathname))
 
   const isSignedIn = !!user && !user.isAnonymous
   const applicationStatus = application?.status ?? 'none'
@@ -194,7 +197,9 @@ export function MargoNav() {
         )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', pointerEvents: 'none' }}>
-          <div style={{ pointerEvents: 'auto' }}><SearchNavLink /></div>
+          {isLanding ? null : (
+            <div style={{ pointerEvents: 'auto' }}><SearchNavLink /></div>
+          )}
           {isSignedIn ? <div style={{ pointerEvents: 'auto' }}><LibraryNavLink /></div> : null}
 
           <div style={{ display: 'none' }} className="margo-desktop-nav">
@@ -244,7 +249,7 @@ export function MargoNav() {
               WebkitTapHighlightColor: 'transparent',
             }}>
               {isTabPending('compose') ? <LoadingRing size={14} strokeWidth={1.5} state="spinning" color="var(--bg)" /> : null}
-              Send a line
+              Post
             </Link>
 
             <div style={{ marginLeft: '4px' }}>
@@ -386,6 +391,9 @@ export function MargoNav() {
             display: flex !important;
             align-items: center;
             gap: 4px;
+            /* Parent row is pointer-events:none so lyrics can receive taps under nav gaps;
+               re-enable hits for Feed/Discover/Post/Hub/avatar in this cluster. */
+            pointer-events: auto;
           }
         }
       `}</style>

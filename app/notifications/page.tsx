@@ -4,6 +4,7 @@ import { SignInLink } from '@/components/signin-link'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useNotifications } from '@/hooks/useNotifications'
 import { NotificationList } from '@/components/notification-list'
+import { signedOutGateBenefitStyle, signedOutGateSignInStyle } from '@/lib/signed-out-gate-styles'
 
 const font = 'var(--font-lora), serif'
 
@@ -34,14 +35,12 @@ export default function NotificationsPage() {
 
         {!isSignedIn ? (
           <div style={{ textAlign: 'center', padding: '48px 0' }}>
-            <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-              Sign in to see your notifications
+            <p style={signedOutGateBenefitStyle}>
+              Get alerts when someone resonates or lyric-backs you.
             </p>
-            <SignInLink style={{
-              padding: '10px 24px', border: '1px solid var(--border)', borderRadius: '50px',
-              color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.6rem',
-              letterSpacing: '1px', textTransform: 'uppercase', textDecoration: 'none',
-            }}>Sign In</SignInLink>
+            <SignInLink style={signedOutGateSignInStyle} returnTo="/notifications">
+              Sign in
+            </SignInLink>
           </div>
         ) : (
           <NotificationList notifications={notifications} loading={loading} />
