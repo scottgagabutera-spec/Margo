@@ -7,7 +7,7 @@ import { CONSENT_REQUIRED_MESSAGE } from '@/lib/legal/consent-copy'
 import { BackButton } from '@/components/back-button'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useIdentity } from '@/hooks/useIdentity'
-import { resolvePostAuthNavigation } from '@/lib/auth-welcome-redirect'
+import { completeAuthAfterProfileReady } from '@/lib/auth-welcome-redirect'
 import { AUTH_RETURN_QUERY, sanitizeAuthReturnPath } from '@/lib/auth-return'
 import { completeAuthNavigation } from '@/lib/auth-complete-navigation'
 import { AuthViewportKeyboardInset } from '@/components/auth-viewport'
@@ -59,8 +59,9 @@ function SigninPageInner() {
 
   const finishAuth = useCallback(async () => {
     const row = await waitUntilReady()
-    completeAuthNavigation(resolvePostAuthNavigation(row, returnTo))
-  }, [returnTo, waitUntilReady])
+    const dest = await completeAuthAfterProfileReady(user?.id, row, returnTo)
+    completeAuthNavigation(dest)
+  }, [returnTo, waitUntilReady, user?.id])
 
   useEffect(() => {
     if (loading) return
