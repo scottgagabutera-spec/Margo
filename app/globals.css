@@ -703,7 +703,7 @@ html[data-margo-stage-idle] .margo-stage-zone {
 }
 .margo-post-card--portrait-feed {
   overflow: visible;
-  padding-top: 12px;
+  padding-top: 8px;
 }
 .margo-feed-post-list > .margo-post-card--portrait-feed:first-child {
   margin-top: 10px;
@@ -793,7 +793,7 @@ html[data-margo-stage-idle] .margo-stage-zone {
   column-gap: 8px;
   row-gap: 0;
   align-items: start;
-  margin-top: -8px;
+  margin-top: -6px;
   min-height: 0;
   padding-left: calc(12px + 52px + 8px - var(--margo-post-card-pad));
   margin-bottom: var(--margo-post-card-gap);

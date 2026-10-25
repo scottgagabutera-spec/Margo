@@ -55,7 +55,7 @@ for (const width of [360, 390, 834]) {
         third.style.margin = '0'
         third.style.padding = '0'
         third.style.fontSize = '16px'
-        third.style.lineHeight = '1.2'
+        third.style.lineHeight = '1'
         third.style.color = 'var(--text-muted)'
         identity?.appendChild(third)
 
