@@ -1,23 +1,15 @@
-import { createBrowserClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 
-/** One-off client for password-recovery links in the URL hash (not used for normal app auth). */
+/** Isolated browser client for password recovery (verifyOtp + updateUser). Not the SSR singleton. */
 export function createRecoveryClient() {
-  return createBrowserClient(
+  return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      cookies: {
-        getAll() {
-          return []
-        },
-        setAll() {
-          // recovery session is in-memory only for this page
-        },
-      },
       auth: {
         persistSession: false,
         autoRefreshToken: false,
-        detectSessionInUrl: true,
+        detectSessionInUrl: false,
       },
     },
   )

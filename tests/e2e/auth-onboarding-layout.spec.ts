@@ -35,10 +35,32 @@ for (const width of [360, 390, 834, 1440]) {
       expect(contained.scrollLeft).toBe(0)
     })
 
-    test('reset-password screen containment', async ({ page }) => {
+    test('reset-password code state containment', async ({ page }) => {
       await page.goto(`${BASE}/reset-password`, { waitUntil: 'domcontentloaded', timeout: 45000 })
       const main = '[data-margo-auth-screen="reset-password"]'
       await expect(page.locator(main)).toBeVisible({ timeout: 15000 })
+      await expect(page.locator('[data-margo-reset-state="code"]')).toBeVisible({ timeout: 15000 })
+      const contained = await assertAuthScreenContained(page, main)
+      expect(contained.ok, JSON.stringify(contained)).toBeTruthy()
+    })
+
+    test('reset-password continue state containment', async ({ page }) => {
+      await page.goto(`${BASE}/reset-password?token_hash=fakehash&type=recovery`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+      const main = '[data-margo-auth-screen="reset-password"]'
+      await expect(page.locator('[data-margo-reset-state="continue"]')).toBeVisible({ timeout: 15000 })
+      const btn = page.locator('[data-margo-reset-continue]')
+      await expect(btn).toBeVisible()
+      const box = await btn.boundingBox()
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(44)
+      const contained = await assertAuthScreenContained(page, main)
+      expect(contained.ok, JSON.stringify(contained)).toBeTruthy()
+    })
+
+    test('reset-password url error state containment', async ({ page }) => {
+      await page.goto(`${BASE}/reset-password?error=access_denied&error_code=otp_expired`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+      await expect(page.locator('[data-margo-reset-state="url_error"]')).toBeVisible({ timeout: 15000 })
+      await expect(page.getByRole('alert')).toContainText('expired')
+      const main = '[data-margo-auth-screen="reset-password"]'
       const contained = await assertAuthScreenContained(page, main)
       expect(contained.ok, JSON.stringify(contained)).toBeTruthy()
     })
@@ -114,6 +136,26 @@ test('sign-in failure shows neutral line and resend without code leak @360', asy
 })
 
 for (const [w, h] of [[360, 640], [390, 844]] as const) {
+  test(`reset code form stays in viewport with keyboard inset @${w}x${h}`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h })
+    await page.goto(`${BASE}/reset-password`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+    await expect(page.locator('[data-margo-reset-state="code"]')).toBeVisible({ timeout: 15000 })
+    await page.evaluate(() => {
+      document.documentElement.style.setProperty('--auth-keyboard-inset', '280px')
+    })
+    const verify = page.locator('[data-margo-reset-verify-code]')
+    await expect(verify).toBeVisible()
+    const ok = await page.evaluate(() => {
+      const btn = document.querySelector('[data-margo-reset-verify-code]') as HTMLElement | null
+      if (!btn) return { ok: false, reason: 'no verify' }
+      btn.scrollIntoView({ block: 'end', behavior: 'instant' })
+      const r = btn.getBoundingClientRect()
+      const vh = window.innerHeight
+      return { ok: r.top >= 0 && r.bottom <= vh + 1, top: r.top, bottom: r.bottom, vh }
+    })
+    expect(ok.ok, JSON.stringify(ok)).toBeTruthy()
+  })
+
   test(`auth email form stays in viewport with keyboard inset @${w}x${h}`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: h })
     await page.goto(`${BASE}/signin?mode=signin`, { waitUntil: 'domcontentloaded', timeout: 45000 })
