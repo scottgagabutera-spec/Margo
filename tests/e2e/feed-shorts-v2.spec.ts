@@ -128,6 +128,57 @@ const CARD_CONTAINMENT_VIEWPORTS = [
   { w: 834, h: 900 },
 ] as const
 
+async function assertPhoneCreditRowBottomLayout(page: import('@playwright/test').Page) {
+  const metrics = await page.evaluate(() => {
+    const frame = document.querySelector(
+      '.margo-feed-shorts-slide__frame:has(.margo-feed-shorts-slide__meta-row)',
+    )
+    const meta = frame?.querySelector('.margo-feed-shorts-slide__meta-row')
+    const lyric = frame?.querySelector('.margo-shorts-canvas p')
+    const mute = frame?.querySelector('.margo-feed-shorts-slide__mute')
+    const logo = frame?.querySelector('.margo-shorts-canvas [aria-hidden]')
+    if (!frame || !meta || !lyric || !mute) return { ok: false, reason: 'missing nodes' }
+    const fr = frame.getBoundingClientRect()
+    const mr = meta.getBoundingClientRect()
+    const lr = lyric.getBoundingClientRect()
+    const muteR = mute.getBoundingClientRect()
+    const logoR = logo?.getBoundingClientRect()
+    const overlaps = (a: DOMRect, b: DOMRect) =>
+      !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom)
+    return {
+      ok: true,
+      metaBelowLyric: mr.top >= lr.bottom - 2,
+      metaInBottom30: mr.top >= fr.top + fr.height * 0.7,
+      muteClear: !logoR || !overlaps(mr, muteR),
+      logoClear: !logoR || !overlaps(mr, logoR),
+      relTop: (mr.top - fr.top) / fr.height,
+    }
+  })
+  expect(metrics.ok).toBe(true)
+  if (metrics.ok) {
+    expect(metrics.metaBelowLyric).toBe(true)
+    expect(metrics.metaInBottom30).toBe(true)
+    expect(metrics.muteClear).toBe(true)
+    expect(metrics.logoClear).toBe(true)
+  }
+}
+
+const PHONE_CREDIT_VIEWPORTS = [
+  { w: 360, h: 640 },
+  { w: 390, h: 844 },
+  { w: 430, h: 932 },
+] as const
+
+for (const { w, h } of PHONE_CREDIT_VIEWPORTS) {
+  test(`phone credit row sits in bottom band below lyric @${w}x${h}`, async ({ page }) => {
+    test.skip(!BASE.includes('vercel.app'), 'fixture clips with cover art required')
+    await page.setViewportSize({ width: w, height: h })
+    await openShortsTab(page, w)
+    await page.waitForTimeout(800)
+    await assertPhoneCreditRowBottomLayout(page)
+  })
+}
+
 for (const { w, h } of CARD_CONTAINMENT_VIEWPORTS) {
   test(`real-style Short: all frame descendants inside card @${w}x${h}`, async ({ page }) => {
     test.skip(!BASE.includes('vercel.app'), 'fixture clips with cover art required')
@@ -615,9 +666,42 @@ test('Shorts frame survives 390→1440 resize and 1440 direct load', async ({ pa
   expect(h2).toBeGreaterThan(240)
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto(shortsUrl(1440), { waitUntil: 'domcontentloaded', timeout: 45000 })
-  await page.waitForTimeout(1200)
+  await page.waitForTimeout(2000)
+  await waitShortsSettledChrome(page)
   await expect(page.locator('.margo-shorts-canvas').first()).toBeVisible()
   const h3 = await page.locator('.margo-feed-shorts-slide__frame').first().evaluate((el) => el.getBoundingClientRect().height)
   expect(h3).toBeGreaterThan(240)
+  const canvasH = await page.locator('.margo-shorts-canvas').first().evaluate((el) => el.getBoundingClientRect().height)
+  expect(canvasH).toBeGreaterThan(240)
+})
+
+test('Shorts desktop width renders without tab switch (390↔1440)', async ({ page }) => {
+  test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto(shortsUrl(1440), { waitUntil: 'domcontentloaded', timeout: 45000 })
+  await page.waitForTimeout(2000)
+  await waitShortsSettledChrome(page)
+  const direct = await page.evaluate(() => {
+    const frame = document.querySelector('.margo-feed-shorts-slide__frame')
+    const canvas = document.querySelector('.margo-shorts-canvas')
+    return {
+      frameH: frame?.getBoundingClientRect().height ?? 0,
+      canvasH: canvas?.getBoundingClientRect().height ?? 0,
+      loading: document.body.innerText.includes('Loading clips'),
+    }
+  })
+  expect(direct.loading).toBe(false)
+  expect(direct.frameH).toBeGreaterThan(240)
+  expect(direct.canvasH).toBeGreaterThan(240)
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.waitForTimeout(700)
+  const phone = await page.locator('.margo-shorts-canvas').first().evaluate((el) => el.getBoundingClientRect().height)
+  expect(phone).toBeGreaterThan(240)
+
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.waitForTimeout(700)
+  const backDesktop = await page.locator('.margo-feed-shorts-slide__frame').first().evaluate((el) => el.getBoundingClientRect().height)
+  expect(backDesktop).toBeGreaterThan(240)
 })
 
