@@ -4,11 +4,12 @@ import type { CSSProperties, ReactNode } from 'react'
 import { MargoPortraitBrandMark } from '@/components/margo-portrait-brand-mark'
 import { UI_FONT } from '@/lib/fonts'
 
-export type MargoPortraitAvatarSize = 'feed' | 'sm'
+export type MargoPortraitAvatarSize = 'feed' | 'sm' | 'profile'
 
 const SIZE_PX: Record<MargoPortraitAvatarSize, { w: number; h: number; r: number }> = {
   feed: { w: 52, h: 66, r: 10 },
   sm: { w: 40, h: 50, r: 8 },
+  profile: { w: 96, h: 120, r: 18 },
 }
 
 export interface MargoPortraitAvatarProps {
@@ -72,7 +73,7 @@ export function MargoPortraitAvatar({
         style={{
           fontFamily: UI_FONT,
           fontWeight: 700,
-          fontSize: size === 'feed' ? '1.125rem' : '0.875rem',
+          fontSize: size === 'profile' ? '1.5rem' : size === 'feed' ? '1.125rem' : '0.875rem',
           color: tierGoldTile ? 'var(--bg)' : 'var(--gold)',
         }}
       >

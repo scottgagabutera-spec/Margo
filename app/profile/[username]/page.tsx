@@ -10,7 +10,6 @@ import { usePosts } from '@/hooks/usePosts'
 import { useOwnPrivatePosts } from '@/hooks/useOwnPrivatePosts'
 import { useProfileReplays } from '@/hooks/useProfileReplays'
 import { useAuthorLyricBacks } from '@/hooks/useAuthorLyricBacks'
-import { ArtistBadge } from '@/components/artist-badge'
 import { SongCatalogCard, type SongCardData } from '@/components/song-catalog-card'
 import { SongPreviewSheet, type SongPreviewSeed } from '@/components/song-preview-sheet'
 import { PostCard } from '@/components/post-card'
@@ -35,6 +34,7 @@ import { MargoLongPressHint } from '@/components/margo-long-press-hint'
 import { resolveSignatureMomentSnippet } from '@/lib/signature-snippet'
 import { useIsBuffering, useIsPlaying } from '@/hooks/useAudioEngine'
 import { useLongPress } from '@/hooks/useLongPress'
+import { ProfilePortraitIdentity, ProfilePortraitActions } from '@/components/profile-portrait-identity'
 
 const supabase = createClient()
 
@@ -623,11 +623,10 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
         <div>
           <div style={{ marginTop: 'var(--nav-height, 72px)', position: 'relative' }}>
           {hasCover ? (
-            <div style={{
+            <div className="margo-profile-cover" style={{
               position: 'relative',
               width: '100%',
               height: '148px',
-              zIndex: 0,
               background: 'var(--surface-2)',
               overflow: 'hidden',
             }}>
@@ -676,81 +675,18 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
             </Link>
           ) : null}
 
-          <div style={{
-            maxWidth: '640px',
-            margin: '0 auto',
-            padding: '0 24px var(--margo-page-padding-bottom)',
-            position: 'relative',
-            zIndex: 2,
-            marginTop: hasCover ? '-48px' : (isOwnProfile ? '16px' : '20px'),
-          }}>
-            <div style={{ marginBottom: '20px', width: 'fit-content', position: 'relative', zIndex: 2 }}>
-              {profile.avatarUrl ? (
-                <button
-                  type="button"
-                  onClick={() => setAvatarLightboxOpen(true)}
-                  aria-label={`View ${profile.displayName}'s photo`}
-                  style={{
-                    width: '88px', height: '88px', borderRadius: '50%', padding: 0,
-                    background: 'none', border: '4px solid var(--bg)', boxSizing: 'border-box',
-                    overflow: 'hidden', cursor: 'pointer', display: 'block',
-                    WebkitTapHighlightColor: 'transparent',
-                    boxShadow: '0 0 0 1px var(--border)',
-                  }}
-                >
-                  <img src={profile.avatarUrl} alt={profile.displayName} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                </button>
-              ) : (
-                <div style={{
-                  width: '88px', height: '88px', borderRadius: '50%',
-                  background: 'linear-gradient(135deg, var(--gold), var(--gold-2))',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
-                  border: '4px solid var(--bg)', boxSizing: 'border-box',
-                }}>
-                  <span style={{ fontFamily: font, fontSize: TYPE.displayName, fontWeight: 600, color: 'var(--bg)' }}>
-                    {(profile.displayName || '??').slice(0, 2).toUpperCase()}
-                  </span>
-                </div>
-              )}
-            </div>
+          <div className={hasCover ? 'margo-profile-sheet margo-profile-sheet--on-cover' : 'margo-profile-sheet margo-profile-sheet--no-cover'}>
+            <ProfilePortraitIdentity
+              displayName={profile.displayName || profile.username}
+              username={profile.username}
+              avatarUrl={profile.avatarUrl}
+              isPrivate={profile.isPrivate}
+              isArtist={profile.isArtist}
+              artistStatus={profile.artistStatus}
+              onAvatarClick={() => setAvatarLightboxOpen(true)}
+            />
 
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              gap: '12px',
-              marginBottom: '12px',
-            }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px', minWidth: 0 }}>
-                  <h1 style={{
-                    fontFamily: font,
-                    fontSize: TYPE.song,
-                    fontWeight: 600,
-                    color: 'var(--text)',
-                    margin: 0,
-                    minWidth: 0,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {profile.displayName}
-                  </h1>
-                  {profile.isPrivate && (
-                    <span style={{
-                      fontFamily: font, fontSize: TYPE.label, fontWeight: 700,
-                      letterSpacing: '0.16em', textTransform: 'uppercase', padding: '2px 7px',
-                      borderRadius: '50px', background: 'var(--surface-2)',
-                      border: '1px solid var(--border)', color: 'var(--text-muted)',
-                      flexShrink: 0,
-                    }}>Private</span>
-                  )}
-                </div>
-                <p style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.2 }}>
-                  @{profile.username}
-                </p>
-              </div>
-
+            <ProfilePortraitActions>
               {isOwnProfile && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, flexWrap: 'nowrap' }}>
                   <Link
@@ -902,11 +838,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 </div>
                 )
               )}
-            </div>
-
-            <div style={{ marginBottom: '16px' }}>
-              <ArtistBadge isArtist={profile.isArtist} artistStatus={profile.artistStatus} size={13} label />
-            </div>
+            </ProfilePortraitActions>
 
             {/* Stats row — Songs added as a third, clickable stat matching
                 the same visual weight as followers/following, instead of
