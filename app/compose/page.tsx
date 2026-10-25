@@ -27,6 +27,7 @@ import { resolveMargoMomentFromComposeDrafts, emotionToVibeLabel, vibeLabelToEmo
 import { persistMomentPost } from '@/lib/moment/persist'
 import { trackEvent } from '@/lib/analytics/track'
 import { ComposeLyricCard, composeLyricTextStyle } from '@/components/compose-lyric-card'
+import { CatalogPickLyricField } from '@/components/catalog-pick-lyric-field'
 import { UI_FONT } from '@/lib/fonts'
 import { MARGO_EXPRESSION_TAGLINE } from '@/lib/margo-expression'
 import type { AtmosphereId } from '@/lib/atmosphere'
@@ -919,10 +920,21 @@ function ComposeInner() {
     resetComposeViewport()
   }, [committedLines.length, clearDraftFields, clearCurrentSongPick, resetComposeViewport])
 
-  const handleLinePickerBack = useCallback(() => {
-    setPhase('find')
+  const openCatalogLinePicker = useCallback(() => {
+    setLinePickComplete(false)
+    setPhase('select')
     resetComposeViewport()
   }, [resetComposeViewport])
+
+  const handleLinePickerBack = useCallback(() => {
+    if (lyric.trim()) {
+      setLinePickComplete(true)
+      resetComposeViewport()
+      return
+    }
+    setPhase('find')
+    resetComposeViewport()
+  }, [lyric, resetComposeViewport])
 
   const handleAddAnotherLine = useCallback(() => {
     if (!lyric.trim() || !songName.trim() || !artistName.trim()) return
@@ -1264,6 +1276,7 @@ function ComposeInner() {
   const isMargoCatalogFlow = !!(linkedSongId && (selectedSong?.source === 'margo' || selectedSong?.margoSongId))
   const showLinePicker = phase === 'select' && isMargoCatalogFlow && !linePickComplete
   const showYourLinePanel = phase === 'select' && !showLinePicker
+  const catalogLinePickOnly = isMargoCatalogFlow
 
   return (
     <main ref={composeRootRef} style={{ minHeight: '100dvh', background: 'var(--bg)', position: 'relative' }}>
@@ -1597,12 +1610,16 @@ function ComposeInner() {
                 setPhase('moment')
                 void fetchEmotionSuggestion(capped, vibeUserPicked)
               }}
-              onSkip={() => {
-                setSnippetStart(null)
-                setSnippetEnd(null)
-                setLinePickComplete(true)
-                setSelectMode('write')
-              }}
+              onSkip={
+                isMargoCatalogFlow
+                  ? undefined
+                  : () => {
+                      setSnippetStart(null)
+                      setSnippetEnd(null)
+                      setLinePickComplete(true)
+                      setSelectMode('write')
+                    }
+              }
               onBack={handleLinePickerBack}
             />
           </div>
@@ -1768,23 +1785,53 @@ function ComposeInner() {
               }}>
                 <div style={{ flex: '0 0 58%', minWidth: 0 }}>
                   <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--text-on-gold-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Song</label>
-                  <input type="text" value={songName} onChange={(e) => setSongName(e.target.value)}
-                    style={{
-                      width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(7,6,10,0.18)',
-                      padding: '4px 0 6px', fontFamily: UI_FONT, fontWeight: 600, color: 'var(--text-on-gold)', outline: 'none', boxSizing: 'border-box',
-                      fontSize: '0.9rem',
-                      overflow: 'hidden', textOverflow: 'ellipsis',
-                    }} />
+                  {catalogLinePickOnly ? (
+                    <button
+                      type="button"
+                      onClick={openCatalogLinePicker}
+                      aria-label={`${songName}. Tap to choose another line.`}
+                      style={{
+                        width: '100%', minHeight: 'var(--margo-touch-min)', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(7,6,10,0.18)',
+                        padding: '4px 0 6px', fontFamily: UI_FONT, fontWeight: 600, color: 'var(--text-on-gold)', textAlign: 'left', cursor: 'pointer',
+                        fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', WebkitTapHighlightColor: 'transparent',
+                      }}
+                    >
+                      {songName}
+                    </button>
+                  ) : (
+                    <input type="text" value={songName} onChange={(e) => setSongName(e.target.value)}
+                      style={{
+                        width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(7,6,10,0.18)',
+                        padding: '4px 0 6px', fontFamily: UI_FONT, fontWeight: 600, color: 'var(--text-on-gold)', outline: 'none', boxSizing: 'border-box',
+                        fontSize: '0.9rem',
+                        overflow: 'hidden', textOverflow: 'ellipsis',
+                      }} />
+                  )}
                 </div>
                 <div style={{ flex: '1 1 38%', minWidth: 0 }}>
                   <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--text-on-gold-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Artist</label>
-                  <input type="text" value={artistName} onChange={(e) => setArtistName(e.target.value)}
-                    style={{
-                      width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(7,6,10,0.18)',
-                      padding: '4px 0 6px', fontFamily: UI_FONT, fontWeight: 400, color: 'var(--text-on-gold-muted)', outline: 'none', boxSizing: 'border-box',
-                      fontSize: '0.75rem',
-                      overflow: 'hidden', textOverflow: 'ellipsis',
-                    }} />
+                  {catalogLinePickOnly ? (
+                    <button
+                      type="button"
+                      onClick={openCatalogLinePicker}
+                      aria-label={`${artistName}. Tap to choose another line.`}
+                      style={{
+                        width: '100%', minHeight: 'var(--margo-touch-min)', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(7,6,10,0.18)',
+                        padding: '4px 0 6px', fontFamily: UI_FONT, fontWeight: 400, color: 'var(--text-on-gold-muted)', textAlign: 'left', cursor: 'pointer',
+                        fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', WebkitTapHighlightColor: 'transparent',
+                      }}
+                    >
+                      {artistName}
+                    </button>
+                  ) : (
+                    <input type="text" value={artistName} onChange={(e) => setArtistName(e.target.value)}
+                      style={{
+                        width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(7,6,10,0.18)',
+                        padding: '4px 0 6px', fontFamily: UI_FONT, fontWeight: 400, color: 'var(--text-on-gold-muted)', outline: 'none', boxSizing: 'border-box',
+                        fontSize: '0.75rem',
+                        overflow: 'hidden', textOverflow: 'ellipsis',
+                      }} />
+                  )}
                 </div>
               </div>
 
@@ -1799,18 +1846,14 @@ function ComposeInner() {
                     {YOUR_LINE_CUE.slice(0, cueRevealChars)}
                   </span>
                 )}
-                <textarea value={lyric} onChange={(e) => setLyric(e.target.value.slice(0, 140))}
-                  style={{
-                    ...composeLyricTextStyle,
-                    flex: 1,
-                    width: '100%',
-                    background: 'transparent',
-                    border: 'none',
-                    outline: 'none',
-                    resize: 'none',
-                    overflowY: 'auto',
-                    boxSizing: 'border-box',
-                  }} />
+                <CatalogPickLyricField
+                  variant="compose"
+                  value={lyric}
+                  catalogPickOnly={catalogLinePickOnly}
+                  onOpenPicker={openCatalogLinePicker}
+                  onValueChange={setLyric}
+                  maxLength={140}
+                />
               </div>
 
               <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>

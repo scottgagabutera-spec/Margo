@@ -149,10 +149,7 @@ export function StageLanding() {
   const emotionAbortRef = useRef<AbortController | null>(null)
 
   const showLinePicker = !!selectedSong && selectedSong.source === 'margo' && !linePickComplete
-  const isExternalOrManualWrite = !!selectedSong && (
-    selectedSong.source !== 'margo' || (linePickComplete && margoLines.length === 0)
-  )
-  const showWriteLine = isExternalOrManualWrite && !showLinePicker
+  const showWriteLine = !!selectedSong && selectedSong.source !== 'margo' && !showLinePicker
   const hasMoment = momentVisible && lyric.trim().length > 0 && !!songName && !!artistName
   const canPlay = !!(linkedAudioUrl && linkedSongId && snippetStart != null && snippetEnd != null)
 
@@ -789,12 +786,19 @@ export function StageLanding() {
                 stickySkip
                 onPick={handleLinePick}
                 onPickParagraph={handleLineParagraph}
-                onSkip={() => {
-                  setSnippetStart(null)
-                  setSnippetEnd(null)
-                  setLinePickComplete(true)
+                onSkip={
+                  selectedSong.source === 'margo'
+                    ? undefined
+                    : () => {
+                        setSnippetStart(null)
+                        setSnippetEnd(null)
+                        setLinePickComplete(true)
+                      }
+                }
+                onBack={() => {
+                  if (lyric.trim()) setLinePickComplete(true)
+                  else clearSong()
                 }}
-                onBack={clearSong}
               />
             </div>
           )}
