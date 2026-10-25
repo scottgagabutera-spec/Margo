@@ -52,14 +52,14 @@
   flex-direction: column;
   align-items: stretch;
   position: relative;
-  padding-top: clamp(28px, 7vh, 64px);
-  padding-bottom: 28px;
+  padding-top: clamp(12px, 3vh, 24px);
+  padding-bottom: 20px;
 }
 
 .margo-auth-layout__mark {
   display: flex;
   justify-content: center;
-  margin-bottom: 32px;
+  margin-bottom: 20px;
 }
 
 .margo-auth-layout__tabs {
@@ -99,11 +99,6 @@
     max-width: none;
     margin: 0;
     justify-content: center;
-  }
-
-  /* Desktop already has the lockup in the brand column. */
-  .margo-auth-layout__mark {
-    display: none;
   }
 
   .margo-auth-layout__intro {

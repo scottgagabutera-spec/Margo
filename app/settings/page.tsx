@@ -12,7 +12,7 @@ import {
   writeAccountSettingsSessionCache,
 } from '@/lib/settings/account-settings-session-cache'
 import { PromoteInlineStatus } from '@/components/promote/promote-page-shell'
-import { validatePassword } from '@/lib/auth-password-policy'
+import { validatePasswordPair } from '@/lib/auth-password-confirm'
 import { AuthPasswordField } from '@/components/auth-password-field'
 
 const supabase = createClient()
@@ -231,7 +231,9 @@ export default function AccountSettingsPage() {
   const lastFetchAtRef = useRef(0)
 
   const [newPassword, setNewPassword] = useState('')
+  const [confirmNewPassword, setConfirmNewPassword] = useState('')
   const [passwordStatus, setPasswordStatus] = useState<string | null>(null)
+  const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null)
   const [savingSection, setSavingSection] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
 
@@ -363,12 +365,19 @@ export default function AccountSettingsPage() {
   }, [authLoading, user, profile, application])
 
   async function updatePassword() {
-    const pwCheck = validatePassword(newPassword)
+    const pwCheck = validatePasswordPair(newPassword, confirmNewPassword)
     if (!pwCheck.ok) {
-      setPasswordStatus(pwCheck.message)
+      if (pwCheck.field === 'confirm') {
+        setConfirmPasswordError(pwCheck.message)
+        setPasswordStatus(null)
+      } else {
+        setPasswordStatus(pwCheck.message)
+        setConfirmPasswordError(null)
+      }
       return
     }
     setPasswordStatus(null)
+    setConfirmPasswordError(null)
     setSavingSection('password')
     try {
       const res = await fetch('/api/auth/update-password', {
@@ -385,6 +394,7 @@ export default function AccountSettingsPage() {
       }
       setPasswordStatus('Updated.')
       setNewPassword('')
+      setConfirmNewPassword('')
     } catch {
       setSavingSection(null)
       setPasswordStatus('Could not reach the server. Try again.')
@@ -554,9 +564,20 @@ export default function AccountSettingsPage() {
               label="New password"
               value={newPassword}
               autoComplete="new-password"
+              showMeter
+              showRequirements
               error={passwordStatus && passwordStatus !== 'Updated.' ? passwordStatus : null}
-              onChange={setNewPassword}
+              onChange={(v) => { setNewPassword(v); setPasswordStatus(null); setConfirmPasswordError(null) }}
             />
+            <div style={{ marginTop: 12 }}>
+              <AuthPasswordField
+                label="Confirm new password"
+                value={confirmNewPassword}
+                autoComplete="new-password"
+                error={confirmPasswordError}
+                onChange={(v) => { setConfirmNewPassword(v); setConfirmPasswordError(null); setPasswordStatus(null) }}
+              />
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
               <TierOneButton onClick={updatePassword} disabled={savingSection === 'password'}>
                 Update password

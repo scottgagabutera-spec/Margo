@@ -3,7 +3,8 @@
 import { useId, useState } from 'react'
 import Link from 'next/link'
 import { BackButton } from '@/components/back-button'
-import MargoLogo from '@/components/MargoLogo'
+import { AuthScreenMark } from '@/components/auth-screen-mark'
+import { stashResetRequestEmail } from '@/lib/auth-recovery-email-prefill'
 import { LoadingRing } from '@/components/loading-ring'
 import { createClient } from '@/lib/supabase/client'
 import { TYPE, UI_FONT } from '@/lib/fonts'
@@ -34,6 +35,7 @@ export default function ForgotPasswordPage() {
           )
           : undefined
       await supabase.auth.resetPasswordForEmail(trimmed, redirectTo ? { redirectTo } : undefined)
+      stashResetRequestEmail(trimmed)
     } catch {
       // same neutral outcome — no account enumeration
     } finally {
@@ -57,9 +59,7 @@ export default function ForgotPasswordPage() {
 
         <div className="margo-auth-layout__panel">
           <div className="margo-auth-layout__intro">
-            <div className="margo-auth-layout__mark">
-              <MargoLogo tier="lockup" size={32} rings />
-            </div>
+            <AuthScreenMark />
           </div>
 
           <main className="margo-auth-layout__main" data-margo-auth-screen="forgot-password">

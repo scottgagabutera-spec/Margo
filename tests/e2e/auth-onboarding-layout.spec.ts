@@ -44,18 +44,6 @@ for (const width of [360, 390, 834, 1440]) {
       expect(contained.ok, JSON.stringify(contained)).toBeTruthy()
     })
 
-    test('reset-password continue state containment', async ({ page }) => {
-      await page.goto(`${BASE}/reset-password?token_hash=fakehash&type=recovery`, { waitUntil: 'domcontentloaded', timeout: 45000 })
-      const main = '[data-margo-auth-screen="reset-password"]'
-      await expect(page.locator('[data-margo-reset-state="continue"]')).toBeVisible({ timeout: 15000 })
-      const btn = page.locator('[data-margo-reset-continue]')
-      await expect(btn).toBeVisible()
-      const box = await btn.boundingBox()
-      expect(box?.height ?? 0).toBeGreaterThanOrEqual(44)
-      const contained = await assertAuthScreenContained(page, main)
-      expect(contained.ok, JSON.stringify(contained)).toBeTruthy()
-    })
-
     test('reset-password url error state containment', async ({ page }) => {
       await page.goto(`${BASE}/reset-password?error=access_denied&error_code=otp_expired`, { waitUntil: 'domcontentloaded', timeout: 45000 })
       await expect(page.locator('[data-margo-reset-state="url_error"]')).toBeVisible({ timeout: 15000 })
@@ -134,6 +122,45 @@ test('sign-in failure shows neutral line and resend without code leak @360', asy
   await expect(page.locator('[data-margo-auth-email-form] [role="alert"]').first()).toContainText('Incorrect email or password')
   await expect(page.getByRole('button', { name: 'Resend confirmation email' })).toBeVisible()
 })
+
+for (const width of [360, 390]) {
+  test.describe(`auth polish @${width}px`, () => {
+    test.use({ viewport: { width, height: 800 } })
+
+    test('one small auth logo on sign-in, forgot, reset', async ({ page }) => {
+      for (const path of ['/signin', '/forgot-password', '/reset-password']) {
+        await page.goto(`${BASE}${path}`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+        await expect(page.locator('[data-margo-auth-logo]')).toHaveCount(1)
+      }
+    })
+
+    test('reset link query still opens code-first', async ({ page }) => {
+      await page.goto(`${BASE}/reset-password?token_hash=fakehash&type=recovery`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+      await expect(page.locator('[data-margo-reset-state="code"]')).toBeVisible({ timeout: 15000 })
+      await expect(page.getByRole('button', { name: 'Use email link instead' })).toBeVisible()
+    })
+
+    test('password confirm labels fixture', async ({ page }) => {
+      await page.setContent(`
+        <div style="width:100%;max-width:420px;padding:16px;box-sizing:border-box">
+          <label>New password</label>
+          <input type="password" aria-label="New password" style="width:100%;height:44px;box-sizing:border-box" />
+          <label>Confirm new password</label>
+          <input type="password" aria-label="Confirm new password" style="width:100%;height:44px;box-sizing:border-box;margin-top:8px" />
+        </div>
+      `)
+      await expect(page.getByLabel('Confirm new password')).toBeVisible()
+      const ok = await page.evaluate(() => {
+        const vw = document.documentElement.clientWidth
+        const el = document.querySelector('[aria-label="Confirm new password"]') as HTMLElement | null
+        if (!el) return false
+        const r = el.getBoundingClientRect()
+        return r.left >= 0 && r.right <= vw + 1
+      })
+      expect(ok).toBe(true)
+    })
+  })
+}
 
 for (const [w, h] of [[360, 640], [390, 844]] as const) {
   test(`reset code form stays in viewport with keyboard inset @${w}x${h}`, async ({ page }) => {

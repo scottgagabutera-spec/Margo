@@ -43,40 +43,12 @@ describe('classifyVerifyOtpError', () => {
 })
 
 describe('recovery flow phase', () => {
-  it('continue when token_hash present', () => {
-    assert.equal(
-      resolveInitialRecoveryPhase({
-        urlErrorKind: null,
-        tokenHash: 'abc',
-        recoveryType: 'recovery',
-        preferCode: false,
-      }),
-      'continue',
-    )
+  it('code-first when no url error', () => {
+    assert.equal(resolveInitialRecoveryPhase({ urlErrorKind: null }), 'code')
     assert.equal(shouldEnableContinueButton('abc', 'recovery'), true)
   })
 
   it('url error wins', () => {
-    assert.equal(
-      resolveInitialRecoveryPhase({
-        urlErrorKind: 'expired',
-        tokenHash: 'abc',
-        recoveryType: 'recovery',
-        preferCode: false,
-      }),
-      'url_error',
-    )
-  })
-
-  it('code path when no token', () => {
-    assert.equal(
-      resolveInitialRecoveryPhase({
-        urlErrorKind: null,
-        tokenHash: null,
-        recoveryType: null,
-        preferCode: false,
-      }),
-      'code',
-    )
+    assert.equal(resolveInitialRecoveryPhase({ urlErrorKind: 'expired' }), 'url_error')
   })
 })

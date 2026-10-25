@@ -4,9 +4,11 @@ import { Suspense, useCallback, useEffect, useId, useRef, useState } from 'react
 import type { EmailOtpType } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { BackButton } from '@/components/back-button'
-import MargoLogo from '@/components/MargoLogo'
+import { AuthScreenMark } from '@/components/auth-screen-mark'
 import { LoadingRing } from '@/components/loading-ring'
-import { parsePasswordErrorMessage, validatePassword } from '@/lib/auth-password-policy'
+import { parsePasswordErrorMessage } from '@/lib/auth-password-policy'
+import { canSavePasswordPair, validatePasswordPair } from '@/lib/auth-password-confirm'
+import { consumeResetRequestEmail } from '@/lib/auth-recovery-email-prefill'
 import { AuthPasswordField } from '@/components/auth-password-field'
 import { AuthRecoveryCodeInput, RECOVERY_CODE_LENGTH } from '@/components/auth-recovery-code-input'
 import { createRecoveryClient } from '@/lib/supabase/recovery-client'
@@ -24,7 +26,6 @@ import {
 } from '@/lib/auth-recovery-errors'
 import {
   mergeAuthCallbackParams,
-  recoveryTypeFromParams,
   stripAuthSecretsFromBrowserUrl,
 } from '@/lib/auth-recovery-url'
 import {
@@ -58,8 +59,10 @@ function ResetPasswordInner() {
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [fieldError, setFieldError] = useState('')
+  const [confirmError, setConfirmError] = useState('')
   const [resendBusy, setResendBusy] = useState(false)
   const [resendStatus, setResendStatus] = useState<string | null>(null)
   const [resendCooldownUntil, setResendCooldownUntil] = useState(0)
@@ -77,7 +80,6 @@ function ResetPasswordInner() {
       ? classifyRecoveryUrlError(params.error, params.error_code, params.error_description)
       : null
     const hash = params.token_hash
-    const recoveryType = recoveryTypeFromParams(params.type)
     stripAuthSecretsFromBrowserUrl()
 
     if (urlKind) {
@@ -87,12 +89,9 @@ function ResetPasswordInner() {
     }
 
     setTokenHash(hash)
-    setPhase(resolveInitialRecoveryPhase({
-      urlErrorKind: null,
-      tokenHash: hash,
-      recoveryType,
-      preferCode: false,
-    }))
+    const prefilled = consumeResetRequestEmail()
+    if (prefilled) setEmail(prefilled)
+    setPhase(resolveInitialRecoveryPhase({ urlErrorKind: null }))
   }, [])
 
   const verifyFailed = useCallback((message: string) => {
@@ -149,13 +148,20 @@ function ResetPasswordInner() {
 
   const handlePasswordSave = async () => {
     if (busy || phase !== 'password') return
-    const pwCheck = validatePassword(password)
+    const pwCheck = validatePasswordPair(password, confirmPassword)
     if (!pwCheck.ok) {
-      setFieldError(pwCheck.message)
+      if (pwCheck.field === 'confirm') {
+        setConfirmError(pwCheck.message)
+        setFieldError('')
+      } else {
+        setFieldError(pwCheck.message)
+        setConfirmError('')
+      }
       return
     }
     setBusy(true)
     setFieldError('')
+    setConfirmError('')
     try {
       const { error: updateError } = await recoveryRef.current.auth.updateUser({ password })
       if (updateError) {
@@ -211,9 +217,7 @@ function ResetPasswordInner() {
 
         <div className="margo-auth-layout__panel">
           <div className="margo-auth-layout__intro">
-            <div className="margo-auth-layout__mark">
-              <MargoLogo tier="lockup" size={32} rings />
-            </div>
+            <AuthScreenMark />
           </div>
 
           <main
@@ -506,26 +510,39 @@ function ResetPasswordInner() {
                 </header>
 
                 <AuthPasswordField
+                  label="New password"
                   value={password}
                   disabled={busy}
                   autoComplete="new-password"
                   error={fieldError || null}
                   showMeter
                   showRequirements
-                  onChange={(v) => { setPassword(v); setFieldError('') }}
+                  onChange={(v) => { setPassword(v); setFieldError(''); setConfirmError('') }}
                   onEnter={() => { void handlePasswordSave() }}
                 />
+
+                <div style={{ marginTop: '16px' }} data-margo-reset-confirm-password>
+                  <AuthPasswordField
+                    label="Confirm new password"
+                    value={confirmPassword}
+                    disabled={busy}
+                    autoComplete="new-password"
+                    error={confirmError || null}
+                    onChange={(v) => { setConfirmPassword(v); setConfirmError('') }}
+                    onEnter={() => { void handlePasswordSave() }}
+                  />
+                </div>
 
                 <button
                   type="button"
                   data-margo-reset-save
                   onClick={() => { void handlePasswordSave() }}
-                  disabled={busy || !validatePassword(password).ok}
+                  disabled={busy || !canSavePasswordPair(password, confirmPassword)}
                   style={{
                     ...primaryBtn,
                     marginTop: '16px',
-                    opacity: busy || !validatePassword(password).ok ? 0.55 : 1,
-                    cursor: busy || !validatePassword(password).ok ? 'not-allowed' : 'pointer',
+                    opacity: busy || !canSavePasswordPair(password, confirmPassword) ? 0.55 : 1,
+                    cursor: busy || !canSavePasswordPair(password, confirmPassword) ? 'not-allowed' : 'pointer',
                   }}
                 >
                   {busy ? (

@@ -6,7 +6,7 @@ import { AuthForm, TermsCompletionForm, type AuthMode } from '@/components/auth-
 import { AuthModeTabs } from '@/components/auth-mode-tabs'
 import { CONSENT_REQUIRED_MESSAGE } from '@/lib/legal/consent-copy'
 import { BackButton } from '@/components/back-button'
-import MargoLogo from '@/components/MargoLogo'
+import { AuthScreenMark } from '@/components/auth-screen-mark'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useIdentity } from '@/hooks/useIdentity'
 import { resolvePostAuthNavigation } from '@/lib/auth-welcome-redirect'
@@ -89,9 +89,6 @@ function SigninPageInner() {
         ) : null}
 
         <aside className="margo-auth-layout__brand">
-          <div style={{ marginBottom: '36px' }}>
-            <MargoLogo tier="lockup" size={36} rings />
-          </div>
           <p style={{
             fontFamily: lora,
             fontStyle: 'italic',
@@ -129,14 +126,16 @@ function SigninPageInner() {
               }}>
                 {mode === 'signup' ? 'Create account' : 'Sign in'}
               </h1>
-              <div className="margo-auth-layout__mark">
-                <MargoLogo tier="lockup" size={32} rings />
-              </div>
+              <AuthScreenMark />
               <div className="margo-auth-layout__tabs">
                 <AuthModeTabs mode={mode} onChange={setMode} />
               </div>
             </div>
-          ) : null}
+          ) : (
+            <div className="margo-auth-layout__intro">
+              <AuthScreenMark />
+            </div>
+          )}
 
           <main className="margo-auth-layout__main">
             {isTermsStep ? (

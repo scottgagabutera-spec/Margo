@@ -106,13 +106,8 @@ export type RecoveryFlowPhase =
 
 export function resolveInitialRecoveryPhase(input: {
   urlErrorKind: RecoveryUrlErrorKind | null
-  tokenHash: string | null
-  recoveryType: 'recovery' | null
-  preferCode: boolean
-}): Exclude<RecoveryFlowPhase, 'loading' | 'done' | 'password'> {
+}): Exclude<RecoveryFlowPhase, 'loading' | 'done' | 'password' | 'continue'> {
   if (input.urlErrorKind) return 'url_error'
-  if (input.preferCode) return 'code'
-  if (input.tokenHash && input.recoveryType === 'recovery') return 'continue'
   return 'code'
 }
 
