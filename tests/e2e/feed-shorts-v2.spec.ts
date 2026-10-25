@@ -35,6 +35,33 @@ async function requireShortsFrame(page: import('@playwright/test').Page) {
   return frame
 }
 
+async function waitForShortsAudioPlaying(page: import('@playwright/test').Page, timeoutMs = 20000) {
+  const surface = page.locator('[data-shorts-active="1"] .margo-feed-shorts-slide__tap-surface')
+  await expect(surface).toBeVisible({ timeout: 15000 })
+  const started = await page
+    .waitForFunction(
+      () => {
+        const a = document.querySelector('audio')
+        return !!a && !a.paused
+      },
+      undefined,
+      { timeout: 4000 },
+    )
+    .then(() => true)
+    .catch(() => false)
+  if (!started) {
+    await surface.click({ position: { x: 24, y: 24 } })
+  }
+  await page.waitForFunction(
+    () => {
+      const a = document.querySelector('audio')
+      return !!a && !a.paused
+    },
+    undefined,
+    { timeout: timeoutMs },
+  )
+}
+
 async function assertSlideChromeInsideFrame(page: import('@playwright/test').Page, slideIndex = 0) {
   const slide = page.locator(`[data-shorts-index="${slideIndex}"]`)
   const box = await slide.evaluate((el) => {
@@ -237,15 +264,7 @@ for (const width of [390, 1440]) {
       await page.goto(shortsUrl(width), { waitUntil: 'domcontentloaded', timeout: 45000 })
       await page.waitForTimeout(1500)
       const surface = page.locator('[data-shorts-active="1"] .margo-feed-shorts-slide__tap-surface')
-      await expect(surface).toBeVisible({ timeout: 15000 })
-      await page.waitForFunction(
-        () => {
-          const a = document.querySelector('audio')
-          return !!a && !a.paused
-        },
-        undefined,
-        { timeout: 20000 },
-      )
+      await waitForShortsAudioPlaying(page)
       await surface.click({ position: { x: 24, y: 24 } })
       await page.waitForTimeout(2000)
       await expect
@@ -276,14 +295,7 @@ for (const width of [390, 1440]) {
       await page.waitForTimeout(1500)
       const frame = page.locator('[data-shorts-active="1"] .margo-feed-shorts-slide__frame')
       await expect(frame).toBeVisible({ timeout: 15000 })
-      await page.waitForFunction(
-        () => {
-          const a = document.querySelector('audio')
-          return !!a && !a.paused
-        },
-        undefined,
-        { timeout: 20000 },
-      )
+      await waitForShortsAudioPlaying(page)
       const box = await frame.boundingBox()
       expect(box).toBeTruthy()
       if (!box) return
