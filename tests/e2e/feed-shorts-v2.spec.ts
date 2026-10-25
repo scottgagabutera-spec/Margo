@@ -136,20 +136,31 @@ async function assertPhoneCreditRowBottomLayout(page: import('@playwright/test')
     const meta = frame?.querySelector('.margo-feed-shorts-slide__meta-row')
     const lyric = frame?.querySelector('.margo-shorts-canvas p')
     const mute = frame?.querySelector('.margo-feed-shorts-slide__mute')
-    const logo = frame?.querySelector('.margo-shorts-canvas [aria-hidden]')
     if (!frame || !meta || !lyric || !mute) return { ok: false, reason: 'missing nodes' }
     const fr = frame.getBoundingClientRect()
     const mr = meta.getBoundingClientRect()
     const lr = lyric.getBoundingClientRect()
     const muteR = mute.getBoundingClientRect()
-    const logoR = logo?.getBoundingClientRect()
+    const canvas = frame.querySelector('.margo-shorts-canvas')
+    let logoR: DOMRect | null = null
+    if (canvas) {
+      const canvasTop = canvas.getBoundingClientRect().top
+      for (const el of canvas.querySelectorAll('[aria-hidden]')) {
+        const r = el.getBoundingClientRect()
+        if (r.width < 8 || r.height < 8 || r.width > 56) continue
+        if (r.top <= canvasTop + fr.height * 0.2) {
+          logoR = r
+          break
+        }
+      }
+    }
     const overlaps = (a: DOMRect, b: DOMRect) =>
       !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom)
     return {
       ok: true,
       metaBelowLyric: mr.top >= lr.bottom - 2,
       metaInBottom30: mr.top >= fr.top + fr.height * 0.7,
-      muteClear: !logoR || !overlaps(mr, muteR),
+      muteClear: !overlaps(mr, muteR),
       logoClear: !logoR || !overlaps(mr, logoR),
       relTop: (mr.top - fr.top) / fr.height,
     }
