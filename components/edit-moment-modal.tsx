@@ -215,7 +215,7 @@ function EditMomentSheet({
             <p id="margo-edit-sheet-title" className="margo-edit-sheet__title">Edit</p>
             {echoCount > 0 ? (
               <p className="margo-edit-sheet__replies">
-                {echoCount === 1 ? '1 reply stays' : `${echoCount} replies stay`}
+                {echoCount === 1 ? '1 Lyric Back stays' : `${echoCount} Lyric Backs stay`}
               </p>
             ) : null}
           </div>

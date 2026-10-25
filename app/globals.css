@@ -380,6 +380,17 @@ html[data-margo-stage-idle] .margo-stage-zone {
   font-size: var(--feed-type-lyric);
   white-space: pre-line;
 }
+/* Feed Shorts lyric — same tokens as feed post (.margo-feed-lyric), fixed size (no cqw/layout scaling). */
+.margo-feed-shorts-slide__frame .margo-shorts-canvas .margo-feed-lyric {
+  font-family: var(--font-lora), serif;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: normal;
+  line-height: var(--feed-type-lyric-lh);
+  font-size: var(--feed-type-lyric);
+  white-space: pre-line;
+  overflow-wrap: break-word;
+}
 .margo-feed-lyric--row {
   display: -webkit-box;
   -webkit-line-clamp: 1;
@@ -2856,7 +2867,7 @@ html, body {
   scroll-snap-stop: always;
   scroll-padding-top: 20px;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
+  overscroll-behavior-y: none;
   touch-action: pan-y;
   padding-top: 20px;
   box-sizing: border-box;

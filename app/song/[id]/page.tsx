@@ -533,7 +533,7 @@ function SongPageInner() {
                 <ShareIcon size={20} color="var(--gold)" />
               </div>
               <div>
-                <p style={{ fontFamily: UI_FONT, fontWeight: 600, fontSize: '0.88rem', color: 'var(--text)', margin: 0 }}>Send a line</p>
+                <p style={{ fontFamily: UI_FONT, fontWeight: 600, fontSize: '0.88rem', color: 'var(--text)', margin: 0 }}>Post</p>
                 <p style={{ fontFamily: UI_FONT, fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '3px 0 0' }}>Send this line to someone</p>
               </div>
             </Link>
