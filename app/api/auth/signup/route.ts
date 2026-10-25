@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { buildLegalConsentSettings } from '@/lib/legal/consent'
+import { resolveAuthEmailRedirectOrigin, signInAfterConfirmUrl } from '@/lib/auth-email-redirect'
 import { parsePasswordErrorMessage, validatePassword } from '@/lib/auth-password-policy'
 
 /**
@@ -34,11 +35,13 @@ export async function POST(req: NextRequest) {
   }
 
   const legal = buildLegalConsentSettings()
+  const origin = resolveAuthEmailRedirectOrigin(req)
   const supabase = await createClient()
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
+      emailRedirectTo: signInAfterConfirmUrl(origin),
       data: {
         terms_accepted_at: legal.termsAcceptedAt,
         terms_version: legal.termsVersion,

@@ -12,7 +12,7 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { resolvePostAuthNavigation } from '@/lib/auth-welcome-redirect'
 import { AUTH_RETURN_QUERY, sanitizeAuthReturnPath } from '@/lib/auth-return'
 import { completeAuthNavigation } from '@/lib/auth-complete-navigation'
-import Link from 'next/link'
+import { AuthScreenHelp } from '@/components/auth-screen-help'
 import './auth-layout.css'
 
 const lora = 'var(--font-lora), serif'
@@ -56,6 +56,7 @@ function SigninPageInner() {
     () => parseAuthError(searchParams.get('error')),
     [searchParams],
   )
+  const emailConfirmed = searchParams.get('confirmed') === '1'
 
   const finishAuth = useCallback(async () => {
     const row = await waitUntilReady()
@@ -149,27 +150,11 @@ function SigninPageInner() {
                 oauthReturnTo={returnTo}
                 onSuccess={finishAuth}
                 hideTitle
+                initialShowEmail={emailConfirmed}
+                confirmedBanner={emailConfirmed ? 'Email confirmed. Sign in.' : null}
               />
             )}
-            <p style={{
-              marginTop: '20px',
-              textAlign: 'center',
-            }}>
-              <Link
-                href="/help/account"
-                style={{
-                  fontFamily: ui,
-                  fontSize: '0.68rem',
-                  fontWeight: 700,
-                  letterSpacing: '0.14em',
-                  textTransform: 'uppercase',
-                  color: 'var(--text-muted)',
-                  textDecoration: 'none',
-                }}
-              >
-                Help
-              </Link>
-            </p>
+            <AuthScreenHelp />
           </main>
         </div>
       </div>

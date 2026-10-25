@@ -148,6 +148,7 @@
   --destructive-faint: color-mix(in oklch, var(--destructive) 14%, transparent);
   --success: oklch(0.72 0.17 155);
   --success-faint: color-mix(in oklch, var(--success) 12%, transparent);
+  --warning: oklch(0.75 0.16 65);
   --border: oklch(0.269 0 0);
   --input: oklch(0.269 0 0);
   --ring: oklch(0.439 0 0);

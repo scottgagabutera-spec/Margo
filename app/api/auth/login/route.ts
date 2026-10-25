@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { classifyLoginError, loginErrorMessage } from '@/lib/auth-login-errors'
 
 /**
  * Auth core — password sign-in on the server so Set-Cookie is httpOnly.
@@ -22,8 +23,9 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
   if (error || !data.session || !data.user) {
+    const code = classifyLoginError(error?.message)
     return NextResponse.json(
-      { error: error?.message || 'Invalid login credentials' },
+      { error: loginErrorMessage(code), code },
       { status: 401 },
     )
   }

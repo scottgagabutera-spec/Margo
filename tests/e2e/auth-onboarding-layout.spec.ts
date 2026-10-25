@@ -45,6 +45,9 @@ for (const width of [360, 390, 834, 1440]) {
 
     test('sign-up first view three buttons', async ({ page }) => {
       await page.goto(`${BASE}/signin?mode=signup`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+      await page.waitForTimeout(600)
+      await expect(page.locator('[data-margo-auth-email-open="0"]')).toBeVisible({ timeout: 15000 })
+      await expect(page.locator('[data-margo-auth-email-form]')).toHaveCount(0)
       await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible({ timeout: 15000 })
       await expect(page.getByRole('button', { name: 'Continue with Discord' })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Continue with email' })).toBeVisible()
@@ -58,7 +61,7 @@ for (const width of [360, 390, 834, 1440]) {
       await page.goto(`${BASE}/signin?mode=signup`, { waitUntil: 'domcontentloaded', timeout: 45000 })
       await page.getByRole('button', { name: 'Continue with email' }).click()
       await expect(page.locator('[data-margo-auth-email-form]')).toBeVisible({ timeout: 10000 })
-      await expect(page.getByText(/at least one letter and one number/i)).toBeVisible()
+      await expect(page.getByText(/letter & number/i)).toBeVisible()
     })
 
     test('sign-in forgot link tap target', async ({ page }) => {

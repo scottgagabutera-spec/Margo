@@ -10,6 +10,7 @@ import { parsePasswordErrorMessage, validatePassword } from '@/lib/auth-password
 import { AuthPasswordField } from '@/components/auth-password-field'
 import { createRecoveryClient } from '@/lib/supabase/recovery-client'
 import { TYPE, UI_FONT } from '@/lib/fonts'
+import { AuthScreenHelp } from '@/components/auth-screen-help'
 import '../signin/auth-layout.css'
 
 const ui = UI_FONT
@@ -200,6 +201,7 @@ function ResetPasswordInner() {
               </div>
             )}
           </main>
+          <AuthScreenHelp />
         </div>
       </div>
     </div>

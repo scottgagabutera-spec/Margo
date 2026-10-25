@@ -10,7 +10,9 @@ import {
 } from '@/lib/auth-password-policy'
 import { AuthPasswordField } from '@/components/auth-password-field'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 import { setBrowserAccessToken } from '@/lib/supabase/client'
+import type { LoginErrorCode } from '@/lib/auth-login-errors'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useIdentity } from '@/hooks/useIdentity'
 import {
@@ -37,6 +39,10 @@ interface AuthFormProps {
   oauthReturnTo?: string | null
   /** Sign-in page owns Sign in / Create account as tabs — skip the duplicate h1. */
   hideTitle?: boolean
+  /** Open the email form on first paint (e.g. after email confirm link). */
+  initialShowEmail?: boolean
+  /** One line under tabs when email was confirmed. */
+  confirmedBanner?: string | null
 }
 
 interface TermsCompletionFormProps {
@@ -281,7 +287,16 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
   )
 }
 
-export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthReturnTo, hideTitle }: AuthFormProps) {
+export function AuthForm({
+  mode,
+  onSuccess,
+  onSwitchMode,
+  externalError,
+  oauthReturnTo,
+  hideTitle,
+  initialShowEmail = false,
+  confirmedBanner = null,
+}: AuthFormProps) {
   const { rehydrate } = useAuthGate()
   const { waitUntilReady } = useIdentity()
   const emailId = useId()
@@ -294,19 +309,32 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
   const [error, setError] = useState('')
   const [busy, setBusy] = useState<'email' | 'google' | 'discord' | null>(null)
   const [pendingEmail, setPendingEmail] = useState<string | null>(null)
-  const [showEmailForm, setShowEmailForm] = useState(false)
+  const [showEmailForm, setShowEmailForm] = useState(initialShowEmail)
   const [emailError, setEmailError] = useState<string | null>(null)
   const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [consentError, setConsentError] = useState(false)
+  const [needsConfirmResend, setNeedsConfirmResend] = useState(false)
+  const [resendStatus, setResendStatus] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isSignup) {
       setTermsAccepted(false)
       setPendingEmail(null)
     }
-    setShowEmailForm(false)
+    setShowEmailForm(initialShowEmail)
     setEmailError(null)
     setPasswordError(null)
-  }, [isSignup])
+    setConsentError(false)
+    setNeedsConfirmResend(false)
+    setResendStatus(null)
+  }, [isSignup, initialShowEmail])
+
+  useEffect(() => {
+    if (termsAccepted) {
+      setConsentError(false)
+      if (error === CONSENT_REQUIRED_MESSAGE) setError('')
+    }
+  }, [termsAccepted, error])
 
   useEffect(() => {
     if (isSignup && !termsAccepted) {
@@ -326,18 +354,33 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
 
   const remindConsentIfNeeded = () => {
     if (isSignup && !termsAccepted) {
-      setError(CONSENT_REQUIRED_MESSAGE)
+      setConsentError(true)
     }
+  }
+
+  const requireConsentForAction = (): boolean => {
+    if (!isSignup || termsAccepted) return true
+    setConsentError(true)
+    return false
+  }
+
+  const handleResendConfirmation = async () => {
+    const trimmed = email.trim()
+    if (!trimmed) return
+    setResendStatus(null)
+    const supabase = createClient()
+    const { error: resendError } = await supabase.auth.resend({
+      type: 'signup',
+      email: trimmed,
+    })
+    setResendStatus(resendError ? 'Could not resend. Try again.' : 'Link sent.')
   }
 
   const handleEmailSubmit = async () => {
     setEmailError(null)
     setPasswordError(null)
     setError('')
-    if (isSignup && !termsAccepted) {
-      setError(CONSENT_REQUIRED_MESSAGE)
-      return
-    }
+    if (!requireConsentForAction()) return
     if (isSignup) {
       const pw = validatePassword(password)
       if (!pw.ok) {
@@ -359,15 +402,26 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
           ...(isSignup ? { acceptedTerms: true } : {}),
         }),
       })
-      const body = await res.json().catch(() => ({}))
+      const body = await res.json().catch(() => ({})) as {
+        error?: string
+        code?: LoginErrorCode
+        access_token?: string
+        needs_confirmation?: boolean
+      }
       if (!res.ok) {
         const msg = body.error || 'Something went wrong. Please try again.'
-        if (isSignup && /password|character|letter|number|weak/i.test(msg)) {
+        if (!isSignup) {
+          setPasswordError(msg)
+          setNeedsConfirmResend(body.code === 'email_not_confirmed')
+          return
+        }
+        if (/password|character|letter|number|weak/i.test(msg)) {
           setPasswordError(parsePasswordErrorMessage(msg))
           return
         }
         throw { message: msg }
       }
+      setNeedsConfirmResend(false)
 
       if (body.access_token) {
         setBrowserAccessToken(body.access_token)
@@ -401,10 +455,7 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
   }
 
   const handleOAuthSubmit = (provider: 'google' | 'discord') => {
-    if (isSignup && !termsAccepted) {
-      setError(CONSENT_REQUIRED_MESSAGE)
-      return
-    }
+    if (!requireConsentForAction()) return
     setBusy(provider)
     setError('')
     const params = new URLSearchParams()
@@ -455,27 +506,21 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
   }
 
   const primaryDisabled = loading || !email || !password || signupBlocked
-  const alertMessage = error || externalError
-
-  const renderFormError = (message: string) => {
-    if (message === CONSENT_REQUIRED_MESSAGE) {
-      return <ConsentRequiredAlert message={message} />
-    }
-    return (
-      <p role="alert" style={{
-        fontFamily: ui,
-        fontSize: TYPE.meta,
-        color: 'var(--text-secondary)',
-        margin: 0,
-        lineHeight: 1.45,
-      }}>
-        {message}
-      </p>
-    )
-  }
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', minWidth: 0, boxSizing: 'border-box' }} data-margo-auth-form data-margo-auth-email-open={showEmailForm ? '1' : '0'}>
+      {confirmedBanner ? (
+        <p role="status" style={{
+          fontFamily: ui,
+          fontSize: TYPE.secondary,
+          color: 'var(--success)',
+          margin: '0 0 14px',
+          lineHeight: 1.35,
+          wordBreak: 'break-word',
+        }}>
+          {confirmedBanner}
+        </p>
+      ) : null}
       {hideTitle ? null : (
         <header style={{ marginBottom: isSignup ? '18px' : '28px', textAlign: 'center' }}>
           <h1 style={{
@@ -489,12 +534,6 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
           </h1>
         </header>
       )}
-
-      {alertMessage && !showEmailForm ? (
-        <div style={{ margin: '0 0 16px' }}>
-          {renderFormError(alertMessage)}
-        </div>
-      ) : null}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: showEmailForm ? '16px' : '0' }}>
         <button
@@ -567,6 +606,21 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
         ) : null}
       </div>
 
+      {isSignup ? (
+        <SignupConsentGate highlight={consentAttention && !termsAccepted} consentError={consentError}>
+          <SignupConsentIntro />
+          <SignupConsentCheckbox
+            id="signup-consent"
+            checked={termsAccepted}
+            onChange={(v) => {
+              setTermsAccepted(v)
+              if (v) setConsentError(false)
+            }}
+            disabled={loading}
+          />
+        </SignupConsentGate>
+      ) : null}
+
       {showEmailForm ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '20px' }} data-margo-auth-email-form>
           <div>
@@ -600,12 +654,10 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
             autoComplete={isSignup ? 'new-password' : 'current-password'}
             error={passwordError}
             showRequirements={isSignup}
-            onChange={(v) => { setPassword(v); setPasswordError(null) }}
+            showMeter={isSignup}
+            onChange={(v) => { setPassword(v); setPasswordError(null); setNeedsConfirmResend(false) }}
             onEnter={() => { void handleEmailSubmit() }}
-          />
-
-          {!isSignup ? (
-            <p style={{ margin: '-8px 0 0', textAlign: 'right' }}>
+            forgotPasswordSlot={!isSignup ? (
               <Link
                 href="/forgot-password"
                 style={{
@@ -621,23 +673,55 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
               >
                 Forgot password?
               </Link>
+            ) : undefined}
+          />
+
+          {needsConfirmResend ? (
+            <button
+              type="button"
+              onClick={() => { void handleResendConfirmation() }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--gold)',
+                fontFamily: ui,
+                fontSize: TYPE.meta,
+                cursor: 'pointer',
+                minHeight: '44px',
+                padding: 0,
+                textAlign: 'left',
+              }}
+            >
+              Resend confirmation
+            </button>
+          ) : null}
+          {resendStatus ? (
+            <p style={{ fontFamily: ui, fontSize: TYPE.meta, color: 'var(--text-muted)', margin: 0 }}>
+              {resendStatus}
             </p>
           ) : null}
 
-          {isSignup ? (
-            <SignupConsentGate highlight={consentAttention && !termsAccepted}>
-              <SignupConsentIntro />
-              <SignupConsentCheckbox
-                id="signup-consent"
-                checked={termsAccepted}
-                onChange={setTermsAccepted}
-                disabled={loading}
-              />
-            </SignupConsentGate>
+          {error && error !== CONSENT_REQUIRED_MESSAGE ? (
+            <p role="alert" style={{
+              fontFamily: ui,
+              fontSize: TYPE.meta,
+              color: 'var(--destructive)',
+              margin: 0,
+              wordBreak: 'break-word',
+            }}>
+              {error}
+            </p>
           ) : null}
-
-          {alertMessage && showEmailForm ? (
-            <div>{renderFormError(alertMessage)}</div>
+          {externalError && !isSignup ? (
+            <p role="alert" style={{
+              fontFamily: ui,
+              fontSize: TYPE.meta,
+              color: 'var(--destructive)',
+              margin: 0,
+              wordBreak: 'break-word',
+            }}>
+              {externalError}
+            </p>
           ) : null}
 
           <button
@@ -661,8 +745,8 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
       ) : null}
 
       {onSwitchMode ? (
-        <p style={{ textAlign: 'center', marginTop: '22px', fontFamily: ui, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
-          {isSignup ? 'Already have an account? ' : 'New to Margo? '}
+        <p style={{ textAlign: 'center', marginTop: '22px', fontFamily: ui, fontSize: TYPE.secondary, color: 'var(--text-secondary)', wordBreak: 'break-word' }}>
+          {isSignup ? 'Have an account? ' : 'New here? '}
           <button
             type="button"
             onClick={() => onSwitchMode(isSignup ? 'signin' : 'signup')}

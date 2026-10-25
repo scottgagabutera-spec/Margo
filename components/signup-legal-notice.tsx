@@ -2,27 +2,26 @@
 
 import Link from 'next/link'
 import type { ReactNode } from 'react'
+import { CONSENT_REQUIRED_MESSAGE, CONSENT_REQUIRED_SHORT } from '@/lib/legal/consent-copy'
+import { TYPE, UI_FONT } from '@/lib/fonts'
 
-const lora = 'var(--font-lora), serif'
-const ui = 'var(--font-geist-sans), system-ui, sans-serif'
+const ui = UI_FONT
 
-import { CONSENT_REQUIRED_MESSAGE } from '@/lib/legal/consent-copy'
+export { CONSENT_REQUIRED_MESSAGE, CONSENT_REQUIRED_SHORT }
 
-export { CONSENT_REQUIRED_MESSAGE }
-
-/** Consent reminder — Lora, single line, scales down on narrow viewports. */
-export function ConsentRequiredAlert({ message }: { message: string }) {
+/** Short red alert under the terms block — legal checkbox text unchanged. */
+export function ConsentRequiredAlert({ message = CONSENT_REQUIRED_SHORT }: { message?: string }) {
   return (
     <p
       role="alert"
       className="margo-consent-alert"
       style={{
-        fontFamily: lora,
-        fontSize: 'clamp(0.52rem, 2.55vw, 0.72rem)',
-        color: '#ff7070',
-        margin: 0,
-        lineHeight: 1.25,
-        whiteSpace: 'nowrap',
+        fontFamily: ui,
+        fontSize: TYPE.meta,
+        color: 'var(--destructive)',
+        margin: '8px 0 0',
+        lineHeight: 1.35,
+        wordBreak: 'break-word',
       }}
     >
       {message}
@@ -73,6 +72,7 @@ export function SignupConsentCheckbox({
         margin: 0,
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.6 : 1,
+        minWidth: 0,
       }}
     >
       <input
@@ -92,10 +92,12 @@ export function SignupConsentCheckbox({
         }}
       />
       <span style={{
-        fontFamily: lora,
-        fontSize: '0.74rem',
-        lineHeight: 1.55,
+        fontFamily: ui,
+        fontSize: TYPE.secondary,
+        lineHeight: 1.45,
         color: 'var(--text-secondary)',
+        wordBreak: 'break-word',
+        minWidth: 0,
       }}>
         I have read and agree to the <PolicyLinks />.
       </span>
@@ -107,36 +109,23 @@ interface SignupConsentIntroProps {
   children?: ReactNode
 }
 
-/** Create-account first step — review before choosing signup method. */
+/** Optional intro — same legal sentence as checkbox (duplicate; see report). */
 export function SignupConsentIntro({ children }: SignupConsentIntroProps) {
-  if (children) {
-    return (
-      <p style={{
-        fontFamily: lora,
-        fontSize: 'clamp(0.52rem, 2.55vw, 0.72rem)',
-        lineHeight: 1.25,
-        color: 'var(--text-secondary)',
-        margin: '0 0 14px',
-        whiteSpace: 'nowrap',
-      }}>
-        {children}
-      </p>
-    )
-  }
-
+  const text = children ?? CONSENT_REQUIRED_MESSAGE
   return (
     <p
-      className="margo-consent-alert"
+      className="margo-consent-intro"
       style={{
-        fontFamily: lora,
-        fontSize: 'clamp(0.52rem, 2.55vw, 0.72rem)',
-        lineHeight: 1.25,
-        color: 'var(--text-secondary)',
-        margin: '0 0 14px',
-        whiteSpace: 'nowrap',
+        fontFamily: ui,
+        fontSize: TYPE.meta,
+        lineHeight: 1.35,
+        color: 'var(--text-muted)',
+        margin: '0 0 10px',
+        wordBreak: 'break-word',
+        minWidth: 0,
       }}
     >
-      {CONSENT_REQUIRED_MESSAGE}
+      {text}
     </p>
   )
 }
@@ -144,17 +133,19 @@ export function SignupConsentIntro({ children }: SignupConsentIntroProps) {
 interface SignupConsentGateProps {
   highlight: boolean
   children: ReactNode
+  consentError?: boolean
 }
 
-/**
- * Subtle short attention cue on first visit to Create account — not an alarm.
- * Respects prefers-reduced-motion (see styled-jsx below).
- */
-export function SignupConsentGate({ highlight, children }: SignupConsentGateProps) {
+export function SignupConsentGate({ highlight, children, consentError }: SignupConsentGateProps) {
   return (
     <div
       className={highlight ? 'margo-consent-gate margo-consent-gate--attention' : 'margo-consent-gate'}
-      style={{ marginBottom: '20px' }}
+      style={{
+        marginBottom: '12px',
+        width: '100%',
+        minWidth: 0,
+        boxSizing: 'border-box',
+      }}
     >
       <style jsx>{`
         .margo-consent-gate {
@@ -162,6 +153,8 @@ export function SignupConsentGate({ highlight, children }: SignupConsentGateProp
           border-radius: 12px;
           padding: 14px 14px 12px;
           box-sizing: border-box;
+          max-width: 100%;
+          overflow: hidden;
         }
         @keyframes margo-consent-attention {
           0%, 100% {
@@ -184,6 +177,7 @@ export function SignupConsentGate({ highlight, children }: SignupConsentGateProp
         }
       `}</style>
       {children}
+      {consentError ? <ConsentRequiredAlert /> : null}
     </div>
   )
 }
@@ -193,10 +187,11 @@ export function TermsCompletionIntro() {
   return (
     <p style={{
       fontFamily: ui,
-      fontSize: '0.82rem',
+      fontSize: TYPE.secondary,
       color: 'var(--text-secondary)',
       margin: 0,
-      lineHeight: 1.55,
+      lineHeight: 1.45,
+      wordBreak: 'break-word',
     }}>
       To finish creating your Margo account, please read and accept our <PolicyLinks />.
     </p>

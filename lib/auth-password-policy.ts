@@ -2,9 +2,11 @@
 
 export const AUTH_PASSWORD_MIN_LENGTH = 10
 
-/** Plain requirement line (shown under password fields on signup). */
-export const AUTH_PASSWORD_REQUIREMENTS_LINE =
-  `${AUTH_PASSWORD_MIN_LENGTH} or more characters, with at least one letter and one number.`
+/** Short requirement hint (signup / reset). */
+export const AUTH_PASSWORD_REQUIREMENTS_SHORT = `${AUTH_PASSWORD_MIN_LENGTH}+ chars, letter & number`
+
+/** @deprecated use AUTH_PASSWORD_REQUIREMENTS_SHORT */
+export const AUTH_PASSWORD_REQUIREMENTS_LINE = AUTH_PASSWORD_REQUIREMENTS_SHORT
 
 export type PasswordValidationResult =
   | { ok: true }
@@ -44,9 +46,9 @@ export function passwordStrengthLabel(strength: PasswordStrength): string {
     case 'empty':
       return ''
     case 'too_short':
-      return 'Too short'
+      return 'Weak'
     case 'weak':
-      return 'Add letters and numbers'
+      return 'Weak'
     case 'fair':
       return 'Fair'
     case 'strong':
@@ -54,6 +56,30 @@ export function passwordStrengthLabel(strength: PasswordStrength): string {
     default:
       return ''
   }
+}
+
+/** 0–4 filled segments for the meter bar. */
+export function passwordStrengthSegments(strength: PasswordStrength): number {
+  switch (strength) {
+    case 'empty':
+      return 0
+    case 'too_short':
+    case 'weak':
+      return 1
+    case 'fair':
+      return 3
+    case 'strong':
+      return 4
+    default:
+      return 0
+  }
+}
+
+export function passwordStrengthMeterColor(strength: PasswordStrength): string {
+  if (strength === 'strong') return 'var(--success)'
+  if (strength === 'fair') return 'var(--warning)'
+  if (strength === 'weak' || strength === 'too_short') return 'var(--destructive)'
+  return 'var(--border)'
 }
 
 /** Map Supabase / GoTrue / our API errors to plain field copy. */

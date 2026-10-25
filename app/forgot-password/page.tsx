@@ -7,6 +7,8 @@ import MargoLogo from '@/components/MargoLogo'
 import { LoadingRing } from '@/components/loading-ring'
 import { createClient } from '@/lib/supabase/client'
 import { TYPE, UI_FONT } from '@/lib/fonts'
+import { AuthScreenHelp } from '@/components/auth-screen-help'
+import { resolveAuthEmailRedirectOriginFromHost, resetPasswordRedirectUrl } from '@/lib/auth-email-redirect'
 import '../signin/auth-layout.css'
 
 const ui = UI_FONT
@@ -25,7 +27,11 @@ export default function ForgotPasswordPage() {
     try {
       const supabase = createClient()
       const redirectTo =
-        typeof window !== 'undefined' ? `${window.location.origin}/reset-password` : undefined
+        typeof window !== 'undefined'
+          ? resetPasswordRedirectUrl(
+            resolveAuthEmailRedirectOriginFromHost(window.location.host, window.location.protocol.replace(':', '')),
+          )
+          : undefined
       await supabase.auth.resetPasswordForEmail(trimmed, redirectTo ? { redirectTo } : undefined)
     } catch {
       // same neutral outcome — no account enumeration
@@ -116,7 +122,7 @@ export default function ForgotPasswordPage() {
                     color: 'var(--text-secondary)',
                     margin: '14px 0 0',
                   }}>
-                    Enter your email and we will send a reset link.
+                    Enter your email.
                   </p>
                 </header>
 
@@ -186,6 +192,7 @@ export default function ForgotPasswordPage() {
               </div>
             )}
           </main>
+          <AuthScreenHelp />
         </div>
       </div>
     </div>
