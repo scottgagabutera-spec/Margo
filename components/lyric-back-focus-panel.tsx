@@ -5,7 +5,9 @@ import {
   captureFeedScrollSnapshot,
   lyricBackNestedAnchorScrollTop,
   restoreFeedScrollSnapshot,
+  scrollFeedLyricBackFirstReplyIntoView,
   scrollFeedLyricBackPanelIntoView,
+  scrollPostLyricBackFirstReplyIntoView,
   type FeedScrollSnapshot,
 } from '@/lib/lyric-back-panel-scroll'
 import { usePathname } from 'next/navigation'
@@ -293,6 +295,18 @@ export function LyricBackFocusBody({
   const onListScroll = useCallback(() => {
     rememberScroll(focusId)
   }, [focusId, rememberScroll])
+
+  useLayoutEffect(() => {
+    if (!emptyFirstRoot) return
+    const panel = scrollRef.current?.closest('.margo-post-card__lb-panel, .margo-post-detail-lb')
+    if (!(panel instanceof HTMLElement)) return
+    const scroll = feedPanel
+      ? scrollFeedLyricBackFirstReplyIntoView
+      : scrollPostLyricBackFirstReplyIntoView
+    scroll(panel)
+    const id = window.requestAnimationFrame(() => scroll(panel))
+    return () => window.cancelAnimationFrame(id)
+  }, [emptyFirstRoot, feedPanel])
 
   useLayoutEffect(() => {
     pendingRestore.current = focusId
@@ -721,13 +735,20 @@ export function LyricBackFeedPanel({
       feedScrollSnapshot.current = captureFeedScrollSnapshot(panel)
     }
     const firstReply = !isNested && echoCountLive === 0
-    if (firstReply) return
-    scrollFeedLyricBackPanelIntoView(panel)
+    const scroll = firstReply ? scrollFeedLyricBackFirstReplyIntoView : scrollFeedLyricBackPanelIntoView
+    scroll(panel)
     const frame = window.requestAnimationFrame(() => {
-      if (!isNested && echoCountLive === 0) return
-      scrollFeedLyricBackPanelIntoView(panelRef.current)
+      scroll(panelRef.current)
     })
-    return () => window.cancelAnimationFrame(frame)
+    const frame2 = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        scroll(panelRef.current)
+      })
+    })
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.cancelAnimationFrame(frame2)
+    }
   }, [open, onFeed, focusId, isNested, echoCountLive])
 
   if (!open || !postId) return null

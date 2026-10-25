@@ -8,6 +8,7 @@ import { UI_FONT } from '@/lib/fonts'
 import {
   LYRIC_BACK_KEYBOARD_THRESHOLD_PX,
   panelSearchDropdownFillBelow,
+  panelSearchDropdownFrame,
   visualKeyboardInsetPx,
 } from '@/lib/lyric-back-keyboard'
 import { compactArtworkUrl } from '@/lib/compact-artwork-url'
@@ -321,13 +322,24 @@ export function ComposeSearchDropdown({
       viewportHeight: anchorMeasure.height,
       offsetTop: anchorMeasure.offsetTop,
     }) > LYRIC_BACK_KEYBOARD_THRESHOLD_PX
-    const frame = panelSearchDropdownFillBelow({
+    const frameBelow = panelSearchDropdownFillBelow({
       anchorBottom: anchorRect.bottom,
       offsetTop: anchorMeasure.offsetTop,
       viewportHeight: anchorMeasure.height,
       bottomInset: keyboardOpen ? 8 : pageBottom,
     })
-    const { top, maxHeight } = frame
+    const frameSmart = panelSearchDropdownFrame({
+      anchorTop: anchorRect.top,
+      anchorBottom: anchorRect.bottom,
+      offsetTop: anchorMeasure.offsetTop,
+      viewportHeight: anchorMeasure.height,
+      bottomInset: keyboardOpen ? 8 : pageBottom,
+      gap: 8,
+      maxCap: 360,
+    })
+    const useSmart = frameSmart.maxHeight >= 120 && frameSmart.maxHeight < frameBelow.maxHeight * 0.85
+    const { top, maxHeight: rawMax } = useSmart ? frameSmart : frameBelow
+    const maxHeight = Math.max(rawMax, displayResults.length > 0 ? 132 : rawMax)
     const panelEl = (anchorRef?.current?.closest('.margo-post-card__lb-panel')
       || anchorRef?.current?.closest('.margo-post-detail-lb')
       || anchorRef?.current?.closest('.margo-lb-focus')) as HTMLElement | null

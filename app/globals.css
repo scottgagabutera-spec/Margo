@@ -2340,16 +2340,14 @@ html[data-margo-stage-idle] .margo-stage-zone {
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;
-  display: flex;
-  align-items: center;
-  flex-wrap: nowrap;
+  display: block;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 0.82rem;
   font-weight: 400;
-  letter-spacing: -0.01em;
+  letter-spacing: normal;
   color: var(--text-muted);
   padding: 0 44px 0 40px;
   box-sizing: border-box;
@@ -2358,14 +2356,21 @@ html[data-margo-stage-idle] .margo-stage-zone {
   font-size: 14px;
   padding: 0 32px 0 30px;
 }
-.margo-search-hint__word {
-  opacity: 0.45;
-  transition: opacity 480ms ease, color 480ms ease;
+.margo-search-hint__done {
+  color: var(--text-muted);
 }
-.margo-search-hint__word--on {
-  opacity: 1;
-  color: color-mix(in srgb, var(--gold) 72%, var(--text-muted));
-  font-weight: 500;
+.margo-search-hint__caret {
+  display: inline-block;
+  width: 1px;
+  height: 0.95em;
+  margin-left: 1px;
+  vertical-align: -0.06em;
+  background: color-mix(in srgb, var(--gold) 65%, var(--text-muted));
+  animation: margo-search-hint-caret 1s ease-in-out infinite;
+}
+@keyframes margo-search-hint-caret {
+  0%, 45% { opacity: 1; }
+  50%, 100% { opacity: 0.15; }
 }
 .margo-search-wrap--hint-visible .margo-search,
 .margo-search-wrap--hint-visible .margo-search--lb-panel {
@@ -2384,8 +2389,9 @@ html[data-margo-stage-idle] .margo-stage-zone {
   background: var(--surface);
 }
 @media (prefers-reduced-motion: reduce) {
-  .margo-search-hint__word {
-    transition: none;
+  .margo-search-hint__caret {
+    animation: none;
+    opacity: 0.5;
   }
 }
 html.margo-keyboard-open .margo-mobile-tabbar {

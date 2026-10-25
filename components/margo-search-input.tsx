@@ -4,10 +4,11 @@ import { useId, useState, useEffect, useRef } from 'react'
 import { CloseIcon, SearchIcon } from '@/components/icons'
 import { UI_FONT } from '@/lib/fonts'
 import {
+  MARGO_CATALOG_HINT_CHAR_MS,
+  MARGO_CATALOG_HINT_PAUSE_MS,
   MARGO_CATALOG_SEARCH_ARIA_LABEL,
-  MARGO_CATALOG_SEARCH_HINT_WORDS,
+  MARGO_CATALOG_SEARCH_HINT_FULL,
   MARGO_CATALOG_SEARCH_STATIC_PLACEHOLDER,
-  nextCatalogSearchHintIndex,
 } from '@/lib/margo-search-hints'
 
 interface MargoSearchInputProps {
@@ -36,8 +37,6 @@ interface MargoSearchInputProps {
 /** Must exceed ComposeSearchDropdown scrim (54) and listbox (55). */
 const SEARCH_ABOVE_OVERLAY_Z = 56
 
-const HINT_CYCLE_MS = 3200
-
 /**
  * Shared pill search field — Feed / Discover / Compose / Stage / Lyric Back.
  * UI_FONT, CSS variables only (MARGO_BRAND §14–15).
@@ -62,7 +61,7 @@ export function MargoSearchInput({
   const autoId = useId()
   const inputId = idProp ?? autoId
   const [focused, setFocused] = useState(false)
-  const [hintIndex, setHintIndex] = useState(0)
+  const [typedLen, setTypedLen] = useState(0)
   const [reducedMotion, setReducedMotion] = useState(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const showLeftIcon = icon === 'left'
@@ -82,11 +81,29 @@ export function MargoSearchInput({
   }, [])
 
   useEffect(() => {
-    if (!catalogHints || value.length > 0 || focused || reducedMotion) return
-    const t = window.setInterval(() => {
-      setHintIndex((i) => nextCatalogSearchHintIndex(i))
-    }, HINT_CYCLE_MS)
-    return () => window.clearInterval(t)
+    if (!catalogHints || value.length > 0 || focused) return
+    if (reducedMotion) {
+      setTypedLen(MARGO_CATALOG_SEARCH_HINT_FULL.length)
+      return
+    }
+    setTypedLen(0)
+    let len = 0
+    let pauseTimer = 0
+    const tick = () => {
+      len += 1
+      if (len > MARGO_CATALOG_SEARCH_HINT_FULL.length) {
+        len = 0
+        setTypedLen(0)
+        pauseTimer = window.setTimeout(tick, MARGO_CATALOG_HINT_PAUSE_MS)
+        return
+      }
+      setTypedLen(len)
+      pauseTimer = window.setTimeout(tick, MARGO_CATALOG_HINT_CHAR_MS)
+    }
+    pauseTimer = window.setTimeout(tick, MARGO_CATALOG_HINT_CHAR_MS)
+    return () => {
+      if (pauseTimer) window.clearTimeout(pauseTimer)
+    }
   }, [catalogHints, focused, reducedMotion, value.length])
 
   const showCatalogOverlay = catalogHints && value.length === 0 && !focused
@@ -147,19 +164,10 @@ export function MargoSearchInput({
       ) : null}
       {showCatalogOverlay ? (
         <span className="margo-search-hint" aria-hidden>
-          <span className="margo-search-hint__lead">Search with </span>
-          {MARGO_CATALOG_SEARCH_HINT_WORDS.map((word, i) => (
-            <span
-              key={word}
-              className={
-                'margo-search-hint__word'
-                + (i === hintIndex ? ' margo-search-hint__word--on' : '')
-              }
-            >
-              {word}
-              {i < MARGO_CATALOG_SEARCH_HINT_WORDS.length - 1 ? ', ' : ''}
-            </span>
-          ))}
+          <span className="margo-search-hint__done">
+            {MARGO_CATALOG_SEARCH_HINT_FULL.slice(0, typedLen)}
+          </span>
+          <span className="margo-search-hint__caret" />
         </span>
       ) : null}
       <input

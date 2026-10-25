@@ -1,7 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
-import { scrollPostLyricBackSectionIntoView } from '@/lib/lyric-back-panel-scroll'
+import {
+  scrollPostLyricBackFirstReplyIntoView,
+  scrollPostLyricBackSectionIntoView,
+} from '@/lib/lyric-back-panel-scroll'
 import { usePathname } from 'next/navigation'
 import { useLyricBackFocusStack, type LyricBackStackOptions } from '@/hooks/useLyricBackFocusStack'
 import {
@@ -85,11 +88,10 @@ export function PostDetailLyricSection({
   useLayoutEffect(() => {
     if (!composeOpen) return
     const firstReply = !isNested && echoCountLive === 0
-    if (firstReply) return
-    scrollPostLyricBackSectionIntoView(sectionRef.current)
+    const scroll = firstReply ? scrollPostLyricBackFirstReplyIntoView : scrollPostLyricBackSectionIntoView
+    scroll(sectionRef.current)
     const frame = window.requestAnimationFrame(() => {
-      if (!isNested && echoCountLive === 0) return
-      scrollPostLyricBackSectionIntoView(sectionRef.current)
+      scroll(sectionRef.current)
     })
     return () => window.cancelAnimationFrame(frame)
   }, [composeOpen, focusId, sectionRef, isNested, echoCountLive])

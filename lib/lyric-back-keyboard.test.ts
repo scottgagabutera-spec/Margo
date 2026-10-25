@@ -257,6 +257,7 @@ describe('lyric back keyboard wiring', () => {
     assert.match(panel, /field\.blur\(\)/)
     assert.doesNotMatch(card, /scrollIntoView/)
     assert.match(scroll, /scrollFeedLyricBackPanelIntoView/)
+    assert.match(scroll, /scrollFeedLyricBackFirstReplyIntoView/)
     assert.doesNotMatch(scroll, /scrollFeedLyricBackSearchUnderNav/)
     assert.match(panel, /scrollFeedLyricBackPanelIntoView/)
     assert.match(panel, /restoreFeedScrollSnapshot/)

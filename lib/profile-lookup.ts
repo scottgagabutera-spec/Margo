@@ -63,6 +63,13 @@ async function flush() {
  * after first resolution — repeat subscriptions for the same uid across
  * the feed resolve instantly from cache.
  */
+/** `undefined` = not loaded yet; `null` = no profile row for this author id. */
+export function peekAuthorProfileCache(authorUid: string): AuthorProfile | null | undefined {
+  if (!authorUid) return undefined
+  if (!cache.has(authorUid)) return undefined
+  return cache.get(authorUid) ?? null
+}
+
 export function subscribeAuthorProfile(authorUid: string, listener: Listener): () => void {
   if (!listeners.has(authorUid)) listeners.set(authorUid, new Set())
   listeners.get(authorUid)!.add(listener)
