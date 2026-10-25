@@ -268,6 +268,11 @@ export type UsernameValidationResult =
   | { ok: true; value: string }
   | { ok: false; message: string }
 
+/** Internal temp handle from profile bootstrap — not a valid public choice. */
+export function isTemporaryMemberUsername(raw: string): boolean {
+  return /^member\d+$/.test(normalizeUsernameInput(raw))
+}
+
 export function validateUsernameChoice(
   raw: string,
   currentUsername?: string | null,
@@ -277,6 +282,10 @@ export function validateUsernameChoice(
 
   if (current && value === current) {
     return { ok: true, value }
+  }
+
+  if (isTemporaryMemberUsername(value)) {
+    return { ok: false, message: 'Pick a personal username.' }
   }
 
   if (value.length < USERNAME_MIN_LENGTH) {

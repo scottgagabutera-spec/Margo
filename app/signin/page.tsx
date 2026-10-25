@@ -10,7 +10,6 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { resolvePostAuthNavigation } from '@/lib/auth-welcome-redirect'
 import { AUTH_RETURN_QUERY, sanitizeAuthReturnPath } from '@/lib/auth-return'
 import { completeAuthNavigation } from '@/lib/auth-complete-navigation'
-import { AuthScreenHelp } from '@/components/auth-screen-help'
 import { AuthViewportKeyboardInset } from '@/components/auth-viewport'
 import './auth-layout.css'
 
@@ -130,7 +129,6 @@ function SigninPageInner() {
                 onSignupCheckEmailView={setSignupCheckEmail}
               />
             )}
-            <AuthScreenHelp />
           </main>
         </div>
       </div>

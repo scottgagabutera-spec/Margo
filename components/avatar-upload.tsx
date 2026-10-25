@@ -5,11 +5,9 @@ import { useState, useRef, useEffect } from 'react'
 import { MargoPhotoSource } from '@/components/margo-photo-source'
 import { PortraitAvatarCropSheet } from '@/components/portrait-avatar-crop-sheet'
 import { MargoPortraitAvatar } from '@/components/margo-portrait-avatar'
-import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
+import { uploadProfileAvatar } from '@/lib/profile-avatar-upload'
 import { TYPE, UI_FONT } from '@/lib/fonts'
-
-const supabase = createClient()
 
 const font = UI_FONT
 const bg = 'var(--bg)'
@@ -57,25 +55,7 @@ export function AvatarUpload({ currentAvatarUrl, displayName, onUploaded, onBefo
     setError(null)
 
     try {
-      const ext = file.name.split('.').pop()
-      const path = `${user.id}/avatar.${ext}`
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(path, file, { upsert: true, cacheControl: '3600' })
-
-      if (uploadError) throw uploadError
-
-      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
-      // Cache-bust so the new image shows immediately instead of a stale cached version
-      const freshUrl = `${urlData.publicUrl}?t=${Date.now()}`
-
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: freshUrl })
-        .eq('id', user.id)
-
-      if (updateError) throw updateError
+      const freshUrl = await uploadProfileAvatar(user.id, file)
 
       setLocalPreview(freshUrl)
       setImgFailed(false)

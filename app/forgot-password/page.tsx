@@ -7,7 +7,6 @@ import { stashResetRequestEmail } from '@/lib/auth-recovery-email-prefill'
 import { LoadingRing } from '@/components/loading-ring'
 import { createClient } from '@/lib/supabase/client'
 import { TYPE, UI_FONT } from '@/lib/fonts'
-import { AuthScreenHelp } from '@/components/auth-screen-help'
 import { AuthViewportKeyboardInset, scrollAuthFieldIntoView } from '@/components/auth-viewport'
 import { resolveAuthEmailRedirectOriginFromHost, resetPasswordRedirectUrl } from '@/lib/auth-email-redirect'
 import '../signin/auth-layout.css'
@@ -173,7 +172,6 @@ export default function ForgotPasswordPage() {
               </div>
             )}
           </main>
-          <AuthScreenHelp />
         </div>
       </div>
     </div>

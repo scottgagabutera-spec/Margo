@@ -14,7 +14,6 @@ import { AuthPasswordField } from '@/components/auth-password-field'
 import { AuthRecoveryCodeInput, RECOVERY_CODE_LENGTH } from '@/components/auth-recovery-code-input'
 import { createRecoveryClient } from '@/lib/supabase/recovery-client'
 import { TYPE, UI_FONT } from '@/lib/fonts'
-import { AuthScreenHelp } from '@/components/auth-screen-help'
 import { AuthViewportKeyboardInset, scrollAuthFieldIntoView } from '@/components/auth-viewport'
 import {
   classifyRecoveryUrlError,
@@ -564,7 +563,6 @@ function ResetPasswordInner() {
               </div>
             )}
           </main>
-          <AuthScreenHelp />
         </div>
       </div>
     </div>

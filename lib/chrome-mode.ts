@@ -27,6 +27,8 @@ function isAuthPath(pathname: string | null | undefined): boolean {
     || pathname === '/forgot-password'
     || pathname === '/reset-password'
     || pathname.startsWith('/auth/callback')
+    || pathname === '/welcome'
+    || pathname.startsWith('/welcome/')
   )
 }
 
