@@ -9,8 +9,9 @@ import {
 describe('auth password policy', () => {
   it('requires length, letter, and number', () => {
     assert.equal(validatePassword('abcdefgh').ok, false)
-    assert.equal(validatePassword('12345678').ok, false)
-    assert.equal(validatePassword('abcdefgh1').ok, true)
+    assert.equal(validatePassword('1234567890').ok, false)
+    assert.equal(validatePassword('abcdefgh1').ok, false)
+    assert.equal(validatePassword('abcdefghij1').ok, true)
     assert.equal(validatePassword('a'.repeat(15)).ok, false)
   })
 
@@ -21,6 +22,6 @@ describe('auth password policy', () => {
 
   it('strength hint tracks weak letter-only passwords', () => {
     assert.equal(passwordStrengthHint('abcdefghijklmno'), 'weak')
-    assert.equal(passwordStrengthHint('abcdefgh1'), 'fair')
+    assert.equal(passwordStrengthHint('abcdefghij1'), 'fair')
   })
 })

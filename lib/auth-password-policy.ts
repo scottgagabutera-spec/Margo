@@ -1,6 +1,6 @@
 /** Shared password rules for signup, Settings, and reset. */
 
-export const AUTH_PASSWORD_MIN_LENGTH = 8
+export const AUTH_PASSWORD_MIN_LENGTH = 10
 
 /** Plain requirement line (shown under password fields on signup). */
 export const AUTH_PASSWORD_REQUIREMENTS_LINE =
