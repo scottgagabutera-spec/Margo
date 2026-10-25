@@ -84,12 +84,15 @@ export function PostDetailLyricSection({
 
   useLayoutEffect(() => {
     if (!composeOpen) return
+    const firstReply = !isNested && echoCountLive === 0
+    if (firstReply) return
     scrollPostLyricBackSectionIntoView(sectionRef.current)
     const frame = window.requestAnimationFrame(() => {
+      if (!isNested && echoCountLive === 0) return
       scrollPostLyricBackSectionIntoView(sectionRef.current)
     })
     return () => window.cancelAnimationFrame(frame)
-  }, [composeOpen, focusId, sectionRef])
+  }, [composeOpen, focusId, sectionRef, isNested, echoCountLive])
 
   useEffect(() => {
     if (!composeOpen) clearLyricBackKeyboardChrome()

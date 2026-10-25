@@ -23,6 +23,7 @@ import { PendingNavLink } from '@/components/pending-nav-link'
 import { useStoryRingContext } from '@/components/stories/story-ring-context'
 import { StoryAvatarRing } from '@/components/stories/story-avatar-ring'
 import { MargoPortraitAvatar, feedPortraitDimensions } from '@/components/margo-portrait-avatar'
+import { defaultAvatarUrlForSeed } from '@/lib/default-avatar-url'
 import { isMargoBrandUsername } from '@/lib/margo-brand-account'
 import { RelativeTime } from '@/components/relative-time'
 import type { AuthorProfile } from '@/lib/profile-lookup'
@@ -195,15 +196,18 @@ function PostCardPortraitHeader({
     buildPostHeaderContext(post, authorProfile, storyRing)
   const brandMark = isMargoBrandUsername(profileUsername)
   const avatarInitial = post.username ? post.username.charAt(0).toUpperCase() : (isTier1 ? 'M' : '?')
+  const generatedAvatarUrl = !avatarUrl && !brandMark && !isTier1
+    ? defaultAvatarUrlForSeed(profileUsername || post.username || post.id)
+    : null
 
   const portrait = (
     <MargoPortraitAvatar
       size="feed"
-      imageUrl={avatarUrl}
+      imageUrl={avatarUrl || generatedAvatarUrl}
       onImageError={onAvatarError}
       fallbackInitial={avatarInitial}
       brandMark={brandMark}
-      tierGoldTile={!avatarUrl && !brandMark && isTier1}
+      tierGoldTile={!avatarUrl && !generatedAvatarUrl && !brandMark && isTier1}
       separationRingColor="var(--surface)"
     />
   )
@@ -735,6 +739,7 @@ export function PostCard({
         suggestionsOpen ? 'margo-post-card--lb-panel-open' : '',
       ].filter(Boolean).join(' ')}
       data-lb-panel-open={suggestionsOpen ? '1' : undefined}
+      data-lb-first-reply={suggestionsOpen && echoCountLive === 0 ? '1' : undefined}
       onClick={goToPost}
       onPointerDown={() => {
         if (!disableCardNav && !isRow) persistActivePrimaryScroll()

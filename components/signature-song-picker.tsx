@@ -249,6 +249,7 @@ export function SignatureSongPicker({
       <MargoSearchInput
         value={query}
         onChange={setQuery}
+        catalogHints
         placeholder="Search Margo, Genius, or Apple Music"
         ariaLabel="Search songs"
         loading={loading}

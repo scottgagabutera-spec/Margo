@@ -11,6 +11,8 @@ import {
   type ReactNode,
 } from 'react'
 import { MargoSearchInput } from '@/components/margo-search-input'
+import { MomentComposeVibePicker } from '@/components/moment-compose-vibe-picker'
+import { emotionToVibeLabel, vibeLabelToEmotion } from '@/lib/moment/vibe'
 import { ComposeSearchDropdown, type ComposeSearchHit } from '@/components/compose-search-dropdown'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { FeedIconSend, FeedIconClose } from '@/components/feed-card-icons'
@@ -78,6 +80,8 @@ export type LyricBackPanelComposeProps = {
   focusSearchOnMount?: boolean
   /** Panel chrome: search sits in the one-row bar. */
   renderBar?: (search: ReactNode) => ReactNode
+  /** Feed first Lyric Back: tabs in pin, search below the post context. */
+  pinSearchInBar?: boolean
   /** Rendered after song/line (e.g. vibe + Save). Hides built-in panel send when set. */
   panelAfterBody?: ReactNode
   onPostingChange?: (posting: boolean) => void
@@ -114,6 +118,7 @@ export const LyricBackPanelCompose = forwardRef<
     replyToLabel,
     focusSearchOnMount = false,
     renderBar,
+    pinSearchInBar = true,
     panelAfterBody,
     onPostingChange,
     lockSongAndLine = false,
@@ -144,6 +149,13 @@ export const LyricBackPanelCompose = forwardRef<
     onPostingChange?.(posting)
   }, [onPostingChange, posting])
   const [postError, setPostError] = useState<string | null>(null)
+  const [composeVibeLabel, setComposeVibeLabel] = useState(
+    () => emotionToVibeLabel(parentEmotion) || 'Chill',
+  )
+
+  useEffect(() => {
+    setComposeVibeLabel(emotionToVibeLabel(parentEmotion) || 'Chill')
+  }, [parentPostId, parentEmotion])
 
   const handleSendRef = useRef<() => void>(() => {})
 
@@ -358,7 +370,9 @@ export const LyricBackPanelCompose = forwardRef<
     if (!canSend || !selected) return
     setPosting(true)
     setPostError(null)
-    const emotion = submitEmotion ?? parentEmotion
+    const emotion = submitEmotion
+      ?? vibeLabelToEmotion(composeVibeLabel)
+      ?? parentEmotion
     const body = {
       text: lyric.trim(),
       emotion,
@@ -513,6 +527,7 @@ export const LyricBackPanelCompose = forwardRef<
     snippetEnd,
     snippetStart,
     submitEmotion,
+    composeVibeLabel,
   ])
 
   handleSendRef.current = () => {
@@ -576,6 +591,7 @@ export const LyricBackPanelCompose = forwardRef<
         loading={searchLoading}
         placeholder={isPanelLayout ? 'Search' : 'Search by lyric, song or artist…'}
         ariaLabel="Search by lyric, song or artist"
+        catalogHints
         compact={isPanelLayout}
         stackAboveOverlay={isPanelLayout && searchOpen}
         autoFocus={focusSearchOnMount && !lockSongAndLine}
@@ -630,6 +646,13 @@ export const LyricBackPanelCompose = forwardRef<
         <span className="margo-song-row__artist margo-post-card__lb-compose-artist">{selected.artist}</span>
       </div>
       <div className="margo-song-row__trail">
+        {isPanelLayout ? (
+          <MomentComposeVibePicker
+            compact
+            vibeLabel={composeVibeLabel}
+            onVibeSelect={setComposeVibeLabel}
+          />
+        ) : null}
         <LyricBackTrackListenControl
           className={isPanelLayout ? 'margo-post-card__lb-compose-open' : undefined}
           songId={selected.catalogSongId}
@@ -754,8 +777,15 @@ export const LyricBackPanelCompose = forwardRef<
       {!isPanelLayout && replyToLabel ? (
         <p className="margo-post-card__lb-compose-reply-to">{replyToLabel}</p>
       ) : null}
-      {renderBar ? renderBar(searchField) : searchField}
+      {renderBar
+        ? renderBar(isPanelLayout && !pinSearchInBar ? null : searchField)
+        : searchField}
       {body}
+      {isPanelLayout && !pinSearchInBar ? (
+        <div className="margo-post-card__lb-search-footer" data-lb-search-footer="1">
+          {searchField}
+        </div>
+      ) : null}
       {panelAfterBody ? (
         <div className="margo-post-card__lb-compose-panel-footer">{panelAfterBody}</div>
       ) : null}

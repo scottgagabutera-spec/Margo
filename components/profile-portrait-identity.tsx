@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { MargoPortraitAvatar } from '@/components/margo-portrait-avatar'
+import { defaultAvatarUrlForSeed } from '@/lib/default-avatar-url'
 import { isMargoBrandUsername } from '@/lib/margo-brand-account'
 import { ArtistBadge, type ArtistStatus } from '@/components/artist-badge'
 export function ProfilePortraitIdentity({
@@ -28,11 +29,14 @@ export function ProfilePortraitIdentity({
   const brandMark = isMargoBrandUsername(username)
   const hasPhoto = !!avatarUrl?.trim() && !avatarBroken
   const initial = (displayName || username || '?').charAt(0).toUpperCase()
+  const generatedAvatarUrl = !hasPhoto && !brandMark
+    ? defaultAvatarUrlForSeed(username || displayName)
+    : null
 
   const portrait = (
     <MargoPortraitAvatar
       size="profile"
-      imageUrl={hasPhoto ? avatarUrl : null}
+      imageUrl={hasPhoto ? avatarUrl : generatedAvatarUrl}
       onImageError={onAvatarError}
       fallbackInitial={initial}
       brandMark={brandMark}

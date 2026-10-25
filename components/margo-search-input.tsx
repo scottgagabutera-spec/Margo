@@ -3,6 +3,12 @@
 import { useId, useState, useEffect, useRef } from 'react'
 import { CloseIcon, SearchIcon } from '@/components/icons'
 import { UI_FONT } from '@/lib/fonts'
+import {
+  MARGO_CATALOG_SEARCH_ARIA_LABEL,
+  MARGO_CATALOG_SEARCH_HINT_WORDS,
+  MARGO_CATALOG_SEARCH_STATIC_PLACEHOLDER,
+  nextCatalogSearchHintIndex,
+} from '@/lib/margo-search-hints'
 
 interface MargoSearchInputProps {
   value: string
@@ -23,10 +29,14 @@ interface MargoSearchInputProps {
   autoFocus?: boolean
   /** Lyric Back panel: 36px field, CSS-owned type size (14px / 16px on iOS WebKit). */
   compact?: boolean
+  /** Premium cycling “Search with song / lyric / artist” when empty. */
+  catalogHints?: boolean
 }
 
 /** Must exceed ComposeSearchDropdown scrim (54) and listbox (55). */
 const SEARCH_ABOVE_OVERLAY_Z = 56
+
+const HINT_CYCLE_MS = 3200
 
 /**
  * Shared pill search field — Feed / Discover / Compose / Stage / Lyric Back.
@@ -47,10 +57,13 @@ export function MargoSearchInput({
   id: idProp,
   autoFocus = false,
   compact = false,
+  catalogHints = false,
 }: MargoSearchInputProps) {
   const autoId = useId()
   const inputId = idProp ?? autoId
   const [focused, setFocused] = useState(false)
+  const [hintIndex, setHintIndex] = useState(0)
+  const [reducedMotion, setReducedMotion] = useState(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const showLeftIcon = icon === 'left'
 
@@ -59,11 +72,40 @@ export function MargoSearchInput({
     inputRef.current?.focus()
   }, [autoFocus])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const apply = () => setReducedMotion(mq.matches)
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
+  }, [])
+
+  useEffect(() => {
+    if (!catalogHints || value.length > 0 || focused || reducedMotion) return
+    const t = window.setInterval(() => {
+      setHintIndex((i) => nextCatalogSearchHintIndex(i))
+    }, HINT_CYCLE_MS)
+    return () => window.clearInterval(t)
+  }, [catalogHints, focused, reducedMotion, value.length])
+
+  const showCatalogOverlay = catalogHints && value.length === 0 && !focused
+  const resolvedPlaceholder = catalogHints
+    ? (reducedMotion || focused ? MARGO_CATALOG_SEARCH_STATIC_PLACEHOLDER : ' ')
+    : placeholder
+  const resolvedAria = ariaLabel || (catalogHints ? MARGO_CATALOG_SEARCH_ARIA_LABEL : placeholder)
+
   const inputClass = compact ? 'margo-search margo-search--lb-panel' : className
+  const wrapClass = [
+    compact ? 'margo-search-wrap margo-search-wrap--lb' : '',
+    catalogHints ? 'margo-search-wrap--catalog-hints' : '',
+    showCatalogOverlay ? 'margo-search-wrap--hint-visible' : '',
+    focused && catalogHints ? 'margo-search-wrap--hint-focus' : '',
+  ].filter(Boolean).join(' ')
 
   return (
     <div
-      className={compact ? 'margo-search-wrap margo-search-wrap--lb' : undefined}
+      className={wrapClass || undefined}
       style={{ position: 'relative', width: '100%', zIndex: stackAboveOverlay ? SEARCH_ABOVE_OVERLAY_Z : undefined }}
     >
       {showLeftIcon ? (
@@ -103,6 +145,23 @@ export function MargoSearchInput({
           )}
         </span>
       ) : null}
+      {showCatalogOverlay ? (
+        <span className="margo-search-hint" aria-hidden>
+          <span className="margo-search-hint__lead">Search with </span>
+          {MARGO_CATALOG_SEARCH_HINT_WORDS.map((word, i) => (
+            <span
+              key={word}
+              className={
+                'margo-search-hint__word'
+                + (i === hintIndex ? ' margo-search-hint__word--on' : '')
+              }
+            >
+              {word}
+              {i < MARGO_CATALOG_SEARCH_HINT_WORDS.length - 1 ? ', ' : ''}
+            </span>
+          ))}
+        </span>
+      ) : null}
       <input
         id={inputId}
         ref={inputRef}
@@ -124,8 +183,8 @@ export function MargoSearchInput({
           setFocused(false)
           onBlur?.()
         }}
-        placeholder={placeholder}
-        aria-label={ariaLabel || placeholder}
+        placeholder={resolvedPlaceholder}
+        aria-label={resolvedAria}
         aria-busy={loading}
         style={compact ? {
           width: '100%',

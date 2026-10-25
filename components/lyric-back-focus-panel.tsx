@@ -270,6 +270,11 @@ export function LyricBackFocusBody({
   }, [onApplySuggestion])
 
   const feedPanel = variant === 'feed-panel'
+  const emptyFirstRoot = !isNested
+    && !ideasOpen
+    && echoCountHint === 0
+    && echoesReady
+    && echoes.length === 0
   const showCompose = composeOpen && canReply && Boolean(focusId)
   const scrollRef = useRef<HTMLDivElement>(null)
   const scrollMemory = useRef<Map<string, number>>(new Map())
@@ -441,7 +446,13 @@ export function LyricBackFocusBody({
   )
 
   return (
-    <div className="margo-lb-focus">
+    <div
+      className={
+        'margo-lb-focus'
+        + (emptyFirstRoot ? ' margo-lb-focus--first-reply' : '')
+      }
+      data-lb-first-reply={emptyFirstRoot ? '1' : undefined}
+    >
       <TitleTag className="margo-sr-only">
         Lyric Backs, {headerCount}
         {replyToUsername ? `, ${String(replyToUsername).replace(/^@/, '')}` : ''}
@@ -458,6 +469,7 @@ export function LyricBackFocusBody({
             focusSearchOnMount={false}
             replyToLabel={null}
             renderBar={renderBar}
+            pinSearchInBar={!emptyFirstRoot}
             onSent={() => {
               sentSnapshot.current = new Set(echoes.map((echo) => echo.id))
               onSent()
@@ -654,20 +666,6 @@ export function LyricBackFeedPanel({
   useLyricBackPanelViewport(panelRef, open && onFeed)
   const feedScrollSnapshot = useRef<FeedScrollSnapshot | null>(null)
 
-  useLayoutEffect(() => {
-    if (!open || !onFeed) return
-    const panel = panelRef.current
-    if (!panel) return
-    if (!feedScrollSnapshot.current) {
-      feedScrollSnapshot.current = captureFeedScrollSnapshot(panel)
-    }
-    scrollFeedLyricBackPanelIntoView(panel)
-    const frame = window.requestAnimationFrame(() => {
-      scrollFeedLyricBackPanelIntoView(panelRef.current)
-    })
-    return () => window.cancelAnimationFrame(frame)
-  }, [open, onFeed, focusId])
-
   useEffect(() => {
     if (open) return
     if (feedScrollSnapshot.current) {
@@ -715,13 +713,33 @@ export function LyricBackFeedPanel({
     [onEchoCountDelta],
   )
 
+  useLayoutEffect(() => {
+    if (!open || !onFeed) return
+    const panel = panelRef.current
+    if (!panel) return
+    if (!feedScrollSnapshot.current) {
+      feedScrollSnapshot.current = captureFeedScrollSnapshot(panel)
+    }
+    const firstReply = !isNested && echoCountLive === 0
+    if (firstReply) return
+    scrollFeedLyricBackPanelIntoView(panel)
+    const frame = window.requestAnimationFrame(() => {
+      if (!isNested && echoCountLive === 0) return
+      scrollFeedLyricBackPanelIntoView(panelRef.current)
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [open, onFeed, focusId, isNested, echoCountLive])
+
   if (!open || !postId) return null
 
   return (
     <div
       ref={panelRef}
       data-no-card-nav
-      className={`margo-post-card__lb-panel${isNested ? ' margo-post-card__lb-panel--thread-focus' : ' margo-post-card__lb-panel--feed-root'}`}
+      className={`margo-post-card__lb-panel${
+        isNested ? ' margo-post-card__lb-panel--thread-focus' : ' margo-post-card__lb-panel--feed-root'
+      }${!isNested && echoCountLive === 0 ? ' margo-post-card__lb-panel--first-reply' : ''}`}
+      data-lb-first-reply={!isNested && echoCountLive === 0 ? '1' : undefined}
       role="region"
       aria-label="Lyric Backs"
     >
