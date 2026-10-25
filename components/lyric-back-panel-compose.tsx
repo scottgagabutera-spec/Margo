@@ -755,7 +755,7 @@ export const LyricBackPanelCompose = forwardRef<
     </div>
   ) : null
 
-  const panelVibeFooter = isPanelLayout && !showLyricField && !panelAfterBody ? (
+  const panelVibeFooter = isPanelLayout && selected && !showLyricField && !panelAfterBody ? (
     <div className="margo-post-card__lb-compose-vibe-only">
       <MomentComposeVibePicker
         compact
@@ -792,18 +792,16 @@ export const LyricBackPanelCompose = forwardRef<
         ? renderBar(isPanelLayout && !pinSearchInBar ? null : searchField)
         : searchField}
       {body}
-      {isPanelLayout && !pinSearchInBar ? (
+      {isPanelLayout && !pinSearchInBar && !selected ? (
         <div className="margo-post-card__lb-search-footer" data-lb-search-footer="1">
-          {!selected ? (
-            <div className="margo-post-card__lb-search-footer__vibe">
-              <MomentComposeVibePicker
-                compact
-                density="panel"
-                vibeLabel={composeVibeLabel}
-                onVibeSelect={setComposeVibeLabel}
-              />
-            </div>
-          ) : null}
+          <div className="margo-post-card__lb-search-footer__vibe">
+            <MomentComposeVibePicker
+              compact
+              density="panel"
+              vibeLabel={composeVibeLabel}
+              onVibeSelect={setComposeVibeLabel}
+            />
+          </div>
           {searchField}
         </div>
       ) : null}

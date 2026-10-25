@@ -126,17 +126,39 @@ function ResultsList({
   return (
     <>
       {loading && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: '20px' }}>
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              style={{
-                width: '6px', height: '6px', borderRadius: '50%',
-                background: 'var(--gold)', opacity: 0.5,
-                animation: 'margo-bounce-dot 1s ease-in-out infinite', animationDelay: `${i * 150}ms`,
-              }}
-            />
-          ))}
+        <div
+          className={isPanel ? 'compose-search-row compose-search-row--panel compose-search-row--loading' : undefined}
+          style={isPanel ? undefined : {
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '20px',
+          }}
+          role="status"
+          aria-live="polite"
+        >
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '6px' }}>
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                style={{
+                  width: '6px', height: '6px', borderRadius: '50%',
+                  background: 'var(--gold)', opacity: 0.5,
+                  animation: 'margo-bounce-dot 1s ease-in-out infinite', animationDelay: `${i * 150}ms`,
+                }}
+              />
+            ))}
+          </div>
+          <span style={{
+            fontFamily: UI_FONT,
+            fontSize: isPanel ? '0.72rem' : '0.82rem',
+            color: 'var(--text-muted)',
+            letterSpacing: '0.02em',
+          }}
+          >
+            Searching songs…
+          </span>
         </div>
       )}
       {!loading && displayResults.length === 0 && (

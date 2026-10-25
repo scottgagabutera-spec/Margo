@@ -23,7 +23,6 @@ import { PendingNavLink } from '@/components/pending-nav-link'
 import { useStoryRingContext } from '@/components/stories/story-ring-context'
 import { StoryAvatarRing } from '@/components/stories/story-avatar-ring'
 import { MargoPortraitAvatar, feedPortraitDimensions } from '@/components/margo-portrait-avatar'
-import { defaultAvatarUrlForSeed } from '@/lib/default-avatar-url'
 import { FoundingListenerSheet } from '@/components/founding-listener-sheet'
 import { isFoundingListenerAuthor, profileHrefForAuthor } from '@/lib/profile-public-link'
 import { isMargoBrandUsername } from '@/lib/margo-brand-account'
@@ -186,6 +185,7 @@ function PostCardPortraitHeader({
   isTier1,
   storyRing,
   onFoundingListener,
+  portraitFallbackSeed,
 }: {
   post: Post
   authorProfile: AuthorProfile | null
@@ -194,6 +194,7 @@ function PostCardPortraitHeader({
   isTier1: boolean
   storyRing: StoryRingCtx
   onFoundingListener?: (displayName: string) => void
+  portraitFallbackSeed: string
 }) {
   const dim = feedPortraitDimensions('feed')
   const { profileUsername, profileHref, authorProfileId, storyAuthor, displayLabel } =
@@ -207,6 +208,7 @@ function PostCardPortraitHeader({
       imageUrl={avatarUrl}
       onImageError={onAvatarError}
       fallbackInitial={avatarInitial}
+      fallbackSeed={!avatarUrl && !brandMark ? portraitFallbackSeed : null}
       brandMark={brandMark}
       tierGoldTile={!avatarUrl && !brandMark && isTier1}
       separationRingColor="var(--surface)"
@@ -666,14 +668,8 @@ export function PostCard({
   }, [post.id, recordImpression])
 
   const rawAvatarUrl = (post.authorAvatarUrl || authorProfile?.avatarUrl || '').trim()
-  const profileUsernameForSeed = (authorProfile?.username || post.username || post.id).replace(/^@/, '')
-  const generatedAvatarUrl = !rawAvatarUrl && !avatarBroken
-    && !isMargoBrandUsername(profileUsernameForSeed)
-    ? defaultAvatarUrlForSeed(profileUsernameForSeed)
-    : null
-  const avatarUrl = rawAvatarUrl && !avatarBroken
-    ? rawAvatarUrl
-    : generatedAvatarUrl
+  const avatarUrl = rawAvatarUrl && !avatarBroken ? rawAvatarUrl : null
+  const portraitFallbackSeed = (authorProfile?.username || post.username || post.id).replace(/^@/, '')
 
   // Optimistic — the server delete already succeeded by the time this is
   // set. Other open surfaces reconcile via their own Realtime subscription
@@ -824,6 +820,7 @@ export function PostCard({
           isTier1={isTier1}
           storyRing={storyRing}
           onFoundingListener={openFoundingListener}
+          portraitFallbackSeed={portraitFallbackSeed}
         />
       ) : null}
       <div className={usePortraitHeader ? 'margo-post-card__header margo-post-card__header--portrait' : 'margo-post-card__header'}>

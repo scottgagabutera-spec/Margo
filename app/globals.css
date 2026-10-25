@@ -1563,12 +1563,28 @@ html[data-margo-stage-idle] .margo-stage-zone {
 .margo-post-card__lb-search-footer__vibe .margo-moment-vibe-picker--panel {
   width: 100%;
 }
-.margo-portrait-avatar--generated .margo-portrait-avatar__photo {
-  object-fit: cover;
-  transform: scale(1.06);
+.margo-portrait-avatar--seed .margo-portrait-avatar__frame {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold) 22%, transparent);
 }
-.margo-portrait-avatar--generated .margo-portrait-avatar__frame {
-  background: var(--surface-2);
+.margo-portrait-avatar--seed .margo-portrait-avatar__initial {
+  text-shadow: 0 1px 12px color-mix(in srgb, var(--gold) 35%, transparent);
+}
+.margo-post-card[data-lb-panel-open='1'][data-lb-first-reply='1'] ~ .margo-post-card {
+  opacity: 0.08;
+  pointer-events: none;
+  max-height: 48px;
+  overflow: hidden;
+  margin-top: 0;
+  filter: saturate(0.2);
+}
+.compose-search-row--loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 72px;
+  padding: 12px;
 }
 .margo-post-card__lb-compose-panel-footer {
   position: relative;
