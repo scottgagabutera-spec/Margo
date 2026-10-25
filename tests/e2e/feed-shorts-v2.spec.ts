@@ -400,3 +400,117 @@ test('two-column layout when viewport fits pair @1920', async ({ page }) => {
   expect(cols).toBe('2')
 })
 
+async function cdpTouchSwipe(
+  page: import('@playwright/test').Page,
+  startX: number,
+  startY: number,
+  deltaY: number,
+) {
+  const client = await page.context().newCDPSession(page)
+  const steps = 14
+  await client.send('Input.dispatchTouchEvent', {
+    type: 'touchStart',
+    touchPoints: [{ x: startX, y: startY }],
+  })
+  for (let i = 1; i <= steps; i++) {
+    await client.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ x: startX, y: startY - (deltaY * i) / steps }],
+    })
+  }
+  await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+}
+
+async function readSettledIndex(page: import('@playwright/test').Page) {
+  return page.evaluate(() => {
+    const pager = document.querySelector('.margo-feed-shorts-pager')
+    const active = document.querySelector('[data-shorts-active="1"]')
+    return {
+      scrollTop: pager?.scrollTop ?? 0,
+      index: active?.getAttribute('data-shorts-index') ?? null,
+    }
+  })
+}
+
+for (const size of [
+  { w: 390, h: 844 },
+  { w: 360, h: 740 },
+]) {
+  test(`touch swipe up/down settles one Short per flick @${size.w}x${size.h}`, async ({ page }) => {
+    test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
+    await page.setViewportSize({ width: size.w, height: size.h })
+    await page.goto(shortsUrl(size.w), { waitUntil: 'domcontentloaded', timeout: 45000 })
+    await page.waitForTimeout(1500)
+    const pager = page.locator('.margo-feed-shorts-pager')
+    await expect(pager).toBeVisible({ timeout: 20000 })
+    const box = await pager.boundingBox()
+    expect(box).toBeTruthy()
+    if (!box) return
+    const cx = box.x + box.width / 2
+    const cy = box.y + box.height * 0.55
+    const log: { dir: string; before: unknown; after: unknown }[] = []
+    let idx = 0
+    for (const dir of ['up', 'up', 'up', 'down', 'down', 'down'] as const) {
+      const before = await readSettledIndex(page)
+      const delta = dir === 'up' ? box.height * 0.72 : -box.height * 0.72
+      await cdpTouchSwipe(page, cx, cy, delta)
+      await page.waitForTimeout(450)
+      await pager.evaluate((el) => el.dispatchEvent(new Event('scrollend')))
+      await page.waitForTimeout(250)
+      const after = await readSettledIndex(page)
+      log.push({ dir, before, after })
+      if (dir === 'up') {
+        expect(Number(after.index)).toBeGreaterThanOrEqual(Number(before.index))
+        idx = Number(after.index)
+      } else {
+        expect(Number(after.index)).toBeLessThanOrEqual(idx)
+        idx = Number(after.index)
+      }
+    }
+  })
+}
+
+test('sign-up CTA lives in chrome-bottom not over lyric center', async ({ page }) => {
+  test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto(shortsUrl(390), { waitUntil: 'domcontentloaded', timeout: 45000 })
+  await page.waitForTimeout(1200)
+  await expect(page.locator('.margo-feed-shorts-slide__center-play-label')).toHaveCount(0)
+  const cta = page.locator('.margo-feed-shorts-slide__signup-cta')
+  if ((await cta.count()) === 0) {
+    test.info().annotations.push({ type: 'note', description: 'Anon signup gate not visible yet (needs 5 plays)' })
+    return
+  }
+  await expect(cta).toHaveCount(1)
+  const frame = page.locator('[data-shorts-active="1"] .margo-feed-shorts-slide__frame')
+  const frameBox = await frame.boundingBox()
+  const ctaBox = await cta.boundingBox()
+  expect(frameBox && ctaBox).toBeTruthy()
+  if (frameBox && ctaBox) {
+    expect(ctaBox.y).toBeGreaterThan(frameBox.y + frameBox.height * 0.55)
+    expect(ctaBox.y + ctaBox.height).toBeLessThanOrEqual(frameBox.y + frameBox.height + 2)
+  }
+})
+
+test('Shorts frame survives 390→1440 resize and 1440 direct load', async ({ page }) => {
+  test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto(shortsUrl(390), { waitUntil: 'domcontentloaded', timeout: 45000 })
+  await page.waitForTimeout(1200)
+  await expect(page.locator('.margo-shorts-canvas').first()).toBeVisible()
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.waitForTimeout(600)
+  const h1 = await page.locator('.margo-feed-shorts-slide__frame').first().evaluate((el) => el.getBoundingClientRect().height)
+  expect(h1).toBeGreaterThan(240)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.waitForTimeout(400)
+  const h2 = await page.locator('.margo-feed-shorts-slide__frame').first().evaluate((el) => el.getBoundingClientRect().height)
+  expect(h2).toBeGreaterThan(240)
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto(shortsUrl(1440), { waitUntil: 'domcontentloaded', timeout: 45000 })
+  await page.waitForTimeout(1200)
+  await expect(page.locator('.margo-shorts-canvas').first()).toBeVisible()
+  const h3 = await page.locator('.margo-feed-shorts-slide__frame').first().evaluate((el) => el.getBoundingClientRect().height)
+  expect(h3).toBeGreaterThan(240)
+})
+

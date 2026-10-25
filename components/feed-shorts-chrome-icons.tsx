@@ -1,7 +1,15 @@
 /** SVG-only Shorts chrome icons (no emoji). */
 
-export function ShortsMuteIcon({ muted, size = 20 }: { muted: boolean; size?: number }) {
-  const c = 'var(--gold)'
+export function ShortsMuteIcon({
+  muted,
+  size = 20,
+  color = 'currentColor',
+}: {
+  muted: boolean
+  size?: number
+  color?: string
+}) {
+  const c = color
   return muted ? (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
       <path d="M11 5L6 9H3v6h3l5 4V5z" stroke={c} strokeWidth="1.75" strokeLinejoin="round" />
@@ -16,20 +24,36 @@ export function ShortsMuteIcon({ muted, size = 20 }: { muted: boolean; size?: nu
   )
 }
 
-export function ShortsCenterPlayIcon({ size = 44 }: { size?: number }) {
+export function ShortsCenterPlayIcon({
+  size = 44,
+  accent = 'var(--margo-shorts-chrome-icon, var(--gold))',
+  scrim = 'var(--margo-shorts-chrome-scrim, rgba(8,7,12,0.42))',
+}: {
+  size?: number
+  accent?: string
+  scrim?: string
+}) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" fill="none" aria-hidden>
-      <circle cx="24" cy="24" r="22" fill="rgba(8,7,12,0.42)" stroke="rgba(255,255,255,0.22)" strokeWidth="1" />
-      <path d="M20 15v18l14-9-14-9z" fill="var(--gold)" />
+      <circle cx="24" cy="24" r="22" fill={scrim} stroke="rgba(255,255,255,0.22)" strokeWidth="1" />
+      <path d="M20 15v18l14-9-14-9z" fill={accent} />
     </svg>
   )
 }
 
-export function ShortsCenterPauseIcon({ size = 44 }: { size?: number }) {
-  const c = 'var(--gold)'
+export function ShortsCenterPauseIcon({
+  size = 44,
+  accent = 'var(--margo-shorts-chrome-icon, var(--gold))',
+  scrim = 'var(--margo-shorts-chrome-scrim, rgba(8,7,12,0.42))',
+}: {
+  size?: number
+  accent?: string
+  scrim?: string
+}) {
+  const c = accent
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" fill="none" aria-hidden>
-      <circle cx="24" cy="24" r="22" fill="rgba(8,7,12,0.42)" stroke="rgba(255,255,255,0.22)" strokeWidth="1" />
+      <circle cx="24" cy="24" r="22" fill={scrim} stroke="rgba(255,255,255,0.22)" strokeWidth="1" />
       <rect x="18" y="16" width="4.5" height="16" rx="1" fill={c} />
       <rect x="25.5" y="16" width="4.5" height="16" rx="1" fill={c} />
     </svg>

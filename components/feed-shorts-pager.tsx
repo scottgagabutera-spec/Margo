@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import {
@@ -23,6 +23,7 @@ import { isLivingAtmosphere, type AtmosphereId } from '@/lib/atmosphere'
 import type { LyricMoment } from '@/lib/lyric-moments-board'
 import { playLyricMomentShort } from '@/lib/lyric-moment-playback'
 import { pickShortsLook } from '@/lib/shorts-looks'
+import { getShortsChromeTokens } from '@/lib/shorts-chrome-tokens'
 import { computeShortsFrameLayout, SHORTS_DESKTOP_MIN_WIDTH } from '@/lib/shorts-frame-layout'
 import { utcDayKey } from '@/lib/shorts-shelf-rotation'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
@@ -50,14 +51,11 @@ function persistShortsUnmutePref(unmuted: boolean): void {
 function findSettledSlideIndex(scroller: HTMLElement): number {
   const slides = scroller.querySelectorAll<HTMLElement>('[data-shorts-slide]')
   if (!slides.length) return 0
-  const rootRect = scroller.getBoundingClientRect()
-  const targetY = rootRect.top + rootRect.height * 0.45
+  const scrollTop = scroller.scrollTop
   let bestIdx = 0
   let bestDist = Infinity
   slides.forEach((el) => {
-    const r = el.getBoundingClientRect()
-    const mid = r.top + r.height / 2
-    const dist = Math.abs(mid - targetY)
+    const dist = Math.abs(el.offsetTop - scrollTop)
     if (dist < bestDist) {
       bestDist = dist
       bestIdx = Number(el.dataset.shortsIndex) || 0
@@ -83,6 +81,23 @@ type SlideProps = {
   onTapVideo: () => void
   onToggleMute: () => void
   onCenterPlay: () => void
+  onSignup: () => void
+}
+
+function chromeStyleVars(tokens: ReturnType<typeof getShortsChromeTokens>): CSSProperties {
+  return {
+    ['--margo-shorts-chrome-title' as string]: tokens.title,
+    ['--margo-shorts-chrome-artist' as string]: tokens.artist,
+    ['--margo-shorts-chrome-icon' as string]: tokens.icon,
+    ['--margo-shorts-chrome-progress-track' as string]: tokens.progressTrack,
+    ['--margo-shorts-chrome-progress-fill' as string]: tokens.progressFill,
+    ['--margo-shorts-chrome-mute-bg' as string]: tokens.muteChipBg,
+    ['--margo-shorts-chrome-mute-border' as string]: tokens.muteChipBorder,
+    ['--margo-shorts-chrome-signup-ink' as string]: tokens.signupInk,
+    ['--margo-shorts-chrome-signup-bg' as string]: tokens.signupBg,
+    ['--margo-shorts-chrome-signup-border' as string]: tokens.signupBorder,
+    ['--margo-shorts-chrome-scrim' as string]: tokens.centerScrim,
+  }
 }
 
 function FeedShortsSlide({
@@ -102,9 +117,11 @@ function FeedShortsSlide({
   onTapVideo,
   onToggleMute,
   onCenterPlay,
+  onSignup,
 }: SlideProps) {
   const [tapFlash, setTapFlash] = useState<'play' | 'pause' | null>(null)
   const effectOwnsFill = !reduceMotion && isLivingAtmosphere(atmosphereId)
+  const chromeTokens = getShortsChromeTokens(stageThemeId, atmosphereId)
 
   useEffect(() => {
     if (!tapFlash) return
@@ -135,7 +152,10 @@ function FeedShortsSlide({
       data-shorts-theme={stageThemeId}
       data-shorts-atmosphere={atmosphereId}
     >
-      <div className="margo-feed-shorts-slide__frame">
+      <div
+        className="margo-feed-shorts-slide__frame"
+        style={chromeStyleVars(chromeTokens)}
+      >
         <MomentExportPreviewFrame
           shapeId="vertical"
           framed={false}
@@ -186,26 +206,35 @@ function FeedShortsSlide({
                 onToggleMute()
               }}
             >
-              <ShortsMuteIcon muted={!soundOn} />
+              <ShortsMuteIcon muted={!soundOn} color={chromeTokens.icon} />
             </button>
             {showCenterPlay ? (
               <button
                 type="button"
                 className="margo-feed-shorts-slide__center-play"
-                aria-label={showSignupOnPlay ? 'Sign up to play Shorts' : 'Play Short'}
+                aria-label="Play Short"
                 onClick={(e) => {
                   e.stopPropagation()
                   onCenterPlay()
                 }}
               >
-                {showSignupOnPlay ? (
-                  <span className="margo-feed-shorts-slide__center-play-label">Sign up</span>
-                ) : (
-                  <ShortsCenterPlayIcon />
-                )}
+                <ShortsCenterPlayIcon />
               </button>
             ) : null}
             <div className="margo-feed-shorts-slide__chrome-bottom">
+              {showSignupOnPlay ? (
+                <button
+                  type="button"
+                  className="margo-feed-shorts-slide__signup-cta"
+                  aria-label="Sign up to play Shorts"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onSignup()
+                  }}
+                >
+                  Sign up
+                </button>
+              ) : null}
               <div
                 className="margo-feed-shorts-slide__progress"
                 role="progressbar"
@@ -269,43 +298,70 @@ export function FeedShortsPager({
   const lastAutoIndexRef = useRef<number>(-1)
   const utcDay = utcDayKey(new Date())
 
+  const syncFrameMetrics = useCallback(() => {
+    const root = scrollerRef.current
+    if (!root) return
+    const styles = getComputedStyle(document.documentElement)
+    const nav = parseFloat(styles.getPropertyValue('--nav-height')) || 72
+    const tabBar = parseFloat(styles.getPropertyValue('--margo-feed-tab-bar-h')) || 44
+    const vibeBar = vibeFilterActive
+      ? parseFloat(styles.getPropertyValue('--margo-feed-vibe-bar-h')) || 0
+      : 0
+    const bottom = parseFloat(styles.getPropertyValue('--margo-page-padding-bottom')) || 88
+    const topChrome = nav + tabBar + vibeBar
+
+    if (window.innerWidth < SHORTS_DESKTOP_MIN_WIDTH) {
+      const availH = Math.max(320, window.innerHeight - topChrome - bottom)
+      const frameW = Math.min(420, window.innerWidth - 32, (availH * 9) / 16)
+      const frameH = (frameW * 16) / 9
+      root.style.setProperty('--margo-shorts-frame-w', `${frameW}px`)
+      root.style.setProperty('--margo-shorts-frame-h', `${frameH}px`)
+      root.style.removeProperty('--margo-shorts-slide-min-h')
+      delete root.dataset.shortsCols
+      return
+    }
+
+    const layout = computeShortsFrameLayout(
+      window.innerWidth,
+      window.innerHeight,
+      topChrome,
+      bottom,
+    )
+    root.style.setProperty('--margo-shorts-frame-w', `${layout.frameWidthPx}px`)
+    root.style.setProperty('--margo-shorts-frame-h', `${layout.frameHeightPx}px`)
+    root.style.setProperty('--margo-shorts-slide-min-h', `${layout.slideStridePx}px`)
+    root.dataset.shortsCols = String(layout.columns)
+  }, [vibeFilterActive])
+
+  const commitSettledFromDom = useCallback(() => {
+    const root = scrollerRef.current
+    if (!root) return
+    isScrollingRef.current = false
+    userPausedRef.current = false
+    setUserPaused(false)
+    setProgressPct(0)
+    setPlayingKey(null)
+    lastAutoIndexRef.current = -1
+    const idx = findSettledSlideIndex(root)
+    settledIndexRef.current = idx
+    setSettledIndex(idx)
+  }, [])
+
   useEffect(() => {
     const mq = window.matchMedia(`(min-width: ${SHORTS_DESKTOP_MIN_WIDTH}px)`)
-    const sync = () => setDesktopLayout(mq.matches)
-    sync()
-    mq.addEventListener('change', sync)
-    return () => mq.removeEventListener('change', sync)
-  }, [])
+    const syncLayoutMode = () => {
+      setDesktopLayout(mq.matches)
+      syncFrameMetrics()
+      commitSettledFromDom()
+    }
+    syncLayoutMode()
+    mq.addEventListener('change', syncLayoutMode)
+    return () => mq.removeEventListener('change', syncLayoutMode)
+  }, [commitSettledFromDom, syncFrameMetrics])
 
   useEffect(() => {
     const root = scrollerRef.current
     if (!root) return
-    const syncFrameMetrics = () => {
-      if (window.innerWidth < SHORTS_DESKTOP_MIN_WIDTH) {
-        root.style.removeProperty('--margo-shorts-frame-w')
-        root.style.removeProperty('--margo-shorts-frame-h')
-        root.style.removeProperty('--margo-shorts-slide-min-h')
-        delete root.dataset.shortsCols
-        return
-      }
-      const styles = getComputedStyle(document.documentElement)
-      const nav = parseFloat(styles.getPropertyValue('--nav-height')) || 72
-      const tabBar = parseFloat(styles.getPropertyValue('--margo-feed-tab-bar-h')) || 44
-      const vibeBar = vibeFilterActive
-        ? parseFloat(styles.getPropertyValue('--margo-feed-vibe-bar-h')) || 0
-        : 0
-      const bottom = parseFloat(styles.getPropertyValue('--margo-page-padding-bottom')) || 88
-      const layout = computeShortsFrameLayout(
-        window.innerWidth,
-        window.innerHeight,
-        nav + tabBar + vibeBar,
-        bottom,
-      )
-      root.style.setProperty('--margo-shorts-frame-w', `${layout.frameWidthPx}px`)
-      root.style.setProperty('--margo-shorts-frame-h', `${layout.frameHeightPx}px`)
-      root.style.setProperty('--margo-shorts-slide-min-h', `${layout.slideStridePx}px`)
-      root.dataset.shortsCols = String(layout.columns)
-    }
     syncFrameMetrics()
     window.addEventListener('resize', syncFrameMetrics)
     let ro: ResizeObserver | undefined
@@ -317,7 +373,7 @@ export function FeedShortsPager({
       window.removeEventListener('resize', syncFrameMetrics)
       ro?.disconnect()
     }
-  }, [vibeFilterActive])
+  }, [syncFrameMetrics])
 
   useEffect(() => {
     setSoundOn(readShortsUnmutePref())
@@ -344,6 +400,7 @@ export function FeedShortsPager({
       lastAutoIndexRef.current = -1
       isScrollingRef.current = false
     } else {
+      syncFrameMetrics()
       const root = scrollerRef.current
       if (root) {
         root.scrollTop = 0
@@ -353,7 +410,7 @@ export function FeedShortsPager({
         lastAutoIndexRef.current = -1
       }
     }
-  }, [tabActive])
+  }, [syncFrameMetrics, tabActive])
 
   const applyShortsVolume = useCallback((wantSound: boolean) => {
     const state = getAudioEngineState()
@@ -447,41 +504,29 @@ export function FeedShortsPager({
 
     let settleTimer: ReturnType<typeof setTimeout> | undefined
 
-    const commitSettled = () => {
-      isScrollingRef.current = false
-      const idx = findSettledSlideIndex(root)
-      settledIndexRef.current = idx
-      setSettledIndex(idx)
-    }
-
     const onScroll = () => {
       if (!isScrollingRef.current) {
         isScrollingRef.current = true
-        userPausedRef.current = false
-        setUserPaused(false)
-        setProgressPct(0)
         stop()
-        setPlayingKey(null)
-        lastAutoIndexRef.current = -1
       }
       if (settleTimer) clearTimeout(settleTimer)
-      settleTimer = setTimeout(commitSettled, 140)
+      settleTimer = setTimeout(commitSettledFromDom, 120)
     }
 
     const onScrollEnd = () => {
       if (settleTimer) clearTimeout(settleTimer)
-      commitSettled()
+      commitSettledFromDom()
     }
 
     root.addEventListener('scroll', onScroll, { passive: true })
     root.addEventListener('scrollend', onScrollEnd)
-    commitSettled()
+    commitSettledFromDom()
     return () => {
       root.removeEventListener('scroll', onScroll)
       root.removeEventListener('scrollend', onScrollEnd)
       if (settleTimer) clearTimeout(settleTimer)
     }
-  }, [clips.length])
+  }, [clips.length, commitSettledFromDom])
 
   useEffect(() => {
     if (!tabActive || autoplayBlocked || isScrollingRef.current) return
@@ -595,7 +640,8 @@ export function FeedShortsPager({
         const showCenterPlay =
           isSettled
           && !isPlaying
-          && (showSignupOnPlay || autoplayBlocked || userPaused)
+          && !showSignupOnPlay
+          && (autoplayBlocked || userPaused)
         const slideProgress = isSettled && isPlaying ? progressPct : 0
         return (
           <FeedShortsSlide
@@ -616,6 +662,7 @@ export function FeedShortsPager({
             onTapVideo={handleTapVideo}
             onToggleMute={toggleMutePref}
             onCenterPlay={handleCenterPlay}
+            onSignup={onRequireSignIn}
           />
         )
       })}
