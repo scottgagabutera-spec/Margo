@@ -24,13 +24,10 @@ for (const width of [360, 390] as const) {
 
     test('signed out opens auth gate shell', async ({ page }) => {
       await page.goto(`${BASE}/welcome?step=1`, { waitUntil: 'domcontentloaded', timeout: 45000 })
-      await page.waitForTimeout(800)
-      const signedOut = page.locator('[data-margo-welcome-state="signed-out"]')
-      const ready = page.locator('[data-margo-welcome="ready"]')
-      const gate = page.locator('[data-margo-auth-form], [role="dialog"]')
-      const signedOutVisible = await signedOut.isVisible().catch(() => false)
-      const readyVisible = await ready.isVisible().catch(() => false)
-      expect(signedOutVisible || readyVisible || (await gate.count()) > 0).toBeTruthy()
+      await expect(page.locator('[data-margo-welcome="loading"]')).toHaveCount(0, { timeout: 20000 })
+      await expect(
+        page.locator('[data-margo-welcome-state="signed-out"], [data-margo-welcome="ready"]'),
+      ).toHaveCount(1, { timeout: 10000 })
       await expect(page.locator('.margo-mobile-tabbar')).toHaveCount(0)
       await expect(page.locator('[data-margo-auth-logo]')).toHaveCount(0)
     })
