@@ -59,7 +59,7 @@ for (const width of [360, 390, 834, 1440]) {
     test('reset-password url error state containment', async ({ page }) => {
       await page.goto(`${BASE}/reset-password?error=access_denied&error_code=otp_expired`, { waitUntil: 'domcontentloaded', timeout: 45000 })
       await expect(page.locator('[data-margo-reset-state="url_error"]')).toBeVisible({ timeout: 15000 })
-      await expect(page.getByRole('alert')).toContainText('expired')
+      await expect(page.locator('[data-margo-reset-state="url_error"] [role="alert"]').first()).toContainText('expired')
       const main = '[data-margo-auth-screen="reset-password"]'
       const contained = await assertAuthScreenContained(page, main)
       expect(contained.ok, JSON.stringify(contained)).toBeTruthy()
