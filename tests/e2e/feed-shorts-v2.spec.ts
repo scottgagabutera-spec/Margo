@@ -50,7 +50,13 @@ async function waitForShortsAudioPlaying(page: import('@playwright/test').Page, 
     .then(() => true)
     .catch(() => false)
   if (!started) {
-    await surface.click({ position: { x: 24, y: 24 } })
+    const frame = page.locator('[data-shorts-active="1"] .margo-feed-shorts-slide__frame')
+    const box = await frame.boundingBox()
+    if (box) {
+      await page.mouse.click(box.x + box.width * 0.5, box.y + box.height * 0.38)
+    } else {
+      await surface.click({ position: { x: 160, y: 200 } })
+    }
   }
   await page.waitForFunction(
     () => {
@@ -140,7 +146,11 @@ for (const width of WIDTHS) {
       await page.waitForTimeout(1200)
       const pager = page.locator('.margo-feed-shorts-pager')
       if ((await pager.count()) === 0) test.skip()
-      await assertSlideChromeInsideFrame(page, 0)
+      await expect(page.locator('[data-shorts-active="1"]')).toHaveCount(1, { timeout: 15000 })
+      const activeIdx = Number(
+        (await page.locator('[data-shorts-active="1"]').getAttribute('data-shorts-index')) ?? '0',
+      )
+      await assertSlideChromeInsideFrame(page, activeIdx)
       if ((await page.locator('[data-shorts-index="1"]').count()) > 0) {
         await pager.evaluate((el) => {
           el.scrollTop = el.clientHeight * 0.85
@@ -255,10 +265,15 @@ for (const width of WIDTHS) {
 
     test('gap under Lyrics/Shorts tabs before first frame', async ({ page }) => {
       await openShortsTab(page, width)
+      const pager = page.locator('.margo-feed-shorts-pager')
+      if ((await pager.count()) > 0) {
+        await pager.evaluate((el) => {
+          el.scrollTop = 0
+        })
+        await page.waitForTimeout(400)
+      }
       const tabBar = page.locator('.margo-feed-content-tab-bar')
-      const target = width >= 640
-        ? page.locator('.margo-feed-shorts-slide__frame').first()
-        : page.locator('[aria-label="Shorts preview, 9:16"]').first()
+      const target = page.locator('[data-shorts-active="1"] .margo-feed-shorts-slide__frame').first()
       if ((await target.count()) === 0) test.skip()
       await expect(tabBar).toBeVisible()
       await expect(target).toBeVisible({ timeout: 20000 })
@@ -297,7 +312,11 @@ for (const width of [390, 1440]) {
       await page.waitForTimeout(1500)
       const surface = page.locator('[data-shorts-active="1"] .margo-feed-shorts-slide__tap-surface')
       await waitForShortsAudioPlaying(page)
-      await surface.click({ position: { x: 24, y: 24 } })
+      const frameBox = await page.locator('[data-shorts-active="1"] .margo-feed-shorts-slide__frame').boundingBox()
+      expect(frameBox).toBeTruthy()
+      if (frameBox) {
+        await page.mouse.click(frameBox.x + frameBox.width * 0.5, frameBox.y + frameBox.height * 0.38)
+      }
       await page.waitForTimeout(2000)
       await expect
         .poll(async () =>

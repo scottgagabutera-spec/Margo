@@ -2950,6 +2950,10 @@ html, body {
     align-items: center;
     justify-content: center;
     gap: 10px;
+    pointer-events: none;
+  }
+  .margo-feed-shorts-slide__meta-row a,
+  .margo-feed-shorts-slide__meta-row img {
     pointer-events: auto;
   }
   .margo-feed-shorts-slide__meta-art {
@@ -2968,7 +2972,7 @@ html, body {
 .margo-feed-shorts-slide__tap-surface {
   position: absolute;
   inset: 0;
-  z-index: 1;
+  z-index: 2;
   margin: 0;
   padding: 0;
   border: none;
@@ -3150,6 +3154,10 @@ html, body {
     align-items: center;
     justify-content: center;
     gap: 3.5cqw;
+    pointer-events: none;
+  }
+  .margo-feed-shorts-slide__meta-row a,
+  .margo-feed-shorts-slide__meta-row img {
     pointer-events: auto;
   }
   .margo-feed-shorts-slide__meta-art {
