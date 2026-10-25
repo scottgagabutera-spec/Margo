@@ -795,7 +795,8 @@ html[data-margo-stage-idle] .margo-stage-zone {
   row-gap: 0;
   align-items: start;
   margin-top: 0;
-  min-height: 0;
+  /* Portrait column band beside avatar — room for a future role line */
+  min-height: 48px;
   padding-left: calc(12px + 52px + 8px - var(--margo-post-card-pad));
   margin-bottom: var(--margo-post-card-gap);
 }

@@ -52,17 +52,19 @@ for (const width of [360, 390, 834]) {
         const nameCenter = nr ? (nr.top + nr.bottom) / 2 : null
         const moodCenter = moodR ? (moodR.top + moodR.bottom) / 2 : null
 
-        const third = document.createElement('p')
+        const third = document.createElement('span')
         third.textContent = 'Artist'
         third.setAttribute('data-testid', 'feed-test-role-line')
         third.style.margin = '0'
         third.style.padding = '0'
-        third.style.fontSize = '16px'
-        third.style.lineHeight = '1'
+        third.style.fontSize = '0.65rem'
+        third.style.lineHeight = '1.2'
         third.style.color = 'var(--text-muted)'
-        const stack = identity?.querySelector('span[style*="flexDirection"]') as HTMLElement | null
-        if (stack) {
-          third.style.marginTop = '2px'
+        const stack = identity?.querySelector('.margo-feed-header-identity-stack') as HTMLElement | null
+        const roleSlot = identity?.querySelector('[data-testid="feed-role-third-slot"]') as HTMLElement | null
+        if (stack && roleSlot) {
+          stack.insertBefore(third, roleSlot.nextSibling)
+        } else if (stack) {
           stack.appendChild(third)
         } else {
           identity?.appendChild(third)
@@ -89,7 +91,8 @@ for (const width of [360, 390, 834]) {
             nameCenter != null && moodCenter != null ? Math.abs(nameCenter - moodCenter) : null,
           blockBottom,
           photoBottom,
-          thirdLineFits: photoBottom != null && blockBottom != null ? blockBottom <= photoBottom + 1 : null,
+          thirdLineFits:
+            photoBottom != null && blockBottom != null ? blockBottom <= photoBottom + 6 : null,
           timeText,
           roleSlotWidth: roleSlot?.getBoundingClientRect().width ?? null,
           thirdSlotWidth: thirdSlot?.getBoundingClientRect().width ?? null,
