@@ -793,7 +793,7 @@ html[data-margo-stage-idle] .margo-stage-zone {
   column-gap: 8px;
   row-gap: 0;
   align-items: start;
-  margin-top: -6px;
+  margin-top: -22px;
   min-height: 0;
   padding-left: calc(12px + 52px + 8px - var(--margo-post-card-pad));
   margin-bottom: var(--margo-post-card-gap);

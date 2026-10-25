@@ -57,7 +57,13 @@ for (const width of [360, 390, 834]) {
         third.style.fontSize = '16px'
         third.style.lineHeight = '1'
         third.style.color = 'var(--text-muted)'
-        identity?.appendChild(third)
+        const stack = identity?.querySelector('span[style*="flexDirection"]') as HTMLElement | null
+        if (stack) {
+          third.style.marginTop = '2px'
+          stack.appendChild(third)
+        } else {
+          identity?.appendChild(third)
+        }
 
         const ir3 = identity?.getBoundingClientRect()
         const photoBottom = fr?.bottom ?? null
