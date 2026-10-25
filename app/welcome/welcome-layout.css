@@ -56,7 +56,120 @@
 .margo-welcome-footer__row--step4 {
   grid-template-columns: auto 1fr;
   gap: 12px;
+  align-items: center;
 }
+
+.margo-welcome-next--wide {
+  justify-self: stretch;
+  width: 100%;
+  max-width: none;
+}
+
+.margo-welcome-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-meta, 0.8125rem);
+  font-weight: 600;
+  min-height: var(--margo-touch-min);
+  padding: 0 8px;
+  cursor: pointer;
+  justify-self: start;
+}
+
+.margo-welcome-back-btn__icon {
+  flex-shrink: 0;
+}
+
+.margo-welcome-step-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.margo-welcome-saved-flash {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-meta, 0.8125rem);
+  font-weight: 600;
+  color: var(--success);
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity 240ms ease, transform 240ms ease;
+}
+
+.margo-welcome-saved-flash--on {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.margo-welcome-chosen-line {
+  width: 100%;
+  min-width: 0;
+  padding-left: 0;
+  margin-left: 0;
+}
+
+.margo-welcome-retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-meta, 0.8125rem);
+  font-weight: 600;
+  color: var(--destructive);
+  cursor: pointer;
+  min-height: 20px;
+}
+
+.margo-welcome-upload-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.margo-welcome-upload-badge--ok {
+  background: var(--success);
+  color: var(--bg);
+}
+
+.margo-welcome-avatar-upload-badge {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: var(--text-on-gold, var(--bg));
+  border: 2px solid var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
 
 .margo-welcome-next {
   justify-self: end;

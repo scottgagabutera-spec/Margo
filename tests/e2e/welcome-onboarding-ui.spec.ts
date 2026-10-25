@@ -29,6 +29,13 @@ for (const width of [360, 390] as const) {
   test.describe(`welcome onboarding UI @${width}px`, () => {
     test.use({ viewport: { width, height: 844 } })
 
+    test('auth screens have no Help link', async ({ page }) => {
+      for (const path of ['/signin', '/forgot-password', '/reset-password']) {
+        await page.goto(`${BASE}${path}`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+        await expect(page.getByRole('link', { name: 'Help' })).toHaveCount(0)
+      }
+    })
+
     test('signed out shell, no tab bar, no Help', async ({ page }) => {
       await page.goto(`${BASE}/welcome?step=1`, { waitUntil: 'domcontentloaded', timeout: 45000 })
       await expect(page.locator('[data-margo-welcome="loading"]')).toHaveCount(0, { timeout: 20000 })
@@ -66,7 +73,7 @@ for (const width of [360, 390] as const) {
       await expect(page).toHaveURL(/step=3/)
       await page.getByRole('button', { name: 'Skip for now' }).click()
       await expect(page).toHaveURL(/step=4/)
-      await expect(page.getByRole('heading', { name: "You're in" })).toBeVisible()
+      await expect(page.getByRole('heading', { name: /You.re in/ })).toBeVisible()
       const contained = await assertWelcomeContained(page)
       expect(contained.ok, JSON.stringify(contained)).toBeTruthy()
     })
@@ -87,6 +94,14 @@ for (const width of [360, 390] as const) {
       await skipIfWizardHidden(page)
       await page.getByRole('button', { name: 'Next' }).click()
       await expect(page.getByText('Pick at least 3, or skip.')).toBeVisible()
+    })
+
+    test('footer back inline and step 4 feed button', async ({ page }) => {
+      await page.goto(`${BASE}/welcome?step=4`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+      await skipIfWizardHidden(page)
+      await expect(page.locator('.margo-welcome-footer__row--step4')).toBeVisible()
+      await expect(page.locator('.margo-welcome-back-btn')).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Go to Feed' })).toBeVisible()
     })
   })
 }

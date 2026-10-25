@@ -1,4 +1,4 @@
-/** In-memory welcome draft for refresh resume (UI only — no server writes). */
+/** Session draft when profile/settings have not caught up yet (fallback after saved profile). */
 
 export type WelcomeDraftRole = 'listener' | 'artist' | 'both'
 

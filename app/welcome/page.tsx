@@ -9,7 +9,6 @@ import {
   useRef,
   useState,
 } from 'react'
-import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { MargoPortraitAvatar } from '@/components/margo-portrait-avatar'
 import { AuthViewportKeyboardInset, scrollAuthFieldIntoView } from '@/components/auth-viewport'
@@ -17,8 +16,25 @@ import { UsernameFieldShell } from '@/components/username-field-shell'
 import { useUsernameAvailability } from '@/hooks/useUsernameAvailability'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+import { LoadingRing } from '@/components/loading-ring'
+import { MargoPhotoSource } from '@/components/margo-photo-source'
+import { PortraitAvatarCropSheet } from '@/components/portrait-avatar-crop-sheet'
+import { uploadProfileCover } from '@/components/cover-upload'
+import { completeAuthNavigation } from '@/lib/auth-complete-navigation'
 import { DISCOVER_VIBES } from '@/lib/discover-vibes'
 import { TYPE, UI_FONT } from '@/lib/fonts'
+import {
+  clearProfileAvatar,
+  clearProfileCover,
+  uploadProfileAvatar,
+} from '@/lib/profile-avatar-upload'
+import { persistProfileSettings, fetchWelcomeProfileSnapshot } from '@/lib/welcome-save'
+import {
+  mergeOnboardingSettings,
+  mergeTasteVibesSettings,
+  onboardingFromSettings,
+  tasteVibesFromSettings,
+} from '@/lib/welcome-profile-settings'
 import {
   isTemporaryMemberUsername,
   normalizeUsernameInput,
@@ -88,24 +104,59 @@ function XIcon() {
   )
 }
 
-function StatusLine({ tone, children }: { tone: 'success' | 'error' | 'empty'; children: React.ReactNode }) {
+type StatusTone = 'success' | 'error' | 'checking' | 'neutral' | 'empty'
+
+function StatusLine({ tone, children }: { tone: StatusTone; children: React.ReactNode }) {
   return (
     <div className="margo-welcome-status-line" aria-live="polite">
       {tone === 'empty' ? (
         <span style={{ visibility: 'hidden' }}>.</span>
       ) : (
         <>
-          {tone === 'success' ? <CheckIcon /> : <XIcon />}
+          {tone === 'checking' ? (
+            <LoadingRing size={14} strokeWidth={2} state="spinning" />
+          ) : tone === 'success' ? (
+            <CheckIcon />
+          ) : tone === 'error' ? (
+            <XIcon />
+          ) : null}
           <span style={{
             fontFamily: ui,
             fontSize: TYPE.meta,
-            color: tone === 'success' ? 'var(--success)' : 'var(--destructive)',
+            color: tone === 'success'
+              ? 'var(--success)'
+              : tone === 'error'
+                ? 'var(--destructive)'
+                : tone === 'checking'
+                  ? 'var(--gold)'
+                  : 'var(--text-muted)',
           }}>
             {children}
           </span>
         </>
       )}
     </div>
+  )
+}
+
+function SavedFlash({ visible }: { visible: boolean }) {
+  return (
+    <div
+      className={`margo-welcome-saved-flash${visible ? ' margo-welcome-saved-flash--on' : ''}`}
+      aria-live="polite"
+    >
+      <CheckIcon />
+      <span>Saved</span>
+    </div>
+  )
+}
+
+function BackButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" className="margo-welcome-back-btn" onClick={onClick}>
+      <ChevronLeftIcon />
+      <span>Back</span>
+    </button>
   )
 }
 
@@ -164,7 +215,7 @@ function CameraIcon() {
 
 function ChevronLeftIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden style={{ verticalAlign: 'middle', marginRight: '2px' }}>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden className="margo-welcome-back-btn__icon">
       <path d="M14 6l-6 6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
@@ -183,9 +234,19 @@ function WelcomePageInner() {
   const searchParams = useSearchParams()
   const step = parseStep(searchParams.get('step'))
   const { user, loading, requireAuth } = useAuthGate()
-  const { identity } = useIdentity()
+  const {
+    identity,
+    updateDisplayName,
+    changeUsername,
+    syncAvatarUrl,
+    syncCoverUrl,
+    refreshIdentity,
+  } = useIdentity()
   const nameId = useId()
   const formRef = useRef<HTMLFormElement>(null)
+  const savedFlashTimer = useRef<number | null>(null)
+  const vibeSaveTimer = useRef<number | null>(null)
+  const profileSettingsRef = useRef<Record<string, unknown> | null>(null)
 
   const [displayName, setDisplayName] = useState('')
   const [username, setUsername] = useState('')
@@ -196,9 +257,21 @@ function WelcomePageInner() {
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
   const [photoTarget, setPhotoTarget] = useState<WelcomePhotoTarget | null>(null)
   const [photoSheetOpen, setPhotoSheetOpen] = useState(false)
+  const [cropOpen, setCropOpen] = useState(false)
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null)
+  const [avatarUploadState, setAvatarUploadState] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle')
+  const [coverUploadState, setCoverUploadState] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle')
+  const [avatarUploadError, setAvatarUploadError] = useState(false)
+  const [coverUploadError, setCoverUploadError] = useState(false)
   const [step1Attempted, setStep1Attempted] = useState(false)
   const [step3Attempted, setStep3Attempted] = useState(false)
   const [useDialogLayout, setUseDialogLayout] = useState(false)
+  const [savedFlash, setSavedFlash] = useState(false)
+  const [step1SaveError, setStep1SaveError] = useState<string | null>(null)
+  const [step1Saving, setStep1Saving] = useState(false)
+  const [vibesSaveError, setVibesSaveError] = useState<string | null>(null)
+  const [roleSaveError, setRoleSaveError] = useState<string | null>(null)
+  const [finishing, setFinishing] = useState(false)
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 900px)')
@@ -214,26 +287,39 @@ function WelcomePageInner() {
     }
   }, [loading, user, requireAuth, step])
 
+  const flashSaved = useCallback(() => {
+    setSavedFlash(true)
+    if (savedFlashTimer.current) window.clearTimeout(savedFlashTimer.current)
+    savedFlashTimer.current = window.setTimeout(() => setSavedFlash(false), 2400)
+  }, [])
+
   useEffect(() => {
     if (!user?.id || seeded) return
-    const draft = readWelcomeDraft(user.id)
-    if (draft) {
-      setDisplayName(draft.displayName)
-      setUsername(draft.username)
-      setMoods(draft.moods)
-      setRole(draft.role)
+    let cancelled = false
+    void (async () => {
+      const snap = await fetchWelcomeProfileSnapshot(user.id)
+      if (cancelled) return
+      profileSettingsRef.current = snap.settings
+      const draft = readWelcomeDraft(user.id)
+      const savedMoods = tasteVibesFromSettings(snap.settings)
+      const savedRole = onboardingFromSettings(snap.settings).role ?? null
+
+      const profileName = identity?.displayName || ''
+      const profileUsername = identity?.username && !isTemporaryMemberUsername(identity.username)
+        ? identity.username
+        : ''
+
+      setDisplayName(profileName || draft?.displayName || '')
+      setUsername(profileUsername || draft?.username || '')
+      setMoods(savedMoods.length > 0 ? savedMoods : (draft?.moods ?? []))
+      setRole(savedRole ?? draft?.role ?? null)
+      setAvatarPreview(snap.avatarUrl ?? identity?.avatarUrl ?? null)
+      setCoverPreview(snap.coverUrl ?? identity?.coverUrl ?? null)
+      if (snap.avatarUrl || identity?.avatarUrl) setAvatarUploadState('done')
+      if (snap.coverUrl || identity?.coverUrl) setCoverUploadState('done')
       setSeeded(true)
-      return
-    }
-    if (identity) {
-      setDisplayName(identity.displayName || '')
-      setUsername(
-        identity.username && !isTemporaryMemberUsername(identity.username)
-          ? identity.username
-          : '',
-      )
-    }
-    setSeeded(true)
+    })()
+    return () => { cancelled = true }
   }, [user?.id, identity, seeded])
 
   useEffect(() => {
@@ -249,6 +335,38 @@ function WelcomePageInner() {
   const goStep = useCallback((next: WelcomeStep) => {
     router.replace(`/welcome?step=${next}`)
   }, [router])
+
+  const saveTasteVibes = useCallback(async (nextMoods: string[]) => {
+    if (!user?.id) return { ok: false as const }
+    const result = await persistProfileSettings(user.id, (current) => {
+      const merged = mergeTasteVibesSettings(current, nextMoods)
+      profileSettingsRef.current = merged
+      return merged
+    })
+    if (!result.ok) {
+      setVibesSaveError('Couldn\u2019t save. Try again.')
+      return result
+    }
+    setVibesSaveError(null)
+    flashSaved()
+    return result
+  }, [user?.id, flashSaved])
+
+  const saveOnboardingRole = useCallback(async (nextRole: WelcomeDraftRole | null) => {
+    if (!user?.id) return { ok: false as const }
+    const result = await persistProfileSettings(user.id, (current) => {
+      const merged = mergeOnboardingSettings(current, { role: nextRole ?? undefined })
+      profileSettingsRef.current = merged
+      return merged
+    })
+    if (!result.ok) {
+      setRoleSaveError('Couldn\u2019t save. Try again.')
+      return result
+    }
+    setRoleSaveError(null)
+    flashSaved()
+    return result
+  }, [user?.id, flashSaved])
 
   const usernameAvailability = useUsernameAvailability(
     username,
@@ -279,33 +397,129 @@ function WelcomePageInner() {
 
   const step1Valid = usernameSuccess && displayValidation.ok
 
+  const saveStep1Profile = useCallback(async (): Promise<boolean> => {
+    if (!user?.id || !step1Valid) return false
+    setStep1Saving(true)
+    setStep1SaveError(null)
+    try {
+      const tasks: Promise<{ success: boolean; error?: string }>[] = []
+      const nextName = displayValidation.ok ? displayValidation.value : displayName.trim()
+      if (nextName && nextName !== identity?.displayName) {
+        tasks.push(updateDisplayName(nextName))
+      }
+      const nextUser = usernameValidation.ok ? usernameValidation.value : usernameClean
+      if (nextUser && nextUser !== identity?.username) {
+        tasks.push(changeUsername(username))
+      }
+      if (tasks.length > 0) {
+        const results = await Promise.all(tasks)
+        const failed = results.find((r) => !r.success)
+        if (failed) {
+          setStep1SaveError('Couldn\u2019t save. Try again.')
+          return false
+        }
+        await refreshIdentity()
+      }
+      flashSaved()
+      return true
+    } finally {
+      setStep1Saving(false)
+    }
+  }, [
+    user?.id,
+    step1Valid,
+    displayValidation,
+    displayName,
+    identity?.displayName,
+    identity?.username,
+    usernameValidation,
+    usernameClean,
+    username,
+    updateDisplayName,
+    changeUsername,
+    refreshIdentity,
+    flashSaved,
+  ])
+
   const nameInitial = useMemo(() => {
     const v = displayValidation.ok ? displayValidation.value : displayName.trim()
     const ch = v.charAt(0).toUpperCase()
     return ch || '?'
   }, [displayName, displayValidation])
 
-  const setPreviewFile = useCallback((
-    kind: WelcomePhotoTarget,
-    file: File | null,
-  ) => {
-    if (kind === 'avatar') {
-      setAvatarPreview((prev) => {
-        if (prev) URL.revokeObjectURL(prev)
-        return file ? URL.createObjectURL(file) : null
-      })
-    } else {
-      setCoverPreview((prev) => {
-        if (prev) URL.revokeObjectURL(prev)
-        return file ? URL.createObjectURL(file) : null
-      })
+  const uploadAvatarFile = useCallback(async (file: File) => {
+    if (!user?.id) return
+    const blobUrl = URL.createObjectURL(file)
+    setAvatarPreview(blobUrl)
+    setAvatarUploadState('uploading')
+    setAvatarUploadError(false)
+    try {
+      const url = await uploadProfileAvatar(user.id, file)
+      syncAvatarUrl(url)
+      setAvatarPreview(url)
+      setAvatarUploadState('done')
+      flashSaved()
+    } catch {
+      setAvatarUploadState('error')
+      setAvatarUploadError(true)
     }
-  }, [])
+  }, [user?.id, syncAvatarUrl, flashSaved])
+
+  const uploadCoverFile = useCallback(async (file: File) => {
+    if (!user?.id) return
+    const blobUrl = URL.createObjectURL(file)
+    setCoverPreview(blobUrl)
+    setCoverUploadState('uploading')
+    setCoverUploadError(false)
+    try {
+      const url = await uploadProfileCover(user.id, file)
+      syncCoverUrl(url)
+      setCoverPreview(url)
+      setCoverUploadState('done')
+      flashSaved()
+    } catch {
+      setCoverUploadState('error')
+      setCoverUploadError(true)
+    }
+  }, [user?.id, syncCoverUrl, flashSaved])
+
+  const removePhoto = useCallback(async (target: WelcomePhotoTarget) => {
+    if (!user?.id) return
+    try {
+      if (target === 'avatar') {
+        await clearProfileAvatar(user.id)
+        await refreshIdentity()
+        setAvatarPreview(null)
+        setAvatarUploadState('idle')
+        setAvatarUploadError(false)
+      } else {
+        await clearProfileCover(user.id)
+        await refreshIdentity()
+        setCoverPreview(null)
+        setCoverUploadState('idle')
+        setCoverUploadError(false)
+      }
+      flashSaved()
+    } catch {
+      if (target === 'avatar') setAvatarUploadError(true)
+      else setCoverUploadError(true)
+    }
+  }, [user?.id, refreshIdentity, flashSaved])
 
   const openPhotoPicker = (target: WelcomePhotoTarget) => {
     setPhotoTarget(target)
     setPhotoSheetOpen(true)
   }
+
+  const handlePickedFile = useCallback((file: File) => {
+    if (!photoTarget) return
+    if (photoTarget === 'avatar') {
+      setPendingAvatarFile(file)
+      setCropOpen(true)
+    } else {
+      void uploadCoverFile(file)
+    }
+  }, [photoTarget, uploadCoverFile])
 
   const handleSignOut = async () => {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
@@ -314,19 +528,67 @@ function WelcomePageInner() {
 
   const tryStep1Next = () => {
     setStep1Attempted(true)
-    if (step1Valid) goStep(2)
+    if (!step1Valid || step1Saving) return
+    void (async () => {
+      const ok = await saveStep1Profile()
+      if (ok) goStep(2)
+    })()
   }
 
   const tryStep3Next = () => {
     setStep3Attempted(true)
-    if (moods.length >= 3) goStep(4)
+    if (moods.length >= 3) {
+      void saveTasteVibes(moods).finally(() => goStep(4))
+    }
+  }
+
+  const skipStep3 = () => {
+    void saveTasteVibes(moods).finally(() => goStep(4))
+  }
+
+  const finishWelcome = () => {
+    if (finishing) return
+    setFinishing(true)
+    void (async () => {
+      await saveTasteVibes(moods)
+      if (role) await saveOnboardingRole(role)
+      if (user?.id) {
+        await persistProfileSettings(user.id, (current) => {
+          const merged = mergeOnboardingSettings(current, {
+            completedAt: new Date().toISOString(),
+            role: role ?? undefined,
+          })
+          profileSettingsRef.current = merged
+          return merged
+        })
+      }
+      completeAuthNavigation('/feed')
+    })()
   }
 
   const toggleMood = (mood: string) => {
-    setMoods((prev) => (
-      prev.includes(mood) ? prev.filter((m) => m !== mood) : [...prev, mood]
-    ))
+    setMoods((prev) => {
+      const next = prev.includes(mood) ? prev.filter((m) => m !== mood) : [...prev, mood]
+      if (vibeSaveTimer.current) window.clearTimeout(vibeSaveTimer.current)
+      vibeSaveTimer.current = window.setTimeout(() => {
+        void saveTasteVibes(next)
+      }, 450)
+      return next
+    })
   }
+
+  const pickRole = (value: WelcomeDraftRole) => {
+    setRole((prev) => {
+      const next = prev === value ? null : value
+      void saveOnboardingRole(next)
+      return next
+    })
+  }
+
+  useEffect(() => () => {
+    if (savedFlashTimer.current) window.clearTimeout(savedFlashTimer.current)
+    if (vibeSaveTimer.current) window.clearTimeout(vibeSaveTimer.current)
+  }, [])
 
   const displayHandle = usernameClean ? `@${usernameClean}` : '@username'
   const displayTitle = displayValidation.ok ? displayValidation.value : (displayName.trim() || 'Your name')
@@ -396,15 +658,18 @@ function WelcomePageInner() {
           {step === 1 ? (
             <div data-margo-welcome-panel="profile">
               <header style={{ marginBottom: '20px' }}>
-                <h1 style={{
-                  fontFamily: ui,
-                  fontSize: TYPE.pageTitle,
-                  color: 'var(--text)',
-                  fontWeight: 600,
-                  margin: '0 0 8px',
-                }}>
-                  Your profile
-                </h1>
+                <div className="margo-welcome-step-title-row">
+                  <h1 style={{
+                    fontFamily: ui,
+                    fontSize: TYPE.pageTitle,
+                    color: 'var(--text)',
+                    fontWeight: 600,
+                    margin: '0 0 8px',
+                  }}>
+                    Your profile
+                  </h1>
+                  <SavedFlash visible={savedFlash && step === 1} />
+                </div>
                 <p style={{
                   fontFamily: ui,
                   fontSize: TYPE.secondary,
@@ -489,7 +754,9 @@ function WelcomePageInner() {
                         />
                       </div>
                     </UsernameFieldShell>
-                    {usernameSuccess ? (
+                    {usernameAvailability === 'checking' ? (
+                      <StatusLine tone="checking">Checking…</StatusLine>
+                    ) : usernameSuccess ? (
                       <StatusLine tone="success">
                         @{usernameClean} is available
                       </StatusLine>
@@ -498,6 +765,16 @@ function WelcomePageInner() {
                         {step1UserError || ''}
                       </StatusLine>
                     )}
+                    {step1SaveError ? (
+                      <button
+                        type="button"
+                        className="margo-welcome-retry-btn"
+                        onClick={() => { void saveStep1Profile() }}
+                      >
+                        <XIcon />
+                        {step1SaveError}
+                      </button>
+                    ) : null}
                   </div>
 
                   <div style={{
@@ -533,15 +810,18 @@ function WelcomePageInner() {
           {step === 2 ? (
             <div data-margo-welcome-panel="photos">
               <header style={{ marginBottom: '16px' }}>
-                <h1 style={{
-                  fontFamily: ui,
-                  fontSize: TYPE.pageTitle,
-                  color: 'var(--text)',
-                  fontWeight: 600,
-                  margin: '0 0 8px',
-                }}>
-                  Add your photos
-                </h1>
+                <div className="margo-welcome-step-title-row">
+                  <h1 style={{
+                    fontFamily: ui,
+                    fontSize: TYPE.pageTitle,
+                    color: 'var(--text)',
+                    fontWeight: 600,
+                    margin: '0 0 8px',
+                  }}>
+                    Add your photos
+                  </h1>
+                  <SavedFlash visible={savedFlash && step === 2} />
+                </div>
                 <p style={{
                   fontFamily: ui,
                   fontSize: TYPE.secondary,
@@ -559,6 +839,16 @@ function WelcomePageInner() {
                 aria-label={coverPreview ? 'Change cover photo' : 'Add cover photo'}
                 onClick={() => openPhotoPicker('cover')}
               >
+                {coverUploadState === 'uploading' ? (
+                  <span className="margo-welcome-upload-badge" aria-hidden>
+                    <LoadingRing size={22} strokeWidth={2} state="spinning" />
+                  </span>
+                ) : null}
+                {coverUploadState === 'done' ? (
+                  <span className="margo-welcome-upload-badge margo-welcome-upload-badge--ok" aria-hidden>
+                    <CheckIcon />
+                  </span>
+                ) : null}
                 {coverPreview ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={coverPreview} alt="" className="margo-welcome-cover__img" />
@@ -578,6 +868,16 @@ function WelcomePageInner() {
                   </span>
                 )}
               </button>
+              {coverUploadError ? (
+                <button
+                  type="button"
+                  className="margo-welcome-retry-btn"
+                  onClick={() => openPhotoPicker('cover')}
+                >
+                  <XIcon />
+                  {'Couldn\u2019t upload. Try again.'}
+                </button>
+              ) : null}
 
               <div className="margo-welcome-avatar-stack">
                 <button
@@ -599,11 +899,31 @@ function WelcomePageInner() {
                     fallbackInitial={nameInitial}
                     separationRingColor="var(--bg)"
                   />
-                  <span className="margo-welcome-camera-badge" aria-hidden>
-                    <CameraIcon />
-                  </span>
+                  {avatarUploadState === 'uploading' ? (
+                    <span className="margo-welcome-avatar-upload-badge" aria-hidden>
+                      <LoadingRing size={18} strokeWidth={2} state="spinning" />
+                    </span>
+                  ) : avatarUploadState === 'done' ? (
+                    <span className="margo-welcome-avatar-upload-badge margo-welcome-upload-badge--ok" aria-hidden>
+                      <CheckIcon />
+                    </span>
+                  ) : (
+                    <span className="margo-welcome-camera-badge" aria-hidden>
+                      <CameraIcon />
+                    </span>
+                  )}
                 </button>
               </div>
+              {avatarUploadError ? (
+                <button
+                  type="button"
+                  className="margo-welcome-retry-btn"
+                  onClick={() => openPhotoPicker('avatar')}
+                >
+                  <XIcon />
+                  {'Couldn\u2019t upload. Try again.'}
+                </button>
+              ) : null}
 
               <div style={{ marginBottom: '8px' }}>
                 <p style={{
@@ -630,15 +950,18 @@ function WelcomePageInner() {
           {step === 3 ? (
             <div data-margo-welcome-panel="vibes">
               <header style={{ marginBottom: '16px' }}>
-                <h1 style={{
-                  fontFamily: ui,
-                  fontSize: TYPE.pageTitle,
-                  color: 'var(--text)',
-                  fontWeight: 600,
-                  margin: '0 0 8px',
-                }}>
-                  Pick your vibe
-                </h1>
+                <div className="margo-welcome-step-title-row">
+                  <h1 style={{
+                    fontFamily: ui,
+                    fontSize: TYPE.pageTitle,
+                    color: 'var(--text)',
+                    fontWeight: 600,
+                    margin: '0 0 8px',
+                  }}>
+                    Pick your vibe
+                  </h1>
+                  <SavedFlash visible={savedFlash && step === 3} />
+                </div>
                 <p style={{
                   fontFamily: ui,
                   fontSize: TYPE.secondary,
@@ -685,15 +1008,25 @@ function WelcomePageInner() {
                 })}
               </div>
 
-              {step3Attempted && moods.length < 3 ? (
-                <StatusLine tone="error">Pick at least 3, or skip.</StatusLine>
-              ) : (
-                <StatusLine tone={moods.length >= 3 ? 'success' : 'empty'}>
-                  {moods.length >= 3 ? `${moods.length} chosen` : ''}
-                </StatusLine>
-              )}
+              <div className="margo-welcome-chosen-line">
+                {step3Attempted && moods.length < 3 ? (
+                  <StatusLine tone="error">Pick at least 3, or skip.</StatusLine>
+                ) : moods.length >= 3 ? (
+                  <StatusLine tone="success">{`${moods.length} chosen`}</StatusLine>
+                ) : moods.length > 0 ? (
+                  <StatusLine tone="neutral">{`${moods.length} chosen`}</StatusLine>
+                ) : (
+                  <StatusLine tone="empty"> </StatusLine>
+                )}
+              </div>
+              {vibesSaveError ? (
+                <button type="button" className="margo-welcome-retry-btn" onClick={() => { void saveTasteVibes(moods) }}>
+                  <XIcon />
+                  {vibesSaveError}
+                </button>
+              ) : null}
 
-              <p style={{ ...labelStyle, marginTop: '20px', marginBottom: '10px' }}>I&apos;m here as a…</p>
+              <p style={{ ...labelStyle, marginTop: '20px', marginBottom: '10px' }}>{'I\u2019m here as a\u2026'}</p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
                 {([
                   ['listener', 'Listener'],
@@ -706,7 +1039,7 @@ function WelcomePageInner() {
                       key={value}
                       type="button"
                       aria-pressed={selected}
-                      onClick={() => setRole(selected ? null : value)}
+                      onClick={() => pickRole(value)}
                       style={{
                         fontFamily: ui,
                         fontSize: TYPE.meta,
@@ -725,6 +1058,12 @@ function WelcomePageInner() {
                   )
                 })}
               </div>
+              {roleSaveError ? (
+                <button type="button" className="margo-welcome-retry-btn" onClick={() => { void saveOnboardingRole(role) }}>
+                  <XIcon />
+                  {roleSaveError}
+                </button>
+              ) : null}
             </div>
           ) : null}
 
@@ -738,7 +1077,7 @@ function WelcomePageInner() {
                   fontWeight: 600,
                   margin: '0 0 8px',
                 }}>
-                  You&apos;re in
+                  {'You\u2019re in'}
                 </h1>
                 <p style={{
                   fontFamily: ui,
@@ -754,7 +1093,7 @@ function WelcomePageInner() {
                 {[
                   { icon: <PenIcon />, title: 'Post a lyric', line: 'Say it in a line, your way.' },
                   { icon: <PeopleIcon />, title: 'Follow people', line: 'Your feed fills with voices you like.' },
-                  { icon: <ProfileIcon />, title: 'Make it yours', line: 'Add a photo, bio and signature lyric in Edit Profile.' },
+                  { icon: <ProfileIcon />, title: 'Complete your profile', line: 'Add a bio and signature lyric in Edit Profile, anytime.' },
                 ].map((card) => (
                   <div key={card.title} className="margo-welcome-card">
                     <div className="margo-welcome-card__icon">{card.icon}</div>
@@ -793,6 +1132,7 @@ function WelcomePageInner() {
                 type="button"
                 data-margo-welcome-next
                 className="margo-welcome-next"
+                disabled={step1Saving}
                 onClick={tryStep1Next}
               >
                 Next
@@ -802,19 +1142,15 @@ function WelcomePageInner() {
 
           {step === 2 || step === 3 ? (
             <div className="margo-welcome-footer__row">
-              <button
-                type="button"
-                className="margo-welcome-text-btn"
-                onClick={() => goStep((step - 1) as WelcomeStep)}
-              >
-                <ChevronLeftIcon />
-                Back
-              </button>
+              <BackButton onClick={() => goStep((step - 1) as WelcomeStep)} />
               <button
                 type="button"
                 className="margo-welcome-text-btn"
                 style={{ justifySelf: 'center' }}
-                onClick={() => goStep((step + 1) as WelcomeStep)}
+                onClick={() => {
+                  if (step === 2) goStep(3)
+                  else skipStep3()
+                }}
               >
                 Skip for now
               </button>
@@ -833,31 +1169,17 @@ function WelcomePageInner() {
           ) : null}
 
           {step === 4 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+            <div className="margo-welcome-footer__row margo-welcome-footer__row--step4">
+              <BackButton onClick={() => goStep(3)} />
               <button
                 type="button"
-                className="margo-welcome-text-btn"
-                style={{ alignSelf: 'flex-start' }}
-                onClick={() => goStep(3)}
-              >
-                <ChevronLeftIcon />
-                Back
-              </button>
-              <Link
-                href="/feed"
                 data-margo-welcome-feed
-                className="margo-welcome-next"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  textDecoration: 'none',
-                  width: '100%',
-                  maxWidth: 'none',
-                }}
+                className="margo-welcome-next margo-welcome-next--wide"
+                disabled={finishing}
+                onClick={finishWelcome}
               >
                 Go to Feed
-              </Link>
+              </button>
             </div>
           ) : null}
         </footer>
@@ -869,11 +1191,18 @@ function WelcomePageInner() {
         target={photoTarget || 'avatar'}
         hasPhoto={photoTarget === 'cover' ? !!coverPreview : !!avatarPreview}
         useDialogLayout={useDialogLayout}
-        onFile={(file) => {
-          if (photoTarget) setPreviewFile(photoTarget, file)
-        }}
+        onFile={(file) => handlePickedFile(file)}
         onRemove={() => {
-          if (photoTarget) setPreviewFile(photoTarget, null)
+          if (photoTarget) void removePhoto(photoTarget)
+        }}
+      />
+      <PortraitAvatarCropSheet
+        open={cropOpen}
+        onOpenChange={setCropOpen}
+        file={pendingAvatarFile}
+        onConfirm={(cropped) => {
+          setPendingAvatarFile(null)
+          void uploadAvatarFile(cropped)
         }}
       />
     </div>
