@@ -880,29 +880,36 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
               )}
             </div>
 
-            <div style={{ marginBottom: '24px' }}>
-              <p style={sectionLabelStyle}>Bio</p>
-              {profile.bio ? (
-                <p style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                  {profile.bio}
-                </p>
-              ) : isOwnProfile ? (
-                <Link href="/profile/edit" style={{ ...emptyLyricStyle, textDecoration: 'none' }}>
-                  Add a bio
-                </Link>
-              ) : (
-                <p style={emptyLyricStyle}>
-                  No bio yet.
-                </p>
-              )}
-            </div>
+            {profile.bio || isOwnProfile ? (
+              <div style={{ marginBottom: '24px' }}>
+                <p style={sectionLabelStyle}>Bio</p>
+                {profile.bio ? (
+                  <p style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                    {profile.bio}
+                  </p>
+                ) : (
+                  <Link
+                    href="/profile/edit"
+                    style={{
+                      fontFamily: font,
+                      fontSize: TYPE.meta,
+                      color: 'var(--text-muted)',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Add bio
+                  </Link>
+                )}
+              </div>
+            ) : null}
 
             {profile.isArtist && (
               <ProfileArtistLinks links={profile.artistLinks} />
             )}
 
+            {profile.signatureLyric ? (
             <MargoLongPressHint
-              active={isOwnProfile && !!profile.signatureLyric ? signatureLongPress.pressing : false}
+              active={isOwnProfile ? signatureLongPress.pressing : false}
               progress={signatureLongPress.progress}
               style={{
                 background: 'var(--gold-faint)',
@@ -952,8 +959,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 }}
               >
               <p style={sectionLabelStyle}>Signature lyric</p>
-              {profile.signatureLyric ? (
-                isOwnProfile ? (
+                {isOwnProfile ? (
                   <>
                       <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--gold)', lineHeight: 1.5, marginBottom: '8px' }}>
                         &ldquo;{profile.signatureLyric}&rdquo;
@@ -1008,18 +1014,25 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                       </div>
                     )}
                   </>
-                )
-              ) : isOwnProfile ? (
-                <Link href="/profile/edit" style={{ ...emptyLyricStyle, textDecoration: 'none' }}>
-                  Add the lyric that says it best
-                </Link>
-              ) : (
-                <p style={emptyLyricStyle}>
-                  Hasn&rsquo;t picked one yet.
-                </p>
-              )}
+                )}
               </div>
             </MargoLongPressHint>
+            ) : isOwnProfile ? (
+              <div style={{ marginBottom: '20px' }}>
+                <p style={sectionLabelStyle}>Signature lyric</p>
+                <Link
+                  href="/profile/edit"
+                  style={{
+                    fontFamily: font,
+                    fontSize: TYPE.meta,
+                    color: 'var(--text-muted)',
+                    textDecoration: 'none',
+                  }}
+                >
+                  Add signature lyric
+                </Link>
+              </div>
+            ) : null}
 
             {/* ── Discography preview — a taste, not the whole catalog.
                 Capped at DISCOGRAPHY_PREVIEW_COUNT and horizontally
@@ -1058,13 +1071,11 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                     ))}
                   </div>
                 ) : artistSongs.length === 0 ? (
-                  <p style={emptyLyricStyle}>
-                    {isOwnProfile ? (
-                      <>Nothing live yet — head to <Link href="/studio" style={{ color: 'var(--gold)' }}>Studio</Link> to publish your first song.</>
-                    ) : (
-                      `${profile.displayName} hasn't published a song yet.`
-                    )}
-                  </p>
+                  isOwnProfile ? (
+                    <Link href="/studio" style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)', textDecoration: 'none' }}>
+                      Studio
+                    </Link>
+                  ) : null
                 ) : (
                   <div className="discog-row">
                     {artistSongs.slice(0, DISCOGRAPHY_PREVIEW_COUNT).map(song => {
@@ -1110,7 +1121,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                     This account is private.
                   </p>
                   <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', margin: 0 }}>
-                    Follow {profile.displayName || profile.username} to see their lyrics.
+                    Follow to view lyrics.
                   </p>
                 </div>
               ) : (
@@ -1157,14 +1168,10 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
               {contentTab === 'lyrics' ? (
                 ownPosts.length === 0 ? (
                   isOwnProfile ? (
-                    <Link href="/compose" style={{ ...emptyLyricStyle, textDecoration: 'none' }}>
-                      Share your first lyric
+                    <Link href="/compose" style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)', textDecoration: 'none' }}>
+                      Compose
                     </Link>
-                  ) : (
-                    <p style={emptyLyricStyle}>
-                      Hasn&rsquo;t shared a lyric yet.
-                    </p>
-                  )
+                  ) : null
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {ownPosts.map(post => (
@@ -1187,9 +1194,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                     Loading reposts…
                   </p>
                 ) : profileReplays.length === 0 ? (
-                  <p style={emptyLyricStyle}>
-                    {isOwnProfile ? 'No reposts yet — tap Repost on a lyric in the feed.' : 'No reposts yet.'}
-                  </p>
+                  null
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {profileReplays.map(item => (
@@ -1218,9 +1223,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 )
               ) : contentTab === 'private' ? (
                 privatePosts.length === 0 ? (
-                  <p style={emptyLyricStyle}>
-                    Nothing private yet — use Keep Private when you compose.
-                  </p>
+                  null
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {privatePosts.map(post => (
@@ -1242,9 +1245,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                   Loading lyric backs…
                 </p>
               ) : lyricBacks.length === 0 ? (
-                <p style={emptyLyricStyle}>
-                  {isOwnProfile ? 'No lyric backs yet.' : 'No lyric backs yet.'}
-                </p>
+                null
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {lyricBacks.map(post => (
