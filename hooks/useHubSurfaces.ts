@@ -3,20 +3,18 @@
 import { useMemo } from 'react'
 import { useNotifications } from '@/hooks/useNotifications'
 import { useUnreadMessagesCount } from '@/hooks/useUnreadMessagesCount'
+import { useIdentity } from '@/hooks/useIdentity'
 import {
-  buildHubSurfaces,
   hubHasActivity,
-  type HubSurface,
-} from '@/lib/hub/surfaces'
+  resolveHubTiles,
+  type ResolvedHubTile,
+} from '@/lib/hub/tiles'
 
-/**
- * Live unread for Hub surfaces that actually have an unread concept.
- * Library is omitted from the unread map (stays 0) until it has one.
- */
 export function useHubSurfaces(signedIn: boolean): {
-  surfaces: HubSurface[]
+  tiles: ResolvedHubTile[]
   hasActivity: boolean
 } {
+  const { identity } = useIdentity()
   const { notifications } = useNotifications()
   const messagesUnread = useUnreadMessagesCount()
 
@@ -25,10 +23,17 @@ export function useHubSurfaces(signedIn: boolean): {
     : 0
 
   return useMemo(() => {
-    const surfaces = buildHubSurfaces({
-      messages: signedIn ? messagesUnread : 0,
-      notifications: notificationsUnread,
+    const tiles = resolveHubTiles({
+      signedIn,
+      isArtist: !!identity?.isArtist,
+      unread: {
+        messages: signedIn ? messagesUnread : 0,
+        notifications: notificationsUnread,
+      },
     })
-    return { surfaces, hasActivity: signedIn && hubHasActivity(surfaces) }
-  }, [signedIn, messagesUnread, notificationsUnread])
+    return {
+      tiles,
+      hasActivity: signedIn && hubHasActivity(tiles),
+    }
+  }, [signedIn, identity?.isArtist, messagesUnread, notificationsUnread])
 }

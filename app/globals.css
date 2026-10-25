@@ -1577,6 +1577,215 @@ html[data-margo-stage-idle] .margo-stage-zone {
   margin-top: 0;
   filter: saturate(0.2);
 }
+.margo-hub-shell {
+  max-width: min(100%, 560px);
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+@media (min-width: 834px) {
+  .margo-hub-shell {
+    max-width: min(100%, 720px);
+  }
+}
+@media (min-width: 1440px) {
+  .margo-hub-shell {
+    max-width: min(100%, 960px);
+  }
+}
+.margo-hub-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+@media (min-width: 834px) {
+  .margo-hub-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+}
+.margo-hub-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  margin-bottom: 14px;
+  padding: 4px 2px 6px;
+  box-sizing: border-box;
+}
+.margo-hub-identity__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.margo-hub-identity__name {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--margo-feed-display-name, 0.9375rem);
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.margo-hub-identity__handle {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--margo-feed-handle, 0.8125rem);
+  color: var(--text-muted);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.margo-hub-signed-out-cta {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 4px 14px;
+  text-align: center;
+  box-sizing: border-box;
+}
+.margo-hub-signed-out-cta__line {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+.margo-hub-sign-in-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--margo-touch-min);
+  padding: 0 28px;
+  border-radius: 50px;
+  background: var(--gold);
+  color: var(--bg);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  text-decoration: none;
+  box-sizing: border-box;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.margo-hub-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 10px 14px;
+  min-height: 118px;
+  min-width: 0;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--gold) 18%, var(--border));
+  background: var(--surface);
+  text-decoration: none;
+  position: relative;
+  box-sizing: border-box;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 120ms var(--ease-out),
+    border-color 120ms var(--ease-out),
+    background 80ms var(--ease-out);
+}
+.margo-hub-tile--dimmed {
+  opacity: 0.5;
+}
+.margo-hub-tile--pending {
+  border-color: var(--gold-border);
+  background: var(--gold-faint);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .margo-hub-tile:active:not([aria-disabled='true']) {
+    transform: scale(0.98);
+  }
+}
+.margo-hub-tile:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+.margo-hub-tile__icon-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--gold) 6%, var(--surface-2));
+  border: 1px solid color-mix(in srgb, var(--gold) 22%, transparent);
+  box-sizing: border-box;
+}
+.margo-hub-tile__label {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.25;
+  text-align: center;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+  width: 100%;
+}
+.margo-hub-tile__caption {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  line-height: 1.25;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+  min-width: 0;
+}
+.margo-hub-tile__caption--gold {
+  color: var(--gold);
+}
+.margo-hub-tile__badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  min-width: 18px;
+  height: 18px;
+  max-width: calc(100% - 16px);
+  border-radius: 999px;
+  background: var(--gold);
+  color: var(--bg);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  box-sizing: border-box;
+  line-height: 1;
+}
+.margo-hub-tile__lock {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
 .compose-search-row--loading {
   display: flex;
   flex-direction: column;
