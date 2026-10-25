@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
-import { ShortsCenterPlayIcon, ShortsMuteIcon } from '@/components/feed-shorts-chrome-icons'
+import {
+  ShortsCenterPauseIcon,
+  ShortsCenterPlayIcon,
+  ShortsMuteIcon,
+} from '@/components/feed-shorts-chrome-icons'
 import {
   getAudioEngineState,
   stop,
@@ -99,7 +103,14 @@ function FeedShortsSlide({
   onToggleMute,
   onCenterPlay,
 }: SlideProps) {
+  const [tapFlash, setTapFlash] = useState<'play' | 'pause' | null>(null)
   const effectOwnsFill = !reduceMotion && isLivingAtmosphere(atmosphereId)
+
+  useEffect(() => {
+    if (!tapFlash) return
+    const t = window.setTimeout(() => setTapFlash(null), 560)
+    return () => window.clearTimeout(t)
+  }, [tapFlash])
 
   const songBlock = (
     <div className="margo-feed-shorts-slide__meta-row">
@@ -128,7 +139,7 @@ function FeedShortsSlide({
         <MomentExportPreviewFrame
           shapeId="vertical"
           framed={false}
-          fillParent={desktopLayout}
+          fillParent
           style={{ height: '100%', width: '100%' }}
         >
           <StageMomentCard
@@ -155,8 +166,16 @@ function FeedShortsSlide({
               type="button"
               className="margo-feed-shorts-slide__tap-surface"
               aria-label={isPlaying ? 'Pause Short' : 'Play Short'}
-              onClick={onTapVideo}
+              onClick={() => {
+                if (!reduceMotion) setTapFlash(isPlaying ? 'pause' : 'play')
+                onTapVideo()
+              }}
             />
+            {tapFlash && !reduceMotion ? (
+              <span className="margo-feed-shorts-slide__tap-flash" aria-hidden>
+                {tapFlash === 'pause' ? <ShortsCenterPauseIcon size={44} /> : <ShortsCenterPlayIcon size={44} />}
+              </span>
+            ) : null}
             <button
               type="button"
               className="margo-feed-shorts-slide__mute"
@@ -388,7 +407,7 @@ export function FeedShortsPager({
             && current.audioUrl
           ) {
             window.setTimeout(() => {
-              if (isScrollingRef.current || !tabActiveRef.current) return
+              if (isScrollingRef.current || !tabActiveRef.current || userPausedRef.current) return
               const wantSound = readShortsUnmutePref()
               applyShortsVolume(wantSound)
               playLyricMomentShort(current)
@@ -507,9 +526,15 @@ export function FeedShortsPager({
       && state.songId === clip.songId
       && state.snippet.lineIndex === clip.lineId
     if (onThisClip && state.playing) {
-      togglePlayPause()
       userPausedRef.current = true
       setUserPaused(true)
+      togglePlayPause()
+      return
+    }
+    if (onThisClip && !state.playing && userPausedRef.current) {
+      userPausedRef.current = false
+      setUserPaused(false)
+      togglePlayPause()
       return
     }
     userPausedRef.current = false

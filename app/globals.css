@@ -2881,13 +2881,36 @@ html, body {
 }
 .margo-feed-shorts-slide__frame {
   position: relative;
-  flex: 1;
-  width: 100%;
+  flex: 0 1 auto;
+  width: min(100%, 420px, calc((100dvh - var(--nav-height, 72px) - var(--margo-feed-tab-bar-h, 44px) - var(--margo-page-padding-bottom, 88px) - 72px) * 9 / 16));
   max-width: min(100%, 420px);
+  aspect-ratio: 9 / 16;
   min-height: 0;
+  overflow: hidden;
+  border-radius: 18px;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.margo-feed-shorts-slide__meta-row {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 10px;
+  pointer-events: auto;
+}
+.margo-feed-shorts-slide__meta-art {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.margo-feed-shorts-slide__meta-text {
+  min-width: 0;
+  flex: 1;
+  text-align: left;
 }
 .margo-feed-shorts-slide__tap-surface {
   position: absolute;
@@ -2929,9 +2952,10 @@ html, body {
   pointer-events: none;
 }
 .margo-feed-shorts-slide__progress {
-  height: 3px;
+  height: 2px;
   background: rgba(255, 255, 255, 0.18);
   width: 100%;
+  box-sizing: border-box;
 }
 .margo-feed-shorts-slide__progress-fill {
   height: 100%;
@@ -2976,6 +3000,27 @@ html, body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+.margo-feed-shorts-slide__tap-flash {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 4;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0;
+  animation: margo-shorts-tap-flash 0.55s var(--ease-out) forwards;
+}
+@keyframes margo-shorts-tap-flash {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.88); }
+  22% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.02); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .margo-feed-shorts-slide__tap-flash {
+    animation: none;
+    opacity: 0;
+  }
 }
 .margo-feed-shorts-slide__center-play-label {
   font-family: var(--font-geist-sans), system-ui, sans-serif;

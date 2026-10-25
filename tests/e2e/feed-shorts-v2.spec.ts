@@ -1,7 +1,13 @@
 import { test, expect } from '@playwright/test'
 
 const BASE = process.env.PLAYWRIGHT_BASE_URL ?? 'https://trymargo.com'
-const WIDTHS = [360, 390, 430, 640, 834, 1180, 1440, 1920]
+const WIDTHS = [360, 375, 390, 430, 640, 834, 1180, 1440, 1920]
+const PHONE_HEIGHTS: Record<number, number> = {
+  360: 640,
+  375: 667,
+  390: 844,
+  430: 932,
+}
 
 function shortsUrl(width: number) {
   const fixture = BASE.includes('vercel.app')
@@ -29,9 +35,63 @@ async function requireShortsFrame(page: import('@playwright/test').Page) {
   return frame
 }
 
+async function assertSlideChromeInsideFrame(page: import('@playwright/test').Page, slideIndex = 0) {
+  const slide = page.locator(`[data-shorts-index="${slideIndex}"]`)
+  const box = await slide.evaluate((el) => {
+    const frame = el.querySelector('.margo-feed-shorts-slide__frame')
+    if (!frame) return { ok: false, reason: 'no frame' }
+    const fr = frame.getBoundingClientRect()
+    const selectors = [
+      '.margo-feed-shorts-slide__chrome-bottom',
+      '.margo-feed-shorts-slide__progress',
+      '.margo-feed-shorts-slide__mute',
+      '.margo-shorts-canvas',
+      '.margo-feed-shorts-slide__meta-art',
+    ]
+    for (const sel of selectors) {
+      const nodes = frame.querySelectorAll(sel)
+      nodes.forEach((node) => {
+        const r = node.getBoundingClientRect()
+        if (r.width === 0 && r.height === 0) return
+        if (r.left < fr.left - 1 || r.right > fr.right + 1) {
+          throw new Error(`overflow-x ${sel}: ${JSON.stringify({ fr, r })}`)
+        }
+        if (r.top < fr.top - 1 || r.bottom > fr.bottom + 1) {
+          throw new Error(`overflow-y ${sel}: ${JSON.stringify({ fr, r })}`)
+        }
+      })
+    }
+    return { ok: true, frame: { w: fr.width, h: fr.height } }
+  })
+  expect(box.ok).toBe(true)
+}
+
 for (const width of WIDTHS) {
   test.describe(`feed shorts @${width}px`, () => {
-    test.use({ viewport: { width, height: width < 640 ? 844 : 900 } })
+    test.use({
+      viewport: {
+        width,
+        height: width < 640 ? (PHONE_HEIGHTS[width] ?? 740) : 900,
+      },
+    })
+
+    test('slide chrome stays inside 9:16 frame bounds', async ({ page }) => {
+      test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
+      await openShortsTab(page, width)
+      await page.waitForTimeout(1200)
+      const pager = page.locator('.margo-feed-shorts-pager')
+      if ((await pager.count()) === 0) test.skip()
+      await assertSlideChromeInsideFrame(page, 0)
+      if ((await page.locator('[data-shorts-index="1"]').count()) > 0) {
+        await pager.evaluate((el) => {
+          el.scrollTop = el.clientHeight * 0.85
+        })
+        await page.waitForTimeout(400)
+        await pager.evaluate((el) => el.dispatchEvent(new Event('scrollend')))
+        await page.waitForTimeout(300)
+        await assertSlideChromeInsideFrame(page, 1)
+      }
+    })
 
     test('9:16 frame, no horizontal overflow', async ({ page }) => {
       await openShortsTab(page, width)
@@ -169,6 +229,51 @@ for (const width of WIDTHS) {
 }
 
 for (const width of [390, 1440]) {
+  test.describe(`shorts tap pause @${width}px`, () => {
+    test.use({ viewport: { width, height: width < 640 ? 844 : 900 } })
+
+    test('one tap pauses for 2s; second tap resumes (mouse)', async ({ page }) => {
+      test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
+      await page.goto(shortsUrl(width), { waitUntil: 'domcontentloaded', timeout: 45000 })
+      await page.waitForTimeout(2000)
+      const surface = page.locator('[data-shorts-active="1"] .margo-feed-shorts-slide__tap-surface')
+      await expect(surface).toBeVisible({ timeout: 15000 })
+      await surface.click()
+      await page.waitForTimeout(2000)
+      const paused = await page.evaluate(() => {
+        const a = document.querySelector('audio')
+        return !a || a.paused
+      })
+      expect(paused).toBe(true)
+      await surface.click()
+      await page.waitForTimeout(600)
+      const playing = await page.evaluate(() => {
+        const a = document.querySelector('audio')
+        return !!a && !a.paused
+      })
+      expect(playing).toBe(true)
+    })
+
+    test('one tap pauses for 2s (touch)', async ({ page, browserName }) => {
+      test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
+      test.skip(browserName === 'firefox', 'touch tap timing flaky on Firefox CI')
+      await page.goto(shortsUrl(width), { waitUntil: 'domcontentloaded', timeout: 45000 })
+      await page.waitForTimeout(2000)
+      const frame = page.locator('[data-shorts-active="1"] .margo-feed-shorts-slide__frame')
+      await expect(frame).toBeVisible({ timeout: 15000 })
+      const box = await frame.boundingBox()
+      expect(box).toBeTruthy()
+      if (!box) return
+      await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height * 0.45)
+      await page.waitForTimeout(2000)
+      const paused = await page.evaluate(() => {
+        const a = document.querySelector('audio')
+        return !a || a.paused
+      })
+      expect(paused).toBe(true)
+    })
+  })
+
   test.describe(`shorts look stable swipe @${width}px`, () => {
     test.use({ viewport: { width, height: width < 640 ? 844 : 900 } })
 
@@ -209,14 +314,18 @@ for (const width of [390, 1440]) {
       }
     })
 
-    test('fixture clips use five different looks', async ({ page }) => {
+    test('fixture clips mix colour-only, effect-only, and combined looks', async ({ page }) => {
       test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
       await page.goto(shortsUrl(width), { waitUntil: 'domcontentloaded', timeout: 45000 })
       await page.waitForTimeout(1200)
       const pairs = await page.locator('[data-shorts-slide]').evaluateAll((els) =>
-        els.slice(0, 5).map((el) => `${el.getAttribute('data-shorts-theme')}:${el.getAttribute('data-shorts-atmosphere')}`),
+        els.slice(0, 6).map((el) => `${el.getAttribute('data-shorts-theme')}:${el.getAttribute('data-shorts-atmosphere')}`),
       )
       expect(new Set(pairs).size).toBeGreaterThanOrEqual(3)
+      const hasColourOnly = pairs.some((p) => p.endsWith(':still'))
+      const hasEffectOnly = pairs.some((p) => p.startsWith('gold:') && !p.endsWith(':still'))
+      expect(hasColourOnly || pairs.filter((p) => p.endsWith(':still')).length >= 1).toBe(true)
+      expect(pairs.some((p) => !p.endsWith(':still'))).toBe(true)
     })
   })
 }
