@@ -87,7 +87,6 @@ for (const width of [360, 390, 834, 1440]) {
       if (layout.identityCenterDelta != null) expect(layout.identityCenterDelta).toBeLessThanOrEqual(8)
       expect(layout.statsOffScreen).not.toBe(true)
       expect(layout.roleSlotWidth ?? 0).toBe(0)
-      expect(layout.thirdSlotWidth ?? 0).toBe(0)
     })
   })
 }

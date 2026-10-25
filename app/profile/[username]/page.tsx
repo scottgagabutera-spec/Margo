@@ -220,6 +220,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
   const [notFound, setNotFound] = useState(false)
   const [followerCount, setFollowerCount] = useState<number | null>(cached?.followerCount ?? null)
   const [followingCount, setFollowingCount] = useState<number | null>(cached?.followingCount ?? null)
+  const [postsCount, setPostsCount] = useState<number | null>(cached?.postsCount ?? null)
   const [followRelation, setFollowRelation] = useState<FollowRelationState>({ ready: true, status: null })
   const [followBusy, setFollowBusy] = useState(false)
   const [avatarLightboxOpen, setAvatarLightboxOpen] = useState(false)
@@ -257,6 +258,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
       setProfile(cachedNow.profile)
       setFollowerCount(cachedNow.followerCount)
       setFollowingCount(cachedNow.followingCount)
+      setPostsCount(cachedNow.postsCount)
       setLoading(false)
       setNotFound(false)
     } else {
@@ -269,6 +271,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
         setProfile(bundle.profile)
         setFollowerCount(bundle.followerCount)
         setFollowingCount(bundle.followingCount)
+        setPostsCount(bundle.postsCount)
         setNotFound(false)
         setLoading(false)
         if (bundle.viewerFollowStatus !== undefined) {
@@ -283,6 +286,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
         setProfile(peek.profile)
         setFollowerCount(peek.followerCount)
         setFollowingCount(peek.followingCount)
+        setPostsCount(peek.postsCount)
         setNotFound(false)
         setLoading(false)
         if (peek.viewerFollowStatus !== undefined) {
@@ -860,6 +864,11 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 href={(isOwnProfile || !profile.followListsPrivate) ? `/profile/${profile.username}/following` : undefined}
                 count={followingCount}
                 label="following"
+                showDivider
+              />
+              <ProfileStat
+                count={postsCount ?? (isOwnProfile ? ownPosts.length : null)}
+                label="lyrics"
                 showDivider={!!profile.isArtist}
               />
               {profile.isArtist && (

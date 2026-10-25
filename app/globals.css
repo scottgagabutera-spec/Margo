@@ -972,13 +972,56 @@ html[data-margo-stage-idle] .margo-stage-zone {
   color: var(--text-muted);
   flex-shrink: 0;
 }
-.margo-profile-role-third-slot {
+.margo-profile-role-third-slot,
+.margo-feed-role-third-slot {
   display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+}
+.margo-profile-role-third-slot:empty,
+.margo-feed-role-third-slot:empty {
   width: 0;
   height: 0;
   overflow: hidden;
-  margin: 0;
+}
+.margo-role-line {
+  display: inline-block;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  color: var(--text-muted);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.margo-role-line--brand {
+  color: var(--gold);
+  opacity: 0.88;
+}
+.margo-post-card__mood--word {
+  height: auto;
+  min-height: 0;
   padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  font-size: var(--feed-type-mood-chip);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--post-vibe-chip-text);
+  opacity: 0.92;
+}
+.margo-post-card__header--portrait .margo-post-card__mood--word {
+  align-self: start;
+  margin-top: 1px;
 }
 .margo-profile-actions {
   display: flex;

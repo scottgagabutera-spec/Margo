@@ -85,9 +85,14 @@ export function AuthorMeta({
         // Future: 18px round role badge (Artist / Producer / Label) — empty slot adds no width today.
         <span className="margo-feed-author-role-slot" data-testid="feed-author-role-slot" aria-hidden />
       ) : null}
-      {profile && (
-        <ArtistBadge isArtist={profile.isArtist} artistStatus={profile.artistStatus} size={size === 'compact' ? 11 : 13} />
-      )}
+      {!feedCardHeader && profile ? (
+        <ArtistBadge
+          isArtist={profile.isArtist}
+          artistStatus={profile.artistStatus}
+          size={size === 'compact' ? 11 : 13}
+          presentation="seal"
+        />
+      ) : null}
     </span>
   )
 
@@ -131,7 +136,15 @@ export function AuthorMeta({
         {nameRow}
         {handleRow}
         {feedCardHeader ? (
-          <span className="margo-feed-role-third-slot" data-testid="feed-role-third-slot" aria-hidden />
+          <span className="margo-feed-role-third-slot" data-testid="feed-role-third-slot">
+            {profile && (
+              <ArtistBadge
+                isArtist={profile.isArtist}
+                artistStatus={profile.artistStatus}
+                presentation="line"
+              />
+            )}
+          </span>
         ) : null}
       </span>
     )
