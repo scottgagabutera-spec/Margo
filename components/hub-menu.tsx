@@ -16,38 +16,40 @@ import {
 import { createPortal } from 'react-dom'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useHubSurfaces } from '@/hooks/useHubSurfaces'
+import { useIdentity } from '@/hooks/useIdentity'
 import { MARGO_CLOSE_HUB_EVENT, persistActivePrimaryScroll, readActiveScrollTop } from '@/components/primary-tab-shell'
-import { BellIcon, HubGridIcon, LibraryIcon, MessagesIcon, SearchIcon } from '@/components/icons'
-import { LoadingRing } from '@/components/loading-ring'
+import {
+  BellIcon,
+  HubGridIcon,
+  LibraryIcon,
+  LockIcon,
+  MessagesIcon,
+  PenLineIcon,
+  SearchIcon,
+} from '@/components/icons'
 import { PendingNavLink } from '@/components/pending-nav-link'
-import { UI_FONT } from '@/lib/fonts'
-import type { HubSurface, HubSurfaceId } from '@/lib/hub/surfaces'
-import { MargoSymbol } from '@/components/margo-symbol'
+import { MargoPortraitAvatar } from '@/components/margo-portrait-avatar'
 import { SignInLink } from '@/components/signin-link'
 import { buildSigninHref, persistAuthReturnScroll } from '@/lib/auth-return'
 import { searchHrefForPath, searchScopeForPath, consumeHubOverlayRestore } from '@/lib/search-scope'
+import { isMargoBrandUsername } from '@/lib/margo-brand-account'
+import {
+  hubTileBadgeLabel,
+  type HubTileIconId,
+  type ResolvedHubTile,
+} from '@/lib/hub/tiles'
 
-/** UI chrome — MARGO_BRAND §3 Geist Sans */
-const font = UI_FONT
-
-/** Scroll dismiss: ≥24px cumulative ΔY or velocity ≥0.6 px/ms */
 const SCROLL_DISTANCE_PX = 24
 const SCROLL_VELOCITY_PX_MS = 0.6
-
-/** Brand §14 / §15 — touch target floor */
 const TOUCH = 'var(--margo-touch-min)'
 
-function badgeLabel(n: number): string {
-  if (n <= 0) return ''
-  return n > 9 ? '9+' : String(n)
-}
-
-function TileIcon({ kind }: { kind: HubSurfaceId }) {
+function TileIcon({ kind }: { kind: HubTileIconId }) {
   const color = 'var(--gold)'
-  if (kind === 'library') return <LibraryIcon size={18} color={color} />
-  if (kind === 'messages') return <MessagesIcon size={18} color={color} />
-  if (kind === 'stage') return <MargoSymbol size={18} />
-  return <BellIcon size={18} color={color} />
+  const size = 22
+  if (kind === 'library') return <LibraryIcon size={size} color={color} />
+  if (kind === 'messages') return <MessagesIcon size={size} color={color} />
+  if (kind === 'stage') return <PenLineIcon size={size} color={color} />
+  return <BellIcon size={size} color={color} />
 }
 
 function HubPresenceDot({ visible, top, right }: { visible: boolean; top: string; right: string }) {
@@ -68,107 +70,97 @@ function HubPresenceDot({ visible, top, right }: { visible: boolean; top: string
   )
 }
 
-function HubTile({
-  surface,
+function HubIdentityHeader() {
+  const { identity } = useIdentity()
+  if (!identity) return null
+  const brandMark = isMargoBrandUsername(identity.username)
+  const handle = `@${identity.username.replace(/^@/, '')}`
+  return (
+    <PendingNavLink href="/you" className="margo-hub-identity" data-margo-hub-root>
+      <MargoPortraitAvatar
+        size="sm"
+        imageUrl={identity.avatarUrl}
+        fallbackInitial={(identity.displayName || identity.username || '?').slice(0, 1)}
+        fallbackSeed={!identity.avatarUrl && !brandMark ? identity.username : null}
+        brandMark={brandMark}
+      />
+      <span className="margo-hub-identity__text">
+        <span className="margo-hub-identity__name">{identity.displayName || identity.username}</span>
+        <span className="margo-hub-identity__handle">{handle}</span>
+      </span>
+    </PendingNavLink>
+  )
+}
+
+function HubTileLink({
+  tile,
   signedIn,
   pending,
-  locked,
+  navLocked,
   onBeginNavigate,
 }: {
-  surface: HubSurface
+  tile: ResolvedHubTile
   signedIn: boolean
   pending: boolean
-  locked: boolean
+  navLocked: boolean
   onBeginNavigate: (href: string) => boolean
 }) {
-  const { href, id, label, unread, wide, public: isPublic } = surface
-  const badge = signedIn ? badgeLabel(unread) : ''
-  const dest = signedIn || isPublic ? href : buildSigninHref(href)
+  const badge = signedIn ? hubTileBadgeLabel(tile.count) : ''
+  const dest = signedIn || !tile.needsAccount ? tile.href : buildSigninHref(tile.href)
+  const showLock = tile.locked
+  const captionGold = !!tile.captionGold
+
   return (
     <Link
       href={dest}
       onClick={(e) => {
-        if (!signedIn && !isPublic) {
+        if (tile.locked) {
           persistActivePrimaryScroll()
           persistAuthReturnScroll()
         }
-        if (locked || pending || !onBeginNavigate(dest)) {
+        if (navLocked || pending || !onBeginNavigate(dest)) {
           e.preventDefault()
         }
       }}
       data-margo-hub-root
+      data-hub-tile={tile.id}
       aria-busy={pending}
-      className="margo-hub-tile"
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px',
-        padding: '14px 12px',
-        borderRadius: '12px',
-        border: pending ? '1px solid var(--gold-border)' : '1px solid var(--border)',
-        background: pending ? 'var(--gold-faint)' : 'rgba(255,255,255,0.02)',
-        textDecoration: 'none',
-        position: 'relative',
-        minHeight: '112px',
-        boxSizing: 'border-box',
-        gridColumn: wide ? '1 / -1' : undefined,
-        opacity: signedIn || isPublic ? (locked ? 0.45 : 1) : 0.85,
-        pointerEvents: locked ? 'none' : 'auto',
-        transition: 'background 80ms var(--ease-out), border-color 80ms var(--ease-out)',
-      }}
+      aria-label={
+        showLock
+          ? `${tile.label}. Sign in required`
+          : badge
+            ? `${tile.label}, ${badge} new`
+            : tile.label
+      }
+      className={[
+        'margo-hub-tile',
+        tile.dimmed ? 'margo-hub-tile--dimmed' : '',
+        pending ? 'margo-hub-tile--pending' : '',
+        tile.locked ? 'margo-hub-tile--locked-nav' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
     >
-      {badge ? (
-        <span
-          style={{
-            position: 'absolute',
-            top: '8px',
-            right: '8px',
-            minWidth: '16px',
-            height: '16px',
-            borderRadius: '50%',
-            background: 'var(--gold)',
-            color: 'var(--bg)',
-            fontFamily: font,
-            fontSize: '0.55rem',
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '0 4px',
-            boxSizing: 'border-box',
-          }}
-        >
+      {showLock ? (
+        <span className="margo-hub-tile__lock" aria-hidden>
+          <LockIcon size={16} color="var(--text-muted)" />
+        </span>
+      ) : badge ? (
+        <span className="margo-hub-tile__badge" aria-hidden>
           {badge}
         </span>
       ) : null}
-      <TileIcon kind={id} />
-      <span
-        style={{
-          fontFamily: font,
-          fontSize: '0.72rem',
-          fontWeight: 700,
-          letterSpacing: '0.4px',
-          color: 'var(--text)',
-          lineHeight: 1.25,
-        }}
-      >
-        {label}
+      <span className="margo-hub-tile__icon-wrap">
+        <TileIcon kind={tile.icon} />
       </span>
-      {/* Preview slot — spinner while the destination RSC is in flight */}
-      <div
-        style={{
-          flex: 1,
-          minHeight: '40px',
-          borderRadius: '8px',
-          border: pending ? 'none' : '1px dashed rgba(255,255,255,0.06)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-        aria-hidden={!pending}
+      <span className="margo-hub-tile__label">{tile.label}</span>
+      <span
+        className={
+          'margo-hub-tile__caption' + (captionGold ? ' margo-hub-tile__caption--gold' : '')
+        }
       >
-        {pending ? <LoadingRing size={28} strokeWidth={2} state="spinning" /> : null}
-      </div>
+        {tile.caption}
+      </span>
     </Link>
   )
 }
@@ -179,7 +171,7 @@ type HubContextValue = {
   toggle: () => void
   close: () => void
   hubHasUnread: boolean
-  surfaces: HubSurface[]
+  tiles: ResolvedHubTile[]
   signedIn: boolean
   pendingHref: string | null
   beginNavigate: (href: string) => boolean
@@ -196,74 +188,36 @@ function useHub(): HubContextValue {
 function HubTiles({
   signedIn,
   close,
-  surfaces,
+  tiles,
   pendingHref,
   beginNavigate,
 }: {
   signedIn: boolean
   close: () => void
-  surfaces: HubSurface[]
+  tiles: ResolvedHubTile[]
   pendingHref: string | null
   beginNavigate: (href: string) => boolean
 }) {
   return (
     <>
-      {!signedIn && (
-        <div
-          style={{
-            gridColumn: '1 / -1',
-            padding: '14px 16px',
-            borderRadius: '12px',
-            border: '1px solid rgba(232,197,71,0.25)',
-            background: 'rgba(232,197,71,0.06)',
-            marginBottom: '4px',
-          }}
-        >
-          <p
-            style={{
-              fontFamily: font,
-              fontSize: '0.82rem',
-              color: 'var(--text)',
-              margin: '0 0 10px',
-              lineHeight: 1.4,
-            }}
-          >
-            Sign in to see your Messages, Music Library, and Notifications. The Stage is open without an account.
-          </p>
-          <SignInLink
-            onClick={close}
-            data-margo-hub-root
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minHeight: TOUCH,
-              padding: '0 20px',
-              borderRadius: '50px',
-              background: 'var(--gold)',
-              color: 'var(--bg)',
-              fontFamily: font,
-              fontSize: '0.6rem',
-              fontWeight: 700,
-              letterSpacing: '1.5px',
-              textTransform: 'uppercase',
-              textDecoration: 'none',
-              boxSizing: 'border-box',
-            }}
-          >
-            Sign In
+      {signedIn ? <HubIdentityHeader /> : null}
+      {!signedIn ? (
+        <div className="margo-hub-signed-out-cta">
+          <p className="margo-hub-signed-out-cta__line">Sign in to open your space</p>
+          <SignInLink onClick={close} data-margo-hub-root className="margo-hub-sign-in-btn">
+            Sign in
           </SignInLink>
         </div>
-      )}
-      {surfaces.map((surface) => {
-        const dest = signedIn || surface.public ? surface.href : buildSigninHref(surface.href)
+      ) : null}
+      {tiles.map((tile) => {
+        const dest = signedIn || !tile.needsAccount ? tile.href : buildSigninHref(tile.href)
         return (
-          <HubTile
-            key={surface.id}
-            surface={surface}
+          <HubTileLink
+            key={tile.id}
+            tile={tile}
             signedIn={signedIn}
             pending={pendingHref === dest}
-            locked={!!pendingHref && pendingHref !== dest}
+            navLocked={!!pendingHref && pendingHref !== dest}
             onBeginNavigate={beginNavigate}
           />
         )
@@ -273,7 +227,7 @@ function HubTiles({
 }
 
 function HubPanel() {
-  const { open, close, signedIn, surfaces, pendingHref, beginNavigate } = useHub()
+  const { open, close, signedIn, tiles, pendingHref, beginNavigate } = useHub()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => setMounted(true), [])
@@ -283,14 +237,21 @@ function HubPanel() {
   const tileProps = {
     signedIn,
     close,
-    surfaces,
+    tiles,
     pendingHref,
     beginNavigate,
   }
 
+  const shell = (
+    <div className="margo-hub-shell">
+      <div className="margo-hub-grid">
+        <HubTiles {...tileProps} />
+      </div>
+    </div>
+  )
+
   return createPortal(
     <>
-      {/* Mobile: sheet under nav, above tab bar */}
       <div
         className="margo-hub-sheet"
         data-margo-hub-root
@@ -304,25 +265,16 @@ function HubPanel() {
           background: 'var(--bg)',
           borderBottom: '1px solid var(--border)',
           boxShadow: '0 12px 28px rgba(0,0,0,0.45)',
-          padding: '14px 16px 18px',
+          padding: '14px 16px calc(18px + env(safe-area-inset-bottom))',
           overflowY: 'auto',
+          overflowX: 'hidden',
           WebkitOverflowScrolling: 'touch',
+          boxSizing: 'border-box',
         }}
       >
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '10px',
-            maxWidth: '560px',
-            margin: '0 auto',
-          }}
-        >
-          <HubTiles {...tileProps} />
-        </div>
+        {shell}
       </div>
 
-      {/* Desktop: anchored panel */}
       <div
         className="margo-hub-panel"
         data-margo-hub-root
@@ -330,32 +282,24 @@ function HubPanel() {
           display: 'none',
           position: 'fixed',
           top: 'calc(var(--nav-height, 72px) + 8px)',
-          right: '24px',
-          width: '380px',
+          right: 'max(16px, env(safe-area-inset-right))',
+          width: 'min(420px, calc(100vw - 32px))',
+          maxHeight: 'calc(100dvh - var(--nav-height, 72px) - 24px)',
           zIndex: 60,
           background: 'var(--bg)',
           border: '1px solid var(--border)',
           borderRadius: '14px',
           boxShadow: '0 12px 28px rgba(0,0,0,0.45)',
           padding: '12px',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          boxSizing: 'border-box',
         }}
       >
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '8px',
-          }}
-        >
-          <HubTiles {...tileProps} />
-        </div>
+        {shell}
       </div>
 
       <style>{`
-        .margo-hub-tile:active {
-          background: var(--gold-faint) !important;
-          border-color: var(--gold-border) !important;
-        }
         @media (min-width: 640px) {
           .margo-hub-sheet { display: none !important; }
           .margo-hub-panel { display: block !important; }
@@ -371,7 +315,7 @@ export function HubProvider({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuthGate()
   const signedIn = !authLoading && !!user && !user.is_anonymous
 
-  const { surfaces, hasActivity } = useHubSurfaces(signedIn)
+  const { tiles, hasActivity } = useHubSurfaces(signedIn)
 
   const [open, setOpen] = useState(false)
   const [pendingHref, setPendingHref] = useState<string | null>(null)
@@ -430,10 +374,6 @@ export function HubProvider({ children }: { children: ReactNode }) {
       const target = e.target
       if (!(target instanceof Element)) return
       if (target.closest('[data-margo-hub-root]')) return
-      // Tab-bar / desktop nav taps must not dismiss Hub on touchstart —
-      // that uncovers Feed (or whatever pane was under the sheet) before
-      // optimistic You/Discover paint. PrimaryTabShell closes Hub in the
-      // same click that paints the destination.
       if (target.closest('.margo-mobile-tabbar, .margo-nav')) return
       close()
     }
@@ -483,10 +423,10 @@ export function HubProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({
-      open, setOpen, toggle, close, hubHasUnread: hasActivity, surfaces, signedIn,
+      open, setOpen, toggle, close, hubHasUnread: hasActivity, tiles, signedIn,
       pendingHref, beginNavigate,
     }),
-    [open, toggle, close, hasActivity, surfaces, signedIn, pendingHref, beginNavigate],
+    [open, toggle, close, hasActivity, tiles, signedIn, pendingHref, beginNavigate],
   )
 
   return (
@@ -497,7 +437,6 @@ export function HubProvider({ children }: { children: ReactNode }) {
   )
 }
 
-/** Desktop / top-bar icon trigger — 44×44 touch (Brand §14). */
 export function HubIconButton() {
   const { open, toggle, hubHasUnread } = useHub()
   return (
@@ -528,7 +467,6 @@ export function HubIconButton() {
   )
 }
 
-/** Mobile tab-bar Hub control — label visible (Brand §14 feed-action rule). */
 export function HubTabButton({ style, labelStyle }: { style: CSSProperties; labelStyle: CSSProperties }) {
   const { open, toggle, hubHasUnread } = useHub()
   return (
