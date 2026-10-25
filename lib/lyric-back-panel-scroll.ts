@@ -103,25 +103,33 @@ export function scrollFeedLyricBackFirstReplyIntoView(panel: HTMLElement | null)
 
   const searchAnchor = panel.querySelector('[data-lb-search-footer="1"], .margo-lb-focus__search-wrap')
   const card = panel.closest('.margo-post-card')
-  const body = card?.querySelector('.margo-post-card__body')
+  const lyricZone = card?.querySelector(
+    '.margo-post-card__lyric-zone, .margo-post-card__moment-stage-inner, .margo-post-card__body',
+  )
 
   const { top: visibleTop, bottom: visibleBottom } = feedVisibleBand()
+  const band = visibleBottom - visibleTop
+  const searchTargetTop = visibleTop + band * 0.5
+  const lyricTargetTop = visibleTop + 12
+
   let delta = 0
-
-  if (body instanceof HTMLElement) {
-    const bodyRect = body.getBoundingClientRect()
-    const desiredBodyTop = visibleTop + 10
-    delta = bodyRect.top - desiredBodyTop
-  }
-
-  if (searchAnchor instanceof HTMLElement) {
+  if (lyricZone instanceof HTMLElement && searchAnchor instanceof HTMLElement) {
+    const lyricRect = lyricZone.getBoundingClientRect()
     const searchRect = searchAnchor.getBoundingClientRect()
-    const searchMid = searchRect.top + searchRect.height / 2
-    const desiredMid = visibleTop + (visibleBottom - visibleTop) * 0.54
-    const deltaSearch = searchMid - desiredMid
-    if (Math.abs(deltaSearch) > Math.abs(delta) || Math.abs(delta) < 24) {
-      delta = deltaSearch
+    const deltaLyric = lyricRect.top - lyricTargetTop
+    const deltaSearch = searchRect.top - searchTargetTop
+    delta = deltaLyric * 0.55 + deltaSearch * 0.45
+    const projectedLyricTop = lyricRect.top - delta
+    const projectedSearchTop = searchRect.top - delta
+    if (projectedLyricTop < visibleTop - 8) {
+      delta = lyricRect.top - lyricTargetTop
+    } else if (projectedSearchTop > visibleBottom - 72) {
+      delta = searchRect.top - (visibleBottom - 80)
     }
+  } else if (lyricZone instanceof HTMLElement) {
+    delta = lyricZone.getBoundingClientRect().top - lyricTargetTop
+  } else if (searchAnchor instanceof HTMLElement) {
+    delta = searchAnchor.getBoundingClientRect().top - searchTargetTop
   }
 
   if (Math.abs(delta) < 1) return false

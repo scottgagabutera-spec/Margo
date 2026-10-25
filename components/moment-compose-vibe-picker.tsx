@@ -13,6 +13,8 @@ export type MomentComposeVibePickerProps = {
   variant?: 'stage' | 'inline'
   theme?: StageCardTheme
   compact?: boolean
+  /** Lyric Back panel send row — tight 5-column grid below the tag. */
+  density?: 'default' | 'panel'
   disabled?: boolean
 }
 
@@ -26,6 +28,7 @@ export function MomentComposeVibePicker({
   variant = 'inline',
   theme,
   compact = false,
+  density = 'default',
   disabled = false,
 }: MomentComposeVibePickerProps) {
   const [open, setOpen] = useState(false)
@@ -97,11 +100,19 @@ export function MomentComposeVibePicker({
     )
   }
 
+  const panelDensity = density === 'panel'
+
   return (
-    <div className={`margo-moment-vibe-picker${compact ? ' margo-moment-vibe-picker--compact' : ''}`}>
+    <div
+      className={[
+        'margo-moment-vibe-picker',
+        compact ? 'margo-moment-vibe-picker--compact' : '',
+        panelDensity ? 'margo-moment-vibe-picker--panel' : '',
+      ].filter(Boolean).join(' ')}
+    >
       <button
         type="button"
-        className="margo-moment-vibe-picker__tag"
+        className={`margo-moment-vibe-picker__tag${panelDensity ? ' margo-moment-vibe-picker__tag--panel' : ''}`}
         data-no-card-nav
         aria-expanded={open}
         aria-label={`Vibe: ${vibeLabel}. Tap to change.`}
@@ -109,7 +120,9 @@ export function MomentComposeVibePicker({
         onClick={() => canPick && setOpen((v) => !v)}
       >
         <span className="margo-moment-vibe-picker__label">Vibe</span>
-        <span className="margo-moment-vibe-picker__chip">{vibeLabel}</span>
+        <span className={`margo-moment-vibe-picker__chip${panelDensity ? ' margo-moment-vibe-picker__chip--on' : ''}`}>
+          {vibeLabel}
+        </span>
       </button>
       {open && canPick ? (
         <VibeGrid
@@ -121,6 +134,7 @@ export function MomentComposeVibePicker({
             setOpen(false)
           }}
           variant="inline"
+          density={density}
         />
       ) : null}
     </div>
@@ -134,6 +148,7 @@ function VibeGrid({
   onPick,
   variant,
   theme,
+  density = 'default',
 }: {
   options: string[]
   vibeLabel: string
@@ -141,6 +156,7 @@ function VibeGrid({
   onPick: (label: string) => void
   variant: 'stage' | 'inline'
   theme?: StageCardTheme
+  density?: 'default' | 'panel'
 }) {
   if (variant === 'stage' && theme) {
     return (
@@ -209,8 +225,17 @@ function VibeGrid({
     )
   }
 
+  const panelGrid = density === 'panel'
+
   return (
-    <div className="margo-moment-vibe-picker__grid" role="listbox" aria-label="Choose a vibe">
+    <div
+      className={
+        'margo-moment-vibe-picker__grid'
+        + (panelGrid ? ' margo-moment-vibe-picker__grid--panel' : '')
+      }
+      role="listbox"
+      aria-label="Choose a vibe"
+    >
       {options.map((option) => {
         const selected = option === vibeLabel
         return (
@@ -219,7 +244,7 @@ function VibeGrid({
             type="button"
             role="option"
             aria-selected={selected}
-            className={`margo-moment-vibe-picker__option${selected ? ' margo-moment-vibe-picker__option--on' : ''}`}
+            className={`margo-moment-vibe-picker__option${selected ? ' margo-moment-vibe-picker__option--on' : ''}${panelGrid ? ' margo-moment-vibe-picker__option--panel' : ''}`}
             onClick={() => onPick(option)}
           >
             {option}

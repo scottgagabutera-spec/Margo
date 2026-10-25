@@ -1514,6 +1514,62 @@ html[data-margo-stage-idle] .margo-stage-zone {
   border-color: var(--gold);
   color: var(--text);
 }
+.margo-moment-vibe-picker--panel {
+  margin-top: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.margo-moment-vibe-picker__tag--panel {
+  padding: 0;
+}
+.margo-moment-vibe-picker__grid--panel {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+  margin-top: 8px;
+  padding-top: 8px;
+  max-height: 118px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.margo-moment-vibe-picker__option--panel {
+  min-height: 28px;
+  padding: 0 4px;
+  font-size: 0.52rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border-radius: 8px;
+  text-transform: none;
+}
+.margo-moment-vibe-picker__option--panel.margo-moment-vibe-picker__option--on {
+  border-color: var(--gold-border);
+  background: color-mix(in srgb, var(--gold) 14%, var(--surface-2));
+  color: var(--gold);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--gold) 35%, transparent);
+}
+.margo-post-card__lb-compose-send-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 8px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+}
+.margo-post-card__lb-compose-vibe-only,
+.margo-post-card__lb-search-footer__vibe {
+  padding: 4px 0 2px;
+}
+.margo-post-card__lb-search-footer__vibe .margo-moment-vibe-picker--panel {
+  width: 100%;
+}
+.margo-portrait-avatar--generated .margo-portrait-avatar__photo {
+  object-fit: cover;
+  transform: scale(1.06);
+}
+.margo-portrait-avatar--generated .margo-portrait-avatar__frame {
+  background: var(--surface-2);
+}
 .margo-post-card__lb-compose-panel-footer {
   position: relative;
   z-index: 1;
@@ -2694,14 +2750,6 @@ html.margo-keyboard-open .margo-mobile-tabbar {
   .margo-post-card__lb-compose-input--panel {
     field-sizing: content;
   }
-}
-.margo-post-card__lb-compose-send-row {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  min-height: 44px;
-  margin: 0;
-  padding: 0;
 }
 .margo-post-card__lb-compose-send--panel {
   width: 44px;

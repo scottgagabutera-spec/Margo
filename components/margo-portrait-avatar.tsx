@@ -47,6 +47,7 @@ export function MargoPortraitAvatar({
 }: MargoPortraitAvatarProps) {
   const dim = SIZE_PX[size]
   const hasPhoto = !!imageUrl?.trim()
+  const isGeneratedPhoto = hasPhoto && imageUrl!.includes('api.dicebear.com/')
 
   const tileBg = brandMark
     ? 'var(--surface-2)'
@@ -87,6 +88,7 @@ export function MargoPortraitAvatar({
       className={[
         'margo-portrait-avatar',
         brandMark ? 'margo-portrait-avatar--brand' : '',
+        isGeneratedPhoto ? 'margo-portrait-avatar--generated' : '',
         className,
       ].filter(Boolean).join(' ')}
       style={{

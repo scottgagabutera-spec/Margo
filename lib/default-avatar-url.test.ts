@@ -7,7 +7,8 @@ describe('defaultAvatarUrlForSeed', () => {
     const a = defaultAvatarUrlForSeed('n2music')
     const b = defaultAvatarUrlForSeed('n2music')
     assert.equal(a, b)
-    assert.match(a, /dicebear\.com\/9\.x\/notionists/)
+    assert.match(a, /dicebear\.com\/9\.x\/lorelei/)
+    assert.match(a, /size=132/)
     assert.match(a, /seed=n2music/)
   })
 

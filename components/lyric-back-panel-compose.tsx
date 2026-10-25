@@ -646,13 +646,6 @@ export const LyricBackPanelCompose = forwardRef<
         <span className="margo-song-row__artist margo-post-card__lb-compose-artist">{selected.artist}</span>
       </div>
       <div className="margo-song-row__trail">
-        {isPanelLayout ? (
-          <MomentComposeVibePicker
-            compact
-            vibeLabel={composeVibeLabel}
-            onVibeSelect={setComposeVibeLabel}
-          />
-        ) : null}
         <LyricBackTrackListenControl
           className={isPanelLayout ? 'margo-post-card__lb-compose-open' : undefined}
           songId={selected.catalogSongId}
@@ -726,6 +719,12 @@ export const LyricBackPanelCompose = forwardRef<
       ) : null}
       {isPanelLayout && !panelAfterBody ? (
         <div className="margo-post-card__lb-compose-send-row">
+          <MomentComposeVibePicker
+            compact
+            density="panel"
+            vibeLabel={composeVibeLabel}
+            onVibeSelect={setComposeVibeLabel}
+          />
           <button
             type="button"
             className="margo-post-card__lb-compose-send margo-post-card__lb-compose-send--panel"
@@ -756,7 +755,18 @@ export const LyricBackPanelCompose = forwardRef<
     </div>
   ) : null
 
-  const body = songChip || linePicker || lyricBlock ? (
+  const panelVibeFooter = isPanelLayout && !showLyricField && !panelAfterBody ? (
+    <div className="margo-post-card__lb-compose-vibe-only">
+      <MomentComposeVibePicker
+        compact
+        density="panel"
+        vibeLabel={composeVibeLabel}
+        onVibeSelect={setComposeVibeLabel}
+      />
+    </div>
+  ) : null
+
+  const body = songChip || linePicker || lyricBlock || panelVibeFooter ? (
     <div
       className={
         'margo-post-card__lb-compose-body'
@@ -766,6 +776,7 @@ export const LyricBackPanelCompose = forwardRef<
       {songChip}
       {linePicker}
       {lyricBlock}
+      {panelVibeFooter}
     </div>
   ) : null
 
@@ -783,6 +794,16 @@ export const LyricBackPanelCompose = forwardRef<
       {body}
       {isPanelLayout && !pinSearchInBar ? (
         <div className="margo-post-card__lb-search-footer" data-lb-search-footer="1">
+          {!selected ? (
+            <div className="margo-post-card__lb-search-footer__vibe">
+              <MomentComposeVibePicker
+                compact
+                density="panel"
+                vibeLabel={composeVibeLabel}
+                onVibeSelect={setComposeVibeLabel}
+              />
+            </div>
+          ) : null}
           {searchField}
         </div>
       ) : null}

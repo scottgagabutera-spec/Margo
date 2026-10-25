@@ -201,18 +201,14 @@ function PostCardPortraitHeader({
   const foundingListener = isFoundingListenerAuthor(authorProfile, authorProfileId)
   const brandMark = isMargoBrandUsername(profileUsername)
   const avatarInitial = post.username ? post.username.charAt(0).toUpperCase() : (isTier1 ? 'M' : '?')
-  const generatedAvatarUrl = !avatarUrl && !brandMark && !isTier1
-    ? defaultAvatarUrlForSeed(profileUsername || post.username || post.id)
-    : null
-
   const portrait = (
     <MargoPortraitAvatar
       size="feed"
-      imageUrl={avatarUrl || generatedAvatarUrl}
+      imageUrl={avatarUrl}
       onImageError={onAvatarError}
       fallbackInitial={avatarInitial}
       brandMark={brandMark}
-      tierGoldTile={!avatarUrl && !generatedAvatarUrl && !brandMark && isTier1}
+      tierGoldTile={!avatarUrl && !brandMark && isTier1}
       separationRingColor="var(--surface)"
     />
   )
@@ -670,7 +666,14 @@ export function PostCard({
   }, [post.id, recordImpression])
 
   const rawAvatarUrl = (post.authorAvatarUrl || authorProfile?.avatarUrl || '').trim()
-  const avatarUrl = rawAvatarUrl && !avatarBroken ? rawAvatarUrl : null
+  const profileUsernameForSeed = (authorProfile?.username || post.username || post.id).replace(/^@/, '')
+  const generatedAvatarUrl = !rawAvatarUrl && !avatarBroken
+    && !isMargoBrandUsername(profileUsernameForSeed)
+    ? defaultAvatarUrlForSeed(profileUsernameForSeed)
+    : null
+  const avatarUrl = rawAvatarUrl && !avatarBroken
+    ? rawAvatarUrl
+    : generatedAvatarUrl
 
   // Optimistic — the server delete already succeeded by the time this is
   // set. Other open surfaces reconcile via their own Realtime subscription
