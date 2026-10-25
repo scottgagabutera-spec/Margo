@@ -64,8 +64,8 @@
   --feed-type-display-name: 0.9375rem;
   --feed-type-handle: 0.8125rem;
   --feed-type-date: 0.8125rem;
-  --feed-type-song-title: 0.875rem;
-  --feed-type-artist: 0.8125rem;
+  --feed-type-song-title: 0.8125rem;
+  --feed-type-artist: 0.75rem;
   --feed-type-control-label: 0.8125rem;
   --feed-type-feed-action-label: 0.75rem;
   --feed-type-action-count: 0.8125rem;
@@ -1905,53 +1905,73 @@ html[data-margo-stage-idle] .margo-stage-zone {
 .margo-post-card__external-meta {
   min-width: 0;
 }
+.margo-post-card__song-meta {
+  flex: 1 1 0%;
+  min-width: 0;
+  overflow: hidden;
+}
+.margo-song-meta--feed-row .margo-song-meta__title-line {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+  overflow: hidden;
+  word-break: break-word;
+}
 .margo-post-card__external-title {
   margin: 0;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: var(--feed-type-song-title);
   font-weight: 600;
   color: var(--text);
-  line-height: 1.3;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
 }
-.margo-post-card__external-source {
+.margo-post-card__external-artist {
   margin: 2px 0 0;
-  display: flex;
-  align-items: center;
-  gap: 4px;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: var(--feed-type-artist);
   font-weight: 400;
   color: var(--text-muted);
-  line-height: 1.3;
+  line-height: 1.25;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.margo-post-card__external-source-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 .margo-post-card__external-open {
-  width: var(--margo-touch-min);
-  height: var(--margo-touch-min);
-  border-radius: 50%;
   flex-shrink: 0;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-height: var(--margo-touch-min);
+  padding: 0 2px 0 10px;
   border: none;
   background: transparent;
   color: var(--post-vibe-text);
   text-decoration: none;
   box-sizing: border-box;
+  max-width: 42%;
+}
+.margo-post-card__external-provider {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--feed-type-artist);
+  font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 88px;
 }
 .margo-post-card__external-open-inner {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;

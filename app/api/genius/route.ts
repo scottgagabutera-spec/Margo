@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { consumeHourlyApiRateLimit } from '@/lib/api-rate-limit'
 import { getRequestClientIp, ipRateLimitBucket } from '@/lib/api-request-ip'
+import { parseAppleTrackCredit } from '@/lib/apple-track-credit'
 
 const MAX_QUERY_LEN = 200
 const RATE_LIMIT_PER_HOUR = 120
@@ -84,16 +85,19 @@ async function searchItunes(query: string): Promise<SearchResult[]> {
   if (!r.ok) return []
   const data = await r.json()
   const tracks = (data.results || []).filter((t: any) => t.wrapperType === 'track')
-  return tracks.slice(0, 3).map((t: any) => ({
-    song: t.trackName,
-    artist: t.artistName || 'Unknown Artist',
-    artwork: t.artworkUrl100 || null,
-    artworkFull: t.artworkUrl100 ? t.artworkUrl100.replace('100x100bb', '600x600bb') : null,
-    geniusUrl: null,
-    trackViewUrl: t.trackViewUrl || null,
-    id: null,
-    source: 'apple',
-  }))
+  return tracks.slice(0, 3).map((t: any) => {
+    const credit = parseAppleTrackCredit(t.trackName || '', t.artistName || 'Unknown Artist')
+    return {
+      song: credit.title,
+      artist: credit.artist,
+      artwork: t.artworkUrl100 || null,
+      artworkFull: t.artworkUrl100 ? t.artworkUrl100.replace('100x100bb', '600x600bb') : null,
+      geniusUrl: null,
+      trackViewUrl: t.trackViewUrl || null,
+      id: null,
+      source: 'apple',
+    }
+  })
 }
 
 export async function GET(request: NextRequest) {

@@ -23,6 +23,7 @@ import { playOrTogglePostMoment } from '@/lib/audio-engine'
 import { usePostMomentPlaybackUi, usePostMomentPlaybackMetrics } from '@/hooks/useAudioEngine'
 import { useWarmAudioUrlOnVisible } from '@/hooks/useWarmAudioUrl'
 import { livingAtmosphereOrNull } from '@/lib/atmosphere'
+import { parseAppleTrackCredit } from '@/lib/apple-track-credit'
 import {
   feedLyricNeedsExpand,
   formatMomentClock,
@@ -316,8 +317,11 @@ export function PostCardSongSection({
   const songId = primaryCatalog?.songId || post.songId
   const songHref = songId ? `/song/${songId}` : null
   const provider = externalHref ? externalProviderLabel(externalHref) : null
-  const externalArtist = (line?.artistName || post.knowledge?.artist || '').trim()
-  const externalTitle = (line?.songTitle || post.knowledge?.song || '').trim()
+  const externalArtistRaw = (line?.artistName || post.knowledge?.artist || '').trim()
+  const externalTitleRaw = (line?.songTitle || post.knowledge?.song || '').trim()
+  const externalCredit = parseAppleTrackCredit(externalTitleRaw, externalArtistRaw)
+  const externalArtist = externalCredit.artist
+  const externalTitle = externalCredit.title
 
   return (
     <section className="margo-post-card__song-block" data-no-card-nav>
@@ -332,8 +336,8 @@ export function PostCardSongSection({
             {showSongMetaOnce && primaryCatalog ? (
               <SongMeta
                 className="margo-song-meta--feed-row"
-                title={primaryCatalog.songTitle}
-                artist={primaryCatalog.artistName}
+                title={parseAppleTrackCredit(primaryCatalog.songTitle || '', primaryCatalog.artistName || '').title}
+                artist={parseAppleTrackCredit(primaryCatalog.songTitle || '', primaryCatalog.artistName || '').artist}
                 aiGenerated={primaryCatalog.isAiGenerated}
                 href={songHref}
                 titleStyle={{ fontSize: `var(${FEED_TYPE.songTitle})`, fontWeight: 600 }}
@@ -344,13 +348,9 @@ export function PostCardSongSection({
                 {externalTitle ? (
                   <p className="margo-post-card__external-title">{externalTitle}</p>
                 ) : null}
-                <p className="margo-post-card__external-source">
-                  <span className="margo-post-card__external-source-text">
-                    {externalArtist ? `${externalArtist} · ` : null}
-                    {provider}
-                  </span>
-                  <FeedIconExternal size={12} aria-hidden />
-                </p>
+                {externalArtist ? (
+                  <p className="margo-post-card__external-artist">{externalArtist}</p>
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -368,11 +368,14 @@ export function PostCardSongSection({
               href={externalHref}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={externalListenAriaLabel(externalHref) || 'Open in Apple Music'}
+              aria-label={externalListenAriaLabel(externalHref) || 'Open in music app'}
               onClick={(e) => e.stopPropagation()}
             >
+              {provider ? (
+                <span className="margo-post-card__external-provider">{provider}</span>
+              ) : null}
               <span className="margo-post-card__external-open-inner">
-                <FeedIconExternal size={16} />
+                <FeedIconExternal size={14} />
               </span>
             </a>
           ) : null}
