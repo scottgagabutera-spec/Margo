@@ -73,6 +73,12 @@ for (const width of [360, 390] as const) {
       await expectStatusTokenColors(page)
     })
 
+    test('/welcome does not redirect away when signed out', async ({ page }) => {
+      await page.goto(`${BASE}/welcome?step=1`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+      await expect(page.locator('[data-margo-welcome="loading"]')).toHaveCount(0, { timeout: 20000 })
+      await expect(page).toHaveURL(/\/welcome/)
+    })
+
     test('signed out shell, no tab bar, no Help', async ({ page }) => {
       await page.goto(`${BASE}/welcome?step=1`, { waitUntil: 'domcontentloaded', timeout: 45000 })
       await expect(page.locator('[data-margo-welcome="loading"]')).toHaveCount(0, { timeout: 20000 })

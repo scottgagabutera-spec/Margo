@@ -3,7 +3,9 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { completeAuthNavigation } from '@/lib/auth-complete-navigation'
+import { completeAuthAfterProfileReady } from '@/lib/auth-welcome-redirect'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+import { useIdentity } from '@/hooks/useIdentity'
 import {
   CONSENT_REQUIRED_MESSAGE,
   PolicyLinks,
@@ -32,7 +34,8 @@ const primaryBtnStyle: React.CSSProperties = {
  * without recorded Margo terms acceptance. Defense-in-depth behind proxy.ts.
  */
 export function LegalConsentGateModal() {
-  const { rehydrate } = useAuthGate()
+  const { rehydrate, user } = useAuthGate()
+  const { waitUntilReady } = useIdentity()
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -59,7 +62,9 @@ export function LegalConsentGateModal() {
       await rehydrate({ force: true })
       setRedirecting(true)
       toast.success('Welcome to Margo.')
-      completeAuthNavigation('/profile/edit?welcome=1')
+      const identity = await waitUntilReady()
+      const dest = await completeAuthAfterProfileReady(user?.id, identity, null)
+      completeAuthNavigation(dest)
       return
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.')

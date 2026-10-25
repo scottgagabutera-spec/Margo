@@ -3,7 +3,7 @@
 import { useEffect, useId, useState } from 'react'
 import { toast } from 'sonner'
 import { completeAuthNavigation } from '@/lib/auth-complete-navigation'
-import { resolvePostAuthNavigation } from '@/lib/auth-welcome-redirect'
+import { completeAuthAfterProfileReady } from '@/lib/auth-welcome-redirect'
 import {
   parsePasswordErrorMessage,
   validatePassword,
@@ -191,7 +191,7 @@ const primaryBtnStyle: React.CSSProperties = {
 }
 
 export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletionFormProps) {
-  const { rehydrate } = useAuthGate()
+  const { rehydrate, user } = useAuthGate()
   const { waitUntilReady } = useIdentity()
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [error, setError] = useState('')
@@ -230,7 +230,8 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
         onSuccess()
       } else {
         const row = await waitUntilReady()
-        completeAuthNavigation(resolvePostAuthNavigation(row, null))
+        const dest = await completeAuthAfterProfileReady(user?.id, row, null)
+        completeAuthNavigation(dest)
       }
       return
     } catch (e) {
@@ -305,7 +306,7 @@ export function AuthForm({
   confirmedBanner = null,
   onSignupCheckEmailView,
 }: AuthFormProps) {
-  const { rehydrate } = useAuthGate()
+  const { rehydrate, user } = useAuthGate()
   const { waitUntilReady } = useIdentity()
   const emailId = useId()
   const isSignup = mode === 'signup'
@@ -455,7 +456,8 @@ export function AuthForm({
         if (onSuccess) {
           onSuccess()
         } else {
-          completeAuthNavigation(resolvePostAuthNavigation(row, oauthReturnTo))
+          const dest = await completeAuthAfterProfileReady(user?.id, row, oauthReturnTo)
+          completeAuthNavigation(dest)
         }
         return
       }

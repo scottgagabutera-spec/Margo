@@ -1,17 +1,16 @@
-import type { Identity } from '@/hooks/useIdentity'
-import { sanitizeAuthReturnPath } from '@/lib/auth-return'
+export {
+  MARGO_WELCOME_ONBOARDING_AUTH_CUTOFF_ISO,
+  isAuthUserCreatedOnOrAfterWelcomeCutoff,
+  needsOnboarding,
+  welcomeOnboardingPath,
+  resolvePostAuthNavigation,
+  isWelcomeOnboardingExemptPath,
+  type WelcomeOnboardingProfileContext,
+} from '@/lib/welcome-needs-onboarding'
 
-/** Skippable welcome edit when the auto-generated handle is still the display name. */
-export function resolvePostAuthNavigation(
-  identity: Identity | null | undefined,
-  returnTo?: string | null,
-): string {
-  if (identity && identity.displayName === identity.username) {
-    const safe = sanitizeAuthReturnPath(returnTo)
-    if (safe && safe !== '/profile/edit' && !safe.startsWith('/profile/edit?')) {
-      return `/profile/edit?welcome=1&returnTo=${encodeURIComponent(safe)}`
-    }
-    return '/profile/edit?welcome=1'
-  }
-  return sanitizeAuthReturnPath(returnTo) || '/feed'
-}
+export {
+  resolvePostAuthDestination,
+  loadWelcomeOnboardingContext,
+  fetchAuthUserCreatedAt,
+  completeAuthAfterProfileReady,
+} from '@/lib/resolve-post-auth-destination'

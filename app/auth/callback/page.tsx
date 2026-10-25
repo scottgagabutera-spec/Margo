@@ -6,7 +6,8 @@ import { LoadingRing } from '@/components/loading-ring'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useIdentity } from '@/hooks/useIdentity'
 import { sanitizeAuthReturnPath } from '@/lib/auth-return'
-import { resolvePostAuthNavigation } from '@/lib/auth-welcome-redirect'
+import { resolvePostAuthDestination } from '@/lib/auth-welcome-redirect'
+import { createClient } from '@/lib/supabase/client'
 import { UI_FONT } from '@/lib/fonts'
 
 const ui = UI_FONT
@@ -53,7 +54,14 @@ function OAuthCallbackInner() {
         const redirectTo = sanitizeAuthReturnPath(body.redirectTo) || '/feed'
         await rehydrate()
         const identity = await waitUntilReady()
-        router.replace(resolvePostAuthNavigation(identity, redirectTo))
+        const { data: authData } = await createClient().auth.getUser()
+        const dest = await resolvePostAuthDestination(
+          authData.user?.id,
+          identity,
+          authData.user?.created_at ?? null,
+          redirectTo,
+        )
+        router.replace(dest)
       } catch {
         setError('Sign-in was interrupted. Please try again.')
       }
