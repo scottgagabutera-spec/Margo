@@ -3,7 +3,6 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { AuthForm, TermsCompletionForm, type AuthMode } from '@/components/auth-form'
-import { AuthModeTabs } from '@/components/auth-mode-tabs'
 import { CONSENT_REQUIRED_MESSAGE } from '@/lib/legal/consent-copy'
 import { BackButton } from '@/components/back-button'
 import { useAuthGate } from '@/components/supabase-auth-provider'
@@ -71,8 +70,6 @@ function SigninPageInner() {
     }
   }, [loading, user, needsTermsAcceptance, finishAuth])
 
-  const showModeTabs = !isTermsStep && !signupCheckEmail
-
   return (
     <div style={{
       minHeight: '100dvh',
@@ -82,7 +79,7 @@ function SigninPageInner() {
     }}>
       <AuthViewportKeyboardInset />
       <div className="margo-auth-layout">
-        {showModeTabs || isTermsStep ? (
+        {!signupCheckEmail || isTermsStep ? (
           <div className="margo-auth-layout__back">
             <BackButton variant="chrome" preferHistory={false} fallbackHref={returnTo || '/'} />
           </div>
@@ -115,27 +112,6 @@ function SigninPageInner() {
         </aside>
 
         <div className="margo-auth-layout__panel">
-          {showModeTabs ? (
-            <div className="margo-auth-layout__intro">
-              <h1 style={{
-                position: 'absolute',
-                width: '1px',
-                height: '1px',
-                padding: 0,
-                margin: '-1px',
-                overflow: 'hidden',
-                clip: 'rect(0, 0, 0, 0)',
-                whiteSpace: 'nowrap',
-                border: 0,
-              }}>
-                {mode === 'signup' ? 'Create account' : 'Sign in'}
-              </h1>
-              <div className="margo-auth-layout__tabs">
-                <AuthModeTabs mode={mode} onChange={setMode} />
-              </div>
-            </div>
-          ) : null}
-
           <main className="margo-auth-layout__main">
             {isTermsStep ? (
               <TermsCompletionForm
@@ -149,7 +125,6 @@ function SigninPageInner() {
                 externalError={externalError}
                 oauthReturnTo={returnTo}
                 onSuccess={finishAuth}
-                hideTitle
                 initialShowEmail={emailConfirmed}
                 confirmedBanner={emailConfirmed ? 'Email confirmed. Sign in.' : null}
                 onSignupCheckEmailView={setSignupCheckEmail}

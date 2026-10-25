@@ -19,7 +19,9 @@ Do not change **Site URL** or **Redirect URLs** here — Scott configures those 
 
 ## Header logo PNG
 
-There is **no** dedicated transparent gold lockup PNG in the repo (only `og-image.png`, which is a social share card — do not use in email). Templates use a **text “MARGO”** band on `#0c0c0e` until a proper `public/` asset is added and deployed to production.
+- **File:** `public/margo-email-logo.png` (192×192, transparent; rendered from `components/MargoLogo.tsx` symbol geometry).
+- **Production URL:** `https://trymargo.com/margo-email-logo.png` (live after deploy).
+- Templates show the PNG at 40×40 in the `#0c0c0e` band plus gold **MARGO** text (fallback when images are blocked; `alt="Margo"` on the img).
 
 ## Reset password — variables
 

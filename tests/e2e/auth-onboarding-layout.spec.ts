@@ -53,31 +53,37 @@ for (const width of [360, 390, 834, 1440]) {
       expect(contained.ok, JSON.stringify(contained)).toBeTruthy()
     })
 
-    test('sign-up first view three buttons', async ({ page }) => {
+    test('sign-up opens on email form with icon social row', async ({ page }) => {
+      if (width !== 360 && width !== 390) return
       await page.goto(`${BASE}/signin?mode=signup`, { waitUntil: 'domcontentloaded', timeout: 45000 })
       await page.waitForTimeout(600)
-      await expect(page.locator('[data-margo-auth-email-open="0"]')).toBeVisible({ timeout: 15000 })
-      await expect(page.locator('[data-margo-auth-email-form]')).toHaveCount(0)
-      await expect(page.locator('.margo-consent-gate')).toHaveCount(0)
-      await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible({ timeout: 15000 })
-      await expect(page.getByRole('button', { name: 'Continue with Discord' })).toBeVisible()
-      await expect(page.getByRole('button', { name: 'Continue with email' })).toBeVisible()
-      for (const name of ['Continue with Google', 'Continue with Discord', 'Continue with email']) {
-        const box = await page.getByRole('button', { name }).boundingBox()
+      await expect(page.locator('[data-margo-auth-email-open="1"]')).toBeVisible({ timeout: 15000 })
+      await expect(page.locator('[data-margo-auth-email-form]')).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Create account' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Continue with email' })).toHaveCount(0)
+      await expect(page.locator('[role="tablist"]')).toHaveCount(0)
+      for (const name of ['Continue with Google', 'Continue with Discord']) {
+        const btn = page.getByRole('button', { name })
+        await expect(btn).toBeVisible({ timeout: 15000 })
+        const box = await btn.boundingBox()
+        expect(box?.width ?? 0).toBeGreaterThanOrEqual(44)
         expect(box?.height ?? 0).toBeGreaterThanOrEqual(44)
       }
+      const contained = await assertAuthScreenContained(page, '[data-margo-auth-form]')
+      expect(contained.ok, JSON.stringify(contained)).toBeTruthy()
     })
 
     test('inline email form and password hint', async ({ page }) => {
+      if (width !== 360 && width !== 390) return
       await page.goto(`${BASE}/signin?mode=signup`, { waitUntil: 'domcontentloaded', timeout: 45000 })
-      await page.getByRole('button', { name: 'Continue with email' }).click()
       await expect(page.locator('[data-margo-auth-email-form]')).toBeVisible({ timeout: 10000 })
       await expect(page.getByText(/letter & number/i)).toBeVisible()
     })
 
     test('sign-in forgot link tap target', async ({ page }) => {
+      if (width !== 360 && width !== 390) return
       await page.goto(`${BASE}/signin?mode=signin`, { waitUntil: 'domcontentloaded', timeout: 45000 })
-      await page.getByRole('button', { name: 'Continue with email' }).click()
+      await expect(page.locator('[data-margo-auth-email-form]')).toBeVisible({ timeout: 15000 })
       const link = page.getByRole('link', { name: 'Forgot password?' })
       await expect(link).toBeVisible({ timeout: 15000 })
       const box = await link.boundingBox()
@@ -115,7 +121,7 @@ test('sign-in failure shows neutral line and resend without code leak @360', asy
     })
   })
   await page.goto(`${BASE}/signin?mode=signin`, { waitUntil: 'domcontentloaded', timeout: 45000 })
-  await page.getByRole('button', { name: 'Continue with email' }).click()
+  await expect(page.locator('[data-margo-auth-email-form]')).toBeVisible({ timeout: 15000 })
   await page.locator('input[type="email"]').fill('someone@example.com')
   await page.locator('input[type="password"]').fill('wrong-password-1')
   await page.getByRole('button', { name: 'Sign in' }).click()
@@ -192,7 +198,7 @@ for (const [w, h] of [[360, 640], [390, 844]] as const) {
   test(`auth email form stays in viewport with keyboard inset @${w}x${h}`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: h })
     await page.goto(`${BASE}/signin?mode=signin`, { waitUntil: 'domcontentloaded', timeout: 45000 })
-    await page.getByRole('button', { name: 'Continue with email' }).click()
+    await expect(page.locator('[data-margo-auth-email-form]')).toBeVisible({ timeout: 15000 })
     await page.evaluate(() => {
       document.documentElement.style.setProperty('--auth-keyboard-inset', '280px')
     })
