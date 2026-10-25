@@ -95,6 +95,46 @@ for (const width of [360, 390, 834, 1440]) {
   })
 }
 
+test('sign-in failure shows neutral line and resend without code leak @360', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 640 })
+  await page.route('**/api/auth/login', async (route) => {
+    await route.fulfill({
+      status: 401,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'Incorrect email or password.' }),
+    })
+  })
+  await page.goto(`${BASE}/signin?mode=signin`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+  await page.getByRole('button', { name: 'Continue with email' }).click()
+  await page.locator('input[type="email"]').fill('someone@example.com')
+  await page.locator('input[type="password"]').fill('wrong-password-1')
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await expect(page.getByRole('alert')).toContainText('Incorrect email or password')
+  await expect(page.getByRole('button', { name: 'Resend confirmation email' })).toBeVisible()
+})
+
+for (const [w, h] of [[360, 640], [390, 844]] as const) {
+  test(`auth email form stays in viewport with keyboard inset @${w}x${h}`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h })
+    await page.goto(`${BASE}/signin?mode=signin`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+    await page.getByRole('button', { name: 'Continue with email' }).click()
+    await page.evaluate(() => {
+      document.documentElement.style.setProperty('--auth-keyboard-inset', '280px')
+    })
+    const submit = page.getByRole('button', { name: 'Sign in' })
+    await expect(submit).toBeVisible()
+    const ok = await page.evaluate(() => {
+      const btn = document.querySelector('[data-margo-auth-submit]') as HTMLElement | null
+      if (!btn) return { ok: false, reason: 'no submit' }
+      btn.scrollIntoView({ block: 'end', behavior: 'instant' })
+      const r = btn.getBoundingClientRect()
+      const vh = window.innerHeight
+      return { ok: r.top >= 0 && r.bottom <= vh + 1, top: r.top, bottom: r.bottom, vh }
+    })
+    expect(ok.ok, JSON.stringify(ok)).toBeTruthy()
+  })
+}
+
 test('username status line fixture stays inside parent @360', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 800 })
   await page.setContent(`

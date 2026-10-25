@@ -13,6 +13,7 @@ import { resolvePostAuthNavigation } from '@/lib/auth-welcome-redirect'
 import { AUTH_RETURN_QUERY, sanitizeAuthReturnPath } from '@/lib/auth-return'
 import { completeAuthNavigation } from '@/lib/auth-complete-navigation'
 import { AuthScreenHelp } from '@/components/auth-screen-help'
+import { AuthViewportKeyboardInset } from '@/components/auth-viewport'
 import './auth-layout.css'
 
 const lora = 'var(--font-lora), serif'
@@ -27,7 +28,7 @@ function parseAuthError(code: string | null): string | null {
     return CONSENT_REQUIRED_MESSAGE
   }
   if (code === 'auth') {
-    return 'Sign-in was interrupted. Please try again.'
+    return 'Sign-in interrupted. Try again.'
   }
   return null
 }
@@ -79,6 +80,7 @@ function SigninPageInner() {
       display: 'flex',
       flexDirection: 'column',
     }}>
+      <AuthViewportKeyboardInset />
       <div className="margo-auth-layout">
         {showModeTabs ? (
           <div className="margo-auth-layout__back">

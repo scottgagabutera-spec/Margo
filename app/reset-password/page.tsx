@@ -11,6 +11,7 @@ import { AuthPasswordField } from '@/components/auth-password-field'
 import { createRecoveryClient } from '@/lib/supabase/recovery-client'
 import { TYPE, UI_FONT } from '@/lib/fonts'
 import { AuthScreenHelp } from '@/components/auth-screen-help'
+import { AuthViewportKeyboardInset } from '@/components/auth-viewport'
 import '../signin/auth-layout.css'
 
 const ui = UI_FONT
@@ -52,7 +53,7 @@ function ResetPasswordInner() {
       }
       setDone(true)
     } catch {
-      setError('Could not update password. Request a new link and try again.')
+      setError('Could not update. Request a new link.')
     } finally {
       setBusy(false)
     }
@@ -65,6 +66,7 @@ function ResetPasswordInner() {
       display: 'flex',
       flexDirection: 'column',
     }}>
+      <AuthViewportKeyboardInset />
       <div className="margo-auth-layout">
         <div className="margo-auth-layout__back">
           <BackButton variant="chrome" preferHistory={false} fallbackHref="/signin" />
@@ -131,7 +133,7 @@ function ResetPasswordInner() {
                   color: 'var(--text-secondary)',
                   margin: '0 0 20px',
                 }}>
-                  Open the link from your email, or request a new one.
+                  Use the email link, or request another.
                 </p>
                 <Link
                   href="/forgot-password"
@@ -163,7 +165,7 @@ function ResetPasswordInner() {
                     fontWeight: 600,
                     margin: 0,
                   }}>
-                    Choose a new password
+                    New password
                   </h1>
                 </header>
 

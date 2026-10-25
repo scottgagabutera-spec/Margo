@@ -383,7 +383,7 @@ export default function AccountSettingsPage() {
         setPasswordStatus(body.error || 'Could not update password.')
         return
       }
-      setPasswordStatus('Password updated.')
+      setPasswordStatus('Updated.')
       setNewPassword('')
     } catch {
       setSavingSection(null)
@@ -554,14 +554,14 @@ export default function AccountSettingsPage() {
               label="New password"
               value={newPassword}
               autoComplete="new-password"
-              error={passwordStatus && passwordStatus !== 'Password updated.' ? passwordStatus : null}
+              error={passwordStatus && passwordStatus !== 'Updated.' ? passwordStatus : null}
               onChange={setNewPassword}
             />
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
               <TierOneButton onClick={updatePassword} disabled={savingSection === 'password'}>
-                Update Password
+                Update password
               </TierOneButton>
-              {passwordStatus === 'Password updated.' ? (
+              {passwordStatus === 'Updated.' ? (
                 <span style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--success)' }}>
                   {passwordStatus}
                 </span>
@@ -570,8 +570,7 @@ export default function AccountSettingsPage() {
           </>
         ) : (
           <p style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text-secondary)' }}>
-            You signed in with Google or Discord, so there is no Margo password to change. Manage
-            your password with that provider instead.
+            You use Google or Discord sign-in. Change your password there.
           </p>
         )}
       </Card>

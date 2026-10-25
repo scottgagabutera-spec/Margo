@@ -11,6 +11,7 @@ import {
   type PasswordStrength,
 } from '@/lib/auth-password-policy'
 import { TYPE, UI_FONT } from '@/lib/fonts'
+import { scrollAuthFieldIntoView } from '@/components/auth-viewport'
 
 const ui = UI_FONT
 
@@ -23,6 +24,9 @@ interface AuthPasswordFieldProps {
   showMeter?: boolean
   label?: string
   forgotPasswordSlot?: React.ReactNode
+  /** Shown beside the error line (e.g. resend confirmation). */
+  errorAddon?: React.ReactNode
+  onFocus?: () => void
   onChange: (value: string) => void
   onEnter?: () => void
 }
@@ -95,6 +99,8 @@ export function AuthPasswordField({
   showMeter = true,
   label = 'Password',
   forgotPasswordSlot,
+  errorAddon,
+  onFocus,
   onChange,
   onEnter,
 }: AuthPasswordFieldProps) {
@@ -127,6 +133,10 @@ export function AuthPasswordField({
           disabled={disabled}
           aria-describedby={showRequirements ? hintId : undefined}
           onChange={(e) => onChange(e.target.value)}
+          onFocus={(e) => {
+            onFocus?.()
+            scrollAuthFieldIntoView(e.currentTarget)
+          }}
           onKeyDown={(e) => e.key === 'Enter' && onEnter?.()}
           className="margo-auth-input"
           style={{
@@ -200,16 +210,27 @@ export function AuthPasswordField({
       ) : null}
 
       {error ? (
-        <p role="alert" style={{
-          fontFamily: ui,
-          fontSize: TYPE.meta,
-          color: 'var(--destructive)',
-          margin: '6px 0 0',
-          lineHeight: 1.35,
-          wordBreak: 'break-word',
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '6px 12px',
+          alignItems: 'center',
+          marginTop: '6px',
+          minWidth: 0,
         }}>
-          {error}
-        </p>
+          <p role="alert" style={{
+            fontFamily: ui,
+            fontSize: TYPE.meta,
+            color: 'var(--destructive)',
+            margin: 0,
+            lineHeight: 1.35,
+            wordBreak: 'break-word',
+            minWidth: 0,
+          }}>
+            {error}
+          </p>
+          {errorAddon}
+        </div>
       ) : null}
     </div>
   )

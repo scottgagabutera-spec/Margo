@@ -8,6 +8,7 @@ import { LoadingRing } from '@/components/loading-ring'
 import { createClient } from '@/lib/supabase/client'
 import { TYPE, UI_FONT } from '@/lib/fonts'
 import { AuthScreenHelp } from '@/components/auth-screen-help'
+import { AuthViewportKeyboardInset, scrollAuthFieldIntoView } from '@/components/auth-viewport'
 import { resolveAuthEmailRedirectOriginFromHost, resetPasswordRedirectUrl } from '@/lib/auth-email-redirect'
 import '../signin/auth-layout.css'
 
@@ -48,6 +49,7 @@ export default function ForgotPasswordPage() {
       display: 'flex',
       flexDirection: 'column',
     }}>
+      <AuthViewportKeyboardInset />
       <div className="margo-auth-layout">
         <div className="margo-auth-layout__back">
           <BackButton variant="chrome" preferHistory={false} fallbackHref="/signin" />
@@ -71,7 +73,7 @@ export default function ForgotPasswordPage() {
                     fontWeight: 600,
                     margin: '0 0 14px',
                   }}>
-                    Check your email
+                    Check email
                   </h1>
                   <p style={{
                     fontFamily: ui,
@@ -79,8 +81,9 @@ export default function ForgotPasswordPage() {
                     lineHeight: 1.5,
                     color: 'var(--text-secondary)',
                     margin: 0,
+                    wordBreak: 'break-word',
                   }}>
-                    If an account exists for that address, we sent a link to reset your password.
+                    If that email has an account, we sent a reset link.
                   </p>
                 </header>
                 <Link
@@ -122,7 +125,7 @@ export default function ForgotPasswordPage() {
                     color: 'var(--text-secondary)',
                     margin: '14px 0 0',
                   }}>
-                    Enter your email.
+                    Your email.
                   </p>
                 </header>
 
@@ -149,6 +152,7 @@ export default function ForgotPasswordPage() {
                     value={email}
                     disabled={busy}
                     onChange={(e) => setEmail(e.target.value)}
+                    onFocus={(e) => scrollAuthFieldIntoView(e.currentTarget)}
                     onKeyDown={(e) => e.key === 'Enter' && void handleSubmit()}
                     className="margo-auth-input"
                     style={{

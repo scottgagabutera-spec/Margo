@@ -193,7 +193,7 @@ export function TermsCompletionIntro() {
       lineHeight: 1.45,
       wordBreak: 'break-word',
     }}>
-      To finish creating your Margo account, please read and accept our <PolicyLinks />.
+      Accept our <PolicyLinks /> to finish.
     </p>
   )
 }

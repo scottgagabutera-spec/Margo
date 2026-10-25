@@ -12,21 +12,26 @@ import { AuthPasswordField } from '@/components/auth-password-field'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { setBrowserAccessToken } from '@/lib/supabase/client'
-import type { LoginErrorCode } from '@/lib/auth-login-errors'
+import {
+  RESEND_CONFIRM_NEUTRAL_MESSAGE,
+  SIGN_IN_NEUTRAL_MESSAGE,
+} from '@/lib/auth-login-errors'
+import { scrollAuthFieldIntoView } from '@/components/auth-viewport'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useIdentity } from '@/hooks/useIdentity'
 import {
   CONSENT_REQUIRED_MESSAGE,
+  CONSENT_REQUIRED_SHORT,
   ConsentRequiredAlert,
   SignupConsentCheckbox,
   SignupConsentGate,
-  SignupConsentIntro,
   TermsCompletionIntro,
 } from '@/components/signup-legal-notice'
 import { TYPE, UI_FONT } from '@/lib/fonts'
 import { LoadingRing } from '@/components/loading-ring'
 
 const ui = UI_FONT
+const RESEND_COOLDOWN_MS = 60_000
 
 export type AuthMode = 'signup' | 'signin'
 
@@ -53,13 +58,10 @@ interface TermsCompletionFormProps {
 function friendlyError(e: { message?: string }): string {
   const msg = e?.message || ''
   if (msg.includes('already registered') || msg.toLowerCase().includes('already been registered') || msg.toLowerCase().includes('user already registered')) {
-    return 'That email already has an account — try signing in instead.'
+    return 'Email in use. Sign in instead.'
   }
-  if (msg.includes('Invalid login credentials')) {
-    return 'Incorrect email or password.'
-  }
-  if (msg.includes('Email not confirmed')) {
-    return 'Please confirm your email before signing in.'
+  if (msg.includes('Invalid login credentials') || msg.includes('Invalid credentials') || msg.includes('Email not confirmed')) {
+    return SIGN_IN_NEUTRAL_MESSAGE
   }
   if (msg.toLowerCase().includes('password')) {
     return parsePasswordErrorMessage(msg)
@@ -70,7 +72,7 @@ function friendlyError(e: { message?: string }): string {
   if (msg.includes('Terms of Service')) {
     return msg
   }
-  return msg || 'Something went wrong. Please try again.'
+  return msg || 'Something went wrong.'
 }
 
 const fieldLabelStyle: React.CSSProperties = {
@@ -199,7 +201,7 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
   const handleSubmit = async () => {
     if (redirecting) return
     if (!termsAccepted) {
-      setError(CONSENT_REQUIRED_MESSAGE)
+      setError(CONSENT_REQUIRED_SHORT)
       return
     }
     setLoading(true)
@@ -213,7 +215,7 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
       })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) {
-        throw { message: body.error || 'Something went wrong. Please try again.' }
+        throw { message: body.error || 'Something went wrong.' }
       }
       await rehydrate({ force: true })
       setRedirecting(true)
@@ -245,7 +247,7 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
           fontWeight: 600,
           margin: '0 0 14px',
         }}>
-          Finish creating your account
+          Finish account
         </h1>
         <TermsCompletionIntro />
       </header>
@@ -261,8 +263,9 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
 
       {(error || externalError) ? (
         <div style={{ margin: '0 0 16px' }}>
-          {(error || externalError) === CONSENT_REQUIRED_MESSAGE
-            ? <ConsentRequiredAlert message={CONSENT_REQUIRED_MESSAGE} />
+          {(error || externalError) === CONSENT_REQUIRED_SHORT
+            || (error || externalError) === CONSENT_REQUIRED_MESSAGE
+            ? <ConsentRequiredAlert />
             : (
               <p role="alert" style={{ fontFamily: ui, fontSize: TYPE.secondary, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.45 }}>
                 {error || externalError}
@@ -281,7 +284,7 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
           opacity: disabled ? 0.55 : 1,
         }}
       >
-        {redirecting ? 'Taking you to Margo…' : loading ? 'Saving…' : 'Continue to Margo'}
+        {redirecting ? 'Opening Margo…' : loading ? 'Saving…' : 'Continue'}
       </button>
     </div>
   )
@@ -313,8 +316,11 @@ export function AuthForm({
   const [emailError, setEmailError] = useState<string | null>(null)
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [consentError, setConsentError] = useState(false)
-  const [needsConfirmResend, setNeedsConfirmResend] = useState(false)
+  const [signInFailed, setSignInFailed] = useState(false)
+  const [resendCooldownUntil, setResendCooldownUntil] = useState(0)
+  const [resendBusy, setResendBusy] = useState(false)
   const [resendStatus, setResendStatus] = useState<string | null>(null)
+  const [cooldownTick, setCooldownTick] = useState(0)
 
   useEffect(() => {
     if (!isSignup) {
@@ -325,9 +331,16 @@ export function AuthForm({
     setEmailError(null)
     setPasswordError(null)
     setConsentError(false)
-    setNeedsConfirmResend(false)
+    setSignInFailed(false)
+    setResendCooldownUntil(0)
     setResendStatus(null)
   }, [isSignup, initialShowEmail])
+
+  useEffect(() => {
+    if (resendCooldownUntil <= Date.now()) return
+    const t = window.setInterval(() => setCooldownTick((n) => n + 1), 1000)
+    return () => window.clearInterval(t)
+  }, [resendCooldownUntil])
 
   useEffect(() => {
     if (termsAccepted) {
@@ -365,16 +378,21 @@ export function AuthForm({
     return false
   }
 
+  const resendCooldownActive = resendCooldownUntil > Date.now()
+
   const handleResendConfirmation = async () => {
     const trimmed = email.trim()
-    if (!trimmed) return
+    if (!trimmed || resendCooldownActive || resendBusy) return
+    setResendBusy(true)
     setResendStatus(null)
     const supabase = createClient()
-    const { error: resendError } = await supabase.auth.resend({
+    await supabase.auth.resend({
       type: 'signup',
       email: trimmed,
     })
-    setResendStatus(resendError ? 'Could not resend. Try again.' : 'Link sent.')
+    setResendStatus(RESEND_CONFIRM_NEUTRAL_MESSAGE)
+    setResendCooldownUntil(Date.now() + RESEND_COOLDOWN_MS)
+    setResendBusy(false)
   }
 
   const handleEmailSubmit = async () => {
@@ -405,15 +423,14 @@ export function AuthForm({
       })
       const body = await res.json().catch(() => ({})) as {
         error?: string
-        code?: LoginErrorCode
         access_token?: string
         needs_confirmation?: boolean
       }
       if (!res.ok) {
-        const msg = body.error || 'Something went wrong. Please try again.'
+        const msg = body.error || 'Something went wrong.'
         if (!isSignup) {
-          setPasswordError(msg)
-          setNeedsConfirmResend(body.code === 'email_not_confirmed')
+          setPasswordError(SIGN_IN_NEUTRAL_MESSAGE)
+          setSignInFailed(true)
           return
         }
         if (/password|character|letter|number|weak/i.test(msg)) {
@@ -422,7 +439,7 @@ export function AuthForm({
         }
         throw { message: msg }
       }
-      setNeedsConfirmResend(false)
+      setSignInFailed(false)
 
       if (body.access_token) {
         setBrowserAccessToken(body.access_token)
@@ -442,7 +459,7 @@ export function AuthForm({
         return
       }
 
-      throw { message: 'Something went wrong. Please try again.' }
+      throw { message: 'Something went wrong.' }
     } catch (e) {
       const msg = friendlyError(e as { message?: string })
       if (/email|address|registered|confirm/i.test(msg)) {
@@ -477,7 +494,7 @@ export function AuthForm({
             fontWeight: 600,
             margin: '0 0 14px',
           }}>
-            Check your email
+            Check email
           </h1>
           <p style={{
             fontFamily: ui,
@@ -485,8 +502,9 @@ export function AuthForm({
             lineHeight: 1.5,
             color: 'var(--text-secondary)',
             margin: 0,
+            wordBreak: 'break-word',
           }}>
-            We sent a link to <span style={{ color: 'var(--text)' }}>{pendingEmail}</span>. Open it, then sign in.
+            Link sent to <span style={{ color: 'var(--text)' }}>{pendingEmail}</span>. Open it, then sign in.
           </p>
         </header>
         <button
@@ -531,7 +549,7 @@ export function AuthForm({
             fontWeight: 600,
             margin: 0,
           }}>
-            {isSignup ? 'Create your account' : 'Sign in'}
+            {isSignup ? 'Create account' : 'Sign in'}
           </h1>
         </header>
       )}
@@ -607,7 +625,6 @@ export function AuthForm({
 
       {showSignupConsent ? (
         <SignupConsentGate highlight={consentAttention && !termsAccepted} consentError={consentError}>
-          <SignupConsentIntro />
           <SignupConsentCheckbox
             id="signup-consent"
             checked={termsAccepted}
@@ -634,7 +651,10 @@ export function AuthForm({
               value={email}
               disabled={loading}
               onChange={(v) => { setEmail(v); setEmailError(null) }}
-              onFocus={remindConsentIfNeeded}
+              onFocus={() => {
+                remindConsentIfNeeded()
+                scrollAuthFieldIntoView(document.getElementById(emailId))
+              }}
               onClick={remindConsentIfNeeded}
               onEnter={() => { void handleEmailSubmit() }}
             />
@@ -657,8 +677,35 @@ export function AuthForm({
             error={passwordError}
             showRequirements={isSignup}
             showMeter={isSignup}
-            onChange={(v) => { setPassword(v); setPasswordError(null); setNeedsConfirmResend(false) }}
+            onChange={(v) => {
+              setPassword(v)
+              setPasswordError(null)
+              setSignInFailed(false)
+              setResendStatus(null)
+            }}
             onEnter={() => { void handleEmailSubmit() }}
+            errorAddon={!isSignup && signInFailed && passwordError ? (
+              <button
+                type="button"
+                onClick={() => { void handleResendConfirmation() }}
+                disabled={resendCooldownActive || resendBusy || !email.trim()}
+                aria-disabled={resendCooldownActive || resendBusy || !email.trim()}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: resendCooldownActive ? 'var(--text-muted)' : 'var(--gold)',
+                  fontFamily: ui,
+                  fontSize: TYPE.meta,
+                  cursor: resendCooldownActive || resendBusy || !email.trim() ? 'not-allowed' : 'pointer',
+                  minHeight: '44px',
+                  padding: '0 4px',
+                  opacity: resendCooldownActive ? 0.55 : 1,
+                  flexShrink: 0,
+                }}
+              >
+                {resendBusy ? 'Sending…' : resendCooldownActive ? 'Resend in 1 min' : 'Resend confirmation email'}
+              </button>
+            ) : undefined}
             forgotPasswordSlot={!isSignup ? (
               <Link
                 href="/forgot-password"
@@ -678,25 +725,6 @@ export function AuthForm({
             ) : undefined}
           />
 
-          {needsConfirmResend ? (
-            <button
-              type="button"
-              onClick={() => { void handleResendConfirmation() }}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--gold)',
-                fontFamily: ui,
-                fontSize: TYPE.meta,
-                cursor: 'pointer',
-                minHeight: '44px',
-                padding: 0,
-                textAlign: 'left',
-              }}
-            >
-              Resend confirmation
-            </button>
-          ) : null}
           {resendStatus ? (
             <p style={{ fontFamily: ui, fontSize: TYPE.meta, color: 'var(--text-muted)', margin: 0 }}>
               {resendStatus}
@@ -728,6 +756,7 @@ export function AuthForm({
 
           <button
             type="button"
+            data-margo-auth-submit
             onClick={() => { void handleEmailSubmit() }}
             disabled={primaryDisabled}
             aria-disabled={primaryDisabled}
@@ -763,7 +792,7 @@ export function AuthForm({
               padding: 0,
             }}
           >
-            {isSignup ? 'Sign in' : 'Create an account'}
+            {isSignup ? 'Sign in' : 'Create account'}
           </button>
         </p>
       ) : null}

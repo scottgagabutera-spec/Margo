@@ -43,6 +43,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
+  scroll-padding-bottom: calc(var(--auth-keyboard-inset, 0px) + 24px);
 }
 
 /* Lockup + mode CTAs sit below Back — not in the same row. */
@@ -69,6 +70,8 @@
 .margo-auth-layout__main {
   width: 100%;
   min-width: 0;
+  padding-bottom: calc(var(--auth-keyboard-inset, 0px) + 8px);
+  box-sizing: border-box;
 }
 
 @media (min-width: 901px) {
