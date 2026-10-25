@@ -26,6 +26,8 @@ interface AuthPasswordFieldProps {
   forgotPasswordSlot?: React.ReactNode
   /** Shown beside the error line (e.g. resend confirmation). */
   errorAddon?: React.ReactNode
+  /** Green check when passwords match (confirm field only). */
+  matchOk?: boolean
   onFocus?: () => void
   onChange: (value: string) => void
   onEnter?: () => void
@@ -100,6 +102,7 @@ export function AuthPasswordField({
   label = 'Password',
   forgotPasswordSlot,
   errorAddon,
+  matchOk = false,
   onFocus,
   onChange,
   onEnter,
@@ -191,7 +194,7 @@ export function AuthPasswordField({
         </p>
       ) : null}
 
-      {showRequirements && satisfied ? (
+      {showRequirements && satisfied && !matchOk ? (
         <p id={hintId} style={{
           fontFamily: ui,
           fontSize: TYPE.meta,
@@ -203,7 +206,19 @@ export function AuthPasswordField({
         </p>
       ) : null}
 
-      {showMeter && value ? <StrengthMeter strength={strength} /> : null}
+      {matchOk ? (
+        <p style={{
+          fontFamily: ui,
+          fontSize: TYPE.meta,
+          color: 'var(--success)',
+          margin: '8px 0 0',
+          lineHeight: 1.25,
+        }}>
+          ✓
+        </p>
+      ) : null}
+
+      {showMeter && value && !matchOk ? <StrengthMeter strength={strength} /> : null}
 
       {forgotPasswordSlot ? (
         <div style={{ marginTop: '4px', textAlign: 'right' }}>{forgotPasswordSlot}</div>

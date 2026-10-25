@@ -10,6 +10,7 @@ import {
 } from '@/lib/auth-password-policy'
 import { AuthPasswordField } from '@/components/auth-password-field'
 import Link from 'next/link'
+import { AuthSuccessIcon } from '@/components/auth-success-icon'
 import { createClient } from '@/lib/supabase/client'
 import { setBrowserAccessToken } from '@/lib/supabase/client'
 import {
@@ -48,6 +49,8 @@ interface AuthFormProps {
   initialShowEmail?: boolean
   /** One line under tabs when email was confirmed. */
   confirmedBanner?: string | null
+  /** Sign-up “check email” view — hide tabs in parent. */
+  onSignupCheckEmailView?: (active: boolean) => void
 }
 
 interface TermsCompletionFormProps {
@@ -299,6 +302,7 @@ export function AuthForm({
   hideTitle,
   initialShowEmail = false,
   confirmedBanner = null,
+  onSignupCheckEmailView,
 }: AuthFormProps) {
   const { rehydrate } = useAuthGate()
   const { waitUntilReady } = useIdentity()
@@ -361,10 +365,12 @@ export function AuthForm({
     if (externalError) setError(externalError)
   }, [externalError])
 
+  useEffect(() => {
+    onSignupCheckEmailView?.(!!pendingEmail)
+  }, [pendingEmail, onSignupCheckEmailView])
+
   const loading = busy !== null
   const signupBlocked = isSignup && !termsAccepted
-  /** Terms + checkbox only after email expand or a consent nudge — first view stays three buttons. */
-  const showSignupConsent = isSignup && (showEmailForm || consentError)
 
   const remindConsentIfNeeded = () => {
     if (isSignup && !termsAccepted) {
@@ -485,8 +491,9 @@ export function AuthForm({
 
   if (pendingEmail) {
     return (
-      <div style={{ width: '100%' }}>
-        <header style={{ marginBottom: '22px', textAlign: 'center' }}>
+      <div style={{ width: '100%' }} data-margo-auth-check-email="signup">
+        <AuthSuccessIcon />
+        <header style={{ textAlign: 'center' }}>
           <h1 style={{
             fontFamily: ui,
             fontSize: TYPE.pageTitle,
@@ -504,22 +511,21 @@ export function AuthForm({
             margin: 0,
             wordBreak: 'break-word',
           }}>
-            Link sent to <span style={{ color: 'var(--text)' }}>{pendingEmail}</span>. Open it, then sign in.
+            Link sent to <span style={{ color: 'var(--text)' }}>{pendingEmail}</span>. Open it, then{' '}
+            <Link
+              href="/signin?mode=signin"
+              style={{
+                color: 'var(--gold)',
+                fontSize: TYPE.secondary,
+                fontWeight: 600,
+                textDecoration: 'underline',
+              }}
+            >
+              sign in
+            </Link>
+            .
           </p>
         </header>
-        <button
-          type="button"
-          onClick={() => {
-            setPendingEmail(null)
-            onSwitchMode?.('signin')
-          }}
-          style={{
-            ...primaryBtnStyle,
-            cursor: 'pointer',
-          }}
-        >
-          Back to sign in
-        </button>
       </div>
     )
   }
@@ -623,23 +629,6 @@ export function AuthForm({
         ) : null}
       </div>
 
-      {showSignupConsent ? (
-        <SignupConsentGate highlight={consentAttention && !termsAccepted} consentError={consentError}>
-          <SignupConsentCheckbox
-            id="signup-consent"
-            checked={termsAccepted}
-            onChange={(v) => {
-              setTermsAccepted(v)
-              if (v) {
-                setConsentError(false)
-                setError('')
-              }
-            }}
-            disabled={loading}
-          />
-        </SignupConsentGate>
-      ) : null}
-
       {showEmailForm ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '20px' }} data-margo-auth-email-form>
           <div>
@@ -725,6 +714,23 @@ export function AuthForm({
             ) : undefined}
           />
 
+          {isSignup && showEmailForm ? (
+            <SignupConsentGate highlight={consentAttention && !termsAccepted} consentError={consentError}>
+              <SignupConsentCheckbox
+                id="signup-consent"
+                checked={termsAccepted}
+                onChange={(v) => {
+                  setTermsAccepted(v)
+                  if (v) {
+                    setConsentError(false)
+                    setError('')
+                  }
+                }}
+                disabled={loading}
+              />
+            </SignupConsentGate>
+          ) : null}
+
           {resendStatus ? (
             <p style={{ fontFamily: ui, fontSize: TYPE.meta, color: 'var(--text-muted)', margin: 0 }}>
               {resendStatus}
@@ -775,7 +781,7 @@ export function AuthForm({
         </div>
       ) : null}
 
-      {onSwitchMode ? (
+      {onSwitchMode && !pendingEmail ? (
         <p style={{ textAlign: 'center', marginTop: '22px', fontFamily: ui, fontSize: TYPE.secondary, color: 'var(--text-secondary)', wordBreak: 'break-word' }}>
           {isSignup ? 'Have an account? ' : 'New here? '}
           <button

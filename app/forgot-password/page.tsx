@@ -1,9 +1,8 @@
 'use client'
 
 import { useId, useState } from 'react'
-import Link from 'next/link'
 import { BackButton } from '@/components/back-button'
-import { AuthScreenMark } from '@/components/auth-screen-mark'
+import { AuthSuccessIcon } from '@/components/auth-success-icon'
 import { stashResetRequestEmail } from '@/lib/auth-recovery-email-prefill'
 import { LoadingRing } from '@/components/loading-ring'
 import { createClient } from '@/lib/supabase/client'
@@ -58,14 +57,11 @@ export default function ForgotPasswordPage() {
         </div>
 
         <div className="margo-auth-layout__panel">
-          <div className="margo-auth-layout__intro">
-            <AuthScreenMark />
-          </div>
-
           <main className="margo-auth-layout__main" data-margo-auth-screen="forgot-password">
             {submitted ? (
-              <div style={{ width: '100%' }}>
-                <header style={{ marginBottom: '22px', textAlign: 'center' }}>
+              <div style={{ width: '100%' }} data-margo-auth-check-email="reset">
+                <AuthSuccessIcon />
+                <header style={{ textAlign: 'center' }}>
                   <h1 style={{
                     fontFamily: ui,
                     fontSize: TYPE.pageTitle,
@@ -83,28 +79,9 @@ export default function ForgotPasswordPage() {
                     margin: 0,
                     wordBreak: 'break-word',
                   }}>
-                    If that email has an account, we sent a reset link.
+                    If that email has an account, we sent a code.
                   </p>
                 </header>
-                <Link
-                  href="/signin"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '100%',
-                    minHeight: '44px',
-                    background: 'var(--gold)',
-                    color: 'var(--text-on-gold, var(--bg))',
-                    borderRadius: '50px',
-                    fontFamily: ui,
-                    fontWeight: 600,
-                    fontSize: TYPE.meta,
-                    textDecoration: 'none',
-                  }}
-                >
-                  Back to sign in
-                </Link>
               </div>
             ) : (
               <div style={{ width: '100%' }}>
@@ -125,7 +102,7 @@ export default function ForgotPasswordPage() {
                     color: 'var(--text-secondary)',
                     margin: '14px 0 0',
                   }}>
-                    Your email.
+                    Email used for your account.
                   </p>
                 </header>
 
@@ -191,7 +168,7 @@ export default function ForgotPasswordPage() {
                 >
                   {busy ? (
                     <LoadingRing size={18} strokeWidth={1.5} state="spinning" color="var(--bg)" />
-                  ) : 'Send reset link'}
+                  ) : 'Send code'}
                 </button>
               </div>
             )}

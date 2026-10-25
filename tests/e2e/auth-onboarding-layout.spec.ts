@@ -127,11 +127,17 @@ for (const width of [360, 390]) {
   test.describe(`auth polish @${width}px`, () => {
     test.use({ viewport: { width, height: 800 } })
 
-    test('one small auth logo on sign-in, forgot, reset', async ({ page }) => {
+    test('no auth logo on sign-in, forgot, reset', async ({ page }) => {
       for (const path of ['/signin', '/forgot-password', '/reset-password']) {
         await page.goto(`${BASE}${path}`, { waitUntil: 'domcontentloaded', timeout: 45000 })
-        await expect(page.locator('[data-margo-auth-logo]')).toHaveCount(1)
+        await expect(page.locator('[data-margo-auth-logo]')).toHaveCount(0)
       }
+    })
+
+    test('forgot password send code copy', async ({ page }) => {
+      await page.goto(`${BASE}/forgot-password`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+      await expect(page.getByRole('button', { name: 'Send code' })).toBeVisible()
+      await expect(page.getByText('Email used for your account.')).toBeVisible()
     })
 
     test('reset link query still opens code-first', async ({ page }) => {

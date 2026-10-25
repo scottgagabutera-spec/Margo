@@ -574,6 +574,14 @@ export default function AccountSettingsPage() {
                 label="Confirm new password"
                 value={confirmNewPassword}
                 autoComplete="new-password"
+                showRequirements={false}
+                showMeter={false}
+                matchOk={
+                  confirmNewPassword.length > 0
+                  && newPassword === confirmNewPassword
+                  && validatePasswordPair(newPassword, confirmNewPassword).ok
+                  && !confirmPasswordError
+                }
                 error={confirmPasswordError}
                 onChange={(v) => { setConfirmNewPassword(v); setConfirmPasswordError(null); setPasswordStatus(null) }}
               />

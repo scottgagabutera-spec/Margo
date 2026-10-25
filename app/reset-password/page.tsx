@@ -4,10 +4,11 @@ import { Suspense, useCallback, useEffect, useId, useRef, useState } from 'react
 import type { EmailOtpType } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { BackButton } from '@/components/back-button'
-import { AuthScreenMark } from '@/components/auth-screen-mark'
+import { AuthSuccessIcon } from '@/components/auth-success-icon'
 import { LoadingRing } from '@/components/loading-ring'
 import { parsePasswordErrorMessage } from '@/lib/auth-password-policy'
-import { canSavePasswordPair, validatePasswordPair } from '@/lib/auth-password-confirm'
+import { canSavePasswordPair, PASSWORD_MISMATCH_MESSAGE, validatePasswordPair } from '@/lib/auth-password-confirm'
+import { validatePassword } from '@/lib/auth-password-policy'
 import { consumeResetRequestEmail } from '@/lib/auth-recovery-email-prefill'
 import { AuthPasswordField } from '@/components/auth-password-field'
 import { AuthRecoveryCodeInput, RECOVERY_CODE_LENGTH } from '@/components/auth-recovery-code-input'
@@ -216,10 +217,6 @@ function ResetPasswordInner() {
         </div>
 
         <div className="margo-auth-layout__panel">
-          <div className="margo-auth-layout__intro">
-            <AuthScreenMark />
-          </div>
-
           <main
             className="margo-auth-layout__main"
             data-margo-auth-screen="reset-password"
@@ -231,6 +228,7 @@ function ResetPasswordInner() {
               </div>
             ) : phase === 'done' ? (
               <div style={{ width: '100%', textAlign: 'center' }}>
+                <AuthSuccessIcon />
                 <h1 style={{
                   fontFamily: ui,
                   fontSize: TYPE.pageTitle,
@@ -527,8 +525,22 @@ function ResetPasswordInner() {
                     value={confirmPassword}
                     disabled={busy}
                     autoComplete="new-password"
+                    showRequirements={false}
+                    showMeter={false}
+                    matchOk={
+                      confirmPassword.length > 0
+                      && password === confirmPassword
+                      && validatePassword(password).ok
+                      && !confirmError
+                    }
                     error={confirmError || null}
-                    onChange={(v) => { setConfirmPassword(v); setConfirmError('') }}
+                    onChange={(v) => {
+                      setConfirmPassword(v)
+                      setConfirmError('')
+                      if (v && password !== v && validatePassword(password).ok) {
+                        setConfirmError(PASSWORD_MISMATCH_MESSAGE)
+                      }
+                    }}
                     onEnter={() => { void handlePasswordSave() }}
                   />
                 </div>

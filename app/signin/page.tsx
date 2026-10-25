@@ -6,7 +6,6 @@ import { AuthForm, TermsCompletionForm, type AuthMode } from '@/components/auth-
 import { AuthModeTabs } from '@/components/auth-mode-tabs'
 import { CONSENT_REQUIRED_MESSAGE } from '@/lib/legal/consent-copy'
 import { BackButton } from '@/components/back-button'
-import { AuthScreenMark } from '@/components/auth-screen-mark'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useIdentity } from '@/hooks/useIdentity'
 import { resolvePostAuthNavigation } from '@/lib/auth-welcome-redirect'
@@ -48,6 +47,7 @@ function SigninPageInner() {
   const initialMode = parseMode(searchParams.get('mode'))
   const isTermsStep = searchParams.get('step') === 'terms'
   const [mode, setMode] = useState<AuthMode>(initialMode)
+  const [signupCheckEmail, setSignupCheckEmail] = useState(false)
   const returnTo = useMemo(
     () => sanitizeAuthReturnPath(searchParams.get(AUTH_RETURN_QUERY)),
     [searchParams],
@@ -71,7 +71,7 @@ function SigninPageInner() {
     }
   }, [loading, user, needsTermsAcceptance, finishAuth])
 
-  const showModeTabs = !isTermsStep
+  const showModeTabs = !isTermsStep && !signupCheckEmail
 
   return (
     <div style={{
@@ -82,11 +82,15 @@ function SigninPageInner() {
     }}>
       <AuthViewportKeyboardInset />
       <div className="margo-auth-layout">
-        {showModeTabs ? (
+        {showModeTabs || isTermsStep ? (
           <div className="margo-auth-layout__back">
             <BackButton variant="chrome" preferHistory={false} fallbackHref={returnTo || '/'} />
           </div>
-        ) : null}
+        ) : (
+          <div className="margo-auth-layout__back">
+            <BackButton variant="chrome" preferHistory={false} fallbackHref="/signin" />
+          </div>
+        )}
 
         <aside className="margo-auth-layout__brand">
           <p style={{
@@ -126,16 +130,11 @@ function SigninPageInner() {
               }}>
                 {mode === 'signup' ? 'Create account' : 'Sign in'}
               </h1>
-              <AuthScreenMark />
               <div className="margo-auth-layout__tabs">
                 <AuthModeTabs mode={mode} onChange={setMode} />
               </div>
             </div>
-          ) : (
-            <div className="margo-auth-layout__intro">
-              <AuthScreenMark />
-            </div>
-          )}
+          ) : null}
 
           <main className="margo-auth-layout__main">
             {isTermsStep ? (
@@ -153,6 +152,7 @@ function SigninPageInner() {
                 hideTitle
                 initialShowEmail={emailConfirmed}
                 confirmedBanner={emailConfirmed ? 'Email confirmed. Sign in.' : null}
+                onSignupCheckEmailView={setSignupCheckEmail}
               />
             )}
             <AuthScreenHelp />

@@ -52,14 +52,8 @@
   flex-direction: column;
   align-items: stretch;
   position: relative;
-  padding-top: clamp(12px, 3vh, 24px);
-  padding-bottom: 20px;
-}
-
-.margo-auth-layout__mark {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 20px;
+  padding-top: clamp(8px, 2vh, 16px);
+  padding-bottom: 16px;
 }
 
 .margo-auth-layout__tabs {
