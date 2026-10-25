@@ -109,7 +109,10 @@ export function AuthorMeta({
   ) : null
 
   const handleRow = (username || metaAfterHandle) ? (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
+    <span
+      className={feedCardHeader ? 'margo-feed-header-handle-row' : undefined}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}
+    >
       {handleNode}
       {metaAfterHandle}
     </span>
@@ -117,9 +120,19 @@ export function AuthorMeta({
 
   if (layout === 'stacked') {
     return (
-      <span style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
+      <span
+        className={feedCardHeader ? 'margo-feed-header-identity-stack' : undefined}
+        style={
+          feedCardHeader
+            ? undefined
+            : { display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }
+        }
+      >
         {nameRow}
         {handleRow}
+        {feedCardHeader ? (
+          <span className="margo-feed-role-third-slot" data-testid="feed-role-third-slot" aria-hidden />
+        ) : null}
       </span>
     )
   }
