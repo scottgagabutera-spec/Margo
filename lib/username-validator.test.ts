@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
   isDisplayNameReserved,
+  isTemporaryMemberUsername,
   isUsernameReserved,
   normalizeUsernameInput,
   validateDisplayNameChoice,
@@ -40,6 +41,12 @@ describe('username validator', () => {
 
   it('blocks anything containing butera', () => {
     assert.equal(validateUsernameChoice('xbuterax').ok, false)
+  })
+
+  it('blocks temporary member handles', () => {
+    assert.equal(isTemporaryMemberUsername('member123456789'), true)
+    assert.equal(validateUsernameChoice('member123456789').ok, false)
+    assert.equal(validateUsernameChoice('member123456789', 'member123456789').ok, true)
   })
 
   it('allows scottie and ladygaga substring fans', () => {

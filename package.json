@@ -79,6 +79,7 @@
     "test:auth-recovery": "node --experimental-strip-types --test lib/auth-recovery-errors.test.ts lib/auth-recovery-url.test.ts",
     "test:auth-password-confirm": "node --experimental-strip-types --test lib/auth-password-confirm.test.ts",
     "test:e2e:auth-onboarding": "playwright test tests/e2e/auth-onboarding-layout.spec.ts --project=chromium",
+    "test:e2e:welcome-ui": "playwright test tests/e2e/welcome-onboarding-ui.spec.ts --project=chromium",
     "test:e2e:hub-launcher": "playwright test tests/e2e/hub-launcher-grid.spec.ts --project=chromium",
     "test:e2e:profile-portrait-hero": "playwright test tests/e2e/profile-portrait-hero.spec.ts",
     "test:e2e:feed-portrait-avatar": "playwright test tests/e2e/feed-portrait-avatar.spec.ts",
