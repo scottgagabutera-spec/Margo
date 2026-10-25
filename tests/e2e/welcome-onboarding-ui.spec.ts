@@ -4,7 +4,7 @@ const BASE = process.env.PLAYWRIGHT_BASE_URL ?? 'https://trymargo.com'
 
 async function assertWelcomeContained(page: import('@playwright/test').Page) {
   return page.evaluate(() => {
-    const root = document.querySelector('[data-margo-welcome="ready"], [data-margo-welcome-state="signed-out"]') as HTMLElement | null
+    const root = document.querySelector('[data-margo-welcome="ready"], [data-margo-welcome="signed-out"]') as HTMLElement | null
     if (!root) return { ok: false, reason: 'no welcome root' }
     const vw = document.documentElement.clientWidth
     const offenders: string[] = []
@@ -96,6 +96,9 @@ for (const width of [320, 768, 1280] as const) {
     await page.setViewportSize({ width, height: width >= 768 ? 900 : 700 })
     await page.goto(`${BASE}/welcome?step=1`, { waitUntil: 'domcontentloaded', timeout: 45000 })
     await expect(page.locator('[data-margo-welcome="loading"]')).toHaveCount(0, { timeout: 20000 })
+    await expect(
+      page.locator('[data-margo-welcome="ready"], [data-margo-welcome="signed-out"]'),
+    ).toHaveCount(1, { timeout: 15000 })
     const contained = await assertWelcomeContained(page)
     expect(contained.ok, JSON.stringify(contained)).toBeTruthy()
   })
