@@ -2760,6 +2760,14 @@ html.margo-keyboard-open .margo-mobile-tabbar {
 .margo-post-card__lb-compose-input--catalog-pick:focus {
   border-color: var(--gold-border);
 }
+.margo-catalog-pick-lyric--signature {
+  width: 100%;
+  margin-bottom: 12px;
+}
+.margo-catalog-pick-lyric__input {
+  width: 100%;
+  box-sizing: border-box;
+}
 .margo-post-card__lb-compose-track--pick-line .margo-post-card__lb-compose-track-pick {
   flex: 1 1 auto;
   min-width: 0;

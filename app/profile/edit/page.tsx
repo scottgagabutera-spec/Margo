@@ -8,6 +8,7 @@ import { useAuthGate } from '@/components/supabase-auth-provider'
 import { AvatarUpload } from '@/components/avatar-upload'
 import { CoverUpload } from '@/components/cover-upload'
 import { SignatureSongPicker } from '@/components/signature-song-picker'
+import { CatalogPickLyricField } from '@/components/catalog-pick-lyric-field'
 import { SignInLink } from '@/components/signin-link'
 import { LoadingRing } from '@/components/loading-ring'
 import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
@@ -59,6 +60,7 @@ function EditProfilePageInner() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [signatureSheetOpen, setSignatureSheetOpen] = useState(false)
+  const [signatureLinePickerOpen, setSignatureLinePickerOpen] = useState(false)
   const lyricInputRef = useRef<HTMLTextAreaElement>(null)
   const signatureSectionRef = useRef<HTMLDivElement>(null)
   /** Seed form once per mount — identity refresh must not reset typed fields. */
@@ -407,33 +409,27 @@ function EditProfilePageInner() {
 
             <div id="signature" ref={signatureSectionRef}>
               <label style={labelStyle}>Signature</label>
-              <textarea
-                ref={lyricInputRef}
+              <CatalogPickLyricField
+                variant="signature"
+                textareaRef={lyricInputRef}
                 value={lyric}
-                onChange={e => setLyric(e.target.value.slice(0, 140))}
+                catalogPickOnly={!!catalogSongId}
+                onOpenPicker={() => setSignatureLinePickerOpen(true)}
+                onValueChange={setLyric}
                 rows={2}
-                style={{
-                  ...inputStyle,
-                  height: 'auto',
-                  padding: '14px 16px',
-                  resize: 'none',
-                  fontFamily: lyricFont,
-                  fontStyle: 'italic',
-                  fontSize: TYPE.lyric,
-                  color: 'var(--gold)',
-                  lineHeight: 1.5,
-                  marginBottom: '12px',
-                }}
               />
               <SignatureSongPicker
                 songTitle={song}
                 artistName={artist}
                 catalogSongId={catalogSongId}
                 currentLyric={lyric}
+                linePickerOpen={signatureLinePickerOpen}
+                onLinePickerOpenChange={setSignatureLinePickerOpen}
                 onChange={({ song: nextSong, artist: nextArtist, catalogSongId: nextId }) => {
                   setSong(nextSong)
                   setArtist(nextArtist)
                   setCatalogSongId(nextId)
+                  if (nextId) setSignatureLinePickerOpen(true)
                 }}
                 onLyricPick={(text) => setLyric(text)}
               />

@@ -82,6 +82,8 @@ export function SignatureSongPicker({
   currentLyric,
   onChange,
   onLyricPick,
+  linePickerOpen,
+  onLinePickerOpenChange,
 }: {
   songTitle: string
   artistName: string
@@ -89,6 +91,8 @@ export function SignatureSongPicker({
   currentLyric?: string
   onChange: (next: { song: string; artist: string; catalogSongId: string | null }) => void
   onLyricPick?: (lyric: string) => void
+  linePickerOpen?: boolean
+  onLinePickerOpenChange?: (open: boolean) => void
 }) {
   const [query, setQuery] = useState('')
   const [hits, setHits] = useState<ComposeSearchHit[]>([])
@@ -98,6 +102,9 @@ export function SignatureSongPicker({
   const [lines, setLines] = useState<ComposeLyricLine[]>([])
   const [linesLoading, setLinesLoading] = useState(false)
   const genRef = useRef(0)
+  const pickerOpen = linePickerOpen !== undefined
+    ? linePickerOpen
+    : !!(catalogSongId && !(currentLyric || '').trim())
 
   type MargoSongHitLocal = {
     id: string
@@ -289,18 +296,45 @@ export function SignatureSongPicker({
               snippet={snippet}
             />
           ) : null}
-          <span style={{
-            flex: 1,
-            minWidth: 0,
-            fontFamily: font,
-            fontSize: TYPE.secondary,
-            color: 'var(--text)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}>
-            {selectedLabel}
-          </span>
+          {catalogSongId ? (
+            <button
+              type="button"
+              onClick={() => onLinePickerOpenChange?.(true)}
+              aria-label={`${selectedLabel}. Tap to choose another line.`}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                minHeight: 'var(--margo-touch-min)',
+                fontFamily: font,
+                fontSize: TYPE.secondary,
+                color: 'var(--text)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                border: 'none',
+                background: 'none',
+                padding: 0,
+                textAlign: 'left',
+                cursor: 'pointer',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              {selectedLabel}
+            </button>
+          ) : (
+            <span style={{
+              flex: 1,
+              minWidth: 0,
+              fontFamily: font,
+              fontSize: TYPE.secondary,
+              color: 'var(--text)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}>
+              {selectedLabel}
+            </span>
+          )}
           <button
             type="button"
             aria-label="Clear song"
@@ -326,7 +360,7 @@ export function SignatureSongPicker({
         </div>
       ) : null}
 
-      {catalogSongId ? (
+      {catalogSongId && pickerOpen ? (
         <ComposeLinePicker
           lines={lines}
           loading={linesLoading}
@@ -338,14 +372,20 @@ export function SignatureSongPicker({
           enableParagraphPick
           maxParagraphLines={2}
           hideHeader
-          onPick={(line) => onLyricPick?.(line.text.slice(0, 140))}
+          onPick={(line) => {
+            onLyricPick?.(line.text.slice(0, 140))
+            onLinePickerOpenChange?.(false)
+          }}
           onPickParagraph={(picked) => {
             const joined = picked.map((l) => l.text.trim()).filter(Boolean).join('\n')
             onLyricPick?.(joined.slice(0, 140))
+            onLinePickerOpenChange?.(false)
           }}
-          onBack={() => {}}
+          onBack={() => {
+            if ((currentLyric || '').trim()) onLinePickerOpenChange?.(false)
+          }}
         />
-      ) : hasSongMeta ? (
+      ) : hasSongMeta && !catalogSongId ? (
         <p style={{
           fontFamily: font,
           fontSize: TYPE.secondary,
