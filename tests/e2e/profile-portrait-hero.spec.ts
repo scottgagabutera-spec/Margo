@@ -7,12 +7,12 @@ const MAIN_HANDLE_PX = 0.7 * 16
 
 async function openProfile(page: import('@playwright/test').Page) {
   await page.goto(`${BASE}/feed`, { waitUntil: 'domcontentloaded', timeout: 45000 })
-  await page.waitForTimeout(800)
   const link = page.locator('a[href^="/profile/"]').first()
-  if ((await link.count()) === 0) test.skip(true, 'No profile link on feed')
+  await expect(link).toBeVisible({ timeout: 25000 })
   await link.click()
   await page.waitForURL(/\/profile\//, { timeout: 15000 })
-  await page.waitForTimeout(600)
+  await expect(page.locator('[data-testid="profile-portrait-hero"]').first()).toBeVisible({ timeout: 20000 })
+  await page.waitForTimeout(400)
 }
 
 for (const width of [360, 390, 834, 1440]) {
