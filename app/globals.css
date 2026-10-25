@@ -701,6 +701,134 @@ html[data-margo-stage-idle] .margo-stage-zone {
   align-items: center;
   margin-bottom: var(--margo-post-card-gap);
 }
+.margo-post-card--portrait-feed {
+  overflow: visible;
+  padding-top: calc(var(--margo-post-card-pad) + 4px);
+}
+.margo-feed-post-list > .margo-post-card--portrait-feed:first-child {
+  margin-top: 10px;
+}
+.margo-post-card__portrait-slot {
+  position: absolute;
+  left: 12px;
+  top: -14px;
+  z-index: 3;
+  pointer-events: none;
+}
+.margo-post-card__portrait-slot .margo-post-card__portrait-btn {
+  pointer-events: auto;
+}
+.margo-post-card__portrait-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--margo-touch-min);
+  min-height: var(--margo-touch-min);
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+  text-decoration: none;
+  color: inherit;
+}
+.margo-post-card__portrait-story-dot {
+  position: absolute;
+  right: 2px;
+  bottom: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: 1.5px solid var(--bg);
+  box-shadow: 0 0 6px rgba(232, 197, 71, 0.55);
+  pointer-events: none;
+}
+.margo-post-card__portrait-story-dot[data-unseen='0'] {
+  opacity: 0.85;
+}
+.margo-portrait-avatar {
+  display: inline-block;
+  width: var(--mpa-w);
+  height: var(--mpa-h);
+  position: relative;
+  flex-shrink: 0;
+  transform: perspective(360px) rotateY(-9deg);
+  transform-origin: 50% 100%;
+}
+.margo-portrait-avatar__sep {
+  position: absolute;
+  inset: -3px;
+  border-radius: calc(var(--mpa-r) + 3px);
+  background: var(--mpa-sep, var(--surface));
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.38);
+  z-index: 0;
+}
+.margo-portrait-avatar__frame {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--mpa-r);
+  border: 1px solid var(--gold);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.margo-portrait-avatar__photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 35%;
+  display: block;
+}
+.margo-post-card__header--portrait {
+  grid-template-columns: 1fr auto auto;
+  grid-template-rows: auto;
+  column-gap: 8px;
+  row-gap: 0;
+  align-items: center;
+  min-height: 52px;
+  padding-left: calc(12px + 52px + 10px);
+  margin-bottom: 10px;
+}
+.margo-post-card__header--portrait .margo-post-card__header-identity,
+.margo-post-card__header--portrait .margo-post-card__header-identity-link {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
+.margo-post-card__header--portrait .margo-post-card__mood {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+}
+.margo-post-card__header--portrait .margo-post-card__header-tools {
+  grid-column: 3;
+  grid-row: 1;
+  align-self: center;
+}
+.margo-post-card__header-identity-link {
+  display: block;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+  border-radius: 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+.margo-post-card__shared-time {
+  margin: -8px 0 10px;
+  padding: 0;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+.margo-post-card--portrait-feed .margo-post-card__moment-stage {
+  margin-top: calc(var(--margo-post-card-lyric-margin) - 6px);
+}
 .margo-post-card__header-tools {
   display: flex;
   align-items: center;
@@ -1213,14 +1341,17 @@ html[data-margo-stage-idle] .margo-stage-zone {
   margin-left: 4px;
 }
 @media (max-width: 360px) {
-  .margo-post-card__header {
+  .margo-post-card__header:not(.margo-post-card__header--portrait) {
     grid-template-columns: 36px 1fr auto;
   }
-  .margo-post-card__mood {
+  .margo-post-card__header:not(.margo-post-card__header--portrait) .margo-post-card__mood {
     grid-column: 2 / -1;
     grid-row: 2;
     justify-self: start;
     margin-top: 2px;
+  }
+  .margo-post-card__header--portrait {
+    padding-left: calc(12px + 52px + 8px);
   }
 }
 .margo-post-card__moment-stage {

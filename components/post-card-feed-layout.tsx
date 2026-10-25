@@ -7,7 +7,6 @@ import { resolveMomentLines } from '@/lib/post-lines'
 import { FEED_ARTWORK_THUMB_PX } from '@/lib/feed/layout'
 import { PostThumbnail } from '@/components/post-thumbnail'
 import { SongMeta } from '@/components/song-meta'
-import { FEED_TYPE } from '@/lib/fonts'
 import {
   FEED_CARD_LYRIC_CLASS,
   FEED_CARD_LYRIC_CLAMP_CLASS,
@@ -34,6 +33,8 @@ import {
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { trackEvent } from '@/lib/analytics/track'
 import { FeedIconExternal, FeedIconLyricsLines, FeedMomentPlaybackIcon } from '@/components/feed-card-icons'
+import { PostCardSharedTime } from '@/components/relative-time'
+import { UI_FONT, FEED_TYPE } from '@/lib/fonts'
 
 function externalProviderLabel(href: string): string {
   if (/music\.apple\.com/i.test(href)) return 'Apple Music'
@@ -177,6 +178,22 @@ function SongMomentProgress({
         style={{ width: `${playing ? progressPct : 0}%` }}
       />
     </div>
+  )
+}
+
+export function PostCardSharedTimeLine({ date }: { date: number | string | Date }) {
+  return (
+    <p className="margo-post-card__shared-time">
+      <PostCardSharedTime
+        date={date}
+        style={{
+          fontFamily: UI_FONT,
+          fontSize: `var(${FEED_TYPE.date})`,
+          color: 'var(--text-muted)',
+          lineHeight: 1.3,
+        }}
+      />
+    </p>
   )
 }
 

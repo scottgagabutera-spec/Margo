@@ -1,6 +1,12 @@
 'use client'
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import {
+  formatSharedRelativeTime,
+  formatSharedTimeTitle,
+} from '@/lib/format-shared-relative-time'
+
+export { formatSharedRelativeTime, formatSharedTimeTitle } from '@/lib/format-shared-relative-time'
 
 const DAY_SEC = 86_400
 const WEEK_SEC = 7 * DAY_SEC
@@ -53,6 +59,85 @@ export function formatRelativeTime(
   if (diffSec < DAY_SEC) return `${Math.floor(diffSec / 3600)}h`
   if (diffSec < WEEK_SEC) return `${Math.floor(diffSec / DAY_SEC)}d`
   return formatAbsoluteDate(then, now)
+}
+
+export function PostCardSharedTime({
+  date,
+  className,
+  style,
+}: {
+  date: number | string | Date
+  className?: string
+  style?: CSSProperties
+}) {
+  const spanRef = useRef<HTMLSpanElement>(null)
+  const title = formatSharedTimeTitle(date)
+  const [label, setLabel] = useState(() => formatSharedRelativeTime(date))
+
+  useEffect(() => {
+    const sync = () => setLabel(formatSharedRelativeTime(date))
+    sync()
+
+    const el = spanRef.current
+    let allowed = isTickAllowed(el)
+    let timer: ReturnType<typeof setInterval> | null = null
+
+    const clear = () => {
+      if (timer) {
+        clearInterval(timer)
+        timer = null
+      }
+    }
+
+    const schedule = () => {
+      clear()
+      if (!allowed) return
+      const then = toMs(date)
+      const ageSec = Math.max(0, (Date.now() - then) / 1000)
+      const ms = tickMsForAge(ageSec)
+      if (ms == null) return
+      timer = setInterval(() => {
+        sync()
+        schedule()
+      }, ms)
+    }
+
+    const onGateChange = () => {
+      const next = isTickAllowed(spanRef.current)
+      if (next && !allowed) {
+        sync()
+        allowed = true
+        schedule()
+        return
+      }
+      if (!next && allowed) {
+        allowed = false
+        clear()
+      }
+    }
+
+    if (allowed) schedule()
+
+    document.addEventListener('visibilitychange', onGateChange)
+    const pane = el?.closest('[data-margo-primary-tab]') ?? null
+    let mo: MutationObserver | null = null
+    if (pane) {
+      mo = new MutationObserver(onGateChange)
+      mo.observe(pane, { attributes: true, attributeFilter: ['data-margo-primary-tab-active'] })
+    }
+
+    return () => {
+      clear()
+      document.removeEventListener('visibilitychange', onGateChange)
+      mo?.disconnect()
+    }
+  }, [date])
+
+  return (
+    <span ref={spanRef} className={className} style={style} title={title}>
+      {label}
+    </span>
+  )
 }
 
 /** Interval for adaptive tick, or null when the label is a static absolute date. */

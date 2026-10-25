@@ -7,6 +7,11 @@ interface StoryAvatarRingProps {
   hasUnseen?: boolean
   children: ReactNode
   style?: CSSProperties
+  /** Portrait feed avatar — rounded-rect ring matching 4:5 tile. */
+  shape?: 'circle' | 'portrait'
+  portraitWidth?: number
+  portraitHeight?: number
+  portraitRadius?: number
 }
 
 /**
@@ -17,17 +22,27 @@ export function StoryAvatarRing({
   hasUnseen = false,
   children,
   style,
+  shape = 'circle',
+  portraitWidth,
+  portraitHeight,
+  portraitRadius = 10,
 }: StoryAvatarRingProps) {
   const ringPad = 2
-  const outer = size + ringPad * 2 + 4
+  const isPortrait = shape === 'portrait'
+  const innerW = isPortrait ? (portraitWidth ?? size) : size
+  const innerH = isPortrait ? (portraitHeight ?? Math.round(size * 1.25)) : size
+  const outerW = innerW + ringPad * 2 + 4
+  const outerH = innerH + ringPad * 2 + 4
+  const outerRadius = isPortrait ? portraitRadius + 4 : '50%'
+  const innerRadius = isPortrait ? portraitRadius : '50%'
 
   return (
     <span
       className={hasUnseen ? 'margo-story-avatar-ring margo-story-avatar-ring--pulse' : 'margo-story-avatar-ring'}
       style={{
-        width: outer,
-        height: outer,
-        borderRadius: '50%',
+        width: isPortrait ? outerW : outerW,
+        height: isPortrait ? outerH : outerW,
+        borderRadius: outerRadius,
         padding: ringPad,
         flexShrink: 0,
         background: hasUnseen
@@ -41,16 +56,16 @@ export function StoryAvatarRing({
       }}
     >
       <span style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        overflow: 'hidden',
-        border: '2px solid var(--bg)',
+        width: innerW,
+        height: innerH,
+        borderRadius: innerRadius,
+        overflow: isPortrait ? 'visible' : 'hidden',
+        border: isPortrait ? 'none' : '2px solid var(--bg)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         boxSizing: 'border-box',
-        background: 'var(--surface-2)',
+        background: isPortrait ? 'transparent' : 'var(--surface-2)',
       }}>
         {children}
       </span>

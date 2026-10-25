@@ -21,6 +21,8 @@ export interface AuthorMetaProps {
   metaAfterHandle?: ReactNode
   /** stacked = name on first line, @handle · meta on second (PostCard). */
   layout?: 'inline' | 'stacked'
+  /** Feed post portrait header — FEED_TYPE tokens, tight name/handle stack. */
+  feedCardHeader?: boolean
 }
 
 /**
@@ -35,20 +37,31 @@ export function AuthorMeta({
   handlePrefix = '',
   metaAfterHandle,
   layout = 'inline',
+  feedCardHeader = false,
 }: AuthorMetaProps) {
   const profile = useAuthorProfile(authorUid)
 
   const displayName = profile?.displayName || fallbackName || 'Margo Listener'
   const username = profile?.username
 
-  const nameSize = size === 'compact' ? '0.75rem' : '0.82rem'
-  const handleSize = size === 'compact' ? '0.6rem' : '0.7rem'
+  const nameSize = feedCardHeader
+    ? 'var(--feed-type-display-name)'
+    : size === 'compact'
+      ? '0.75rem'
+      : '0.82rem'
+  const handleSize = feedCardHeader
+    ? 'var(--feed-type-handle)'
+    : size === 'compact'
+      ? '0.6rem'
+      : '0.7rem'
+  const stackedLineHeight = feedCardHeader ? 1.2 : undefined
 
   const handleStyle: CSSProperties = {
     fontFamily: UI_FONT,
     fontSize: handleSize,
-    color: 'var(--text-secondary)',
+    color: feedCardHeader ? 'var(--text-muted)' : 'var(--text-secondary)',
     textDecoration: 'none',
+    lineHeight: stackedLineHeight,
     display: 'inline-flex',
     alignItems: 'center',
     minHeight: size === 'compact' || layout === 'stacked' ? undefined : 'var(--margo-touch-min)',
@@ -67,6 +80,7 @@ export function AuthorMeta({
           fontSize: nameSize,
           fontWeight: 600,
           color: 'var(--text)',
+          lineHeight: stackedLineHeight,
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
