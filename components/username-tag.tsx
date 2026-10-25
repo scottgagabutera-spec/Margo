@@ -88,6 +88,10 @@ export function AuthorMeta({
       >
         {displayName}
       </span>
+      {feedCardHeader ? (
+        // Future: 18px round role badge (Artist / Producer / Label) — empty slot adds no width today.
+        <span className="margo-feed-author-role-slot" data-testid="feed-author-role-slot" aria-hidden />
+      ) : null}
       {profile && (
         <ArtistBadge isArtist={profile.isArtist} artistStatus={profile.artistStatus} size={size === 'compact' ? 11 : 13} />
       )}

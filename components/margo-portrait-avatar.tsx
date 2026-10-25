@@ -1,7 +1,7 @@
 'use client'
 
 import type { CSSProperties, ReactNode } from 'react'
-import { MargoSymbol } from '@/components/margo-symbol'
+import { MargoPortraitBrandMark } from '@/components/margo-portrait-brand-mark'
 import { UI_FONT } from '@/lib/fonts'
 
 export type MargoPortraitAvatarSize = 'feed' | 'sm'
@@ -47,9 +47,11 @@ export function MargoPortraitAvatar({
   const dim = SIZE_PX[size]
   const hasPhoto = !!imageUrl?.trim()
 
-  const tileBg = brandMark || tierGoldTile
-    ? 'var(--gold)'
-    : 'linear-gradient(135deg, rgba(232,197,71,0.28), rgba(232,197,71,0.08))'
+  const tileBg = brandMark
+    ? 'var(--surface-2)'
+    : tierGoldTile
+      ? 'var(--gold)'
+      : 'linear-gradient(135deg, rgba(232,197,71,0.28), rgba(232,197,71,0.08))'
 
   const inner = children ?? (
     hasPhoto ? (
@@ -61,7 +63,9 @@ export function MargoPortraitAvatar({
         className="margo-portrait-avatar__photo"
       />
     ) : brandMark ? (
-      <MargoSymbol size={Math.round(dim.w * 0.42)} variant="ink" />
+      <span className="margo-portrait-avatar__brand-inset">
+        <MargoPortraitBrandMark className="margo-portrait-avatar__brand-mark" />
+      </span>
     ) : (
       <span
         className="margo-portrait-avatar__initial"
@@ -79,7 +83,11 @@ export function MargoPortraitAvatar({
 
   return (
     <span
-      className={['margo-portrait-avatar', className].filter(Boolean).join(' ')}
+      className={[
+        'margo-portrait-avatar',
+        brandMark ? 'margo-portrait-avatar--brand' : '',
+        className,
+      ].filter(Boolean).join(' ')}
       style={{
         ['--mpa-w' as string]: `${dim.w}px`,
         ['--mpa-h' as string]: `${dim.h}px`,

@@ -22,7 +22,7 @@ function plural(n: number, one: string, many: string): string {
 }
 
 /**
- * Feed post card: "Shared 1 day ago" (muted line under lyric).
+ * Feed post card muted line under lyric (e.g. "2 days ago", "Sep 24").
  */
 export function formatSharedRelativeTime(
   input: number | string | Date,
@@ -33,20 +33,20 @@ export function formatSharedRelativeTime(
 
   const diffSec = Math.max(0, (nowMs - then) / 1000)
 
-  if (diffSec < 60) return 'Shared just now'
+  if (diffSec < 60) return 'just now'
   if (diffSec < 3600) {
     const m = Math.floor(diffSec / 60)
-    return `Shared ${m} ${plural(m, 'minute', 'minutes')} ago`
+    return `${m} ${plural(m, 'minute', 'minutes')} ago`
   }
   if (diffSec < DAY_SEC) {
     const h = Math.floor(diffSec / 3600)
-    return `Shared ${h} ${plural(h, 'hour', 'hours')} ago`
+    return `${h} ${plural(h, 'hour', 'hours')} ago`
   }
   if (diffSec < WEEK_SEC) {
     const d = Math.floor(diffSec / DAY_SEC)
-    return `Shared ${d} ${plural(d, 'day', 'days')} ago`
+    return `${d} ${plural(d, 'day', 'days')} ago`
   }
-  return `Shared ${formatAbsoluteDate(then, nowMs)}`
+  return formatAbsoluteDate(then, nowMs)
 }
 
 /** Full calendar label for title/tooltip on shared-time line. */

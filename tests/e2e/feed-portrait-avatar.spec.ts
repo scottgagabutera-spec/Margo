@@ -19,67 +19,88 @@ for (const width of [360, 390, 834]) {
   test.describe(`feed portrait header @${width}px`, () => {
     test.use({ viewport: { width, height: 844 } })
 
-    test('portrait in viewport; identity clears photo; shared time under lyric; mood not off-screen', async ({ page }) => {
+    test('portrait alignment, time copy, role slot, brand inset', async ({ page }) => {
       const card = await firstFeedCard(page)
       const portrait = card.locator('[data-testid="feed-portrait-avatar"]').first()
       await expect(portrait).toBeVisible()
 
       const layout = await card.evaluate((cardEl) => {
         const doc = document.documentElement
-        const portraitEl = cardEl.querySelector('[data-testid="feed-portrait-avatar"]') as HTMLElement | null
+        const portraitBtn = cardEl.querySelector('[data-testid="feed-portrait-avatar"]') as HTMLElement | null
+        const frame = cardEl.querySelector('.margo-portrait-avatar__frame') as HTMLElement | null
         const identity = cardEl.querySelector('[data-testid="feed-header-identity"]') as HTMLElement | null
+        const nameEl = identity?.querySelector('span[style*="fontWeight: 600"]') as HTMLElement | null
         const lyric = cardEl.querySelector('.margo-post-card__lyric-zone') as HTMLElement | null
-        const shared = cardEl.querySelector('.margo-post-card__shared-time') as HTMLElement | null
+        const timeLine = cardEl.querySelector('.margo-post-card__shared-time') as HTMLElement | null
         const song = cardEl.querySelector('.margo-post-card__song-block') as HTMLElement | null
         const mood = cardEl.querySelector('.margo-post-card__mood') as HTMLElement | null
+        const roleSlot = cardEl.querySelector('[data-testid="feed-author-role-slot"]') as HTMLElement | null
 
-        const pr = portraitEl?.getBoundingClientRect()
+        const pr = portraitBtn?.getBoundingClientRect()
+        const fr = frame?.getBoundingClientRect()
         const ir = identity?.getBoundingClientRect()
+        const nr = nameEl?.getBoundingClientRect()
         const lr = lyric?.getBoundingClientRect()
-        const sr = shared?.getBoundingClientRect()
+        const tr = timeLine?.getBoundingClientRect()
         const songR = song?.getBoundingClientRect()
         const moodR = mood?.getBoundingClientRect()
 
-        const gapIdentityPhoto =
-          pr && ir ? Math.max(0, ir.left - pr.right) : null
+        const photoTop = fr?.top ?? pr?.top ?? null
+        const photoBottom = fr?.bottom ?? pr?.bottom ?? null
+        const photoCenter = photoTop != null && photoBottom != null ? (photoTop + photoBottom) / 2 : null
+        const textCenter = ir ? (ir.top + ir.bottom) / 2 : null
+        const moodCenter = moodR ? (moodR.top + moodR.bottom) / 2 : null
 
-        const identityBlock = identity?.querySelector('span[style*="flexDirection"]') as HTMLElement | null
-        let nameHandleGap: number | null = null
-        if (identityBlock) {
-          const kids = identityBlock.children
-          if (kids.length >= 2) {
-            const a = kids[0].getBoundingClientRect()
-            const b = kids[1].getBoundingClientRect()
-            nameHandleGap = b.top - a.bottom
-          }
+        const brandMark = cardEl.querySelector('.margo-portrait-avatar__brand-mark') as SVGSVGElement | null
+        let brandInsetRatio: number | null = null
+        if (brandMark && fr) {
+          const mb = brandMark.getBoundingClientRect()
+          const padX = (fr.width - mb.width) / 2
+          brandInsetRatio = fr.width > 0 ? padX / fr.width : null
         }
+
+        const timeText = timeLine?.textContent?.trim() ?? ''
 
         return {
           viewportW: doc.clientWidth,
-          portraitTop: pr?.top ?? null,
-          portraitBottom: pr?.bottom ?? null,
-          portraitLeft: pr?.left ?? null,
-          portraitRight: pr?.right ?? null,
-          gapIdentityPhoto,
-          nameHandleGap,
-          sharedBelowLyric: lr && sr ? sr.top >= lr.bottom - 2 : null,
-          sharedAboveSong: sr && songR ? sr.bottom <= songR.top + 2 : song ? false : null,
+          photoTop,
+          photoBottom,
+          nameTop: nr?.top ?? null,
+          nameTopMinusPhotoTop: photoTop != null && nr?.top != null ? nr.top - photoTop : null,
+          textCenter,
+          photoCenter,
+          moodTextCenterDelta:
+            textCenter != null && moodCenter != null ? Math.abs(moodCenter - textCenter) : null,
+          gapIdentityPhoto: pr && ir ? Math.max(0, ir.left - pr.right) : null,
+          sharedBelowLyric: lr && tr ? tr.top >= lr.bottom - 2 : null,
+          sharedAboveSong: tr && songR ? tr.bottom <= songR.top + 2 : song ? false : null,
           moodRight: moodR?.right ?? null,
-          lyricLeft: lr?.left ?? null,
+          timeText,
+          roleSlotWidth: roleSlot?.getBoundingClientRect().width ?? null,
+          brandInsetRatio,
         }
       })
 
-      expect(layout.portraitLeft).toBeGreaterThanOrEqual(-2)
-      expect(layout.portraitRight ?? 0).toBeLessThanOrEqual(layout.viewportW + 2)
-      expect(layout.portraitTop ?? 0).toBeGreaterThanOrEqual(-2)
+      expect(layout.photoTop ?? 0).toBeGreaterThanOrEqual(-4)
+      if (layout.photoTop != null && layout.nameTop != null) {
+        expect(layout.nameTop).toBeGreaterThanOrEqual(layout.photoTop - 2)
+      }
+      if (layout.photoBottom != null && layout.nameTop != null) {
+        expect(layout.nameTop).toBeLessThanOrEqual(layout.photoBottom)
+      }
+      if (layout.moodTextCenterDelta != null) {
+        expect(layout.moodTextCenterDelta).toBeLessThanOrEqual(6)
+      }
       expect(layout.gapIdentityPhoto ?? 0).toBeGreaterThan(4)
       if (layout.sharedBelowLyric != null) expect(layout.sharedBelowLyric).toBe(true)
       if (layout.sharedAboveSong != null) expect(layout.sharedAboveSong).toBe(true)
       if (layout.moodRight != null) {
         expect(layout.moodRight).toBeLessThanOrEqual(layout.viewportW + 1)
       }
-      if (layout.lyricLeft != null && layout.portraitRight != null) {
-        expect(layout.lyricLeft).toBeLessThanOrEqual(layout.portraitRight + 4)
+      expect(layout.timeText.toLowerCase()).not.toContain('shared')
+      expect(layout.roleSlotWidth ?? 0).toBe(0)
+      if (layout.brandInsetRatio != null) {
+        expect(layout.brandInsetRatio).toBeGreaterThanOrEqual(0.12)
       }
     })
   })
