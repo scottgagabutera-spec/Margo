@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import {
@@ -51,11 +51,14 @@ function persistShortsUnmutePref(unmuted: boolean): void {
 function findSettledSlideIndex(scroller: HTMLElement): number {
   const slides = scroller.querySelectorAll<HTMLElement>('[data-shorts-slide]')
   if (!slides.length) return 0
-  const scrollTop = scroller.scrollTop
+  const rootRect = scroller.getBoundingClientRect()
+  const targetY = rootRect.top + rootRect.height * 0.45
   let bestIdx = 0
   let bestDist = Infinity
   slides.forEach((el) => {
-    const dist = Math.abs(el.offsetTop - scrollTop)
+    const r = el.getBoundingClientRect()
+    const mid = r.top + r.height / 2
+    const dist = Math.abs(mid - targetY)
     if (dist < bestDist) {
       bestDist = dist
       bestIdx = Number(el.dataset.shortsIndex) || 0
@@ -159,7 +162,7 @@ function FeedShortsSlide({
         <MomentExportPreviewFrame
           shapeId="vertical"
           framed={false}
-          fillParent
+          fillParent={desktopLayout}
           style={{ height: '100%', width: '100%' }}
         >
           <StageMomentCard
@@ -292,7 +295,11 @@ export function FeedShortsPager({
   const [autoplayBlocked, setAutoplayBlocked] = useState(false)
   const [anonPlaysCompleted, setAnonPlaysCompleted] = useState(0)
   const [reduceMotion, setReduceMotion] = useState(false)
-  const [desktopLayout, setDesktopLayout] = useState(false)
+  const [desktopLayout, setDesktopLayout] = useState(
+    () =>
+      typeof window !== 'undefined'
+      && window.matchMedia(`(min-width: ${SHORTS_DESKTOP_MIN_WIDTH}px)`).matches,
+  )
   const anonPlayedKeysRef = useRef(new Set<string>())
   const signedInRef = useRef(signedIn)
   const lastAutoIndexRef = useRef<number>(-1)
@@ -311,11 +318,8 @@ export function FeedShortsPager({
     const topChrome = nav + tabBar + vibeBar
 
     if (window.innerWidth < SHORTS_DESKTOP_MIN_WIDTH) {
-      const availH = Math.max(320, window.innerHeight - topChrome - bottom)
-      const frameW = Math.min(420, window.innerWidth - 32, (availH * 9) / 16)
-      const frameH = (frameW * 16) / 9
-      root.style.setProperty('--margo-shorts-frame-w', `${frameW}px`)
-      root.style.setProperty('--margo-shorts-frame-h', `${frameH}px`)
+      root.style.removeProperty('--margo-shorts-frame-w')
+      root.style.removeProperty('--margo-shorts-frame-h')
       root.style.removeProperty('--margo-shorts-slide-min-h')
       delete root.dataset.shortsCols
       return
@@ -358,6 +362,10 @@ export function FeedShortsPager({
     mq.addEventListener('change', syncLayoutMode)
     return () => mq.removeEventListener('change', syncLayoutMode)
   }, [commitSettledFromDom, syncFrameMetrics])
+
+  useLayoutEffect(() => {
+    syncFrameMetrics()
+  }, [syncFrameMetrics])
 
   useEffect(() => {
     const root = scrollerRef.current

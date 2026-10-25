@@ -492,6 +492,37 @@ test('sign-up CTA lives in chrome-bottom not over lyric center', async ({ page }
   }
 })
 
+for (const size of [
+  { w: 360, h: 640 },
+  { w: 390, h: 844 },
+  { w: 430, h: 932 },
+]) {
+  test(`phone Shorts canvas is 320px wide and fits pane @${size.w}x${size.h}`, async ({ page }) => {
+    test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
+    await page.setViewportSize({ width: size.w, height: size.h })
+    await page.goto(shortsUrl(size.w), { waitUntil: 'domcontentloaded', timeout: 45000 })
+    await page.waitForTimeout(1200)
+    const canvas = page.locator('[aria-label="Shorts preview, 9:16"]').first()
+    await expect(canvas).toBeVisible({ timeout: 15000 })
+    const canvasBox = await canvas.boundingBox()
+    const pager = page.locator('.margo-feed-shorts-pager')
+    const pagerBox = await pager.boundingBox()
+    expect(canvasBox && pagerBox).toBeTruthy()
+    if (canvasBox && pagerBox) {
+      expect(Math.round(canvasBox.width)).toBe(320)
+      expect(canvasBox.y + canvasBox.height).toBeLessThanOrEqual(pagerBox.y + pagerBox.height + 2)
+      const secondSlide = page.locator('[data-shorts-index="1"]')
+      if ((await secondSlide.count()) > 0) {
+        const secondBox = await secondSlide.boundingBox()
+        expect(secondBox).toBeTruthy()
+        if (secondBox) {
+          expect(secondBox.y).toBeGreaterThanOrEqual(pagerBox.y + pagerBox.height - 4)
+        }
+      }
+    }
+  })
+}
+
 test('Shorts frame survives 390→1440 resize and 1440 direct load', async ({ page }) => {
   test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
   await page.setViewportSize({ width: 390, height: 844 })
