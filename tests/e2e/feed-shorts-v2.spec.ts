@@ -570,10 +570,15 @@ async function readSettledIndex(page: import('@playwright/test').Page) {
   })
 }
 
-async function readPullToRefreshShift(page: import('@playwright/test').Page) {
+async function readFeedPullTransformShift(page: import('@playwright/test').Page) {
   return page.evaluate(() => {
-    const indicator = document.querySelector('[aria-label="Pull to refresh"]')?.parentElement
-    return indicator?.getBoundingClientRect().height ?? 0
+    const pager = document.querySelector('.margo-feed-shorts-pager')
+    const wrapper = pager?.parentElement
+    if (!wrapper) return 0
+    const t = getComputedStyle(wrapper).transform
+    if (!t || t === 'none') return 0
+    const m = t.match(/matrix\([^,]+,[^,]+,[^,]+,[^,]+,[^,]+,\s*([^)]+)\)/)
+    return m ? Math.abs(parseFloat(m[1])) : 0
   })
 }
 
@@ -612,14 +617,13 @@ test('swipe down from Short 2 to Short 1 does not trigger pull-to-refresh', asyn
   await expect(page.locator('[data-shorts-active="1"]')).toHaveAttribute('data-shorts-index', '1', {
     timeout: 15000,
   })
-  const pullBefore = await readPullToRefreshShift(page)
-  expect(pullBefore).toBeLessThan(4)
+  expect(await readFeedPullTransformShift(page)).toBeLessThan(4)
   await swipeShorts(page, 'down')
   await expect(page.locator('[data-shorts-active="1"]')).toHaveAttribute('data-shorts-index', '0', {
     timeout: 15000,
   })
-  const pullAfter = await readPullToRefreshShift(page)
-  expect(pullAfter).toBeLessThan(4)
+  expect(await readFeedPullTransformShift(page)).toBeLessThan(4)
+  await expect(page.getByLabel('Refreshing')).toHaveCount(0)
 })
 
 test('swipe up and swipe down use similar scroll distance at same flick strength', async ({ page }) => {
