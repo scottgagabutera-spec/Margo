@@ -109,7 +109,7 @@ test('sign-in failure shows neutral line and resend without code leak @360', asy
   await page.locator('input[type="email"]').fill('someone@example.com')
   await page.locator('input[type="password"]').fill('wrong-password-1')
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page.getByRole('alert')).toContainText('Incorrect email or password')
+  await expect(page.locator('[data-margo-auth-email-form] [role="alert"]').first()).toContainText('Incorrect email or password')
   await expect(page.getByRole('button', { name: 'Resend confirmation email' })).toBeVisible()
 })
 
