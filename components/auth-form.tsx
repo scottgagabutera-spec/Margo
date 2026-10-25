@@ -350,7 +350,8 @@ export function AuthForm({
 
   const loading = busy !== null
   const signupBlocked = isSignup && !termsAccepted
-  const oauthVisuallyMuted = loading || signupBlocked
+  /** Terms + checkbox only after email expand or a consent nudge — first view stays three buttons. */
+  const showSignupConsent = isSignup && (showEmailForm || consentError)
 
   const remindConsentIfNeeded = () => {
     if (isSignup && !termsAccepted) {
@@ -541,13 +542,12 @@ export function AuthForm({
           onClick={() => handleOAuthSubmit('google')}
           disabled={loading}
           aria-busy={busy === 'google'}
-          aria-disabled={oauthVisuallyMuted}
           style={{
             ...oauthBtnBase,
             background: 'rgba(255,255,255,0.03)',
             border: busy === 'google' ? '1px solid var(--gold-border)' : '1px solid rgba(255,255,255,0.1)',
             color: 'var(--text)',
-            opacity: oauthVisuallyMuted ? 0.55 : 1,
+            opacity: loading ? 0.55 : 1,
             cursor: loading ? 'not-allowed' : 'pointer',
           }}
         >
@@ -567,13 +567,12 @@ export function AuthForm({
           onClick={() => handleOAuthSubmit('discord')}
           disabled={loading}
           aria-busy={busy === 'discord'}
-          aria-disabled={oauthVisuallyMuted}
           style={{
             ...oauthBtnBase,
             background: 'rgba(88,101,242,0.1)',
             border: busy === 'discord' ? '1px solid var(--gold-border)' : '1px solid rgba(88,101,242,0.28)',
             color: 'var(--text)',
-            opacity: oauthVisuallyMuted ? 0.55 : 1,
+            opacity: loading ? 0.55 : 1,
             cursor: loading ? 'not-allowed' : 'pointer',
           }}
         >
@@ -606,7 +605,7 @@ export function AuthForm({
         ) : null}
       </div>
 
-      {isSignup ? (
+      {showSignupConsent ? (
         <SignupConsentGate highlight={consentAttention && !termsAccepted} consentError={consentError}>
           <SignupConsentIntro />
           <SignupConsentCheckbox
@@ -614,7 +613,10 @@ export function AuthForm({
             checked={termsAccepted}
             onChange={(v) => {
               setTermsAccepted(v)
-              if (v) setConsentError(false)
+              if (v) {
+                setConsentError(false)
+                setError('')
+              }
             }}
             disabled={loading}
           />
