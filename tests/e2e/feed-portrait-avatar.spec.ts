@@ -61,9 +61,9 @@ for (const width of [360, 390, 834]) {
         third.style.lineHeight = '1.2'
         third.style.color = 'var(--text-muted)'
         const stack = identity?.querySelector('.margo-feed-header-identity-stack') as HTMLElement | null
-        const roleSlot = identity?.querySelector('[data-testid="feed-role-third-slot"]') as HTMLElement | null
-        if (stack && roleSlot) {
-          stack.insertBefore(third, roleSlot.nextSibling)
+        const thirdSlotEl = identity?.querySelector('[data-testid="feed-role-third-slot"]') as HTMLElement | null
+        if (stack && thirdSlotEl) {
+          stack.insertBefore(third, thirdSlotEl.nextSibling)
         } else if (stack) {
           stack.appendChild(third)
         } else {
