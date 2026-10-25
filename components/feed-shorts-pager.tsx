@@ -238,6 +238,7 @@ function FeedShortsSlide({
                   Sign up
                 </button>
               ) : null}
+              <div className="margo-feed-shorts-slide__meta">{songBlock}</div>
               <div
                 className="margo-feed-shorts-slide__progress"
                 role="progressbar"
@@ -251,7 +252,6 @@ function FeedShortsSlide({
                   style={{ width: `${Math.min(100, Math.max(0, progressPct * 100))}%` }}
                 />
               </div>
-              <div className="margo-feed-shorts-slide__meta">{songBlock}</div>
             </div>
           </>
         ) : null}
@@ -365,7 +365,13 @@ export function FeedShortsPager({
 
   useLayoutEffect(() => {
     syncFrameMetrics()
-  }, [syncFrameMetrics])
+  }, [syncFrameMetrics, loading, meetsMinimum, clips.length])
+
+  useLayoutEffect(() => {
+    if (loading || !meetsMinimum) return
+    syncFrameMetrics()
+    commitSettledFromDom()
+  }, [loading, meetsMinimum, clips.length, syncFrameMetrics, commitSettledFromDom])
 
   useEffect(() => {
     const root = scrollerRef.current
