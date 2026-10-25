@@ -145,6 +145,10 @@
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.396 0.141 25.723);
   --destructive-foreground: oklch(0.637 0.237 25.331);
+  --destructive-faint: color-mix(in oklch, var(--destructive) 14%, transparent);
+  --success: oklch(0.72 0.17 155);
+  --success-faint: color-mix(in oklch, var(--success) 12%, transparent);
+  --warning: oklch(0.75 0.16 65);
   --border: oklch(0.269 0 0);
   --input: oklch(0.269 0 0);
   --ring: oklch(0.439 0 0);
@@ -5129,5 +5133,23 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   background: var(--gold);
   border: none;
   color: var(--text-on-gold);
+}
+
+@keyframes margo-field-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+
+.margo-username-field--shake {
+  animation: margo-field-shake 0.36s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .margo-username-field--shake {
+    animation: none;
+  }
 }
 

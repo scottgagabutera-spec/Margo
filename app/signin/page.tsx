@@ -3,14 +3,15 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { AuthForm, TermsCompletionForm, type AuthMode } from '@/components/auth-form'
-import { AuthModeTabs } from '@/components/auth-mode-tabs'
 import { CONSENT_REQUIRED_MESSAGE } from '@/lib/legal/consent-copy'
 import { BackButton } from '@/components/back-button'
-import MargoLogo from '@/components/MargoLogo'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+import { useIdentity } from '@/hooks/useIdentity'
+import { resolvePostAuthNavigation } from '@/lib/auth-welcome-redirect'
 import { AUTH_RETURN_QUERY, sanitizeAuthReturnPath } from '@/lib/auth-return'
 import { completeAuthNavigation } from '@/lib/auth-complete-navigation'
-import Link from 'next/link'
+import { AuthScreenHelp } from '@/components/auth-screen-help'
+import { AuthViewportKeyboardInset } from '@/components/auth-viewport'
 import './auth-layout.css'
 
 const lora = 'var(--font-lora), serif'
@@ -25,7 +26,7 @@ function parseAuthError(code: string | null): string | null {
     return CONSENT_REQUIRED_MESSAGE
   }
   if (code === 'auth') {
-    return 'Sign-in was interrupted. Please try again.'
+    return 'Sign-in interrupted. Try again.'
   }
   return null
 }
@@ -41,9 +42,11 @@ export default function SigninPage() {
 function SigninPageInner() {
   const searchParams = useSearchParams()
   const { user, loading, needsTermsAcceptance } = useAuthGate()
+  const { waitUntilReady } = useIdentity()
   const initialMode = parseMode(searchParams.get('mode'))
   const isTermsStep = searchParams.get('step') === 'terms'
   const [mode, setMode] = useState<AuthMode>(initialMode)
+  const [signupCheckEmail, setSignupCheckEmail] = useState(false)
   const returnTo = useMemo(
     () => sanitizeAuthReturnPath(searchParams.get(AUTH_RETURN_QUERY)),
     [searchParams],
@@ -53,19 +56,19 @@ function SigninPageInner() {
     () => parseAuthError(searchParams.get('error')),
     [searchParams],
   )
+  const emailConfirmed = searchParams.get('confirmed') === '1'
 
-  const finishAuth = useCallback(() => {
-    completeAuthNavigation(returnTo)
-  }, [returnTo])
+  const finishAuth = useCallback(async () => {
+    const row = await waitUntilReady()
+    completeAuthNavigation(resolvePostAuthNavigation(row, returnTo))
+  }, [returnTo, waitUntilReady])
 
   useEffect(() => {
     if (loading) return
     if (user && !needsTermsAcceptance) {
-      finishAuth()
+      void finishAuth()
     }
   }, [loading, user, needsTermsAcceptance, finishAuth])
-
-  const showModeTabs = !isTermsStep
 
   return (
     <div style={{
@@ -74,17 +77,19 @@ function SigninPageInner() {
       display: 'flex',
       flexDirection: 'column',
     }}>
+      <AuthViewportKeyboardInset />
       <div className="margo-auth-layout">
-        {showModeTabs ? (
+        {!signupCheckEmail || isTermsStep ? (
           <div className="margo-auth-layout__back">
             <BackButton variant="chrome" preferHistory={false} fallbackHref={returnTo || '/'} />
           </div>
-        ) : null}
+        ) : (
+          <div className="margo-auth-layout__back">
+            <BackButton variant="chrome" preferHistory={false} fallbackHref="/signin" />
+          </div>
+        )}
 
         <aside className="margo-auth-layout__brand">
-          <div style={{ marginBottom: '36px' }}>
-            <MargoLogo tier="lockup" size={36} rings />
-          </div>
           <p style={{
             fontFamily: lora,
             fontStyle: 'italic',
@@ -107,30 +112,6 @@ function SigninPageInner() {
         </aside>
 
         <div className="margo-auth-layout__panel">
-          {showModeTabs ? (
-            <div className="margo-auth-layout__intro">
-              <h1 style={{
-                position: 'absolute',
-                width: '1px',
-                height: '1px',
-                padding: 0,
-                margin: '-1px',
-                overflow: 'hidden',
-                clip: 'rect(0, 0, 0, 0)',
-                whiteSpace: 'nowrap',
-                border: 0,
-              }}>
-                {mode === 'signup' ? 'Create account' : 'Sign in'}
-              </h1>
-              <div className="margo-auth-layout__mark">
-                <MargoLogo tier="lockup" size={32} rings />
-              </div>
-              <div className="margo-auth-layout__tabs">
-                <AuthModeTabs mode={mode} onChange={setMode} />
-              </div>
-            </div>
-          ) : null}
-
           <main className="margo-auth-layout__main">
             {isTermsStep ? (
               <TermsCompletionForm
@@ -144,28 +125,12 @@ function SigninPageInner() {
                 externalError={externalError}
                 oauthReturnTo={returnTo}
                 onSuccess={finishAuth}
-                hideTitle
+                initialShowEmail={emailConfirmed}
+                confirmedBanner={emailConfirmed ? 'Email confirmed. Sign in.' : null}
+                onSignupCheckEmailView={setSignupCheckEmail}
               />
             )}
-            <p style={{
-              marginTop: '20px',
-              textAlign: 'center',
-            }}>
-              <Link
-                href="/help/account"
-                style={{
-                  fontFamily: ui,
-                  fontSize: '0.68rem',
-                  fontWeight: 700,
-                  letterSpacing: '0.14em',
-                  textTransform: 'uppercase',
-                  color: 'var(--text-muted)',
-                  textDecoration: 'none',
-                }}
-              >
-                Help
-              </Link>
-            </p>
+            <AuthScreenHelp />
           </main>
         </div>
       </div>

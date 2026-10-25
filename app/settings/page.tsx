@@ -12,6 +12,8 @@ import {
   writeAccountSettingsSessionCache,
 } from '@/lib/settings/account-settings-session-cache'
 import { PromoteInlineStatus } from '@/components/promote/promote-page-shell'
+import { validatePasswordPair } from '@/lib/auth-password-confirm'
+import { AuthPasswordField } from '@/components/auth-password-field'
 
 const supabase = createClient()
 
@@ -229,7 +231,9 @@ export default function AccountSettingsPage() {
   const lastFetchAtRef = useRef(0)
 
   const [newPassword, setNewPassword] = useState('')
+  const [confirmNewPassword, setConfirmNewPassword] = useState('')
   const [passwordStatus, setPasswordStatus] = useState<string | null>(null)
+  const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null)
   const [savingSection, setSavingSection] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
 
@@ -361,11 +365,19 @@ export default function AccountSettingsPage() {
   }, [authLoading, user, profile, application])
 
   async function updatePassword() {
-    if (newPassword.length < 8) {
-      setPasswordStatus('Use at least 8 characters.')
+    const pwCheck = validatePasswordPair(newPassword, confirmNewPassword)
+    if (!pwCheck.ok) {
+      if (pwCheck.field === 'confirm') {
+        setConfirmPasswordError(pwCheck.message)
+        setPasswordStatus(null)
+      } else {
+        setPasswordStatus(pwCheck.message)
+        setConfirmPasswordError(null)
+      }
       return
     }
     setPasswordStatus(null)
+    setConfirmPasswordError(null)
     setSavingSection('password')
     try {
       const res = await fetch('/api/auth/update-password', {
@@ -380,8 +392,9 @@ export default function AccountSettingsPage() {
         setPasswordStatus(body.error || 'Could not update password.')
         return
       }
-      setPasswordStatus('Password updated.')
+      setPasswordStatus('Updated.')
       setNewPassword('')
+      setConfirmNewPassword('')
     } catch {
       setSavingSection(null)
       setPasswordStatus('Could not reach the server. Try again.')
@@ -547,39 +560,46 @@ export default function AccountSettingsPage() {
         <SectionLabel>Security</SectionLabel>
         {hasPasswordAuth ? (
           <>
-            <input
-              type="password"
+            <AuthPasswordField
+              label="New password"
               value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="New password"
-              style={{
-                width: '100%',
-                fontFamily: font,
-                fontSize: TYPE.body,
-                padding: '12px 16px',
-                borderRadius: 12,
-                border: '1px solid var(--border)',
-                background: 'var(--surface-2)',
-                color: 'var(--text)',
-                boxSizing: 'border-box',
-                marginBottom: '12px',
-              }}
+              autoComplete="new-password"
+              showMeter
+              showRequirements
+              error={passwordStatus && passwordStatus !== 'Updated.' ? passwordStatus : null}
+              onChange={(v) => { setNewPassword(v); setPasswordStatus(null); setConfirmPasswordError(null) }}
             />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ marginTop: 12 }}>
+              <AuthPasswordField
+                label="Confirm new password"
+                value={confirmNewPassword}
+                autoComplete="new-password"
+                showRequirements={false}
+                showMeter={false}
+                matchOk={
+                  confirmNewPassword.length > 0
+                  && newPassword === confirmNewPassword
+                  && validatePasswordPair(newPassword, confirmNewPassword).ok
+                  && !confirmPasswordError
+                }
+                error={confirmPasswordError}
+                onChange={(v) => { setConfirmNewPassword(v); setConfirmPasswordError(null); setPasswordStatus(null) }}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
               <TierOneButton onClick={updatePassword} disabled={savingSection === 'password'}>
-                Update Password
+                Update password
               </TierOneButton>
-              {passwordStatus && (
-                <span style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
+              {passwordStatus === 'Updated.' ? (
+                <span style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--success)' }}>
                   {passwordStatus}
                 </span>
-              )}
+              ) : null}
             </div>
           </>
         ) : (
           <p style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text-secondary)' }}>
-            You signed in with Google or Discord, so there is no Margo password to change. Manage
-            your password with that provider instead.
+            You use Google or Discord sign-in. Change your password there.
           </p>
         )}
       </Card>

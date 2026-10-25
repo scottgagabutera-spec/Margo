@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { buildLegalConsentSettings, mergeLegalConsentIntoSettings } from '@/lib/legal/consent'
+import { buildLegalConsentSettings } from '@/lib/legal/consent'
+import { resolveAuthEmailRedirectOrigin, signInAfterConfirmUrl } from '@/lib/auth-email-redirect'
+import { parsePasswordErrorMessage, validatePassword } from '@/lib/auth-password-policy'
 
 /**
  * Auth core — password sign-up on the server (httpOnly cookies when a
@@ -20,6 +22,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'email and password required' }, { status: 400 })
   }
 
+  const passwordCheck = validatePassword(password)
+  if (!passwordCheck.ok) {
+    return NextResponse.json({ error: passwordCheck.message }, { status: 400 })
+  }
+
   if (body.acceptedTerms !== true) {
     return NextResponse.json(
       { error: 'You must agree to the Terms of Service and Privacy Policy to create an account.' },
@@ -28,11 +35,13 @@ export async function POST(req: NextRequest) {
   }
 
   const legal = buildLegalConsentSettings()
+  const origin = resolveAuthEmailRedirectOrigin(req)
   const supabase = await createClient()
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
+      emailRedirectTo: signInAfterConfirmUrl(origin),
       data: {
         terms_accepted_at: legal.termsAcceptedAt,
         terms_version: legal.termsVersion,
@@ -40,7 +49,7 @@ export async function POST(req: NextRequest) {
     },
   })
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 })
+    return NextResponse.json({ error: parsePasswordErrorMessage(error.message) }, { status: 400 })
   }
 
   if (!data.session?.access_token || !data.user) {

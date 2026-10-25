@@ -22,7 +22,12 @@ export function isMessageThreadPath(pathname: string | null | undefined): boolea
 
 function isAuthPath(pathname: string | null | undefined): boolean {
   if (!pathname) return false
-  return pathname === '/signin' || pathname.startsWith('/auth/callback')
+  return (
+    pathname === '/signin'
+    || pathname === '/forgot-password'
+    || pathname === '/reset-password'
+    || pathname.startsWith('/auth/callback')
+  )
 }
 
 /** `/admin` is an internal tool — never show public Margo nav or You/Feed tabs. */

@@ -1,6 +1,5 @@
 'use client'
 import { Suspense, useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { MargoActionSheet } from '@/components/margo-action-sheet'
 import { useRouter } from 'next/navigation'
 import { useIdentity } from '@/hooks/useIdentity'
@@ -21,6 +20,13 @@ import {
 import { profileEditHasUnsavedChanges } from '@/lib/profile-edit-unsaved'
 import { useProfileEditLeaveGuard } from '@/hooks/useProfileEditLeaveGuard'
 import { EditProfilePageSkeleton } from '@/components/margo-skeletons'
+import { UsernameFieldShell } from '@/components/username-field-shell'
+import { useUsernameAvailability } from '@/hooks/useUsernameAvailability'
+import {
+  normalizeUsernameInput,
+  USERNAME_MAX_LENGTH,
+  validateUsernameChoice,
+} from '@/lib/username-validator'
 
 const font = UI_FONT
 const lyricFont = LYRIC_FONT
@@ -65,8 +71,29 @@ function EditProfilePageInner() {
   const signatureSectionRef = useRef<HTMLDivElement>(null)
   /** Seed form once per mount — identity refresh must not reset typed fields. */
   const formSeededRef = useRef(false)
-  const searchParams = useSearchParams()
-  const showWelcome = searchParams.get('welcome') === '1'
+  const usernameAvailability = useUsernameAvailability(
+    username,
+    identity?.username ?? null,
+    user?.id ?? null,
+  )
+
+  const usernameValidation = useMemo(
+    () => validateUsernameChoice(username, identity?.username ?? null),
+    [username, identity?.username],
+  )
+
+  const usernameChangedForSave = useMemo(() => {
+    if (!identity) return false
+    const next = normalizeUsernameInput(username)
+    return next.length > 0 && next !== normalizeUsernameInput(identity.username)
+  }, [username, identity])
+
+  const usernameBlocksSave =
+    usernameChangedForSave
+    && (!usernameValidation.ok
+      || usernameAvailability === 'checking'
+      || usernameAvailability === 'taken'
+      || usernameAvailability === 'invalid')
 
   const persistDraftNow = useCallback(() => {
     if (!user?.id) return
@@ -152,6 +179,7 @@ function EditProfilePageInner() {
 
   const handleSave = useCallback(async () => {
     if (!identity) return
+    if (usernameBlocksSave) return
     setSaving(true)
     setError(null)
 
@@ -164,8 +192,10 @@ function EditProfilePageInner() {
     // Capture the username this save will land on — either the newly
     // typed one (if changed) or the current one — so the post-save
     // redirect goes to the right profile even if the handle just changed.
-    const usernameChanged = username.trim() && username.trim().toLowerCase() !== identity.username
-    const destinationUsername = usernameChanged ? username.trim().toLowerCase() : identity.username
+    const cleanedUsername = normalizeUsernameInput(username)
+    const usernameChanged =
+      cleanedUsername.length > 0 && cleanedUsername !== normalizeUsernameInput(identity.username)
+    const destinationUsername = usernameChanged ? cleanedUsername : identity.username
 
     if (displayName.trim() && displayName.trim() !== identity.displayName) {
       tasks.push(updateDisplayName(displayName))
@@ -209,7 +239,7 @@ function EditProfilePageInner() {
       if (user?.id) clearProfileEditDraft(user.id)
       router.push(`/profile/${destinationUsername}`)
     }
-  }, [identity, user?.id, displayName, username, bio, lyric, song, artist, catalogSongId, isPrivate, artistLinkDraft, updateDisplayName, changeUsername, updateBio, updateSignatureLyric, setPrivate, updateArtistLinks, router])
+  }, [identity, user?.id, displayName, username, bio, lyric, song, artist, catalogSongId, isPrivate, artistLinkDraft, usernameBlocksSave, updateDisplayName, changeUsername, updateBio, updateSignatureLyric, setPrivate, updateArtistLinks, router])
 
   if (!loading && !user) {
     return (
@@ -302,41 +332,25 @@ function EditProfilePageInner() {
             <button
               type="button"
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || usernameBlocksSave}
               style={{
                 minHeight: 'var(--margo-touch-min)',
                 padding: '0 4px',
                 background: 'none',
                 border: 'none',
-                cursor: saving ? 'not-allowed' : 'pointer',
+                cursor: saving || usernameBlocksSave ? 'not-allowed' : 'pointer',
                 fontFamily: font,
                 fontSize: TYPE.label,
                 fontWeight: 700,
                 letterSpacing: '0.16em',
                 textTransform: 'uppercase',
                 color: 'var(--gold)',
-                opacity: saving ? 0.7 : 1,
+                opacity: saving || usernameBlocksSave ? 0.45 : 1,
               }}
             >
               {saving ? 'Saving' : 'Save'}
             </button>
           </div>
-
-          {showWelcome ? (
-            <p style={{
-              fontFamily: font,
-              fontSize: TYPE.secondary,
-              color: 'var(--text-secondary)',
-              lineHeight: 1.45,
-              margin: '0 0 16px',
-              padding: '12px 14px',
-              borderRadius: '12px',
-              border: '1px solid var(--gold-border)',
-              background: 'var(--gold-faint)',
-            }}>
-              Welcome — add a photo and anything you want on your profile, then tap Save. You can change this anytime.
-            </p>
-          ) : null}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -373,15 +387,29 @@ function EditProfilePageInner() {
 
             <div>
               <label style={labelStyle}>Username</label>
-              <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontFamily: font, color: 'var(--text-secondary)', fontSize: TYPE.body }}>@</span>
+              <UsernameFieldShell
+                visualState={usernameAvailability}
+                showFeedback={usernameChangedForSave}
+                statusId="profile-edit-username-status"
+                data-margo-username-status={usernameAvailability}
+              >
+                <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontFamily: font, color: 'var(--text-secondary)', fontSize: TYPE.body, zIndex: 1 }}>@</span>
                 <input
                   type="text"
                   value={username}
-                  onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20))}
-                  style={{ ...inputStyle, paddingLeft: '30px' }}
+                  onChange={e => setUsername(normalizeUsernameInput(e.target.value))}
+                  style={{
+                    ...inputStyle,
+                    paddingLeft: '30px',
+                    border: 'none',
+                    background: 'transparent',
+                  }}
+                  maxLength={USERNAME_MAX_LENGTH}
+                  aria-describedby="profile-edit-username-status"
                 />
-              </div>
+                </div>
+              </UsernameFieldShell>
             </div>
 
             <div>
@@ -433,18 +461,6 @@ function EditProfilePageInner() {
                 }}
                 onLyricPick={(text) => setLyric(text)}
               />
-              {!catalogSongId && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
-                  <input
-                    type="text" value={song} onChange={e => { setSong(e.target.value); setCatalogSongId(null) }} placeholder="Song"
-                    style={inputStyle}
-                  />
-                  <input
-                    type="text" value={artist} onChange={e => { setArtist(e.target.value); setCatalogSongId(null) }} placeholder="Artist"
-                    style={inputStyle}
-                  />
-                </div>
-              )}
             </div>
 
             <div style={{

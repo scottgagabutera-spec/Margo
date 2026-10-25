@@ -7,16 +7,16 @@
   max-width: 1080px;
   margin: 0 auto;
   box-sizing: border-box;
-  min-height: 100%;
+  min-height: 100dvh;
   padding:
     max(16px, env(safe-area-inset-top))
     max(24px, env(safe-area-inset-right))
     max(40px, env(safe-area-inset-bottom))
     max(24px, env(safe-area-inset-left));
   gap: 0;
-  align-items: start;
+  align-items: stretch;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto minmax(0, 1fr);
   grid-template-areas:
     "back"
     "panel";
@@ -41,34 +41,18 @@
   max-width: 420px;
   margin: 0 auto;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-}
-
-/* Lockup + mode CTAs sit below Back — not in the same row. */
-.margo-auth-layout__intro {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  position: relative;
-  padding-top: clamp(28px, 7vh, 64px);
-  padding-bottom: 28px;
-}
-
-.margo-auth-layout__mark {
-  display: flex;
   justify-content: center;
-  margin-bottom: 32px;
-}
-
-.margo-auth-layout__tabs {
-  width: 100%;
-  min-width: 0;
+  scroll-padding-bottom: calc(var(--auth-keyboard-inset, 0px) + 24px);
 }
 
 .margo-auth-layout__main {
   width: 100%;
   min-width: 0;
+  padding-bottom: calc(var(--auth-keyboard-inset, 0px) + 8px);
+  box-sizing: border-box;
 }
 
 @media (min-width: 901px) {
@@ -98,13 +82,4 @@
     justify-content: center;
   }
 
-  /* Desktop already has the lockup in the brand column. */
-  .margo-auth-layout__mark {
-    display: none;
-  }
-
-  .margo-auth-layout__intro {
-    padding-top: 0;
-    padding-bottom: 24px;
-  }
 }

@@ -8,21 +8,13 @@ import { sanitizeArtistLinks } from '@/lib/artist-links'
 import { mergeLegalConsentIntoSettings, legalConsentFromUserMetadata } from '@/lib/legal/consent'
 import type { ArtistApplicationLinks } from '@/lib/artist-music-group'
 import { warmProfile } from '@/lib/profile-warm'
+import { validateDisplayNameChoice, validateUsernameChoice } from '@/lib/username-validator'
 import { warmFeedPosts } from '@/lib/primary-tab-prefetch'
+import { providerAvatarFromUser, providerFullNameFromUser } from '@/lib/oauth-profile-name'
+import { pickAvailableUsernameFromProviderName } from '@/lib/pick-available-username'
+import { createTemporaryMemberHandle } from '@/lib/temporary-member-handle'
 
 const supabase = createClient()
-
-const INSTRUMENTS = [
-  'guitar', 'piano', 'violin', 'cello', 'drums', 'bass', 'flute', 'harp',
-  'trumpet', 'sitar', 'viola', 'banjo', 'saxophone', 'clarinet', 'ukulele',
-  'organ', 'synth', 'mandolin', 'trombone',
-]
-
-function generateUsername() {
-  const instrument = INSTRUMENTS[Math.floor(Math.random() * INSTRUMENTS.length)]
-  const number = Math.floor(Math.random() * 9000) + 1000
-  return `${instrument}${number}`
-}
 
 export type ArtistStatus = 'active' | 'warned' | 'frozen' | 'removed' | null
 
@@ -123,10 +115,8 @@ const IdentityContext = createContext<IdentityContextValue | null>(null)
  * The first time a given auth UID is seen here, a profiles row is
  * auto-created. If the OAuth provider (Google/Discord) handed back a
  * real name and/or avatar in user_metadata, those are used for
- * display_name/avatar_url — the generated instrument+number handle is
- * reserved for the unique @username only, and is used as a
- * display_name fallback solely for email/password signups where no
- * real name exists yet.
+ * display_name/avatar_url from the provider when present; otherwise a
+ * neutral temporary @username (member+digits) until onboarding sets a real name.
  *
  * `identity` state only updates in two places: when the auth user
  * changes (via the effect below), or when refreshIdentity() is called
@@ -160,19 +150,22 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
     }
 
     const meta = su.user_metadata || {}
-    const realName: string | null = meta.full_name || meta.name || null
-    const avatarUrl: string | null = meta.avatar_url || meta.picture || null
+    const realName = providerFullNameFromUser(su)
+    const avatarUrl = providerAvatarFromUser(su)
     const recordedLegal = legalConsentFromUserMetadata(meta as Record<string, unknown>)
     const settings = recordedLegal
       ? mergeLegalConsentIntoSettings(null, recordedLegal)
       : undefined
 
-    let username = generateUsername()
-    for (let attempts = 0; attempts < 5; attempts++) {
+    let username = realName
+      ? await pickAvailableUsernameFromProviderName(realName)
+      : createTemporaryMemberHandle()
+
+    for (let attempts = 0; attempts < 6; attempts++) {
       const insertRow: Record<string, unknown> = {
         id: su.id,
         username,
-        display_name: realName || username,
+        display_name: realName || '',
         avatar_url: avatarUrl,
       }
       if (settings) insertRow.settings = settings
@@ -189,7 +182,7 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
         return mapped
       }
       if (error?.code === '23505') {
-        username = generateUsername()
+        username = createTemporaryMemberHandle()
         continue
       }
       console.error('Failed to create profile:', error)
@@ -300,8 +293,9 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
 
   const updateDisplayName = useCallback(async (newName: string): Promise<ActionResult> => {
     if (!identityUser) return { success: false, error: 'Not signed in.' }
-    const trimmed = newName.trim().slice(0, 30)
-    if (!trimmed) return { success: false, error: 'Name cannot be empty.' }
+    const validation = validateDisplayNameChoice(newName)
+    if (!validation.ok) return { success: false, error: validation.message }
+    const trimmed = validation.value
 
     const { error } = await supabase.from('profiles').update({ display_name: trimmed }).eq('id', identityUser.id)
     if (error) return { success: false, error: 'Could not update name.' }
@@ -312,18 +306,19 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
 
   const changeUsername = useCallback(async (newUsername: string): Promise<ActionResult> => {
     if (!identityUser) return { success: false, error: 'Not signed in.' }
-    const cleaned = newUsername.trim().toLowerCase().replace(/[^a-z0-9_]/g, '')
-    if (cleaned.length < 3) return { success: false, error: 'Username must be at least 3 characters.' }
+    const validation = validateUsernameChoice(newUsername, identity?.username ?? null)
+    if (!validation.ok) return { success: false, error: validation.message }
 
+    const cleaned = validation.value
     const { error } = await supabase.from('profiles').update({ username: cleaned }).eq('id', identityUser.id)
     if (error) {
-      if (error.code === '23505') return { success: false, error: 'That username is already taken.' }
+      if (error.code === '23505') return { success: false, error: 'Not available.' }
       return { success: false, error: 'Could not update username.' }
     }
 
     setIdentityState(prev => (prev ? { ...prev, username: cleaned } : prev))
     return { success: true }
-  }, [identityUser])
+  }, [identityUser, identity?.username])
 
   const updateSignatureLyric = useCallback(async (
     data: { lyric: string; song: string; artist: string; songId?: string | null }
