@@ -686,7 +686,7 @@ export default function DiscoverPage() {
                   borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700,
                   letterSpacing: '1px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.75)', textDecoration: 'none',
                 }}
-              >Send a line</Link>
+              >Post</Link>
             </div>
 
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>

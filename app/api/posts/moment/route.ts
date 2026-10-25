@@ -147,7 +147,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'This post can no longer be edited.' }, { status: 400 })
   }
   if (row.parent_post_id) {
-    return NextResponse.json({ error: 'Use Lyric Back edit for replies.' }, { status: 400 })
+    return NextResponse.json({ error: 'Use Lyric Back edit for Lyric Backs.' }, { status: 400 })
   }
 
   const line0 = body.lines[0] ?? {}

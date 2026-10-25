@@ -469,6 +469,7 @@ function FeedPageInner() {
     <StoryFeedAuthorSync authorIds={feedAuthorIds} />
     <FeedPostEvictProvider evict={evictFeedPost}>
     <PullToRefresh
+      enabled={feedContentTab !== 'shorts'}
       onRefreshingChange={setPtrBusy}
       onRefresh={async () => {
         const [latest] = await Promise.all([

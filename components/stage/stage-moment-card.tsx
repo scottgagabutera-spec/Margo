@@ -279,6 +279,7 @@ export function StageMomentCard({
   const artSize = layout?.artwork?.width ?? (isShorts ? 56 : 48)
   const artRadius = artSize * (isShorts ? 10 / 56 : 8 / 48)
   const metaMarginTop = layout?.meta ? (layout.meta.y - layout.lyric.y - layout.lyric.height) : 14
+  const feedShortsFixedLyric = isShorts && shortsFeedStableLook && hideShortsCreditRow
 
   return (
     <div ref={cardRef} style={isShorts ? { width: '100%', height: '100%' } : undefined}>
@@ -322,9 +323,21 @@ export function StageMomentCard({
           }}
         >
           <p
+            className={feedShortsFixedLyric ? 'margo-feed-lyric' : undefined}
             style={isShorts
               ? (layout
-                ? {
+                ? feedShortsFixedLyric
+                  ? {
+                      position: 'absolute',
+                      left: layout.lyric.x,
+                      top: layout.lyric.y,
+                      width: layout.lyric.maxWidth,
+                      margin: 0,
+                      color: theme.ink,
+                      maxHeight: '58%',
+                      overflow: 'hidden',
+                    }
+                  : {
                     ...lyricStyle,
                     position: 'absolute',
                     left: layout.lyric.x,
@@ -339,7 +352,9 @@ export function StageMomentCard({
                   })
               : lyricStyle}
           >
-            {layout && layout.lyric.lines.length > 0
+            {feedShortsFixedLyric
+              ? lyric
+              : layout && layout.lyric.lines.length > 0
               ? layout.lyric.lines.map((line, i) => (
                   <span
                     key={`${i}-${line.text}`}

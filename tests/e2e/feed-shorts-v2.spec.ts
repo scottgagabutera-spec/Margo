@@ -570,6 +570,102 @@ async function readSettledIndex(page: import('@playwright/test').Page) {
   })
 }
 
+async function readFeedPullTransformShift(page: import('@playwright/test').Page) {
+  return page.evaluate(() => {
+    const pager = document.querySelector('.margo-feed-shorts-pager')
+    const wrapper = pager?.parentElement
+    if (!wrapper) return 0
+    const t = getComputedStyle(wrapper).transform
+    if (!t || t === 'none') return 0
+    const m = t.match(/matrix\([^,]+,[^,]+,[^,]+,[^,]+,[^,]+,\s*([^)]+)\)/)
+    return m ? Math.abs(parseFloat(m[1])) : 0
+  })
+}
+
+async function swipeShorts(
+  page: import('@playwright/test').Page,
+  direction: 'up' | 'down',
+  magnitudeRatio = 0.72,
+) {
+  const pager = page.locator('.margo-feed-shorts-pager')
+  const box = await pager.boundingBox()
+  expect(box).toBeTruthy()
+  if (!box) return { scrollDelta: 0, before: 0, after: 0 }
+  const cx = box.x + box.width / 2
+  const cy = box.y + box.height * 0.55
+  const before = await pager.evaluate((el) => el.scrollTop)
+  const delta = direction === 'up' ? box.height * magnitudeRatio : -box.height * magnitudeRatio
+  await cdpTouchSwipe(page, cx, cy, delta)
+  await page.waitForTimeout(450)
+  await pager.evaluate((el) => el.dispatchEvent(new Event('scrollend')))
+  await page.waitForTimeout(250)
+  const after = await pager.evaluate((el) => el.scrollTop)
+  return { scrollDelta: Math.abs(after - before), before, after }
+}
+
+test('swipe down from Short 2 to Short 1 does not trigger pull-to-refresh', async ({ page }) => {
+  test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await openShortsTab(page, 390)
+  const pager = page.locator('.margo-feed-shorts-pager')
+  await pager.evaluate((el) => {
+    el.scrollTop = el.clientHeight * 1.05
+  })
+  await page.waitForTimeout(400)
+  await pager.evaluate((el) => el.dispatchEvent(new Event('scrollend')))
+  await page.waitForTimeout(300)
+  await expect(page.locator('[data-shorts-active="1"]')).toHaveAttribute('data-shorts-index', '1', {
+    timeout: 15000,
+  })
+  expect(await readFeedPullTransformShift(page)).toBeLessThan(4)
+  await swipeShorts(page, 'down')
+  await expect(page.locator('[data-shorts-active="1"]')).toHaveAttribute('data-shorts-index', '0', {
+    timeout: 15000,
+  })
+  expect(await readFeedPullTransformShift(page)).toBeLessThan(4)
+  await expect(page.getByLabel('Refreshing')).toHaveCount(0)
+})
+
+test('swipe up and swipe down use similar scroll distance at same flick strength', async ({ page }) => {
+  test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await openShortsTab(page, 390)
+  await expect(page.locator('[data-shorts-active="1"]')).toHaveAttribute('data-shorts-index', '0', {
+    timeout: 15000,
+  })
+  const up = await swipeShorts(page, 'up')
+  expect(up.scrollDelta).toBeGreaterThan(80)
+  const down = await swipeShorts(page, 'down')
+  expect(down.scrollDelta).toBeGreaterThan(80)
+  const ratio = up.scrollDelta / Math.max(down.scrollDelta, 1)
+  expect(ratio).toBeGreaterThan(0.45)
+  expect(ratio).toBeLessThan(2.2)
+})
+
+test('Shorts lyric typography matches feed post lyric', async ({ page }) => {
+  test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto(`${BASE}/feed`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+  await page.waitForTimeout(1200)
+  const feedLyric = page.locator('.margo-feed-lyric').first()
+  if ((await feedLyric.count()) === 0) test.skip(true, 'no feed posts on preview')
+  const feedStyle = await feedLyric.evaluate((el) => {
+    const s = getComputedStyle(el)
+    return { fontSize: s.fontSize, fontFamily: s.fontFamily, fontWeight: s.fontWeight, lineHeight: s.lineHeight }
+  })
+  await openShortsTab(page, 390)
+  const shortsLyric = page.locator('.margo-shorts-canvas .margo-feed-lyric').first()
+  await expect(shortsLyric).toBeVisible({ timeout: 15000 })
+  const shortsStyle = await shortsLyric.evaluate((el) => {
+    const s = getComputedStyle(el)
+    return { fontSize: s.fontSize, fontFamily: s.fontFamily, fontWeight: s.fontWeight, lineHeight: s.lineHeight }
+  })
+  expect(shortsStyle.fontSize).toBe(feedStyle.fontSize)
+  expect(shortsStyle.fontFamily).toBe(feedStyle.fontFamily)
+  expect(shortsStyle.fontWeight).toBe(feedStyle.fontWeight)
+  expect(shortsStyle.lineHeight).toBe(feedStyle.lineHeight)
+})
+
 for (const size of [
   { w: 390, h: 844 },
   { w: 360, h: 740 },

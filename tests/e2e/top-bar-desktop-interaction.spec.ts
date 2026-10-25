@@ -49,7 +49,7 @@ for (const width of WIDTHS) {
       expect(Date.now() - t0).toBeLessThan(8000)
     })
 
-    test('Send a line navigates to compose', async ({ page }) => {
+    test('Post navigates to compose', async ({ page }) => {
       await page.goto(`${BASE}/feed`, { waitUntil: 'domcontentloaded', timeout: 45000 })
       await page.waitForTimeout(800)
       const pill = page.locator('.margo-desktop-nav a[href="/compose"]')
