@@ -22,7 +22,11 @@ import { UsernameTag } from '@/components/username-tag'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { useStoryRingContext } from '@/components/stories/story-ring-context'
 import { StoryAvatarRing } from '@/components/stories/story-avatar-ring'
+import { MargoPortraitAvatar, feedPortraitDimensions } from '@/components/margo-portrait-avatar'
+import { isMargoBrandUsername } from '@/lib/margo-brand-account'
 import { RelativeTime } from '@/components/relative-time'
+import type { AuthorProfile } from '@/lib/profile-lookup'
+import { PostCardSharedTimeLine } from '@/components/post-card-feed-layout'
 import { useAuthorProfile } from '@/hooks/useAuthorProfile'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
@@ -108,9 +112,11 @@ export function normalizeEmotion(e: string) {
 function PostMomentBody({
   post,
   atmosphereRooms,
+  showSharedTime,
 }: {
   post: Post
   atmosphereRooms: { songId: string; lineText: string }[]
+  showSharedTime?: boolean
 }) {
   return (
     <div className="margo-post-card__body">
@@ -122,6 +128,9 @@ function PostMomentBody({
           <PostCardLyricSection post={post} />
         </div>
       </div>
+      {showSharedTime && post.timestamp != null ? (
+        <PostCardSharedTimeLine date={post.timestamp} />
+      ) : null}
       <PostCardSongSection post={post} showMomentControls />
     </div>
   )
@@ -146,6 +155,331 @@ function EarnedTag({ label, onClick }: { label: 'New' | 'Trending' | 'Top'; onCl
         cursor: 'pointer', flexShrink: 0,
       }}
     >{label}</button>
+  )
+}
+
+type StoryRingCtx = ReturnType<typeof useStoryRingContext>
+
+function buildPostHeaderContext(
+  post: Post,
+  authorProfile: AuthorProfile | null,
+  storyRing: StoryRingCtx,
+) {
+  const profileUsername = (authorProfile?.username || post.username || '').replace(/^@/, '')
+  const profileHref = profileUsername ? `/profile/${profileUsername}` : null
+  const authorProfileId = post.authorUid || null
+  const storyAuthor = authorProfileId && storyRing?.hasActiveStory(authorProfileId)
+    ? storyRing.getStoryAuthor(authorProfileId)
+    : null
+  const displayLabel = storyAuthor?.displayName || authorProfile?.displayName || post.username || 'profile'
+  return { profileUsername, profileHref, authorProfileId, storyAuthor, displayLabel }
+}
+
+function PostCardPortraitHeader({
+  post,
+  authorProfile,
+  avatarUrl,
+  onAvatarError,
+  isTier1,
+  storyRing,
+}: {
+  post: Post
+  authorProfile: AuthorProfile | null
+  avatarUrl: string | null
+  onAvatarError: () => void
+  isTier1: boolean
+  storyRing: StoryRingCtx
+}) {
+  const dim = feedPortraitDimensions('feed')
+  const { profileUsername, profileHref, authorProfileId, storyAuthor, displayLabel } =
+    buildPostHeaderContext(post, authorProfile, storyRing)
+  const brandMark = isMargoBrandUsername(profileUsername)
+  const avatarInitial = post.username ? post.username.charAt(0).toUpperCase() : (isTier1 ? 'M' : '?')
+
+  const portrait = (
+    <MargoPortraitAvatar
+      size="feed"
+      imageUrl={avatarUrl}
+      onImageError={onAvatarError}
+      fallbackInitial={avatarInitial}
+      brandMark={brandMark}
+      tierGoldTile={!avatarUrl && !brandMark && isTier1}
+      separationRingColor="var(--surface)"
+    />
+  )
+
+  const portraitCore = storyAuthor ? (
+    <StoryAvatarRing
+      shape="portrait"
+      size={dim.w}
+      portraitWidth={dim.w}
+      portraitHeight={dim.h}
+      portraitRadius={dim.r}
+      hasUnseen={storyAuthor.hasUnseen}
+    >
+      {portrait}
+    </StoryAvatarRing>
+  ) : (
+    portrait
+  )
+
+  const control = storyAuthor && storyRing && authorProfileId ? (
+    <button
+      type="button"
+      className="margo-post-card__portrait-btn"
+      data-testid="feed-portrait-avatar"
+      onClick={(e) => {
+        e.stopPropagation()
+        storyRing.openStory(authorProfileId)
+      }}
+      onPointerDown={() => storyRing.warmStory(authorProfileId)}
+      aria-label={
+        storyAuthor.hasUnseen
+          ? `View ${displayLabel}'s new Story`
+          : `View ${displayLabel}'s Story`
+      }
+      title="View Story"
+    >
+      {portraitCore}
+      <span className="margo-post-card__portrait-story-dot" aria-hidden data-unseen={storyAuthor.hasUnseen ? '1' : '0'} />
+    </button>
+  ) : profileHref ? (
+    <PendingNavLink
+      href={profileHref}
+      indicator="subtle"
+      ringSize={20}
+      data-testid="feed-portrait-avatar"
+      onClick={(e) => e.stopPropagation()}
+      aria-label={`View profile @${profileUsername}`}
+      className="margo-post-card__portrait-btn"
+    >
+      {portraitCore}
+    </PendingNavLink>
+  ) : (
+    <span className="margo-post-card__portrait-btn" data-testid="feed-portrait-avatar">{portraitCore}</span>
+  )
+
+  return <div className="margo-post-card__portrait-slot">{control}</div>
+}
+
+function PostCardHeaderIdentity({
+  post,
+  authorProfile,
+  feedCardHeader,
+}: {
+  post: Post
+  authorProfile: AuthorProfile | null
+  feedCardHeader?: boolean
+  portraitLayout?: boolean
+}) {
+  const profileUsername = (authorProfile?.username || post.username || '').replace(/^@/, '')
+  const profileHref = profileUsername ? `/profile/${profileUsername}` : null
+  const nameBlock = (
+    <div className="margo-post-card__header-identity" data-testid="feed-header-identity">
+      <UsernameTag
+        authorUid={post.authorUid || null}
+        fallbackName={post.username}
+        linkProfile={false}
+        layout="stacked"
+        feedCardHeader={feedCardHeader}
+      />
+    </div>
+  )
+  return profileHref ? (
+    <PendingNavLink
+      href={profileHref}
+      indicator="subtle"
+      ringSize={22}
+      onClick={(e) => e.stopPropagation()}
+      aria-label={`View profile @${profileUsername}`}
+      className="margo-post-card__header-identity-link"
+    >
+      {nameBlock}
+    </PendingNavLink>
+  ) : (
+    nameBlock
+  )
+}
+
+function PostCardHeaderLegacy({
+  post,
+  authorProfile,
+  avatarUrl,
+  onAvatarError,
+  isTier1,
+  isCompact,
+  avatarPx,
+  storyRing,
+}: {
+  post: Post
+  authorProfile: AuthorProfile | null
+  avatarUrl: string | null
+  onAvatarError: () => void
+  isTier1: boolean
+  isCompact: boolean
+  avatarPx: string
+  storyRing: StoryRingCtx
+}) {
+  const { profileUsername, profileHref, authorProfileId, storyAuthor, displayLabel } =
+    buildPostHeaderContext(post, authorProfile, storyRing)
+  const timeNode = post.timestamp != null ? (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+      <span style={{ color: 'var(--text-muted)', fontSize: `var(${FEED_TYPE.date})` }} aria-hidden>·</span>
+      <RelativeTime
+        date={post.timestamp}
+        variant="long"
+        style={{
+          fontFamily: UI_FONT,
+          fontSize: `var(${FEED_TYPE.date})`,
+          color: 'var(--text-muted)',
+          lineHeight: 1.3,
+          whiteSpace: 'nowrap',
+        }}
+      />
+    </span>
+  ) : null
+  const avatarInitial = post.username ? post.username.charAt(0).toUpperCase() : (isTier1 ? 'M' : 'ML')
+  const avatarInner = avatarUrl ? (
+    <img src={avatarUrl} alt="" onError={onAvatarError} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+  ) : (
+    <span style={{
+      fontFamily: UI_FONT,
+      fontSize: `var(${FEED_TYPE.handle})`,
+      fontWeight: 700,
+      color: isTier1 ? 'var(--bg)' : 'var(--gold)',
+    }}>
+      {avatarInitial}
+    </span>
+  )
+  const avatarShellStyle: React.CSSProperties = {
+    width: avatarPx,
+    height: avatarPx,
+    borderRadius: '50%',
+    flexShrink: 0,
+    background: avatarUrl
+      ? 'none'
+      : isTier1 ? 'var(--gold)' : 'linear-gradient(135deg, rgba(232,197,71,0.3), rgba(232,197,71,0.1))',
+    border: avatarUrl
+      ? '1px solid rgba(255,255,255,0.08)'
+      : isTier1 ? 'none' : '1px solid rgba(232,197,71,0.2)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  }
+  const avatarPxNum = isCompact ? 32 : 36
+  const avatarCore = storyAuthor ? (
+    <StoryAvatarRing size={avatarPxNum} hasUnseen={storyAuthor.hasUnseen}>
+      {avatarInner}
+    </StoryAvatarRing>
+  ) : (
+    <div style={avatarShellStyle}>{avatarInner}</div>
+  )
+  const avatarControl = storyAuthor && storyRing && authorProfileId ? (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation()
+        storyRing.openStory(authorProfileId)
+      }}
+      onPointerDown={() => storyRing.warmStory(authorProfileId)}
+      aria-label={
+        storyAuthor.hasUnseen
+          ? `View ${displayLabel}'s new Story`
+          : `View ${displayLabel}'s Story`
+      }
+      title="View Story"
+      style={{
+        border: 'none',
+        background: 'none',
+        padding: 0,
+        margin: 0,
+        cursor: 'pointer',
+        flexShrink: 0,
+        WebkitTapHighlightColor: 'transparent',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: 'var(--margo-touch-min)',
+        minHeight: 'var(--margo-touch-min)',
+        position: 'relative',
+      }}
+    >
+      {avatarCore}
+      <span aria-hidden style={{
+        position: 'absolute',
+        right: storyAuthor.hasUnseen ? 2 : 4,
+        bottom: storyAuthor.hasUnseen ? 2 : 4,
+        width: 8,
+        height: 8,
+        borderRadius: '50%',
+        background: 'var(--gold)',
+        border: '1.5px solid var(--bg)',
+        boxShadow: '0 0 6px rgba(232,197,71,0.55)',
+      }} />
+    </button>
+  ) : profileHref ? (
+    <PendingNavLink
+      href={profileHref}
+      indicator="subtle"
+      ringSize={20}
+      onClick={(e) => e.stopPropagation()}
+      aria-label={`View profile @${profileUsername}`}
+      style={{
+        flexShrink: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: 'var(--margo-touch-min)',
+        minHeight: 'var(--margo-touch-min)',
+        WebkitTapHighlightColor: 'transparent',
+        borderRadius: '50%',
+      }}
+    >
+      {avatarCore}
+    </PendingNavLink>
+  ) : (
+    avatarCore
+  )
+  const nameBlock = (
+    <div style={{ minWidth: 0, flex: 1 }}>
+      <UsernameTag
+        authorUid={post.authorUid || null}
+        fallbackName={post.username}
+        linkProfile={false}
+        layout="stacked"
+        size={isCompact ? 'compact' : 'default'}
+        metaAfterHandle={timeNode}
+      />
+    </div>
+  )
+  return (
+    <>
+      <div style={{ gridRow: '1 / span 2' }}>{avatarControl}</div>
+      <div style={{ minWidth: 0, gridColumn: 2 }}>
+        {profileHref ? (
+          <PendingNavLink
+            href={profileHref}
+            indicator="subtle"
+            ringSize={22}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`View profile @${profileUsername}`}
+            style={{
+              minWidth: 0,
+              textDecoration: 'none',
+              color: 'inherit',
+              WebkitTapHighlightColor: 'transparent',
+              display: 'block',
+              borderRadius: '8px',
+            }}
+          >
+            {nameBlock}
+          </PendingNavLink>
+        ) : (
+          nameBlock
+        )}
+      </div>
+    </>
   )
 }
 
@@ -222,6 +556,7 @@ export function PostCard({
   // row collapses to a dense one-liner; expand renders the compact card in place
   const isRow = variant === 'row'
   const isCompact = variant === 'compact' || (isRow && rowExpanded)
+  const usePortraitHeader = variant === 'feed' && !isCompact
   const avatarPx = isCompact ? '32px' : '36px'
 
   const lines = resolveMomentLines(post)
@@ -396,6 +731,7 @@ export function PostCard({
         isTier1 ? 'margo-post-card--tier1' : '',
         externalCardLayout ? 'margo-post-card--external' : '',
         highlightShared ? 'margo-feed-post--shared' : '',
+        usePortraitHeader ? 'margo-post-card--portrait-feed' : '',
         suggestionsOpen ? 'margo-post-card--lb-panel-open' : '',
       ].filter(Boolean).join(' ')}
       data-lb-panel-open={suggestionsOpen ? '1' : undefined}
@@ -430,175 +766,36 @@ export function PostCard({
           </span>
         </button>
       )}
-      <div className="margo-post-card__header">
-        {(() => {
-          const profileUsername = (authorProfile?.username || post.username || '').replace(/^@/, '')
-          const profileHref = profileUsername ? `/profile/${profileUsername}` : null
-          const authorProfileId = post.authorUid || null
-          const storyAuthor = authorProfileId && storyRing?.hasActiveStory(authorProfileId)
-            ? storyRing.getStoryAuthor(authorProfileId)
-            : null
-          const displayLabel = storyAuthor?.displayName || authorProfile?.displayName || post.username || 'profile'
-          const timeNode = post.timestamp != null ? (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ color: 'var(--text-muted)', fontSize: `var(${FEED_TYPE.date})` }} aria-hidden>·</span>
-              <RelativeTime
-                date={post.timestamp}
-                variant="long"
-                style={{
-                  fontFamily: UI_FONT,
-                  fontSize: `var(${FEED_TYPE.date})`,
-                  color: 'var(--text-muted)',
-                  lineHeight: 1.3,
-                  whiteSpace: 'nowrap',
-                }}
-              />
-            </span>
-          ) : null
-          const avatarInitial = post.username ? post.username.charAt(0).toUpperCase() : (isTier1 ? 'M' : 'ML')
-          const avatarInner = avatarUrl ? (
-            <img src={avatarUrl} alt="" onError={() => setAvatarBroken(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : (
-            <span style={{
-              fontFamily: UI_FONT,
-              fontSize: `var(${FEED_TYPE.handle})`,
-              fontWeight: 700,
-              color: isTier1 ? 'var(--bg)' : 'var(--gold)',
-            }}>
-              {avatarInitial}
-            </span>
-          )
-          const avatarShellStyle: React.CSSProperties = {
-            width: avatarPx,
-            height: avatarPx,
-            borderRadius: '50%',
-            flexShrink: 0,
-            background: avatarUrl
-              ? 'none'
-              : isTier1 ? 'var(--gold)' : 'linear-gradient(135deg, rgba(232,197,71,0.3), rgba(232,197,71,0.1))',
-            border: avatarUrl
-              ? '1px solid rgba(255,255,255,0.08)'
-              : isTier1 ? 'none' : '1px solid rgba(232,197,71,0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden',
-          }
-          const avatarPxNum = isCompact ? 32 : 36
-          const avatarCore = storyAuthor ? (
-            <StoryAvatarRing size={avatarPxNum} hasUnseen={storyAuthor.hasUnseen}>
-              {avatarInner}
-            </StoryAvatarRing>
-          ) : (
-            <div style={avatarShellStyle}>{avatarInner}</div>
-          )
-          const avatarControl = storyAuthor && storyRing && authorProfileId ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                storyRing.openStory(authorProfileId)
-              }}
-              onPointerDown={() => storyRing.warmStory(authorProfileId)}
-              aria-label={
-                storyAuthor.hasUnseen
-                  ? `View ${displayLabel}'s new Story`
-                  : `View ${displayLabel}'s Story`
-              }
-              title="View Story"
-              style={{
-                border: 'none',
-                background: 'none',
-                padding: 0,
-                margin: 0,
-                cursor: 'pointer',
-                flexShrink: 0,
-                WebkitTapHighlightColor: 'transparent',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minWidth: 'var(--margo-touch-min)',
-                minHeight: 'var(--margo-touch-min)',
-                position: 'relative',
-              }}
-            >
-              {avatarCore}
-              <span aria-hidden style={{
-                position: 'absolute',
-                right: storyAuthor.hasUnseen ? 2 : 4,
-                bottom: storyAuthor.hasUnseen ? 2 : 4,
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: 'var(--gold)',
-                border: '1.5px solid var(--bg)',
-                boxShadow: '0 0 6px rgba(232,197,71,0.55)',
-              }} />
-            </button>
-          ) : profileHref ? (
-            <PendingNavLink
-              href={profileHref}
-              indicator="subtle"
-              ringSize={20}
-              onClick={(e) => e.stopPropagation()}
-              aria-label={`View profile @${profileUsername}`}
-              style={{
-                flexShrink: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minWidth: 'var(--margo-touch-min)',
-                minHeight: 'var(--margo-touch-min)',
-                WebkitTapHighlightColor: 'transparent',
-                borderRadius: '50%',
-              }}
-            >
-              {avatarCore}
-            </PendingNavLink>
-          ) : (
-            avatarCore
-          )
-          const nameBlock = (
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <UsernameTag
-                authorUid={post.authorUid || null}
-                fallbackName={post.username}
-                linkProfile={false}
-                layout="stacked"
-                size={isCompact ? 'compact' : 'default'}
-                metaAfterHandle={timeNode}
-              />
-            </div>
-          )
-          return (
-            <>
-              <div style={{ gridRow: '1 / span 2' }}>{avatarControl}</div>
-              <div style={{ minWidth: 0, gridColumn: 2 }}>
-                {profileHref ? (
-                  <PendingNavLink
-                    href={profileHref}
-                    indicator="subtle"
-                    ringSize={22}
-                    onClick={(e) => e.stopPropagation()}
-                    aria-label={`View profile @${profileUsername}`}
-                    style={{
-                      minWidth: 0,
-                      textDecoration: 'none',
-                      color: 'inherit',
-                      WebkitTapHighlightColor: 'transparent',
-                      display: 'block',
-                      borderRadius: '8px',
-                    }}
-                  >
-                    {nameBlock}
-                  </PendingNavLink>
-                ) : (
-                  nameBlock
-                )}
-              </div>
-            </>
-          )
-        })()}
+      {usePortraitHeader ? (
+        <PostCardPortraitHeader
+          post={post}
+          authorProfile={authorProfile}
+          avatarUrl={avatarUrl}
+          onAvatarError={() => setAvatarBroken(true)}
+          isTier1={isTier1}
+          storyRing={storyRing}
+        />
+      ) : null}
+      <div className={usePortraitHeader ? 'margo-post-card__header margo-post-card__header--portrait' : 'margo-post-card__header'}>
+        {usePortraitHeader ? (
+          <PostCardHeaderIdentity
+            post={post}
+            authorProfile={authorProfile}
+            feedCardHeader
+            portraitLayout
+          />
+        ) : (
+          <PostCardHeaderLegacy
+            post={post}
+            authorProfile={authorProfile}
+            avatarUrl={avatarUrl}
+            onAvatarError={() => setAvatarBroken(true)}
+            isTier1={isTier1}
+            isCompact={isCompact}
+            avatarPx={avatarPx}
+            storyRing={storyRing}
+          />
+        )}
         {label && !isRow ? (
           <button
             type="button"
@@ -644,7 +841,7 @@ export function PostCard({
         data-delete-inline-host={post.id}
         data-no-card-nav
       />
-      <PostMomentBody post={post} atmosphereRooms={atmosphereRooms} />
+      <PostMomentBody post={post} atmosphereRooms={atmosphereRooms} showSharedTime={usePortraitHeader} />
 
       {lyricBackAllowed && !threadDetail ? (
         <PostCardSuggestedReply

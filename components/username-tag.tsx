@@ -21,6 +21,8 @@ export interface AuthorMetaProps {
   metaAfterHandle?: ReactNode
   /** stacked = name on first line, @handle · meta on second (PostCard). */
   layout?: 'inline' | 'stacked'
+  /** Feed post portrait header — FEED_TYPE tokens, tight name/handle stack. */
+  feedCardHeader?: boolean
 }
 
 /**
@@ -35,6 +37,7 @@ export function AuthorMeta({
   handlePrefix = '',
   metaAfterHandle,
   layout = 'inline',
+  feedCardHeader = false,
 }: AuthorMetaProps) {
   const profile = useAuthorProfile(authorUid)
 
@@ -60,7 +63,11 @@ export function AuthorMeta({
   const handleLabel = `${handlePrefix}${username ? '@' + username : ''}`
 
   const nameRow = (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
+    <span
+      className={feedCardHeader ? 'margo-post-card__header-name-row' : undefined}
+      data-testid={feedCardHeader ? 'feed-header-name-line' : undefined}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', minWidth: 0 }}
+    >
       <span
         style={{
           fontFamily: UI_FONT,
@@ -74,6 +81,10 @@ export function AuthorMeta({
       >
         {displayName}
       </span>
+      {feedCardHeader ? (
+        // Future: 18px round role badge (Artist / Producer / Label) — empty slot adds no width today.
+        <span className="margo-feed-author-role-slot" data-testid="feed-author-role-slot" aria-hidden />
+      ) : null}
       {profile && (
         <ArtistBadge isArtist={profile.isArtist} artistStatus={profile.artistStatus} size={size === 'compact' ? 11 : 13} />
       )}
