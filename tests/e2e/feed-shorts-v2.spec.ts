@@ -68,29 +68,61 @@ async function assertSlideChromeInsideFrame(page: import('@playwright/test').Pag
     const frame = el.querySelector('.margo-feed-shorts-slide__frame')
     if (!frame) return { ok: false, reason: 'no frame' }
     const fr = frame.getBoundingClientRect()
-    const selectors = [
-      '.margo-feed-shorts-slide__chrome-bottom',
-      '.margo-feed-shorts-slide__progress',
+    const mustHaveSelectors = [
       '.margo-feed-shorts-slide__mute',
-      '.margo-shorts-canvas',
+      '.margo-feed-shorts-slide__progress',
       '.margo-feed-shorts-slide__meta-art',
+      '.margo-feed-shorts-slide__song',
+      '.margo-feed-shorts-slide__artist',
+      '.margo-shorts-canvas',
     ]
-    for (const sel of selectors) {
-      const nodes = frame.querySelectorAll(sel)
-      nodes.forEach((node) => {
-        const r = node.getBoundingClientRect()
-        if (r.width === 0 && r.height === 0) return
-        if (r.left < fr.left - 1 || r.right > fr.right + 1) {
-          throw new Error(`overflow-x ${sel}: ${JSON.stringify({ fr, r })}`)
-        }
-        if (r.top < fr.top - 1 || r.bottom > fr.bottom + 1) {
-          throw new Error(`overflow-y ${sel}: ${JSON.stringify({ fr, r })}`)
-        }
-      })
+    for (const sel of mustHaveSelectors) {
+      if (!frame.querySelector(sel)) {
+        throw new Error(`missing ${sel} inside frame`)
+      }
     }
+    const skipTags = new Set(['SCRIPT', 'STYLE'])
+    const nodes = frame.querySelectorAll('*')
+    nodes.forEach((node) => {
+      if (!(node instanceof HTMLElement)) return
+      if (skipTags.has(node.tagName)) return
+      const r = node.getBoundingClientRect()
+      if (r.width < 0.5 && r.height < 0.5) return
+      const label =
+        node.className && typeof node.className === 'string'
+          ? node.className.split(/\s+/).slice(0, 2).join('.')
+          : node.tagName
+      if (r.left < fr.left - 1 || r.right > fr.right + 1) {
+        throw new Error(`overflow-x ${label}: ${JSON.stringify({ fr, r })}`)
+      }
+      if (r.top < fr.top - 1 || r.bottom > fr.bottom + 1) {
+        throw new Error(`overflow-y ${label}: ${JSON.stringify({ fr, r })}`)
+      }
+    })
     return { ok: true, frame: { w: fr.width, h: fr.height } }
   })
   expect(box.ok).toBe(true)
+}
+
+const CARD_CONTAINMENT_VIEWPORTS = [
+  { w: 360, h: 640 },
+  { w: 390, h: 844 },
+  { w: 430, h: 932 },
+  { w: 834, h: 900 },
+] as const
+
+for (const { w, h } of CARD_CONTAINMENT_VIEWPORTS) {
+  test(`real-style Short: all frame descendants inside card @${w}x${h}`, async ({ page }) => {
+    test.skip(!BASE.includes('vercel.app'), 'fixture clips with cover art required')
+    await page.setViewportSize({ width: w, height: h })
+    await openShortsTab(page, w)
+    await page.waitForTimeout(1200)
+    const frame = page.locator('[data-shorts-active="1"] .margo-feed-shorts-slide__frame')
+    if ((await frame.count()) === 0) test.skip()
+    await expect(frame.locator('.margo-feed-shorts-slide__meta-art')).toBeVisible({ timeout: 15000 })
+    const activeIdx = Number((await page.locator('[data-shorts-active="1"]').getAttribute('data-shorts-index')) ?? '0')
+    await assertSlideChromeInsideFrame(page, activeIdx)
+  })
 }
 
 for (const width of WIDTHS) {

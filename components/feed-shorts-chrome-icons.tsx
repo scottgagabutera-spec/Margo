@@ -2,24 +2,37 @@
 
 export function ShortsMuteIcon({
   muted,
-  size = 20,
+  size = 22,
   color = 'currentColor',
 }: {
   muted: boolean
   size?: number
   color?: string
 }) {
-  const c = color
+  const stroke = color
+  const sw = 1.75
   return muted ? (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M11 5L6 9H3v6h3l5 4V5z" stroke={c} strokeWidth="1.75" strokeLinejoin="round" />
-      <path d="M16 9l5 5M21 9l-5 5" stroke={c} strokeWidth="1.75" strokeLinecap="round" />
+      <path
+        d="M11 5L6 9H3v6h3l5 4V5z"
+        stroke={stroke}
+        strokeWidth={sw}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <path d="M16 9l5 5M21 9l-5 5" stroke={stroke} strokeWidth={sw} strokeLinecap="round" />
     </svg>
   ) : (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M11 5L6 9H3v6h3l5 4V5z" stroke={c} strokeWidth="1.75" strokeLinejoin="round" />
-      <path d="M15.5 8.5a4.5 4.5 0 010 7" stroke={c} strokeWidth="1.75" strokeLinecap="round" />
-      <path d="M18 6a7.5 7.5 0 010 12" stroke={c} strokeWidth="1.75" strokeLinecap="round" />
+      <path
+        d="M11 5L6 9H3v6h3l5 4V5z"
+        stroke={stroke}
+        strokeWidth={sw}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <path d="M15.5 8.5a4.5 4.5 0 010 7" stroke={stroke} strokeWidth={sw} strokeLinecap="round" />
+      <path d="M18 6a7.5 7.5 0 010 12" stroke={stroke} strokeWidth={sw} strokeLinecap="round" />
     </svg>
   )
 }

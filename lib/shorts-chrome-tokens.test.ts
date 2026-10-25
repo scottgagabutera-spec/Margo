@@ -22,11 +22,10 @@ describe('shorts chrome contrast', () => {
     const reports = auditShortsLookContrasts()
     assert.ok(reports.length >= 5)
     for (const row of reports) {
-      assert.ok(
-        row.titleRatio >= 4.5,
-        `${row.lookKey} title ${row.titleRatio}`,
-      )
+      assert.ok(row.titleRatio >= 4.5, `${row.lookKey} title ${row.titleRatio}`)
       assert.ok(row.iconRatio >= 3, `${row.lookKey} icon ${row.iconRatio}`)
+      assert.ok(row.iconOnChipRatio >= 3, `${row.lookKey} iconOnChip ${row.iconOnChipRatio}`)
+      assert.ok(row.progressFillRatio >= 3, `${row.lookKey} progress ${row.progressFillRatio}`)
     }
   })
 })

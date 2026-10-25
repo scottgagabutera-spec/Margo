@@ -84,10 +84,50 @@ export function contrastRatio(fgHex: string, bgHex: string): number {
   return (lighter + 0.05) / (darker + 0.05)
 }
 
-function pickAccentOnBackground(bg: string, ink: string): string {
-  if (contrastRatio(BRAND_GOLD, bg) >= 3) return BRAND_GOLD
+function pickReadableInk(bg: string, ink: string): string {
   if (contrastRatio(ink, bg) >= 3) return ink
+  if (contrastRatio(BRAND_GOLD, bg) >= 3) return BRAND_GOLD
   return relativeLuminance(bg) > 0.55 ? '#07060A' : '#F4F1ED'
+}
+
+function pickAccentOnBackground(bg: string, ink: string): string {
+  return pickReadableInk(bg, ink)
+}
+
+function hexFromRgb(r: number, g: number, b: number): string {
+  const h = (n: number) => n.toString(16).padStart(2, '0')
+  return `#${h(r)}${h(g)}${h(b)}`
+}
+
+function parseRgba(input: string): { r: number; g: number; b: number; a: number } | null {
+  const m = input.trim().match(/^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+))?\s*\)$/)
+  if (!m) return null
+  return {
+    r: Math.round(Number(m[1])),
+    g: Math.round(Number(m[2])),
+    b: Math.round(Number(m[3])),
+    a: m[4] === undefined ? 1 : Number(m[4]),
+  }
+}
+
+/** Alpha-over blend of an rgba layer on a hex background (for contrast audits). */
+export function compositeColorOverHex(fg: string, bgHex: string): string {
+  const bg = parseHexColor(bgHex)
+  if (!bg) return bgHex
+  const layer = parseRgba(fg)
+  if (!layer) return fg.startsWith('#') ? fg : bgHex
+  const a = layer.a
+  const r = Math.round(layer.r * a + bg.r * (1 - a))
+  const g = Math.round(layer.g * a + bg.g * (1 - a))
+  const b = Math.round(layer.b * a + bg.b * (1 - a))
+  return hexFromRgb(r, g, b)
+}
+
+function muteChipBackground(ink: string, onDark: boolean): string {
+  const rgb = parseHexColor(ink)
+  if (!rgb) return onDark ? 'rgba(255,255,255,0.14)' : 'rgba(7,6,10,0.32)'
+  const alpha = onDark ? 0.16 : 0.28
+  return `rgba(${rgb.r},${rgb.g},${rgb.b},${alpha})`
 }
 
 /** Readable chrome colours from the same paint as the lyric stage. */
@@ -96,16 +136,26 @@ export function getShortsChromeTokens(
   atmosphereId: AtmosphereId,
 ): ShortsChromeTokens {
   const paint = resolveShortsPaint(stageThemeId, atmosphereId)
-  const accent = pickAccentOnBackground(paint.bg, paint.ink)
   const onDark = relativeLuminance(paint.bg) < 0.35
+  let icon = pickReadableInk(paint.bg, paint.ink)
+  const accent = pickAccentOnBackground(paint.bg, paint.ink)
+  let muteChipBg = muteChipBackground(paint.ink, onDark)
+  let chipEffective = compositeColorOverHex(muteChipBg, paint.bg)
+  if (contrastRatio(icon, chipEffective) < 3) {
+    muteChipBg = onDark ? 'rgba(255,255,255,0.22)' : 'rgba(7,6,10,0.42)'
+    chipEffective = compositeColorOverHex(muteChipBg, paint.bg)
+  }
+  if (contrastRatio(icon, chipEffective) < 3) {
+    icon = onDark ? '#F4F1ED' : '#07060A'
+  }
   return {
     title: paint.ink,
     artist: paint.inkMuted,
-    icon: accent,
-    progressTrack: onDark ? 'rgba(255,255,255,0.22)' : 'rgba(7,6,10,0.18)',
-    progressFill: accent,
-    muteChipBg: onDark ? 'rgba(255,255,255,0.12)' : 'rgba(7,6,10,0.42)',
-    muteChipBorder: onDark ? 'rgba(255,255,255,0.18)' : 'rgba(7,6,10,0.12)',
+    icon,
+    progressTrack: onDark ? 'rgba(255,255,255,0.22)' : 'rgba(7,6,10,0.22)',
+    progressFill: icon,
+    muteChipBg,
+    muteChipBorder: onDark ? 'rgba(255,255,255,0.2)' : 'rgba(7,6,10,0.18)',
     signupInk: onDark ? '#F4F1ED' : '#07060A',
     signupBg: onDark ? 'rgba(255,255,255,0.14)' : 'rgba(7,6,10,0.08)',
     signupBorder: accent,
@@ -117,6 +167,8 @@ export type ShortsLookContrastReport = {
   lookKey: string
   titleRatio: number
   iconRatio: number
+  iconOnChipRatio: number
+  progressFillRatio: number
 }
 
 /** Every registry look + mode samples must meet WCAG-ish floors. */
@@ -138,6 +190,11 @@ export function auditShortsLookContrasts(): ShortsLookContrastReport[] {
       lookKey: key,
       titleRatio: contrastRatio(tokens.title, paint.bg),
       iconRatio: contrastRatio(tokens.icon, paint.bg),
+      iconOnChipRatio: contrastRatio(
+        tokens.icon,
+        compositeColorOverHex(tokens.muteChipBg, paint.bg),
+      ),
+      progressFillRatio: contrastRatio(tokens.progressFill, paint.bg),
     })
   }
   return reports

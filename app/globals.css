@@ -2888,11 +2888,62 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 @media (max-width: 639px) {
   .margo-feed-shorts-slide__frame {
+    position: relative;
+    flex: 0 0 auto;
+    width: min(100%, 320px);
+    max-width: min(100%, 320px);
+    aspect-ratio: 9 / 16;
     overflow: hidden;
     border-radius: 18px;
+    align-self: center;
+  }
+  .margo-feed-shorts-slide__frame > div {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .margo-feed-shorts-slide__frame .margo-shorts-canvas,
+  .margo-feed-shorts-slide__frame [aria-label='Shorts preview, 9:16'] {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    border-radius: inherit;
+  }
+  .margo-feed-shorts-slide__chrome-bottom {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 0 12px 12px;
+    box-sizing: border-box;
+  }
+  .margo-feed-shorts-slide__progress {
+    width: 100%;
+    margin: 0;
+  }
+  .margo-feed-shorts-slide__mute {
+    top: 12px;
+    right: 12px;
+  }
+  .margo-feed-shorts-slide__meta {
+    max-width: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 8px 0 0;
+  }
+  .margo-feed-shorts-slide__signup-cta {
+    width: 100%;
+    margin: 0 0 10px;
+  }
+  .margo-feed-shorts-slide__song,
+  .margo-feed-shorts-slide__artist {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
   }
   .margo-feed-shorts-slide__meta-row {
     display: flex;

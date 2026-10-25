@@ -162,7 +162,7 @@ function FeedShortsSlide({
         <MomentExportPreviewFrame
           shapeId="vertical"
           framed={false}
-          fillParent={desktopLayout}
+          fillParent
           style={{ height: '100%', width: '100%' }}
         >
           <StageMomentCard
