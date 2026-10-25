@@ -3,6 +3,8 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { MargoPhotoSource } from '@/components/margo-photo-source'
+import { PortraitAvatarCropSheet } from '@/components/portrait-avatar-crop-sheet'
+import { MargoPortraitAvatar } from '@/components/margo-portrait-avatar'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 import { TYPE, UI_FONT } from '@/lib/fonts'
@@ -29,6 +31,8 @@ export function AvatarUpload({ currentAvatarUrl, displayName, onUploaded, onBefo
   const [localPreview, setLocalPreview] = useState<string | null>(null)
   const [imgFailed, setImgFailed] = useState(false)
   const [sourceOpen, setSourceOpen] = useState(false)
+  const [cropOpen, setCropOpen] = useState(false)
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
 
   const previewUrl = localPreview ?? currentAvatarUrl
   const showPhoto = !!previewUrl && !imgFailed
@@ -36,8 +40,6 @@ export function AvatarUpload({ currentAvatarUrl, displayName, onUploaded, onBefo
   useEffect(() => {
     setImgFailed(false)
   }, [previewUrl])
-
-  const initials = (displayName || '??').slice(0, 2).toUpperCase()
 
   const uploadFile = async (file: File) => {
     if (!user) return
@@ -88,28 +90,14 @@ export function AvatarUpload({ currentAvatarUrl, displayName, onUploaded, onBefo
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-      <div
-        style={{
-          width: '88px', height: '88px', borderRadius: '50%', flexShrink: 0,
-          background: showPhoto ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          overflow: 'hidden', position: 'relative',
-          border: '1px solid var(--border)',
-        }}
-      >
-        {showPhoto ? (
-          <img
-            src={previewUrl!}
-            alt={displayName}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            onError={() => setImgFailed(true)}
-          />
-        ) : (
-          <span style={{ fontFamily: font, fontSize: TYPE.displayName, fontWeight: 600, color: bg }}>
-            {initials}
-          </span>
-        )}
-      </div>
+      <MargoPortraitAvatar
+        size="profile"
+        imageUrl={showPhoto ? previewUrl : null}
+        onImageError={() => setImgFailed(true)}
+        fallbackInitial={(displayName || '??').charAt(0).toUpperCase()}
+        brandMark={false}
+        separationRingColor="var(--bg)"
+      />
 
       {error && (
         <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', textAlign: 'center' }}>
@@ -142,7 +130,19 @@ export function AvatarUpload({ currentAvatarUrl, displayName, onUploaded, onBefo
         open={sourceOpen}
         onOpenChange={setSourceOpen}
         title="Profile photo"
-        onFile={(file) => void uploadFile(file)}
+        onFile={(file) => {
+          setPendingFile(file)
+          setCropOpen(true)
+        }}
+      />
+      <PortraitAvatarCropSheet
+        open={cropOpen}
+        onOpenChange={setCropOpen}
+        file={pendingFile}
+        onConfirm={(cropped) => {
+          setPendingFile(null)
+          void uploadFile(cropped)
+        }}
       />
     </div>
   )
