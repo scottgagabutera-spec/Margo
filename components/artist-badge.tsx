@@ -1,18 +1,8 @@
 'use client'
 
 /**
- * ArtistBadge — the single source of truth for what a verified Margo
- * artist looks like, wherever their identity renders: Feed posts (via
- * UsernameTag), the profile page, the Artists directory, lyric-back
- * attribution, anywhere else a name shows up.
- *
- * Visibility rule: a badge is a public claim of good standing, so it
- * only renders for artist_status 'active' or 'warned' — a private
- * warning between Margo and the artist isn't something the public
- * needs to see reflected in their badge. 'frozen' and 'removed' hide
- * the badge entirely, since displaying it would misrepresent a
- * suspended artist as being in full standing. Rows with no status set
- * yet (legacy / pre-moderation-system) default to visible.
+ * ArtistBadge — verified-artist affordance. Feed uses a minimal inline seal;
+ * profile and feed portrait headers use a single uppercase role line below @handle.
  */
 
 export type ArtistStatus = 'active' | 'warned' | 'frozen' | 'removed' | null | undefined
@@ -27,11 +17,10 @@ interface ArtistBadgeProps {
   isArtist: boolean
   artistStatus?: ArtistStatus
   size?: number
-  // When true, renders the full labeled pill ("Verified Artist") used on
-  // the profile page. When false (default), renders just the compact
-  // seal icon — meant to sit inline next to a name in tight spaces
-  // like Feed cards, the Artists grid, or lyric-back attribution.
+  /** @deprecated Use presentation="line" on profile instead of label pill. */
   label?: boolean
+  /** seal = compact check (legacy inline). line = premium text under @handle. */
+  presentation?: 'seal' | 'line'
 }
 
 function VerifiedSeal({ size }: { size: number }) {
@@ -60,25 +49,22 @@ function VerifiedSeal({ size }: { size: number }) {
   )
 }
 
-export function ArtistBadge({ isArtist, artistStatus, size = 14, label = false }: ArtistBadgeProps) {
+export function ArtistBadge({
+  isArtist,
+  artistStatus,
+  size = 14,
+  label = false,
+  presentation = 'seal',
+}: ArtistBadgeProps) {
   if (!shouldShowArtistBadge(isArtist, artistStatus)) return null
 
-  if (!label) {
-    return <VerifiedSeal size={size} />
+  if (presentation === 'line' || label) {
+    return (
+      <span className="margo-role-line" data-testid="margo-role-line">
+        Artist
+      </span>
+    )
   }
 
-  return (
-    <span
-      style={{
-        display: 'inline-flex', alignItems: 'center', gap: '6px',
-        fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
-        letterSpacing: '1.5px', textTransform: 'uppercase', padding: '4px 10px 4px 8px',
-        borderRadius: '50px', background: 'rgba(232,197,71,0.12)',
-        border: '1px solid var(--gold-border)', color: 'var(--gold)',
-      }}
-    >
-      <VerifiedSeal size={size} />
-      Verified Artist
-    </span>
-  )
+  return <VerifiedSeal size={size} />
 }

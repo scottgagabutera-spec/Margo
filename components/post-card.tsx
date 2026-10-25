@@ -799,7 +799,10 @@ export function PostCard({
         {label && !isRow ? (
           <button
             type="button"
-            className="margo-post-card__mood"
+            className={[
+              'margo-post-card__mood',
+              usePortraitHeader ? 'margo-post-card__mood--word' : '',
+            ].filter(Boolean).join(' ')}
             data-no-card-nav
             aria-label={`Vibe: ${label}`}
             onClick={(e) => {
@@ -807,7 +810,9 @@ export function PostCard({
               onSelectVibe?.(emotion.toUpperCase())
             }}
           >
-            <FeedVibeGlyph id={FEED_HUE_GLYPH[vibeTheme.hue]} size={12} />
+            {!usePortraitHeader ? (
+              <FeedVibeGlyph id={FEED_HUE_GLYPH[vibeTheme.hue]} size={12} />
+            ) : null}
             <span className="margo-post-card__mood-label">{label}</span>
           </button>
         ) : null}

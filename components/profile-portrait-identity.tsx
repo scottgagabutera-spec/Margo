@@ -60,13 +60,20 @@ export function ProfilePortraitIdentity({
         <div className="margo-profile-identity__name-row">
           <h1 className="margo-profile-identity__name">{displayName}</h1>
           <span className="margo-feed-author-role-slot" data-testid="profile-author-role-slot" aria-hidden />
-          <ArtistBadge isArtist={!!isArtist} artistStatus={artistStatus} size={13} label />
           {isPrivate ? (
             <span className="margo-profile-identity__private-pill">Private</span>
           ) : null}
         </div>
         <p className="margo-profile-identity__handle">@{username}</p>
-        <span className="margo-profile-role-third-slot" data-testid="profile-role-third-slot" aria-hidden />
+        <span className="margo-profile-role-third-slot" data-testid="profile-role-third-slot">
+          {brandMark ? (
+            <span className="margo-role-line margo-role-line--brand" data-testid="margo-role-line">
+              Music label
+            </span>
+          ) : (
+            <ArtistBadge isArtist={!!isArtist} artistStatus={artistStatus} presentation="line" />
+          )}
+        </span>
       </div>
     </div>
   )

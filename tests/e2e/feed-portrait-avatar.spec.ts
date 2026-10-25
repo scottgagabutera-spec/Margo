@@ -114,7 +114,6 @@ for (const width of [360, 390, 834]) {
       expect(layout.timeText.toLowerCase()).not.toContain('shared')
       expect(layout.timeText).not.toMatch(/^[A-Z][a-z]{2}\s+\d/)
       expect(layout.roleSlotWidth ?? 0).toBe(0)
-      expect(layout.thirdSlotWidth ?? 0).toBe(0)
     })
   })
 }

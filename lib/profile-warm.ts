@@ -28,6 +28,7 @@ export interface WarmProfileBundle {
   profile: WarmProfileRow
   followerCount: number
   followingCount: number
+  postsCount: number
   /** Present when peek RPC includes the viewer's follow row (authenticated). */
   viewerFollowStatus?: 'pending' | 'accepted' | null
   loadedAt: number
@@ -88,6 +89,7 @@ function bundleFromPeekPayload(payload: Record<string, unknown>): WarmProfileBun
     }),
     followerCount: Math.max(0, Number(payload.followerCount) || 0),
     followingCount: Math.max(0, Number(payload.followingCount) || 0),
+    postsCount: Math.max(0, Number(payload.postsCount) || 0),
     viewerFollowStatus: normalizeViewerFollowStatus(payload.viewerFollowStatus),
     loadedAt: Date.now(),
   }
@@ -110,7 +112,7 @@ export async function fetchProfilePeek(username: string): Promise<WarmProfileBun
 export async function fetchProfileBundle(username: string): Promise<WarmProfileBundle | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, display_name, is_artist, artist_status, bio, avatar_url, cover_url, signature_lyric, signature_song, signature_artist, signature_song_id, is_private, follow_lists_private, who_can_message, artist_links, followers_count, following_count')
+    .select('id, username, display_name, is_artist, artist_status, bio, avatar_url, cover_url, signature_lyric, signature_song, signature_artist, signature_song_id, is_private, follow_lists_private, who_can_message, artist_links, followers_count, following_count, posts_count')
     .eq('username', username)
     .maybeSingle()
 
@@ -119,6 +121,7 @@ export async function fetchProfileBundle(username: string): Promise<WarmProfileB
       profile: mapRow(data as Record<string, unknown>),
       followerCount: Math.max(0, Number(data.followers_count) || 0),
       followingCount: Math.max(0, Number(data.following_count) || 0),
+      postsCount: Math.max(0, Number(data.posts_count) || 0),
       loadedAt: Date.now(),
     }
   }
