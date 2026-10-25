@@ -4,25 +4,18 @@ function toMs(input: number | string | Date): number {
   return new Date(input).getTime()
 }
 
-function formatAbsoluteDate(thenMs: number, nowMs: number): string {
-  const then = new Date(thenMs)
-  const month = then.toLocaleString('en-US', { month: 'short' })
-  const day = then.getDate()
-  const thenYear = then.getFullYear()
-  const nowYear = new Date(nowMs).getFullYear()
-  if (thenYear === nowYear) return `${month} ${day}`
-  return `${month} ${day}, ${thenYear}`
-}
-
 const DAY_SEC = 86_400
 const WEEK_SEC = 7 * DAY_SEC
+const MONTH_SEC = 30 * DAY_SEC
+const YEAR_SEC = 365 * DAY_SEC
 
 function plural(n: number, one: string, many: string): string {
   return n === 1 ? one : many
 }
 
 /**
- * Feed post card muted line under lyric (e.g. "2 days ago", "Sep 24").
+ * Feed post card muted line under lyric — relative only (no calendar dates).
+ * Thresholds: &lt;7d days · &lt;30d weeks · &lt;365d months · else years.
  */
 export function formatSharedRelativeTime(
   input: number | string | Date,
@@ -30,6 +23,8 @@ export function formatSharedRelativeTime(
 ): string {
   const then = toMs(input)
   if (!Number.isFinite(then)) return ''
+
+  if (then > nowMs) return 'just now'
 
   const diffSec = Math.max(0, (nowMs - then) / 1000)
 
@@ -46,10 +41,19 @@ export function formatSharedRelativeTime(
     const d = Math.floor(diffSec / DAY_SEC)
     return `${d} ${plural(d, 'day', 'days')} ago`
   }
-  return formatAbsoluteDate(then, nowMs)
+  if (diffSec < MONTH_SEC) {
+    const w = Math.floor(diffSec / WEEK_SEC)
+    return `${w} ${plural(w, 'week', 'weeks')} ago`
+  }
+  if (diffSec < YEAR_SEC) {
+    const mo = Math.floor(diffSec / MONTH_SEC)
+    return `${mo} ${plural(mo, 'month', 'months')} ago`
+  }
+  const y = Math.floor(diffSec / YEAR_SEC)
+  return `${y} ${plural(y, 'year', 'years')} ago`
 }
 
-/** Full calendar label for title/tooltip on shared-time line. */
+/** Full calendar label for title/tooltip on posted-time line. */
 export function formatSharedTimeTitle(input: number | string | Date): string {
   const then = toMs(input)
   if (!Number.isFinite(then)) return ''

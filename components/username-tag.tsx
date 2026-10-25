@@ -44,24 +44,14 @@ export function AuthorMeta({
   const displayName = profile?.displayName || fallbackName || 'Margo Listener'
   const username = profile?.username
 
-  const nameSize = feedCardHeader
-    ? 'var(--feed-type-display-name)'
-    : size === 'compact'
-      ? '0.75rem'
-      : '0.82rem'
-  const handleSize = feedCardHeader
-    ? 'var(--feed-type-handle)'
-    : size === 'compact'
-      ? '0.6rem'
-      : '0.7rem'
-  const stackedLineHeight = feedCardHeader ? 1.2 : undefined
+  const nameSize = size === 'compact' ? '0.75rem' : '0.82rem'
+  const handleSize = size === 'compact' ? '0.6rem' : '0.7rem'
 
   const handleStyle: CSSProperties = {
     fontFamily: UI_FONT,
     fontSize: handleSize,
-    color: feedCardHeader ? 'var(--text-muted)' : 'var(--text-secondary)',
+    color: 'var(--text-secondary)',
     textDecoration: 'none',
-    lineHeight: stackedLineHeight,
     display: 'inline-flex',
     alignItems: 'center',
     minHeight: size === 'compact' || layout === 'stacked' ? undefined : 'var(--margo-touch-min)',
@@ -73,14 +63,17 @@ export function AuthorMeta({
   const handleLabel = `${handlePrefix}${username ? '@' + username : ''}`
 
   const nameRow = (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
+    <span
+      className={feedCardHeader ? 'margo-post-card__header-name-row' : undefined}
+      data-testid={feedCardHeader ? 'feed-header-name-line' : undefined}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', minWidth: 0 }}
+    >
       <span
         style={{
           fontFamily: UI_FONT,
           fontSize: nameSize,
           fontWeight: 600,
           color: 'var(--text)',
-          lineHeight: stackedLineHeight,
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',

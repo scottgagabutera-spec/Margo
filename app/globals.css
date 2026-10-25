@@ -703,7 +703,7 @@ html[data-margo-stage-idle] .margo-stage-zone {
 }
 .margo-post-card--portrait-feed {
   overflow: visible;
-  padding-top: var(--margo-post-card-pad);
+  padding-top: 12px;
 }
 .margo-feed-post-list > .margo-post-card--portrait-feed:first-child {
   margin-top: 10px;
@@ -792,11 +792,16 @@ html[data-margo-stage-idle] .margo-stage-zone {
   grid-template-rows: auto;
   column-gap: 8px;
   row-gap: 0;
-  align-items: center;
-  margin-top: -14px;
-  min-height: 66px;
-  padding-left: calc(12px + 52px + 10px);
+  align-items: start;
+  margin-top: -8px;
+  min-height: 0;
+  padding-left: calc(12px + 52px + 8px);
   margin-bottom: var(--margo-post-card-gap);
+}
+.margo-post-card__header--portrait .margo-post-card__mood,
+.margo-post-card__header--portrait .margo-post-card__header-tools {
+  align-self: start;
+  margin-top: -4px;
 }
 .margo-feed-author-role-slot {
   display: inline-block;
@@ -831,12 +836,10 @@ html[data-margo-stage-idle] .margo-stage-zone {
 .margo-post-card__header--portrait .margo-post-card__mood {
   grid-column: 2;
   grid-row: 1;
-  align-self: center;
 }
 .margo-post-card__header--portrait .margo-post-card__header-tools {
   grid-column: 3;
   grid-row: 1;
-  align-self: center;
 }
 .margo-post-card__header-identity-link {
   display: block;
