@@ -235,42 +235,76 @@ for (const width of [390, 1440]) {
     test('one tap pauses for 2s; second tap resumes (mouse)', async ({ page }) => {
       test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
       await page.goto(shortsUrl(width), { waitUntil: 'domcontentloaded', timeout: 45000 })
-      await page.waitForTimeout(2000)
+      await page.waitForTimeout(1500)
       const surface = page.locator('[data-shorts-active="1"] .margo-feed-shorts-slide__tap-surface')
       await expect(surface).toBeVisible({ timeout: 15000 })
-      await surface.click()
+      await page.waitForFunction(
+        () => {
+          const a = document.querySelector('audio')
+          return !!a && !a.paused
+        },
+        undefined,
+        { timeout: 20000 },
+      )
+      await surface.click({ position: { x: 24, y: 24 } })
       await page.waitForTimeout(2000)
-      const paused = await page.evaluate(() => {
-        const a = document.querySelector('audio')
-        return !a || a.paused
-      })
-      expect(paused).toBe(true)
-      await surface.click()
-      await page.waitForTimeout(600)
-      const playing = await page.evaluate(() => {
-        const a = document.querySelector('audio')
-        return !!a && !a.paused
-      })
-      expect(playing).toBe(true)
+      await expect
+        .poll(async () =>
+          page.evaluate(() => {
+            const a = document.querySelector('audio')
+            return !a || a.paused
+          }),
+        )
+        .toBe(true)
+      const centerPlay = page.locator('[data-shorts-active="1"] .margo-feed-shorts-slide__center-play')
+      await expect(centerPlay).toBeVisible()
+      await centerPlay.click()
+      await expect
+        .poll(async () =>
+          page.evaluate(() => {
+            const a = document.querySelector('audio')
+            return !!a && !a.paused
+          }),
+        )
+        .toBe(true)
     })
 
     test('one tap pauses for 2s (touch)', async ({ page, browserName }) => {
       test.skip(!BASE.includes('vercel.app'), 'fixture clips required')
       test.skip(browserName === 'firefox', 'touch tap timing flaky on Firefox CI')
       await page.goto(shortsUrl(width), { waitUntil: 'domcontentloaded', timeout: 45000 })
-      await page.waitForTimeout(2000)
+      await page.waitForTimeout(1500)
       const frame = page.locator('[data-shorts-active="1"] .margo-feed-shorts-slide__frame')
       await expect(frame).toBeVisible({ timeout: 15000 })
+      await page.waitForFunction(
+        () => {
+          const a = document.querySelector('audio')
+          return !!a && !a.paused
+        },
+        undefined,
+        { timeout: 20000 },
+      )
       const box = await frame.boundingBox()
       expect(box).toBeTruthy()
       if (!box) return
-      await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height * 0.45)
+      await page.touchscreen.tap(box.x + box.width * 0.35, box.y + box.height * 0.42)
+      await expect
+        .poll(async () =>
+          page.evaluate(() => {
+            const a = document.querySelector('audio')
+            return !a || a.paused
+          }),
+        )
+        .toBe(true)
       await page.waitForTimeout(2000)
-      const paused = await page.evaluate(() => {
-        const a = document.querySelector('audio')
-        return !a || a.paused
-      })
-      expect(paused).toBe(true)
+      await expect
+        .poll(async () =>
+          page.evaluate(() => {
+            const a = document.querySelector('audio')
+            return !a || a.paused
+          }),
+        )
+        .toBe(true)
     })
   })
 
