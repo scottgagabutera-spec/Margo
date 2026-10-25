@@ -381,6 +381,8 @@ describe('lyric back keyboard wiring', () => {
     assert.match(compose, /margo-post-card__lb-compose-send--panel/)
     assert.match(compose, /margo-post-card__lb-compose-send-row/)
     assert.match(compose, /density="panel"/)
+    assert.match(compose, /catalogLinePickOnly/)
+    assert.match(compose, /openCatalogLinePicker/)
     assert.doesNotMatch(compose, /margo-post-card__lb-compose-send--infield/)
     assert.match(compose, /blurSearch\(\)/)
     assert.match(compose, /data-lb-lyric/)

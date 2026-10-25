@@ -278,13 +278,6 @@ export const LyricBackPanelCompose = forwardRef<
     }
   }, [])
 
-  useEffect(() => {
-    if (!selected?.catalogSongId || linesLoading) return
-    if (lines.length === 0 && !linePickDone) {
-      setLinePickDone(true)
-    }
-  }, [linePickDone, lines.length, linesLoading, selected?.catalogSongId])
-
   const selectHit = useCallback(async (hit: ComposeSearchHit) => {
     setQuery('')
     setHits([])
@@ -357,6 +350,16 @@ export const LyricBackPanelCompose = forwardRef<
     setSnippetEnd(last?.endSec ?? null)
     setLinePickDone(true)
   }, [])
+
+  const catalogLinePickOnly = Boolean(selected?.catalogSongId) && !lockSongAndLine
+
+  const openCatalogLinePicker = useCallback(() => {
+    if (!selected?.catalogSongId || lockSongAndLine) return
+    if (lines.length === 0 && !linesLoading) {
+      void loadCatalogLines(selected.catalogSongId)
+    }
+    setLinePickDone(false)
+  }, [lines.length, linesLoading, loadCatalogLines, lockSongAndLine, selected?.catalogSongId])
 
   const canSend = Boolean(
     selected?.title
@@ -549,11 +552,7 @@ export const LyricBackPanelCompose = forwardRef<
     },
   }))
 
-  const showLinePicker = Boolean(
-    selected?.catalogSongId
-    && !linePickDone
-    && (lines.length > 0 || linesLoading),
-  )
+  const showLinePicker = Boolean(selected?.catalogSongId && !linePickDone)
   const showLyricField = Boolean(selected && (linePickDone || !selected.catalogSongId))
 
   const syncPanelLyricHeight = useCallback(() => {
@@ -618,7 +617,7 @@ export const LyricBackPanelCompose = forwardRef<
     <div
       className={`margo-song-row margo-post-card__lb-compose-track${
         isPanelLayout ? ' margo-post-card__lb-compose-track--chip' : ' margo-post-card__lb-compose-track--picked'
-      }`}
+      }${catalogLinePickOnly && linePickDone ? ' margo-post-card__lb-compose-track--pick-line' : ''}`}
     >
       {selected.artwork ? (
         <PostThumbnail
@@ -641,10 +640,23 @@ export const LyricBackPanelCompose = forwardRef<
           aria-hidden
         />
       )}
-      <div className="margo-song-row__meta">
-        <span className="margo-song-row__title margo-post-card__lb-compose-song">{selected.title}</span>
-        <span className="margo-song-row__artist margo-post-card__lb-compose-artist">{selected.artist}</span>
-      </div>
+      {catalogLinePickOnly && linePickDone ? (
+        <button
+          type="button"
+          className="margo-song-row__meta margo-post-card__lb-compose-track-pick"
+          data-no-card-nav
+          aria-label={`${selected.title} by ${selected.artist}. Tap to choose another line.`}
+          onClick={openCatalogLinePicker}
+        >
+          <span className="margo-song-row__title margo-post-card__lb-compose-song">{selected.title}</span>
+          <span className="margo-song-row__artist margo-post-card__lb-compose-artist">{selected.artist}</span>
+        </button>
+      ) : (
+        <div className="margo-song-row__meta">
+          <span className="margo-song-row__title margo-post-card__lb-compose-song">{selected.title}</span>
+          <span className="margo-song-row__artist margo-post-card__lb-compose-artist">{selected.artist}</span>
+        </div>
+      )}
       <div className="margo-song-row__trail">
         <LyricBackTrackListenControl
           className={isPanelLayout ? 'margo-post-card__lb-compose-open' : undefined}
@@ -689,7 +701,10 @@ export const LyricBackPanelCompose = forwardRef<
             variant={isPanelLayout ? 'panel' : 'compose'}
             onPick={onPickLine}
         onPickParagraph={onPickParagraph}
-        onBack={() => resetSong()}
+        onBack={() => {
+          if (lyric.trim()) setLinePickDone(true)
+          else resetSong()
+        }}
       />
     </div>
   ) : null
@@ -697,22 +712,42 @@ export const LyricBackPanelCompose = forwardRef<
   const lyricBlock = showLyricField ? (
     <div
       className={
-        isPanelLayout
+        (isPanelLayout
           ? 'margo-post-card__lb-compose-lyric margo-post-card__lb-compose-lyric--panel'
-          : undefined
+          : '')
+        + (catalogLinePickOnly ? ' margo-post-card__lb-compose-lyric--catalog-pick' : '')
       }
     >
       <textarea
         ref={isPanelLayout ? lyricRef : undefined}
-        className={`margo-post-card__lb-compose-input${isPanelLayout ? ' margo-post-card__lb-compose-input--panel' : ''}`}
+        className={
+          `margo-post-card__lb-compose-input${isPanelLayout ? ' margo-post-card__lb-compose-input--panel' : ''}`
+          + (catalogLinePickOnly ? ' margo-post-card__lb-compose-input--catalog-pick' : '')
+        }
         data-lb-lyric={isPanelLayout ? '1' : undefined}
         value={lyric}
-        onChange={(e) => setLyric(e.target.value.slice(0, 140))}
-        placeholder="Write your line…"
+        onChange={(e) => {
+          if (catalogLinePickOnly) return
+          setLyric(e.target.value.slice(0, 140))
+        }}
+        onFocus={(e) => {
+          if (!catalogLinePickOnly) return
+          e.preventDefault()
+          openCatalogLinePicker()
+          e.currentTarget.blur()
+        }}
+        onClick={() => {
+          if (catalogLinePickOnly) openCatalogLinePicker()
+        }}
+        placeholder={catalogLinePickOnly ? 'Choose a line from the song…' : 'Write your line…'}
         rows={isPanelLayout ? 2 : 3}
-        aria-label="Lyric Back text"
-        readOnly={lockSongAndLine}
-        aria-readonly={lockSongAndLine || undefined}
+        aria-label={
+          catalogLinePickOnly
+            ? 'Selected catalog line. Tap to choose another line.'
+            : 'Lyric Back text'
+        }
+        readOnly={lockSongAndLine || catalogLinePickOnly}
+        aria-readonly={lockSongAndLine || catalogLinePickOnly || undefined}
       />
       {postError ? (
         <p className="margo-post-card__lb-compose-error" role="alert">{postError}</p>
