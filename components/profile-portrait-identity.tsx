@@ -28,13 +28,13 @@ export function ProfilePortraitIdentity({
   const brandMark = isMargoBrandUsername(username)
   const hasPhoto = !!avatarUrl?.trim() && !avatarBroken
   const initial = (displayName || username || '?').charAt(0).toUpperCase()
-
   const portrait = (
     <MargoPortraitAvatar
       size="profile"
       imageUrl={hasPhoto ? avatarUrl : null}
       onImageError={onAvatarError}
       fallbackInitial={initial}
+      fallbackSeed={!hasPhoto && !brandMark ? username || displayName : null}
       brandMark={brandMark}
       separationRingColor="var(--bg)"
     />

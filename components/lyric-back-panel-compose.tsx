@@ -11,6 +11,8 @@ import {
   type ReactNode,
 } from 'react'
 import { MargoSearchInput } from '@/components/margo-search-input'
+import { MomentComposeVibePicker } from '@/components/moment-compose-vibe-picker'
+import { emotionToVibeLabel, vibeLabelToEmotion } from '@/lib/moment/vibe'
 import { ComposeSearchDropdown, type ComposeSearchHit } from '@/components/compose-search-dropdown'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { FeedIconSend, FeedIconClose } from '@/components/feed-card-icons'
@@ -78,6 +80,8 @@ export type LyricBackPanelComposeProps = {
   focusSearchOnMount?: boolean
   /** Panel chrome: search sits in the one-row bar. */
   renderBar?: (search: ReactNode) => ReactNode
+  /** Feed first Lyric Back: tabs in pin, search below the post context. */
+  pinSearchInBar?: boolean
   /** Rendered after song/line (e.g. vibe + Save). Hides built-in panel send when set. */
   panelAfterBody?: ReactNode
   onPostingChange?: (posting: boolean) => void
@@ -114,6 +118,7 @@ export const LyricBackPanelCompose = forwardRef<
     replyToLabel,
     focusSearchOnMount = false,
     renderBar,
+    pinSearchInBar = true,
     panelAfterBody,
     onPostingChange,
     lockSongAndLine = false,
@@ -144,6 +149,13 @@ export const LyricBackPanelCompose = forwardRef<
     onPostingChange?.(posting)
   }, [onPostingChange, posting])
   const [postError, setPostError] = useState<string | null>(null)
+  const [composeVibeLabel, setComposeVibeLabel] = useState(
+    () => emotionToVibeLabel(parentEmotion) || 'Chill',
+  )
+
+  useEffect(() => {
+    setComposeVibeLabel(emotionToVibeLabel(parentEmotion) || 'Chill')
+  }, [parentPostId, parentEmotion])
 
   const handleSendRef = useRef<() => void>(() => {})
 
@@ -266,13 +278,6 @@ export const LyricBackPanelCompose = forwardRef<
     }
   }, [])
 
-  useEffect(() => {
-    if (!selected?.catalogSongId || linesLoading) return
-    if (lines.length === 0 && !linePickDone) {
-      setLinePickDone(true)
-    }
-  }, [linePickDone, lines.length, linesLoading, selected?.catalogSongId])
-
   const selectHit = useCallback(async (hit: ComposeSearchHit) => {
     setQuery('')
     setHits([])
@@ -346,6 +351,16 @@ export const LyricBackPanelCompose = forwardRef<
     setLinePickDone(true)
   }, [])
 
+  const catalogLinePickOnly = Boolean(selected?.catalogSongId) && !lockSongAndLine
+
+  const openCatalogLinePicker = useCallback(() => {
+    if (!selected?.catalogSongId || lockSongAndLine) return
+    if (lines.length === 0 && !linesLoading) {
+      void loadCatalogLines(selected.catalogSongId)
+    }
+    setLinePickDone(false)
+  }, [lines.length, linesLoading, loadCatalogLines, lockSongAndLine, selected?.catalogSongId])
+
   const canSend = Boolean(
     selected?.title
     && selected?.artist
@@ -358,7 +373,9 @@ export const LyricBackPanelCompose = forwardRef<
     if (!canSend || !selected) return
     setPosting(true)
     setPostError(null)
-    const emotion = submitEmotion ?? parentEmotion
+    const emotion = submitEmotion
+      ?? vibeLabelToEmotion(composeVibeLabel)
+      ?? parentEmotion
     const body = {
       text: lyric.trim(),
       emotion,
@@ -513,6 +530,7 @@ export const LyricBackPanelCompose = forwardRef<
     snippetEnd,
     snippetStart,
     submitEmotion,
+    composeVibeLabel,
   ])
 
   handleSendRef.current = () => {
@@ -534,11 +552,7 @@ export const LyricBackPanelCompose = forwardRef<
     },
   }))
 
-  const showLinePicker = Boolean(
-    selected?.catalogSongId
-    && !linePickDone
-    && (lines.length > 0 || linesLoading),
-  )
+  const showLinePicker = Boolean(selected?.catalogSongId && !linePickDone)
   const showLyricField = Boolean(selected && (linePickDone || !selected.catalogSongId))
 
   const syncPanelLyricHeight = useCallback(() => {
@@ -576,6 +590,7 @@ export const LyricBackPanelCompose = forwardRef<
         loading={searchLoading}
         placeholder={isPanelLayout ? 'Search' : 'Search by lyric, song or artist…'}
         ariaLabel="Search by lyric, song or artist"
+        catalogHints
         compact={isPanelLayout}
         stackAboveOverlay={isPanelLayout && searchOpen}
         autoFocus={focusSearchOnMount && !lockSongAndLine}
@@ -602,7 +617,7 @@ export const LyricBackPanelCompose = forwardRef<
     <div
       className={`margo-song-row margo-post-card__lb-compose-track${
         isPanelLayout ? ' margo-post-card__lb-compose-track--chip' : ' margo-post-card__lb-compose-track--picked'
-      }`}
+      }${catalogLinePickOnly && linePickDone ? ' margo-post-card__lb-compose-track--pick-line' : ''}`}
     >
       {selected.artwork ? (
         <PostThumbnail
@@ -625,10 +640,23 @@ export const LyricBackPanelCompose = forwardRef<
           aria-hidden
         />
       )}
-      <div className="margo-song-row__meta">
-        <span className="margo-song-row__title margo-post-card__lb-compose-song">{selected.title}</span>
-        <span className="margo-song-row__artist margo-post-card__lb-compose-artist">{selected.artist}</span>
-      </div>
+      {catalogLinePickOnly && linePickDone ? (
+        <button
+          type="button"
+          className="margo-song-row__meta margo-post-card__lb-compose-track-pick"
+          data-no-card-nav
+          aria-label={`${selected.title} by ${selected.artist}. Tap to choose another line.`}
+          onClick={openCatalogLinePicker}
+        >
+          <span className="margo-song-row__title margo-post-card__lb-compose-song">{selected.title}</span>
+          <span className="margo-song-row__artist margo-post-card__lb-compose-artist">{selected.artist}</span>
+        </button>
+      ) : (
+        <div className="margo-song-row__meta">
+          <span className="margo-song-row__title margo-post-card__lb-compose-song">{selected.title}</span>
+          <span className="margo-song-row__artist margo-post-card__lb-compose-artist">{selected.artist}</span>
+        </div>
+      )}
       <div className="margo-song-row__trail">
         <LyricBackTrackListenControl
           className={isPanelLayout ? 'margo-post-card__lb-compose-open' : undefined}
@@ -673,7 +701,10 @@ export const LyricBackPanelCompose = forwardRef<
             variant={isPanelLayout ? 'panel' : 'compose'}
             onPick={onPickLine}
         onPickParagraph={onPickParagraph}
-        onBack={() => resetSong()}
+        onBack={() => {
+          if (lyric.trim()) setLinePickDone(true)
+          else resetSong()
+        }}
       />
     </div>
   ) : null
@@ -681,28 +712,54 @@ export const LyricBackPanelCompose = forwardRef<
   const lyricBlock = showLyricField ? (
     <div
       className={
-        isPanelLayout
+        (isPanelLayout
           ? 'margo-post-card__lb-compose-lyric margo-post-card__lb-compose-lyric--panel'
-          : undefined
+          : '')
+        + (catalogLinePickOnly ? ' margo-post-card__lb-compose-lyric--catalog-pick' : '')
       }
     >
       <textarea
         ref={isPanelLayout ? lyricRef : undefined}
-        className={`margo-post-card__lb-compose-input${isPanelLayout ? ' margo-post-card__lb-compose-input--panel' : ''}`}
+        className={
+          `margo-post-card__lb-compose-input${isPanelLayout ? ' margo-post-card__lb-compose-input--panel' : ''}`
+          + (catalogLinePickOnly ? ' margo-post-card__lb-compose-input--catalog-pick' : '')
+        }
         data-lb-lyric={isPanelLayout ? '1' : undefined}
         value={lyric}
-        onChange={(e) => setLyric(e.target.value.slice(0, 140))}
-        placeholder="Write your line…"
+        onChange={(e) => {
+          if (catalogLinePickOnly) return
+          setLyric(e.target.value.slice(0, 140))
+        }}
+        onFocus={(e) => {
+          if (!catalogLinePickOnly) return
+          e.preventDefault()
+          openCatalogLinePicker()
+          e.currentTarget.blur()
+        }}
+        onClick={() => {
+          if (catalogLinePickOnly) openCatalogLinePicker()
+        }}
+        placeholder={catalogLinePickOnly ? 'Choose a line from the song…' : 'Write your line…'}
         rows={isPanelLayout ? 2 : 3}
-        aria-label="Lyric Back text"
-        readOnly={lockSongAndLine}
-        aria-readonly={lockSongAndLine || undefined}
+        aria-label={
+          catalogLinePickOnly
+            ? 'Selected catalog line. Tap to choose another line.'
+            : 'Lyric Back text'
+        }
+        readOnly={lockSongAndLine || catalogLinePickOnly}
+        aria-readonly={lockSongAndLine || catalogLinePickOnly || undefined}
       />
       {postError ? (
         <p className="margo-post-card__lb-compose-error" role="alert">{postError}</p>
       ) : null}
       {isPanelLayout && !panelAfterBody ? (
         <div className="margo-post-card__lb-compose-send-row">
+          <MomentComposeVibePicker
+            compact
+            density="panel"
+            vibeLabel={composeVibeLabel}
+            onVibeSelect={setComposeVibeLabel}
+          />
           <button
             type="button"
             className="margo-post-card__lb-compose-send margo-post-card__lb-compose-send--panel"
@@ -733,7 +790,18 @@ export const LyricBackPanelCompose = forwardRef<
     </div>
   ) : null
 
-  const body = songChip || linePicker || lyricBlock ? (
+  const panelVibeFooter = isPanelLayout && selected && !showLyricField && !panelAfterBody ? (
+    <div className="margo-post-card__lb-compose-vibe-only">
+      <MomentComposeVibePicker
+        compact
+        density="panel"
+        vibeLabel={composeVibeLabel}
+        onVibeSelect={setComposeVibeLabel}
+      />
+    </div>
+  ) : null
+
+  const body = songChip || linePicker || lyricBlock || panelVibeFooter ? (
     <div
       className={
         'margo-post-card__lb-compose-body'
@@ -743,6 +811,7 @@ export const LyricBackPanelCompose = forwardRef<
       {songChip}
       {linePicker}
       {lyricBlock}
+      {panelVibeFooter}
     </div>
   ) : null
 
@@ -754,8 +823,23 @@ export const LyricBackPanelCompose = forwardRef<
       {!isPanelLayout && replyToLabel ? (
         <p className="margo-post-card__lb-compose-reply-to">{replyToLabel}</p>
       ) : null}
-      {renderBar ? renderBar(searchField) : searchField}
+      {renderBar
+        ? renderBar(isPanelLayout && !pinSearchInBar ? null : searchField)
+        : searchField}
       {body}
+      {isPanelLayout && !pinSearchInBar && !selected ? (
+        <div className="margo-post-card__lb-search-footer" data-lb-search-footer="1">
+          <div className="margo-post-card__lb-search-footer__vibe">
+            <MomentComposeVibePicker
+              compact
+              density="panel"
+              vibeLabel={composeVibeLabel}
+              onVibeSelect={setComposeVibeLabel}
+            />
+          </div>
+          {searchField}
+        </div>
+      ) : null}
       {panelAfterBody ? (
         <div className="margo-post-card__lb-compose-panel-footer">{panelAfterBody}</div>
       ) : null}

@@ -8,6 +8,7 @@ import { UI_FONT } from '@/lib/fonts'
 import {
   LYRIC_BACK_KEYBOARD_THRESHOLD_PX,
   panelSearchDropdownFillBelow,
+  panelSearchDropdownFrame,
   visualKeyboardInsetPx,
 } from '@/lib/lyric-back-keyboard'
 import { compactArtworkUrl } from '@/lib/compact-artwork-url'
@@ -125,17 +126,39 @@ function ResultsList({
   return (
     <>
       {loading && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: '20px' }}>
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              style={{
-                width: '6px', height: '6px', borderRadius: '50%',
-                background: 'var(--gold)', opacity: 0.5,
-                animation: 'margo-bounce-dot 1s ease-in-out infinite', animationDelay: `${i * 150}ms`,
-              }}
-            />
-          ))}
+        <div
+          className={isPanel ? 'compose-search-row compose-search-row--panel compose-search-row--loading' : undefined}
+          style={isPanel ? undefined : {
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '20px',
+          }}
+          role="status"
+          aria-live="polite"
+        >
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '6px' }}>
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                style={{
+                  width: '6px', height: '6px', borderRadius: '50%',
+                  background: 'var(--gold)', opacity: 0.5,
+                  animation: 'margo-bounce-dot 1s ease-in-out infinite', animationDelay: `${i * 150}ms`,
+                }}
+              />
+            ))}
+          </div>
+          <span style={{
+            fontFamily: UI_FONT,
+            fontSize: isPanel ? '0.72rem' : '0.82rem',
+            color: 'var(--text-muted)',
+            letterSpacing: '0.02em',
+          }}
+          >
+            Searching songs…
+          </span>
         </div>
       )}
       {!loading && displayResults.length === 0 && (
@@ -321,13 +344,24 @@ export function ComposeSearchDropdown({
       viewportHeight: anchorMeasure.height,
       offsetTop: anchorMeasure.offsetTop,
     }) > LYRIC_BACK_KEYBOARD_THRESHOLD_PX
-    const frame = panelSearchDropdownFillBelow({
+    const frameBelow = panelSearchDropdownFillBelow({
       anchorBottom: anchorRect.bottom,
       offsetTop: anchorMeasure.offsetTop,
       viewportHeight: anchorMeasure.height,
       bottomInset: keyboardOpen ? 8 : pageBottom,
     })
-    const { top, maxHeight } = frame
+    const frameSmart = panelSearchDropdownFrame({
+      anchorTop: anchorRect.top,
+      anchorBottom: anchorRect.bottom,
+      offsetTop: anchorMeasure.offsetTop,
+      viewportHeight: anchorMeasure.height,
+      bottomInset: keyboardOpen ? 8 : pageBottom,
+      gap: 8,
+      maxCap: 360,
+    })
+    const useSmart = frameSmart.maxHeight >= 120 && frameSmart.maxHeight < frameBelow.maxHeight * 0.85
+    const { top, maxHeight: rawMax } = useSmart ? frameSmart : frameBelow
+    const maxHeight = Math.max(rawMax, displayResults.length > 0 ? 132 : rawMax)
     const panelEl = (anchorRef?.current?.closest('.margo-post-card__lb-panel')
       || anchorRef?.current?.closest('.margo-post-detail-lb')
       || anchorRef?.current?.closest('.margo-lb-focus')) as HTMLElement | null

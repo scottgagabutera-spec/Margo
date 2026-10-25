@@ -1391,6 +1391,7 @@ function ComposeInner() {
                 loading={searchLoading}
                 placeholder="Song, artist, or lyric…"
                 ariaLabel="Search songs"
+                catalogHints
                 stackAboveOverlay={showResults}
               />
               <ComposeSearchDropdown

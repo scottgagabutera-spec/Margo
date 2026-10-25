@@ -753,6 +753,7 @@ export function StageLanding() {
             loading={searchLoading}
             placeholder="Search by lyric, song or artist…"
             ariaLabel="Search songs on Stage"
+            catalogHints
             stackAboveOverlay={showResults}
           />
           <ComposeSearchDropdown

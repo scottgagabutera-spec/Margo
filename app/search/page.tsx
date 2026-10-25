@@ -274,6 +274,7 @@ function SearchPageInner() {
         onChange={setQuery}
         placeholder={scope.placeholder}
         ariaLabel={scope.placeholder}
+        catalogHints={scope.types.includes('song') || scope.types.includes('catalog_line')}
         autoFocus
       />
 

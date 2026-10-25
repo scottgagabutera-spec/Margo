@@ -1,7 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
-import { scrollPostLyricBackSectionIntoView } from '@/lib/lyric-back-panel-scroll'
+import {
+  scrollPostLyricBackFirstReplyIntoView,
+  scrollPostLyricBackSectionIntoView,
+} from '@/lib/lyric-back-panel-scroll'
 import { usePathname } from 'next/navigation'
 import { useLyricBackFocusStack, type LyricBackStackOptions } from '@/hooks/useLyricBackFocusStack'
 import {
@@ -84,12 +87,14 @@ export function PostDetailLyricSection({
 
   useLayoutEffect(() => {
     if (!composeOpen) return
-    scrollPostLyricBackSectionIntoView(sectionRef.current)
+    const firstReply = !isNested && echoCountLive === 0
+    const scroll = firstReply ? scrollPostLyricBackFirstReplyIntoView : scrollPostLyricBackSectionIntoView
+    scroll(sectionRef.current)
     const frame = window.requestAnimationFrame(() => {
-      scrollPostLyricBackSectionIntoView(sectionRef.current)
+      scroll(sectionRef.current)
     })
     return () => window.cancelAnimationFrame(frame)
-  }, [composeOpen, focusId, sectionRef])
+  }, [composeOpen, focusId, sectionRef, isNested, echoCountLive])
 
   useEffect(() => {
     if (!composeOpen) clearLyricBackKeyboardChrome()

@@ -80,6 +80,92 @@ function findLyricBackPin(root: HTMLElement): HTMLElement | null {
   return el instanceof HTMLElement ? el : null
 }
 
+function readPageBottomPx(): number {
+  if (typeof document === 'undefined') return 88
+  return readPxVar('--margo-page-bottom', 88)
+}
+
+function feedVisibleBand(): { top: number; bottom: number } {
+  const chrome = readFeedLyricBackChromeHeights()
+  const top = feedLyricBackHeadroomTop(chrome)
+  const vv = typeof window !== 'undefined' ? window.visualViewport : null
+  const bottom = (vv?.height ?? window.innerHeight) + (vv?.offsetTop ?? 0) - readPageBottomPx()
+  return { top, bottom }
+}
+
+/**
+ * First Lyric Back: keep the moment visible under the tabs and place search near mid-screen.
+ */
+export function scrollFeedLyricBackFirstReplyIntoView(panel: HTMLElement | null): boolean {
+  if (!panel || typeof document === 'undefined') return false
+  const pane = findFeedPrimaryScrollPane(panel)
+  if (!pane) return false
+
+  const searchAnchor = panel.querySelector('[data-lb-search-footer="1"], .margo-lb-focus__search-wrap')
+  const card = panel.closest('.margo-post-card')
+  const lyricZone = card?.querySelector(
+    '.margo-post-card__lyric-zone, .margo-post-card__moment-stage-inner, .margo-post-card__body',
+  )
+
+  const { top: visibleTop, bottom: visibleBottom } = feedVisibleBand()
+  const band = visibleBottom - visibleTop
+  const searchTargetTop = visibleTop + band * 0.5
+  const lyricTargetTop = visibleTop + 12
+
+  let delta = 0
+  if (lyricZone instanceof HTMLElement && searchAnchor instanceof HTMLElement) {
+    const lyricRect = lyricZone.getBoundingClientRect()
+    const searchRect = searchAnchor.getBoundingClientRect()
+    const deltaLyric = lyricRect.top - lyricTargetTop
+    const deltaSearch = searchRect.top - searchTargetTop
+    delta = deltaLyric * 0.55 + deltaSearch * 0.45
+    const projectedLyricTop = lyricRect.top - delta
+    const projectedSearchTop = searchRect.top - delta
+    if (projectedLyricTop < visibleTop - 8) {
+      delta = lyricRect.top - lyricTargetTop
+    } else if (projectedSearchTop > visibleBottom - 72) {
+      delta = searchRect.top - (visibleBottom - 80)
+    }
+  } else if (lyricZone instanceof HTMLElement) {
+    delta = lyricZone.getBoundingClientRect().top - lyricTargetTop
+  } else if (searchAnchor instanceof HTMLElement) {
+    delta = searchAnchor.getBoundingClientRect().top - searchTargetTop
+  }
+
+  if (Math.abs(delta) < 1) return false
+  pane.scrollTop += delta
+  return true
+}
+
+/** Post page: first Lyric Back — moment stays readable, search near mid viewport. */
+export function scrollPostLyricBackFirstReplyIntoView(section: HTMLElement | null): boolean {
+  if (!section || typeof window === 'undefined') return false
+  const searchAnchor = section.querySelector('[data-lb-search-footer="1"], .margo-lb-focus__search-wrap')
+  const navTop = readPxVar('--nav-height', 72) + LYRIC_BACK_PANEL_OPEN_GAP_PX
+  const vv = window.visualViewport
+  const visibleBottom = (vv?.height ?? window.innerHeight) + (vv?.offsetTop ?? 0) - readPageBottomPx()
+  let delta = 0
+
+  const moment = section.closest('main')?.querySelector('[data-post-moment="1"], .margo-post-card__body')
+  if (moment instanceof HTMLElement) {
+    delta = moment.getBoundingClientRect().top - navTop
+  }
+
+  if (searchAnchor instanceof HTMLElement) {
+    const searchRect = searchAnchor.getBoundingClientRect()
+    const searchMid = searchRect.top + searchRect.height / 2
+    const desiredMid = navTop + (visibleBottom - navTop) * 0.54
+    const deltaSearch = searchMid - desiredMid
+    if (Math.abs(deltaSearch) > Math.abs(delta) || Math.abs(delta) < 24) {
+      delta = deltaSearch
+    }
+  }
+
+  if (Math.abs(delta) < 1) return false
+  window.scrollBy(0, delta)
+  return true
+}
+
 /** Scroll the feed pane so the panel bar sits under Lyrics/Shorts (and vibe bar when shown). */
 export function scrollFeedLyricBackPanelIntoView(panel: HTMLElement | null): boolean {
   if (!panel || typeof document === 'undefined') return false

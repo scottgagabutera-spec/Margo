@@ -617,11 +617,9 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
         </div>
       )}
 
-      {!loading && notFound && (
-        <p style={{ ...emptyLyricStyle, textAlign: 'center', paddingTop: 'calc(var(--nav-height, 72px) + 88px)' }}>
-          No one here by that name.
-        </p>
-      )}
+      {!loading && notFound ? (
+        <p className="margo-sr-only">Founding Listener — profile not available.</p>
+      ) : null}
 
       {!loading && profile && (
         <div>

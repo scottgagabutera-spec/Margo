@@ -23,6 +23,8 @@ import { PendingNavLink } from '@/components/pending-nav-link'
 import { useStoryRingContext } from '@/components/stories/story-ring-context'
 import { StoryAvatarRing } from '@/components/stories/story-avatar-ring'
 import { MargoPortraitAvatar, feedPortraitDimensions } from '@/components/margo-portrait-avatar'
+import { FoundingListenerSheet } from '@/components/founding-listener-sheet'
+import { isFoundingListenerAuthor, profileHrefForAuthor } from '@/lib/profile-public-link'
 import { isMargoBrandUsername } from '@/lib/margo-brand-account'
 import { RelativeTime } from '@/components/relative-time'
 import type { AuthorProfile } from '@/lib/profile-lookup'
@@ -166,8 +168,8 @@ function buildPostHeaderContext(
   storyRing: StoryRingCtx,
 ) {
   const profileUsername = (authorProfile?.username || post.username || '').replace(/^@/, '')
-  const profileHref = profileUsername ? `/profile/${profileUsername}` : null
   const authorProfileId = post.authorUid || null
+  const profileHref = profileHrefForAuthor(authorProfile, authorProfileId)
   const storyAuthor = authorProfileId && storyRing?.hasActiveStory(authorProfileId)
     ? storyRing.getStoryAuthor(authorProfileId)
     : null
@@ -182,6 +184,8 @@ function PostCardPortraitHeader({
   onAvatarError,
   isTier1,
   storyRing,
+  onFoundingListener,
+  portraitFallbackSeed,
 }: {
   post: Post
   authorProfile: AuthorProfile | null
@@ -189,19 +193,22 @@ function PostCardPortraitHeader({
   onAvatarError: () => void
   isTier1: boolean
   storyRing: StoryRingCtx
+  onFoundingListener?: (displayName: string) => void
+  portraitFallbackSeed: string
 }) {
   const dim = feedPortraitDimensions('feed')
   const { profileUsername, profileHref, authorProfileId, storyAuthor, displayLabel } =
     buildPostHeaderContext(post, authorProfile, storyRing)
+  const foundingListener = isFoundingListenerAuthor(authorProfile, authorProfileId)
   const brandMark = isMargoBrandUsername(profileUsername)
   const avatarInitial = post.username ? post.username.charAt(0).toUpperCase() : (isTier1 ? 'M' : '?')
-
   const portrait = (
     <MargoPortraitAvatar
       size="feed"
       imageUrl={avatarUrl}
       onImageError={onAvatarError}
       fallbackInitial={avatarInitial}
+      fallbackSeed={!avatarUrl && !brandMark ? portraitFallbackSeed : null}
       brandMark={brandMark}
       tierGoldTile={!avatarUrl && !brandMark && isTier1}
       separationRingColor="var(--surface)"
@@ -243,6 +250,19 @@ function PostCardPortraitHeader({
       {portraitCore}
       <span className="margo-post-card__portrait-story-dot" aria-hidden data-unseen={storyAuthor.hasUnseen ? '1' : '0'} />
     </button>
+  ) : foundingListener && onFoundingListener ? (
+    <button
+      type="button"
+      className="margo-post-card__portrait-btn"
+      data-testid="feed-portrait-avatar"
+      onClick={(e) => {
+        e.stopPropagation()
+        onFoundingListener(displayLabel)
+      }}
+      aria-label={`${displayLabel}, Founding Listener`}
+    >
+      {portraitCore}
+    </button>
   ) : profileHref ? (
     <PendingNavLink
       href={profileHref}
@@ -266,14 +286,18 @@ function PostCardHeaderIdentity({
   post,
   authorProfile,
   feedCardHeader,
+  onFoundingListener,
 }: {
   post: Post
   authorProfile: AuthorProfile | null
   feedCardHeader?: boolean
   portraitLayout?: boolean
+  onFoundingListener?: (displayName: string) => void
 }) {
   const profileUsername = (authorProfile?.username || post.username || '').replace(/^@/, '')
-  const profileHref = profileUsername ? `/profile/${profileUsername}` : null
+  const profileHref = profileHrefForAuthor(authorProfile, post.authorUid || null)
+  const foundingListener = isFoundingListenerAuthor(authorProfile, post.authorUid || null)
+  const displayLabel = authorProfile?.displayName || post.username || profileUsername
   const nameBlock = (
     <div className="margo-post-card__header-identity" data-testid="feed-header-identity">
       <UsernameTag
@@ -285,6 +309,21 @@ function PostCardHeaderIdentity({
       />
     </div>
   )
+  if (foundingListener && onFoundingListener) {
+    return (
+      <button
+        type="button"
+        className="margo-post-card__header-identity-link"
+        onClick={(e) => {
+          e.stopPropagation()
+          onFoundingListener(displayLabel)
+        }}
+        aria-label={`${displayLabel}, Founding Listener`}
+      >
+        {nameBlock}
+      </button>
+    )
+  }
   return profileHref ? (
     <PendingNavLink
       href={profileHref}
@@ -526,6 +565,10 @@ export function PostCard({
   const [repostSheetOpen, setRepostSheetOpen] = useState(false)
   const [rowExpanded, setRowExpanded] = useState(false)
   const [avatarBroken, setAvatarBroken] = useState(false)
+  const [foundingListenerName, setFoundingListenerName] = useState<string | null>(null)
+  const openFoundingListener = useCallback((displayName: string) => {
+    setFoundingListenerName(displayName)
+  }, [])
   const [suggestionsOpen, setSuggestionsOpen] = useState(false)
   const [echoCountLive, setEchoCountLive] = useState(echoCount)
   const openLyricBackHandledRef = useRef(false)
@@ -626,6 +669,7 @@ export function PostCard({
 
   const rawAvatarUrl = (post.authorAvatarUrl || authorProfile?.avatarUrl || '').trim()
   const avatarUrl = rawAvatarUrl && !avatarBroken ? rawAvatarUrl : null
+  const portraitFallbackSeed = (authorProfile?.username || post.username || post.id).replace(/^@/, '')
 
   // Optimistic — the server delete already succeeded by the time this is
   // set. Other open surfaces reconcile via their own Realtime subscription
@@ -735,6 +779,7 @@ export function PostCard({
         suggestionsOpen ? 'margo-post-card--lb-panel-open' : '',
       ].filter(Boolean).join(' ')}
       data-lb-panel-open={suggestionsOpen ? '1' : undefined}
+      data-lb-first-reply={suggestionsOpen && echoCountLive === 0 ? '1' : undefined}
       onClick={goToPost}
       onPointerDown={() => {
         if (!disableCardNav && !isRow) persistActivePrimaryScroll()
@@ -774,6 +819,8 @@ export function PostCard({
           onAvatarError={() => setAvatarBroken(true)}
           isTier1={isTier1}
           storyRing={storyRing}
+          onFoundingListener={openFoundingListener}
+          portraitFallbackSeed={portraitFallbackSeed}
         />
       ) : null}
       <div className={usePortraitHeader ? 'margo-post-card__header margo-post-card__header--portrait' : 'margo-post-card__header'}>
@@ -783,6 +830,7 @@ export function PostCard({
             authorProfile={authorProfile}
             feedCardHeader
             portraitLayout
+            onFoundingListener={openFoundingListener}
           />
         ) : (
           <PostCardHeaderLegacy
@@ -926,6 +974,12 @@ export function PostCard({
           }}
         />
       ) : null}
+
+      <FoundingListenerSheet
+        open={foundingListenerName != null}
+        displayName={foundingListenerName}
+        onClose={() => setFoundingListenerName(null)}
+      />
 
     </div>
   )

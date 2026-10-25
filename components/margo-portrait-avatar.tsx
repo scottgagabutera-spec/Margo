@@ -3,6 +3,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { MargoPortraitBrandMark } from '@/components/margo-portrait-brand-mark'
 import { UI_FONT } from '@/lib/fonts'
+import { portraitFallbackFromSeed } from '@/lib/portrait-fallback'
 
 export type MargoPortraitAvatarSize = 'feed' | 'sm' | 'profile'
 
@@ -22,6 +23,8 @@ export interface MargoPortraitAvatarProps {
   brandMark?: boolean
   /** Gold tile + dark initial (Tier1 catalog moment, no photo). */
   tierGoldTile?: boolean
+  /** Username/id seed for a deterministic gradient initial (no external avatar). */
+  fallbackSeed?: string | null
   /** Ring behind the frame — usually matches the card surface. */
   separationRingColor?: string
   className?: string
@@ -40,6 +43,7 @@ export function MargoPortraitAvatar({
   fallbackInitial = '?',
   brandMark = false,
   tierGoldTile = false,
+  fallbackSeed = null,
   separationRingColor = 'var(--surface)',
   className,
   style,
@@ -47,12 +51,18 @@ export function MargoPortraitAvatar({
 }: MargoPortraitAvatarProps) {
   const dim = SIZE_PX[size]
   const hasPhoto = !!imageUrl?.trim()
+  const seededFallback = !hasPhoto && !brandMark && !tierGoldTile && fallbackSeed
+    ? portraitFallbackFromSeed(fallbackSeed, fallbackInitial)
+    : null
 
   const tileBg = brandMark
     ? 'var(--surface-2)'
     : tierGoldTile
       ? 'var(--gold)'
-      : 'linear-gradient(135deg, rgba(232,197,71,0.28), rgba(232,197,71,0.08))'
+      : seededFallback?.background
+        ?? 'linear-gradient(135deg, rgba(232,197,71,0.28), rgba(232,197,71,0.08))'
+  const initialChar = seededFallback?.initial ?? fallbackInitial
+  const initialColor = tierGoldTile ? 'var(--bg)' : (seededFallback?.color ?? 'var(--gold)')
 
   const inner = children ?? (
     hasPhoto ? (
@@ -74,10 +84,11 @@ export function MargoPortraitAvatar({
           fontFamily: UI_FONT,
           fontWeight: 700,
           fontSize: size === 'profile' ? '1.5rem' : size === 'feed' ? '1.125rem' : '0.875rem',
-          color: tierGoldTile ? 'var(--bg)' : 'var(--gold)',
+          color: initialColor,
+          letterSpacing: '-0.04em',
         }}
       >
-        {fallbackInitial}
+        {initialChar}
       </span>
     )
   )
@@ -87,6 +98,7 @@ export function MargoPortraitAvatar({
       className={[
         'margo-portrait-avatar',
         brandMark ? 'margo-portrait-avatar--brand' : '',
+        seededFallback ? 'margo-portrait-avatar--seed' : '',
         className,
       ].filter(Boolean).join(' ')}
       style={{
