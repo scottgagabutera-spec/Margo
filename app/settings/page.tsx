@@ -12,6 +12,7 @@ import {
   writeAccountSettingsSessionCache,
 } from '@/lib/settings/account-settings-session-cache'
 import { PromoteInlineStatus } from '@/components/promote/promote-page-shell'
+import { AUTH_PASSWORD_MIN_LENGTH, AUTH_PASSWORD_MIN_MESSAGE } from '@/lib/auth-password-policy'
 
 const supabase = createClient()
 
@@ -361,8 +362,8 @@ export default function AccountSettingsPage() {
   }, [authLoading, user, profile, application])
 
   async function updatePassword() {
-    if (newPassword.length < 8) {
-      setPasswordStatus('Use at least 8 characters.')
+    if (newPassword.length < AUTH_PASSWORD_MIN_LENGTH) {
+      setPasswordStatus(AUTH_PASSWORD_MIN_MESSAGE)
       return
     }
     setPasswordStatus(null)

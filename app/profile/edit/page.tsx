@@ -21,6 +21,12 @@ import {
 import { profileEditHasUnsavedChanges } from '@/lib/profile-edit-unsaved'
 import { useProfileEditLeaveGuard } from '@/hooks/useProfileEditLeaveGuard'
 import { EditProfilePageSkeleton } from '@/components/margo-skeletons'
+import { useUsernameAvailability } from '@/hooks/useUsernameAvailability'
+import {
+  normalizeUsernameInput,
+  USERNAME_MAX_LENGTH,
+  validateUsernameChoice,
+} from '@/lib/username-validator'
 
 const font = UI_FONT
 const lyricFont = LYRIC_FONT
@@ -67,6 +73,30 @@ function EditProfilePageInner() {
   const formSeededRef = useRef(false)
   const searchParams = useSearchParams()
   const showWelcome = searchParams.get('welcome') === '1'
+
+  const usernameAvailability = useUsernameAvailability(
+    username,
+    identity?.username ?? null,
+    user?.id ?? null,
+  )
+
+  const usernameValidation = useMemo(
+    () => validateUsernameChoice(username, identity?.username ?? null),
+    [username, identity?.username],
+  )
+
+  const usernameChangedForSave = useMemo(() => {
+    if (!identity) return false
+    const next = normalizeUsernameInput(username)
+    return next.length > 0 && next !== normalizeUsernameInput(identity.username)
+  }, [username, identity])
+
+  const usernameBlocksSave =
+    usernameChangedForSave
+    && (!usernameValidation.ok
+      || usernameAvailability === 'checking'
+      || usernameAvailability === 'taken'
+      || usernameAvailability === 'invalid')
 
   const persistDraftNow = useCallback(() => {
     if (!user?.id) return
@@ -152,6 +182,7 @@ function EditProfilePageInner() {
 
   const handleSave = useCallback(async () => {
     if (!identity) return
+    if (usernameBlocksSave) return
     setSaving(true)
     setError(null)
 
@@ -164,8 +195,10 @@ function EditProfilePageInner() {
     // Capture the username this save will land on — either the newly
     // typed one (if changed) or the current one — so the post-save
     // redirect goes to the right profile even if the handle just changed.
-    const usernameChanged = username.trim() && username.trim().toLowerCase() !== identity.username
-    const destinationUsername = usernameChanged ? username.trim().toLowerCase() : identity.username
+    const cleanedUsername = normalizeUsernameInput(username)
+    const usernameChanged =
+      cleanedUsername.length > 0 && cleanedUsername !== normalizeUsernameInput(identity.username)
+    const destinationUsername = usernameChanged ? cleanedUsername : identity.username
 
     if (displayName.trim() && displayName.trim() !== identity.displayName) {
       tasks.push(updateDisplayName(displayName))
@@ -209,7 +242,7 @@ function EditProfilePageInner() {
       if (user?.id) clearProfileEditDraft(user.id)
       router.push(`/profile/${destinationUsername}`)
     }
-  }, [identity, user?.id, displayName, username, bio, lyric, song, artist, catalogSongId, isPrivate, artistLinkDraft, updateDisplayName, changeUsername, updateBio, updateSignatureLyric, setPrivate, updateArtistLinks, router])
+  }, [identity, user?.id, displayName, username, bio, lyric, song, artist, catalogSongId, isPrivate, artistLinkDraft, usernameBlocksSave, updateDisplayName, changeUsername, updateBio, updateSignatureLyric, setPrivate, updateArtistLinks, router])
 
   if (!loading && !user) {
     return (
@@ -302,20 +335,20 @@ function EditProfilePageInner() {
             <button
               type="button"
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || usernameBlocksSave}
               style={{
                 minHeight: 'var(--margo-touch-min)',
                 padding: '0 4px',
                 background: 'none',
                 border: 'none',
-                cursor: saving ? 'not-allowed' : 'pointer',
+                cursor: saving || usernameBlocksSave ? 'not-allowed' : 'pointer',
                 fontFamily: font,
                 fontSize: TYPE.label,
                 fontWeight: 700,
                 letterSpacing: '0.16em',
                 textTransform: 'uppercase',
                 color: 'var(--gold)',
-                opacity: saving ? 0.7 : 1,
+                opacity: saving || usernameBlocksSave ? 0.45 : 1,
               }}
             >
               {saving ? 'Saving' : 'Save'}
@@ -378,10 +411,32 @@ function EditProfilePageInner() {
                 <input
                   type="text"
                   value={username}
-                  onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20))}
+                  onChange={e => setUsername(normalizeUsernameInput(e.target.value))}
                   style={{ ...inputStyle, paddingLeft: '30px' }}
+                  maxLength={USERNAME_MAX_LENGTH}
+                  aria-describedby="profile-edit-username-status"
                 />
               </div>
+              <p
+                id="profile-edit-username-status"
+                data-margo-username-status={usernameAvailability}
+                style={{
+                  fontFamily: font,
+                  fontSize: TYPE.meta,
+                  color: 'var(--text-muted)',
+                  margin: '8px 0 0',
+                  minHeight: '18px',
+                  lineHeight: 1.35,
+                }}
+              >
+                {usernameChangedForSave && usernameAvailability === 'checking'
+                  ? 'Checking…'
+                  : usernameChangedForSave && usernameAvailability === 'available'
+                    ? 'Available'
+                    : usernameChangedForSave && (usernameAvailability === 'taken' || usernameAvailability === 'invalid')
+                      ? 'Not available'
+                      : '\u00a0'}
+              </p>
             </div>
 
             <div>

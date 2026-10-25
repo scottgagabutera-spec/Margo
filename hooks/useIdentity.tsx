@@ -8,6 +8,7 @@ import { sanitizeArtistLinks } from '@/lib/artist-links'
 import { mergeLegalConsentIntoSettings, legalConsentFromUserMetadata } from '@/lib/legal/consent'
 import type { ArtistApplicationLinks } from '@/lib/artist-music-group'
 import { warmProfile } from '@/lib/profile-warm'
+import { validateUsernameChoice } from '@/lib/username-validator'
 import { warmFeedPosts } from '@/lib/primary-tab-prefetch'
 
 const supabase = createClient()
@@ -312,18 +313,19 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
 
   const changeUsername = useCallback(async (newUsername: string): Promise<ActionResult> => {
     if (!identityUser) return { success: false, error: 'Not signed in.' }
-    const cleaned = newUsername.trim().toLowerCase().replace(/[^a-z0-9_]/g, '')
-    if (cleaned.length < 3) return { success: false, error: 'Username must be at least 3 characters.' }
+    const validation = validateUsernameChoice(newUsername, identity?.username ?? null)
+    if (!validation.ok) return { success: false, error: validation.message }
 
+    const cleaned = validation.value
     const { error } = await supabase.from('profiles').update({ username: cleaned }).eq('id', identityUser.id)
     if (error) {
-      if (error.code === '23505') return { success: false, error: 'That username is already taken.' }
+      if (error.code === '23505') return { success: false, error: 'Not available.' }
       return { success: false, error: 'Could not update username.' }
     }
 
     setIdentityState(prev => (prev ? { ...prev, username: cleaned } : prev))
     return { success: true }
-  }, [identityUser])
+  }, [identityUser, identity?.username])
 
   const updateSignatureLyric = useCallback(async (
     data: { lyric: string; song: string; artist: string; songId?: string | null }

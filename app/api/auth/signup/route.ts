@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { buildLegalConsentSettings, mergeLegalConsentIntoSettings } from '@/lib/legal/consent'
+import { buildLegalConsentSettings } from '@/lib/legal/consent'
+import { AUTH_PASSWORD_MIN_LENGTH, AUTH_PASSWORD_MIN_MESSAGE } from '@/lib/auth-password-policy'
 
 /**
  * Auth core — password sign-up on the server (httpOnly cookies when a
@@ -18,6 +19,10 @@ export async function POST(req: NextRequest) {
   const password = body.password
   if (!email || !password) {
     return NextResponse.json({ error: 'email and password required' }, { status: 400 })
+  }
+
+  if (password.length < AUTH_PASSWORD_MIN_LENGTH) {
+    return NextResponse.json({ error: AUTH_PASSWORD_MIN_MESSAGE }, { status: 400 })
   }
 
   if (body.acceptedTerms !== true) {

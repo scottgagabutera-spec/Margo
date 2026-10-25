@@ -3,6 +3,12 @@
 import { useEffect, useId, useState } from 'react'
 import { toast } from 'sonner'
 import { completeAuthNavigation } from '@/lib/auth-complete-navigation'
+import { resolvePostAuthNavigation } from '@/lib/auth-welcome-redirect'
+import {
+  AUTH_PASSWORD_MIN_LENGTH,
+  AUTH_PASSWORD_MIN_MESSAGE,
+} from '@/lib/auth-password-policy'
+import Link from 'next/link'
 import { setBrowserAccessToken } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useIdentity } from '@/hooks/useIdentity'
@@ -49,7 +55,7 @@ function friendlyError(e: { message?: string }): string {
     return 'Please confirm your email before signing in.'
   }
   if (msg.toLowerCase().includes('password')) {
-    return 'Password should be at least 6 characters.'
+    return AUTH_PASSWORD_MIN_MESSAGE
   }
   if (msg.includes('Unable to validate email')) {
     return 'That email address looks invalid.'
@@ -210,7 +216,8 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
       if (onSuccess) {
         onSuccess()
       } else {
-        completeAuthNavigation('/profile/edit?welcome=1')
+        const row = await waitUntilReady()
+        completeAuthNavigation(resolvePostAuthNavigation(row, null))
       }
       return
     } catch (e) {
@@ -322,6 +329,10 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
       setError(CONSENT_REQUIRED_MESSAGE)
       return
     }
+    if (isSignup && password.length < AUTH_PASSWORD_MIN_LENGTH) {
+      setError(AUTH_PASSWORD_MIN_MESSAGE)
+      return
+    }
 
     setBusy('email')
     setError('')
@@ -345,9 +356,13 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
       if (body.access_token) {
         setBrowserAccessToken(body.access_token)
         await rehydrate()
-        await waitUntilReady()
+        const row = await waitUntilReady()
         if (isSignup) toast.success('Welcome to Margo.')
-        onSuccess?.()
+        if (onSuccess) {
+          onSuccess()
+        } else {
+          completeAuthNavigation(resolvePostAuthNavigation(row, oauthReturnTo))
+        }
         return
       }
 
@@ -557,6 +572,26 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
           onClick={remindConsentIfNeeded}
           onEnter={() => { void handleEmailSubmit() }}
         />
+
+        {!isSignup ? (
+          <p style={{ margin: '-8px 0 0', textAlign: 'right' }}>
+            <Link
+              href="/forgot-password"
+              style={{
+                fontFamily: ui,
+                fontSize: TYPE.meta,
+                color: 'var(--gold)',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                minHeight: '44px',
+                padding: '0 4px',
+              }}
+            >
+              Forgot password?
+            </Link>
+          </p>
+        ) : null}
 
         <button
           type="button"

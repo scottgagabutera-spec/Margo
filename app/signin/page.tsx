@@ -8,6 +8,8 @@ import { CONSENT_REQUIRED_MESSAGE } from '@/lib/legal/consent-copy'
 import { BackButton } from '@/components/back-button'
 import MargoLogo from '@/components/MargoLogo'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+import { useIdentity } from '@/hooks/useIdentity'
+import { resolvePostAuthNavigation } from '@/lib/auth-welcome-redirect'
 import { AUTH_RETURN_QUERY, sanitizeAuthReturnPath } from '@/lib/auth-return'
 import { completeAuthNavigation } from '@/lib/auth-complete-navigation'
 import Link from 'next/link'
@@ -41,6 +43,7 @@ export default function SigninPage() {
 function SigninPageInner() {
   const searchParams = useSearchParams()
   const { user, loading, needsTermsAcceptance } = useAuthGate()
+  const { waitUntilReady } = useIdentity()
   const initialMode = parseMode(searchParams.get('mode'))
   const isTermsStep = searchParams.get('step') === 'terms'
   const [mode, setMode] = useState<AuthMode>(initialMode)
@@ -54,14 +57,15 @@ function SigninPageInner() {
     [searchParams],
   )
 
-  const finishAuth = useCallback(() => {
-    completeAuthNavigation(returnTo)
-  }, [returnTo])
+  const finishAuth = useCallback(async () => {
+    const row = await waitUntilReady()
+    completeAuthNavigation(resolvePostAuthNavigation(row, returnTo))
+  }, [returnTo, waitUntilReady])
 
   useEffect(() => {
     if (loading) return
     if (user && !needsTermsAcceptance) {
-      finishAuth()
+      void finishAuth()
     }
   }, [loading, user, needsTermsAcceptance, finishAuth])
 
