@@ -5,9 +5,10 @@ import { toast } from 'sonner'
 import { completeAuthNavigation } from '@/lib/auth-complete-navigation'
 import { resolvePostAuthNavigation } from '@/lib/auth-welcome-redirect'
 import {
-  AUTH_PASSWORD_MIN_LENGTH,
-  AUTH_PASSWORD_MIN_MESSAGE,
+  parsePasswordErrorMessage,
+  validatePassword,
 } from '@/lib/auth-password-policy'
+import { AuthPasswordField } from '@/components/auth-password-field'
 import Link from 'next/link'
 import { setBrowserAccessToken } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
@@ -55,7 +56,7 @@ function friendlyError(e: { message?: string }): string {
     return 'Please confirm your email before signing in.'
   }
   if (msg.toLowerCase().includes('password')) {
-    return AUTH_PASSWORD_MIN_MESSAGE
+    return parsePasswordErrorMessage(msg)
   }
   if (msg.includes('Unable to validate email')) {
     return 'That email address looks invalid.'
@@ -284,7 +285,6 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
   const { rehydrate } = useAuthGate()
   const { waitUntilReady } = useIdentity()
   const emailId = useId()
-  const passwordId = useId()
   const isSignup = mode === 'signup'
 
   const [email, setEmail] = useState('')
@@ -294,12 +294,18 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
   const [error, setError] = useState('')
   const [busy, setBusy] = useState<'email' | 'google' | 'discord' | null>(null)
   const [pendingEmail, setPendingEmail] = useState<string | null>(null)
+  const [showEmailForm, setShowEmailForm] = useState(false)
+  const [emailError, setEmailError] = useState<string | null>(null)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isSignup) {
       setTermsAccepted(false)
       setPendingEmail(null)
     }
+    setShowEmailForm(false)
+    setEmailError(null)
+    setPasswordError(null)
   }, [isSignup])
 
   useEffect(() => {
@@ -325,17 +331,22 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
   }
 
   const handleEmailSubmit = async () => {
+    setEmailError(null)
+    setPasswordError(null)
+    setError('')
     if (isSignup && !termsAccepted) {
       setError(CONSENT_REQUIRED_MESSAGE)
       return
     }
-    if (isSignup && password.length < AUTH_PASSWORD_MIN_LENGTH) {
-      setError(AUTH_PASSWORD_MIN_MESSAGE)
-      return
+    if (isSignup) {
+      const pw = validatePassword(password)
+      if (!pw.ok) {
+        setPasswordError(pw.message)
+        return
+      }
     }
 
     setBusy('email')
-    setError('')
     try {
       const path = isSignup ? '/api/auth/signup' : '/api/auth/login'
       const res = await fetch(path, {
@@ -350,7 +361,12 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
       })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) {
-        throw { message: body.error || 'Something went wrong. Please try again.' }
+        const msg = body.error || 'Something went wrong. Please try again.'
+        if (isSignup && /password|character|letter|number|weak/i.test(msg)) {
+          setPasswordError(parsePasswordErrorMessage(msg))
+          return
+        }
+        throw { message: msg }
       }
 
       if (body.access_token) {
@@ -373,7 +389,12 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
 
       throw { message: 'Something went wrong. Please try again.' }
     } catch (e) {
-      setError(friendlyError(e as { message?: string }))
+      const msg = friendlyError(e as { message?: string })
+      if (/email|address|registered|confirm/i.test(msg)) {
+        setEmailError(msg)
+      } else {
+        setError(msg)
+      }
     } finally {
       setBusy(null)
     }
@@ -404,7 +425,7 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
             fontWeight: 600,
             margin: '0 0 14px',
           }}>
-            Check your email to confirm your account
+            Check your email
           </h1>
           <p style={{
             fontFamily: ui,
@@ -413,8 +434,7 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
             color: 'var(--text-secondary)',
             margin: 0,
           }}>
-            We sent a confirmation link to <span style={{ color: 'var(--text)' }}>{pendingEmail}</span>.
-            Open it to confirm your account, then come back and sign in.
+            We sent a link to <span style={{ color: 'var(--text)' }}>{pendingEmail}</span>. Open it, then sign in.
           </p>
         </header>
         <button
@@ -470,27 +490,13 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
         </header>
       )}
 
-      {isSignup ? (
-        <>
-          <SignupConsentIntro />
-          <SignupConsentGate highlight={consentAttention && !termsAccepted}>
-            <SignupConsentCheckbox
-              id="signup-consent"
-              checked={termsAccepted}
-              onChange={setTermsAccepted}
-              disabled={loading}
-            />
-          </SignupConsentGate>
-        </>
-      ) : null}
-
-      {alertMessage ? (
+      {alertMessage && !showEmailForm ? (
         <div style={{ margin: '0 0 16px' }}>
           {renderFormError(alertMessage)}
         </div>
       ) : null}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '22px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: showEmailForm ? '16px' : '0' }}>
         <button
           type="button"
           onClick={() => handleOAuthSubmit('google')}
@@ -514,7 +520,7 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
           </svg>
           {busy === 'google' ? (
             <LoadingRing size={16} strokeWidth={1.5} state="spinning" />
-          ) : (isSignup ? 'Continue with Google' : 'Sign in with Google')}
+          ) : 'Continue with Google'}
         </button>
 
         <button
@@ -537,80 +543,122 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthRe
           </svg>
           {busy === 'discord' ? (
             <LoadingRing size={16} strokeWidth={1.5} state="spinning" />
-          ) : (isSignup ? 'Continue with Discord' : 'Sign in with Discord')}
+          ) : 'Continue with Discord'}
         </button>
+
+        {!showEmailForm ? (
+          <button
+            type="button"
+            onClick={() => {
+              setShowEmailForm(true)
+              setError('')
+            }}
+            disabled={loading}
+            style={{
+              ...oauthBtnBase,
+              background: 'var(--gold-faint)',
+              border: '1px solid var(--gold-border)',
+              color: 'var(--text)',
+              cursor: loading ? 'not-allowed' : 'pointer',
+            }}
+          >
+            Continue with email
+          </button>
+        ) : null}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '0 0 20px' }}>
-        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.07)' }} />
-        <span style={{ fontFamily: ui, fontSize: TYPE.label, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.16em' }}>or email</span>
-        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.07)' }} />
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <AuthTextField
-          id={emailId}
-          label="Email"
-          type="email"
-          autoComplete="email"
-          value={email}
-          disabled={loading}
-          onChange={setEmail}
-          onFocus={remindConsentIfNeeded}
-          onClick={remindConsentIfNeeded}
-          onEnter={() => { void handleEmailSubmit() }}
-        />
-        <AuthTextField
-          id={passwordId}
-          label="Password"
-          type="password"
-          autoComplete={isSignup ? 'new-password' : 'current-password'}
-          value={password}
-          disabled={loading}
-          onChange={setPassword}
-          onFocus={remindConsentIfNeeded}
-          onClick={remindConsentIfNeeded}
-          onEnter={() => { void handleEmailSubmit() }}
-        />
-
-        {!isSignup ? (
-          <p style={{ margin: '-8px 0 0', textAlign: 'right' }}>
-            <Link
-              href="/forgot-password"
-              style={{
+      {showEmailForm ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '20px' }} data-margo-auth-email-form>
+          <div>
+            <AuthTextField
+              id={emailId}
+              label="Email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              disabled={loading}
+              onChange={(v) => { setEmail(v); setEmailError(null) }}
+              onFocus={remindConsentIfNeeded}
+              onClick={remindConsentIfNeeded}
+              onEnter={() => { void handleEmailSubmit() }}
+            />
+            {emailError ? (
+              <p role="alert" style={{
                 fontFamily: ui,
                 fontSize: TYPE.meta,
-                color: 'var(--gold)',
-                textDecoration: 'none',
-                display: 'inline-flex',
-                alignItems: 'center',
-                minHeight: '44px',
-                padding: '0 4px',
-              }}
-            >
-              Forgot password?
-            </Link>
-          </p>
-        ) : null}
+                color: 'var(--destructive)',
+                margin: '6px 0 0',
+              }}>
+                {emailError}
+              </p>
+            ) : null}
+          </div>
 
-        <button
-          type="button"
-          onClick={() => { void handleEmailSubmit() }}
-          disabled={primaryDisabled}
-          aria-disabled={primaryDisabled}
-          aria-busy={busy === 'email'}
-          style={{
-            ...primaryBtnStyle,
-            cursor: primaryDisabled ? 'not-allowed' : 'pointer',
-            opacity: primaryDisabled ? 0.55 : 1,
-            marginTop: '4px',
-          }}
-        >
-          {busy === 'email' ? (
-            <LoadingRing size={18} strokeWidth={1.5} state="spinning" color="var(--bg)" />
-          ) : (isSignup ? 'Create account' : 'Sign in')}
-        </button>
-      </div>
+          <AuthPasswordField
+            value={password}
+            disabled={loading}
+            autoComplete={isSignup ? 'new-password' : 'current-password'}
+            error={passwordError}
+            showRequirements={isSignup}
+            onChange={(v) => { setPassword(v); setPasswordError(null) }}
+            onEnter={() => { void handleEmailSubmit() }}
+          />
+
+          {!isSignup ? (
+            <p style={{ margin: '-8px 0 0', textAlign: 'right' }}>
+              <Link
+                href="/forgot-password"
+                style={{
+                  fontFamily: ui,
+                  fontSize: TYPE.meta,
+                  color: 'var(--gold)',
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  minHeight: '44px',
+                  padding: '0 4px',
+                }}
+              >
+                Forgot password?
+              </Link>
+            </p>
+          ) : null}
+
+          {isSignup ? (
+            <SignupConsentGate highlight={consentAttention && !termsAccepted}>
+              <SignupConsentIntro />
+              <SignupConsentCheckbox
+                id="signup-consent"
+                checked={termsAccepted}
+                onChange={setTermsAccepted}
+                disabled={loading}
+              />
+            </SignupConsentGate>
+          ) : null}
+
+          {alertMessage && showEmailForm ? (
+            <div>{renderFormError(alertMessage)}</div>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={() => { void handleEmailSubmit() }}
+            disabled={primaryDisabled}
+            aria-disabled={primaryDisabled}
+            aria-busy={busy === 'email'}
+            style={{
+              ...primaryBtnStyle,
+              cursor: primaryDisabled ? 'not-allowed' : 'pointer',
+              opacity: primaryDisabled ? 0.55 : 1,
+              marginTop: '4px',
+            }}
+          >
+            {busy === 'email' ? (
+              <LoadingRing size={18} strokeWidth={1.5} state="spinning" color="var(--bg)" />
+            ) : (isSignup ? 'Create account' : 'Sign in')}
+          </button>
+        </div>
+      ) : null}
 
       {onSwitchMode ? (
         <p style={{ textAlign: 'center', marginTop: '22px', fontFamily: ui, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>

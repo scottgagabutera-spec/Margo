@@ -1,15 +1,13 @@
 'use client'
 
-import { Suspense, useEffect, useId, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { BackButton } from '@/components/back-button'
 import MargoLogo from '@/components/MargoLogo'
 import { LoadingRing } from '@/components/loading-ring'
-import {
-  AUTH_PASSWORD_MIN_LENGTH,
-  AUTH_PASSWORD_MIN_MESSAGE,
-} from '@/lib/auth-password-policy'
+import { parsePasswordErrorMessage, validatePassword } from '@/lib/auth-password-policy'
+import { AuthPasswordField } from '@/components/auth-password-field'
 import { createRecoveryClient } from '@/lib/supabase/recovery-client'
 import { TYPE, UI_FONT } from '@/lib/fonts'
 import '../signin/auth-layout.css'
@@ -17,7 +15,6 @@ import '../signin/auth-layout.css'
 const ui = UI_FONT
 
 function ResetPasswordInner() {
-  const passwordId = useId()
   const [ready, setReady] = useState(false)
   const [hasRecoverySession, setHasRecoverySession] = useState(false)
   const [password, setPassword] = useState('')
@@ -38,8 +35,9 @@ function ResetPasswordInner() {
 
   const handleSubmit = async () => {
     if (busy || !hasRecoverySession) return
-    if (password.length < AUTH_PASSWORD_MIN_LENGTH) {
-      setError(AUTH_PASSWORD_MIN_MESSAGE)
+    const pwCheck = validatePassword(password)
+    if (!pwCheck.ok) {
+      setError(pwCheck.message)
       return
     }
     setBusy(true)
@@ -48,7 +46,7 @@ function ResetPasswordInner() {
       const supabase = recoveryRef.current ?? createRecoveryClient()
       const { error: updateError } = await supabase.auth.updateUser({ password })
       if (updateError) {
-        setError('Could not update password. Request a new link and try again.')
+        setError(parsePasswordErrorMessage(updateError.message))
         return
       }
       setDone(true)
@@ -168,62 +166,19 @@ function ResetPasswordInner() {
                   </h1>
                 </header>
 
-                {error ? (
-                  <p role="alert" style={{
-                    fontFamily: ui,
-                    fontSize: TYPE.secondary,
-                    color: 'var(--text-secondary)',
-                    margin: '0 0 16px',
-                    lineHeight: 1.45,
-                  }}>
-                    {error}
-                  </p>
-                ) : null}
-
-                <div style={{ marginBottom: '16px' }}>
-                  <label
-                    htmlFor={passwordId}
-                    style={{
-                      display: 'block',
-                      fontFamily: ui,
-                      fontSize: TYPE.label,
-                      color: 'var(--text-muted)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '1.5px',
-                      marginBottom: '8px',
-                      fontWeight: 700,
-                    }}
-                  >
-                    New password
-                  </label>
-                  <input
-                    id={passwordId}
-                    type="password"
-                    autoComplete="new-password"
-                    value={password}
-                    disabled={busy}
-                    onChange={(e) => setPassword(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && void handleSubmit()}
-                    style={{
-                      width: '100%',
-                      height: '44px',
-                      padding: '0 14px',
-                      background: 'var(--surface-2)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '12px',
-                      color: 'var(--text)',
-                      fontFamily: ui,
-                      fontSize: TYPE.body,
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
+                <AuthPasswordField
+                  value={password}
+                  disabled={busy}
+                  autoComplete="new-password"
+                  error={error || null}
+                  onChange={(v) => { setPassword(v); setError('') }}
+                  onEnter={() => { void handleSubmit() }}
+                />
 
                 <button
                   type="button"
                   onClick={() => { void handleSubmit() }}
-                  disabled={busy || password.length < AUTH_PASSWORD_MIN_LENGTH}
+                  disabled={busy || !validatePassword(password).ok}
                   style={{
                     width: '100%',
                     minHeight: '44px',
@@ -234,8 +189,8 @@ function ResetPasswordInner() {
                     fontFamily: ui,
                     fontWeight: 600,
                     fontSize: TYPE.meta,
-                    cursor: busy || password.length < AUTH_PASSWORD_MIN_LENGTH ? 'not-allowed' : 'pointer',
-                    opacity: busy || password.length < AUTH_PASSWORD_MIN_LENGTH ? 0.55 : 1,
+                    cursor: busy || !validatePassword(password).ok ? 'not-allowed' : 'pointer',
+                    opacity: busy || !validatePassword(password).ok ? 0.55 : 1,
                   }}
                 >
                   {busy ? (

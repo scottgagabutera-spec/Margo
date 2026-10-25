@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { parsePasswordErrorMessage, validatePassword } from '@/lib/auth-password-policy'
 
 /**
  * Auth core — password change via cookie session.
@@ -18,11 +19,9 @@ export async function POST(req: NextRequest) {
   if (!password || typeof password !== 'string') {
     return NextResponse.json({ error: 'password required' }, { status: 400 })
   }
-  if (password.length < 8) {
-    return NextResponse.json(
-      { error: 'Use at least 8 characters.' },
-      { status: 400 },
-    )
+  const passwordCheck = validatePassword(password)
+  if (!passwordCheck.ok) {
+    return NextResponse.json({ error: passwordCheck.message }, { status: 400 })
   }
 
   const supabase = await createClient()
@@ -33,7 +32,7 @@ export async function POST(req: NextRequest) {
 
   const { error } = await supabase.auth.updateUser({ password })
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 })
+    return NextResponse.json({ error: parsePasswordErrorMessage(error.message) }, { status: 400 })
   }
 
   return NextResponse.json({ ok: true })

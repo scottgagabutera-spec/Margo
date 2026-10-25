@@ -1,6 +1,5 @@
 'use client'
 import { Suspense, useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { MargoActionSheet } from '@/components/margo-action-sheet'
 import { useRouter } from 'next/navigation'
 import { useIdentity } from '@/hooks/useIdentity'
@@ -21,6 +20,7 @@ import {
 import { profileEditHasUnsavedChanges } from '@/lib/profile-edit-unsaved'
 import { useProfileEditLeaveGuard } from '@/hooks/useProfileEditLeaveGuard'
 import { EditProfilePageSkeleton } from '@/components/margo-skeletons'
+import { UsernameFieldShell } from '@/components/username-field-shell'
 import { useUsernameAvailability } from '@/hooks/useUsernameAvailability'
 import {
   normalizeUsernameInput,
@@ -71,9 +71,6 @@ function EditProfilePageInner() {
   const signatureSectionRef = useRef<HTMLDivElement>(null)
   /** Seed form once per mount — identity refresh must not reset typed fields. */
   const formSeededRef = useRef(false)
-  const searchParams = useSearchParams()
-  const showWelcome = searchParams.get('welcome') === '1'
-
   const usernameAvailability = useUsernameAvailability(
     username,
     identity?.username ?? null,
@@ -355,22 +352,6 @@ function EditProfilePageInner() {
             </button>
           </div>
 
-          {showWelcome ? (
-            <p style={{
-              fontFamily: font,
-              fontSize: TYPE.secondary,
-              color: 'var(--text-secondary)',
-              lineHeight: 1.45,
-              margin: '0 0 16px',
-              padding: '12px 14px',
-              borderRadius: '12px',
-              border: '1px solid var(--gold-border)',
-              background: 'var(--gold-faint)',
-            }}>
-              Welcome — add a photo and anything you want on your profile, then tap Save. You can change this anytime.
-            </p>
-          ) : null}
-
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <AvatarUpload
@@ -406,37 +387,29 @@ function EditProfilePageInner() {
 
             <div>
               <label style={labelStyle}>Username</label>
-              <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontFamily: font, color: 'var(--text-secondary)', fontSize: TYPE.body }}>@</span>
+              <UsernameFieldShell
+                visualState={usernameAvailability}
+                showFeedback={usernameChangedForSave}
+                statusId="profile-edit-username-status"
+                data-margo-username-status={usernameAvailability}
+              >
+                <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontFamily: font, color: 'var(--text-secondary)', fontSize: TYPE.body, zIndex: 1 }}>@</span>
                 <input
                   type="text"
                   value={username}
                   onChange={e => setUsername(normalizeUsernameInput(e.target.value))}
-                  style={{ ...inputStyle, paddingLeft: '30px' }}
+                  style={{
+                    ...inputStyle,
+                    paddingLeft: '30px',
+                    border: 'none',
+                    background: 'transparent',
+                  }}
                   maxLength={USERNAME_MAX_LENGTH}
                   aria-describedby="profile-edit-username-status"
                 />
-              </div>
-              <p
-                id="profile-edit-username-status"
-                data-margo-username-status={usernameAvailability}
-                style={{
-                  fontFamily: font,
-                  fontSize: TYPE.meta,
-                  color: 'var(--text-muted)',
-                  margin: '8px 0 0',
-                  minHeight: '18px',
-                  lineHeight: 1.35,
-                }}
-              >
-                {usernameChangedForSave && usernameAvailability === 'checking'
-                  ? 'Checking…'
-                  : usernameChangedForSave && usernameAvailability === 'available'
-                    ? 'Available'
-                    : usernameChangedForSave && (usernameAvailability === 'taken' || usernameAvailability === 'invalid')
-                      ? 'Not available'
-                      : '\u00a0'}
-              </p>
+                </div>
+              </UsernameFieldShell>
             </div>
 
             <div>
@@ -488,18 +461,6 @@ function EditProfilePageInner() {
                 }}
                 onLyricPick={(text) => setLyric(text)}
               />
-              {!catalogSongId && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
-                  <input
-                    type="text" value={song} onChange={e => { setSong(e.target.value); setCatalogSongId(null) }} placeholder="Song"
-                    style={inputStyle}
-                  />
-                  <input
-                    type="text" value={artist} onChange={e => { setArtist(e.target.value); setCatalogSongId(null) }} placeholder="Artist"
-                    style={inputStyle}
-                  />
-                </div>
-              )}
             </div>
 
             <div style={{

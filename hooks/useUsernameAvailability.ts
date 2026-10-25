@@ -21,20 +21,20 @@ export function useUsernameAvailability(
 
   useEffect(() => {
     const cleaned = normalizeUsernameInput(rawUsername)
-    const validation = validateUsernameChoice(rawUsername, currentUsername)
 
     if (!cleaned) {
       setState('idle')
       return
     }
 
-    if (!validation.ok) {
-      setState('invalid')
+    if (currentUsername && cleaned === normalizeUsernameInput(currentUsername)) {
+      setState('available')
       return
     }
 
-    if (currentUsername && cleaned === normalizeUsernameInput(currentUsername)) {
-      setState('available')
+    const validation = validateUsernameChoice(rawUsername, currentUsername)
+    if (!validation.ok) {
+      setState('invalid')
       return
     }
 
