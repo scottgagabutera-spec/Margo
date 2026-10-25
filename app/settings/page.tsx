@@ -13,6 +13,7 @@ import {
 } from '@/lib/settings/account-settings-session-cache'
 import { PromoteInlineStatus } from '@/components/promote/promote-page-shell'
 import { validatePassword } from '@/lib/auth-password-policy'
+import { AuthPasswordField } from '@/components/auth-password-field'
 
 const supabase = createClient()
 
@@ -549,33 +550,22 @@ export default function AccountSettingsPage() {
         <SectionLabel>Security</SectionLabel>
         {hasPasswordAuth ? (
           <>
-            <input
-              type="password"
+            <AuthPasswordField
+              label="New password"
               value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="New password"
-              style={{
-                width: '100%',
-                fontFamily: font,
-                fontSize: TYPE.body,
-                padding: '12px 16px',
-                borderRadius: 12,
-                border: '1px solid var(--border)',
-                background: 'var(--surface-2)',
-                color: 'var(--text)',
-                boxSizing: 'border-box',
-                marginBottom: '12px',
-              }}
+              autoComplete="new-password"
+              error={passwordStatus && passwordStatus !== 'Password updated.' ? passwordStatus : null}
+              onChange={setNewPassword}
             />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
               <TierOneButton onClick={updatePassword} disabled={savingSection === 'password'}>
                 Update Password
               </TierOneButton>
-              {passwordStatus && (
-                <span style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
+              {passwordStatus === 'Password updated.' ? (
+                <span style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--success)' }}>
                   {passwordStatus}
                 </span>
-              )}
+              ) : null}
             </div>
           </>
         ) : (
