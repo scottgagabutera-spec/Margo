@@ -703,7 +703,8 @@ html[data-margo-stage-idle] .margo-stage-zone {
 }
 .margo-post-card--portrait-feed {
   overflow: visible;
-  padding-top: 8px;
+  /* Inset header text inside the card frame; portrait avatar may still overlap upward. */
+  padding-top: 10px;
 }
 .margo-feed-post-list > .margo-post-card--portrait-feed:first-child {
   margin-top: 10px;
@@ -793,15 +794,38 @@ html[data-margo-stage-idle] .margo-stage-zone {
   column-gap: 8px;
   row-gap: 0;
   align-items: start;
-  margin-top: -22px;
-  min-height: 0;
+  margin-top: 0;
+  /* Portrait column band beside avatar — room for a future role line */
+  min-height: 48px;
   padding-left: calc(12px + 52px + 8px - var(--margo-post-card-pad));
   margin-bottom: var(--margo-post-card-gap);
 }
 .margo-post-card__header--portrait .margo-post-card__mood,
 .margo-post-card__header--portrait .margo-post-card__header-tools {
   align-self: start;
-  margin-top: -4px;
+  margin-top: 0;
+}
+.margo-feed-header-identity-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+.margo-feed-header-identity-stack .margo-post-card__header-name-row {
+  line-height: 1.2;
+}
+.margo-feed-header-identity-stack .margo-feed-header-handle-row {
+  line-height: 1.2;
+  margin: 0;
+}
+.margo-feed-role-third-slot {
+  display: block;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
 }
 .margo-feed-author-role-slot {
   display: inline-block;

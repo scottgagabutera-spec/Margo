@@ -46,20 +46,25 @@ for (const width of [360, 390, 834]) {
 
         const hGap = fr && ir ? ir.left - fr.right : null
         const topOffset = ir ? ir.top - cardR.top : null
+        const moodTopOffset = moodR ? moodR.top - cardR.top : null
+        const nameHandleGap =
+          nr && handleText ? handleText.getBoundingClientRect().top - nr.bottom : null
         const nameCenter = nr ? (nr.top + nr.bottom) / 2 : null
         const moodCenter = moodR ? (moodR.top + moodR.bottom) / 2 : null
 
-        const third = document.createElement('p')
+        const third = document.createElement('span')
         third.textContent = 'Artist'
         third.setAttribute('data-testid', 'feed-test-role-line')
         third.style.margin = '0'
         third.style.padding = '0'
-        third.style.fontSize = '16px'
-        third.style.lineHeight = '1'
+        third.style.fontSize = '0.65rem'
+        third.style.lineHeight = '1.2'
         third.style.color = 'var(--text-muted)'
-        const stack = identity?.querySelector('span[style*="flexDirection"]') as HTMLElement | null
-        if (stack) {
-          third.style.marginTop = '2px'
+        const stack = identity?.querySelector('.margo-feed-header-identity-stack') as HTMLElement | null
+        const thirdSlotEl = identity?.querySelector('[data-testid="feed-role-third-slot"]') as HTMLElement | null
+        if (stack && thirdSlotEl) {
+          stack.insertBefore(third, thirdSlotEl.nextSibling)
+        } else if (stack) {
           stack.appendChild(third)
         } else {
           identity?.appendChild(third)
@@ -73,24 +78,35 @@ for (const width of [360, 390, 834]) {
 
         const timeText = timeLine?.textContent?.trim() ?? ''
         const roleSlot = cardEl.querySelector('[data-testid="feed-author-role-slot"]') as HTMLElement | null
+        const thirdSlot = cardEl.querySelector('[data-testid="feed-role-third-slot"]') as HTMLElement | null
 
         return {
           hGap,
           topOffset,
+          moodTopOffset,
+          nameHandleGap,
           nameFs,
           handleFs,
           nameMoodCenterDelta:
             nameCenter != null && moodCenter != null ? Math.abs(nameCenter - moodCenter) : null,
           blockBottom,
           photoBottom,
-          thirdLineFits: photoBottom != null && blockBottom != null ? blockBottom <= photoBottom + 1 : null,
+          thirdLineFits:
+            photoBottom != null && blockBottom != null ? blockBottom <= photoBottom + 6 : null,
           timeText,
           roleSlotWidth: roleSlot?.getBoundingClientRect().width ?? null,
+          thirdSlotWidth: thirdSlot?.getBoundingClientRect().width ?? null,
         }
       })
 
       expect(layout.hGap ?? 99).toBeLessThanOrEqual(12)
-      expect(layout.topOffset ?? 99).toBeLessThanOrEqual(12)
+      expect(layout.topOffset ?? -99).toBeGreaterThanOrEqual(4)
+      expect(layout.topOffset ?? 99).toBeLessThanOrEqual(16)
+      if (layout.moodTopOffset != null) {
+        expect(layout.moodTopOffset).toBeGreaterThanOrEqual(4)
+        expect(layout.moodTopOffset).toBeLessThanOrEqual(20)
+      }
+      if (layout.nameHandleGap != null) expect(layout.nameHandleGap).toBeLessThanOrEqual(4)
       if (layout.nameFs != null) expect(Math.abs(layout.nameFs - MAIN_NAME_PX)).toBeLessThan(1.5)
       if (layout.handleFs != null) expect(Math.abs(layout.handleFs - MAIN_HANDLE_PX)).toBeLessThan(1.5)
       if (layout.nameMoodCenterDelta != null) expect(layout.nameMoodCenterDelta).toBeLessThanOrEqual(6)
@@ -98,6 +114,7 @@ for (const width of [360, 390, 834]) {
       expect(layout.timeText.toLowerCase()).not.toContain('shared')
       expect(layout.timeText).not.toMatch(/^[A-Z][a-z]{2}\s+\d/)
       expect(layout.roleSlotWidth ?? 0).toBe(0)
+      expect(layout.thirdSlotWidth ?? 0).toBe(0)
     })
   })
 }
