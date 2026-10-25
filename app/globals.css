@@ -26,6 +26,11 @@
   --gold-faint: rgba(232,197,71,0.08);
   --gold-border: rgba(232,197,71,0.28);
   --gold-glow: rgba(232,197,71,0.12);
+  /* Semantic feedback — app shell is always dark; do not rely on `.dark` for these. */
+  --success: oklch(0.72 0.17 155);
+  --success-faint: color-mix(in oklch, var(--success) 12%, transparent);
+  --destructive: oklch(0.62 0.22 25);
+  --destructive-faint: color-mix(in oklch, var(--destructive) 14%, transparent);
   --resonate: #E8C547;
   --resonate-faint: rgba(232,197,71,0.08);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);

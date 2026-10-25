@@ -47,6 +47,13 @@ import {
   type WelcomeDraftRole,
 } from '@/lib/welcome-draft'
 import { WelcomePhotoPicker, type WelcomePhotoTarget } from '@/app/welcome/welcome-photo-picker'
+import { WelcomeStep4Cards } from '@/app/welcome/welcome-step4-cards'
+import {
+  resolveWelcomeStep4Role,
+  welcomeStep4Cards,
+  welcomeStep4Subtitle,
+} from '@/lib/welcome-step4-content'
+import { welcomeVibesHintMessage } from '@/lib/welcome-vibes-hint'
 import './welcome-layout.css'
 
 const ui = UI_FONT
@@ -89,47 +96,54 @@ function parseStep(raw: string | null): WelcomeStep {
 
 function CheckIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M5 12l5 5L20 7" stroke="var(--success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden className="margo-welcome-status-line__icon">
+      <path d="M5 12l5 5L20 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
 
 function XIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M6 6l12 12M18 6L6 18" stroke="var(--destructive)" strokeWidth="2" strokeLinecap="round" />
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden className="margo-welcome-status-line__icon">
+      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   )
 }
 
 type StatusTone = 'success' | 'error' | 'checking' | 'neutral' | 'empty'
 
-function StatusLine({ tone, children }: { tone: StatusTone; children: React.ReactNode }) {
+function StatusLine({
+  tone,
+  children,
+  testId,
+}: {
+  tone: StatusTone
+  children: React.ReactNode
+  testId?: string
+}) {
+  const toneClass = tone === 'empty'
+    ? ''
+    : ` margo-welcome-status-line--${tone}`
   return (
-    <div className="margo-welcome-status-line" aria-live="polite">
+    <div
+      className={`margo-welcome-status-line${toneClass}`}
+      aria-live="polite"
+      data-margo-welcome-status={testId ?? (tone === 'empty' ? 'empty' : tone)}
+    >
       {tone === 'empty' ? (
         <span style={{ visibility: 'hidden' }}>.</span>
       ) : (
         <>
           {tone === 'checking' ? (
-            <LoadingRing size={14} strokeWidth={2} state="spinning" />
+            <span className="margo-welcome-status-line__icon">
+              <LoadingRing size={14} strokeWidth={2} state="spinning" />
+            </span>
           ) : tone === 'success' ? (
             <CheckIcon />
           ) : tone === 'error' ? (
             <XIcon />
           ) : null}
-          <span style={{
-            fontFamily: ui,
-            fontSize: TYPE.meta,
-            color: tone === 'success'
-              ? 'var(--success)'
-              : tone === 'error'
-                ? 'var(--destructive)'
-                : tone === 'checking'
-                  ? 'var(--gold)'
-                  : 'var(--text-muted)',
-          }}>
+          <span className="margo-welcome-status-line__text" style={{ fontFamily: ui, fontSize: TYPE.meta }}>
             {children}
           </span>
         </>
@@ -172,34 +186,6 @@ function WelcomeProgress({ step }: { step: WelcomeStep }) {
         return <span key={n} className="margo-welcome-progress__dot" />
       })}
     </div>
-  )
-}
-
-function PenIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M4 20h4l10-10-4-4L4 16v4z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-function PeopleIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M3 19c0-3 2.5-5 6-5s6 2 6 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      <circle cx="17" cy="9" r="2" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M15 19c0-2 1.2-3.5 3.5-3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function ProfileIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
   )
 }
 
@@ -592,6 +578,19 @@ function WelcomePageInner() {
   const displayHandle = usernameClean ? `@${usernameClean}` : '@username'
   const displayTitle = displayValidation.ok ? displayValidation.value : (displayName.trim() || 'Your name')
 
+  const usernameLiveError = (() => {
+    if (usernameAvailability === 'checking') return null
+    if (usernameSuccess) return null
+    if (!usernameValidation.ok) return usernameValidation.message
+    if (usernameAvailability === 'taken') return `@${usernameClean} is taken`
+    if (usernameAvailability === 'invalid') return 'Not available'
+    if (isTemporaryMemberUsername(usernameClean)) return 'Pick a personal username.'
+    return null
+  })()
+
+  const step4Role = resolveWelcomeStep4Role(role)
+  const step4Cards = welcomeStep4Cards(step4Role)
+
   if (loading) {
     return (
       <div style={{ minHeight: '100dvh', background: 'var(--bg)' }} data-margo-welcome="loading" />
@@ -610,18 +609,6 @@ function WelcomePageInner() {
 
   const step1NameError = step1Attempted && !displayValidation.ok
     ? (displayName.trim() ? displayValidation.message : 'Enter your name.')
-    : null
-
-  const step1UserError = step1Attempted && !usernameSuccess
-    ? (!usernameValidation.ok
-      ? usernameValidation.message
-      : usernameAvailability === 'taken'
-        ? 'Already taken'
-        : usernameAvailability === 'invalid'
-          ? 'Not available'
-          : isTemporaryMemberUsername(usernameClean)
-            ? 'Pick a personal username.'
-            : 'Not available')
     : null
 
   return (
@@ -713,7 +700,12 @@ function WelcomePageInner() {
                     <label style={labelStyle}>Username</label>
                     <UsernameFieldShell
                       visualState={usernameAvailability}
-                      showFeedback={false}
+                      showFeedback={
+                        usernameAvailability === 'available'
+                        || usernameAvailability === 'taken'
+                        || usernameAvailability === 'invalid'
+                        || !usernameValidation.ok
+                      }
                       statusId="welcome-username-status"
                       data-margo-username-status={usernameAvailability}
                     >
@@ -746,7 +738,7 @@ function WelcomePageInner() {
                             background: 'transparent',
                             boxShadow: usernameSuccess
                               ? 'inset 0 0 0 1px var(--success)'
-                              : step1UserError
+                              : usernameLiveError
                                 ? 'inset 0 0 0 1px var(--destructive)'
                                 : 'none',
                           }}
@@ -754,15 +746,17 @@ function WelcomePageInner() {
                       </div>
                     </UsernameFieldShell>
                     {usernameAvailability === 'checking' ? (
-                      <StatusLine tone="checking">Checking…</StatusLine>
+                      <StatusLine tone="checking" testId="username-checking">Checking…</StatusLine>
                     ) : usernameSuccess ? (
-                      <StatusLine tone="success">
+                      <StatusLine tone="success" testId="username-available">
                         @{usernameClean} is available
                       </StatusLine>
-                    ) : (
-                      <StatusLine tone={step1UserError ? 'error' : 'empty'}>
-                        {step1UserError || ''}
+                    ) : usernameLiveError ? (
+                      <StatusLine tone="error" testId="username-error">
+                        {usernameLiveError}
                       </StatusLine>
+                    ) : (
+                      <StatusLine tone="empty"> </StatusLine>
                     )}
                     {step1SaveError ? (
                       <button
@@ -1009,13 +1003,15 @@ function WelcomePageInner() {
 
               <div className="margo-welcome-chosen-line">
                 {step3Attempted && moods.length < 3 ? (
-                  <StatusLine tone="error">Pick at least 3, or skip.</StatusLine>
+                  <StatusLine tone="error" testId="vibes-error">Pick at least 3, or skip.</StatusLine>
                 ) : moods.length >= 3 ? (
-                  <StatusLine tone="success">{`${moods.length} chosen`}</StatusLine>
-                ) : moods.length > 0 ? (
-                  <StatusLine tone="neutral">{`${moods.length} chosen`}</StatusLine>
+                  <StatusLine tone="success" testId="vibes-success">
+                    {welcomeVibesHintMessage(moods.length)}
+                  </StatusLine>
                 ) : (
-                  <StatusLine tone="empty"> </StatusLine>
+                  <StatusLine tone="neutral" testId="vibes-hint">
+                    {welcomeVibesHintMessage(moods.length)}
+                  </StatusLine>
                 )}
               </div>
               {vibesSaveError ? (
@@ -1037,6 +1033,7 @@ function WelcomePageInner() {
                     <button
                       key={value}
                       type="button"
+                      data-margo-welcome-role={value}
                       aria-pressed={selected}
                       onClick={() => pickRole(value)}
                       style={{
@@ -1084,41 +1081,11 @@ function WelcomePageInner() {
                   color: 'var(--text-secondary)',
                   margin: 0,
                 }}>
-                  Here is what you can do on Margo.
+                  {welcomeStep4Subtitle(step4Role)}
                 </p>
               </header>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {[
-                  { icon: <PenIcon />, title: 'Post a lyric', line: 'Say it in a line, your way.' },
-                  { icon: <PeopleIcon />, title: 'Follow people', line: 'Your feed fills with voices you like.' },
-                  { icon: <ProfileIcon />, title: 'Complete your profile', line: 'Add a bio and signature lyric in Edit Profile, anytime.' },
-                ].map((card) => (
-                  <div key={card.title} className="margo-welcome-card">
-                    <div className="margo-welcome-card__icon">{card.icon}</div>
-                    <div style={{ minWidth: 0 }}>
-                      <p style={{
-                        fontFamily: ui,
-                        fontSize: TYPE.body,
-                        fontWeight: 600,
-                        color: 'var(--text)',
-                        margin: '0 0 4px',
-                      }}>
-                        {card.title}
-                      </p>
-                      <p style={{
-                        fontFamily: ui,
-                        fontSize: TYPE.meta,
-                        color: 'var(--text-secondary)',
-                        margin: 0,
-                        lineHeight: 1.4,
-                      }}>
-                        {card.line}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <WelcomeStep4Cards cards={step4Cards} />
             </div>
           ) : null}
         </div>
@@ -1173,11 +1140,18 @@ function WelcomePageInner() {
               <button
                 type="button"
                 data-margo-welcome-feed
-                className="margo-welcome-next margo-welcome-next--wide"
+                className={`margo-welcome-next margo-welcome-next--wide${finishing ? ' margo-welcome-next--busy' : ''}`}
                 disabled={finishing}
                 onClick={finishWelcome}
               >
-                Go to Feed
+                {finishing ? (
+                  <>
+                    <LoadingRing size={18} strokeWidth={2} state="spinning" color="var(--bg)" />
+                    Saving…
+                  </>
+                ) : (
+                  'Go to Feed'
+                )}
               </button>
             </div>
           ) : null}

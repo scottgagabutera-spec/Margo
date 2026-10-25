@@ -49,6 +49,13 @@ describe('username validator', () => {
     assert.equal(validateUsernameChoice('member123456789', 'member123456789').ok, true)
   })
 
+  it('Edit Profile bio-only save keeps unchanged member handle valid', () => {
+    const current = 'member684340688'
+    const result = validateUsernameChoice(current, current)
+    assert.equal(result.ok, true)
+    if (result.ok) assert.equal(result.value, current)
+  })
+
   it('allows scottie and ladygaga substring fans', () => {
     assert.equal(validateUsernameChoice('scottie').ok, true)
     assert.equal(validateUsernameChoice('ladygaga').ok, true)

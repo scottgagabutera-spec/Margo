@@ -75,6 +75,7 @@
     "test:hub-tiles": "node --experimental-strip-types --test lib/hub/tiles.test.ts",
     "test:username-validator": "node --experimental-strip-types --test lib/username-validator.test.ts",
     "test:welcome-profile-settings": "node --experimental-strip-types --test lib/welcome-profile-settings.test.ts",
+    "test:welcome-unit": "node --experimental-strip-types --test lib/welcome-profile-settings.test.ts lib/welcome-vibes-hint.test.ts lib/welcome-step4-content.test.ts lib/welcome-design-tokens.test.ts lib/profile-avatar-upload.test.ts lib/username-validator.test.ts",
     "test:auth-password-policy": "node --experimental-strip-types --test lib/auth-password-policy.test.ts",
     "test:auth-login-errors": "node --experimental-strip-types --test lib/auth-login-errors.test.ts",
     "test:auth-recovery": "node --experimental-strip-types --test lib/auth-recovery-errors.test.ts lib/auth-recovery-url.test.ts",

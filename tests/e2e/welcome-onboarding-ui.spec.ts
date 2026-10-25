@@ -18,6 +18,37 @@ async function assertWelcomeContained(page: import('@playwright/test').Page) {
   })
 }
 
+async function expectStatusTokenColors(page: import('@playwright/test').Page) {
+  const colors = await page.evaluate(() => {
+    const root = getComputedStyle(document.documentElement)
+    const successToken = root.getPropertyValue('--success').trim()
+    const destructiveToken = root.getPropertyValue('--destructive').trim()
+    const sample = (tone: 'success' | 'error') => {
+      const wrap = document.createElement('div')
+      wrap.className = `margo-welcome-status-line margo-welcome-status-line--${tone}`
+      const text = document.createElement('span')
+      text.className = 'margo-welcome-status-line__text'
+      wrap.appendChild(text)
+      document.body.appendChild(wrap)
+      const computed = getComputedStyle(text).color
+      wrap.remove()
+      return computed
+    }
+    const bodyText = getComputedStyle(document.body).color
+    return {
+      successToken,
+      destructiveToken,
+      successText: sample('success'),
+      errorText: sample('error'),
+      bodyText,
+    }
+  })
+  expect(colors.successToken.length).toBeGreaterThan(2)
+  expect(colors.destructiveToken.length).toBeGreaterThan(2)
+  expect(colors.successText).not.toBe(colors.bodyText)
+  expect(colors.errorText).not.toBe(colors.bodyText)
+}
+
 async function skipIfWizardHidden(page: import('@playwright/test').Page) {
   const ready = page.locator('[data-margo-welcome="ready"]')
   if (!(await ready.isVisible().catch(() => false))) {
@@ -34,6 +65,12 @@ for (const width of [360, 390] as const) {
         await page.goto(`${BASE}${path}`, { waitUntil: 'domcontentloaded', timeout: 45000 })
         await expect(page.getByRole('link', { name: 'Help' })).toHaveCount(0)
       }
+    })
+
+    test('success and error status lines use semantic tokens', async ({ page }) => {
+      await page.goto(`${BASE}/welcome?step=1`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+      await expect(page.locator('[data-margo-welcome="loading"]')).toHaveCount(0, { timeout: 20000 })
+      await expectStatusTokenColors(page)
     })
 
     test('signed out shell, no tab bar, no Help', async ({ page }) => {
@@ -60,7 +97,10 @@ for (const width of [360, 390] as const) {
       const handle = `alexw${Date.now().toString().slice(-7)}`
       await page.locator('input[autocomplete="username"]').fill(handle)
       await page.waitForTimeout(1200)
-      await expect(page.getByText(/is available/)).toBeVisible({ timeout: 15000 })
+      await expect(page.locator('[data-margo-welcome-status="username-available"]')).toBeVisible({ timeout: 15000 })
+      const availableColor = await page.locator('[data-margo-welcome-status="username-available"] .margo-welcome-status-line__text').evaluate((el) => getComputedStyle(el).color)
+      const bodyColor = await page.locator('body').evaluate((el) => getComputedStyle(el).color)
+      expect(availableColor).not.toBe(bodyColor)
       await page.getByRole('button', { name: 'Next' }).click()
       await expect(page).toHaveURL(/step=2/)
       await expect(page.getByRole('heading', { name: 'Add your photos' })).toBeVisible()
@@ -92,8 +132,36 @@ for (const width of [360, 390] as const) {
     test('step 3 chip gating message', async ({ page }) => {
       await page.goto(`${BASE}/welcome?step=3`, { waitUntil: 'domcontentloaded', timeout: 45000 })
       await skipIfWizardHidden(page)
+      await expect(page.locator('[data-margo-welcome-status="vibes-hint"]')).toContainText('Pick 3 to continue')
+      await page.getByRole('button', { name: 'Chill' }).click()
+      await expect(page.locator('[data-margo-welcome-status="vibes-hint"]')).toContainText('2 more to go')
+      await page.getByRole('button', { name: 'Hope' }).click()
+      await expect(page.locator('[data-margo-welcome-status="vibes-hint"]')).toContainText('1 more to go')
+      await page.getByRole('button', { name: 'Love' }).click()
+      await expect(page.locator('[data-margo-welcome-status="vibes-success"]')).toContainText('3 chosen')
+      const chosenColor = await page.locator('[data-margo-welcome-status="vibes-success"] .margo-welcome-status-line__text').evaluate((el) => getComputedStyle(el).color)
+      const bodyColor = await page.locator('body').evaluate((el) => getComputedStyle(el).color)
+      expect(chosenColor).not.toBe(bodyColor)
       await page.getByRole('button', { name: 'Next' }).click()
-      await expect(page.getByText('Pick at least 3, or skip.')).toBeVisible()
+      await expect(page).toHaveURL(/step=4/)
+    })
+
+    test('step 3 chip gating error on Next', async ({ page }) => {
+      await page.goto(`${BASE}/welcome?step=3`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+      await skipIfWizardHidden(page)
+      await page.getByRole('button', { name: 'Next' }).click()
+      await expect(page.locator('[data-margo-welcome-status="vibes-error"]')).toBeVisible()
+    })
+
+    test('step 4 cards follow role preference', async ({ page }) => {
+      await page.goto(`${BASE}/welcome?step=3`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+      await skipIfWizardHidden(page)
+      await page.locator('[data-margo-welcome-role="artist"]').click()
+      await page.getByRole('button', { name: 'Skip for now' }).click()
+      await expect(page).toHaveURL(/step=4/)
+      await expect(page.locator('[data-margo-welcome-step4-card="apply-artist"]')).toBeVisible()
+      await expect(page.locator('[data-margo-welcome-step4-card="complete-profile"]')).toBeVisible()
+      expect(await page.locator('[data-margo-welcome-step4-card]').count()).toBeLessThanOrEqual(4)
     })
 
     test('footer back inline and step 4 feed button', async ({ page }) => {

@@ -1,6 +1,12 @@
 import { createClient } from '@/lib/supabase/client'
+import {
+  PROFILE_AVATAR_BUCKET,
+  profileAvatarObjectPath,
+} from '@/lib/profile-avatar-upload-path'
 
 const supabase = createClient()
+
+export { PROFILE_AVATAR_BUCKET, profileAvatarObjectPath } from '@/lib/profile-avatar-upload-path'
 
 /** Same storage path + profiles.avatar_url write as Edit Profile (`AvatarUpload`). */
 export async function uploadProfileAvatar(userId: string, file: File): Promise<string> {
@@ -10,10 +16,9 @@ export async function uploadProfileAvatar(userId: string, file: File): Promise<s
   if (file.size > 5 * 1024 * 1024) {
     throw new Error('Image must be under 5MB.')
   }
-  const ext = file.name.split('.').pop() || 'jpg'
-  const path = `${userId}/avatar.${ext}`
+  const path = profileAvatarObjectPath(userId, file.name)
   const { error: uploadError } = await supabase.storage
-    .from('avatars')
+    .from(PROFILE_AVATAR_BUCKET)
     .upload(path, file, { upsert: true, cacheControl: '3600' })
   if (uploadError) throw uploadError
   const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)

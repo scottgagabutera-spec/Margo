@@ -187,8 +187,11 @@
 }
 
 .margo-welcome-next:disabled {
-  opacity: 0.55;
   cursor: not-allowed;
+}
+
+.margo-welcome-next--busy:disabled {
+  opacity: 0.92;
 }
 
 .margo-welcome-next:focus-visible {
@@ -251,6 +254,58 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  width: 100%;
+  padding: 0;
+  margin-left: 0;
+  text-align: left;
+}
+
+.margo-welcome-status-line__icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+}
+
+.margo-welcome-status-line--success {
+  color: var(--success);
+}
+
+.margo-welcome-status-line--success .margo-welcome-status-line__text {
+  color: var(--success);
+}
+
+.margo-welcome-status-line--error {
+  color: var(--destructive);
+}
+
+.margo-welcome-status-line--error .margo-welcome-status-line__text {
+  color: var(--destructive);
+}
+
+.margo-welcome-status-line--checking {
+  color: var(--gold);
+}
+
+.margo-welcome-status-line--checking .margo-welcome-status-line__text {
+  color: var(--gold);
+}
+
+.margo-welcome-status-line--neutral .margo-welcome-status-line__text {
+  color: var(--text-muted);
+}
+
+.margo-welcome-next--busy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.margo-welcome-next:disabled:not(.margo-welcome-next--busy) {
+  opacity: 1;
 }
 
 .margo-welcome-cover {
