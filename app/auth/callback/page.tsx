@@ -56,7 +56,7 @@ function OAuthCallbackInner() {
         const body = await res.json().catch(() => ({})) as { redirectTo?: string }
         const follow = oauthCallbackClientReturnTo(body.redirectTo)
         await rehydrate()
-        if (follow.kind === 'terms') {
+        if (follow.kind === 'terms' || follow.kind === 'final') {
           completeAuthNavigation(follow.href)
           return
         }

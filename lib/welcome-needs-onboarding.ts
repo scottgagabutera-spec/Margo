@@ -35,12 +35,21 @@ export type WelcomeOnboardingProfileContext = {
   authUserCreatedAt: string | null | undefined
 }
 
+/** True when created_at is not yet available for cutoff logic (null, empty, or unparseable). */
+export function isAuthUserCreatedAtUnavailable(
+  authUserCreatedAt: string | null | undefined,
+): boolean {
+  if (authUserCreatedAt == null) return true
+  const trimmed = authUserCreatedAt.trim()
+  if (!trimmed) return true
+  return Number.isNaN(Date.parse(trimmed))
+}
+
 export function isAuthUserCreatedOnOrAfterWelcomeCutoff(
   authUserCreatedAt: string | null | undefined,
 ): boolean {
-  if (!authUserCreatedAt) return false
-  const ms = Date.parse(authUserCreatedAt)
-  if (Number.isNaN(ms)) return false
+  if (isAuthUserCreatedAtUnavailable(authUserCreatedAt)) return false
+  const ms = Date.parse(authUserCreatedAt!)
   return ms >= CUTOFF_MS
 }
 
@@ -50,6 +59,8 @@ export function needsOnboarding(ctx: WelcomeOnboardingProfileContext): boolean {
 
   const completedAt = onboardingFromSettings(ctx.settings).completedAt
   if (completedAt) return false
+
+  if (isAuthUserCreatedAtUnavailable(ctx.authUserCreatedAt)) return true
 
   const { username, displayName } = ctx.identity
   const name = (displayName || '').trim()

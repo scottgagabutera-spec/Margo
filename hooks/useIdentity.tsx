@@ -11,7 +11,6 @@ import { warmProfile } from '@/lib/profile-warm'
 import { validateDisplayNameChoice, validateUsernameChoice } from '@/lib/username-validator'
 import { warmFeedPosts } from '@/lib/primary-tab-prefetch'
 import { providerAvatarFromUser, providerFullNameFromUser } from '@/lib/oauth-profile-name'
-import { pickAvailableUsernameFromProviderName } from '@/lib/pick-available-username'
 import { createTemporaryMemberHandle } from '@/lib/temporary-member-handle'
 
 const supabase = createClient()
@@ -158,22 +157,19 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
       return mapped
     }
 
-    const realName = providerFullNameFromUser(su)
     const avatarUrl = providerAvatarFromUser(su)
     const recordedLegal = legalConsentFromUserMetadata(meta as Record<string, unknown>)
     const settings = recordedLegal
       ? mergeLegalConsentIntoSettings(null, recordedLegal)
       : undefined
 
-    let username = realName
-      ? await pickAvailableUsernameFromProviderName(realName)
-      : createTemporaryMemberHandle()
+    let username = createTemporaryMemberHandle()
 
     for (let attempts = 0; attempts < 6; attempts++) {
       const insertRow: Record<string, unknown> = {
         id: su.id,
         username,
-        display_name: realName || '',
+        display_name: '',
         avatar_url: avatarUrl,
       }
       if (settings) insertRow.settings = settings

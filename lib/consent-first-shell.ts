@@ -5,8 +5,9 @@ export function shouldMountAppContent(input: {
   pathname: string | null | undefined
   step: string | null | undefined
 }): boolean {
-  if (!input.signedIn || !input.needsTermsAcceptance) return true
   const path = (input.pathname || '').split('?')[0]
+  if (path === '/auth/callback') return false
+  if (!input.signedIn || !input.needsTermsAcceptance) return true
   return path === '/signin' && input.step === 'terms'
 }
 

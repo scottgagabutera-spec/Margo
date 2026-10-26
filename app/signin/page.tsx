@@ -41,7 +41,7 @@ export default function SigninPage() {
 function SigninPageInner() {
   const searchParams = useSearchParams()
   const { user, loading, needsTermsAcceptance } = useAuthGate()
-  const { waitUntilReady } = useIdentity()
+  const { waitUntilReady, loading: identityLoading } = useIdentity()
   const initialMode = parseMode(searchParams.get('mode'))
   const isTermsStep = searchParams.get('step') === 'terms'
   const [mode, setMode] = useState<AuthMode>(initialMode)
@@ -64,11 +64,12 @@ function SigninPageInner() {
   }, [returnTo, waitUntilReady, user?.id])
 
   useEffect(() => {
-    if (loading) return
+    if (loading || identityLoading) return
+    if (isTermsStep) return
     if (user && !needsTermsAcceptance) {
       void finishAuth()
     }
-  }, [loading, user, needsTermsAcceptance, finishAuth])
+  }, [loading, identityLoading, user, needsTermsAcceptance, isTermsStep, finishAuth])
 
   return (
     <div style={{
