@@ -6,8 +6,8 @@ import {
   HUB_LAUNCHER_PANEL_WIDTH_DESKTOP_PX,
 } from './hub-launcher-layout.ts'
 
-test('hub launcher uses four-column app grid on phone and desktop', () => {
-  assert.equal(HUB_LAUNCHER_GRID_COLUMNS_PHONE, 4)
+test('hub launcher uses three columns on phone and four on desktop', () => {
+  assert.equal(HUB_LAUNCHER_GRID_COLUMNS_PHONE, 3)
   assert.equal(HUB_LAUNCHER_GRID_COLUMNS_DESKTOP, 4)
 })
 

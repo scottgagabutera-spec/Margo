@@ -1586,53 +1586,108 @@ html[data-margo-stage-idle] .margo-stage-zone {
   margin-top: 0;
   filter: saturate(0.2);
 }
-.margo-hub-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 54;
-  pointer-events: none;
-}
 .margo-hub-scrim {
-  position: absolute;
-  inset: 0;
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: calc(var(--margo-tabbar-h, 0px) + env(safe-area-inset-bottom, 0px));
+  z-index: 52;
   border: none;
+  padding: 0;
+  margin: 0;
   background: var(--margo-scrim);
   cursor: default;
-  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
 }
-.margo-hub-launcher {
+@media (min-width: 640px) {
+  .margo-hub-scrim {
+    bottom: 0;
+    z-index: 58;
+  }
+}
+.margo-hub-sheet {
   position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--margo-tabbar-h, 0px) + 10px + env(safe-area-inset-bottom, 0px));
+  width: min(calc(100vw - 20px), 380px);
   z-index: 55;
-  pointer-events: auto;
-  left: 12px;
-  right: 12px;
-  top: calc(var(--nav-height, 72px) + 12px);
-  bottom: calc(var(--margo-tabbar-h, 0px) + 12px + env(safe-area-inset-bottom, 0px));
-  margin: 0 auto;
-  max-width: 480px;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 20px;
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
-  padding: 20px 16px 24px;
+  border-radius: 18px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.48);
+  padding: 12px 12px 14px;
   overflow-y: auto;
   overflow-x: hidden;
   box-sizing: border-box;
+  max-height: min(420px, calc(100dvh - var(--margo-tabbar-h, 0px) - var(--nav-height, 72px) - 32px));
   -webkit-overflow-scrolling: touch;
 }
+.margo-hub-panel {
+  display: none;
+  position: fixed;
+  width: min(380px, calc(100vw - 24px));
+  max-height: min(440px, calc(100dvh - var(--nav-height, 72px) - 24px));
+  z-index: 60;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
+  padding: 12px 12px 14px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
 @media (min-width: 640px) {
-  .margo-hub-launcher {
-    left: auto;
-    right: auto;
-    top: auto;
-    bottom: auto;
-    width: 380px;
-    max-width: calc(100vw - 24px);
-    max-height: min(420px, calc(100dvh - var(--nav-height, 72px) - 24px));
-    margin: 0;
-    padding: 18px 16px 20px;
-    border-radius: 16px;
+  .margo-hub-sheet {
+    display: none !important;
   }
+  .margo-hub-panel {
+    display: block !important;
+  }
+}
+.margo-hub-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: var(--margo-touch-min);
+  margin-bottom: 8px;
+  padding: 0 2px 4px;
+  box-sizing: border-box;
+}
+.margo-hub-panel-head__title {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.margo-hub-panel-head__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.margo-hub-panel-head__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--margo-touch-min);
+  height: var(--margo-touch-min);
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  text-decoration: none;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+.margo-hub-panel-head__icon-btn:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
 }
 .margo-hub-shell {
   width: 100%;
@@ -1641,8 +1696,8 @@ html[data-margo-stage-idle] .margo-stage-zone {
 }
 .margo-hub-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(72px, 1fr));
-  gap: 16px 8px;
+  grid-template-columns: repeat(3, minmax(72px, 1fr));
+  gap: 14px 6px;
   width: 100%;
   box-sizing: border-box;
   justify-content: center;
@@ -1650,17 +1705,21 @@ html[data-margo-stage-idle] .margo-stage-zone {
 @media (min-width: 640px) {
   .margo-hub-grid {
     grid-template-columns: repeat(4, minmax(72px, 1fr));
-    gap: 18px 10px;
+    gap: 16px 8px;
   }
 }
 .margo-hub-identity {
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   gap: 12px;
   min-width: 0;
-  margin-bottom: 14px;
-  padding: 4px 2px 6px;
+  margin-bottom: 6px;
+  padding: 4px 2px 8px;
   box-sizing: border-box;
+  text-decoration: none;
+  color: inherit;
+  border-radius: 10px;
 }
 .margo-hub-identity__text {
   display: flex;

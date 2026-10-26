@@ -18,6 +18,7 @@ import {
 import { createPortal } from 'react-dom'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useHubSurfaces } from '@/hooks/useHubSurfaces'
+import { useIdentity } from '@/hooks/useIdentity'
 import { MARGO_CLOSE_HUB_EVENT, persistActivePrimaryScroll, readActiveScrollTop } from '@/components/primary-tab-shell'
 import {
   BellIcon,
@@ -28,8 +29,11 @@ import {
   PenLineIcon,
   SearchIcon,
 } from '@/components/icons'
+import { MargoPortraitAvatar } from '@/components/margo-portrait-avatar'
 import { PendingNavLink } from '@/components/pending-nav-link'
+import { SignInLink } from '@/components/signin-link'
 import { buildSigninHref, persistAuthReturnScroll } from '@/lib/auth-return'
+import { isMargoBrandUsername } from '@/lib/margo-brand-account'
 import { searchHrefForPath, searchScopeForPath, consumeHubOverlayRestore } from '@/lib/search-scope'
 import {
   hubTileBadgeLabel,
@@ -68,22 +72,47 @@ function HubPresenceDot({ visible, top, right }: { visible: boolean; top: string
   )
 }
 
+function HubIdentityHeader() {
+  const { identity } = useIdentity()
+  if (!identity) return null
+  const brandMark = isMargoBrandUsername(identity.username)
+  const handle = `@${identity.username.replace(/^@/, '')}`
+  return (
+    <PendingNavLink href="/you" className="margo-hub-identity" data-margo-hub-root>
+      <MargoPortraitAvatar
+        size="sm"
+        imageUrl={identity.avatarUrl}
+        fallbackInitial={(identity.displayName || identity.username || '?').slice(0, 1)}
+        fallbackSeed={!identity.avatarUrl && !brandMark ? identity.username : null}
+        brandMark={brandMark}
+      />
+      <span className="margo-hub-identity__text">
+        <span className="margo-hub-identity__name">{identity.displayName || identity.username}</span>
+        <span className="margo-hub-identity__handle">{handle}</span>
+      </span>
+    </PendingNavLink>
+  )
+}
+
 function HubTileLink({
   tile,
   signedIn,
   pending,
   navLocked,
   onBeginNavigate,
+  onClose,
 }: {
   tile: ResolvedHubTile
   signedIn: boolean
   pending: boolean
   navLocked: boolean
   onBeginNavigate: (href: string) => boolean
+  onClose: () => void
 }) {
   const badge = signedIn ? hubTileBadgeLabel(tile.count) : ''
   const dest = signedIn || !tile.needsAccount ? tile.href : buildSigninHref(tile.href)
   const showLock = tile.locked
+  const captionGold = !!tile.captionGold
 
   return (
     <Link
@@ -93,9 +122,15 @@ function HubTileLink({
           persistActivePrimaryScroll()
           persistAuthReturnScroll()
         }
-        if (navLocked || pending || !onBeginNavigate(dest)) {
+        if (navLocked || pending) {
           e.preventDefault()
+          return
         }
+        if (!onBeginNavigate(dest)) {
+          e.preventDefault()
+          return
+        }
+        if (!tile.locked) onClose()
       }}
       data-margo-hub-root
       data-hub-tile={tile.id}
@@ -130,6 +165,13 @@ function HubTileLink({
         <TileIcon kind={tile.icon} />
       </span>
       <span className="margo-hub-tile__label">{tile.label}</span>
+      <span
+        className={
+          'margo-hub-tile__caption' + (captionGold ? ' margo-hub-tile__caption--gold' : '')
+        }
+      >
+        {tile.caption}
+      </span>
     </Link>
   )
 }
@@ -155,6 +197,43 @@ function useHub(): HubContextValue {
   return ctx
 }
 
+function HubPanelSearchButton({ onNavigate }: { onNavigate: () => void }) {
+  const pathname = usePathname()
+  const href = searchHrefForPath(pathname, '/hub')
+  const scope = searchScopeForPath('/hub')
+  return (
+    <PendingNavLink
+      href={href}
+      aria-label={scope.placeholder}
+      ringSize={18}
+      data-margo-hub-root
+      onClick={onNavigate}
+      className="margo-hub-panel-head__icon-btn"
+    >
+      <SearchIcon size={20} color="var(--text-secondary)" />
+    </PendingNavLink>
+  )
+}
+
+function HubPanelHeader({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="margo-hub-panel-head" data-margo-hub-root>
+      <span className="margo-hub-panel-head__title">Hub</span>
+      <div className="margo-hub-panel-head__actions">
+        <HubPanelSearchButton onNavigate={onClose} />
+        <button
+          type="button"
+          className="margo-hub-panel-head__icon-btn"
+          aria-label="Close Hub"
+          onClick={onClose}
+        >
+          <span aria-hidden style={{ fontSize: '1.25rem', lineHeight: 1, color: 'var(--text-secondary)' }}>×</span>
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function HubTiles({
   signedIn,
   close,
@@ -170,6 +249,7 @@ function HubTiles({
 }) {
   return (
     <>
+      {signedIn ? <HubIdentityHeader /> : null}
       {tiles.map((tile) => {
         const dest = signedIn || !tile.needsAccount ? tile.href : buildSigninHref(tile.href)
         return (
@@ -180,36 +260,70 @@ function HubTiles({
             pending={pendingHref === dest}
             navLocked={!!pendingHref && pendingHref !== dest}
             onBeginNavigate={beginNavigate}
+            onClose={close}
           />
         )
       })}
+      {!signedIn ? (
+        <div className="margo-hub-signed-out-cta">
+          <p className="margo-hub-signed-out-cta__line">Sign in to open your space</p>
+          <SignInLink onClick={close} data-margo-hub-root className="margo-hub-sign-in-btn">
+            Sign in
+          </SignInLink>
+        </div>
+      ) : null}
     </>
+  )
+}
+
+function HubPanelBody({
+  signedIn,
+  close,
+  tiles,
+  pendingHref,
+  beginNavigate,
+}: {
+  signedIn: boolean
+  close: () => void
+  tiles: ResolvedHubTile[]
+  pendingHref: string | null
+  beginNavigate: (href: string) => boolean
+}) {
+  return (
+    <div className="margo-hub-shell">
+      <HubPanelHeader onClose={close} />
+      <div className="margo-hub-grid">
+        <HubTiles
+          signedIn={signedIn}
+          close={close}
+          tiles={tiles}
+          pendingHref={pendingHref}
+          beginNavigate={beginNavigate}
+        />
+      </div>
+    </div>
   )
 }
 
 function HubPanel() {
   const { open, close, signedIn, tiles, pendingHref, beginNavigate, hubAnchorRef } = useHub()
   const [mounted, setMounted] = useState(false)
-  const panelRef = useRef<HTMLDivElement>(null)
+  const sheetRef = useRef<HTMLDivElement>(null)
+  const desktopRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => setMounted(true), [])
 
-  useEffect(() => {
-    if (!open) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
-  }, [open])
-
   useLayoutEffect(() => {
     if (!open) return
-    const panel = panelRef.current
     const anchor = hubAnchorRef.current
-    if (!panel || !anchor) return
+    if (!anchor) return
     const isDesktop = window.matchMedia('(min-width: 640px)').matches
+    const panel = isDesktop ? desktopRef.current : sheetRef.current
+    if (!panel) return
     if (!isDesktop) {
       panel.style.removeProperty('left')
       panel.style.removeProperty('top')
+      panel.style.removeProperty('right')
       return
     }
     const ar = anchor.getBoundingClientRect()
@@ -218,11 +332,12 @@ function HubPanel() {
     left = Math.max(12, Math.min(left, window.innerWidth - pw - 12))
     panel.style.left = `${left}px`
     panel.style.top = `${ar.bottom + 10}px`
-  }, [open, hubAnchorRef, tiles.length])
+    panel.style.right = 'auto'
+  }, [open, hubAnchorRef, tiles.length, signedIn])
 
   if (!mounted || !open) return null
 
-  const tileProps = {
+  const bodyProps = {
     signedIn,
     close,
     tiles,
@@ -231,7 +346,7 @@ function HubPanel() {
   }
 
   return createPortal(
-    <div className="margo-hub-overlay" data-margo-hub-root>
+    <>
       <button
         type="button"
         className="margo-hub-scrim"
@@ -239,20 +354,26 @@ function HubPanel() {
         onClick={close}
       />
       <div
-        ref={panelRef}
-        className="margo-hub-launcher"
+        ref={sheetRef}
+        className="margo-hub-sheet"
+        data-margo-hub-root
         role="dialog"
         aria-modal="true"
-        aria-label="Margo apps"
-        data-margo-hub-root
+        aria-label="Hub"
       >
-        <div className="margo-hub-shell">
-          <div className="margo-hub-grid">
-            <HubTiles {...tileProps} />
-          </div>
-        </div>
+        <HubPanelBody {...bodyProps} />
       </div>
-    </div>,
+      <div
+        ref={desktopRef}
+        className="margo-hub-panel"
+        data-margo-hub-root
+        role="dialog"
+        aria-modal="true"
+        aria-label="Hub"
+      >
+        <HubPanelBody {...bodyProps} />
+      </div>
+    </>,
     document.body,
   )
 }
@@ -300,7 +421,7 @@ export function HubProvider({ children }: { children: ReactNode }) {
         new URLSearchParams(window.location.search).get('hub') === '1'
         || consumeHubOverlayRestore()
       )
-    setOpen(restoreHub)
+    setOpen(restoreHub ? true : false)
     if (restoreHub && typeof window !== 'undefined') {
       const url = new URL(window.location.href)
       url.searchParams.delete('hub')
