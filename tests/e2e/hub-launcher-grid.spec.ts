@@ -50,7 +50,8 @@ for (const width of [360, 390, 834, 1440]) {
       else await openHubMobile(page)
 
       await expect(page.locator(`${rootSel} .margo-hub-panel-head__title`)).toHaveText('Hub')
-      await expect(page.locator(`${rootSel} button[aria-label="Close Hub"]`)).toHaveCount(0)
+      const closeHubCount = width >= 640 ? 0 : 1
+      await expect(page.locator(`${rootSel} button[aria-label="Close Hub"]`)).toHaveCount(closeHubCount)
       await expect(page.locator(`${rootSel} .margo-hub-scrim`)).toHaveCount(0)
 
       const tiles = page.locator(`${rootSel} [data-hub-tile]`)
