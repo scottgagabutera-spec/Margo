@@ -35,6 +35,7 @@ import { resolveSignatureMomentSnippet } from '@/lib/signature-snippet'
 import { useIsBuffering, useIsPlaying } from '@/hooks/useAudioEngine'
 import { useLongPress } from '@/hooks/useLongPress'
 import { ProfilePortraitIdentity, ProfilePortraitActions } from '@/components/profile-portrait-identity'
+import { ProfileAccountMenu } from '@/components/profile-account-menu'
 
 const supabase = createClient()
 
@@ -439,7 +440,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
 
   const [contentTab, setContentTab] = useState<ProfileContentTab>('lyrics')
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
-  const accountMenuRef = useRef<HTMLDivElement>(null)
+  const accountMenuTriggerRef = useRef<HTMLButtonElement>(null)
 
   const { requireAuth, rehydrate } = useAuthGate()
   const [resonated, setResonated] = useState<Set<string>>(() => {
@@ -478,17 +479,6 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
     }),
     [profile?.whoCanMessage, followStatus, isOwnProfile, followKnown],
   )
-
-  useEffect(() => {
-    if (!accountMenuOpen) return
-    const onDoc = (e: MouseEvent) => {
-      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target as Node)) {
-        setAccountMenuOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', onDoc)
-    return () => document.removeEventListener('mousedown', onDoc)
-  }, [accountMenuOpen])
 
   const { items: profileReplays, loading: replaysLoading } = useProfileReplays(
     profile?.id ?? null,
@@ -704,11 +694,13 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                       whiteSpace: 'nowrap', flexShrink: 0,
                     }}
                   >Edit Profile</Link>
-                  <div ref={accountMenuRef} style={{ position: 'relative', flexShrink: 0 }}>
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
                     <button
+                      ref={accountMenuTriggerRef}
                       type="button"
                       aria-label="Account menu"
                       aria-expanded={accountMenuOpen}
+                      aria-haspopup="dialog"
                       onClick={() => setAccountMenuOpen(o => !o)}
                       style={{
                         width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
@@ -722,66 +714,15 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                     >
                       <MoreIcon size={18} color="var(--text-secondary)" />
                     </button>
-                    {accountMenuOpen && (
-                      <div style={{
-                        position: 'absolute', top: 'calc(100% + 8px)', right: 0,
-                        minWidth: '200px', background: 'var(--bg)',
-                        border: '1px solid var(--border)', borderRadius: '10px',
-                        boxShadow: '0 12px 28px rgba(0,0,0,0.45)',
-                        padding: '6px', zIndex: 40,
-                      }}>
-                        <Link
-                          href="/settings"
-                          onClick={() => setAccountMenuOpen(false)}
-                          style={{
-                            display: 'flex', alignItems: 'center',
-                            minHeight: 'var(--margo-touch-min)',
-                            fontFamily: font, fontSize: TYPE.secondary,
-                            textDecoration: 'none', color: 'var(--text-secondary)',
-                            padding: '0 12px', borderRadius: '6px', boxSizing: 'border-box',
-                          }}
-                        >Account Settings</Link>
-                        {identity?.isArtist && (
-                          <Link
-                            href="/studio"
-                            onClick={() => setAccountMenuOpen(false)}
-                            style={{
-                              display: 'flex', alignItems: 'center',
-                              minHeight: 'var(--margo-touch-min)',
-                              fontFamily: font, fontSize: TYPE.secondary,
-                              textDecoration: 'none', color: 'var(--text-secondary)',
-                              padding: '0 12px', borderRadius: '6px', boxSizing: 'border-box',
-                            }}
-                          >Studio</Link>
-                        )}
-                        {showApplyCTA && (
-                          <Link
-                            href="/apply-artist"
-                            onClick={() => setAccountMenuOpen(false)}
-                            style={{
-                              display: 'flex', alignItems: 'center',
-                              minHeight: 'var(--margo-touch-min)',
-                              fontFamily: font, fontSize: TYPE.secondary,
-                              textDecoration: 'none', color: 'var(--text-secondary)',
-                              padding: '0 12px', borderRadius: '6px', boxSizing: 'border-box',
-                            }}
-                          >{applyLabel}</Link>
-                        )}
-                        <div style={{ height: '1px', background: 'var(--border)', margin: '6px 4px' }} />
-                        <button
-                          type="button"
-                          onClick={() => { setAccountMenuOpen(false); void handleSignOut() }}
-                          style={{
-                            display: 'flex', alignItems: 'center', width: '100%', textAlign: 'left',
-                            minHeight: 'var(--margo-touch-min)',
-                            fontFamily: font, fontSize: TYPE.secondary,
-                            background: 'none', border: 'none', cursor: 'pointer',
-                            color: 'var(--text-muted)',
-                            padding: '0 12px', borderRadius: '6px', boxSizing: 'border-box',
-                          }}
-                        >Sign Out</button>
-                      </div>
-                    )}
+                    <ProfileAccountMenu
+                      open={accountMenuOpen}
+                      onOpenChange={setAccountMenuOpen}
+                      triggerRef={accountMenuTriggerRef}
+                      showStudio={!!identity?.isArtist}
+                      showApply={showApplyCTA}
+                      applyLabel={applyLabel}
+                      onSignOut={() => { void handleSignOut() }}
+                    />
                   </div>
                 </div>
               )}

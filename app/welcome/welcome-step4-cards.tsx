@@ -36,6 +36,13 @@ function Step4Icon({ id }: { id: WelcomeStep4IconId }) {
       return <MusicNoteIcon size={20} color={color} />
     case 'profile':
       return <ProfileIcon />
+    case 'promote':
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path d="M4 16v4h4l9-9-4-4-9 9Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+          <path d="M14 6l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      )
     default:
       return null
   }

@@ -14,6 +14,7 @@ import { useStageChromeHidden } from '@/lib/stage-chrome'
 import { useSigninHref } from '@/components/signin-link'
 import { persistAuthReturnScroll } from '@/lib/auth-return'
 import { persistActivePrimaryScroll } from '@/components/primary-tab-shell'
+import { YouTabPortrait } from '@/components/you-tab-portrait'
 
 const font = 'var(--font-geist-sans), system-ui, sans-serif'
 
@@ -167,6 +168,7 @@ export function MobileTabBar() {
 
       <Link
         href={youHref}
+        aria-label={isSignedIn ? 'You' : undefined}
         style={tabStyle(isOnProfile, tabLive('you') || youAwaitingIdentity)}
         {...(isSignedIn ? youLink : {})}
         onClick={(event) => {
@@ -180,20 +182,20 @@ export function MobileTabBar() {
       >
         {tabPending('you') || youAwaitingIdentity ? (
           <LoadingRing size={20} strokeWidth={1.5} state="spinning" />
-        ) : isSignedIn && identity?.avatarUrl ? (
-          <span style={{
-            width: '20px', height: '20px', borderRadius: '50%', overflow: 'hidden',
-            border: isOnProfile ? '1.5px solid var(--gold)' : '1px solid rgba(255,255,255,0.25)',
-          }}>
-            <img src={identity.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          </span>
+        ) : isSignedIn && identity ? (
+          <YouTabPortrait
+            username={identity.username}
+            displayName={identity.displayName || identity.username}
+            avatarUrl={identity.avatarUrl}
+            active={isOnProfile}
+          />
         ) : (
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
             <circle cx="10" cy="7" r="3" stroke="currentColor" strokeWidth="1.5"/>
             <path d="M4 17c0-3 2.7-5 6-5s6 2 6 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
         )}
-        <span style={labelStyle}>{isSignedIn ? 'You' : 'Sign In'}</span>
+        {!isSignedIn ? <span style={labelStyle}>Sign In</span> : null}
       </Link>
 
       <style>{`

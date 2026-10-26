@@ -65,9 +65,29 @@ export default function MessagesPage() {
                 </div>
               </div>
             ) : list.length === 0 ? (
-              <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'center', padding: '48px 16px' }}>
-                {tab === 'inbox' ? 'No conversations yet' : 'No message requests'}
-              </p>
+              tab === 'inbox' ? (
+                <div style={{ textAlign: 'center', padding: '48px 16px' }} data-margo-messages-inbox-empty>
+                  <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '0 0 16px', lineHeight: 1.45 }}>
+                    When a lyric hits home, say hi from their profile.
+                  </p>
+                  <PendingNavLink
+                    href="/discover"
+                    style={{
+                      fontFamily: font,
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.12em',
+                      textTransform: 'uppercase',
+                      color: 'var(--gold)',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Discover people
+                  </PendingNavLink>
+                </div>
+              ) : (
+                <div style={{ minHeight: '120px' }} aria-hidden data-margo-messages-requests-empty />
+              )
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 {list.map(c => (
