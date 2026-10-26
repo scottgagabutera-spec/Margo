@@ -5,11 +5,12 @@ import { MargoPortraitBrandMark } from '@/components/margo-portrait-brand-mark'
 import { UI_FONT } from '@/lib/fonts'
 import { portraitFallbackFromSeed } from '@/lib/portrait-fallback'
 
-export type MargoPortraitAvatarSize = 'feed' | 'sm' | 'profile'
+export type MargoPortraitAvatarSize = 'feed' | 'sm' | 'tab' | 'profile'
 
 const SIZE_PX: Record<MargoPortraitAvatarSize, { w: number; h: number; r: number }> = {
   feed: { w: 52, h: 66, r: 10 },
   sm: { w: 40, h: 50, r: 8 },
+  tab: { w: 32, h: 40, r: 7 },
   profile: { w: 96, h: 120, r: 18 },
 }
 

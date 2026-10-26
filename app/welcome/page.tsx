@@ -54,6 +54,9 @@ import {
   welcomeStep4Subtitle,
 } from '@/lib/welcome-step4-content'
 import { welcomeVibesHintMessage } from '@/lib/welcome-vibes-hint'
+import { welcomeAdvanceStepOptimistic } from '@/lib/welcome-step-navigation'
+import { WelcomeStep3RoleSection } from '@/components/welcome-step3-role'
+import type { WelcomeCreatorType } from '@/lib/welcome-role-ui'
 import './welcome-layout.css'
 
 const ui = UI_FONT
@@ -231,6 +234,7 @@ function WelcomePageInner() {
   const formRef = useRef<HTMLFormElement>(null)
   const savedFlashTimer = useRef<number | null>(null)
   const vibeSaveTimer = useRef<number | null>(null)
+  const creatorTypeSaveTimer = useRef<number | null>(null)
   const profileSettingsRef = useRef<Record<string, unknown> | null>(null)
 
   const [displayName, setDisplayName] = useState('')
@@ -238,6 +242,7 @@ function WelcomePageInner() {
   const [seeded, setSeeded] = useState(false)
   const [moods, setMoods] = useState<string[]>([])
   const [role, setRole] = useState<WelcomeDraftRole | null>(null)
+  const [creatorType, setCreatorType] = useState<WelcomeCreatorType | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
   const [photoTarget, setPhotoTarget] = useState<WelcomePhotoTarget | null>(null)
@@ -287,7 +292,9 @@ function WelcomePageInner() {
       profileSettingsRef.current = snap.settings
       const draft = readWelcomeDraft(user.id)
       const savedMoods = tasteVibesFromSettings(snap.settings)
-      const savedRole = onboardingFromSettings(snap.settings).role ?? null
+      const onboarding = onboardingFromSettings(snap.settings)
+      const savedRole = onboarding.role ?? null
+      const savedCreatorType = onboarding.creatorType ?? null
 
       const profileName = identity?.displayName || ''
       const profileUsername = identity?.username && !isTemporaryMemberUsername(identity.username)
@@ -298,6 +305,7 @@ function WelcomePageInner() {
       setUsername(profileUsername || draft?.username || '')
       setMoods(savedMoods.length > 0 ? savedMoods : (draft?.moods ?? []))
       setRole(savedRole ?? draft?.role ?? null)
+      setCreatorType(savedCreatorType)
       setAvatarPreview(snap.avatarUrl ?? identity?.avatarUrl ?? null)
       setCoverPreview(snap.coverUrl ?? identity?.coverUrl ?? null)
       if (snap.avatarUrl || identity?.avatarUrl) setAvatarUploadState('done')
@@ -352,6 +360,16 @@ function WelcomePageInner() {
     flashSaved()
     return result
   }, [user?.id, flashSaved])
+
+  const saveOnboardingCreatorType = useCallback(async (next: WelcomeCreatorType | null) => {
+    if (!user?.id) return { ok: false as const }
+    return persistProfileSettings(user.id, (current) => {
+      const patch = next === null ? { creatorType: null } : { creatorType: next }
+      const merged = mergeOnboardingSettings(current, patch)
+      profileSettingsRef.current = merged
+      return merged
+    })
+  }, [user?.id])
 
   const usernameAvailability = useUsernameAvailability(
     username,
@@ -518,21 +536,27 @@ function WelcomePageInner() {
   const tryStep1Next = () => {
     setStep1Attempted(true)
     if (!step1Valid || step1Saving) return
-    void (async () => {
-      const ok = await saveStep1Profile()
-      if (ok) goStep(2)
-    })()
+    welcomeAdvanceStepOptimistic(
+      () => goStep(2),
+      () => saveStep1Profile(),
+    )
   }
 
   const tryStep3Next = () => {
     setStep3Attempted(true)
     if (moods.length >= 3) {
-      void saveTasteVibes(moods).finally(() => goStep(4))
+      welcomeAdvanceStepOptimistic(
+        () => goStep(4),
+        () => saveTasteVibes(moods),
+      )
     }
   }
 
   const skipStep3 = () => {
-    void saveTasteVibes(moods).finally(() => goStep(4))
+    welcomeAdvanceStepOptimistic(
+      () => goStep(4),
+      () => saveTasteVibes(moods),
+    )
   }
 
   const finishWelcome = () => {
@@ -553,6 +577,7 @@ function WelcomePageInner() {
           const merged = mergeOnboardingSettings(current, {
             completedAt: new Date().toISOString(),
             role: role ?? undefined,
+            creatorType: creatorType ?? undefined,
           })
           profileSettingsRef.current = merged
           return merged
@@ -594,13 +619,26 @@ function WelcomePageInner() {
     setRole((prev) => {
       const next = prev === value ? null : value
       void saveOnboardingRole(next)
+      if (next !== 'artist') {
+        setCreatorType(null)
+        void saveOnboardingCreatorType(null)
+      }
       return next
     })
+  }
+
+  const pickCreatorType = (value: WelcomeCreatorType | null) => {
+    setCreatorType(value)
+    if (creatorTypeSaveTimer.current) window.clearTimeout(creatorTypeSaveTimer.current)
+    creatorTypeSaveTimer.current = window.setTimeout(() => {
+      void saveOnboardingCreatorType(value)
+    }, 350)
   }
 
   useEffect(() => () => {
     if (savedFlashTimer.current) window.clearTimeout(savedFlashTimer.current)
     if (vibeSaveTimer.current) window.clearTimeout(vibeSaveTimer.current)
+    if (creatorTypeSaveTimer.current) window.clearTimeout(creatorTypeSaveTimer.current)
   }, [])
 
   const displayHandle = usernameClean ? `@${usernameClean}` : '@username'
@@ -1050,39 +1088,12 @@ function WelcomePageInner() {
                 </button>
               ) : null}
 
-              <p style={{ ...labelStyle, marginTop: '20px', marginBottom: '10px' }}>{'I\u2019m here as a\u2026'}</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
-                {([
-                  ['listener', 'Listener'],
-                  ['artist', 'Artist'],
-                  ['both', 'Both'],
-                ] as const).map(([value, label]) => {
-                  const selected = role === value
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      data-margo-welcome-role={value}
-                      aria-pressed={selected}
-                      onClick={() => pickRole(value)}
-                      style={{
-                        fontFamily: ui,
-                        fontSize: TYPE.meta,
-                        fontWeight: 600,
-                        padding: '10px 16px',
-                        borderRadius: '999px',
-                        border: selected ? '1px solid var(--gold-border)' : '1px solid transparent',
-                        cursor: 'pointer',
-                        minHeight: 'var(--margo-touch-min)',
-                        background: selected ? 'var(--gold-faint)' : 'var(--surface-2)',
-                        color: selected ? 'var(--gold)' : 'var(--text)',
-                      }}
-                    >
-                      {label}
-                    </button>
-                  )
-                })}
-              </div>
+              <WelcomeStep3RoleSection
+                role={role}
+                creatorType={creatorType}
+                onPickRole={pickRole}
+                onPickCreatorType={pickCreatorType}
+              />
               {roleSaveError ? (
                 <button type="button" className="margo-welcome-retry-btn" onClick={() => { void saveOnboardingRole(role) }}>
                   <XIcon />

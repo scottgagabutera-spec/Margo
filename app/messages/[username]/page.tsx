@@ -202,12 +202,7 @@ export default function ThreadPage() {
           {loadError}
         </p>
       ) : messages.length === 0 ? (
-        <p style={{
-          fontFamily: font, fontStyle: 'italic', fontSize: '0.82rem',
-          color: 'var(--text-secondary)', textAlign: 'center', padding: '48px 16px',
-        }}>
-          No messages yet.
-        </p>
+        <div data-margo-thread-empty aria-hidden style={{ flex: '1 1 auto', minHeight: '24px' }} />
       ) : (
         messages.map(m => {
           const mine = m.senderId === user.id

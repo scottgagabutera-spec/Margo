@@ -1,6 +1,6 @@
 import { DEFAULT_ICON_COLOR, DEFAULT_ICON_SIZE, type MargoIconProps } from './icon-props'
 
-/** Chat bubble — Messages (Hub tile; also glyph for DMs chrome). */
+/** Rounded speech bubble — Hub Messages tile (matches launcher stroke family). */
 export function MessagesIcon({ size = DEFAULT_ICON_SIZE, color = DEFAULT_ICON_COLOR }: MargoIconProps) {
   return (
     <svg
@@ -12,9 +12,9 @@ export function MessagesIcon({ size = DEFAULT_ICON_SIZE, color = DEFAULT_ICON_CO
       aria-hidden
     >
       <path
-        d="M4 6h16v11H9l-5 3.5V6Z"
+        d="M6 7h12a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H10l-4 3v-3H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"
         stroke={color}
-        strokeWidth="1.5"
+        strokeWidth="1.8"
         strokeLinejoin="round"
       />
     </svg>

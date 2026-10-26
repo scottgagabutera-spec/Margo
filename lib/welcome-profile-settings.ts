@@ -1,5 +1,6 @@
 import { DISCOVER_VIBES } from './discover-vibes.ts'
-import type { WelcomeDraftRole } from '@/lib/welcome-draft'
+import type { WelcomeDraftRole } from './welcome-draft.ts'
+import { isWelcomeCreatorType, type WelcomeCreatorType } from './welcome-role-ui.ts'
 
 const ALLOWED_MOODS = new Set<string>(DISCOVER_VIBES.filter((v) => v !== 'ALL'))
 
@@ -8,6 +9,7 @@ export type ProfileSettingsJson = Record<string, unknown>
 export type OnboardingSettings = {
   role?: WelcomeDraftRole
   completedAt?: string
+  creatorType?: WelcomeCreatorType
 }
 
 /** User-chosen Discover moods — same vocabulary as Discover filters. */
@@ -39,9 +41,11 @@ export function onboardingFromSettings(settings: ProfileSettingsJson | null | un
   if (!onboarding || typeof onboarding !== 'object') return {}
   const role = (onboarding as OnboardingSettings).role
   const completedAt = (onboarding as OnboardingSettings).completedAt
+  const creatorType = (onboarding as OnboardingSettings).creatorType
   return {
     role: role === 'listener' || role === 'artist' || role === 'both' ? role : undefined,
     completedAt: typeof completedAt === 'string' ? completedAt : undefined,
+    creatorType: isWelcomeCreatorType(creatorType) ? creatorType : undefined,
   }
 }
 
@@ -60,7 +64,11 @@ export function mergeTasteVibesSettings(
 
 export function mergeOnboardingSettings(
   settings: ProfileSettingsJson | null | undefined,
-  patch: Partial<OnboardingSettings> & { role?: WelcomeDraftRole | null },
+  patch: {
+    role?: WelcomeDraftRole | null
+    completedAt?: string
+    creatorType?: WelcomeCreatorType | null
+  },
 ): ProfileSettingsJson {
   const base = settings && typeof settings === 'object' ? { ...settings } : {}
   const prev = base.onboarding && typeof base.onboarding === 'object'
@@ -71,6 +79,10 @@ export function mergeOnboardingSettings(
     else prev.role = patch.role
   }
   if (patch.completedAt !== undefined) prev.completedAt = patch.completedAt
+  if ('creatorType' in patch) {
+    if (patch.creatorType == null) delete prev.creatorType
+    else prev.creatorType = patch.creatorType
+  }
   base.onboarding = prev
   return base
 }

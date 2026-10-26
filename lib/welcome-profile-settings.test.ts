@@ -3,6 +3,7 @@ import test from 'node:test'
 import {
   mergeOnboardingSettings,
   mergeTasteVibesSettings,
+  onboardingFromSettings,
   sanitizeWelcomeMoods,
   tasteVibesFromSettings,
 } from './welcome-profile-settings.ts'
@@ -30,4 +31,15 @@ test('tasteVibesFromSettings reads profiles.settings.taste.vibes', () => {
 test('mergeOnboardingSettings stores role and completedAt under onboarding', () => {
   const next = mergeOnboardingSettings({}, { role: 'both', completedAt: '2026-01-01T00:00:00.000Z' })
   assert.deepEqual(next.onboarding, { role: 'both', completedAt: '2026-01-01T00:00:00.000Z' })
+})
+
+test('mergeOnboardingSettings stores creatorType under onboarding only', () => {
+  const next = mergeOnboardingSettings(
+    { onboarding: { role: 'artist' } },
+    { creatorType: 'songwriter' },
+  )
+  assert.deepEqual((next.onboarding as { creatorType: string }).creatorType, 'songwriter')
+  const read = onboardingFromSettings(next)
+  assert.equal(read.role, 'artist')
+  assert.equal(read.creatorType, 'songwriter')
 })

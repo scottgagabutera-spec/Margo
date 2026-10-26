@@ -14,6 +14,8 @@ import {
 import { PromoteInlineStatus } from '@/components/promote/promote-page-shell'
 import { validatePasswordPair } from '@/lib/auth-password-confirm'
 import { AuthPasswordField } from '@/components/auth-password-field'
+import { SettingsOnboardingPreference } from '@/components/settings-onboarding-preference'
+import { resolveBecomeArtistSettingsState } from '@/lib/become-artist-settings-row'
 
 const supabase = createClient()
 
@@ -726,28 +728,52 @@ export default function AccountSettingsPage() {
         </Card>
       )}
 
-      {/* Artist status */}
       <Card>
-        <SectionLabel>Artist Status</SectionLabel>
-        {profile.is_artist ? (
-          <p style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--gold)' }}>
-            You are a Verified Artist.
-          </p>
-        ) : application ? (
-          <p style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text-secondary)' }}>
-            Your artist application is{' '}
-            <span style={{ color: 'var(--text)', fontWeight: 600 }}>{application.status}</span>.
-          </p>
-        ) : (
-          <>
-            <p style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text-secondary)', marginBottom: 16 }}>
-              You have not applied as an artist yet.
-            </p>
-            <Link href="/apply-artist">
-              <TierTwoButton onClick={() => {}}>Apply as an Artist</TierTwoButton>
-            </Link>
-          </>
-        )}
+        <SectionLabel>Membership</SectionLabel>
+        {(() => {
+          const artistRow = resolveBecomeArtistSettingsState({
+            isArtist: profile.is_artist,
+            applicationStatus: application?.status,
+          })
+          return (
+            <div
+              data-margo-become-artist-row
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+                minHeight: 'var(--margo-touch-min)',
+                padding: '4px 0',
+              }}
+            >
+              <span style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text)' }}>
+                Become an artist
+              </span>
+              {artistRow.kind === 'pending' ? (
+                <span style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-muted)' }}>
+                  {artistRow.label}
+                </span>
+              ) : (
+                <Link
+                  href={artistRow.href}
+                  style={{
+                    fontFamily: font,
+                    fontSize: TYPE.secondary,
+                    fontWeight: 600,
+                    color: 'var(--gold)',
+                    textDecoration: 'none',
+                  }}
+                >
+                  {artistRow.label}
+                </Link>
+              )}
+            </div>
+          )
+        })()}
+        {userId ? (
+          <SettingsOnboardingPreference userId={userId} settingsJson={profile.settings as Record<string, unknown> | null} />
+        ) : null}
       </Card>
 
       {/* Account: hide + delete */}

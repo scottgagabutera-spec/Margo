@@ -1,6 +1,6 @@
 import type { WelcomeDraftRole } from './welcome-draft.ts'
 
-export type WelcomeStep4Role = 'listener' | 'artist' | 'both'
+export type WelcomeStep4Role = 'listener' | 'artist'
 
 export type WelcomeStep4IconId =
   | 'pen'
@@ -9,6 +9,7 @@ export type WelcomeStep4IconId =
   | 'lyric-back'
   | 'apply'
   | 'profile'
+  | 'promote'
 
 export interface WelcomeStep4CardDef {
   id: string
@@ -17,20 +18,17 @@ export interface WelcomeStep4CardDef {
   line: string
 }
 
+/** Saved "both" maps to artist cards [read from code]. */
 export function resolveWelcomeStep4Role(role: WelcomeDraftRole | null): WelcomeStep4Role {
-  if (role === 'artist') return 'artist'
-  if (role === 'both') return 'both'
+  if (role === 'artist' || role === 'both') return 'artist'
   return 'listener'
 }
 
 export function welcomeStep4Subtitle(role: WelcomeStep4Role): string {
   if (role === 'artist') {
-    return 'Share your voice and grow when you are ready.'
+    return 'Share your voice when you are ready. Listeners can still discover you here.'
   }
-  if (role === 'both') {
-    return 'Listen, share lines, and explore what you can build here.'
-  }
-  return 'Your feed, Discover, and lyric moments start here.'
+  return 'Your feed, Discover, and lyric moments are ready when you are.'
 }
 
 const COMPLETE_PROFILE_CARD: WelcomeStep4CardDef = {
@@ -42,72 +40,48 @@ const COMPLETE_PROFILE_CARD: WelcomeStep4CardDef = {
 
 const LISTENER_CARDS: WelcomeStep4CardDef[] = [
   {
-    id: 'post-lyric',
-    icon: 'pen',
-    title: 'Post a lyric',
-    line: 'Share a line from the heart in Compose.',
-  },
-  {
-    id: 'discover-listen',
+    id: 'discover-music',
     icon: 'compass',
-    title: 'Discover and listen',
-    line: 'Find songs through lyric moments and sing along in karaoke.',
+    title: 'Find your kind of music',
+    line: 'Browse songs and lyric moments in Discover, then sing along on a song page.',
   },
   {
-    id: 'feed-follow',
-    icon: 'feed',
-    title: 'Follow voices you love',
-    line: 'Build your Feed with posts, Shorts, and Lyric Backs.',
+    id: 'share-lyric',
+    icon: 'pen',
+    title: 'Say it through a song',
+    line: 'Post a lyric that matches your mood in Compose.',
+  },
+  {
+    id: 'answer-with-music',
+    icon: 'lyric-back',
+    title: 'Answer with music',
+    line: 'Resonate, send a Lyric Back, export a Card, or repost a moment you love.',
   },
   COMPLETE_PROFILE_CARD,
 ]
 
 const ARTIST_CARDS: WelcomeStep4CardDef[] = [
   {
-    id: 'post-lyric',
-    icon: 'pen',
-    title: 'Post a lyric',
-    line: 'Introduce yourself with lines that feel like you.',
-  },
-  {
-    id: 'discover-listen',
-    icon: 'compass',
-    title: 'Discover the catalog',
-    line: 'Explore songs and moments the way listeners do today.',
-  },
-  {
     id: 'apply-artist',
     icon: 'apply',
-    title: 'Apply to share music',
-    line: 'When you are ready, apply as an artist. Studio unlocks after approval.',
-  },
-  COMPLETE_PROFILE_CARD,
-]
-
-const BOTH_CARDS: WelcomeStep4CardDef[] = [
-  {
-    id: 'post-lyric',
-    icon: 'pen',
-    title: 'Post a lyric',
-    line: 'Share lines in Compose and join the conversation.',
+    title: 'Apply to share your music',
+    line: 'Build your artist profile and apply when you are ready. Studio unlocks after approval.',
   },
   {
-    id: 'discover-listen',
-    icon: 'compass',
-    title: 'Discover and listen',
-    line: 'Moments, songs, and karaoke are all in Discover.',
+    id: 'lyrics-find-people',
+    icon: 'feed',
+    title: 'Let your lyrics find people',
+    line: 'Lyric moments help listeners discover your songs. They can Resonate and send Lyric Backs.',
   },
   {
-    id: 'listen-and-apply',
-    icon: 'lyric-back',
-    title: 'Connect and grow',
-    line: 'Follow people, send Lyric Backs, and apply to share your music later.',
+    id: 'promote-music',
+    icon: 'promote',
+    title: 'Promote your music',
+    line: 'After approval, prepare clips for TikTok and YouTube Shorts from Studio.',
   },
   COMPLETE_PROFILE_CARD,
 ]
 
 export function welcomeStep4Cards(role: WelcomeStep4Role): WelcomeStep4CardDef[] {
-  if (role === 'artist') return ARTIST_CARDS
-  if (role === 'both') return BOTH_CARDS
-  return LISTENER_CARDS
+  return role === 'artist' ? ARTIST_CARDS : LISTENER_CARDS
 }
