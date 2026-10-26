@@ -461,7 +461,7 @@ Master reference for members and artists. Labels match the app on **main** today
 - Lyrics sync with playback; mini player may continue elsewhere.
 
 ### If something goes wrong
-- **Loading…** stuck — Check network; song may lack `audio_url`.
+- **Loading…** stuck — Check network; song may not have playable audio yet.
 - No karaoke lines — Song may still be processing in Studio.
 
 ### Poster idea
@@ -1042,7 +1042,7 @@ Master reference for members and artists. Labels match the app on **main** today
 2. Visit `/apply-artist` for status copy **Your application is being reviewed**.
 3. When approved, **Become an artist** row shows **Open Studio**.
 4. Profile **⋯** menu gains **Studio** for active artists.
-5. `is_artist` with active status unlocks `/studio`, `/studio/promote`, and **Connected Accounts & Auto-Promote** in Settings.
+5. Active verified artist status unlocks `/studio`, `/studio/promote`, and **Connected Accounts & Auto-Promote** in Settings.
 
 ### What you should see when it worked
 - **Open Studio** and Studio upload UI.
@@ -1373,7 +1373,7 @@ Master reference for members and artists. Labels match the app on **main** today
 - Active artist; connected promote accounts (#36).
 
 ### Steps
-1. In **Studio** on a song, find block **Auto-Promote** (`GeneratePromotionBlock`).
+1. In **Studio** on a song, find the **Auto-Promote** block.
 2. Read copy: **AI picks quotable lyric windows and queues Shorts for your review on all connected platforms — nothing posts to the Feed.**
 3. Run generate when button enabled; review output in **Promotion queue** (#36).
 4. Approve/reject before **Publish** if **Review each post before it publishes** is selected.
@@ -1416,7 +1416,7 @@ Master reference for members and artists. Labels match the app on **main** today
 ## Check on a phone before filming
 
 - [ ] **Shorts** tab shows clips (not **Shorts coming soon**) in your production catalog — minimum **5** eligible live songs with moments (`SHORTS_MIN_ELIGIBLE_SONGS`).
-- [ ] **Repost** button visible on a real post you do not own (feature flag `enablePromote` / repost gates on feed).
+- [ ] **Repost** button visible on a real post you do not own (may depend on feed repost settings).
 - [ ] **TikTok Connect** completes on device (sandbox/production credentials may block in preview).
 - [ ] **YouTube Publish** from **Promotion queue** finishes on a test channel.
 - [ ] **Welcome** enforcer sends new Google signup to step 1 on phone browser you use for ads.
