@@ -90,13 +90,15 @@ function mapRow(row: NotificationRow, actors: Map<string, ActorIdentity>): Notif
   }
 }
 
-async function fetchNotificationsMapped(userId: string): Promise<Notification[]> {
+export const NOTIFICATIONS_PAGE_SIZE = 30
+
+async function fetchNotificationsMapped(userId: string, limit: number): Promise<Notification[]> {
   const { data, error } = await supabase
     .from('notifications')
     .select(SELECT_COLUMNS)
     .eq('recipient_id', userId)
     .order('created_at', { ascending: false })
-    .limit(50)
+    .limit(limit)
 
   if (error) throw error
   const rows = (data || []) as NotificationRow[]
@@ -124,8 +126,11 @@ interface NotificationsContextValue {
   notifications: Notification[]
   unreadCount: number
   loading: boolean
+  hasMoreNotifications: boolean
+  loadMoreNotifications: () => void
   refetch: () => Promise<void>
   markAllRead: () => Promise<void>
+  markNotificationRead: (id: string) => Promise<void>
   acceptFollowRequest: (notification: Notification) => Promise<void>
   declineFollowRequest: (notification: Notification) => Promise<void>
 }
@@ -152,20 +157,27 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const signedOut = !authLoading && (!authUser || !!authUser.is_anonymous)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchLimit, setFetchLimit] = useState(NOTIFICATIONS_PAGE_SIZE)
+  const [hasMoreNotifications, setHasMoreNotifications] = useState(false)
 
   const unreadCount = notifications.filter(n => !n.readAt).length
 
   const refetch = useCallback(async () => {
     if (!userId) return
     try {
-      const mapped = await fetchNotificationsMapped(userId)
+      const mapped = await fetchNotificationsMapped(userId, fetchLimit)
       setNotifications(mapped)
+      setHasMoreNotifications(mapped.length >= fetchLimit)
     } catch (error) {
       console.error('Failed to load notifications:', error)
     } finally {
       setLoading(false)
     }
-  }, [userId])
+  }, [userId, fetchLimit])
+
+  const loadMoreNotifications = useCallback(() => {
+    setFetchLimit((n) => n + NOTIFICATIONS_PAGE_SIZE)
+  }, [])
 
   useForegroundCatchup(refetch, !!userId)
 
@@ -174,6 +186,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
     if (signedOut || !userId) {
       setNotifications([])
+      setFetchLimit(NOTIFICATIONS_PAGE_SIZE)
+      setHasMoreNotifications(false)
       setLoading(false)
       return
     }
@@ -223,6 +237,22 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       supabase.removeChannel(channel)
     }
   }, [authLoading, signedOut, userId, refetch])
+
+  useEffect(() => {
+    if (authLoading || signedOut || !userId) return
+    setLoading(true)
+    void refetch()
+  }, [fetchLimit, authLoading, signedOut, userId, refetch])
+
+  const markNotificationRead = useCallback(async (id: string) => {
+    if (!userId) return
+    const now = new Date().toISOString()
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id && !n.readAt ? { ...n, readAt: now } : n)),
+    )
+    const { error } = await supabase.from('notifications').update({ read_at: now }).eq('id', id)
+    if (error) console.error('Failed to mark notification read:', error)
+  }, [userId])
 
   const markAllRead = useCallback(async () => {
     if (!userId) return
@@ -282,8 +312,16 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   return (
     <NotificationsContext.Provider value={{
-      notifications, unreadCount, loading, refetch, markAllRead,
-      acceptFollowRequest, declineFollowRequest,
+      notifications,
+      unreadCount,
+      loading,
+      hasMoreNotifications,
+      loadMoreNotifications,
+      refetch,
+      markAllRead,
+      markNotificationRead,
+      acceptFollowRequest,
+      declineFollowRequest,
     }}>
       {children}
     </NotificationsContext.Provider>
