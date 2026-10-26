@@ -234,31 +234,10 @@ function useHub(): HubContextValue {
   return ctx
 }
 
-function HubPanelSearchButton({ onNavigate }: { onNavigate: () => void }) {
-  const pathname = usePathname()
-  const href = searchHrefForPath(pathname, '/hub')
-  const scope = searchScopeForPath('/hub')
-  return (
-    <PendingNavLink
-      href={href}
-      aria-label={scope.placeholder}
-      ringSize={18}
-      data-margo-hub-root
-      onClick={onNavigate}
-      className="margo-hub-panel-head__icon-btn"
-    >
-      <SearchIcon size={20} color="var(--text-secondary)" />
-    </PendingNavLink>
-  )
-}
-
-function HubPanelHeader({ onNavigate }: { onNavigate: () => void }) {
+function HubPanelHeader() {
   return (
     <div className="margo-hub-panel-head" data-margo-hub-root>
       <span className="margo-hub-panel-head__title">Hub</span>
-      <div className="margo-hub-panel-head__actions">
-        <HubPanelSearchButton onNavigate={onNavigate} />
-      </div>
     </div>
   )
 }
@@ -335,7 +314,7 @@ function HubPanelBody({
 }) {
   return (
     <div className="margo-hub-shell">
-      <HubPanelHeader onNavigate={close} />
+      <HubPanelHeader />
       <div className="margo-hub-grid">
         <HubTiles
           signedIn={signedIn}

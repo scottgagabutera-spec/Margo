@@ -4,6 +4,10 @@ import { useId, useState, useEffect, useRef } from 'react'
 import { CloseIcon, SearchIcon } from '@/components/icons'
 import { UI_FONT } from '@/lib/fonts'
 import {
+  DEPTH_HINT_CHAR_MS,
+  DEPTH_HINT_ROTATE_MS,
+} from '@/lib/depth-search-hints'
+import {
   MARGO_CATALOG_HINT_CHAR_MS,
   MARGO_CATALOG_HINT_PAUSE_MS,
   MARGO_CATALOG_SEARCH_ARIA_LABEL,
@@ -32,6 +36,8 @@ interface MargoSearchInputProps {
   compact?: boolean
   /** Premium cycling “Search with song / lyric / artist” when empty. */
   catalogHints?: boolean
+  /** Cycle typewriter phrases (Messages / Library depth pages). */
+  rotatingHints?: readonly string[]
 }
 
 /** Must exceed ComposeSearchDropdown scrim (54) and listbox (55). */
@@ -57,12 +63,17 @@ export function MargoSearchInput({
   autoFocus = false,
   compact = false,
   catalogHints = false,
+  rotatingHints,
 }: MargoSearchInputProps) {
   const autoId = useId()
   const inputId = idProp ?? autoId
   const [focused, setFocused] = useState(false)
   const [typedLen, setTypedLen] = useState(0)
+  const [hintIndex, setHintIndex] = useState(0)
   const [reducedMotion, setReducedMotion] = useState(false)
+  const activeRotatingHint = rotatingHints?.length
+    ? rotatingHints[hintIndex % rotatingHints.length]
+    : null
   const inputRef = useRef<HTMLInputElement | null>(null)
   const showLeftIcon = icon === 'left'
 
@@ -106,18 +117,55 @@ export function MargoSearchInput({
     }
   }, [catalogHints, focused, reducedMotion, value.length])
 
-  const showCatalogOverlay = catalogHints && value.length === 0 && !focused
-  const resolvedPlaceholder = catalogHints
-    ? (reducedMotion || focused ? MARGO_CATALOG_SEARCH_STATIC_PLACEHOLDER : ' ')
+  useEffect(() => {
+    if (!rotatingHints?.length || value.length > 0 || focused) return
+    if (reducedMotion) return
+    const rotate = window.setInterval(() => {
+      setHintIndex((i) => (i + 1) % rotatingHints.length)
+      setTypedLen(0)
+    }, DEPTH_HINT_ROTATE_MS)
+    return () => window.clearInterval(rotate)
+  }, [rotatingHints, focused, reducedMotion, value.length])
+
+  useEffect(() => {
+    if (!activeRotatingHint || value.length > 0 || focused) return
+    if (reducedMotion) {
+      setTypedLen(activeRotatingHint.length)
+      return
+    }
+    setTypedLen(0)
+    let len = 0
+    let pauseTimer = 0
+    const tick = () => {
+      len += 1
+      if (len > activeRotatingHint.length) {
+        return
+      }
+      setTypedLen(len)
+      pauseTimer = window.setTimeout(tick, DEPTH_HINT_CHAR_MS)
+    }
+    pauseTimer = window.setTimeout(tick, DEPTH_HINT_CHAR_MS)
+    return () => {
+      if (pauseTimer) window.clearTimeout(pauseTimer)
+    }
+  }, [activeRotatingHint, focused, reducedMotion, value.length])
+
+  const useAnimatedHint = catalogHints || !!activeRotatingHint
+  const hintFullText = catalogHints
+    ? MARGO_CATALOG_SEARCH_HINT_FULL
+    : activeRotatingHint ?? ''
+  const showCatalogOverlay = useAnimatedHint && value.length === 0 && !focused
+  const resolvedPlaceholder = useAnimatedHint
+    ? (reducedMotion || focused ? (catalogHints ? MARGO_CATALOG_SEARCH_STATIC_PLACEHOLDER : hintFullText) : ' ')
     : placeholder
-  const resolvedAria = ariaLabel || (catalogHints ? MARGO_CATALOG_SEARCH_ARIA_LABEL : placeholder)
+  const resolvedAria = ariaLabel || (catalogHints ? MARGO_CATALOG_SEARCH_ARIA_LABEL : hintFullText || placeholder)
 
   const inputClass = compact ? 'margo-search margo-search--lb-panel' : className
   const wrapClass = [
     compact ? 'margo-search-wrap margo-search-wrap--lb' : '',
-    catalogHints ? 'margo-search-wrap--catalog-hints' : '',
+    useAnimatedHint ? 'margo-search-wrap--catalog-hints' : '',
     showCatalogOverlay ? 'margo-search-wrap--hint-visible' : '',
-    focused && catalogHints ? 'margo-search-wrap--hint-focus' : '',
+    focused && useAnimatedHint ? 'margo-search-wrap--hint-focus' : '',
   ].filter(Boolean).join(' ')
 
   return (
@@ -165,7 +213,7 @@ export function MargoSearchInput({
       {showCatalogOverlay ? (
         <span className="margo-search-hint" aria-hidden>
           <span className="margo-search-hint__done">
-            {MARGO_CATALOG_SEARCH_HINT_FULL.slice(0, typedLen)}
+            {hintFullText.slice(0, typedLen)}
           </span>
           <span className="margo-search-hint__caret" />
         </span>
