@@ -4,8 +4,8 @@ const BASE = process.env.PLAYWRIGHT_BASE_URL ?? 'https://trymargo.com'
 
 const GATES = [
   ['/library', 'Save lines and songs'],
-  ['/messages', 'Message people'],
-  ['/notifications', 'Get alerts'],
+  ['/messages', 'Sign in to see your messages'],
+  ['/notifications', 'Sign in to see your notifications'],
 ] as const
 
 test.describe('signed-out gate @390', () => {

@@ -49,7 +49,7 @@ for (const width of [360, 390, 834, 1440]) {
       if (width >= 640) await openHubDesktop(page)
       else await openHubMobile(page)
 
-      await expect(page.locator('.margo-hub-panel-head__title')).toHaveText('Hub')
+      await expect(page.locator(`${rootSel} .margo-hub-panel-head__title`)).toHaveText('Hub')
       await expect(page.locator('button[aria-label="Close Hub"]')).toHaveCount(0)
       await expect(page.locator('.margo-hub-scrim')).toHaveCount(0)
 
