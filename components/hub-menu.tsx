@@ -19,7 +19,12 @@ import { createPortal } from 'react-dom'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useHubSurfaces } from '@/hooks/useHubSurfaces'
 import { useIdentity } from '@/hooks/useIdentity'
-import { MARGO_CLOSE_HUB_EVENT, persistActivePrimaryScroll, readActiveScrollTop } from '@/components/primary-tab-shell'
+import {
+  leavePrimaryTabSurface,
+  MARGO_CLOSE_HUB_EVENT,
+  persistActivePrimaryScroll,
+  readActiveScrollTop,
+} from '@/components/primary-tab-shell'
 import {
   BellIcon,
   HubGridIcon,
@@ -189,6 +194,7 @@ function HubTileLink({
           e.preventDefault()
           return
         }
+        leavePrimaryTabSurface()
         if (tile.id !== 'stage') {
           markHubNavFromTile()
         }

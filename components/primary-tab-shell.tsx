@@ -399,9 +399,17 @@ interface PrimaryTabShellProps {
 /** Hub overlay listens for this so it closes in the same turn as a tab paint. */
 export const MARGO_CLOSE_HUB_EVENT = 'margo:close-hub'
 
+/** Hub tiles / depth links: drop keepalive paint before the route commits. */
+export const MARGO_LEAVE_PRIMARY_TABS_EVENT = 'margo:leave-primary-tabs'
+
 function closeHubOverlay() {
   if (typeof window === 'undefined') return
   window.dispatchEvent(new Event(MARGO_CLOSE_HUB_EVENT))
+}
+
+export function leavePrimaryTabSurface() {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new Event(MARGO_LEAVE_PRIMARY_TABS_EVENT))
 }
 
 const paneStyle = (
@@ -492,6 +500,28 @@ export function PrimaryTabShell({
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  useEffect(() => {
+    const onLeavePrimary = () => {
+      if (!paintedTabRef.current) return
+      intentHrefRef.current = null
+      intentGenRef.current += 1
+      const clear = () => {
+        paintedTabRef.current = null
+        setPaintedTab(null)
+        setNavPending(false)
+        setAckedTab(null)
+        setRingTab(null)
+      }
+      try {
+        flushSync(clear)
+      } catch {
+        clear()
+      }
+    }
+    window.addEventListener(MARGO_LEAVE_PRIMARY_TABS_EVENT, onLeavePrimary)
+    return () => window.removeEventListener(MARGO_LEAVE_PRIMARY_TABS_EVENT, onLeavePrimary)
   }, [])
 
   useLayoutEffect(() => {
