@@ -6,18 +6,18 @@ async function openHubMobile(page: import('@playwright/test').Page) {
   await page.goto(`${BASE}/feed`, { waitUntil: 'domcontentloaded', timeout: 45000 })
   await page.waitForTimeout(600)
   await page.locator('.margo-mobile-tabbar button[aria-label^="Hub"]').click({ timeout: 10000 })
-  const launcher = page.locator('.margo-hub-launcher')
-  await expect(launcher).toBeVisible({ timeout: 10000 })
-  return launcher
+  const sheet = page.locator('.margo-hub-sheet')
+  await expect(sheet).toBeVisible({ timeout: 10000 })
+  return sheet
 }
 
 async function openHubDesktop(page: import('@playwright/test').Page) {
   await page.goto(`${BASE}/feed`, { waitUntil: 'domcontentloaded', timeout: 45000 })
   await page.waitForTimeout(600)
   await page.locator('.margo-nav-bar button[aria-label^="Hub"]').click({ timeout: 10000 })
-  const launcher = page.locator('.margo-hub-launcher')
-  await expect(launcher).toBeVisible({ timeout: 10000 })
-  return launcher
+  const panel = page.locator('.margo-hub-panel')
+  await expect(panel).toBeVisible({ timeout: 10000 })
+  return panel
 }
 
 async function assertContained(page: import('@playwright/test').Page, rootSelector: string) {
@@ -44,10 +44,13 @@ for (const width of [360, 390, 834, 1440]) {
   test.describe(`hub launcher grid @${width}px`, () => {
     test.use({ viewport: { width, height: 900 } })
 
-    test('signed-out layout: Stage first, locks, no dashed boxes, containment', async ({ page }) => {
-      const rootSel = '.margo-hub-launcher'
+    test('signed-out layout: Stage first, locks, captions, sign-in CTA, close', async ({ page }) => {
+      const rootSel = width >= 640 ? '.margo-hub-panel' : '.margo-hub-sheet'
       if (width >= 640) await openHubDesktop(page)
       else await openHubMobile(page)
+
+      await expect(page.locator('.margo-hub-panel-head__title')).toHaveText('Hub')
+      await expect(page.locator('button[aria-label="Close Hub"]').first()).toBeVisible()
 
       const tiles = page.locator(`${rootSel} [data-hub-tile]`)
       await expect(tiles.first()).toHaveAttribute('data-hub-tile', 'stage')
@@ -58,11 +61,11 @@ for (const width of [360, 390, 834, 1440]) {
       await expect(page.locator(`${rootSel} [data-hub-tile="stage"] .margo-hub-tile__lock`)).toHaveCount(0)
       await expect(page.locator(`${rootSel} .margo-hub-tile__lock`)).toHaveCount(3)
 
+      await expect(page.locator(`${rootSel} .margo-hub-signed-out-cta`)).toBeVisible()
+      await expect(page.locator(`${rootSel} .margo-hub-tile__caption`).first()).toBeVisible()
+
       const dashed = await page.locator(`${rootSel} [style*="dashed"]`).count()
       expect(dashed).toBe(0)
-
-      await expect(page.locator(`${rootSel} .margo-hub-identity`)).toHaveCount(0)
-      await expect(page.locator(`${rootSel} .margo-hub-tile__caption`)).toHaveCount(0)
 
       const tileBox = await page.locator(`${rootSel} [data-hub-tile="stage"]`).boundingBox()
       expect(tileBox?.height ?? 0).toBeGreaterThanOrEqual(40)
@@ -71,6 +74,9 @@ for (const width of [360, 390, 834, 1440]) {
       const contained = await assertContained(page, rootSel)
       expect(contained.ok, JSON.stringify(contained)).toBeTruthy()
       expect(contained.docScroll).toBe(0)
+
+      await page.locator('button[aria-label="Close Hub"]').first().click()
+      await expect(page.locator(rootSel)).toHaveCount(0)
     })
   })
 }
