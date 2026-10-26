@@ -44,13 +44,14 @@ for (const width of [360, 390, 834, 1440]) {
   test.describe(`hub launcher grid @${width}px`, () => {
     test.use({ viewport: { width, height: 900 } })
 
-    test('signed-out layout: Stage first, locks, captions, sign-in CTA, close', async ({ page }) => {
+    test('signed-out layout: layer, tiles, sign-in CTA, dismiss via tab', async ({ page }) => {
       const rootSel = width >= 640 ? '.margo-hub-panel' : '.margo-hub-sheet'
       if (width >= 640) await openHubDesktop(page)
       else await openHubMobile(page)
 
       await expect(page.locator('.margo-hub-panel-head__title')).toHaveText('Hub')
-      await expect(page.locator('button[aria-label="Close Hub"]').first()).toBeVisible()
+      await expect(page.locator('button[aria-label="Close Hub"]')).toHaveCount(0)
+      await expect(page.locator('.margo-hub-scrim')).toHaveCount(0)
 
       const tiles = page.locator(`${rootSel} [data-hub-tile]`)
       await expect(tiles.first()).toHaveAttribute('data-hub-tile', 'stage')
@@ -60,23 +61,20 @@ for (const width of [360, 390, 834, 1440]) {
       }
       await expect(page.locator(`${rootSel} [data-hub-tile="stage"] .margo-hub-tile__lock`)).toHaveCount(0)
       await expect(page.locator(`${rootSel} .margo-hub-tile__lock`)).toHaveCount(3)
+      await expect(page.locator(`${rootSel} .margo-hub-tile__caption`)).toHaveCount(0)
 
       await expect(page.locator(`${rootSel} .margo-hub-signed-out-cta`)).toBeVisible()
-      await expect(page.locator(`${rootSel} .margo-hub-tile__caption`).first()).toBeVisible()
 
       const dashed = await page.locator(`${rootSel} [style*="dashed"]`).count()
       expect(dashed).toBe(0)
 
-      const tileBox = await page.locator(`${rootSel} [data-hub-tile="stage"]`).boundingBox()
-      expect(tileBox?.height ?? 0).toBeGreaterThanOrEqual(40)
-      expect(tileBox?.width ?? 0).toBeGreaterThanOrEqual(40)
-
       const contained = await assertContained(page, rootSel)
       expect(contained.ok, JSON.stringify(contained)).toBeTruthy()
-      expect(contained.docScroll).toBe(0)
 
-      await page.locator('button[aria-label="Close Hub"]').first().click()
-      await expect(page.locator(rootSel)).toHaveCount(0)
+      if (width < 640) {
+        await page.locator('.margo-mobile-tabbar a[href="/feed"], .margo-mobile-tabbar button').filter({ hasText: 'Feed' }).first().click()
+        await expect(page.locator(rootSel)).toHaveCount(0)
+      }
     })
   })
 }
