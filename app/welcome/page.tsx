@@ -54,6 +54,7 @@ import {
   welcomeStep4Subtitle,
 } from '@/lib/welcome-step4-content'
 import { welcomeVibesHintMessage } from '@/lib/welcome-vibes-hint'
+import { welcomeAdvanceStepOptimistic } from '@/lib/welcome-step-navigation'
 import { WelcomeStep3RoleSection } from '@/components/welcome-step3-role'
 import type { WelcomeCreatorType } from '@/lib/welcome-role-ui'
 import './welcome-layout.css'
@@ -535,21 +536,27 @@ function WelcomePageInner() {
   const tryStep1Next = () => {
     setStep1Attempted(true)
     if (!step1Valid || step1Saving) return
-    void (async () => {
-      const ok = await saveStep1Profile()
-      if (ok) goStep(2)
-    })()
+    welcomeAdvanceStepOptimistic(
+      () => goStep(2),
+      () => saveStep1Profile(),
+    )
   }
 
   const tryStep3Next = () => {
     setStep3Attempted(true)
     if (moods.length >= 3) {
-      void saveTasteVibes(moods).finally(() => goStep(4))
+      welcomeAdvanceStepOptimistic(
+        () => goStep(4),
+        () => saveTasteVibes(moods),
+      )
     }
   }
 
   const skipStep3 = () => {
-    void saveTasteVibes(moods).finally(() => goStep(4))
+    welcomeAdvanceStepOptimistic(
+      () => goStep(4),
+      () => saveTasteVibes(moods),
+    )
   }
 
   const finishWelcome = () => {

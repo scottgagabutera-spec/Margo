@@ -5,7 +5,7 @@ const BASE = process.env.PLAYWRIGHT_BASE_URL ?? 'https://trymargo.com'
 async function menuInViewport(page: import('@playwright/test').Page) {
   return page.evaluate(() => {
     const menu = document.querySelector(
-      '[data-margo-profile-account-menu="popover"], [data-margo-profile-account-menu="sheet"]',
+      '[data-margo-profile-account-menu="popover"]',
     ) as HTMLElement | null
     if (!menu) return { ok: false, reason: 'no menu' }
     const dialog = menu.querySelector('[role="dialog"]') as HTMLElement | null ?? menu

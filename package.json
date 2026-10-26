@@ -84,7 +84,7 @@
     "test:auth-password-confirm": "node --experimental-strip-types --test lib/auth-password-confirm.test.ts",
     "test:e2e:auth-onboarding": "playwright test tests/e2e/auth-onboarding-layout.spec.ts --project=chromium",
     "test:e2e:welcome-ui": "playwright test tests/e2e/welcome-onboarding-ui.spec.ts --project=chromium",
-    "test:polish-unit": "node --experimental-strip-types --test lib/welcome-step4-content.test.ts lib/welcome-profile-settings.test.ts lib/welcome-role-ui.test.ts",
+    "test:polish-unit": "node --experimental-strip-types --test lib/welcome-step4-content.test.ts lib/welcome-profile-settings.test.ts lib/welcome-role-ui.test.ts lib/welcome-step-navigation.test.ts lib/profile-account-menu-layout.test.ts lib/become-artist-settings-row.test.ts lib/hub-tiles-badge.test.ts",
     "test:e2e:polish-menu-you": "playwright test tests/e2e/polish-menu-you.spec.ts --project=chromium",
     "test:e2e:hub-launcher": "playwright test tests/e2e/hub-launcher-grid.spec.ts --project=chromium",
     "test:e2e:profile-portrait-hero": "playwright test tests/e2e/profile-portrait-hero.spec.ts",

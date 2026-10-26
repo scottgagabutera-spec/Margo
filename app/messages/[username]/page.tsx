@@ -16,8 +16,6 @@ import { parseMomentMessageBody } from '@/lib/moment/message-format'
 import { signedOutGateBenefitStyle, signedOutGateSignInStyle } from '@/lib/signed-out-gate-styles'
 import { isPartnerUuid } from '@/lib/messages/partner-key'
 import { TYPE, UI_FONT } from '@/lib/fonts'
-import { MargoPortraitAvatar } from '@/components/margo-portrait-avatar'
-import { isMargoBrandUsername } from '@/lib/margo-brand-account'
 
 const font = 'var(--font-lora), serif'
 const uiFont = UI_FONT
@@ -125,29 +123,12 @@ export default function ThreadPage() {
     )
   }
 
-  const emptyThread = !loading && !loadError && messages.length === 0 && partner
-
   const composer = composerReady ? (
     <KeyboardSafeCtaBar
       keyboardOpen={keyboardOpen}
       solidBackground
       contentMaxWidth={560}
     >
-      {emptyThread && partner?.username ? (
-        <p style={{ textAlign: 'center', margin: '0 0 10px' }}>
-          <Link
-            href={`/profile/${partner.username}`}
-            style={{
-              fontFamily: uiFont,
-              fontSize: TYPE.meta,
-              color: 'var(--text-muted)',
-              textDecoration: 'underline',
-            }}
-          >
-            View profile
-          </Link>
-        </p>
-      ) : null}
       {!canSend ? (
         <p style={{ fontFamily: uiFont, fontSize: TYPE.secondary, color: 'var(--text-secondary)', textAlign: 'center', margin: 0, lineHeight: 1.45 }}>
           {blockedReason || (partner ? `${partner.displayName} is not accepting messages right now.` : '')}
@@ -220,47 +201,9 @@ export default function ThreadPage() {
         }}>
           {loadError}
         </p>
-      ) : messages.length === 0 && partner ? (
-        <div
-          data-margo-thread-empty
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '32px 16px 48px',
-            minHeight: 'min(50vh, 360px)',
-            textAlign: 'center',
-          }}
-        >
-          <MargoPortraitAvatar
-            size="profile"
-            imageUrl={partner.avatarUrl}
-            fallbackInitial={(partner.displayName || partner.username || '?').trim().slice(0, 1).toUpperCase()}
-            fallbackSeed={!partner.avatarUrl && !isMargoBrandUsername(partner.username) ? partner.username : null}
-            brandMark={isMargoBrandUsername(partner.username)}
-            separationRingColor="var(--bg)"
-            style={{ marginBottom: '14px' }}
-          />
-          <p style={{
-            fontFamily: font,
-            fontSize: '1rem',
-            color: 'var(--text)',
-            margin: '0 0 4px',
-            fontWeight: 600,
-          }}>
-            {partner.displayName || partner.username}
-          </p>
-          <p style={{
-            fontFamily: uiFont,
-            fontSize: TYPE.secondary,
-            color: 'var(--text-muted)',
-            margin: 0,
-          }}>
-            @{partner.username}
-          </p>
-        </div>
-      ) : messages.length === 0 ? null : (
+      ) : messages.length === 0 ? (
+        <div data-margo-thread-empty aria-hidden style={{ flex: '1 1 auto', minHeight: '24px' }} />
+      ) : (
         messages.map(m => {
           const mine = m.senderId === user.id
           return (

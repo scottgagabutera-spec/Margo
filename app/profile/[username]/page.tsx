@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { createClient, signOutBrowser } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useIdentity } from '@/hooks/useIdentity'
-import { useArtistApplication } from '@/hooks/useArtistApplication'
 import { usePosts } from '@/hooks/usePosts'
 import { useOwnPrivatePosts } from '@/hooks/useOwnPrivatePosts'
 import { useProfileReplays } from '@/hooks/useProfileReplays'
@@ -206,7 +205,6 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
   const params = useParams<{ username: string }>()
   const router = useRouter()
   const { user, identity, updateSignatureLyric } = useIdentity()
-  const { application } = useArtistApplication()
   const { isTabActive } = usePrimaryTab()
   const username = (usernameProp || (typeof params.username === 'string' ? params.username : '')).trim()
   // Own profile is a keepalive "you" pane — pause posts Realtime while hidden.
@@ -532,13 +530,6 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
     }
   }
 
-  const applicationStatus = application?.status ?? 'none'
-  const showApplyCTA = isOwnProfile && !identity?.isArtist
-  const applyLabel =
-    applicationStatus === 'pending' ? 'Application pending' :
-    applicationStatus === 'rejected' ? 'Reapply as artist' :
-    'Apply as an artist'
-
   const handleSignOut = async () => {
     await signOutBrowser()
     await rehydrate()
@@ -719,8 +710,6 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                       onOpenChange={setAccountMenuOpen}
                       triggerRef={accountMenuTriggerRef}
                       showStudio={!!identity?.isArtist}
-                      showApply={showApplyCTA}
-                      applyLabel={applyLabel}
                       onSignOut={() => { void handleSignOut() }}
                     />
                   </div>

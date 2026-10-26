@@ -34,7 +34,7 @@ async function assertContained(page: import('@playwright/test').Page, rootSelect
         offenders.push((el as HTMLElement).className || el.tagName)
       }
     }
-    root.querySelectorAll('.margo-hub-tile, .margo-hub-sign-in-btn, .margo-hub-tile__icon-wrap, .margo-hub-tile__label, .margo-hub-tile__caption, .margo-hub-tile__badge, .margo-hub-tile__lock').forEach(check)
+    root.querySelectorAll('.margo-hub-tile, .margo-hub-tile__icon-wrap, .margo-hub-tile__label, .margo-hub-tile__badge, .margo-hub-tile__lock').forEach(check)
     if (root.scrollWidth > root.clientWidth + 1) offenders.push('horizontal-scroll')
     return { ok: offenders.length === 0, offenders, docScroll: document.documentElement.scrollLeft }
   }, rootSelector)
@@ -61,11 +61,12 @@ for (const width of [360, 390, 834, 1440]) {
       const dashed = await page.locator(`${rootSel} [style*="dashed"]`).count()
       expect(dashed).toBe(0)
 
-      await expect(page.getByRole('link', { name: 'Sign in', exact: true })).toBeVisible()
+      await expect(page.locator(`${rootSel} .margo-hub-identity`)).toHaveCount(0)
+      await expect(page.locator(`${rootSel} .margo-hub-tile__caption`)).toHaveCount(0)
 
       const tileBox = await page.locator(`${rootSel} [data-hub-tile="stage"]`).boundingBox()
-      expect(tileBox?.height ?? 0).toBeGreaterThanOrEqual(44)
-      expect(tileBox?.width ?? 0).toBeGreaterThanOrEqual(44)
+      expect(tileBox?.height ?? 0).toBeGreaterThanOrEqual(40)
+      expect(tileBox?.width ?? 0).toBeGreaterThanOrEqual(40)
 
       const contained = await assertContained(page, rootSel)
       expect(contained.ok, JSON.stringify(contained)).toBeTruthy()
@@ -74,11 +75,11 @@ for (const width of [360, 390, 834, 1440]) {
   })
 }
 
-test('99+ badge class fits inside tile (unit DOM fixture)', async ({ page }) => {
+test('9+ badge class fits inside tile (unit DOM fixture)', async ({ page }) => {
   await page.setContent(`
-    <div class="margo-hub-grid" style="width:120px;padding:8px;box-sizing:border-box">
-      <a class="margo-hub-tile" style="position:relative;min-height:118px;display:block">
-        <span class="margo-hub-tile__badge">99+</span>
+    <div class="margo-hub-grid" style="width:84px;padding:8px;box-sizing:border-box">
+      <a class="margo-hub-tile" style="position:relative;display:block">
+        <span class="margo-hub-tile__badge">9+</span>
       </a>
     </div>
   `)

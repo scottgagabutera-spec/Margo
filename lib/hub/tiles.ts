@@ -76,7 +76,7 @@ export const HUB_TILE_CONFIG: HubTileConfig[] = [
   },
   {
     id: 'library',
-    label: 'Music Library',
+    label: 'Library',
     captionSignedOut: 'Your songs',
     captionSignedIn: 'Your songs',
     route: '/library',
@@ -125,7 +125,7 @@ export type ResolvedHubTile = HubTileConfig & {
 
 export function hubTileBadgeLabel(count: number): string {
   if (count <= 0) return ''
-  if (count > 99) return '99+'
+  if (count > 9) return '9+'
   return String(count)
 }
 

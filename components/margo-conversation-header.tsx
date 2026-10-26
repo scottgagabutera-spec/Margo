@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import { ArrowLeftIcon } from '@/components/icons'
+import { MargoPortraitAvatar } from '@/components/margo-portrait-avatar'
+import { isMargoBrandUsername } from '@/lib/margo-brand-account'
 import { TYPE, UI_FONT } from '@/lib/fonts'
 
 export interface MargoConversationHeaderProps {
@@ -15,7 +17,7 @@ export interface MargoConversationHeaderProps {
 const touch = 'var(--margo-touch-min)'
 
 /**
- * Message thread header — icon-only back (matches BackButton chrome) + centered partner identity.
+ * Message thread header — back + centered partner identity (portrait tile).
  */
 export function MargoConversationHeader({
   displayName,
@@ -25,6 +27,8 @@ export function MargoConversationHeader({
 }: MargoConversationHeaderProps) {
   const profileHref = username ? `/profile/${username}` : undefined
   const name = displayName?.trim() || username || ''
+  const brandMark = username ? isMargoBrandUsername(username) : false
+  const initial = (name || '?').trim().slice(0, 1).toUpperCase()
 
   return (
     <header
@@ -38,7 +42,7 @@ export function MargoConversationHeader({
           : '8px',
         paddingLeft: '8px',
         paddingRight: '8px',
-        paddingBottom: '10px',
+        paddingBottom: '8px',
         display: 'grid',
         gridTemplateColumns: `${touch} 1fr ${touch}`,
         alignItems: 'center',
@@ -66,6 +70,7 @@ export function MargoConversationHeader({
       {profileHref && name ? (
         <Link
           href={profileHref}
+          data-margo-thread-header-identity
           style={{
             display: 'flex',
             flexDirection: 'column',
@@ -78,29 +83,15 @@ export function MargoConversationHeader({
             WebkitTapHighlightColor: 'transparent',
           }}
         >
-          <div
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              flexShrink: 0,
-              overflow: 'hidden',
-              marginBottom: '4px',
-              background: avatarUrl ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
-              border: '1px solid var(--gold-border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <span style={{ fontFamily: UI_FONT, fontSize: TYPE.label, fontWeight: 700, color: 'var(--bg)' }}>
-                {name.slice(0, 2).toUpperCase()}
-              </span>
-            )}
-          </div>
+          <MargoPortraitAvatar
+            size="tab"
+            imageUrl={avatarUrl}
+            fallbackInitial={initial}
+            fallbackSeed={!avatarUrl && username && !brandMark ? username : null}
+            brandMark={brandMark}
+            separationRingColor="var(--bg)"
+            style={{ marginBottom: '4px' }}
+          />
           <p
             style={{
               fontFamily: UI_FONT,
@@ -124,7 +115,7 @@ export function MargoConversationHeader({
                 fontFamily: UI_FONT,
                 fontSize: TYPE.meta,
                 color: 'var(--text-muted)',
-                margin: '2px 0 0',
+                margin: '1px 0 0',
                 maxWidth: '100%',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
