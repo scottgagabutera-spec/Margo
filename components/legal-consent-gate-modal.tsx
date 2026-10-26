@@ -63,7 +63,7 @@ export function LegalConsentGateModal() {
       setRedirecting(true)
       toast.success('Welcome to Margo.')
       const identity = await waitUntilReady()
-      const dest = await completeAuthAfterProfileReady(user?.id, identity, null)
+      const dest = await completeAuthAfterProfileReady(user?.id, identity, null, waitUntilReady)
       completeAuthNavigation(dest)
       return
     } catch (e) {

@@ -3,11 +3,7 @@
 import { useEffect } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useAuthGate } from '@/components/supabase-auth-provider'
-import { LegalConsentGateModal } from '@/components/legal-consent-gate-modal'
-import {
-  isConsentEnforcementExemptPath,
-  isTermsCompletionPage,
-} from '@/lib/legal/consent-paths'
+import { isTermsCompletionPage } from '@/lib/legal/consent-paths'
 import { AUTH_RETURN_QUERY, buildSigninHref } from '@/lib/auth-return'
 
 /**
@@ -32,8 +28,6 @@ export function LegalConsentEnforcer() {
     }
   }, [loading, user, needsTermsAcceptance, onTermsPage, pathname, router, searchParams])
 
-  if (loading || !user || !needsTermsAcceptance) return null
-  if (onTermsPage || isConsentEnforcementExemptPath(pathname)) return null
-
-  return <LegalConsentGateModal />
+  // ConsentFirstShell blocks product mounts and redirects to /signin?step=terms.
+  return null
 }

@@ -1,4 +1,4 @@
-import { sanitizeOAuthReturnPath } from '@/lib/oauth-return'
+import { sanitizeOAuthReturnPath } from './oauth-return.ts'
 
 export const AUTH_RETURN_QUERY = 'returnTo'
 const AUTH_RETURN_SCROLL_KEY = 'margo-auth-return-scroll'

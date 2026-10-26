@@ -21,6 +21,17 @@ export default function GlobalError({
           <p style={{ fontSize: '0.95rem', lineHeight: 1.5, opacity: 0.85 }}>
             Something went wrong. Try again — we&apos;ve been notified.
           </p>
+          {error.digest ? (
+            <p style={{
+              fontSize: '0.65rem',
+              lineHeight: 1.4,
+              color: 'rgba(255,255,255,0.45)',
+              margin: '12px 0 0',
+              fontFamily: 'ui-monospace, monospace',
+            }}>
+              Ref: {error.digest}
+            </p>
+          ) : null}
           <button
             type="button"
             onClick={() => reset()}

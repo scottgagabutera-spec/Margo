@@ -233,7 +233,7 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
         onSuccess()
       } else {
         const row = await waitUntilReady()
-        const dest = await completeAuthAfterProfileReady(user?.id, row, null)
+        const dest = await completeAuthAfterProfileReady(user?.id, row, null, waitUntilReady)
         completeAuthNavigation(dest)
       }
       return
@@ -294,6 +294,28 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
       >
         {redirecting ? 'Opening Margo…' : loading ? 'Saving…' : 'Continue'}
       </button>
+      <p style={{ textAlign: 'center', margin: '18px 0 0' }}>
+        <button
+          type="button"
+          onClick={() => {
+            void fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).then(() => {
+              window.location.assign('/signin')
+            })
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--text-muted)',
+            fontFamily: ui,
+            fontSize: TYPE.meta,
+            cursor: 'pointer',
+            textDecoration: 'underline',
+            minHeight: '44px',
+          }}
+        >
+          Sign out
+        </button>
+      </p>
     </div>
   )
 }
@@ -467,7 +489,7 @@ export function AuthForm({
         if (onSuccess) {
           onSuccess()
         } else {
-          const dest = await completeAuthAfterProfileReady(user?.id, row, oauthReturnTo)
+          const dest = await completeAuthAfterProfileReady(user?.id, row, oauthReturnTo, waitUntilReady)
           completeAuthNavigation(dest)
         }
         return
@@ -639,47 +661,53 @@ export function AuthForm({
             }}
             onEnter={() => { void handleEmailSubmit() }}
             errorAddon={!isSignup && signInFailed && passwordError ? (
-              passwordError === SIGN_IN_UNKNOWN_EMAIL_MESSAGE && onSwitchMode ? (
-                <button
-                  type="button"
-                  onClick={() => onSwitchMode('signup')}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--gold)',
-                    fontFamily: ui,
-                    fontSize: TYPE.meta,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    minHeight: '44px',
-                    padding: '0 4px',
-                    flexShrink: 0,
-                  }}
-                >
-                  Create account
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => { void handleResendConfirmation() }}
-                  disabled={resendCooldownActive || resendBusy || !email.trim()}
-                  aria-disabled={resendCooldownActive || resendBusy || !email.trim()}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: resendCooldownActive ? 'var(--text-muted)' : 'var(--gold)',
-                    fontFamily: ui,
-                    fontSize: TYPE.meta,
-                    cursor: resendCooldownActive || resendBusy || !email.trim() ? 'not-allowed' : 'pointer',
-                    minHeight: '44px',
-                    padding: '0 4px',
-                    opacity: resendCooldownActive ? 0.55 : 1,
-                    flexShrink: 0,
-                  }}
-                >
-                  {resendBusy ? 'Sending…' : resendCooldownActive ? 'Resend in 1 min' : 'Resend confirmation email'}
-                </button>
-              )
+              <>
+                {(passwordError === SIGN_IN_UNKNOWN_EMAIL_MESSAGE
+                  || passwordError === SIGN_IN_NEUTRAL_MESSAGE) && onSwitchMode ? (
+                  <button
+                    type="button"
+                    onClick={() => onSwitchMode('signup')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--gold)',
+                      fontFamily: ui,
+                      fontSize: TYPE.meta,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      minHeight: '44px',
+                      padding: '0 4px',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {passwordError === SIGN_IN_UNKNOWN_EMAIL_MESSAGE
+                      ? 'Create account'
+                      : 'New here? Create account'}
+                  </button>
+                ) : null}
+                {passwordError !== SIGN_IN_UNKNOWN_EMAIL_MESSAGE ? (
+                  <button
+                    type="button"
+                    onClick={() => { void handleResendConfirmation() }}
+                    disabled={resendCooldownActive || resendBusy || !email.trim()}
+                    aria-disabled={resendCooldownActive || resendBusy || !email.trim()}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: resendCooldownActive ? 'var(--text-muted)' : 'var(--gold)',
+                      fontFamily: ui,
+                      fontSize: TYPE.meta,
+                      cursor: resendCooldownActive || resendBusy || !email.trim() ? 'not-allowed' : 'pointer',
+                      minHeight: '44px',
+                      padding: '0 4px',
+                      opacity: resendCooldownActive ? 0.55 : 1,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {resendBusy ? 'Sending…' : resendCooldownActive ? 'Resend in 1 min' : 'Resend confirmation email'}
+                  </button>
+                ) : null}
+              </>
             ) : undefined}
             forgotPasswordSlot={!isSignup ? (
               <Link
