@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   MARGO_WELCOME_ONBOARDING_AUTH_CUTOFF_ISO,
+  isAuthUserCreatedAtUnavailable,
   isWelcomeOnboardingExemptPath,
   needsOnboarding,
   resolvePostAuthNavigation,
@@ -97,6 +98,28 @@ test('missing auth created_at does not skip welcome (Google signup)', () => {
     }),
     true,
   )
+})
+
+test('isAuthUserCreatedAtUnavailable only when null, empty, or unparseable', () => {
+  assert.equal(isAuthUserCreatedAtUnavailable(null), true)
+  assert.equal(isAuthUserCreatedAtUnavailable(undefined), true)
+  assert.equal(isAuthUserCreatedAtUnavailable(''), true)
+  assert.equal(isAuthUserCreatedAtUnavailable('   '), true)
+  assert.equal(isAuthUserCreatedAtUnavailable('not-a-date'), true)
+  assert.equal(isAuthUserCreatedAtUnavailable('2025-06-01T00:00:00.000Z'), false)
+})
+
+test('old account with real name and no completedAt resolves to feed when created_at before cutoff', () => {
+  const ctx = {
+    profileReadOk: true,
+    settings: null as Record<string, unknown> | null,
+    authUserCreatedAt: '2025-06-01T00:00:00.000Z',
+    identity: identity({ username: 'scott_music', displayName: 'Scott Music' }),
+  }
+  assert.equal(isAuthUserCreatedAtUnavailable(ctx.authUserCreatedAt), false)
+  assert.equal(needsOnboarding(ctx), false)
+  assert.equal(resolvePostAuthNavigation(ctx, '/feed'), '/feed')
+  assert.equal(resolvePostAuthNavigation(ctx, null), '/feed')
 })
 
 test('profile read failure fails open', () => {

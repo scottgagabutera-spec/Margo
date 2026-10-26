@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { buildPostAuthContext } from './post-auth-context.ts'
-import { needsOnboarding } from './welcome-needs-onboarding.ts'
+import {
+  isAuthUserCreatedAtUnavailable,
+  needsOnboarding,
+  resolvePostAuthNavigation,
+} from './welcome-needs-onboarding.ts'
 
 test('loading identity is not treated as read failure (skip onboarding bug)', () => {
   assert.equal(
@@ -44,4 +48,16 @@ test('old account unchanged after wait context', () => {
     '2025-01-01T00:00:00.000Z',
   )
   assert.equal(needsOnboarding(ctx), false)
+})
+
+test('wait context with loaded pre-cutoff created_at does not assume welcome', () => {
+  const ctx = buildPostAuthContext(
+    { username: 'scott_music', displayName: 'Scott Music' },
+    null,
+    'ok',
+    '2025-06-01T00:00:00.000Z',
+  )
+  assert.equal(isAuthUserCreatedAtUnavailable(ctx.authUserCreatedAt), false)
+  assert.equal(needsOnboarding(ctx), false)
+  assert.equal(resolvePostAuthNavigation(ctx, '/feed'), '/feed')
 })

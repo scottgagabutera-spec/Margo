@@ -6,6 +6,7 @@ import {
   fetchAuthUserCreatedAt,
 } from '@/lib/resolve-post-auth-destination'
 import {
+  isAuthUserCreatedAtUnavailable,
   needsOnboarding,
   resolvePostAuthNavigation,
   welcomeOnboardingPath,
@@ -50,7 +51,7 @@ export async function resolvePostAuthDestinationWithWait(
     }
 
     if (profileCtx.profileReadStatus === 'ok' && identity) {
-      if (!authUserCreatedAt) {
+      if (isAuthUserCreatedAtUnavailable(authUserCreatedAt)) {
         const pendingCtx = buildPostAuthContext(identity, profileCtx.settings, 'ok', null)
         if (needsOnboarding(pendingCtx)) {
           return {
@@ -74,7 +75,7 @@ export async function resolvePostAuthDestinationWithWait(
       return { dest, outcome: 'resolved' }
     }
 
-    if (!identity || !authUserCreatedAt) {
+    if (!identity) {
       await sleep(POST_AUTH_NAV_POLL_MS)
       continue
     }
