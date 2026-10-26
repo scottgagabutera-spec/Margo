@@ -26,6 +26,7 @@ export function buildMomentMessageBody(
 }
 
 export function parseMomentMessageBody(body: string): ParsedMomentMessage | null {
+  if (body == null || typeof body !== 'string' || !body.trim()) return null
   const magicMatch = body.match(MOMENT_MAGIC_RE)
   const urlMatch = body.match(MOMENT_URL_RE)
   const postId = magicMatch?.[1] || urlMatch?.[1]
@@ -63,13 +64,14 @@ export function parseMomentMessageBody(body: string): ParsedMomentMessage | null
 
 /** Inbox preview — lyric first, never the raw UUID URL. */
 export function formatMessagePreview(body: string, maxLen = 72): string {
-  const moment = parseMomentMessageBody(body)
+  const safe = typeof body === 'string' ? body : ''
+  const moment = parseMomentMessageBody(safe)
   if (moment) {
     const quoted = `"${moment.lyric}"`
     if (quoted.length <= maxLen) return quoted
     return quoted.slice(0, maxLen - 1).trimEnd() + '…'
   }
-  const first = body.split('\n')[0]?.trim() || body
+  const first = safe.split('\n')[0]?.trim() || safe
   if (first.length <= maxLen) return first
   return first.slice(0, maxLen - 1).trimEnd() + '…'
 }

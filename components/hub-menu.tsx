@@ -18,6 +18,7 @@ import {
 import { createPortal } from 'react-dom'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useHubSurfaces } from '@/hooks/useHubSurfaces'
+import { computeHubPanelPosition, pickVisibleHubAnchor } from '@/lib/hub-panel-position'
 import { useIdentity } from '@/hooks/useIdentity'
 import {
   leavePrimaryTabSurface,
@@ -222,7 +223,8 @@ type HubContextValue = {
   signedIn: boolean
   pendingHref: string | null
   beginNavigate: (href: string) => boolean
-  hubAnchorRef: RefObject<HTMLButtonElement | null>
+  hubNavAnchorRef: RefObject<HTMLButtonElement | null>
+  hubTabAnchorRef: RefObject<HTMLButtonElement | null>
   signInReturnTo: string
   onLockedActivate: (returnTo: string) => void
 }
@@ -351,7 +353,8 @@ function HubPanel() {
     tiles,
     pendingHref,
     beginNavigate,
-    hubAnchorRef,
+    hubNavAnchorRef,
+    hubTabAnchorRef,
     signInReturnTo,
     onLockedActivate,
   } = useHub()
@@ -371,16 +374,25 @@ function HubPanel() {
   }, [])
 
   const positionDesktopPanel = useCallback(() => {
-    const anchor = hubAnchorRef.current
     const panel = desktopRef.current
-    if (!anchor || !panel) return
+    if (!panel) return
+    const anchor = pickVisibleHubAnchor(hubNavAnchorRef.current, hubTabAnchorRef.current)
+    if (!anchor) return
     const rect = anchor.getBoundingClientRect()
-    const w = panel.offsetWidth
-    panel.style.left = `${Math.max(12, rect.right - w)}px`
-    panel.style.top = `${rect.bottom + 8}px`
+    const { left, top } = computeHubPanelPosition({
+      anchorRect: rect,
+      panelWidth: panel.offsetWidth,
+      panelHeight: panel.offsetHeight,
+      viewportWidth: document.documentElement.clientWidth,
+      viewportHeight: document.documentElement.clientHeight,
+      margin: 8,
+      gap: 8,
+    })
+    panel.style.left = `${left}px`
+    panel.style.top = `${top}px`
     panel.style.right = 'auto'
     panel.style.transform = 'none'
-  }, [hubAnchorRef])
+  }, [hubNavAnchorRef, hubTabAnchorRef])
 
   useLayoutEffect(() => {
     if (!open) return
@@ -395,13 +407,17 @@ function HubPanel() {
       return
     }
     positionDesktopPanel()
-  }, [open, hubAnchorRef, tiles.length, signedIn, positionDesktopPanel])
+  }, [open, hubNavAnchorRef, hubTabAnchorRef, tiles.length, signedIn, positionDesktopPanel])
 
   useEffect(() => {
     if (!open) return
-    const onResize = () => positionDesktopPanel()
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
+    const onReposition = () => positionDesktopPanel()
+    window.addEventListener('resize', onReposition)
+    window.addEventListener('scroll', onReposition, true)
+    return () => {
+      window.removeEventListener('resize', onReposition)
+      window.removeEventListener('scroll', onReposition, true)
+    }
   }, [open, positionDesktopPanel])
 
   if (!mounted || !open) return null
@@ -455,7 +471,8 @@ export function HubProvider({ children }: { children: ReactNode }) {
   const [pendingHref, setPendingHref] = useState<string | null>(null)
   const [signInReturnTo, setSignInReturnTo] = useState('/feed?hub=1')
   const pendingHrefRef = useRef<string | null>(null)
-  const hubAnchorRef = useRef<HTMLButtonElement | null>(null)
+  const hubNavAnchorRef = useRef<HTMLButtonElement | null>(null)
+  const hubTabAnchorRef = useRef<HTMLButtonElement | null>(null)
   const scrollOriginRef = useRef(0)
   const lastScrollRef = useRef({ y: 0, t: 0 })
 
@@ -579,7 +596,7 @@ export function HubProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       open, setOpen, toggle, close, hubHasUnread: hasActivity, tiles, signedIn,
-      pendingHref, beginNavigate, hubAnchorRef, signInReturnTo, onLockedActivate,
+      pendingHref, beginNavigate, hubNavAnchorRef, hubTabAnchorRef, signInReturnTo, onLockedActivate,
     }),
     [open, toggle, close, hasActivity, tiles, signedIn, pendingHref, beginNavigate, signInReturnTo, onLockedActivate],
   )
@@ -593,12 +610,13 @@ export function HubProvider({ children }: { children: ReactNode }) {
 }
 
 export function HubIconButton() {
-  const { open, toggle, hubHasUnread, hubAnchorRef } = useHub()
+  const { open, toggle, hubHasUnread, hubNavAnchorRef } = useHub()
   return (
     <button
-      ref={hubAnchorRef}
+      ref={hubNavAnchorRef}
       type="button"
       data-margo-hub-root
+      data-hub-anchor="nav"
       onClick={toggle}
       aria-label={hubHasUnread ? 'Hub, new activity' : 'Hub'}
       aria-expanded={open}
@@ -624,12 +642,13 @@ export function HubIconButton() {
 }
 
 export function HubTabButton({ style, labelStyle }: { style: CSSProperties; labelStyle: CSSProperties }) {
-  const { open, toggle, hubHasUnread, hubAnchorRef } = useHub()
+  const { open, toggle, hubHasUnread, hubTabAnchorRef } = useHub()
   return (
     <button
-      ref={hubAnchorRef}
+      ref={hubTabAnchorRef}
       type="button"
       data-margo-hub-root
+      data-hub-anchor="tab"
       onClick={toggle}
       aria-label={hubHasUnread ? 'Hub, new activity' : 'Hub'}
       aria-expanded={open}

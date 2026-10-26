@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { SignInLink } from '@/components/signin-link'
@@ -110,7 +110,14 @@ function ConversationRow({ c, active }: { c: Conversation; active: boolean }) {
 export function MessagesInbox({ embedded = false }: { embedded?: boolean }) {
   const pathname = usePathname()
   const { user } = useIdentity()
-  const { inbox, requests, loading, hasMoreConversations, loadMoreConversations } = useMessaging()
+  const {
+    inbox,
+    requests,
+    loading,
+    loadingMoreConversations,
+    hasMoreConversations,
+    loadMoreConversations,
+  } = useMessaging()
   const [tab, setTab] = useState<'inbox' | 'requests'>('inbox')
   const [query, setQuery] = useState('')
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
@@ -123,12 +130,26 @@ export function MessagesInbox({ embedded = false }: { embedded?: boolean }) {
     ? pathname.split('/')[2]?.split('?')[0]
     : null
 
-  const onScroll = useCallback(() => {
-    const el = loadMoreRef.current
-    if (!el || loading || !hasMoreConversations) return
-    const rect = el.getBoundingClientRect()
-    if (rect.top < window.innerHeight + 120) loadMoreConversations()
-  }, [hasMoreConversations, loadMoreConversations, loading])
+  useEffect(() => {
+    const target = loadMoreRef.current
+    if (!target || !hasMoreConversations || loading || loadingMoreConversations) return
+    const scrollRoot = embedded ? (target.closest('aside') as Element | null) : null
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMoreConversations()
+      },
+      { root: scrollRoot, rootMargin: '120px 0px' },
+    )
+    io.observe(target)
+    return () => io.disconnect()
+  }, [
+    embedded,
+    hasMoreConversations,
+    loadMoreConversations,
+    loading,
+    loadingMoreConversations,
+    list.length,
+  ])
 
   if (!isSignedIn) {
     return (
@@ -150,7 +171,6 @@ export function MessagesInbox({ embedded = false }: { embedded?: boolean }) {
         height: embedded ? '100%' : undefined,
         minHeight: 0,
       }}
-      onScroll={embedded ? onScroll : undefined}
     >
       <MargoSearchInput
         value={query}
@@ -207,7 +227,7 @@ export function MessagesInbox({ embedded = false }: { embedded?: boolean }) {
           {tab === 'inbox' ? 'No messages yet.' : 'No requests.'}
         </p>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }} onScroll={onScroll}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
           {list.map((c) => (
             <ConversationRow
               key={c.otherUser.id}
@@ -216,7 +236,7 @@ export function MessagesInbox({ embedded = false }: { embedded?: boolean }) {
             />
           ))}
           <div ref={loadMoreRef} style={{ height: '1px' }} aria-hidden />
-          {hasMoreConversations ? (
+          {loadingMoreConversations ? (
             <p style={{
               fontFamily: UI_FONT,
               fontSize: LIST_ROW_TYPE.time,
@@ -227,7 +247,7 @@ export function MessagesInbox({ embedded = false }: { embedded?: boolean }) {
             }}>
               Loading more…
             </p>
-          ) : (
+          ) : !hasMoreConversations ? (
             <p style={{
               fontFamily: UI_FONT,
               fontSize: LIST_ROW_TYPE.time,
@@ -238,7 +258,7 @@ export function MessagesInbox({ embedded = false }: { embedded?: boolean }) {
             }}>
               That is everyone for now.
             </p>
-          )}
+          ) : null}
         </div>
       )}
     </div>

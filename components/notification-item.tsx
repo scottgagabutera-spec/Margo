@@ -5,6 +5,8 @@ import type { Notification } from '@/hooks/useNotifications'
 import { useNotifications } from '@/hooks/useNotifications'
 import { RelativeTime } from '@/components/relative-time'
 import { notificationHref } from '@/lib/navigation/notification-routes'
+import { MargoPortraitAvatar } from '@/components/margo-portrait-avatar'
+import { isMargoBrandUsername } from '@/lib/margo-brand-account'
 
 const font = 'var(--font-lora), serif'
 
@@ -87,21 +89,18 @@ export function NotificationItem({
   const { acceptFollowRequest, declineFollowRequest } = useNotifications()
   const [busy, setBusy] = useState(false)
 
+  const actor = notification.actor
+  const brandMark = actor?.username ? isMargoBrandUsername(actor.username) : false
+  const initial = (actor?.displayName || actor?.username || '?').slice(0, 1).toUpperCase()
   const avatar = (
-    <div style={{
-      width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
-      background: notification.actor?.avatarUrl ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
-      border: '1px solid rgba(232,197,71,0.2)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-    }}>
-      {notification.actor?.avatarUrl ? (
-        <img src={notification.actor.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-      ) : (
-        <span style={{ fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: 'var(--bg)' }}>
-          {(notification.actor?.displayName || notification.actor?.username || '??').slice(0, 2).toUpperCase()}
-        </span>
-      )}
-    </div>
+    <MargoPortraitAvatar
+      size="row"
+      imageUrl={actor?.avatarUrl ?? null}
+      fallbackInitial={initial}
+      fallbackSeed={!actor?.avatarUrl && actor?.username && !brandMark ? actor.username : null}
+      brandMark={brandMark}
+      separationRingColor="var(--bg)"
+    />
   )
 
   if (notification.type === 'follow_request') {

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useRef, useLayoutEffect, type CSSProperties } from 'react'
+import { useEffect, useRef, useLayoutEffect, useState, type CSSProperties } from 'react'
 import { usePathname } from 'next/navigation'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useAudioEngine } from '@/hooks/useAudioEngine'
@@ -32,7 +32,18 @@ export function MobileTabBar() {
   const engineState = useAudioEngine()
   const navRef = useRef<HTMLElement | null>(null)
 
-  const shellHidden = hidesTabBar(pathname)
+  const [libraryPlayerOpen, setLibraryPlayerOpen] = useState(false)
+  useEffect(() => {
+    const sync = () => {
+      setLibraryPlayerOpen(document.documentElement.hasAttribute('data-margo-library-player'))
+    }
+    sync()
+    const mo = new MutationObserver(sync)
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-margo-library-player'] })
+    return () => mo.disconnect()
+  }, [])
+
+  const shellHidden = hidesTabBar(pathname) || libraryPlayerOpen
   const stageHidden = useStageChromeHidden()
   const isLanding = pathname === '/'
 

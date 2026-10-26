@@ -16,6 +16,7 @@ import { parseMomentMessageBody } from '@/lib/moment/message-format'
 import { signedOutGateBenefitStyle, signedOutGateSignInStyle } from '@/lib/signed-out-gate-styles'
 import { isPartnerUuid } from '@/lib/messages/partner-key'
 import { TYPE, UI_FONT } from '@/lib/fonts'
+import { threadDayKey, threadDayLabel } from '@/lib/messages/thread-day-label'
 
 const font = 'var(--font-lora), serif'
 const uiFont = UI_FONT
@@ -136,7 +137,7 @@ export default function ThreadPage() {
       ) : (
         <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
           <Link
-            href="/lyric-back"
+            href={partner?.username ? `/lyric-back?returnTo=${encodeURIComponent(`/messages/${partner.username}`)}` : '/lyric-back'}
             aria-label="Share a lyric moment"
             style={{
               width: '40px',
@@ -226,24 +227,47 @@ export default function ThreadPage() {
       ) : messages.length === 0 ? (
         <div data-margo-thread-empty aria-hidden style={{ flex: '1 1 auto', minHeight: '24px' }} />
       ) : (
-        messages.map(m => {
-          const mine = m.senderId === user.id
-          return (
-            <div key={m.id} style={{ display: 'flex', justifyContent: mine ? 'flex-end' : 'flex-start' }}>
-              <div style={{
-                maxWidth: '82%', padding: '10px 14px', borderRadius: '16px',
-                background: mine ? 'var(--gold)' : 'var(--surface-2)',
-                color: mine ? 'var(--bg)' : 'var(--text)',
-              }}>
-                <ThreadMessageBody body={m.body} mine={mine} />
-                <p style={{
-                  fontFamily: font, fontSize: '0.55rem', margin: '4px 0 0',
-                  color: mine ? 'rgba(11,11,11,0.55)' : 'var(--text-muted)',
-                }}>{timeLabel(m.createdAt)}</p>
-              </div>
-            </div>
-          )
-        })
+        (() => {
+          let lastDay = ''
+          return messages.flatMap((m) => {
+            const mine = m.senderId === user.id
+            const dayKey = threadDayKey(m.createdAt)
+            const nodes = []
+            if (dayKey && dayKey !== lastDay) {
+              lastDay = dayKey
+              nodes.push(
+                <p
+                  key={`day-${dayKey}-${m.id}`}
+                  style={{
+                    fontFamily: uiFont,
+                    fontSize: TYPE.meta,
+                    color: 'var(--text-muted)',
+                    textAlign: 'center',
+                    margin: '8px 0 4px',
+                  }}
+                >
+                  {threadDayLabel(m.createdAt)}
+                </p>,
+              )
+            }
+            nodes.push(
+              <div key={m.id} style={{ display: 'flex', justifyContent: mine ? 'flex-end' : 'flex-start' }}>
+                <div style={{
+                  maxWidth: '82%', padding: '10px 14px', borderRadius: '16px',
+                  background: mine ? 'var(--gold)' : 'var(--surface-2)',
+                  color: mine ? 'var(--bg)' : 'var(--text)',
+                }}>
+                  <ThreadMessageBody body={m.body} mine={mine} />
+                  <p style={{
+                    fontFamily: font, fontSize: '0.55rem', margin: '4px 0 0',
+                    color: mine ? 'rgba(11,11,11,0.55)' : 'var(--text-muted)',
+                  }}>{timeLabel(m.createdAt)}</p>
+                </div>
+              </div>,
+            )
+            return nodes
+          })
+        })()
       )}
     </MargoConversationLayout>
   )

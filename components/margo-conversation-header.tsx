@@ -95,7 +95,7 @@ export function MargoConversationHeader({
           <p
             style={{
               fontFamily: UI_FONT,
-              fontSize: TYPE.secondary,
+              fontSize: LIST_ROW_TYPE.name,
               fontWeight: 600,
               color: 'var(--text)',
               margin: 0,
@@ -113,7 +113,7 @@ export function MargoConversationHeader({
             <p
               style={{
                 fontFamily: UI_FONT,
-                fontSize: TYPE.meta,
+                fontSize: LIST_ROW_TYPE.preview,
                 color: 'var(--text-muted)',
                 margin: '1px 0 0',
                 maxWidth: '100%',

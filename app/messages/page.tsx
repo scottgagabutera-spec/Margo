@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { MessagesInbox } from '@/components/messages-inbox'
-import { MessagesSelectChatPlaceholder } from '@/app/messages/layout'
+import { MessagesSelectChatPlaceholder } from '@/components/messages-select-chat-placeholder'
 
 export default function MessagesPage() {
   const [desktop, setDesktop] = useState(false)

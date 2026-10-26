@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -49,6 +50,7 @@ interface MessagingContextValue {
   requests: Conversation[]
   unreadCount: number
   loading: boolean
+  loadingMoreConversations: boolean
   hasMoreConversations: boolean
   loadMoreConversations: () => void
   /** Immediate inbox/badge update after a successful send (no remount wait). */
@@ -121,7 +123,11 @@ async function buildConversationsFromMessages(
           displayName: profile?.display_name || 'Unknown',
           avatarUrl: profile?.avatar_url || null,
         },
-        lastMessage: { body: last.body, createdAt: last.created_at, senderId: last.sender_id },
+        lastMessage: {
+          body: typeof last.body === 'string' ? last.body : '',
+          createdAt: last.created_at,
+          senderId: last.sender_id,
+        },
         unreadCount,
         accepted: mutual || iHaveReplied,
       }
@@ -187,7 +193,10 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
   const [partnerLimit, setPartnerLimit] = useState(CONVERSATIONS_PAGE_SIZE)
+  const partnerLimitRef = useRef(partnerLimit)
+  partnerLimitRef.current = partnerLimit
   const [hasMoreConversations, setHasMoreConversations] = useState(false)
+  const [loadingMoreConversations, setLoadingMoreConversations] = useState(false)
 
   const unreadCount = useMemo(
     () => conversations.reduce((sum, c) => sum + c.unreadCount, 0),
@@ -248,15 +257,19 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
 
   const refetch = useCallback(async () => {
     if (!userId) return
-    const { conversations: list, hasMore } = await loadConversations(userId, partnerLimit)
+    const limit = partnerLimitRef.current
+    const { conversations: list, hasMore } = await loadConversations(userId, limit)
     setConversations(list)
     setHasMoreConversations(hasMore)
     setLoading(false)
-  }, [userId, partnerLimit])
+    setLoadingMoreConversations(false)
+  }, [userId])
 
   const loadMoreConversations = useCallback(() => {
+    if (loadingMoreConversations) return
+    setLoadingMoreConversations(true)
     setPartnerLimit((n) => n + CONVERSATIONS_PAGE_SIZE)
-  }, [])
+  }, [loadingMoreConversations])
 
   useForegroundCatchup(refetch, !!userId)
 
@@ -299,7 +312,8 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!userId || authLoading || signedOut) return
-    setLoading(true)
+    if (partnerLimit <= CONVERSATIONS_PAGE_SIZE) return
+    setLoadingMoreConversations(true)
     void refetch()
   }, [partnerLimit, userId, authLoading, signedOut, refetch])
 
@@ -310,6 +324,7 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
       requests,
       unreadCount,
       loading,
+      loadingMoreConversations,
       hasMoreConversations,
       loadMoreConversations,
       refetch,
@@ -322,6 +337,7 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
       requests,
       unreadCount,
       loading,
+      loadingMoreConversations,
       hasMoreConversations,
       loadMoreConversations,
       refetch,

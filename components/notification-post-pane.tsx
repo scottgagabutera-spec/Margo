@@ -1,15 +1,65 @@
 'use client'
 
-import Link from 'next/link'
+import { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { PostCard } from '@/components/post-card'
 import { usePost } from '@/hooks/usePost'
-import { LYRIC_FONT, LIST_ROW_TYPE, UI_FONT } from '@/lib/fonts'
-import { PlayPauseIcon } from '@/components/play-pause-icon'
-import { useAudioEngine } from '@/hooks/useAudioEngine'
-import { playSnippet } from '@/lib/audio-engine'
+import { useIdentity } from '@/hooks/useIdentity'
+import { useAuthGate } from '@/components/supabase-auth-provider'
+import { createClient } from '@/lib/supabase/client'
+import { LIST_ROW_TYPE, UI_FONT } from '@/lib/fonts'
+const supabase = createClient()
 
 export function NotificationPostPane({ postId }: { postId: string | null }) {
+  const router = useRouter()
   const { post, loading } = usePost(postId)
-  const engine = useAudioEngine()
+  const { user } = useIdentity()
+  const { requireAuth } = useAuthGate()
+  const [resonated, setResonated] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set()
+    try {
+      const saved = localStorage.getItem('margoResonated')
+      return saved ? new Set(JSON.parse(saved)) : new Set()
+    } catch {
+      return new Set()
+    }
+  })
+  const [resonateCounts, setResonateCounts] = useState<Record<string, number>>({})
+
+  useEffect(() => {
+    if (!post?.id) return
+    setResonateCounts((prev) => ({
+      ...prev,
+      [post.id]: prev[post.id] ?? post.resonates ?? 0,
+    }))
+  }, [post?.id, post?.resonates])
+
+  const toggleResonate = useCallback(async (id: string) => {
+    if (!requireAuth()) return
+    const was = resonated.has(id)
+    const next = new Set(resonated)
+    was ? next.delete(id) : next.add(id)
+    setResonated(next)
+    try {
+      localStorage.setItem('margoResonated', JSON.stringify([...next]))
+    } catch { /* ignore */ }
+    setResonateCounts((prev) => ({
+      ...prev,
+      [id]: Math.max(0, (prev[id] ?? 0) + (was ? -1 : 1)),
+    }))
+    const myId = user?.id
+    if (!myId) return
+    if (was) {
+      await supabase.from('post_resonates').delete().eq('post_id', id).eq('actor_id', myId)
+    } else {
+      await supabase.from('post_resonates').insert({ post_id: id, actor_id: myId })
+    }
+  }, [requireAuth, resonated, user?.id])
+
+  const onLyricBack = useCallback(() => {
+    if (!post?.id) return
+    router.push(`/post/${post.id}?lb=1`)
+  }, [post?.id, router])
 
   if (!postId) {
     return (
@@ -33,87 +83,19 @@ export function NotificationPostPane({ postId }: { postId: string | null }) {
     )
   }
 
-  const lyric = post.text?.trim() || post.lines?.[0]?.text || ''
-  const playing = engine.mode !== 'idle'
-
   return (
-    <div style={{ padding: '20px 24px var(--margo-page-padding-bottom)', maxWidth: '560px' }}>
-      <p style={{ fontFamily: UI_FONT, fontSize: LIST_ROW_TYPE.name, fontWeight: 600, margin: '0 0 4px' }}>
-        {post.authorDisplayName || post.username}
-      </p>
-      <p style={{ fontFamily: UI_FONT, fontSize: LIST_ROW_TYPE.preview, color: 'var(--text-muted)', margin: '0 0 20px' }}>
-        @{post.username}
-      </p>
-      <p style={{
-        fontFamily: LYRIC_FONT,
-        fontStyle: 'italic',
-        fontSize: '1.35rem',
-        lineHeight: 1.45,
-        color: 'var(--text)',
-        margin: '0 0 24px',
-      }}>
-        {lyric}
-      </p>
-      {post.knowledge?.song ? (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          padding: '12px',
-          borderRadius: '12px',
-          border: '1px solid var(--border)',
-          background: 'var(--surface-2)',
-          marginBottom: '16px',
-        }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontFamily: UI_FONT, fontSize: LIST_ROW_TYPE.name, margin: 0, color: 'var(--text)' }}>
-              {post.knowledge.song}
-            </p>
-            <p style={{ fontFamily: UI_FONT, fontSize: LIST_ROW_TYPE.preview, margin: '4px 0 0', color: 'var(--text-muted)' }}>
-              {post.knowledge.artist}
-            </p>
-          </div>
-          <button
-            type="button"
-            aria-label={playing ? 'Pause' : 'Play'}
-            onClick={() => {
-              if (post.audioUrl) {
-                if (post.audioUrl) {
-                  void playSnippet({
-                    audioUrl: post.audioUrl,
-                    songId: post.songId || post.id,
-                    title: post.knowledge?.song || 'Song',
-                    artist: post.knowledge?.artist || '',
-                    lineIndex: 0,
-                    lineText: lyric,
-                    startSec: post.snippetStart ?? 0,
-                    endSec: post.snippetEnd ?? post.snippetStart ?? 0,
-                    source: 'mini-player',
-                  })
-                }
-              }
-            }}
-            style={{
-              width: 'var(--margo-touch-min)',
-              height: 'var(--margo-touch-min)',
-              borderRadius: '12px',
-              border: 'none',
-              background: 'var(--gold)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <PlayPauseIcon playing={playing} size={18} color="var(--bg)" />
-          </button>
-        </div>
-      ) : null}
-      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-        <Link href={`/post/${post.id}`} style={{ fontFamily: UI_FONT, fontSize: LIST_ROW_TYPE.chip, color: 'var(--gold)', textDecoration: 'none', fontWeight: 600 }}>
-          Open full post
-        </Link>
-      </div>
+    <div style={{ padding: '16px 20px var(--margo-page-padding-bottom)', maxWidth: '560px' }}>
+      <PostCard
+        post={post}
+        resonated={resonated.has(post.id)}
+        resonateCount={resonateCounts[post.id] ?? post.resonates ?? 0}
+        echoCount={post.replies ?? 0}
+        onResonate={toggleResonate}
+        onExport={() => {}}
+        disableCardNav
+        threadDetail
+        onThreadLyricBack={onLyricBack}
+      />
     </div>
   )
 }
