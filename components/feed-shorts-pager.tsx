@@ -344,6 +344,11 @@ export function FeedShortsPager({
     if (!root || !layout || clips.length === 0) return
     const next = Math.max(0, Math.min(clips.length - 1, index))
     root.scrollTo({ top: next * layout.slideStridePx, behavior })
+    if (typeof window !== 'undefined' && 'onscrollend' in window) {
+      window.requestAnimationFrame(() => {
+        root.dispatchEvent(new Event('scrollend'))
+      })
+    }
   }, [clips.length])
 
   const commitSettledFromDom = useCallback(() => {

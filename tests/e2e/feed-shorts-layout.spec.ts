@@ -122,11 +122,25 @@ for (const { w, h } of VIEWPORTS) {
       if ((await frames.count()) < 2) test.skip(true, 'need 2 clips')
       const idx0 = await page.locator('[data-shorts-active="1"]').getAttribute('data-shorts-index')
       await page.locator('.margo-feed-shorts-arrow').nth(1).click()
-      await page.waitForTimeout(400)
+      await page.waitForFunction(
+        (prev) => {
+          const el = document.querySelector('[data-shorts-active="1"]')
+          return el?.getAttribute('data-shorts-index') !== prev
+        },
+        idx0,
+        { timeout: 8000 },
+      )
       const idx1 = await page.locator('[data-shorts-active="1"]').getAttribute('data-shorts-index')
       expect(idx1).not.toBe(idx0)
       await page.keyboard.press('ArrowUp')
-      await page.waitForTimeout(400)
+      await page.waitForFunction(
+        (prev) => {
+          const el = document.querySelector('[data-shorts-active="1"]')
+          return el?.getAttribute('data-shorts-index') === prev
+        },
+        idx0,
+        { timeout: 8000 },
+      )
       const idx2 = await page.locator('[data-shorts-active="1"]').getAttribute('data-shorts-index')
       expect(idx2).toBe(idx0)
     })
