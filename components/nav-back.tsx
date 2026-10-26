@@ -11,6 +11,11 @@ import {
   recordNavReplace,
   resetNavStack,
 } from '@/lib/in-app-nav-stack'
+import {
+  clearHubNavFromTile,
+  markHubOverlayRestore,
+  openedFromHubTile,
+} from '@/lib/search-scope'
 
 /** @deprecated Use canPopNavStack — kept for callers that imported canPopInAppHistory */
 export function canPopInAppHistory() {
@@ -67,6 +72,24 @@ export type NavBackConfig = {
  * Depth routes get Back in the fixed nav (Instagram / Apple Music pattern).
  * Primary tabs do not. Pages can override via `useRegisterNavBack`.
  */
+function hubAwareFallback(defaultHref: string): string {
+  return openedFromHubTile() ? '/feed?hub=1' : defaultHref
+}
+
+function hubTileBack(defaultHref: string): NavBackConfig {
+  return {
+    fallbackHref: hubAwareFallback(defaultHref),
+    replace: true,
+    onBack: () => {
+      if (openedFromHubTile()) {
+        markHubOverlayRestore()
+        clearHubNavFromTile()
+      }
+      return false
+    },
+  }
+}
+
 export function navBackForPath(pathname: string | null | undefined): NavBackConfig | null {
   if (!pathname) return null
   const p = pathname.split('?')[0]
@@ -76,7 +99,6 @@ export function navBackForPath(pathname: string | null | undefined): NavBackConf
     p === '/discover' ||
     p === '/compose' ||
     p === '/you' ||
-    p === '/messages' ||
     p.startsWith('/song/') ||
     p.startsWith('/m/') ||
     p === '/signin' ||
@@ -87,13 +109,17 @@ export function navBackForPath(pathname: string | null | undefined): NavBackConf
     return null
   }
 
+  if (p === '/messages' || p === '/notifications') {
+    return hubTileBack('/feed')
+  }
+
   if (p === '/search') return { fallbackHref: '/feed', replace: true }
   if (p === '/studio') return { fallbackHref: '/you', preferHistory: false }
   if (p.startsWith('/studio/')) return { fallbackHref: '/studio' }
   if (p === '/settings' || p === '/profile/edit' || p === '/apply-artist') {
     return { fallbackHref: '/you' }
   }
-  if (p === '/library') return { fallbackHref: '/discover' }
+  if (p === '/library') return hubTileBack('/discover')
   if (p.startsWith('/library/')) return { fallbackHref: '/library' }
   if (p.startsWith('/discover/') || p === '/artists') return { fallbackHref: '/discover' }
   if (p.startsWith('/post/')) return { fallbackHref: '/feed', preferHistory: true, replace: true }

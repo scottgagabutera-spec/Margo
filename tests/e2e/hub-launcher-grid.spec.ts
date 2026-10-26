@@ -59,6 +59,14 @@ for (const width of [360, 390, 834, 1440]) {
       for (const id of ['messages', 'notifications', 'library'] as const) {
         await expect(page.locator(`${rootSel} [data-hub-tile="${id}"]`)).toBeVisible()
       }
+      await expect(page.locator(`${rootSel} [data-hub-tile="library"] .margo-hub-tile__label`)).toHaveText(
+        'Music Library',
+      )
+
+      await page.locator(`${rootSel} [data-hub-tile="messages"]`).click()
+      await expect(page).toHaveURL(/\/feed/)
+      await expect(page.locator(rootSel)).toBeVisible()
+      await expect(page.locator('#margo-hub-sign-in')).toBeFocused()
       await expect(page.locator(`${rootSel} [data-hub-tile="stage"] .margo-hub-tile__lock`)).toHaveCount(0)
       await expect(page.locator(`${rootSel} .margo-hub-tile__lock`)).toHaveCount(3)
       await expect(page.locator(`${rootSel} .margo-hub-tile__caption`)).toHaveCount(0)
@@ -72,7 +80,7 @@ for (const width of [360, 390, 834, 1440]) {
       expect(contained.ok, JSON.stringify(contained)).toBeTruthy()
 
       if (width < 640) {
-        await page.locator('.margo-mobile-tabbar a[href="/feed"], .margo-mobile-tabbar button').filter({ hasText: 'Feed' }).first().click()
+        await page.locator('.margo-mobile-tabbar a[href="/feed"]').click()
         await expect(page.locator(rootSel)).toHaveCount(0)
       }
     })

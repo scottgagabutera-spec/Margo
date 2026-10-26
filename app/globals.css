@@ -1726,6 +1726,18 @@ html[data-margo-stage-idle] .margo-stage-zone {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.margo-hub-signed-out-cta--pulse .margo-hub-sign-in-btn {
+  animation: margo-hub-sign-in-pulse 600ms var(--ease-out) 2;
+}
+@keyframes margo-hub-sign-in-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  50% {
+    box-shadow: 0 0 0 3px var(--gold-border);
+  }
+}
 .margo-hub-signed-out-cta {
   grid-column: 1 / -1;
   display: flex;

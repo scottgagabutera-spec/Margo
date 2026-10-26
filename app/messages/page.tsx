@@ -27,9 +27,7 @@ export default function MessagesPage() {
 
         {!isSignedIn ? (
           <div style={{ textAlign: 'center', padding: '48px 0' }}>
-            <p style={signedOutGateBenefitStyle}>
-              Message people who resonate with your lines.
-            </p>
+            <p style={signedOutGateBenefitStyle}>Sign in to see your messages.</p>
             <SignInLink style={signedOutGateSignInStyle} returnTo="/messages">
               Sign in
             </SignInLink>

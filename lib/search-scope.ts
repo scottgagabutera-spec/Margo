@@ -151,6 +151,32 @@ export function safeSearchFromPath(raw: string | null | undefined): string | nul
 }
 
 const HUB_RESTORE_KEY = 'margo-restore-hub'
+const HUB_NAV_FROM_KEY = 'margo-hub-nav-from'
+
+/** User opened a Hub tile (Messages, Library, …) — depth Back should return to Hub. */
+export function markHubNavFromTile() {
+  try {
+    sessionStorage.setItem(HUB_NAV_FROM_KEY, '1')
+  } catch {
+    /* private mode / SSR */
+  }
+}
+
+export function openedFromHubTile(): boolean {
+  try {
+    return sessionStorage.getItem(HUB_NAV_FROM_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+export function clearHubNavFromTile() {
+  try {
+    sessionStorage.removeItem(HUB_NAV_FROM_KEY)
+  } catch {
+    /* private mode */
+  }
+}
 
 /** Search Back pops to a page that is not `/search` — Hub is an overlay, so restore it after the pop. */
 export function markHubOverlayRestore() {

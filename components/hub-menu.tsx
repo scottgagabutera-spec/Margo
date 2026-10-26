@@ -32,9 +32,16 @@ import {
 import { MargoPortraitAvatar } from '@/components/margo-portrait-avatar'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { SignInLink } from '@/components/signin-link'
-import { buildSigninHref, persistAuthReturnScroll } from '@/lib/auth-return'
+import { persistAuthReturnScroll } from '@/lib/auth-return'
 import { isMargoBrandUsername } from '@/lib/margo-brand-account'
-import { searchHrefForPath, searchScopeForPath, consumeHubOverlayRestore } from '@/lib/search-scope'
+import {
+  searchHrefForPath,
+  searchScopeForPath,
+  consumeHubOverlayRestore,
+  markHubNavFromTile,
+  markHubOverlayRestore,
+  clearHubNavFromTile,
+} from '@/lib/search-scope'
 import {
   hubTileBadgeLabel,
   type HubTileIconId,
@@ -94,6 +101,18 @@ function HubIdentityHeader() {
   )
 }
 
+function hubTileClassName(tile: ResolvedHubTile, pending: boolean) {
+  return [
+    'margo-hub-tile',
+    tile.id === 'stage' ? 'margo-hub-tile--stage' : '',
+    tile.dimmed ? 'margo-hub-tile--dimmed' : '',
+    pending ? 'margo-hub-tile--pending' : '',
+    tile.locked ? 'margo-hub-tile--locked-nav' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+}
+
 function HubTileLink({
   tile,
   signedIn,
@@ -101,6 +120,7 @@ function HubTileLink({
   navLocked,
   onBeginNavigate,
   onClose,
+  onLockedActivate,
 }: {
   tile: ResolvedHubTile
   signedIn: boolean
@@ -108,49 +128,20 @@ function HubTileLink({
   navLocked: boolean
   onBeginNavigate: (href: string) => boolean
   onClose: () => void
+  onLockedActivate: (returnTo: string) => void
 }) {
   const badge = signedIn ? hubTileBadgeLabel(tile.count) : ''
-  const dest = signedIn || !tile.needsAccount ? tile.href : buildSigninHref(tile.href)
+  const dest = tile.href
   const showLock = tile.locked
+  const ariaLabel =
+    showLock
+      ? `${tile.label}. Sign in required`
+      : badge
+        ? `${tile.label}, ${badge} new`
+        : tile.label
 
-  return (
-    <Link
-      href={dest}
-      onClick={(e) => {
-        if (tile.locked) {
-          persistActivePrimaryScroll()
-          persistAuthReturnScroll()
-        }
-        if (navLocked || pending) {
-          e.preventDefault()
-          return
-        }
-        if (!onBeginNavigate(dest)) {
-          e.preventDefault()
-          return
-        }
-        if (!tile.locked) onClose()
-      }}
-      data-margo-hub-root
-      data-hub-tile={tile.id}
-      aria-busy={pending}
-      aria-label={
-        showLock
-          ? `${tile.label}. Sign in required`
-          : badge
-            ? `${tile.label}, ${badge} new`
-            : tile.label
-      }
-      className={[
-        'margo-hub-tile',
-        tile.id === 'stage' ? 'margo-hub-tile--stage' : '',
-        tile.dimmed ? 'margo-hub-tile--dimmed' : '',
-        pending ? 'margo-hub-tile--pending' : '',
-        tile.locked ? 'margo-hub-tile--locked-nav' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-    >
+  const tileBody = (
+    <>
       {showLock ? (
         <span className="margo-hub-tile__lock" aria-hidden>
           <LockIcon size={16} color="var(--text-muted)" />
@@ -164,6 +155,54 @@ function HubTileLink({
         <TileIcon kind={tile.icon} />
       </span>
       <span className="margo-hub-tile__label">{tile.label}</span>
+    </>
+  )
+
+  if (showLock) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          if (navLocked || pending) return
+          persistActivePrimaryScroll()
+          persistAuthReturnScroll()
+          onLockedActivate(tile.href)
+        }}
+        data-margo-hub-root
+        data-hub-tile={tile.id}
+        aria-label={ariaLabel}
+        className={hubTileClassName(tile, pending)}
+      >
+        {tileBody}
+      </button>
+    )
+  }
+
+  return (
+    <Link
+      href={dest}
+      onClick={(e) => {
+        if (navLocked || pending) {
+          e.preventDefault()
+          return
+        }
+        if (!onBeginNavigate(dest)) {
+          e.preventDefault()
+          return
+        }
+        if (tile.id !== 'stage') {
+          markHubNavFromTile()
+          markHubOverlayRestore()
+        }
+        onClose()
+      }}
+      data-margo-hub-root
+      data-hub-tile={tile.id}
+      aria-busy={pending}
+      aria-label={ariaLabel}
+      className={hubTileClassName(tile, pending)}
+    >
+      {tileBody}
     </Link>
   )
 }
@@ -179,6 +218,9 @@ type HubContextValue = {
   pendingHref: string | null
   beginNavigate: (href: string) => boolean
   hubAnchorRef: RefObject<HTMLButtonElement | null>
+  signInReturnTo: string
+  signInPulse: boolean
+  onLockedActivate: (returnTo: string) => void
 }
 
 const HubContext = createContext<HubContextValue | null>(null)
@@ -224,18 +266,24 @@ function HubTiles({
   tiles,
   pendingHref,
   beginNavigate,
+  signInReturnTo,
+  signInPulse,
+  onLockedActivate,
 }: {
   signedIn: boolean
   close: () => void
   tiles: ResolvedHubTile[]
   pendingHref: string | null
   beginNavigate: (href: string) => boolean
+  signInReturnTo: string
+  signInPulse: boolean
+  onLockedActivate: (returnTo: string) => void
 }) {
   return (
     <>
       {signedIn ? <HubIdentityHeader /> : null}
       {tiles.map((tile) => {
-        const dest = signedIn || !tile.needsAccount ? tile.href : buildSigninHref(tile.href)
+        const dest = tile.href
         return (
           <HubTileLink
             key={tile.id}
@@ -245,13 +293,27 @@ function HubTiles({
             navLocked={!!pendingHref && pendingHref !== dest}
             onBeginNavigate={beginNavigate}
             onClose={close}
+            onLockedActivate={onLockedActivate}
           />
         )
       })}
       {!signedIn ? (
-        <div className="margo-hub-signed-out-cta">
+        <div
+          className={[
+            'margo-hub-signed-out-cta',
+            signInPulse ? 'margo-hub-signed-out-cta--pulse' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
           <p className="margo-hub-signed-out-cta__line">Sign in to open your space</p>
-          <SignInLink onClick={close} data-margo-hub-root className="margo-hub-sign-in-btn">
+          <SignInLink
+            id="margo-hub-sign-in"
+            returnTo={signInReturnTo}
+            onClick={close}
+            data-margo-hub-root
+            className="margo-hub-sign-in-btn"
+          >
             Sign in
           </SignInLink>
         </div>
@@ -266,12 +328,18 @@ function HubPanelBody({
   tiles,
   pendingHref,
   beginNavigate,
+  signInReturnTo,
+  signInPulse,
+  onLockedActivate,
 }: {
   signedIn: boolean
   close: () => void
   tiles: ResolvedHubTile[]
   pendingHref: string | null
   beginNavigate: (href: string) => boolean
+  signInReturnTo: string
+  signInPulse: boolean
+  onLockedActivate: (returnTo: string) => void
 }) {
   return (
     <div className="margo-hub-shell">
@@ -283,6 +351,9 @@ function HubPanelBody({
           tiles={tiles}
           pendingHref={pendingHref}
           beginNavigate={beginNavigate}
+          signInReturnTo={signInReturnTo}
+          signInPulse={signInPulse}
+          onLockedActivate={onLockedActivate}
         />
       </div>
     </div>
@@ -290,7 +361,18 @@ function HubPanelBody({
 }
 
 function HubPanel() {
-  const { open, close, signedIn, tiles, pendingHref, beginNavigate, hubAnchorRef } = useHub()
+  const {
+    open,
+    close,
+    signedIn,
+    tiles,
+    pendingHref,
+    beginNavigate,
+    hubAnchorRef,
+    signInReturnTo,
+    signInPulse,
+    onLockedActivate,
+  } = useHub()
   const [mounted, setMounted] = useState(false)
   const sheetRef = useRef<HTMLDivElement>(null)
   const desktopRef = useRef<HTMLDivElement>(null)
@@ -327,6 +409,9 @@ function HubPanel() {
     tiles,
     pendingHref,
     beginNavigate,
+    signInReturnTo,
+    signInPulse,
+    onLockedActivate,
   }
 
   return createPortal(
@@ -365,7 +450,10 @@ export function HubProvider({ children }: { children: ReactNode }) {
 
   const [open, setOpen] = useState(false)
   const [pendingHref, setPendingHref] = useState<string | null>(null)
+  const [signInReturnTo, setSignInReturnTo] = useState('/feed?hub=1')
+  const [signInPulse, setSignInPulse] = useState(false)
   const pendingHrefRef = useRef<string | null>(null)
+  const signInPulseTimerRef = useRef<number | null>(null)
   const hubAnchorRef = useRef<HTMLButtonElement | null>(null)
   const scrollOriginRef = useRef(0)
   const lastScrollRef = useRef({ y: 0, t: 0 })
@@ -391,6 +479,21 @@ export function HubProvider({ children }: { children: ReactNode }) {
     return true
   }, [])
 
+  const onLockedActivate = useCallback((returnTo: string) => {
+    setSignInReturnTo(returnTo)
+    setSignInPulse(true)
+    if (signInPulseTimerRef.current != null) {
+      window.clearTimeout(signInPulseTimerRef.current)
+    }
+    signInPulseTimerRef.current = window.setTimeout(() => {
+      setSignInPulse(false)
+      signInPulseTimerRef.current = null
+    }, 1600)
+    window.requestAnimationFrame(() => {
+      document.getElementById('margo-hub-sign-in')?.focus()
+    })
+  }, [])
+
   useEffect(() => {
     pendingHrefRef.current = null
     setPendingHref(null)
@@ -401,6 +504,7 @@ export function HubProvider({ children }: { children: ReactNode }) {
       )
     setOpen(restoreHub ? true : false)
     if (restoreHub && typeof window !== 'undefined') {
+      clearHubNavFromTile()
       const url = new URL(window.location.href)
       url.searchParams.delete('hub')
       const next = url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : '')
@@ -471,9 +575,9 @@ export function HubProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       open, setOpen, toggle, close, hubHasUnread: hasActivity, tiles, signedIn,
-      pendingHref, beginNavigate, hubAnchorRef,
+      pendingHref, beginNavigate, hubAnchorRef, signInReturnTo, signInPulse, onLockedActivate,
     }),
-    [open, toggle, close, hasActivity, tiles, signedIn, pendingHref, beginNavigate],
+    [open, toggle, close, hasActivity, tiles, signedIn, pendingHref, beginNavigate, signInReturnTo, signInPulse, onLockedActivate],
   )
 
   return (

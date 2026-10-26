@@ -76,7 +76,7 @@ export const HUB_TILE_CONFIG: HubTileConfig[] = [
   },
   {
     id: 'library',
-    label: 'Library',
+    label: 'Music Library',
     captionSignedOut: 'Your songs',
     captionSignedIn: 'Your songs',
     route: '/library',

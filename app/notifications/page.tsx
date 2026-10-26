@@ -35,9 +35,7 @@ export default function NotificationsPage() {
 
         {!isSignedIn ? (
           <div style={{ textAlign: 'center', padding: '48px 0' }}>
-            <p style={signedOutGateBenefitStyle}>
-              Get alerts when someone resonates or lyric-backs you.
-            </p>
+            <p style={signedOutGateBenefitStyle}>Sign in to see your notifications.</p>
             <SignInLink style={signedOutGateSignInStyle} returnTo="/notifications">
               Sign in
             </SignInLink>
