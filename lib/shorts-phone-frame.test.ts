@@ -1,23 +1,22 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  PHONE_SHORTS_CANVAS_CAP_PX,
   phoneShortsCanvasHeightPx,
   phoneShortsCanvasWidthPx,
 } from './shorts-phone-frame.ts'
+import { computeShortsFrameLayoutForViewport } from './shorts-frame-layout.ts'
 
-describe('phone Shorts canvas (main size cap)', () => {
-  it('caps card width at 320px on phone viewports', () => {
-    assert.equal(PHONE_SHORTS_CANVAS_CAP_PX, 320)
-    assert.equal(phoneShortsCanvasWidthPx(360), 320)
-    assert.equal(phoneShortsCanvasWidthPx(390), 320)
-    assert.equal(phoneShortsCanvasWidthPx(430), 320)
+const CHROME = { navPx: 72, feedTabBarPx: 40, vibeBarPx: 0, mobileTabBarPx: 80 }
+
+describe('phone Shorts canvas helpers', () => {
+  it('width is viewport minus 32px margin', () => {
+    assert.equal(phoneShortsCanvasWidthPx(360), 328)
+    assert.equal(phoneShortsCanvasWidthPx(320), 288)
   })
 
-  it('9:16 height from 320px width matches main phone card', () => {
-    const h390 = phoneShortsCanvasHeightPx(phoneShortsCanvasWidthPx(390))
-    assert.ok(Math.abs(h390 - 568.888) < 1)
-    const h360 = phoneShortsCanvasHeightPx(phoneShortsCanvasWidthPx(360))
-    assert.ok(Math.abs(h360 - 568.888) < 1)
+  it('matches computeShortsFrameLayoutForViewport on phone', () => {
+    const l = computeShortsFrameLayoutForViewport(390, 844, CHROME)
+    assert.equal(phoneShortsCanvasWidthPx(390), l.frameWidthPx)
+    assert.equal(l.frameHeightPx, phoneShortsCanvasHeightPx(l.frameWidthPx, l.scrollAreaHeightPx))
   })
 })

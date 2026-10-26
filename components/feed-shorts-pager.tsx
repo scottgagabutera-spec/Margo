@@ -24,7 +24,12 @@ import type { LyricMoment } from '@/lib/lyric-moments-board'
 import { playLyricMomentShort } from '@/lib/lyric-moment-playback'
 import { pickShortsLook } from '@/lib/shorts-looks'
 import { getShortsChromeTokens } from '@/lib/shorts-chrome-tokens'
-import { computeShortsFrameLayout, SHORTS_DESKTOP_MIN_WIDTH } from '@/lib/shorts-frame-layout'
+import { ChevronDownIcon, ChevronUpIcon } from '@/components/icons'
+import {
+  computeShortsFrameLayoutForViewport,
+  SHORTS_DESKTOP_MIN_WIDTH,
+  type ShortsFrameLayout,
+} from '@/lib/shorts-frame-layout'
 import { utcDayKey } from '@/lib/shorts-shelf-rotation'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 
@@ -51,20 +56,12 @@ function persistShortsUnmutePref(unmuted: boolean): void {
 function findSettledSlideIndex(scroller: HTMLElement): number {
   const slides = scroller.querySelectorAll<HTMLElement>('[data-shorts-slide]')
   if (!slides.length) return 0
-  const rootRect = scroller.getBoundingClientRect()
-  const targetY = rootRect.top + rootRect.height * 0.45
-  let bestIdx = 0
-  let bestDist = Infinity
-  slides.forEach((el) => {
-    const r = el.getBoundingClientRect()
-    const mid = r.top + r.height / 2
-    const dist = Math.abs(mid - targetY)
-    if (dist < bestDist) {
-      bestDist = dist
-      bestIdx = Number(el.dataset.shortsIndex) || 0
-    }
-  })
-  return bestIdx
+  const stride = slides[0].offsetHeight
+  if (stride > 0) {
+    const idx = Math.round(scroller.scrollTop / stride)
+    return Math.max(0, Math.min(slides.length - 1, idx))
+  }
+  return Number(slides[0].dataset.shortsIndex) || 0
 }
 
 type SlideProps = {
@@ -279,7 +276,7 @@ export function FeedShortsPager({
   vibeFilterActive = false,
   tabActive,
 }: Props) {
-  const withVibeClass = vibeFilterActive ? ' margo-feed-shorts-pager--with-vibe' : ''
+  const withVibeClass = vibeFilterActive ? ' margo-feed-shorts-shell--with-vibe' : ''
   const emptyWithVibe = vibeFilterActive ? ' margo-feed-shorts-empty--with-vibe' : ''
   const scrollerRef = useRef<HTMLDivElement>(null)
   const [settledIndex, setSettledIndex] = useState(0)
@@ -305,37 +302,49 @@ export function FeedShortsPager({
   const lastAutoIndexRef = useRef<number>(-1)
   const utcDay = utcDayKey(new Date())
 
+  const layoutRef = useRef<ShortsFrameLayout | null>(null)
+
   const syncFrameMetrics = useCallback(() => {
     const root = scrollerRef.current
     if (!root) return
     const styles = getComputedStyle(document.documentElement)
     const nav = parseFloat(styles.getPropertyValue('--nav-height')) || 72
-    const tabBar = parseFloat(styles.getPropertyValue('--margo-feed-tab-bar-h')) || 44
+    const tabBar = parseFloat(styles.getPropertyValue('--margo-feed-tab-bar-h')) || 40
     const vibeBar = vibeFilterActive
       ? parseFloat(styles.getPropertyValue('--margo-feed-vibe-bar-h')) || 0
       : 0
-    const bottom = parseFloat(styles.getPropertyValue('--margo-page-padding-bottom')) || 88
-    const topChrome = nav + tabBar + vibeBar
+    const mobileTabBar = parseFloat(styles.getPropertyValue('--margo-tabbar-h')) || 80
 
-    if (window.innerWidth < SHORTS_DESKTOP_MIN_WIDTH) {
-      root.style.removeProperty('--margo-shorts-frame-w')
-      root.style.removeProperty('--margo-shorts-frame-h')
-      root.style.removeProperty('--margo-shorts-slide-min-h')
-      delete root.dataset.shortsCols
-      return
-    }
-
-    const layout = computeShortsFrameLayout(
+    const layout = computeShortsFrameLayoutForViewport(
       window.innerWidth,
       window.innerHeight,
-      topChrome,
-      bottom,
+      { navPx: nav, feedTabBarPx: tabBar, vibeBarPx: vibeBar, mobileTabBarPx: mobileTabBar },
     )
+    layoutRef.current = layout
     root.style.setProperty('--margo-shorts-frame-w', `${layout.frameWidthPx}px`)
     root.style.setProperty('--margo-shorts-frame-h', `${layout.frameHeightPx}px`)
-    root.style.setProperty('--margo-shorts-slide-min-h', `${layout.slideStridePx}px`)
-    root.dataset.shortsCols = String(layout.columns)
+    root.style.setProperty('--margo-shorts-slide-h', `${layout.slideStridePx}px`)
+    root.dataset.shortsCols = '1'
+    const shell = root.parentElement
+    if (shell?.classList.contains('margo-feed-shorts-shell')) {
+      shell.style.setProperty('--margo-shorts-frame-w', `${layout.frameWidthPx}px`)
+    }
+    root.querySelectorAll<HTMLElement>('.margo-feed-shorts-slide__frame').forEach((frame) => {
+      if (layout.frameHeightPx < 400) {
+        frame.dataset.shortsTight = '1'
+      } else {
+        delete frame.dataset.shortsTight
+      }
+    })
   }, [vibeFilterActive])
+
+  const scrollToShortIndex = useCallback((index: number, behavior: ScrollBehavior = 'smooth') => {
+    const root = scrollerRef.current
+    const layout = layoutRef.current
+    if (!root || !layout || clips.length === 0) return
+    const next = Math.max(0, Math.min(clips.length - 1, index))
+    root.scrollTo({ top: next * layout.slideStridePx, behavior })
+  }, [clips.length])
 
   const commitSettledFromDom = useCallback(() => {
     const root = scrollerRef.current
@@ -619,6 +628,50 @@ export function FeedShortsPager({
     playClip(clip, true)
   }, [anonPlaysCompleted, clips, onRequireSignIn, playClip, settledIndex, signedIn])
 
+  useEffect(() => {
+    const root = scrollerRef.current
+    if (!root || !tabActive) return
+
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) < 4) return
+      e.preventDefault()
+      const layout = layoutRef.current
+      if (!layout) return
+      const idx = Math.round(root.scrollTop / layout.slideStridePx)
+      scrollToShortIndex(idx + (e.deltaY > 0 ? 1 : -1), 'smooth')
+    }
+
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target
+      if (
+        t instanceof HTMLElement
+        && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)
+      ) {
+        return
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        scrollToShortIndex(settledIndexRef.current + 1)
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        scrollToShortIndex(settledIndexRef.current - 1)
+      } else if (e.key === ' ' || e.code === 'Space') {
+        e.preventDefault()
+        handleTapVideo()
+      } else if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault()
+        toggleMutePref()
+      }
+    }
+
+    root.addEventListener('wheel', onWheel, { passive: false })
+    window.addEventListener('keydown', onKey)
+    return () => {
+      root.removeEventListener('wheel', onWheel)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [handleTapVideo, scrollToShortIndex, tabActive, toggleMutePref])
+
   if (loading) {
     return (
       <div className={`margo-feed-shorts-empty${emptyWithVibe}`}>
@@ -638,8 +691,11 @@ export function FeedShortsPager({
     )
   }
 
+  const shellClass = `margo-feed-shorts-shell${withVibeClass}`
+
   return (
-    <div ref={scrollerRef} className={`margo-feed-shorts-pager${withVibeClass}`}>
+    <div className={shellClass}>
+      <div ref={scrollerRef} className="margo-feed-shorts-pager">
       {clips.map((clip, index) => {
         const key = `${clip.songId}_${clip.lineId}`
         const vibeLabel = emotionToVibeLabel(clip.vibes[0]) || clip.vibes[0] || null
@@ -680,6 +736,29 @@ export function FeedShortsPager({
           />
         )
       })}
+      </div>
+      {desktopLayout ? (
+        <div className="margo-feed-shorts-arrows" aria-hidden={false}>
+          <button
+            type="button"
+            className="margo-feed-shorts-arrow"
+            aria-label="Previous Short"
+            disabled={settledIndex <= 0}
+            onClick={() => scrollToShortIndex(settledIndex - 1)}
+          >
+            <ChevronUpIcon size={22} color="currentColor" />
+          </button>
+          <button
+            type="button"
+            className="margo-feed-shorts-arrow"
+            aria-label="Next Short"
+            disabled={settledIndex >= clips.length - 1}
+            onClick={() => scrollToShortIndex(settledIndex + 1)}
+          >
+            <ChevronDownIcon size={22} color="currentColor" />
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 }

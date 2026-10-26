@@ -288,29 +288,24 @@ for (const width of WIDTHS) {
       }
     })
 
-    test('scroll-snap and next-short peek on desktop', async ({ page }) => {
-      test.skip(width < 640, 'peek layout is desktop-only')
+    test('scroll-snap: next short not visible until scroll on desktop', async ({ page }) => {
+      test.skip(width < 640, 'desktop-only')
       await openShortsTab(page, width)
       const pager = page.locator('.margo-feed-shorts-pager')
       if ((await pager.count()) === 0) test.skip()
-      const cols = await pager.getAttribute('data-shorts-cols')
-      test.skip(cols === '2', 'two-column layout uses side-by-side pair, not vertical peek')
       const frames = page.locator('.margo-feed-shorts-slide__frame')
       if ((await frames.count()) < 2) test.skip()
       const snap = await pager.evaluate((el) => getComputedStyle(el).scrollSnapType)
       expect(snap).toContain('mandatory')
-      const first = await frames.nth(0).boundingBox()
-      const second = await frames.nth(1).boundingBox()
-      expect(first && second).toBeTruthy()
-      if (first && second) {
-        const pagerBox = await pager.boundingBox()
-        expect(pagerBox).toBeTruthy()
-        if (pagerBox) {
-          const visibleBottom = pagerBox.y + pagerBox.height
-          expect(second.y).toBeLessThan(visibleBottom)
-          expect(second.y).toBeGreaterThan(first.y)
-        }
-      }
+      const peek = await page.evaluate(() => {
+        const pagerEl = document.querySelector('.margo-feed-shorts-pager') as HTMLElement | null
+        if (!pagerEl) return { ok: false }
+        const bottom = pagerEl.getBoundingClientRect().bottom
+        const second = pagerEl.querySelectorAll('.margo-feed-shorts-slide__frame')[1]
+        if (!second) return { ok: true }
+        return { ok: second.getBoundingClientRect().top >= bottom - 1 }
+      })
+      expect(peek.ok).toBeTruthy()
     })
 
     test('giants chrome: mute control, no big row play button', async ({ page }) => {
