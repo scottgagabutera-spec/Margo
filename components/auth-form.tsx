@@ -298,9 +298,14 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
         <button
           type="button"
           onClick={() => {
-            void fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).then(() => {
-              window.location.assign('/signin')
-            })
+            void (async () => {
+              try {
+                const { signOutBrowser } = await import('@/lib/supabase/client')
+                await signOutBrowser()
+              } finally {
+                window.location.assign('/signin')
+              }
+            })()
           }}
           style={{
             background: 'none',

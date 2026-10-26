@@ -50,7 +50,13 @@ export async function resolvePostAuthDestinationWithWait(
 
     if (profileCtx.profileReadStatus === 'ok' && identity) {
       if (isAuthUserCreatedAtUnavailable(authUserCreatedAt)) {
-        const pendingCtx = buildPostAuthContext(identity, profileCtx.settings, 'ok', null)
+        const pendingCtx = buildPostAuthContext(
+          identity,
+          profileCtx.settings,
+          'ok',
+          null,
+          profileCtx.activity,
+        )
         if (needsOnboarding(pendingCtx)) {
           return {
             dest: resolvePostAuthNavigation(pendingCtx, returnTo),
@@ -63,10 +69,11 @@ export async function resolvePostAuthDestinationWithWait(
 
       const dest = resolvePostAuthNavigation(
         buildPostAuthContext(
-          identity,
+          identity ?? profileCtx.identity,
           profileCtx.settings,
           'ok',
           authUserCreatedAt,
+          profileCtx.activity,
         ),
         returnTo,
       )
@@ -83,10 +90,18 @@ export async function resolvePostAuthDestinationWithWait(
 
   const lastIdentity = await waitForIdentity()
   const lastCreatedAt = await fetchAuthUserCreatedAt()
-  const lastProfile = userId ? await loadWelcomeOnboardingContext(userId) : { settings: null, profileReadStatus: 'error' as const }
+  const lastProfile = userId
+    ? await loadWelcomeOnboardingContext(userId)
+    : { settings: null, profileReadStatus: 'error' as const, identity: null, activity: undefined }
   if (lastIdentity && lastProfile.profileReadStatus === 'ok') {
     const dest = resolvePostAuthNavigation(
-      buildPostAuthContext(lastIdentity, lastProfile.settings, 'ok', lastCreatedAt),
+      buildPostAuthContext(
+        lastIdentity ?? lastProfile.identity,
+        lastProfile.settings,
+        'ok',
+        lastCreatedAt,
+        lastProfile.activity,
+      ),
       returnTo,
     )
     if (dest.startsWith('/welcome')) {

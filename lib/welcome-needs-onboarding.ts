@@ -1,9 +1,16 @@
 import { sanitizeOAuthReturnPath } from './oauth-return.ts'
 import { isTemporaryMemberUsername } from './username-validator.ts'
 import {
+  hasProfileActivity,
+  type ProfileActivitySignals,
+} from './welcome-onboarding-activity.ts'
+import {
   onboardingFromSettings,
   type ProfileSettingsJson,
 } from './welcome-profile-settings.ts'
+
+export type { ProfileActivitySignals } from './welcome-onboarding-activity.ts'
+export { hasProfileActivity } from './welcome-onboarding-activity.ts'
 
 /** Same-origin return path only (mirrors lib/auth-return for node:test resolution). */
 const AUTH_RETURN_QUERY = 'returnTo'
@@ -33,6 +40,7 @@ export type WelcomeOnboardingProfileContext = {
   /** When false (missing profile row or read error), fail open — no redirect. */
   profileReadOk: boolean
   authUserCreatedAt: string | null | undefined
+  activity?: ProfileActivitySignals
 }
 
 /** True when created_at is not yet available for cutoff logic (null, empty, or unparseable). */
@@ -45,12 +53,27 @@ export function isAuthUserCreatedAtUnavailable(
   return Number.isNaN(Date.parse(trimmed))
 }
 
+export function isAuthUserCreatedBeforeWelcomeCutoff(
+  authUserCreatedAt: string | null | undefined,
+): boolean {
+  if (isAuthUserCreatedAtUnavailable(authUserCreatedAt)) return false
+  return Date.parse(authUserCreatedAt!) < CUTOFF_MS
+}
+
 export function isAuthUserCreatedOnOrAfterWelcomeCutoff(
   authUserCreatedAt: string | null | undefined,
 ): boolean {
   if (isAuthUserCreatedAtUnavailable(authUserCreatedAt)) return false
   const ms = Date.parse(authUserCreatedAt!)
   return ms >= CUTOFF_MS
+}
+
+/** Pre-cutoff grandfather exception — only member handle with empty display still needs welcome. */
+export function isPreCutoffMemberStubIdentity(
+  identity: WelcomeOnboardingIdentity,
+): boolean {
+  const name = (identity.displayName || '').trim()
+  return isTemporaryMemberUsername(identity.username) && !name
 }
 
 /** Custom username + real display name — existing Margo member, not a fresh OAuth stub row. */
@@ -72,12 +95,20 @@ export function needsOnboarding(ctx: WelcomeOnboardingProfileContext): boolean {
   const completedAt = onboardingFromSettings(ctx.settings).completedAt
   if (completedAt) return false
 
-  if (isAuthUserCreatedAtUnavailable(ctx.authUserCreatedAt)) {
-    return !hasEstablishedPublicIdentity(ctx.identity)
-  }
+  if (hasProfileActivity(ctx.activity)) return false
 
   const { username, displayName } = ctx.identity
   const name = (displayName || '').trim()
+
+  if (isAuthUserCreatedBeforeWelcomeCutoff(ctx.authUserCreatedAt)) {
+    return isPreCutoffMemberStubIdentity(ctx.identity)
+  }
+
+  if (isAuthUserCreatedAtUnavailable(ctx.authUserCreatedAt)) {
+    if (hasEstablishedPublicIdentity(ctx.identity)) return false
+    if (!isTemporaryMemberUsername(username)) return false
+    return true
+  }
 
   if (isTemporaryMemberUsername(username)) return true
   if (!name || name === username) return true

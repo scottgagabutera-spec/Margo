@@ -39,8 +39,8 @@ export function WelcomeOnboardingEnforcer() {
     void (async () => {
       if (identityLoading) return
 
-      const { settings, profileReadStatus } = await loadWelcomeOnboardingContext(user.id)
-      if (profileReadStatus === 'error') return
+      const profileCtx = await loadWelcomeOnboardingContext(user.id)
+      if (profileCtx.profileReadStatus === 'error') return
       let authUserCreatedAt: string | null = null
       try {
         const { data, error } = await supabase.auth.getUser()
@@ -54,10 +54,11 @@ export function WelcomeOnboardingEnforcer() {
       ) || '/feed'
 
       if (!needsOnboarding({
-        identity,
-        settings,
-        profileReadOk: profileReadStatus === 'ok',
+        identity: identity ?? profileCtx.identity,
+        settings: profileCtx.settings,
+        profileReadOk: profileCtx.profileReadStatus === 'ok',
         authUserCreatedAt,
+        activity: profileCtx.activity,
       })) {
         return
       }

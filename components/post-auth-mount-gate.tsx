@@ -48,9 +48,9 @@ export function PostAuthMountGate({ children }: { children: ReactNode }) {
     setFeedReady(false)
     let cancelled = false
     void (async () => {
-      const { settings, profileReadStatus } = await loadWelcomeOnboardingContext(user.id)
+      const profileCtx = await loadWelcomeOnboardingContext(user.id)
       if (cancelled) return
-      if (profileReadStatus === 'error') {
+      if (profileCtx.profileReadStatus === 'error') {
         setFeedReady(true)
         return
       }
@@ -65,10 +65,11 @@ export function PostAuthMountGate({ children }: { children: ReactNode }) {
 
       const returnTo = sanitizeAuthReturnPath(pathname) || '/feed'
       if (needsOnboarding({
-        identity,
-        settings,
+        identity: identity ?? profileCtx.identity,
+        settings: profileCtx.settings,
         profileReadOk: true,
         authUserCreatedAt,
+        activity: profileCtx.activity,
       })) {
         router.replace(welcomeOnboardingPath(returnTo))
         return
