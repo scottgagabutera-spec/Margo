@@ -15,6 +15,7 @@ import { PendingNavLink } from '@/components/pending-nav-link'
 import { SignInLink } from '@/components/signin-link'
 import { BackButton } from '@/components/back-button'
 import { navBackForPath, useNavBackOverride } from '@/components/nav-back'
+import { YouTabPortrait } from '@/components/you-tab-portrait'
 
 const font = 'var(--font-geist-sans), system-ui, sans-serif'
 
@@ -89,6 +90,10 @@ export function MargoNav() {
   const showWordmark = isOnFeed
   const isOnDiscover = activeTab === 'discover' || (!activeTab && !!pathname?.startsWith('/discover'))
   const isOnCompose = activeTab === 'compose' || (!activeTab && pathname === '/compose')
+  const isOnYou =
+    activeTab === 'you'
+    || pathname === '/you'
+    || (!!identity && pathname === `/profile/${identity.username}`)
   const isOnSignin = pathname === '/signin'
   const [isMobile, setIsMobile] = useState(false)
   useEffect(() => {
@@ -290,8 +295,9 @@ export function MargoNav() {
                 <button
                   type="button"
                   onClick={() => setAvatarMenuOpen(o => !o)}
-                  aria-label={`${identity.displayName}'s account menu`}
+                  aria-label="You"
                   aria-expanded={avatarMenuOpen}
+                  aria-haspopup="menu"
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
@@ -301,22 +307,12 @@ export function MargoNav() {
                     cursor: 'pointer', padding: 0,
                   }}
                 >
-                  <span style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    width: '32px', height: '32px', borderRadius: '50%',
-                    overflow: 'hidden',
-                    background: identity.avatarUrl ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
-                    border: avatarMenuOpen ? '2px solid var(--gold)' : '1px solid rgba(232,197,71,0.2)',
-                    boxSizing: 'border-box', transition: 'border-color 150ms ease',
-                  }}>
-                    {identity.avatarUrl ? (
-                      <img src={identity.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <span style={{ fontFamily: font, fontSize: '0.65rem', fontWeight: 700, color: 'var(--bg)' }}>
-                        {(identity.displayName || '??').slice(0, 2).toUpperCase()}
-                      </span>
-                    )}
-                  </span>
+                  <YouTabPortrait
+                    username={identity.username}
+                    displayName={identity.displayName || identity.username}
+                    avatarUrl={identity.avatarUrl}
+                    active={isOnYou || avatarMenuOpen}
+                  />
                 </button>
 
                 {avatarMenuOpen && (
