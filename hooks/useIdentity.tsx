@@ -54,10 +54,10 @@ interface ActionResult {
 function mapRow(row: any): Identity {
   return {
     username: row.username,
-    displayName: row.display_name,
-    isArtist: row.is_artist,
+    displayName: row.display_name ?? '',
+    isArtist: !!row.is_artist,
     artistStatus: row.artist_status ?? null,
-    isPrivate: row.is_private,
+    isPrivate: !!row.is_private,
     followListsPrivate: !!row.follow_lists_private,
     bio: row.bio,
     avatarUrl: row.avatar_url,
@@ -137,6 +137,7 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
   const syncedUidRef = useRef<string | null>(null)
 
   const ensureProfile = useCallback(async (su: SupabaseUser): Promise<Identity | null> => {
+    const meta = su.user_metadata || {}
     const { data: existing } = await supabase
       .from('profiles')
       .select('*')
@@ -146,10 +147,17 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
     if (existing) {
       const mapped = mapRow(existing)
       setIdentityState(mapped)
+      const legal = legalConsentFromUserMetadata(meta as Record<string, unknown>)
+      if (legal && !(existing.settings as Record<string, unknown> | null)?.legal) {
+        const settings = mergeLegalConsentIntoSettings(
+          (existing.settings as Record<string, unknown> | null) ?? null,
+          legal,
+        )
+        await supabase.from('profiles').update({ settings }).eq('id', su.id)
+      }
       return mapped
     }
 
-    const meta = su.user_metadata || {}
     const realName = providerFullNameFromUser(su)
     const avatarUrl = providerAvatarFromUser(su)
     const recordedLegal = legalConsentFromUserMetadata(meta as Record<string, unknown>)

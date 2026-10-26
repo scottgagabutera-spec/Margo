@@ -36,6 +36,7 @@ import { FeedFilterLiveRegion, FeedVibeFilterBar } from '@/components/feed-vibe-
 import { FeedContentTabBar } from '@/components/feed-content-tab-bar'
 import { FeedShortsPager } from '@/components/feed-shorts-pager'
 import { applyFeedContentTab, parseFeedContentTab } from '@/lib/feed-content-tab'
+import { feedListReady } from '@/lib/feed-list-ready'
 import { useFeedShortsClips } from '@/hooks/useFeedShortsClips'
 import {
   E2E_SHORTS_FIXTURE_CLIPS,
@@ -382,7 +383,7 @@ function FeedPageInner() {
     setSelectedSort(prev => (prev === rank ? 'NEW' : rank))
   }
 
-  const listReady = seeded && (posts.length > 0 || !loading)
+  const listReady = feedListReady(seeded, posts.length, loading)
   const showFeedSkeleton = !listReady && posts.length === 0
   const hasActiveFilter = selectedVibe !== 'ALL' || selectedSort !== 'NEW'
 

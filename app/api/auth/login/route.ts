@@ -23,8 +23,8 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
   if (error || !data.session || !data.user) {
-    void classifyLoginErrorFromSupabase(error)
-    return NextResponse.json(loginFailureResponseBody(), { status: 401 })
+    const code = classifyLoginErrorFromSupabase(error)
+    return NextResponse.json(loginFailureResponseBody(code), { status: 401 })
   }
 
   return NextResponse.json({

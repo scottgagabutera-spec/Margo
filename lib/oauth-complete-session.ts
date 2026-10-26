@@ -2,6 +2,8 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { supabaseCookieOptions } from '@/lib/supabase/cookie-options'
 import { buildLegalConsentSettings, hasTermsAcceptanceRecorded, userNeedsTermsAcceptance } from '@/lib/legal/consent'
+import { healProfileRowAndConsent } from '@/lib/auth-account-heal'
+import { oauthPostExchangeRedirect } from '@/lib/auth-oauth-intent'
 import {
   OAUTH_INTENT_COOKIE,
   OAUTH_TERMS_PENDING_COOKIE,
@@ -120,12 +122,12 @@ export async function completeOAuthCodeExchange(
     }
   }
 
-  let redirectTarget = oauthReturn || '/feed'
-  if (user && userNeedsTermsAcceptance(user)) {
-    const params = new URLSearchParams({ step: 'terms' })
-    if (oauthReturn) params.set('returnTo', oauthReturn)
-    redirectTarget = `/signin?${params.toString()}`
+  if (user) {
+    await healProfileRowAndConsent(supabase, user)
   }
+
+  const needsTerms = !!(user && userNeedsTermsAcceptance(user))
+  const redirectTarget = oauthPostExchangeRedirect(needsTerms, oauthReturn)
 
   return json(toAppPath(origin, redirectTarget), pendingCookies, pendingHeaders)
 }
