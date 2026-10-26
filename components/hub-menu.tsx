@@ -26,6 +26,7 @@ import {
   readActiveScrollTop,
 } from '@/components/primary-tab-shell'
 import {
+  ArrowLeftIcon,
   BellIcon,
   HubGridIcon,
   LibraryIcon,
@@ -234,9 +235,19 @@ function useHub(): HubContextValue {
   return ctx
 }
 
-function HubPanelHeader() {
+function HubPanelHeader({ onClose, showBack }: { onClose: () => void; showBack: boolean }) {
   return (
     <div className="margo-hub-panel-head" data-margo-hub-root>
+      {showBack ? (
+        <button
+          type="button"
+          className="margo-hub-panel-head__back"
+          aria-label="Close Hub"
+          onClick={onClose}
+        >
+          <ArrowLeftIcon size={20} color="var(--gold)" />
+        </button>
+      ) : null}
       <span className="margo-hub-panel-head__title">Hub</span>
     </div>
   )
@@ -303,6 +314,7 @@ function HubPanelBody({
   beginNavigate,
   signInReturnTo,
   onLockedActivate,
+  showBack,
 }: {
   signedIn: boolean
   close: () => void
@@ -311,10 +323,11 @@ function HubPanelBody({
   beginNavigate: (href: string) => boolean
   signInReturnTo: string
   onLockedActivate: (returnTo: string) => void
+  showBack: boolean
 }) {
   return (
     <div className="margo-hub-shell">
-      <HubPanelHeader />
+      <HubPanelHeader onClose={close} showBack={showBack} />
       <div className="margo-hub-grid">
         <HubTiles
           signedIn={signedIn}
@@ -343,30 +356,53 @@ function HubPanel() {
     onLockedActivate,
   } = useHub()
   const [mounted, setMounted] = useState(false)
+  const [isDesktop, setIsDesktop] = useState(false)
   const sheetRef = useRef<HTMLDivElement>(null)
   const desktopRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => setMounted(true), [])
 
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 640px)')
+    const sync = () => setIsDesktop(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+
+  const positionDesktopPanel = useCallback(() => {
+    const anchor = hubAnchorRef.current
+    const panel = desktopRef.current
+    if (!anchor || !panel) return
+    const rect = anchor.getBoundingClientRect()
+    const w = panel.offsetWidth
+    panel.style.left = `${Math.max(12, rect.right - w)}px`
+    panel.style.top = `${rect.bottom + 8}px`
+    panel.style.right = 'auto'
+    panel.style.transform = 'none'
+  }, [hubAnchorRef])
+
   useLayoutEffect(() => {
     if (!open) return
-    const anchor = hubAnchorRef.current
-    if (!anchor) return
-    const isDesktop = window.matchMedia('(min-width: 640px)').matches
-    const panel = isDesktop ? desktopRef.current : sheetRef.current
+    const isDesktopMq = window.matchMedia('(min-width: 640px)').matches
+    const panel = isDesktopMq ? desktopRef.current : sheetRef.current
     if (!panel) return
-    if (!isDesktop) {
+    if (!isDesktopMq) {
       panel.style.removeProperty('left')
       panel.style.removeProperty('top')
       panel.style.removeProperty('right')
       panel.style.removeProperty('transform')
       return
     }
-    panel.style.left = '50%'
-    panel.style.transform = 'translateX(-50%)'
-    panel.style.top = 'calc(var(--nav-height, 72px) + 10px)'
-    panel.style.right = 'auto'
-  }, [open, hubAnchorRef, tiles.length, signedIn])
+    positionDesktopPanel()
+  }, [open, hubAnchorRef, tiles.length, signedIn, positionDesktopPanel])
+
+  useEffect(() => {
+    if (!open) return
+    const onResize = () => positionDesktopPanel()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [open, positionDesktopPanel])
 
   if (!mounted || !open) return null
 
@@ -378,6 +414,7 @@ function HubPanel() {
     beginNavigate,
     signInReturnTo,
     onLockedActivate,
+    showBack: !isDesktop,
   }
 
   return createPortal(
@@ -646,30 +683,3 @@ export function SearchNavLink() {
   )
 }
 
-export function LibraryNavLink() {
-  const pathname = usePathname()
-  const active = pathname === '/library' || pathname?.startsWith('/library/')
-  return (
-    <PendingNavLink
-      href="/library"
-      aria-label="Music Library"
-      ringSize={18}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: TOUCH,
-        height: TOUCH,
-        position: 'relative',
-        boxSizing: 'border-box',
-        flexShrink: 0,
-        borderRadius: '8px',
-      }}
-    >
-      <LibraryIcon
-        size={20}
-        color={active ? 'var(--gold)' : 'rgba(255,255,255,0.5)'}
-      />
-    </PendingNavLink>
-  )
-}

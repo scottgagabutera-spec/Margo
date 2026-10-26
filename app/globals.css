@@ -1612,7 +1612,7 @@ html[data-margo-stage-idle] .margo-stage-zone {
 .margo-hub-panel {
   display: none;
   position: fixed;
-  width: min(380px, calc(100vw - 24px));
+  width: 236px;
   max-height: min(440px, calc(100dvh - var(--nav-height, 72px) - 24px));
   z-index: 62;
   background: var(--bg);
@@ -1635,17 +1635,29 @@ html[data-margo-stage-idle] .margo-stage-zone {
 .margo-hub-panel-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px;
   min-height: var(--margo-touch-min);
   margin-bottom: 8px;
   padding: 0 2px 4px;
   box-sizing: border-box;
 }
+.margo-hub-panel-head__back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--margo-touch-min);
+  height: var(--margo-touch-min);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
 .margo-hub-panel-head__title {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 1.05rem;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 500;
   color: var(--text);
   letter-spacing: -0.01em;
 }
@@ -1806,9 +1818,9 @@ html[data-margo-stage-idle] .margo-stage-zone {
   outline-offset: 2px;
 }
 .margo-hub-tile__icon-wrap {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1838,20 +1850,18 @@ html[data-margo-stage-idle] .margo-stage-zone {
   max-width: 96px;
   letter-spacing: -0.01em;
 }
-.margo-hub-tile__caption {
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.6875rem;
-  color: var(--text-muted);
-  line-height: 1.25;
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  width: 100%;
-  min-width: 0;
+.margo-hub-panel .margo-hub-tile__icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
 }
-.margo-hub-tile__caption--gold {
-  color: var(--gold);
+.margo-hub-panel .margo-hub-tile__label {
+  font-size: 11px;
+}
+.margo-hub-panel .margo-hub-panel-head__title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-muted);
 }
 .margo-hub-tile__badge {
   position: absolute;
