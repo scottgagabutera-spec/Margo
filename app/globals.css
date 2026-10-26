@@ -1586,42 +1586,21 @@ html[data-margo-stage-idle] .margo-stage-zone {
   margin-top: 0;
   filter: saturate(0.2);
 }
-.margo-hub-scrim {
-  position: fixed;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: calc(var(--margo-tabbar-h, 0px) + env(safe-area-inset-bottom, 0px));
-  z-index: 52;
-  border: none;
-  padding: 0;
-  margin: 0;
-  background: var(--margo-scrim);
-  cursor: default;
-  -webkit-tap-highlight-color: transparent;
-}
-@media (min-width: 640px) {
-  .margo-hub-scrim {
-    bottom: 0;
-    z-index: 58;
-  }
-}
+/* Hub layer (phone): same band as Library — below nav, above tab bar; tab bar stays tappable. */
 .margo-hub-sheet {
   position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: calc(var(--margo-tabbar-h, 0px) + 10px + env(safe-area-inset-bottom, 0px));
-  width: min(calc(100vw - 20px), 380px);
-  z-index: 55;
+  top: var(--nav-height, 72px);
+  left: 0;
+  right: 0;
+  bottom: calc(var(--margo-tabbar-h, 0px) + env(safe-area-inset-bottom, 0px));
+  z-index: 45;
   background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.48);
-  padding: 12px 12px 14px;
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  padding: 14px 16px calc(16px + env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
   overflow-x: hidden;
   box-sizing: border-box;
-  max-height: min(420px, calc(100dvh - var(--margo-tabbar-h, 0px) - var(--nav-height, 72px) - 32px));
   -webkit-overflow-scrolling: touch;
 }
 .margo-hub-panel {
@@ -1629,7 +1608,7 @@ html[data-margo-stage-idle] .margo-stage-zone {
   position: fixed;
   width: min(380px, calc(100vw - 24px));
   max-height: min(440px, calc(100dvh - var(--nav-height, 72px) - 24px));
-  z-index: 60;
+  z-index: 62;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 16px;

@@ -112,7 +112,6 @@ function HubTileLink({
   const badge = signedIn ? hubTileBadgeLabel(tile.count) : ''
   const dest = signedIn || !tile.needsAccount ? tile.href : buildSigninHref(tile.href)
   const showLock = tile.locked
-  const captionGold = !!tile.captionGold
 
   return (
     <Link
@@ -165,13 +164,6 @@ function HubTileLink({
         <TileIcon kind={tile.icon} />
       </span>
       <span className="margo-hub-tile__label">{tile.label}</span>
-      <span
-        className={
-          'margo-hub-tile__caption' + (captionGold ? ' margo-hub-tile__caption--gold' : '')
-        }
-      >
-        {tile.caption}
-      </span>
     </Link>
   )
 }
@@ -215,20 +207,12 @@ function HubPanelSearchButton({ onNavigate }: { onNavigate: () => void }) {
   )
 }
 
-function HubPanelHeader({ onClose }: { onClose: () => void }) {
+function HubPanelHeader({ onNavigate }: { onNavigate: () => void }) {
   return (
     <div className="margo-hub-panel-head" data-margo-hub-root>
       <span className="margo-hub-panel-head__title">Hub</span>
       <div className="margo-hub-panel-head__actions">
-        <HubPanelSearchButton onNavigate={onClose} />
-        <button
-          type="button"
-          className="margo-hub-panel-head__icon-btn"
-          aria-label="Close Hub"
-          onClick={onClose}
-        >
-          <span aria-hidden style={{ fontSize: '1.25rem', lineHeight: 1, color: 'var(--text-secondary)' }}>×</span>
-        </button>
+        <HubPanelSearchButton onNavigate={onNavigate} />
       </div>
     </div>
   )
@@ -291,7 +275,7 @@ function HubPanelBody({
 }) {
   return (
     <div className="margo-hub-shell">
-      <HubPanelHeader onClose={close} />
+      <HubPanelHeader onNavigate={close} />
       <div className="margo-hub-grid">
         <HubTiles
           signedIn={signedIn}
@@ -347,18 +331,12 @@ function HubPanel() {
 
   return createPortal(
     <>
-      <button
-        type="button"
-        className="margo-hub-scrim"
-        aria-label="Close Hub"
-        onClick={close}
-      />
       <div
         ref={sheetRef}
         className="margo-hub-sheet"
         data-margo-hub-root
         role="dialog"
-        aria-modal="true"
+        aria-modal="false"
         aria-label="Hub"
       >
         <HubPanelBody {...bodyProps} />
@@ -368,7 +346,7 @@ function HubPanel() {
         className="margo-hub-panel"
         data-margo-hub-root
         role="dialog"
-        aria-modal="true"
+        aria-modal="false"
         aria-label="Hub"
       >
         <HubPanelBody {...bodyProps} />
