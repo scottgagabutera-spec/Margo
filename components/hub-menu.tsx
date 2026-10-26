@@ -39,7 +39,6 @@ import {
   searchScopeForPath,
   consumeHubOverlayRestore,
   markHubNavFromTile,
-  markHubOverlayRestore,
   clearHubNavFromTile,
 } from '@/lib/search-scope'
 import {
@@ -192,7 +191,6 @@ function HubTileLink({
         }
         if (tile.id !== 'stage') {
           markHubNavFromTile()
-          markHubOverlayRestore()
         }
         onClose()
       }}
@@ -219,7 +217,6 @@ type HubContextValue = {
   beginNavigate: (href: string) => boolean
   hubAnchorRef: RefObject<HTMLButtonElement | null>
   signInReturnTo: string
-  signInPulse: boolean
   onLockedActivate: (returnTo: string) => void
 }
 
@@ -267,7 +264,6 @@ function HubTiles({
   pendingHref,
   beginNavigate,
   signInReturnTo,
-  signInPulse,
   onLockedActivate,
 }: {
   signedIn: boolean
@@ -276,7 +272,6 @@ function HubTiles({
   pendingHref: string | null
   beginNavigate: (href: string) => boolean
   signInReturnTo: string
-  signInPulse: boolean
   onLockedActivate: (returnTo: string) => void
 }) {
   return (
@@ -298,14 +293,7 @@ function HubTiles({
         )
       })}
       {!signedIn ? (
-        <div
-          className={[
-            'margo-hub-signed-out-cta',
-            signInPulse ? 'margo-hub-signed-out-cta--pulse' : '',
-          ]
-            .filter(Boolean)
-            .join(' ')}
-        >
+        <div className="margo-hub-signed-out-cta">
           <p className="margo-hub-signed-out-cta__line">Sign in to open your space</p>
           <SignInLink
             id="margo-hub-sign-in"
@@ -329,7 +317,6 @@ function HubPanelBody({
   pendingHref,
   beginNavigate,
   signInReturnTo,
-  signInPulse,
   onLockedActivate,
 }: {
   signedIn: boolean
@@ -338,7 +325,6 @@ function HubPanelBody({
   pendingHref: string | null
   beginNavigate: (href: string) => boolean
   signInReturnTo: string
-  signInPulse: boolean
   onLockedActivate: (returnTo: string) => void
 }) {
   return (
@@ -352,7 +338,6 @@ function HubPanelBody({
           pendingHref={pendingHref}
           beginNavigate={beginNavigate}
           signInReturnTo={signInReturnTo}
-          signInPulse={signInPulse}
           onLockedActivate={onLockedActivate}
         />
       </div>
@@ -370,7 +355,6 @@ function HubPanel() {
     beginNavigate,
     hubAnchorRef,
     signInReturnTo,
-    signInPulse,
     onLockedActivate,
   } = useHub()
   const [mounted, setMounted] = useState(false)
@@ -390,14 +374,12 @@ function HubPanel() {
       panel.style.removeProperty('left')
       panel.style.removeProperty('top')
       panel.style.removeProperty('right')
+      panel.style.removeProperty('transform')
       return
     }
-    const ar = anchor.getBoundingClientRect()
-    const pw = panel.offsetWidth
-    let left = ar.left + ar.width / 2 - pw / 2
-    left = Math.max(12, Math.min(left, window.innerWidth - pw - 12))
-    panel.style.left = `${left}px`
-    panel.style.top = `${ar.bottom + 10}px`
+    panel.style.left = '50%'
+    panel.style.transform = 'translateX(-50%)'
+    panel.style.top = 'calc(var(--nav-height, 72px) + 10px)'
     panel.style.right = 'auto'
   }, [open, hubAnchorRef, tiles.length, signedIn])
 
@@ -410,7 +392,6 @@ function HubPanel() {
     pendingHref,
     beginNavigate,
     signInReturnTo,
-    signInPulse,
     onLockedActivate,
   }
 
@@ -451,9 +432,7 @@ export function HubProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false)
   const [pendingHref, setPendingHref] = useState<string | null>(null)
   const [signInReturnTo, setSignInReturnTo] = useState('/feed?hub=1')
-  const [signInPulse, setSignInPulse] = useState(false)
   const pendingHrefRef = useRef<string | null>(null)
-  const signInPulseTimerRef = useRef<number | null>(null)
   const hubAnchorRef = useRef<HTMLButtonElement | null>(null)
   const scrollOriginRef = useRef(0)
   const lastScrollRef = useRef({ y: 0, t: 0 })
@@ -481,14 +460,6 @@ export function HubProvider({ children }: { children: ReactNode }) {
 
   const onLockedActivate = useCallback((returnTo: string) => {
     setSignInReturnTo(returnTo)
-    setSignInPulse(true)
-    if (signInPulseTimerRef.current != null) {
-      window.clearTimeout(signInPulseTimerRef.current)
-    }
-    signInPulseTimerRef.current = window.setTimeout(() => {
-      setSignInPulse(false)
-      signInPulseTimerRef.current = null
-    }, 1600)
     window.requestAnimationFrame(() => {
       document.getElementById('margo-hub-sign-in')?.focus()
     })
@@ -497,12 +468,23 @@ export function HubProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     pendingHrefRef.current = null
     setPendingHref(null)
+    const pathOnly = (pathname || '/feed').split('?')[0]
+    const hubRestoreSurface =
+      pathOnly === '/feed'
+      || pathOnly === '/discover'
+      || pathOnly === '/compose'
+      || pathOnly === '/you'
     const restoreHub = typeof window !== 'undefined'
+      && hubRestoreSurface
       && (
         new URLSearchParams(window.location.search).get('hub') === '1'
         || consumeHubOverlayRestore()
       )
-    setOpen(restoreHub ? true : false)
+    if (restoreHub) {
+      setOpen(true)
+    } else if (hubRestoreSurface) {
+      setOpen(false)
+    }
     if (restoreHub && typeof window !== 'undefined') {
       clearHubNavFromTile()
       const url = new URL(window.location.href)
@@ -575,9 +557,9 @@ export function HubProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       open, setOpen, toggle, close, hubHasUnread: hasActivity, tiles, signedIn,
-      pendingHref, beginNavigate, hubAnchorRef, signInReturnTo, signInPulse, onLockedActivate,
+      pendingHref, beginNavigate, hubAnchorRef, signInReturnTo, onLockedActivate,
     }),
-    [open, toggle, close, hasActivity, tiles, signedIn, pendingHref, beginNavigate, signInReturnTo, signInPulse, onLockedActivate],
+    [open, toggle, close, hasActivity, tiles, signedIn, pendingHref, beginNavigate, signInReturnTo, onLockedActivate],
   )
 
   return (
