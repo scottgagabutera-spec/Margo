@@ -48,6 +48,15 @@ test('state C: consent gate blocks app mount until terms screen', () => {
     }),
     true,
   )
+  assert.equal(
+    shouldMountAppContent({
+      signedIn: true,
+      needsTermsAcceptance: true,
+      pathname: '/signin',
+      step: null,
+    }),
+    true,
+  )
 })
 
 test('state D: new Google account needs welcome after consent', () => {

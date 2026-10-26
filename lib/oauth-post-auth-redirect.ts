@@ -1,6 +1,7 @@
 import type { User } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { oauthPostExchangeRedirect } from '@/lib/auth-oauth-intent'
+import { activityFromProfileRow } from '@/lib/welcome-onboarding-activity'
 import {
   resolvePostAuthNavigation,
   type WelcomeOnboardingProfileContext,
@@ -19,7 +20,7 @@ export async function resolveOAuthPostExchangeRedirect(
 
   const { data: profile, error } = await supabase
     .from('profiles')
-    .select('username, display_name, settings')
+    .select('username, display_name, settings, posts_count, followers_count, following_count, avatar_url')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -37,6 +38,7 @@ export async function resolveOAuthPostExchangeRedirect(
     settings: (profile?.settings as WelcomeOnboardingProfileContext['settings']) ?? null,
     profileReadOk: true,
     authUserCreatedAt: user.created_at ?? null,
+    activity: activityFromProfileRow(profile),
   }
 
   return resolvePostAuthNavigation(ctx, oauthReturn)

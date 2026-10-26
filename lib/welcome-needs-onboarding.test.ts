@@ -34,22 +34,20 @@ test('rule a: member handle needs onboarding', () => {
   )
 })
 
-test('rule b: empty display name needs onboarding', () => {
+test('rule b: empty display name needs onboarding (post-cutoff auth)', () => {
   assert.equal(
     needsOnboarding({
       ...baseCtx,
-      authUserCreatedAt: '2020-01-01T00:00:00.000Z',
       identity: identity({ username: 'cooluser', displayName: '' }),
     }),
     true,
   )
 })
 
-test('rule b: display name equals username needs onboarding', () => {
+test('rule b: display name equals username needs onboarding (post-cutoff auth)', () => {
   assert.equal(
     needsOnboarding({
       ...baseCtx,
-      authUserCreatedAt: '2020-01-01T00:00:00.000Z',
       identity: identity({ username: 'ripple', displayName: 'ripple' }),
     }),
     true,
@@ -88,16 +86,89 @@ test('completedAt set never needs onboarding', () => {
   )
 })
 
-test('missing auth created_at does not skip welcome (Google signup)', () => {
+test('missing auth created_at does not skip welcome for fresh stub identity', () => {
   assert.equal(
     needsOnboarding({
       profileReadOk: true,
       settings: { legal: { termsAcceptedAt: '2026-10-26T00:00:00.000Z', termsVersion: '1' } },
       authUserCreatedAt: null,
-      identity: identity({ username: 'scott_music', displayName: 'Scott Music' }),
+      identity: identity({ username: 'member123456789', displayName: '' }),
     }),
     true,
   )
+})
+
+test('missing auth created_at skips welcome for established legacy account', () => {
+  assert.equal(
+    needsOnboarding({
+      profileReadOk: true,
+      settings: null,
+      authUserCreatedAt: null,
+      identity: identity({ username: 'margo_label', displayName: 'Margo Music' }),
+    }),
+    false,
+  )
+})
+
+test('grandfather: pre-cutoff account with display name equal username goes to feed', () => {
+  const ctx = {
+    profileReadOk: true,
+    settings: null,
+    authUserCreatedAt: '2025-06-01T00:00:00.000Z',
+    identity: identity({ username: 'margo_label', displayName: 'margo_label' }),
+    activity: { postsCount: 3 },
+  }
+  assert.equal(needsOnboarding(ctx), false)
+  assert.equal(resolvePostAuthNavigation(ctx, '/feed'), '/feed')
+})
+
+test('grandfather: pre-cutoff no consent row still feed when not member stub', () => {
+  const ctx = {
+    profileReadOk: true,
+    settings: null,
+    authUserCreatedAt: '2024-01-01T00:00:00.000Z',
+    identity: identity({ username: 'artist_one', displayName: 'artist_one' }),
+    activity: { postsCount: 1 },
+  }
+  assert.equal(needsOnboarding(ctx), false)
+  assert.equal(resolvePostAuthNavigation(ctx, null), '/feed')
+})
+
+test('activity alone skips welcome when created_at unavailable', () => {
+  assert.equal(
+    needsOnboarding({
+      profileReadOk: true,
+      settings: null,
+      authUserCreatedAt: null,
+      identity: identity({ username: 'margo_label', displayName: 'margo_label' }),
+      activity: { followersCount: 2 },
+    }),
+    false,
+  )
+})
+
+test('pre-cutoff only member stub with empty display needs welcome', () => {
+  assert.equal(
+    needsOnboarding({
+      profileReadOk: true,
+      settings: null,
+      authUserCreatedAt: '2025-01-01T00:00:00.000Z',
+      identity: identity({ username: 'member999999999', displayName: '' }),
+    }),
+    true,
+  )
+})
+
+test('legacy missing terms after accept resolves to feed not welcome', () => {
+  const ctx = {
+    profileReadOk: true,
+    settings: { legal: { termsAcceptedAt: '2026-10-26T12:00:00.000Z', termsVersion: '1' } },
+    authUserCreatedAt: '2025-03-01T00:00:00.000Z',
+    identity: identity({ username: 'margo_label', displayName: 'Margo' }),
+    activity: { postsCount: 5 },
+  }
+  assert.equal(needsOnboarding(ctx), false)
+  assert.equal(resolvePostAuthNavigation(ctx, '/feed'), '/feed')
 })
 
 test('isAuthUserCreatedAtUnavailable only when null, empty, or unparseable', () => {

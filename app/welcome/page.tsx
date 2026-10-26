@@ -507,8 +507,12 @@ function WelcomePageInner() {
   }, [photoTarget, uploadCoverFile])
 
   const handleSignOut = async () => {
-    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
-    window.location.assign('/signin')
+    try {
+      const { signOutBrowser } = await import('@/lib/supabase/client')
+      await signOutBrowser()
+    } finally {
+      window.location.assign('/signin')
+    }
   }
 
   const tryStep1Next = () => {

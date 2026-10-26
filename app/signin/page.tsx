@@ -44,6 +44,7 @@ function SigninPageInner() {
   const { waitUntilReady, loading: identityLoading } = useIdentity()
   const initialMode = parseMode(searchParams.get('mode'))
   const isTermsStep = searchParams.get('step') === 'terms'
+  const showTermsCompletion = isTermsStep || (!loading && !!user && needsTermsAcceptance)
   const [mode, setMode] = useState<AuthMode>(initialMode)
   const [signupCheckEmail, setSignupCheckEmail] = useState(false)
   const returnTo = useMemo(
@@ -65,11 +66,11 @@ function SigninPageInner() {
 
   useEffect(() => {
     if (loading || identityLoading) return
-    if (isTermsStep) return
+    if (showTermsCompletion) return
     if (user && !needsTermsAcceptance) {
       void finishAuth()
     }
-  }, [loading, identityLoading, user, needsTermsAcceptance, isTermsStep, finishAuth])
+  }, [loading, identityLoading, user, needsTermsAcceptance, showTermsCompletion, finishAuth])
 
   return (
     <div style={{
@@ -80,7 +81,7 @@ function SigninPageInner() {
     }}>
       <AuthViewportKeyboardInset />
       <div className="margo-auth-layout">
-        {!signupCheckEmail || isTermsStep ? (
+        {!signupCheckEmail || showTermsCompletion ? (
           <div className="margo-auth-layout__back">
             <BackButton variant="chrome" preferHistory={false} fallbackHref={returnTo || '/'} />
           </div>
@@ -114,7 +115,7 @@ function SigninPageInner() {
 
         <div className="margo-auth-layout__panel">
           <main className="margo-auth-layout__main">
-            {isTermsStep ? (
+            {showTermsCompletion ? (
               <TermsCompletionForm
                 externalError={externalError}
                 onSuccess={finishAuth}

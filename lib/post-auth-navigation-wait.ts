@@ -9,9 +9,7 @@ import {
   isAuthUserCreatedAtUnavailable,
   needsOnboarding,
   resolvePostAuthNavigation,
-  welcomeOnboardingPath,
 } from '@/lib/welcome-needs-onboarding'
-import { onboardingFromSettings } from '@/lib/welcome-profile-settings'
 
 export const POST_AUTH_NAV_WAIT_MS = 6000
 export const POST_AUTH_NAV_POLL_MS = 80
@@ -52,7 +50,13 @@ export async function resolvePostAuthDestinationWithWait(
 
     if (profileCtx.profileReadStatus === 'ok' && identity) {
       if (isAuthUserCreatedAtUnavailable(authUserCreatedAt)) {
-        const pendingCtx = buildPostAuthContext(identity, profileCtx.settings, 'ok', null)
+        const pendingCtx = buildPostAuthContext(
+          identity,
+          profileCtx.settings,
+          'ok',
+          null,
+          profileCtx.activity,
+        )
         if (needsOnboarding(pendingCtx)) {
           return {
             dest: resolvePostAuthNavigation(pendingCtx, returnTo),
@@ -65,10 +69,11 @@ export async function resolvePostAuthDestinationWithWait(
 
       const dest = resolvePostAuthNavigation(
         buildPostAuthContext(
-          identity,
+          identity ?? profileCtx.identity,
           profileCtx.settings,
           'ok',
           authUserCreatedAt,
+          profileCtx.activity,
         ),
         returnTo,
       )
@@ -84,13 +89,25 @@ export async function resolvePostAuthDestinationWithWait(
   }
 
   const lastIdentity = await waitForIdentity()
-  const lastProfile = userId ? await loadWelcomeOnboardingContext(userId) : { settings: null, profileReadStatus: 'error' as const }
-  if (
-    lastIdentity
-    && lastProfile.profileReadStatus === 'ok'
-    && !onboardingFromSettings(lastProfile.settings).completedAt
-  ) {
-    return { dest: welcomeOnboardingPath(returnTo), outcome: 'fail_open_timeout' }
+  const lastCreatedAt = await fetchAuthUserCreatedAt()
+  const lastProfile = userId
+    ? await loadWelcomeOnboardingContext(userId)
+    : { settings: null, profileReadStatus: 'error' as const, identity: null, activity: undefined }
+  if (lastIdentity && lastProfile.profileReadStatus === 'ok') {
+    const dest = resolvePostAuthNavigation(
+      buildPostAuthContext(
+        lastIdentity ?? lastProfile.identity,
+        lastProfile.settings,
+        'ok',
+        lastCreatedAt,
+        lastProfile.activity,
+      ),
+      returnTo,
+    )
+    if (dest.startsWith('/welcome')) {
+      return { dest, outcome: 'fail_open_timeout' }
+    }
+    return { dest, outcome: 'fail_open_timeout' }
   }
 
   return { dest: fallback, outcome: 'fail_open_timeout' }

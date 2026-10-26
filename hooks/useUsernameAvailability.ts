@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { fetchProfilePeek } from '@/lib/profile-warm'
+import { usernamePeekIndicatesTaken } from '@/lib/username-peek-availability'
 import { normalizeUsernameInput, validateUsernameChoice } from '@/lib/username-validator'
 
 export type UsernameAvailabilityState =
@@ -45,11 +46,7 @@ export function useUsernameAvailability(
       void (async () => {
         const peek = await fetchProfilePeek(cleaned)
         if (gen !== genRef.current) return
-        if (!peek?.profile?.username) {
-          setState('available')
-          return
-        }
-        if (currentProfileId && peek.profile.id === currentProfileId) {
+        if (!usernamePeekIndicatesTaken(peek?.profile ?? null, cleaned, currentUsername, currentProfileId)) {
           setState('available')
           return
         }

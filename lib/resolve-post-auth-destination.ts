@@ -1,4 +1,5 @@
 import type { Identity } from '@/hooks/useIdentity'
+import { activityFromProfileRow } from '@/lib/welcome-onboarding-activity'
 import { createClient } from '@/lib/supabase/client'
 import {
   resolvePostAuthNavigation,
@@ -32,6 +33,8 @@ export async function completeAuthAfterProfileReady(
 export type ProfileSettingsReadResult = {
   settings: WelcomeOnboardingProfileContext['settings']
   profileReadStatus: 'ok' | 'error'
+  identity: WelcomeOnboardingProfileContext['identity']
+  activity: WelcomeOnboardingProfileContext['activity']
 }
 
 export async function loadWelcomeOnboardingContext(
@@ -40,16 +43,23 @@ export async function loadWelcomeOnboardingContext(
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('settings')
+      .select('username, display_name, settings, posts_count, followers_count, following_count, avatar_url')
       .eq('id', userId)
       .maybeSingle()
-    if (error) return { settings: null, profileReadStatus: 'error' }
+    if (error) return { settings: null, profileReadStatus: 'error', identity: null, activity: undefined }
     return {
       settings: (data?.settings as WelcomeOnboardingProfileContext['settings']) ?? null,
       profileReadStatus: 'ok',
+      identity: data
+        ? {
+            username: data.username as string,
+            displayName: (data.display_name as string | null) ?? '',
+          }
+        : null,
+      activity: activityFromProfileRow(data),
     }
   } catch {
-    return { settings: null, profileReadStatus: 'error' }
+    return { settings: null, profileReadStatus: 'error', identity: null, activity: undefined }
   }
 }
 
@@ -65,13 +75,14 @@ export async function resolvePostAuthDestination(
       returnTo,
     )
   }
-  const { settings, profileReadStatus } = await loadWelcomeOnboardingContext(userId)
+  const profileCtx = await loadWelcomeOnboardingContext(userId)
   return resolvePostAuthNavigation(
     {
-      identity,
-      settings,
-      profileReadOk: profileReadStatus === 'ok',
+      identity: identity ?? profileCtx.identity,
+      settings: profileCtx.settings,
+      profileReadOk: profileCtx.profileReadStatus === 'ok',
       authUserCreatedAt,
+      activity: profileCtx.activity,
     },
     returnTo,
   )

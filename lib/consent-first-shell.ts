@@ -8,7 +8,9 @@ export function shouldMountAppContent(input: {
   const path = (input.pathname || '').split('?')[0]
   if (path === '/auth/callback') return false
   if (!input.signedIn || !input.needsTermsAcceptance) return true
-  return path === '/signin' && input.step === 'terms'
+  // Allow the whole sign-in surface (LegalConsentEnforcer adds step=terms) — avoids blank flash.
+  if (path === '/signin') return true
+  return false
 }
 
 export function consentFirstRedirectHref(
