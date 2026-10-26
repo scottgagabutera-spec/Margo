@@ -1586,6 +1586,54 @@ html[data-margo-stage-idle] .margo-stage-zone {
   margin-top: 0;
   filter: saturate(0.2);
 }
+.margo-hub-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 54;
+  pointer-events: none;
+}
+.margo-hub-scrim {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: var(--margo-scrim);
+  cursor: default;
+  pointer-events: auto;
+}
+.margo-hub-launcher {
+  position: fixed;
+  z-index: 55;
+  pointer-events: auto;
+  left: 12px;
+  right: 12px;
+  top: calc(var(--nav-height, 72px) + 12px);
+  bottom: calc(var(--margo-tabbar-h, 0px) + 12px + env(safe-area-inset-bottom, 0px));
+  margin: 0 auto;
+  max-width: 480px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
+  padding: 20px 16px 24px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
+}
+@media (min-width: 640px) {
+  .margo-hub-launcher {
+    left: auto;
+    right: auto;
+    top: auto;
+    bottom: auto;
+    width: 380px;
+    max-width: calc(100vw - 24px);
+    max-height: min(420px, calc(100dvh - var(--nav-height, 72px) - 24px));
+    margin: 0;
+    padding: 18px 16px 20px;
+    border-radius: 16px;
+  }
+}
 .margo-hub-shell {
   width: 100%;
   margin: 0 auto;
@@ -1593,15 +1641,16 @@ html[data-margo-stage-idle] .margo-stage-zone {
 }
 .margo-hub-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px 4px;
+  grid-template-columns: repeat(4, minmax(72px, 1fr));
+  gap: 16px 8px;
   width: 100%;
   box-sizing: border-box;
+  justify-content: center;
 }
 @media (min-width: 640px) {
   .margo-hub-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px 6px;
+    grid-template-columns: repeat(4, minmax(72px, 1fr));
+    gap: 18px 10px;
   }
 }
 .margo-hub-identity {
@@ -1680,11 +1729,11 @@ html[data-margo-stage-idle] .margo-stage-zone {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 4px 2px 6px;
+  gap: 8px;
+  padding: 4px 2px 8px;
   min-height: 0;
   min-width: 0;
-  max-width: 84px;
+  max-width: 96px;
   justify-self: center;
   width: 100%;
   border: none;
@@ -1694,7 +1743,7 @@ html[data-margo-stage-idle] .margo-stage-zone {
   box-sizing: border-box;
   color: inherit;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 100ms var(--ease-out), opacity 80ms var(--ease-out);
+  transition: transform 120ms var(--ease-out), opacity 80ms var(--ease-out);
 }
 .margo-hub-tile--dimmed {
   opacity: 0.5;
@@ -1713,9 +1762,9 @@ html[data-margo-stage-idle] .margo-stage-zone {
   outline-offset: 2px;
 }
 .margo-hub-tile__icon-wrap {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1733,13 +1782,17 @@ html[data-margo-stage-idle] .margo-stage-zone {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
-  line-height: 1.15;
+  line-height: 1.2;
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   width: 100%;
-  max-width: 84px;
+  max-width: 96px;
+}
+.margo-hub-tile[data-hub-tile='notifications'] .margo-hub-tile__label {
+  max-width: 96px;
+  letter-spacing: -0.01em;
 }
 .margo-hub-tile__caption {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
@@ -1759,9 +1812,9 @@ html[data-margo-stage-idle] .margo-stage-zone {
 .margo-hub-tile__badge {
   position: absolute;
   top: 0;
-  right: calc(50% - 28px);
-  min-width: 16px;
-  height: 16px;
+  right: calc(50% - 30px);
+  min-width: 18px;
+  height: 18px;
   border-radius: 999px;
   background: var(--gold);
   color: var(--bg);
@@ -1771,14 +1824,15 @@ html[data-margo-stage-idle] .margo-stage-zone {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 4px;
+  padding: 0 5px;
   box-sizing: border-box;
   line-height: 1;
+  box-shadow: 0 0 0 2px var(--bg);
 }
 .margo-hub-tile__lock {
   position: absolute;
   top: 2px;
-  right: calc(50% - 26px);
+  right: calc(50% - 28px);
   width: 16px;
   height: 16px;
   display: inline-flex;

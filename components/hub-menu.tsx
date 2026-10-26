@@ -43,7 +43,7 @@ const TOUCH = 'var(--margo-touch-min)'
 
 function TileIcon({ kind }: { kind: HubTileIconId }) {
   const color = 'var(--gold)'
-  const size = 20
+  const size = 22
   if (kind === 'library') return <LibraryIcon size={size} color={color} />
   if (kind === 'messages') return <MessagesIcon size={size} color={color} />
   if (kind === 'stage') return <PenLineIcon size={size} color={color} />
@@ -194,20 +194,30 @@ function HubPanel() {
 
   useEffect(() => setMounted(true), [])
 
+  useEffect(() => {
+    if (!open) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [open])
+
   useLayoutEffect(() => {
     if (!open) return
     const panel = panelRef.current
     const anchor = hubAnchorRef.current
     if (!panel || !anchor) return
     const isDesktop = window.matchMedia('(min-width: 640px)').matches
-    if (!isDesktop) return
+    if (!isDesktop) {
+      panel.style.removeProperty('left')
+      panel.style.removeProperty('top')
+      return
+    }
     const ar = anchor.getBoundingClientRect()
     const pw = panel.offsetWidth
     let left = ar.left + ar.width / 2 - pw / 2
-    left = Math.max(8, Math.min(left, window.innerWidth - pw - 8))
+    left = Math.max(12, Math.min(left, window.innerWidth - pw - 12))
     panel.style.left = `${left}px`
-    panel.style.right = 'auto'
-    panel.style.top = `${ar.bottom + 8}px`
+    panel.style.top = `${ar.bottom + 10}px`
   }, [open, hubAnchorRef, tiles.length])
 
   if (!mounted || !open) return null
@@ -220,72 +230,29 @@ function HubPanel() {
     beginNavigate,
   }
 
-  const shell = (
-    <div className="margo-hub-shell">
-      <div className="margo-hub-grid">
-        <HubTiles {...tileProps} />
-      </div>
-    </div>
-  )
-
   return createPortal(
-    <>
-      <div
-        className="margo-hub-sheet"
-        data-margo-hub-root
-        style={{
-          position: 'fixed',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          bottom: 'calc(var(--margo-tabbar-h, 0px) + 8px + env(safe-area-inset-bottom, 0px))',
-          width: 'min(calc(100vw - 16px), 360px)',
-          zIndex: 55,
-          background: 'var(--bg)',
-          border: '1px solid var(--border)',
-          borderRadius: '14px',
-          boxShadow: '0 12px 28px rgba(0,0,0,0.45)',
-          padding: '10px 8px 12px',
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          WebkitOverflowScrolling: 'touch',
-          boxSizing: 'border-box',
-          maxHeight: 'min(320px, calc(100dvh - var(--margo-tabbar-h, 0px) - 24px))',
-        }}
-      >
-        {shell}
-      </div>
-
+    <div className="margo-hub-overlay" data-margo-hub-root>
+      <button
+        type="button"
+        className="margo-hub-scrim"
+        aria-label="Close Hub"
+        onClick={close}
+      />
       <div
         ref={panelRef}
-        className="margo-hub-panel"
+        className="margo-hub-launcher"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Margo apps"
         data-margo-hub-root
-        style={{
-          display: 'none',
-          position: 'fixed',
-          width: '300px',
-          maxWidth: 'calc(100vw - 16px)',
-          maxHeight: 'min(280px, calc(100dvh - var(--nav-height, 72px) - 16px))',
-          zIndex: 60,
-          background: 'var(--bg)',
-          border: '1px solid var(--border)',
-          borderRadius: '12px',
-          boxShadow: '0 10px 28px rgba(0,0,0,0.4)',
-          padding: '10px 8px 12px',
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          boxSizing: 'border-box',
-        }}
       >
-        {shell}
+        <div className="margo-hub-shell">
+          <div className="margo-hub-grid">
+            <HubTiles {...tileProps} />
+          </div>
+        </div>
       </div>
-
-      <style>{`
-        @media (min-width: 640px) {
-          .margo-hub-sheet { display: none !important; }
-          .margo-hub-panel { display: block !important; }
-        }
-      `}</style>
-    </>,
+    </div>,
     document.body,
   )
 }

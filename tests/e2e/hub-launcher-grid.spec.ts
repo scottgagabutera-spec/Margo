@@ -6,18 +6,18 @@ async function openHubMobile(page: import('@playwright/test').Page) {
   await page.goto(`${BASE}/feed`, { waitUntil: 'domcontentloaded', timeout: 45000 })
   await page.waitForTimeout(600)
   await page.locator('.margo-mobile-tabbar button[aria-label^="Hub"]').click({ timeout: 10000 })
-  const sheet = page.locator('.margo-hub-sheet')
-  await expect(sheet).toBeVisible({ timeout: 10000 })
-  return sheet
+  const launcher = page.locator('.margo-hub-launcher')
+  await expect(launcher).toBeVisible({ timeout: 10000 })
+  return launcher
 }
 
 async function openHubDesktop(page: import('@playwright/test').Page) {
   await page.goto(`${BASE}/feed`, { waitUntil: 'domcontentloaded', timeout: 45000 })
   await page.waitForTimeout(600)
   await page.locator('.margo-nav-bar button[aria-label^="Hub"]').click({ timeout: 10000 })
-  const panel = page.locator('.margo-hub-panel')
-  await expect(panel).toBeVisible({ timeout: 10000 })
-  return panel
+  const launcher = page.locator('.margo-hub-launcher')
+  await expect(launcher).toBeVisible({ timeout: 10000 })
+  return launcher
 }
 
 async function assertContained(page: import('@playwright/test').Page, rootSelector: string) {
@@ -45,7 +45,7 @@ for (const width of [360, 390, 834, 1440]) {
     test.use({ viewport: { width, height: 900 } })
 
     test('signed-out layout: Stage first, locks, no dashed boxes, containment', async ({ page }) => {
-      const rootSel = width >= 640 ? '.margo-hub-panel' : '.margo-hub-sheet'
+      const rootSel = '.margo-hub-launcher'
       if (width >= 640) await openHubDesktop(page)
       else await openHubMobile(page)
 
