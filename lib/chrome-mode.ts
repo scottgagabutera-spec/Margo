@@ -47,5 +47,10 @@ export function hidesAppNav(pathname: string | null | undefined): boolean {
 
 /** Hide MobileTabBar on immersive karaoke, sign-in, and internal admin. */
 export function hidesTabBar(pathname: string | null | undefined): boolean {
-  return chromeModeForPath(pathname) === 'immersive' || isAuthPath(pathname) || isAdminPath(pathname)
+  return (
+    chromeModeForPath(pathname) === 'immersive'
+    || isAuthPath(pathname)
+    || isAdminPath(pathname)
+    || isMessageThreadPath(pathname)
+  )
 }

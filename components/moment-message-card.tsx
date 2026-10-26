@@ -23,6 +23,19 @@ export function MomentMessageCard({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: embedded ? '8px' : '10px' }}>
+      {embedded ? (
+        <p style={{
+          fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
+          fontSize: '0.65rem',
+          fontWeight: 700,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          color: muted,
+          margin: '0 0 4px',
+        }}>
+          Lyric moment
+        </p>
+      ) : null}
       <div
         style={
           embedded

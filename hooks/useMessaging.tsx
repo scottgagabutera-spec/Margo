@@ -40,12 +40,17 @@ interface RawMessage {
   created_at: string
 }
 
+export const CONVERSATIONS_PAGE_SIZE = 30
+const MESSAGE_FETCH_BATCH = 300
+
 interface MessagingContextValue {
   conversations: Conversation[]
   inbox: Conversation[]
   requests: Conversation[]
   unreadCount: number
   loading: boolean
+  hasMoreConversations: boolean
+  loadMoreConversations: () => void
   /** Immediate inbox/badge update after a successful send (no remount wait). */
   applyOutboundMessage: (args: {
     otherUser: ConversationPartner
@@ -68,20 +73,20 @@ function sortByLastMessage(list: Conversation[]): Conversation[] {
   )
 }
 
-async function loadConversations(uid: string): Promise<Conversation[]> {
-  const { data: msgs, error } = await supabase
-    .from('messages')
-    .select('id, sender_id, recipient_id, body, read_at, created_at')
-    .or(`sender_id.eq.${uid},recipient_id.eq.${uid}`)
-    .order('created_at', { ascending: false })
-
-  if (error || !msgs) {
-    console.error('Failed to load messages:', error)
-    return []
+function partnerCountFromMessages(msgs: RawMessage[], uid: string): number {
+  const set = new Set<string>()
+  for (const m of msgs) {
+    set.add(m.sender_id === uid ? m.recipient_id : m.sender_id)
   }
+  return set.size
+}
 
+async function buildConversationsFromMessages(
+  msgs: RawMessage[],
+  uid: string,
+): Promise<Conversation[]> {
   const byOther = new Map<string, RawMessage[]>()
-  for (const m of msgs as RawMessage[]) {
+  for (const m of msgs) {
     const otherId = m.sender_id === uid ? m.recipient_id : m.sender_id
     const list = byOther.get(otherId) || []
     list.push(m)
@@ -124,6 +129,45 @@ async function loadConversations(uid: string): Promise<Conversation[]> {
   )
 }
 
+async function loadConversations(
+  uid: string,
+  partnerLimit: number,
+): Promise<{ conversations: Conversation[]; hasMore: boolean }> {
+  let offset = 0
+  let allMsgs: RawMessage[] = []
+  let moreMessages = true
+
+  while (moreMessages) {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('id, sender_id, recipient_id, body, read_at, created_at')
+      .or(`sender_id.eq.${uid},recipient_id.eq.${uid}`)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + MESSAGE_FETCH_BATCH - 1)
+
+    if (error) {
+      console.error('Failed to load messages:', error)
+      break
+    }
+    const batch = (data || []) as RawMessage[]
+    if (batch.length === 0) {
+      moreMessages = false
+      break
+    }
+    allMsgs = allMsgs.concat(batch)
+    offset += batch.length
+    if (partnerCountFromMessages(allMsgs, uid) >= partnerLimit) break
+    if (batch.length < MESSAGE_FETCH_BATCH) moreMessages = false
+  }
+
+  const built = await buildConversationsFromMessages(allMsgs, uid)
+  const conversations = built.slice(0, partnerLimit)
+  const hasMore =
+    built.length > partnerLimit
+    || (moreMessages && conversations.length >= partnerLimit)
+  return { conversations, hasMore }
+}
+
 /**
  * Owns the single app-global Realtime subscription for DM list + unread.
  * Mount once in the root layout (mirrors NotificationsProvider). Badge,
@@ -142,6 +186,8 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
   const signedOut = !authLoading && (!authUser || !!authUser.is_anonymous)
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
+  const [partnerLimit, setPartnerLimit] = useState(CONVERSATIONS_PAGE_SIZE)
+  const [hasMoreConversations, setHasMoreConversations] = useState(false)
 
   const unreadCount = useMemo(
     () => conversations.reduce((sum, c) => sum + c.unreadCount, 0),
@@ -202,10 +248,15 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
 
   const refetch = useCallback(async () => {
     if (!userId) return
-    const list = await loadConversations(userId)
+    const { conversations: list, hasMore } = await loadConversations(userId, partnerLimit)
     setConversations(list)
+    setHasMoreConversations(hasMore)
     setLoading(false)
-  }, [userId])
+  }, [userId, partnerLimit])
+
+  const loadMoreConversations = useCallback(() => {
+    setPartnerLimit((n) => n + CONVERSATIONS_PAGE_SIZE)
+  }, [])
 
   useForegroundCatchup(refetch, !!userId)
 
@@ -214,6 +265,8 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
 
     if (signedOut || !userId) {
       setConversations([])
+      setPartnerLimit(CONVERSATIONS_PAGE_SIZE)
+      setHasMoreConversations(false)
       setLoading(false)
       return
     }
@@ -244,6 +297,12 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
     }
   }, [authLoading, signedOut, userId, refetch])
 
+  useEffect(() => {
+    if (!userId || authLoading || signedOut) return
+    setLoading(true)
+    void refetch()
+  }, [partnerLimit, userId, authLoading, signedOut, refetch])
+
   const value = useMemo<MessagingContextValue>(
     () => ({
       conversations,
@@ -251,6 +310,8 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
       requests,
       unreadCount,
       loading,
+      hasMoreConversations,
+      loadMoreConversations,
       refetch,
       applyOutboundMessage,
       clearUnreadForPartner,
@@ -261,6 +322,8 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
       requests,
       unreadCount,
       loading,
+      hasMoreConversations,
+      loadMoreConversations,
       refetch,
       applyOutboundMessage,
       clearUnreadForPartner,

@@ -135,11 +135,33 @@ export default function ThreadPage() {
         </p>
       ) : (
         <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+          <Link
+            href="/lyric-back"
+            aria-label="Share a lyric moment"
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '12px',
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid var(--gold-border)',
+              background: 'var(--gold-faint)',
+              textDecoration: 'none',
+              color: 'var(--gold)',
+              fontFamily: uiFont,
+              fontSize: '1rem',
+              fontWeight: 700,
+            }}
+          >
+            &ldquo;
+          </Link>
           <input
             value={draft}
             onChange={e => setDraft(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleSend() } }}
-            placeholder="Write a message…"
+            placeholder={partner ? `Message ${partner.displayName.split(' ')[0]}` : 'Message'}
             aria-label="Message text"
             className="margo-message-compose"
             style={{
@@ -210,7 +232,7 @@ export default function ThreadPage() {
             <div key={m.id} style={{ display: 'flex', justifyContent: mine ? 'flex-end' : 'flex-start' }}>
               <div style={{
                 maxWidth: '82%', padding: '10px 14px', borderRadius: '16px',
-                background: mine ? 'var(--gold)' : 'rgba(255,255,255,0.06)',
+                background: mine ? 'var(--gold)' : 'var(--surface-2)',
                 color: mine ? 'var(--bg)' : 'var(--text)',
               }}>
                 <ThreadMessageBody body={m.body} mine={mine} />
