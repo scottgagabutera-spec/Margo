@@ -10,8 +10,8 @@ describe('computeShortsFrameLayout', () => {
     assert.ok(Math.abs(l.frameWidthPx / l.frameHeightPx - 9 / 16) < 0.02)
   })
 
-  it('very wide uses two columns when pair fits', () => {
+  it('very wide stays one column centered', () => {
     const l = computeShortsFrameLayout(1920, 1080, 120, 88)
-    assert.equal(l.columns, 2)
+    assert.equal(l.columns, 1)
   })
 })
