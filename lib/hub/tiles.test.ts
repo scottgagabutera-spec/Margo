@@ -38,11 +38,11 @@ describe('hub tiles config', () => {
     assert.ok(!shipped.includes('promote'))
   })
 
-  it('caps badge labels at 99+', () => {
+  it('caps badge labels at 9+', () => {
     assert.equal(hubTileBadgeLabel(0), '')
     assert.equal(hubTileBadgeLabel(3), '3')
-    assert.equal(hubTileBadgeLabel(99), '99')
-    assert.equal(hubTileBadgeLabel(100), '99+')
+    assert.equal(hubTileBadgeLabel(9), '9')
+    assert.equal(hubTileBadgeLabel(10), '9+')
   })
 
   it('shows artist-only tiles only when isArtist once shipped', () => {
