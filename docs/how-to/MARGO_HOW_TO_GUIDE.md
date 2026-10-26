@@ -1415,7 +1415,7 @@ Master reference for members and artists. Labels match the app on **main** today
 
 ## Check on a phone before filming
 
-- [ ] **Shorts** tab shows clips (not **Shorts coming soon**) in your production catalog — minimum **5** eligible live songs with moments (`SHORTS_MIN_ELIGIBLE_SONGS`).
+- [ ] **Shorts** tab shows clips (not **Shorts coming soon**) in your production catalog — at least **5** eligible live songs with lyric moments.
 - [ ] **Repost** button visible on a real post you do not own (may depend on feed repost settings).
 - [ ] **TikTok Connect** completes on device (sandbox/production credentials may block in preview).
 - [ ] **YouTube Publish** from **Promotion queue** finishes on a test channel.
