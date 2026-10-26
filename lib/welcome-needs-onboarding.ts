@@ -51,6 +51,9 @@ export function needsOnboarding(ctx: WelcomeOnboardingProfileContext): boolean {
   const completedAt = onboardingFromSettings(ctx.settings).completedAt
   if (completedAt) return false
 
+  // Auth created_at still loading — do not treat as "old account" and skip welcome.
+  if (!ctx.authUserCreatedAt) return true
+
   const { username, displayName } = ctx.identity
   const name = (displayName || '').trim()
 

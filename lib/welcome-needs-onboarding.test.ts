@@ -87,6 +87,18 @@ test('completedAt set never needs onboarding', () => {
   )
 })
 
+test('missing auth created_at does not skip welcome (Google signup)', () => {
+  assert.equal(
+    needsOnboarding({
+      profileReadOk: true,
+      settings: { legal: { termsAcceptedAt: '2026-10-26T00:00:00.000Z', termsVersion: '1' } },
+      authUserCreatedAt: null,
+      identity: identity({ username: 'scott_music', displayName: 'Scott Music' }),
+    }),
+    true,
+  )
+})
+
 test('profile read failure fails open', () => {
   assert.equal(
     needsOnboarding({

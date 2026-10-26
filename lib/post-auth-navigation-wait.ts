@@ -5,7 +5,12 @@ import {
   loadWelcomeOnboardingContext,
   fetchAuthUserCreatedAt,
 } from '@/lib/resolve-post-auth-destination'
-import { resolvePostAuthNavigation } from '@/lib/welcome-needs-onboarding'
+import {
+  needsOnboarding,
+  resolvePostAuthNavigation,
+  welcomeOnboardingPath,
+} from '@/lib/welcome-needs-onboarding'
+import { onboardingFromSettings } from '@/lib/welcome-profile-settings'
 
 export const POST_AUTH_NAV_WAIT_MS = 6000
 export const POST_AUTH_NAV_POLL_MS = 80
@@ -44,12 +49,19 @@ export async function resolvePostAuthDestinationWithWait(
       return { dest: fallback, outcome: 'fail_open_error' }
     }
 
-    if (!identity || !authUserCreatedAt) {
-      await sleep(POST_AUTH_NAV_POLL_MS)
-      continue
-    }
+    if (profileCtx.profileReadStatus === 'ok' && identity) {
+      if (!authUserCreatedAt) {
+        const pendingCtx = buildPostAuthContext(identity, profileCtx.settings, 'ok', null)
+        if (needsOnboarding(pendingCtx)) {
+          return {
+            dest: resolvePostAuthNavigation(pendingCtx, returnTo),
+            outcome: 'resolved',
+          }
+        }
+        await sleep(POST_AUTH_NAV_POLL_MS)
+        continue
+      }
 
-    if (profileCtx.profileReadStatus === 'ok') {
       const dest = resolvePostAuthNavigation(
         buildPostAuthContext(
           identity,
@@ -62,7 +74,22 @@ export async function resolvePostAuthDestinationWithWait(
       return { dest, outcome: 'resolved' }
     }
 
+    if (!identity || !authUserCreatedAt) {
+      await sleep(POST_AUTH_NAV_POLL_MS)
+      continue
+    }
+
     await sleep(POST_AUTH_NAV_POLL_MS)
+  }
+
+  const lastIdentity = await waitForIdentity()
+  const lastProfile = userId ? await loadWelcomeOnboardingContext(userId) : { settings: null, profileReadStatus: 'error' as const }
+  if (
+    lastIdentity
+    && lastProfile.profileReadStatus === 'ok'
+    && !onboardingFromSettings(lastProfile.settings).completedAt
+  ) {
+    return { dest: welcomeOnboardingPath(returnTo), outcome: 'fail_open_timeout' }
   }
 
   return { dest: fallback, outcome: 'fail_open_timeout' }

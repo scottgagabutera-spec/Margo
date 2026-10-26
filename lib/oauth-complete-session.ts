@@ -4,6 +4,7 @@ import { supabaseCookieOptions } from '@/lib/supabase/cookie-options'
 import { buildLegalConsentSettings, hasTermsAcceptanceRecorded, userNeedsTermsAcceptance } from '@/lib/legal/consent'
 import { healProfileRowAndConsent } from '@/lib/auth-account-heal'
 import { oauthPostExchangeRedirect } from '@/lib/auth-oauth-intent'
+import { resolveOAuthPostExchangeRedirect } from '@/lib/oauth-post-auth-redirect'
 import {
   OAUTH_INTENT_COOKIE,
   OAUTH_TERMS_PENDING_COOKIE,
@@ -127,7 +128,9 @@ export async function completeOAuthCodeExchange(
   }
 
   const needsTerms = !!(user && userNeedsTermsAcceptance(user))
-  const redirectTarget = oauthPostExchangeRedirect(needsTerms, oauthReturn)
+  const redirectTarget = user
+    ? await resolveOAuthPostExchangeRedirect(supabase, user, needsTerms, oauthReturn)
+    : oauthPostExchangeRedirect(needsTerms, oauthReturn)
 
   return json(toAppPath(origin, redirectTarget), pendingCookies, pendingHeaders)
 }

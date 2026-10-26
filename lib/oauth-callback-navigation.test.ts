@@ -34,3 +34,11 @@ test('isOAuthTermsCompletionRedirect', () => {
   assert.equal(isOAuthTermsCompletionRedirect('/signin?step=terms'), true)
   assert.equal(isOAuthTermsCompletionRedirect('/feed'), false)
 })
+
+test('oauthCallbackClientReturnTo treats welcome as final server redirect', () => {
+  const follow = oauthCallbackClientReturnTo('/welcome?step=1&returnTo=%2Ffeed')
+  assert.equal(follow.kind, 'final')
+  if (follow.kind === 'final') {
+    assert.match(follow.href, /^\/welcome\?step=1/)
+  }
+})
