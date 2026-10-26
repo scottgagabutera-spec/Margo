@@ -91,7 +91,7 @@ function HubIdentityHeader() {
   return (
     <PendingNavLink href="/you" className="margo-hub-identity" data-margo-hub-root>
       <MargoPortraitAvatar
-        size="sm"
+        size="hub"
         imageUrl={identity.avatarUrl}
         fallbackInitial={(identity.displayName || identity.username || '?').slice(0, 1)}
         fallbackSeed={!identity.avatarUrl && !brandMark ? identity.username : null}

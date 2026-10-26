@@ -769,6 +769,12 @@ html[data-margo-stage-idle] .margo-stage-zone {
   transform: perspective(360px) rotateY(-9deg);
   transform-origin: 50% 100%;
 }
+.margo-portrait-avatar--square {
+  transform: none;
+}
+.margo-portrait-avatar--square .margo-portrait-avatar__photo {
+  object-position: 50% 50%;
+}
 .margo-portrait-avatar__sep {
   position: absolute;
   inset: -3px;

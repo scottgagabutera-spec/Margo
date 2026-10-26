@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { ArrowLeftIcon } from '@/components/icons'
 import { MargoPortraitAvatar } from '@/components/margo-portrait-avatar'
 import { isMargoBrandUsername } from '@/lib/margo-brand-account'
-import { TYPE, UI_FONT } from '@/lib/fonts'
+import { LIST_ROW_TYPE, UI_FONT } from '@/lib/fonts'
 
 export interface MargoConversationHeaderProps {
   displayName?: string
@@ -84,7 +84,7 @@ export function MargoConversationHeader({
           }}
         >
           <MargoPortraitAvatar
-            size="tab"
+            size="chatHeader"
             imageUrl={avatarUrl}
             fallbackInitial={initial}
             fallbackSeed={!avatarUrl && username && !brandMark ? username : null}

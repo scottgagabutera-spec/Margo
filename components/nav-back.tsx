@@ -109,8 +109,11 @@ export function navBackForPath(pathname: string | null | undefined): NavBackConf
     return null
   }
 
-  if (p === '/messages' || p === '/notifications') {
-    return hubTileBack('/feed')
+  if (p === '/messages' || p.startsWith('/messages/')) {
+    return { ...hubTileBack('/feed'), label: 'Messages' }
+  }
+  if (p === '/notifications') {
+    return { ...hubTileBack('/feed'), label: 'Notifications' }
   }
 
   if (p === '/search') return { fallbackHref: '/feed', replace: true }
@@ -119,7 +122,9 @@ export function navBackForPath(pathname: string | null | undefined): NavBackConf
   if (p === '/settings' || p === '/profile/edit' || p === '/apply-artist') {
     return { fallbackHref: '/you' }
   }
-  if (p === '/library') return hubTileBack('/discover')
+  if (p === '/library' || p.startsWith('/library/')) {
+    return { ...hubTileBack('/feed'), label: 'Music Library' }
+  }
   if (p.startsWith('/library/')) return { fallbackHref: '/library' }
   if (p.startsWith('/discover/') || p === '/artists') return { fallbackHref: '/discover' }
   if (p.startsWith('/post/')) return { fallbackHref: '/feed', preferHistory: true, replace: true }

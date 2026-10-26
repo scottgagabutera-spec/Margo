@@ -5,13 +5,25 @@ import { MargoPortraitBrandMark } from '@/components/margo-portrait-brand-mark'
 import { UI_FONT } from '@/lib/fonts'
 import { portraitFallbackFromSeed } from '@/lib/portrait-fallback'
 
-export type MargoPortraitAvatarSize = 'feed' | 'sm' | 'tab' | 'profile'
+export type MargoPortraitAvatarSize =
+  | 'feed'
+  | 'sm'
+  | 'tab'
+  | 'profile'
+  | 'row'
+  | 'hub'
+  | 'chatHeader'
+  | 'nav'
 
-const SIZE_PX: Record<MargoPortraitAvatarSize, { w: number; h: number; r: number }> = {
+const SIZE_PX: Record<MargoPortraitAvatarSize, { w: number; h: number; r: number; square?: boolean }> = {
   feed: { w: 52, h: 66, r: 10 },
   sm: { w: 40, h: 50, r: 8 },
   tab: { w: 32, h: 40, r: 7 },
   profile: { w: 96, h: 120, r: 18 },
+  row: { w: 44, h: 44, r: 12, square: true },
+  hub: { w: 48, h: 48, r: 13, square: true },
+  chatHeader: { w: 34, h: 34, r: 10, square: true },
+  nav: { w: 22, h: 22, r: 6, square: true },
 }
 
 export interface MargoPortraitAvatarProps {
@@ -51,6 +63,7 @@ export function MargoPortraitAvatar({
   children,
 }: MargoPortraitAvatarProps) {
   const dim = SIZE_PX[size]
+  const square = !!dim.square
   const hasPhoto = !!imageUrl?.trim()
   const seededFallback = !hasPhoto && !brandMark && !tierGoldTile && fallbackSeed
     ? portraitFallbackFromSeed(fallbackSeed, fallbackInitial)
@@ -98,6 +111,7 @@ export function MargoPortraitAvatar({
     <span
       className={[
         'margo-portrait-avatar',
+        square ? 'margo-portrait-avatar--square' : '',
         brandMark ? 'margo-portrait-avatar--brand' : '',
         seededFallback ? 'margo-portrait-avatar--seed' : '',
         className,

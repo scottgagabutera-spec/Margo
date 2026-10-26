@@ -16,8 +16,9 @@ import { SignInLink } from '@/components/signin-link'
 import { BackButton } from '@/components/back-button'
 import { navBackForPath, useNavBackOverride } from '@/components/nav-back'
 import { YouTabPortrait } from '@/components/you-tab-portrait'
+import { DEPTH_PAGE_TITLE, UI_FONT } from '@/lib/fonts'
 
-const font = 'var(--font-geist-sans), system-ui, sans-serif'
+const font = UI_FONT
 
 /**
  * Top nav. Logo + Library + Hub are always visible when signed in
@@ -185,7 +186,14 @@ export function MargoNav() {
         pointerEvents: 'none',
       }}>
         {navBack ? (
-          <div style={{ pointerEvents: 'auto', flexShrink: 0 }}>
+          <div style={{
+            pointerEvents: 'auto',
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            minWidth: 0,
+          }}>
             <BackButton
               variant="chrome"
               fallbackHref={navBack.fallbackHref}
@@ -194,6 +202,9 @@ export function MargoNav() {
               onBack={navBack.onBack}
               label={navBack.label || 'Back'}
             />
+            {navBack.label ? (
+              <span style={{ ...DEPTH_PAGE_TITLE, whiteSpace: 'nowrap' }}>{navBack.label}</span>
+            ) : null}
           </div>
         ) : (
           <Link href="/" aria-label="Margo — expression home" style={{ textDecoration: 'none', flexShrink: 0, pointerEvents: 'auto' }}>

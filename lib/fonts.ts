@@ -9,6 +9,23 @@
 export const UI_FONT = 'var(--font-geist-sans), system-ui, sans-serif'
 export const LYRIC_FONT = 'var(--font-lora), serif'
 
+/** Depth pages opened from Hub (Messages, Notifications, Music Library). */
+export const DEPTH_PAGE_TITLE = {
+  fontFamily: UI_FONT,
+  fontSize: '1rem',
+  fontWeight: 500,
+  color: 'var(--text)',
+  margin: 0,
+  letterSpacing: '-0.01em',
+} as const
+
+export const LIST_ROW_TYPE = {
+  name: '0.9375rem',
+  preview: '0.8125rem',
+  time: '0.75rem',
+  chip: '0.8125rem',
+} as const
+
 /** App-wide TYPE roles (non-feed). */
 export const TYPE = {
   pageTitle: '1.5rem',
