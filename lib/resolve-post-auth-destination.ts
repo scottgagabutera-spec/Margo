@@ -21,27 +21,35 @@ export async function completeAuthAfterProfileReady(
   userId: string | undefined,
   identity: Identity | null,
   returnTo?: string | null,
+  waitForIdentity?: () => Promise<Identity | null>,
 ): Promise<string> {
-  const authUserCreatedAt = await fetchAuthUserCreatedAt()
-  return resolvePostAuthDestination(userId, identity, authUserCreatedAt, returnTo)
+  const wait = waitForIdentity ?? (async () => identity)
+  const { resolvePostAuthDestinationWithWait } = await import('@/lib/post-auth-navigation-wait')
+  const { dest } = await resolvePostAuthDestinationWithWait(userId, wait, returnTo)
+  return dest
+}
+
+export type ProfileSettingsReadResult = {
+  settings: WelcomeOnboardingProfileContext['settings']
+  profileReadStatus: 'ok' | 'error'
 }
 
 export async function loadWelcomeOnboardingContext(
   userId: string,
-): Promise<Pick<WelcomeOnboardingProfileContext, 'settings' | 'profileReadOk'>> {
+): Promise<ProfileSettingsReadResult> {
   try {
     const { data, error } = await supabase
       .from('profiles')
       .select('settings')
       .eq('id', userId)
       .maybeSingle()
-    if (error) return { settings: null, profileReadOk: false }
+    if (error) return { settings: null, profileReadStatus: 'error' }
     return {
       settings: (data?.settings as WelcomeOnboardingProfileContext['settings']) ?? null,
-      profileReadOk: true,
+      profileReadStatus: 'ok',
     }
   } catch {
-    return { settings: null, profileReadOk: false }
+    return { settings: null, profileReadStatus: 'error' }
   }
 }
 
@@ -57,9 +65,14 @@ export async function resolvePostAuthDestination(
       returnTo,
     )
   }
-  const { settings, profileReadOk } = await loadWelcomeOnboardingContext(userId)
+  const { settings, profileReadStatus } = await loadWelcomeOnboardingContext(userId)
   return resolvePostAuthNavigation(
-    { identity, settings, profileReadOk, authUserCreatedAt },
+    {
+      identity,
+      settings,
+      profileReadOk: profileReadStatus === 'ok',
+      authUserCreatedAt,
+    },
     returnTo,
   )
 }

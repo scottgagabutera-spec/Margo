@@ -14,6 +14,7 @@ import { ChromeModePublisher } from '@/components/chrome-mode'
 import { AuthReturnRestorer } from '@/components/auth-return-restorer'
 import { AuthGateHost } from '@/components/auth-gate-host'
 import { WelcomeOnboardingEnforcer } from '@/components/welcome-onboarding-enforcer'
+import { ConsentFirstShell } from '@/components/consent-first-shell'
 import { TabSwipeProvider } from '@/hooks/useTabSwipe'
 import { Toaster } from '@/components/ui/sonner'
 import type { Metadata, Viewport } from 'next'
@@ -192,17 +193,21 @@ export default function RootLayout({
                     <AuthReturnRestorer />
                     <WelcomeOnboardingEnforcer />
                   </Suspense>
-                  <TabSwipeProvider
-                    chrome={
-                      <>
-                        <MargoRouteProgress />
-                        <MargoNav />
-                        <MobileTabBar />
-                      </>
-                    }
-                  >
-                    {children}
-                  </TabSwipeProvider>
+                  <Suspense fallback={null}>
+                    <ConsentFirstShell>
+                      <TabSwipeProvider
+                        chrome={
+                          <>
+                            <MargoRouteProgress />
+                            <MargoNav />
+                            <MobileTabBar />
+                          </>
+                        }
+                      >
+                        {children}
+                      </TabSwipeProvider>
+                    </ConsentFirstShell>
+                  </Suspense>
                   <AuthGateHost />
                   </NavBackProvider>
                   </HubProvider>

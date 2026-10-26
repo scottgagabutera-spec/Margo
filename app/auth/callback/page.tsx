@@ -5,10 +5,13 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { LoadingRing } from '@/components/loading-ring'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useIdentity } from '@/hooks/useIdentity'
-import { sanitizeAuthReturnPath } from '@/lib/auth-return'
-import { resolvePostAuthDestination } from '@/lib/auth-welcome-redirect'
+import { completeAuthAfterProfileReady } from '@/lib/auth-welcome-redirect'
+import { completeAuthNavigation } from '@/lib/auth-complete-navigation'
+import { oauthCallbackClientReturnTo } from '@/lib/oauth-callback-navigation'
 import { createClient } from '@/lib/supabase/client'
 import { UI_FONT } from '@/lib/fonts'
+
+const supabase = createClient()
 
 const ui = UI_FONT
 
@@ -51,17 +54,21 @@ function OAuthCallbackInner() {
           body: JSON.stringify({ code }),
         })
         const body = await res.json().catch(() => ({})) as { redirectTo?: string }
-        const redirectTo = sanitizeAuthReturnPath(body.redirectTo) || '/feed'
+        const follow = oauthCallbackClientReturnTo(body.redirectTo)
         await rehydrate()
-        const identity = await waitUntilReady()
-        const { data: authData } = await createClient().auth.getUser()
-        const dest = await resolvePostAuthDestination(
-          authData.user?.id,
-          identity,
-          authData.user?.created_at ?? null,
-          redirectTo,
+        if (follow.kind === 'terms') {
+          completeAuthNavigation(follow.href)
+          return
+        }
+        const { data: authData } = await supabase.auth.getUser()
+        const userId = authData.user?.id
+        const dest = await completeAuthAfterProfileReady(
+          userId,
+          await waitUntilReady(),
+          follow.returnTo,
+          waitUntilReady,
         )
-        router.replace(dest)
+        completeAuthNavigation(dest)
       } catch {
         setError('Sign-in was interrupted. Please try again.')
       }

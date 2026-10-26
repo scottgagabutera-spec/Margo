@@ -59,7 +59,7 @@ function SigninPageInner() {
 
   const finishAuth = useCallback(async () => {
     const row = await waitUntilReady()
-    const dest = await completeAuthAfterProfileReady(user?.id, row, returnTo)
+    const dest = await completeAuthAfterProfileReady(user?.id, row, returnTo, waitUntilReady)
     completeAuthNavigation(dest)
   }, [returnTo, waitUntilReady, user?.id])
 

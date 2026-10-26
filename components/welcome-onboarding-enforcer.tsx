@@ -37,7 +37,10 @@ export function WelcomeOnboardingEnforcer() {
     ranThisLoad.current = true
 
     void (async () => {
-      const { settings, profileReadOk } = await loadWelcomeOnboardingContext(user.id)
+      if (identityLoading) return
+
+      const { settings, profileReadStatus } = await loadWelcomeOnboardingContext(user.id)
+      if (profileReadStatus === 'error') return
       let authUserCreatedAt: string | null = null
       try {
         const { data, error } = await supabase.auth.getUser()
@@ -53,7 +56,7 @@ export function WelcomeOnboardingEnforcer() {
       if (!needsOnboarding({
         identity,
         settings,
-        profileReadOk,
+        profileReadOk: profileReadStatus === 'ok',
         authUserCreatedAt,
       })) {
         return
@@ -66,7 +69,7 @@ export function WelcomeOnboardingEnforcer() {
       }
       router.replace(welcomeOnboardingPath(returnTo))
     })()
-  }, [authLoading, identityLoading, user, identity, pathname, router])
+  }, [authLoading, identityLoading, user, identity, pathname, router, identityLoading])
 
   return null
 }

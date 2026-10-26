@@ -211,7 +211,7 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
     for (const waiter of waiters) waiter(row)
   }, [])
 
-  const waitUntilReady = useCallback((timeoutMs = 5000) => {
+  const waitUntilReady = useCallback((timeoutMs = 6000) => {
     if (identityRef.current && !profileLoadingRef.current) {
       return Promise.resolve(identityRef.current)
     }

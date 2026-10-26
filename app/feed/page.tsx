@@ -35,6 +35,7 @@ import { StoryFeedAuthorSync, StoryRingProvider } from '@/components/stories/sto
 import { FeedFilterLiveRegion, FeedVibeFilterBar } from '@/components/feed-vibe-filter-bar'
 import { FeedContentTabBar } from '@/components/feed-content-tab-bar'
 import { FeedShortsPager } from '@/components/feed-shorts-pager'
+import { MargoPaneErrorBoundary } from '@/components/margo-pane-error-boundary'
 import { applyFeedContentTab, parseFeedContentTab } from '@/lib/feed-content-tab'
 import { feedListReady } from '@/lib/feed-list-ready'
 import { useFeedShortsClips } from '@/hooks/useFeedShortsClips'
@@ -50,9 +51,11 @@ const FEED_STALE_MS = 60_000
 
 export default function FeedPage() {
   return (
-    <Suspense fallback={<FeedPostSkeletonList count={4} />}>
-      <FeedPageInner />
-    </Suspense>
+    <MargoPaneErrorBoundary surface="feed-pane">
+      <Suspense fallback={<FeedPostSkeletonList count={4} />}>
+        <FeedPageInner />
+      </Suspense>
+    </MargoPaneErrorBoundary>
   )
 }
 

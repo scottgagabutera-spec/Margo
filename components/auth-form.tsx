@@ -233,7 +233,7 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
         onSuccess()
       } else {
         const row = await waitUntilReady()
-        const dest = await completeAuthAfterProfileReady(user?.id, row, null)
+        const dest = await completeAuthAfterProfileReady(user?.id, row, null, waitUntilReady)
         completeAuthNavigation(dest)
       }
       return
@@ -294,6 +294,28 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
       >
         {redirecting ? 'Opening Margo…' : loading ? 'Saving…' : 'Continue'}
       </button>
+      <p style={{ textAlign: 'center', margin: '18px 0 0' }}>
+        <button
+          type="button"
+          onClick={() => {
+            void fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).then(() => {
+              window.location.assign('/signin')
+            })
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--text-muted)',
+            fontFamily: ui,
+            fontSize: TYPE.meta,
+            cursor: 'pointer',
+            textDecoration: 'underline',
+            minHeight: '44px',
+          }}
+        >
+          Sign out
+        </button>
+      </p>
     </div>
   )
 }
@@ -467,7 +489,7 @@ export function AuthForm({
         if (onSuccess) {
           onSuccess()
         } else {
-          const dest = await completeAuthAfterProfileReady(user?.id, row, oauthReturnTo)
+          const dest = await completeAuthAfterProfileReady(user?.id, row, oauthReturnTo, waitUntilReady)
           completeAuthNavigation(dest)
         }
         return
@@ -639,7 +661,8 @@ export function AuthForm({
             }}
             onEnter={() => { void handleEmailSubmit() }}
             errorAddon={!isSignup && signInFailed && passwordError ? (
-              passwordError === SIGN_IN_UNKNOWN_EMAIL_MESSAGE && onSwitchMode ? (
+              (passwordError === SIGN_IN_UNKNOWN_EMAIL_MESSAGE
+                || passwordError === SIGN_IN_NEUTRAL_MESSAGE) && onSwitchMode ? (
                 <button
                   type="button"
                   onClick={() => onSwitchMode('signup')}
@@ -656,7 +679,7 @@ export function AuthForm({
                     flexShrink: 0,
                   }}
                 >
-                  Create account
+                  {passwordError === SIGN_IN_UNKNOWN_EMAIL_MESSAGE ? 'Create account' : 'New here? Create account'}
                 </button>
               ) : (
                 <button
