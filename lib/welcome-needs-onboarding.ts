@@ -53,6 +53,18 @@ export function isAuthUserCreatedOnOrAfterWelcomeCutoff(
   return ms >= CUTOFF_MS
 }
 
+/** Custom username + real display name — existing Margo member, not a fresh OAuth stub row. */
+export function hasEstablishedPublicIdentity(
+  identity: WelcomeOnboardingIdentity | null | undefined,
+): boolean {
+  if (!identity) return false
+  const name = (identity.displayName || '').trim()
+  if (!name) return false
+  if (isTemporaryMemberUsername(identity.username)) return false
+  if (name === identity.username) return false
+  return true
+}
+
 export function needsOnboarding(ctx: WelcomeOnboardingProfileContext): boolean {
   if (!ctx.profileReadOk) return false
   if (!ctx.identity) return false
@@ -60,7 +72,9 @@ export function needsOnboarding(ctx: WelcomeOnboardingProfileContext): boolean {
   const completedAt = onboardingFromSettings(ctx.settings).completedAt
   if (completedAt) return false
 
-  if (isAuthUserCreatedAtUnavailable(ctx.authUserCreatedAt)) return true
+  if (isAuthUserCreatedAtUnavailable(ctx.authUserCreatedAt)) {
+    return !hasEstablishedPublicIdentity(ctx.identity)
+  }
 
   const { username, displayName } = ctx.identity
   const name = (displayName || '').trim()
