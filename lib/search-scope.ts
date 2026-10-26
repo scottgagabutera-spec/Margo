@@ -187,6 +187,14 @@ export function markHubOverlayRestore() {
   }
 }
 
+export function peekHubOverlayRestore(): boolean {
+  try {
+    return sessionStorage.getItem(HUB_RESTORE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
 export function consumeHubOverlayRestore(): boolean {
   try {
     if (sessionStorage.getItem(HUB_RESTORE_KEY) !== '1') return false

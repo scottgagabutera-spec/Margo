@@ -80,6 +80,7 @@ function hubTileBack(defaultHref: string): NavBackConfig {
   return {
     fallbackHref: hubAwareFallback(defaultHref),
     replace: true,
+    preferHistory: false,
     onBack: () => {
       if (openedFromHubTile()) {
         markHubOverlayRestore()
@@ -109,8 +110,16 @@ export function navBackForPath(pathname: string | null | undefined): NavBackConf
     return null
   }
 
-  if (p === '/messages' || p.startsWith('/messages/')) {
+  if (p === '/messages') {
     return { ...hubTileBack('/feed'), label: 'Messages' }
+  }
+  if (p.startsWith('/messages/')) {
+    return {
+      fallbackHref: '/messages',
+      replace: true,
+      preferHistory: false,
+      label: 'Messages',
+    }
   }
   if (p === '/notifications') {
     return { ...hubTileBack('/feed'), label: 'Notifications' }

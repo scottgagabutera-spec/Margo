@@ -18,8 +18,10 @@ import {
 import { flushSync } from 'react-dom'
 import { usePathname, useRouter } from 'next/navigation'
 import { usePrimaryTabSwipeGesture } from '@/hooks/usePrimaryTabSwipeGesture'
-import { PrimaryTabPaneSkeleton } from '@/components/margo-skeletons'
+import { HubDeepNavSkeleton, PrimaryTabPaneSkeleton } from '@/components/margo-skeletons'
+import { MARGO_HUB_DEEP_NAV_EVENT, type HubDeepNavDetail } from '@/lib/hub-deep-nav'
 import { warmPrimaryTab } from '@/lib/primary-tab-prefetch'
+import { peekHubOverlayRestore } from '@/lib/search-scope'
 
 /**
  * Primary-tab keepalive + Activity + swipe strip.
@@ -452,6 +454,9 @@ export function PrimaryTabShell({
   // stale usePathname() after a later tap. Cleared only on popstate or when
   // leaving the primary-tab surface (post, settings, sign-in, …).
   const [paintedTab, setPaintedTab] = useState<PrimaryTabId | null>(null)
+  const [deepNavHref, setDeepNavHref] = useState<string | null>(null)
+  const deepNavHrefRef = useRef<string | null>(null)
+  const [hubRestorePending, setHubRestorePending] = useState(false)
   const [navPending, setNavPending] = useState(false)
   const [ackedTab, setAckedTab] = useState<PrimaryTabId | null>(null)
   const [ringTab, setRingTab] = useState<PrimaryTabId | null>(null)
@@ -461,20 +466,30 @@ export function PrimaryTabShell({
   const reassertedGenRef = useRef(0)
   const trustRouteRef = useRef(false)
   const ackClearRef = useRef<number | null>(null)
-  const activeTab = paintedTab ?? routeTab
-
   const cacheRef = useRef(new Map<PrimaryTabId, ReactNode>())
   const paneElsRef = useRef(new Map<PrimaryTabId, HTMLElement | null>())
   const prevTabRef = useRef<PrimaryTabId | null>(null)
   const frozenScrollRef = useRef(frozenScrollLive)
-  const activeTabRef = useRef<PrimaryTabId | null>(activeTab)
   const peekMetaRef = useRef<{ id: PrimaryTabId; dir: PrimaryTabPeekDir } | null>(null)
   const stripOffsetRef = useRef(0)
   const [, setCacheVersion] = useState(0)
   const [peekTab, setPeekTabState] = useState<PrimaryTabId | null>(null)
 
+  const intentDeepPath = deepNavHref ? normalizeTabPath(deepNavHref) : ''
+  const currentPath = normalizeTabPath(pathname)
+  const deepNavInFlight =
+    !!intentDeepPath && currentPath.toLowerCase() !== intentDeepPath.toLowerCase()
+  const suppressKeepalive =
+    deepNavInFlight || hubRestorePending || (deepNavHref !== null && routeTab !== null)
+
+  const activeTab = suppressKeepalive ? null : paintedTab ?? routeTab
+  const onPrimarySurface =
+    !suppressKeepalive && (routeTab !== null || paintedTab !== null)
+
+  const activeTabRef = useRef<PrimaryTabId | null>(activeTab)
   activeTabRef.current = activeTab
   paintedTabRef.current = paintedTab
+  deepNavHrefRef.current = deepNavHref
 
   // Seed cache only after the App Router has committed the painted tab, so we
   // never freeze a loading fallback — or children from a stale in-flight route.
@@ -504,7 +519,6 @@ export function PrimaryTabShell({
 
   useEffect(() => {
     const onLeavePrimary = () => {
-      if (!paintedTabRef.current) return
       intentHrefRef.current = null
       intentGenRef.current += 1
       const clear = () => {
@@ -523,6 +537,53 @@ export function PrimaryTabShell({
     window.addEventListener(MARGO_LEAVE_PRIMARY_TABS_EVENT, onLeavePrimary)
     return () => window.removeEventListener(MARGO_LEAVE_PRIMARY_TABS_EVENT, onLeavePrimary)
   }, [])
+
+  useEffect(() => {
+    const onDeepNav = (event: Event) => {
+      const href = (event as CustomEvent<HubDeepNavDetail>).detail?.href
+      if (!href) return
+      const apply = () => setDeepNavHref(href)
+      try {
+        flushSync(apply)
+      } catch {
+        apply()
+      }
+    }
+    window.addEventListener(MARGO_HUB_DEEP_NAV_EVENT, onDeepNav)
+    return () => window.removeEventListener(MARGO_HUB_DEEP_NAV_EVENT, onDeepNav)
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!deepNavHref) return
+    const intent = normalizeTabPath(deepNavHref)
+    if (currentPath.toLowerCase() === intent.toLowerCase()) {
+      setDeepNavHref(null)
+    }
+  }, [currentPath, deepNavHref])
+
+  useLayoutEffect(() => {
+    if (routeTab !== 'feed') {
+      if (hubRestorePending) setHubRestorePending(false)
+      return
+    }
+    const hubQuery =
+      typeof window !== 'undefined'
+      && new URLSearchParams(window.location.search).get('hub') === '1'
+    if (hubQuery || peekHubOverlayRestore()) {
+      setHubRestorePending(true)
+    }
+  }, [routeTab, pathname, hubRestorePending])
+
+  useEffect(() => {
+    if (!hubRestorePending) return
+    const onHubOpened = () => setHubRestorePending(false)
+    window.addEventListener('margo:hub-overlay-open', onHubOpened)
+    const t = window.setTimeout(() => setHubRestorePending(false), 400)
+    return () => {
+      window.removeEventListener('margo:hub-overlay-open', onHubOpened)
+      window.clearTimeout(t)
+    }
+  }, [hubRestorePending])
 
   useLayoutEffect(() => {
     if (trustRouteRef.current) {
@@ -920,7 +981,8 @@ export function PrimaryTabShell({
 
   const cached = [...cacheRef.current.entries()]
   const showSkeleton = !!activeTab && !cacheRef.current.has(activeTab)
-  const onPrimarySurface = routeTab !== null || paintedTab !== null
+  const showDeepNavSkeleton = deepNavInFlight && !!deepNavHref
+  const showAppChildren = !showDeepNavSkeleton && activeTab === null
 
   return (
     <PrimaryTabContext.Provider value={ctx}>
@@ -959,7 +1021,16 @@ export function PrimaryTabShell({
         </div>
       )}
 
-      {activeTab === null ? children : null}
+      {showDeepNavSkeleton && deepNavHref ? (
+        <div
+          data-margo-hub-deep-nav-paint={normalizeTabPath(deepNavHref)}
+          style={paneStyle(true, true, true)}
+        >
+          <HubDeepNavSkeleton href={deepNavHref} />
+        </div>
+      ) : null}
+
+      {showAppChildren ? children : null}
     </PrimaryTabContext.Provider>
   )
 }

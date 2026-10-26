@@ -217,10 +217,8 @@ export function PostCardLyricSection({ post }: { post: Post }) {
           <p className={FEED_CARD_LYRIC_CLAMP_CLASS}>
             {lines.map((line, i) => (
               <span key={line.id || `line-${line.position}-${i}`}>
-                {i > 0 ? (
-                  <span className="margo-feed-stitch margo-post-card__stitch" aria-hidden> stitch </span>
-                ) : null}
-                &ldquo;{line.text}&rdquo;
+                {i > 0 ? '\n' : ''}
+                &ldquo;{line.text.trim()}&rdquo;
               </span>
             ))}
           </p>

@@ -1610,9 +1610,9 @@ html[data-margo-stage-idle] .margo-stage-zone {
   -webkit-overflow-scrolling: touch;
 }
 .margo-hub-panel {
-  display: none;
   position: fixed;
-  width: 236px;
+  width: 332px;
+  min-width: 0;
   max-height: min(440px, calc(100dvh - var(--nav-height, 72px) - 24px));
   z-index: 62;
   background: var(--bg);
@@ -1623,14 +1623,6 @@ html[data-margo-stage-idle] .margo-stage-zone {
   overflow-y: auto;
   overflow-x: hidden;
   box-sizing: border-box;
-}
-@media (min-width: 640px) {
-  .margo-hub-sheet {
-    display: none !important;
-  }
-  .margo-hub-panel {
-    display: block !important;
-  }
 }
 .margo-hub-panel-head {
   display: flex;
@@ -1693,17 +1685,12 @@ html[data-margo-stage-idle] .margo-stage-zone {
 }
 .margo-hub-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(72px, 1fr));
-  gap: 14px 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 8px;
   width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
   justify-content: center;
-}
-@media (min-width: 640px) {
-  .margo-hub-grid {
-    grid-template-columns: repeat(4, minmax(72px, 1fr));
-    gap: 16px 8px;
-  }
 }
 .margo-hub-identity {
   grid-column: 1 / -1;
@@ -1844,10 +1831,9 @@ html[data-margo-stage-idle] .margo-stage-zone {
   text-overflow: ellipsis;
   white-space: nowrap;
   width: 100%;
-  max-width: 96px;
+  max-width: 100%;
 }
 .margo-hub-tile[data-hub-tile='notifications'] .margo-hub-tile__label {
-  max-width: 96px;
   letter-spacing: -0.01em;
 }
 .margo-hub-panel .margo-hub-tile__icon-wrap {
@@ -1857,6 +1843,7 @@ html[data-margo-stage-idle] .margo-stage-zone {
 }
 .margo-hub-panel .margo-hub-tile__label {
   font-size: 11px;
+  max-width: 100%;
 }
 .margo-hub-panel .margo-hub-panel-head__title {
   font-size: 0.8125rem;
@@ -1993,14 +1980,13 @@ html[data-margo-stage-idle] .margo-stage-zone {
   margin: var(--margo-post-card-lyric-margin) 0;
   text-align: left;
   padding: 0;
-  max-width: 36ch;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
-@media (min-width: 640px) {
-  .margo-post-card__lyric-zone {
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-  }
+.margo-post-card__lyric-zone .margo-feed-lyric {
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 @supports (text-wrap: pretty) {
   .margo-post-card__lyric-zone .margo-feed-lyric {

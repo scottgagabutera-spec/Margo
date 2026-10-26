@@ -309,6 +309,55 @@ export function ProfileSocialActionsSkeleton() {
   )
 }
 
+/** Inbox / notifications / library shape while a Hub tile route is committing. */
+export function HubDeepNavSkeleton({ href }: { href: string }) {
+  const path = href.split('?')[0]
+  const title =
+    path === '/messages'
+      ? 'Messages'
+      : path === '/notifications'
+        ? 'Notifications'
+        : path.startsWith('/library')
+          ? 'Music Library'
+          : ''
+  return (
+    <main
+      style={{
+        minHeight: '100vh',
+        background: 'var(--bg)',
+        padding: 'calc(var(--nav-height, 72px) + 12px) 20px var(--margo-page-padding-bottom)',
+        boxSizing: 'border-box',
+      }}
+      data-margo-hub-deep-nav-skeleton={path}
+    >
+      <PulseStyle />
+      {title ? (
+        <div style={bone({ height: 12, width: 120, borderRadius: 4, border: 'none', marginBottom: 20 })} />
+      ) : null}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 560, margin: '0 auto' }}>
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: '12px 0',
+              borderBottom: '1px solid var(--border)',
+            }}
+          >
+            <div style={bone({ width: 44, height: 44, borderRadius: '50%', border: 'none', flexShrink: 0 }, i * 50)} />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={bone({ height: 10, width: '45%', borderRadius: 4, border: 'none' }, i * 50 + 20)} />
+              <div style={bone({ height: 8, width: '72%', borderRadius: 4, border: 'none' }, i * 50 + 40)} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </main>
+  )
+}
+
 export function PrimaryTabPaneSkeleton({
   tab,
 }: {

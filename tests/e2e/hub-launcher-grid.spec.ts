@@ -77,6 +77,8 @@ for (const width of [360, 390, 834, 1440]) {
       await expect(page.locator(`${rootSel} .margo-hub-tile__caption`)).toHaveCount(0)
 
       await expect(page.locator(`${rootSel} .margo-hub-signed-out-cta`)).toBeVisible()
+      await expect(page.locator('#margo-hub-sign-in')).toHaveCount(1)
+      await expect(page.locator('.margo-hub-identity')).toHaveCount(0)
 
       const dashed = await page.locator(`${rootSel} [style*="dashed"]`).count()
       expect(dashed).toBe(0)
