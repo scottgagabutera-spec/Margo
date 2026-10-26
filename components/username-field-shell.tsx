@@ -26,6 +26,8 @@ interface UsernameFieldShellProps {
   children: React.ReactNode
   visualState: UsernameFieldVisualState
   showFeedback: boolean
+  /** When true, keep border/tint but hide the inner "Available" line (page shows its own). */
+  hideInlineStatus?: boolean
   statusId: string
   'data-margo-username-status'?: string
 }
@@ -34,6 +36,7 @@ export function UsernameFieldShell({
   children,
   visualState,
   showFeedback,
+  hideInlineStatus = false,
   statusId,
   'data-margo-username-status': dataStatus,
 }: UsernameFieldShellProps) {
@@ -96,7 +99,7 @@ export function UsernameFieldShell({
           lineHeight: 1.35,
         }}
       >
-        {usernameStatusMessage(visualState, showFeedback)}
+        {hideInlineStatus ? '\u00a0' : usernameStatusMessage(visualState, showFeedback)}
       </p>
     </div>
   )

@@ -535,10 +535,17 @@ function WelcomePageInner() {
     if (finishing) return
     setFinishing(true)
     void (async () => {
-      await saveTasteVibes(moods)
-      if (role) await saveOnboardingRole(role)
-      if (user?.id) {
-        await persistProfileSettings(user.id, (current) => {
+      const FINISH_TIMEOUT_MS = 8000
+      let navigated = false
+      const goFeed = () => {
+        if (navigated) return
+        navigated = true
+        completeAuthNavigation('/feed')
+      }
+
+      const persistCompletedAt = async () => {
+        if (!user?.id) return { ok: false as const }
+        return persistProfileSettings(user.id, (current) => {
           const merged = mergeOnboardingSettings(current, {
             completedAt: new Date().toISOString(),
             role: role ?? undefined,
@@ -547,7 +554,24 @@ function WelcomePageInner() {
           return merged
         })
       }
-      completeAuthNavigation('/feed')
+
+      const timeoutId = window.setTimeout(() => {
+        goFeed()
+        void persistCompletedAt()
+      }, FINISH_TIMEOUT_MS)
+
+      try {
+        await saveTasteVibes(moods)
+        if (role) await saveOnboardingRole(role)
+        const saved = await persistCompletedAt()
+        window.clearTimeout(timeoutId)
+        if (!saved.ok) void persistCompletedAt()
+        goFeed()
+      } catch {
+        window.clearTimeout(timeoutId)
+        goFeed()
+        void persistCompletedAt()
+      }
     })()
   }
 
@@ -700,6 +724,7 @@ function WelcomePageInner() {
                     <label style={labelStyle}>Username</label>
                     <UsernameFieldShell
                       visualState={usernameAvailability}
+                      hideInlineStatus={usernameSuccess}
                       showFeedback={
                         usernameAvailability === 'available'
                         || usernameAvailability === 'taken'

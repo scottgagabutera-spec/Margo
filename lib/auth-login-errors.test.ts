@@ -24,16 +24,20 @@ describe('auth login errors', () => {
     assert.equal(classifyLoginError('User not found', 'user_not_found'), 'user_not_found')
   })
 
-  it('uses one neutral user message for every classified sign-in failure', () => {
+  it('uses unknown-email copy only for user_not_found', () => {
     for (const shape of GOTRUE_SHAPES) {
       const code = classifyLoginErrorFromSupabase(shape)
-      assert.equal(loginErrorMessage(code), SIGN_IN_NEUTRAL_MESSAGE)
+      if (code === 'user_not_found') {
+        assert.equal(loginErrorMessage(code), "We couldn't find an account with that email.")
+      } else {
+        assert.equal(loginErrorMessage(code), SIGN_IN_NEUTRAL_MESSAGE)
+      }
     }
     assert.equal(loginErrorMessage('unknown'), SIGN_IN_NEUTRAL_MESSAGE)
   })
 
-  it('loginFailureResponseBody does not leak error codes', () => {
-    const body = loginFailureResponseBody()
+  it('loginFailureResponseBody returns user-facing error only', () => {
+    const body = loginFailureResponseBody('invalid_credentials')
     assert.equal(body.error, SIGN_IN_NEUTRAL_MESSAGE)
     assert.equal('code' in body, false)
   })

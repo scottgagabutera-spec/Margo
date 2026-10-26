@@ -1,10 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseCookieOptions } from '@/lib/supabase/cookie-options'
-import {
-  buildLegalConsentSettings,
-  mergeLegalConsentIntoSettings,
-} from '@/lib/legal/consent'
+import { recordTermsAndHealProfile } from '@/lib/auth-account-heal'
 import {
   applyPendingSessionCookies,
   type PendingSessionCookie,
@@ -58,28 +55,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
   }
 
-  const legal = buildLegalConsentSettings()
-  const { error: metaErr } = await supabase.auth.updateUser({
-    data: {
-      terms_accepted_at: legal.termsAcceptedAt,
-      terms_version: legal.termsVersion,
-    },
-  })
-  if (metaErr) {
-    return NextResponse.json({ error: metaErr.message }, { status: 400 })
+  const healed = await recordTermsAndHealProfile(supabase, user)
+  if (!healed.ok) {
+    return NextResponse.json(
+      { error: healed.error || 'Could not save. Try again.' },
+      { status: 400 },
+    )
   }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('settings')
-    .eq('id', user.id)
-    .maybeSingle()
-
-  const settings = mergeLegalConsentIntoSettings(
-    (profile?.settings as Record<string, unknown> | null) ?? null,
-    legal,
-  )
-  await supabase.from('profiles').update({ settings }).eq('id', user.id)
 
   const response = NextResponse.json({ ok: true })
   applyPendingSessionCookies(response, pendingCookies, pendingHeaders)

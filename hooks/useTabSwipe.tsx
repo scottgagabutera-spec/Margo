@@ -7,6 +7,7 @@ import { PrimaryTabShell } from '@/components/primary-tab-shell'
 import { YouTabPage } from '@/components/you-tab-page'
 import { warmPrimaryTab } from '@/lib/primary-tab-prefetch'
 import { warmProfile } from '@/lib/profile-warm'
+import { canMountYouKeepalivePane } from '@/lib/feed-list-ready'
 
 export {
   TAB_SWIPE_EXCLUDE_SELECTOR,
@@ -31,14 +32,21 @@ export function TabSwipeProvider({
   children: ReactNode
   chrome?: ReactNode
 }) {
-  const { user, identity } = useIdentity()
+  const { user, identity, loading: identityLoading } = useIdentity()
   const router = useRouter()
 
   const isSignedIn = !!user && !user.isAnonymous
   const ownProfileHref = isSignedIn
     ? (identity?.username ? `/profile/${identity.username}` : '/you')
     : null
-  const youPane = useMemo(() => (isSignedIn ? <YouTabPage /> : null), [isSignedIn])
+  const youPane = useMemo(
+    () => (canMountYouKeepalivePane({
+      signedIn: isSignedIn,
+      identityLoading,
+      username: identity?.username,
+    }) ? <YouTabPage /> : null),
+    [isSignedIn, identityLoading, identity?.username],
+  )
 
   useEffect(() => {
     if (!isSignedIn) return

@@ -1,5 +1,9 @@
-/** User-facing sign-in failure — same for wrong password, unknown email, unconfirmed. */
+/** Wrong password or unconfirmed email (do not reveal which). */
 export const SIGN_IN_NEUTRAL_MESSAGE = 'Incorrect email or password.'
+
+export const SIGN_IN_UNKNOWN_EMAIL_MESSAGE = "We couldn't find an account with that email."
+
+export const SIGN_UP_EMAIL_IN_USE_MESSAGE = 'That email already has an account.'
 
 export const RESEND_CONFIRM_NEUTRAL_MESSAGE =
   'If this email can be confirmed, a new link is on its way.'
@@ -42,12 +46,25 @@ export function classifyLoginErrorFromSupabase(error: SupabaseLoginErrorShape | 
   return classifyLoginError(error?.message, error?.code)
 }
 
-/** Always neutral — callers must not branch UI on LoginErrorCode for sign-in copy. */
-export function loginErrorMessage(_code: LoginErrorCode): string {
+export function loginErrorMessage(code: LoginErrorCode): string {
+  if (code === 'user_not_found') return SIGN_IN_UNKNOWN_EMAIL_MESSAGE
   return SIGN_IN_NEUTRAL_MESSAGE
 }
 
-/** API body for failed password sign-in — no `code` field (anti-enumeration). */
-export function loginFailureResponseBody(): { error: string } {
-  return { error: SIGN_IN_NEUTRAL_MESSAGE }
+/** API body for failed password sign-in. */
+export function loginFailureResponseBody(code: LoginErrorCode = 'invalid_credentials'): { error: string } {
+  return { error: loginErrorMessage(code) }
+}
+
+export function signupEmailInUseMessage(message: string | undefined | null): string | null {
+  const msg = (message || '').toLowerCase()
+  if (
+    msg.includes('already registered')
+    || msg.includes('already been registered')
+    || msg.includes('user already registered')
+    || msg.includes('already exists')
+  ) {
+    return SIGN_UP_EMAIL_IN_USE_MESSAGE
+  }
+  return null
 }

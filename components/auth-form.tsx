@@ -16,6 +16,9 @@ import { setBrowserAccessToken } from '@/lib/supabase/client'
 import {
   RESEND_CONFIRM_NEUTRAL_MESSAGE,
   SIGN_IN_NEUTRAL_MESSAGE,
+  SIGN_IN_UNKNOWN_EMAIL_MESSAGE,
+  SIGN_UP_EMAIL_IN_USE_MESSAGE,
+  signupEmailInUseMessage,
 } from '@/lib/auth-login-errors'
 import { scrollAuthFieldIntoView } from '@/components/auth-viewport'
 import { useAuthGate } from '@/components/supabase-auth-provider'
@@ -436,15 +439,23 @@ export function AuthForm({
       if (!res.ok) {
         const msg = body.error || 'Something went wrong.'
         if (!isSignup) {
-          setPasswordError(SIGN_IN_NEUTRAL_MESSAGE)
+          setPasswordError(msg === SIGN_IN_UNKNOWN_EMAIL_MESSAGE ? msg : SIGN_IN_NEUTRAL_MESSAGE)
           setSignInFailed(true)
+          setError('')
+          return
+        }
+        const inUse = signupEmailInUseMessage(msg) || (msg === SIGN_UP_EMAIL_IN_USE_MESSAGE ? msg : null)
+        if (inUse) {
+          setEmailError(inUse)
+          setError('')
           return
         }
         if (/password|character|letter|number|weak/i.test(msg)) {
           setPasswordError(parsePasswordErrorMessage(msg))
           return
         }
-        throw { message: msg }
+        setError(msg)
+        return
       }
       setSignInFailed(false)
 
@@ -581,14 +592,35 @@ export function AuthForm({
               onEnter={() => { void handleEmailSubmit() }}
             />
             {emailError ? (
-              <p role="alert" style={{
-                fontFamily: ui,
-                fontSize: TYPE.meta,
-                color: 'var(--destructive)',
-                margin: '6px 0 0',
-              }}>
-                {emailError}
-              </p>
+              <div style={{ margin: '6px 0 0' }}>
+                <p role="alert" style={{
+                  fontFamily: ui,
+                  fontSize: TYPE.meta,
+                  color: 'var(--destructive)',
+                  margin: 0,
+                }}>
+                  {emailError}
+                </p>
+                {emailError === SIGN_UP_EMAIL_IN_USE_MESSAGE && onSwitchMode ? (
+                  <button
+                    type="button"
+                    onClick={() => onSwitchMode('signin')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--gold)',
+                      fontFamily: ui,
+                      fontSize: TYPE.meta,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      minHeight: '44px',
+                      padding: '4px 0 0',
+                    }}
+                  >
+                    Sign in
+                  </button>
+                ) : null}
+              </div>
             ) : null}
           </div>
 
@@ -607,26 +639,47 @@ export function AuthForm({
             }}
             onEnter={() => { void handleEmailSubmit() }}
             errorAddon={!isSignup && signInFailed && passwordError ? (
-              <button
-                type="button"
-                onClick={() => { void handleResendConfirmation() }}
-                disabled={resendCooldownActive || resendBusy || !email.trim()}
-                aria-disabled={resendCooldownActive || resendBusy || !email.trim()}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: resendCooldownActive ? 'var(--text-muted)' : 'var(--gold)',
-                  fontFamily: ui,
-                  fontSize: TYPE.meta,
-                  cursor: resendCooldownActive || resendBusy || !email.trim() ? 'not-allowed' : 'pointer',
-                  minHeight: '44px',
-                  padding: '0 4px',
-                  opacity: resendCooldownActive ? 0.55 : 1,
-                  flexShrink: 0,
-                }}
-              >
-                {resendBusy ? 'Sending…' : resendCooldownActive ? 'Resend in 1 min' : 'Resend confirmation email'}
-              </button>
+              passwordError === SIGN_IN_UNKNOWN_EMAIL_MESSAGE && onSwitchMode ? (
+                <button
+                  type="button"
+                  onClick={() => onSwitchMode('signup')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--gold)',
+                    fontFamily: ui,
+                    fontSize: TYPE.meta,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    minHeight: '44px',
+                    padding: '0 4px',
+                    flexShrink: 0,
+                  }}
+                >
+                  Create account
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => { void handleResendConfirmation() }}
+                  disabled={resendCooldownActive || resendBusy || !email.trim()}
+                  aria-disabled={resendCooldownActive || resendBusy || !email.trim()}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: resendCooldownActive ? 'var(--text-muted)' : 'var(--gold)',
+                    fontFamily: ui,
+                    fontSize: TYPE.meta,
+                    cursor: resendCooldownActive || resendBusy || !email.trim() ? 'not-allowed' : 'pointer',
+                    minHeight: '44px',
+                    padding: '0 4px',
+                    opacity: resendCooldownActive ? 0.55 : 1,
+                    flexShrink: 0,
+                  }}
+                >
+                  {resendBusy ? 'Sending…' : resendCooldownActive ? 'Resend in 1 min' : 'Resend confirmation email'}
+                </button>
+              )
             ) : undefined}
             forgotPasswordSlot={!isSignup ? (
               <Link

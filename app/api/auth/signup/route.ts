@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { buildLegalConsentSettings } from '@/lib/legal/consent'
 import { resolveAuthEmailRedirectOrigin, signInAfterConfirmUrl } from '@/lib/auth-email-redirect'
 import { parsePasswordErrorMessage, validatePassword } from '@/lib/auth-password-policy'
+import { signupEmailInUseMessage, SIGN_UP_EMAIL_IN_USE_MESSAGE } from '@/lib/auth-login-errors'
 
 /**
  * Auth core — password sign-up on the server (httpOnly cookies when a
@@ -49,6 +50,10 @@ export async function POST(req: NextRequest) {
     },
   })
   if (error) {
+    const inUse = signupEmailInUseMessage(error.message)
+    if (inUse) {
+      return NextResponse.json({ error: SIGN_UP_EMAIL_IN_USE_MESSAGE }, { status: 400 })
+    }
     return NextResponse.json({ error: parsePasswordErrorMessage(error.message) }, { status: 400 })
   }
 
