@@ -219,7 +219,7 @@ export function MargoFooter() {
     wasSheetOpen.current = sheetOpen
   }, [sheetOpen])
 
-  const onBackdropPointerDown = () => closeSheet()
+  const onBackdropDismiss = () => closeSheet()
 
   const onSheetPointerDown = (e: ReactPointerEvent) => {
     if (!(e.target as HTMLElement).closest('.margo-footer__sheet-handle')) return
@@ -288,7 +288,8 @@ export function MargoFooter() {
         <div
           className="margo-footer__backdrop"
           role="presentation"
-          onPointerDown={onBackdropPointerDown}
+          onPointerDown={onBackdropDismiss}
+          onClick={onBackdropDismiss}
         />
       ) : null}
 

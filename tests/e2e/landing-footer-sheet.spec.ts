@@ -43,6 +43,18 @@ async function scrollMetrics(page: Page) {
   }))
 }
 
+async function gotoLanding(page: Page) {
+  await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+  await page.waitForTimeout(600)
+}
+
+async function openMoreSheet(page: Page) {
+  const more = page.locator('.margo-footer__mobile-closed').getByRole('button', { name: /^More$/i })
+  await more.click()
+  await expect(page.getByRole('dialog', { name: 'More from Margo' })).toBeVisible()
+  return more
+}
+
 async function minTapTarget(page: Page, selector: string) {
   return page.locator(selector).first().evaluate((el) => {
     const rect = el.getBoundingClientRect()
@@ -125,33 +137,38 @@ test.describe('landing footer phone @390', () => {
     expect(more).toBeGreaterThanOrEqual(44)
   })
 
-  test('More sheet opens and closes via backdrop, Close, Escape, swipe, search, scroll, route, Back', async ({
-    page,
-  }) => {
-    test.setTimeout(60_000)
-    await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 60000 })
-    await page.waitForTimeout(600)
-    const more = page.locator('.margo-footer__mobile-closed').getByRole('button', { name: /^More$/i })
-    const closeInSheet = page.locator('.margo-footer__sheet').getByRole('button', { name: /^Close$/i })
-    await more.click()
-    await expect(page.getByRole('dialog', { name: 'More from Margo' })).toBeVisible()
-
+  test('More sheet lists footer links with correct hrefs', async ({ page }) => {
+    await gotoLanding(page)
+    await openMoreSheet(page)
     for (const { label, href } of SHEET_LINKS) {
       await expect(page.getByRole('dialog').getByRole('link', { name: label })).toHaveAttribute('href', href)
     }
+  })
 
+  test('More sheet closes on backdrop tap', async ({ page }) => {
+    await gotoLanding(page)
+    await openMoreSheet(page)
     await page.locator('.margo-footer__backdrop').click({ position: { x: 8, y: 8 } })
     await expect(page.getByRole('dialog', { name: 'More from Margo' })).toBeHidden()
+  })
 
-    await more.click()
+  test('More sheet closes on Escape', async ({ page }) => {
+    await gotoLanding(page)
+    await openMoreSheet(page)
     await page.keyboard.press('Escape')
     await expect(page.getByRole('dialog')).toBeHidden()
+  })
 
-    await more.click()
-    await closeInSheet.click()
+  test('More sheet closes on Close chip', async ({ page }) => {
+    await gotoLanding(page)
+    await openMoreSheet(page)
+    await page.locator('.margo-footer__sheet').getByRole('button', { name: /^Close$/i }).click()
     await expect(page.getByRole('dialog')).toBeHidden()
+  })
 
-    await more.click()
+  test('More sheet closes on swipe down handle', async ({ page }) => {
+    await gotoLanding(page)
+    await openMoreSheet(page)
     const handle = page.locator('.margo-footer__sheet-handle')
     const box = await handle.boundingBox()
     expect(box).toBeTruthy()
@@ -160,25 +177,37 @@ test.describe('landing footer phone @390', () => {
     await page.mouse.move(box!.x + box!.width / 2, box!.y + 50, { steps: 8 })
     await page.mouse.up()
     await expect(page.getByRole('dialog')).toBeHidden()
+  })
 
-    await more.click()
+  test('More sheet closes on scroll', async ({ page }) => {
+    await gotoLanding(page)
+    await openMoreSheet(page)
     await page.evaluate(() => {
       window.dispatchEvent(new Event('scroll'))
       document.dispatchEvent(new Event('scroll', { bubbles: true }))
     })
     await expect(page.getByRole('dialog')).toBeHidden()
+  })
 
-    await more.click()
+  test('More sheet closes when search is tapped and search focuses', async ({ page }) => {
+    await gotoLanding(page)
+    await openMoreSheet(page)
     const search = page.locator('.margo-stage-hero-search input').first()
     await search.click()
     await expect(page.getByRole('dialog')).toBeHidden()
     await expect(search).toBeFocused()
+  })
 
-    await more.click()
+  test('More sheet closes on Android Back (history pop)', async ({ page }) => {
+    await gotoLanding(page)
+    await openMoreSheet(page)
     await page.evaluate(() => window.history.back())
     await expect(page.getByRole('dialog')).toBeHidden()
+  })
 
-    await more.click()
+  test('More sheet closes on route change', async ({ page }) => {
+    await gotoLanding(page)
+    await openMoreSheet(page)
     await page.goto(`${BASE}/feed`, { waitUntil: 'domcontentloaded' })
     await expect(page.getByRole('dialog', { name: 'More from Margo' })).toHaveCount(0)
   })
