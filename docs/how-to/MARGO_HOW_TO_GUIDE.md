@@ -703,17 +703,17 @@ Master reference for members and artists. Labels match the app on **main** today
 ## 20. Use the Hub (Tier 1 essential)
 
 **Who:** Member (and guests for some tiles)  
-**Goal:** Open Messages, Notifications, Library, and The Stage from one launcher.
+**Goal:** Open Messages, Notifications, Music Library, and The Stage from one launcher.
 
 ### Before you start
 - None.
 
 ### Steps
-1. Tap **Hub** on the bottom tab bar (or **Hub** in desktop nav).
-2. On scrim, read **Margo apps** panel.
-3. Tap a tile: **The Stage** ( `/` ), **Messages**, **Notifications**, or **Library**.
-4. Tap **Close Hub** or scrim to dismiss.
-5. Signed out: locked tiles show **Sign in required**.
+1. Tap **Hub** on the bottom tab bar (or **Hub** in desktop nav). Hub is an **overlay sheet** on phones (not a route); the page underneath stays put — including on **Sign In** (`/signin`).
+2. Read the **Hub** panel (tiles + optional **Sign in** when signed out).
+3. Tap a tile: **The Stage** ( `/` ), **Messages**, **Notifications**, or **Music Library**.
+4. Tap **Back** in the sheet header, tap outside the sheet (not the tab bar), or tap **Hub** again to dismiss.
+5. Signed out: locked tiles go to **Sign In** with a return path; the **Sign In** tab is gold on `/signin` until Hub opens (then Hub is highlighted).
 
 ### What you should see when it worked
 - Tile opens its route; unread counts on **Messages** / **Notifications** when signed in.
@@ -932,7 +932,7 @@ Master reference for members and artists. Labels match the app on **main** today
 
 ---
 
-## 27. Your Library (Tier 2 nice to have)
+## 27. Music Library (Tier 2 nice to have)
 
 **Who:** Member  
 **Goal:** Play saved songs and playlists.

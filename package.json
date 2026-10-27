@@ -110,7 +110,6 @@
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.110.8",
     "@vercel/analytics": "1.6.1",
-    "autoprefixer": "^10.4.20",
     "firebase-admin": "^13.10.0",
     "geist": "^1.7.2",
     "mediabunny": "^1.55.3",
