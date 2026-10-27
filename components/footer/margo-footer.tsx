@@ -6,6 +6,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
@@ -199,14 +200,15 @@ export function MargoFooter() {
 
   const wasSheetOpen = useRef(false)
   useEffect(() => {
-    if (sheetOpen) {
-      requestAnimationFrame(() => {
-        sheetRef.current?.querySelector<HTMLElement>('a, button')?.focus()
-      })
-    } else if (wasSheetOpen.current && moreButtonRef.current) {
-      requestAnimationFrame(() => {
-        moreButtonRef.current?.focus()
-      })
+    if (!sheetOpen) return
+    requestAnimationFrame(() => {
+      sheetRef.current?.querySelector<HTMLElement>('a, button')?.focus()
+    })
+  }, [sheetOpen])
+
+  useLayoutEffect(() => {
+    if (!sheetOpen && wasSheetOpen.current) {
+      moreButtonRef.current?.focus()
     }
     wasSheetOpen.current = sheetOpen
   }, [sheetOpen])
@@ -214,9 +216,7 @@ export function MargoFooter() {
   const onBackdropPointerDown = () => closeSheet()
 
   const onSheetPointerDown = (e: ReactPointerEvent) => {
-    const onHandle = (e.target as HTMLElement).closest('.margo-footer__sheet-handle')
-    const onSheetTop = (e.target as HTMLElement).closest('.margo-footer__sheet')
-    if (!onHandle && !onSheetTop) return
+    if (!(e.target as HTMLElement).closest('.margo-footer__sheet-handle')) return
     dragStartY.current = e.clientY
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
   }
@@ -269,6 +269,7 @@ export function MargoFooter() {
             aria-expanded={sheetOpen}
             aria-controls={sheetId}
             onClick={toggleSheet}
+            data-margo-footer-more
           >
             More
             <ChevronIcon direction="up" />
@@ -285,38 +286,40 @@ export function MargoFooter() {
         />
       ) : null}
 
-      <div
-        id={sheetId}
-        ref={sheetRef}
-        className={`margo-footer__sheet ${sheetAnimClass}${sheetOpen ? ' margo-footer__sheet--visible' : ''}`}
-        role="dialog"
-        aria-label="More from Margo"
-        aria-hidden={!sheetOpen}
-        onPointerDown={onSheetPointerDown}
-        onPointerMove={onSheetPointerMove}
-        onPointerUp={onSheetPointerUp}
-        onPointerCancel={onSheetPointerUp}
-      >
-        <div className="margo-footer__sheet-handle" aria-hidden />
-        <div className="margo-footer__sheet-content">
-          <FooterLinkSections layout="sheet" />
-          <div className="margo-footer__sheet-divider" aria-hidden />
-          <div className="margo-footer__mobile-row1 margo-footer__mobile-row1--in-sheet">
-            <SocialButtonRow />
-            <button
-              type="button"
-              className="margo-footer__more-chip"
-              aria-expanded
-              aria-controls={sheetId}
-              onClick={() => closeSheet()}
-            >
-              Close
-              <ChevronIcon direction="down" />
-            </button>
+      {sheetOpen ? (
+        <div
+          id={sheetId}
+          ref={sheetRef}
+          className={`margo-footer__sheet ${sheetAnimClass} margo-footer__sheet--visible`}
+          role="dialog"
+          aria-label="More from Margo"
+          onPointerDown={onSheetPointerDown}
+          onPointerMove={onSheetPointerMove}
+          onPointerUp={onSheetPointerUp}
+          onPointerCancel={onSheetPointerUp}
+        >
+          <div className="margo-footer__sheet-handle" aria-hidden />
+          <div className="margo-footer__sheet-content">
+            <FooterLinkSections layout="sheet" />
+            <div className="margo-footer__sheet-divider" aria-hidden />
+            <div className="margo-footer__mobile-row1 margo-footer__mobile-row1--in-sheet">
+              <SocialButtonRow />
+              <button
+                type="button"
+                className="margo-footer__more-chip"
+                data-margo-footer-sheet-close
+                aria-expanded
+                aria-controls={sheetId}
+                onClick={() => closeSheet()}
+              >
+                Close
+                <ChevronIcon direction="down" />
+              </button>
+            </div>
+            <CopyrightLine />
           </div>
-          <CopyrightLine />
         </div>
-      </div>
+      ) : null}
     </footer>
   )
 }

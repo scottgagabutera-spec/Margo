@@ -130,7 +130,8 @@ test.describe('landing footer phone @390', () => {
   }) => {
     await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 60000 })
     await page.waitForTimeout(600)
-    const more = page.getByRole('button', { name: /^More$/i })
+    const more = page.locator('.margo-footer__mobile-closed').getByRole('button', { name: /^More$/i })
+    const closeInSheet = page.locator('.margo-footer__sheet').getByRole('button', { name: /^Close$/i })
     await more.click()
     await expect(page.getByRole('dialog', { name: 'More from Margo' })).toBeVisible()
 
@@ -146,7 +147,7 @@ test.describe('landing footer phone @390', () => {
     await expect(page.getByRole('dialog')).toBeHidden()
 
     await more.click()
-    await page.getByRole('dialog').getByRole('button', { name: /^Close$/i }).click()
+    await closeInSheet.click()
     await expect(page.getByRole('dialog')).toBeHidden()
 
     await more.click()
@@ -181,10 +182,13 @@ test.describe('landing footer phone @390', () => {
 
   test('focus returns to More chip after Close', async ({ page }) => {
     await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 60000 })
-    const more = page.getByRole('button', { name: /^More$/i })
+    const more = page.locator('.margo-footer__mobile-closed').getByRole('button', { name: /^More$/i })
     await more.click()
-    await page.getByRole('dialog').getByRole('button', { name: /^Close$/i }).click()
-    await expect(more).toBeFocused()
+    await page.locator('.margo-footer__sheet').getByRole('button', { name: /^Close$/i }).click()
+    await expect(page.getByRole('dialog', { name: 'More from Margo' })).toBeHidden()
+    await expect
+      .poll(async () => more.evaluate((el) => el === document.activeElement))
+      .toBe(true)
   })
 })
 
