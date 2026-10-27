@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useAudioEngine } from '@/hooks/useAudioEngine'
 import { CompassIcon, FeedIcon, PenLineIcon } from '@/components/icons'
-import { HubTabButton } from '@/components/hub-menu'
+import { HubTabButton, useHub } from '@/components/hub-menu'
 import { LoadingRing } from '@/components/loading-ring'
 import { usePrimaryTab, usePrimaryTabLinkProps } from '@/components/primary-tab-shell'
 import { hidesTabBar } from '@/lib/chrome-mode'
@@ -26,6 +26,7 @@ export function MobileTabBar() {
   const pathname = usePathname()
   const { user, identity } = useIdentity()
   const { activeTab, isTabPending, isTabAcked } = usePrimaryTab()
+  const { open: hubOpen } = useHub()
   const feedLink = usePrimaryTabLinkProps('/feed', 'feed')
   const discoverLink = usePrimaryTabLinkProps('/discover', 'discover')
   const composeLink = usePrimaryTabLinkProps('/compose', 'compose')
@@ -95,6 +96,7 @@ export function MobileTabBar() {
   const youLink = usePrimaryTabLinkProps(youHref, 'you')
   const isOnProfile = activeTab === 'you' || (!!identity && isSignedIn && pathname === `/profile/${identity.username}`)
   const isOnSignInRoute = !isSignedIn && pathname?.split('?')[0] === '/signin'
+  const signInTabActive = isOnSignInRoute && !hubOpen
   const youAwaitingIdentity = isSignedIn && !identity && activeTab !== 'you'
 
   const isMusicActive = engineState.mode !== 'idle'
@@ -185,7 +187,7 @@ export function MobileTabBar() {
         )}
       </Link>
 
-      <HubTabButton style={tabStyle(false, false)} labelStyle={labelStyle} />
+      <HubTabButton style={tabStyle(hubOpen, hubOpen)} labelStyle={labelStyle} />
 
       {isSignedIn ? (
         <Link
@@ -207,8 +209,8 @@ export function MobileTabBar() {
         </Link>
       ) : (
         <SignInLink
-          style={tabStyle(isOnSignInRoute, tabLive('you') || youAwaitingIdentity)}
-          aria-current={isOnSignInRoute ? 'page' : undefined}
+          style={tabStyle(signInTabActive, tabLive('you') || youAwaitingIdentity)}
+          aria-current={signInTabActive ? 'page' : undefined}
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
             <circle cx="10" cy="7" r="3" stroke="currentColor" strokeWidth="1.5"/>

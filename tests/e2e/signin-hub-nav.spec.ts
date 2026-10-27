@@ -45,7 +45,9 @@ test.describe('signin hub tab navigation @390', () => {
     await expect(page).toHaveURL(/\/signin/)
     await page.goBack()
     await expect(page).toHaveURL(/\/feed/)
-    await expect(page.getByRole('dialog', { name: 'Hub' })).toBeVisible({ timeout: 10000 })
+    await expect
+      .poll(async () => page.getByRole('dialog', { name: 'Hub' }).isVisible())
+      .toBe(true)
   })
 
   test('Hub locked tile still opens sign-in with returnTo', async ({ page }) => {

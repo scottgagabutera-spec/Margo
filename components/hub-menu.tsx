@@ -207,7 +207,7 @@ type HubContextValue = {
 
 const HubContext = createContext<HubContextValue | null>(null)
 
-function useHub(): HubContextValue {
+export function useHub(): HubContextValue {
   const ctx = useContext(HubContext)
   if (!ctx) throw new Error('Hub components must be used within HubProvider')
   return ctx
