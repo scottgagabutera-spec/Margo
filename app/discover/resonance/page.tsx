@@ -1,14 +1,17 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { CatalogGrid } from '@/components/catalog-grid'
 import { DiscoverVibeFilterRow } from '@/components/discover-vibe-filter-row'
+import { DiscoverViewMoreShell } from '@/components/discover-view-more-shell'
+import { DiscoverBatchedGrid } from '@/components/discover-batched-grid'
 import { ResonanceCard } from '@/components/resonance-card'
 import { usePosts, type Post } from '@/hooks/usePosts'
 import { useSongs } from '@/hooks/useSongs'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { subscribeAudioEngine } from '@/lib/audio-engine'
 import { playResonancePost, queueResonancePost } from '@/lib/resonance-snippet'
+import { DISCOVER_VM_BATCH } from '@/lib/discover-view-more-layout'
+import { filterPostsByVibe } from '@/lib/discover-view-more-logic'
 
 export default function ResonanceCatalogPage() {
   const { posts, loading: postsLoading } = usePosts()
@@ -20,11 +23,10 @@ export default function ResonanceCatalogPage() {
 
   const songsById = useMemo(() => new Map(songs.map(s => [s.id, s])), [songs])
 
-  const resonances = useMemo(() => {
-    const base = posts.filter(p => p.songId && p.text)
-    if (vibe === 'ALL') return base
-    return base.filter(p => (p.emotion || '').toUpperCase() === vibe)
-  }, [posts, vibe])
+  const resonances = useMemo(
+    () => filterPostsByVibe(posts, vibe),
+    [posts, vibe],
+  )
 
   useEffect(() => {
     return subscribeAudioEngine(state => {
@@ -52,26 +54,37 @@ export default function ResonanceCatalogPage() {
     queueResonancePost(post, songsById.get(post.songId), mode)
   }
 
+  const resetKey = `${vibe}:${resonances.length}`
+  const loading = postsLoading || songsLoading
+
   return (
-    <CatalogGrid
-      items={resonances}
-      loading={postsLoading || songsLoading}
-      getKey={p => p.id}
-      extraFilters={<DiscoverVibeFilterRow selected={vibe} onSelect={setVibe} />}
-      emptyMessage={vibe === 'ALL' ? 'No song posts yet.' : `No Resonance posts tagged ${vibe} yet.`}
-      minCardWidth={240}
-      renderCard={post => (
-        <ResonanceCard
-          post={post}
-          variant="grid"
-          isPlaying={playingId === post.id}
-          isBuffering={bufferingId === post.id}
-          onPlay={(e) => playPost(post, e)}
-          onSelectVibe={setVibe}
-          onPlayNext={() => queuePost(post, 'next')}
-          onAddQueue={() => queuePost(post, 'add')}
-        />
-      )}
-    />
+    <DiscoverViewMoreShell
+      title="Resonance"
+      gridKind="resonance"
+      vibeFilters={<DiscoverVibeFilterRow selected={vibe} onSelect={setVibe} />}
+    >
+      <DiscoverBatchedGrid
+        kind="resonance"
+        items={resonances}
+        batchSize={DISCOVER_VM_BATCH.resonance}
+        resetKey={resetKey}
+        loading={loading}
+        skeletonCount={DISCOVER_VM_BATCH.resonance}
+        getKey={p => p.id}
+        emptyMessage="Nothing here yet."
+        renderItem={post => (
+          <ResonanceCard
+            post={post}
+            variant="grid"
+            isPlaying={playingId === post.id}
+            isBuffering={bufferingId === post.id}
+            onPlay={(e) => playPost(post, e)}
+            onSelectVibe={setVibe}
+            onPlayNext={() => queuePost(post, 'next')}
+            onAddQueue={() => queuePost(post, 'add')}
+          />
+        )}
+      />
+    </DiscoverViewMoreShell>
   )
 }

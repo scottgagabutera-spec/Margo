@@ -8,6 +8,7 @@ import { buildSnippetQueueOverflowItems } from '@/components/song-card-actions'
 import { useWarmAudioUrlOnVisible } from '@/hooks/useWarmAudioUrl'
 import type { LyricMoment } from '@/lib/lyric-moments-board'
 import { AtmosphereLayer } from '@/components/atmosphere-layer'
+import { UI_FONT } from '@/lib/fonts'
 
 export function LyricMomentCard({
   moment,
@@ -23,7 +24,7 @@ export function LyricMomentCard({
   moment: LyricMoment
   isPlaying: boolean
   isBuffering?: boolean
-  variant?: 'row' | 'grid'
+  variant?: 'row' | 'grid' | 'discover'
   onClick: () => void
   onPlay: (e: React.MouseEvent) => void
   onSelectVibe: (vibe: string) => void
@@ -33,18 +34,24 @@ export function LyricMomentCard({
   const cardRef = useRef<HTMLDivElement>(null)
   useWarmAudioUrlOnVisible(moment.audioUrl, cardRef, true, moment.start)
   const primaryVibe = moment.vibes[0]
+  const isCatalogGrid = variant === 'grid'
+  const isDiscover = variant === 'discover'
+  const isCompactCard = isCatalogGrid || isDiscover
+  const playSize = isCompactCard ? 28 : undefined
   return (
     <div
       ref={cardRef}
       onClick={onClick}
-      className="moment-card"
+      className={isDiscover ? 'moment-card discover-home-moment-card' : 'moment-card'}
       style={{
-        flexShrink: variant === 'row' ? 0 : undefined,
-        width: variant === 'row' ? '240px' : '100%',
-        scrollSnapAlign: variant === 'row' ? 'start' : undefined,
-        padding: '16px',
-        background: isPlaying ? 'rgba(232,197,71,0.06)' : 'rgba(255,255,255,0.025)',
-        border: `1px solid ${isPlaying ? 'rgba(232,197,71,0.28)' : 'rgba(255,255,255,0.08)'}`,
+        flexShrink: variant === 'row' || isDiscover ? 0 : undefined,
+        width: variant === 'row' ? '240px' : isDiscover ? undefined : '100%',
+        scrollSnapAlign: variant === 'row' || isDiscover ? 'start' : undefined,
+        padding: isDiscover ? '12px' : '16px',
+        background: isDiscover
+          ? 'var(--surface)'
+          : (isPlaying ? 'rgba(232,197,71,0.06)' : 'rgba(255,255,255,0.025)'),
+        border: `1px solid ${isPlaying && isCompactCard ? 'var(--gold)' : isPlaying ? 'rgba(232,197,71,0.28)' : 'rgba(255,255,255,0.08)'}`,
         borderRadius: '14px',
         display: 'flex',
         flexDirection: 'column',
@@ -53,6 +60,7 @@ export function LyricMomentCard({
         transition: 'border-color 200ms ease, background 200ms ease',
         boxSizing: 'border-box',
         height: '100%',
+        minHeight: isCompactCard ? '168px' : undefined,
         position: 'relative',
         isolation: 'isolate',
       }}
@@ -61,10 +69,15 @@ export function LyricMomentCard({
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
         <div style={{ minWidth: 0, flex: 1 }}>
           {primaryVibe && (
-            <VibeTagPill vibe={primaryVibe} onClick={(e) => { e.stopPropagation(); onSelectVibe(primaryVibe) }} />
+            <VibeTagPill
+              vibe={primaryVibe}
+              size={isDiscover ? 'discover' : 'default'}
+              onClick={(e) => { e.stopPropagation(); onSelectVibe(primaryVibe) }}
+            />
           )}
         </div>
         <CardOverflowMenu
+          compact={isDiscover}
           items={buildSnippetQueueOverflowItems({
             canQueue: !!moment.audioUrl,
             onPlayNext,
@@ -73,23 +86,43 @@ export function LyricMomentCard({
         />
       </div>
       <p style={{
-        fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.88rem',
-        color: 'var(--text)', lineHeight: 1.5, margin: 0, whiteSpace: 'pre-line',
-        display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-        minHeight: '4.2em',
+        fontFamily: 'var(--font-lora), serif', fontStyle: 'italic',
+        fontSize: isCompactCard ? '14px' : '0.88rem',
+        color: 'var(--text)', lineHeight: isDiscover ? 1.35 : 1.5, margin: 0, whiteSpace: 'pre-line',
+        display: '-webkit-box',
+        WebkitLineClamp: isCompactCard ? 3 : 4,
+        WebkitBoxOrient: 'vertical', overflow: 'hidden',
+        minHeight: isCompactCard ? 'calc(14px * 1.35 * 3)' : '4.2em',
       }}>&ldquo;{moment.line}&rdquo;</p>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
         <div style={{ minWidth: 0 }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{moment.songTitle}</p>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--text-muted)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{moment.artist}</p>
+          <p style={{
+            fontFamily: isCompactCard ? UI_FONT : 'var(--font-lora), serif',
+            fontSize: isCompactCard ? '10px' : '0.6rem',
+            fontWeight: isDiscover ? 500 : 700,
+            color: isPlaying && isCompactCard ? 'var(--gold)' : 'var(--text-muted)',
+            textTransform: 'uppercase',
+            letterSpacing: isDiscover ? '0.08em' : '0.6px',
+            margin: 0,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}>
+            {moment.songTitle}{isPlaying && isCompactCard ? ' · PLAYING' : ''}
+          </p>
+          {!isCompactCard ? (
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--text-muted)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{moment.artist}</p>
+          ) : null}
         </div>
         <button type="button" onClick={onPlay} style={{
-          width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', flexShrink: 0,
+          width: playSize ?? 'var(--margo-touch-min)',
+          height: playSize ?? 'var(--margo-touch-min)',
+          borderRadius: '50%', flexShrink: 0,
           background: isPlaying ? 'rgba(232,197,71,0.2)' : 'rgba(232,197,71,0.1)',
           border: '1px solid rgba(232,197,71,0.25)', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxSizing: 'border-box',
         }}>
-          <PlayPauseIcon playing={isPlaying} buffering={!!isBuffering} size={15} color="var(--gold)" />
+          <PlayPauseIcon playing={isPlaying} buffering={!!isBuffering} size={isCompactCard ? 12 : 15} color="var(--gold)" />
         </button>
       </div>
     </div>

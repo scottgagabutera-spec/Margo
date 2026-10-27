@@ -1,14 +1,17 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { CatalogGrid } from '@/components/catalog-grid'
 import { DiscoverVibeFilterRow } from '@/components/discover-vibe-filter-row'
+import { DiscoverViewMoreShell } from '@/components/discover-view-more-shell'
+import { DiscoverBatchedGrid } from '@/components/discover-batched-grid'
 import { LyricMomentCard } from '@/components/lyric-moment-card'
 import { useLyricMoments } from '@/hooks/useLyricMoments'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { subscribeAudioEngine } from '@/lib/audio-engine'
 import { buildLyricMomentsFromRows, momentPlayingKey, type LyricMoment } from '@/lib/lyric-moments-board'
 import { playLyricMomentPool, queueLyricMoment } from '@/lib/lyric-moment-playback'
+import { DISCOVER_VM_BATCH } from '@/lib/discover-view-more-layout'
+import { filterMomentsByVibe } from '@/lib/discover-view-more-logic'
 
 export default function LyricMomentsCatalogPage() {
   const { moments: momentRows, songAtomsBySongId, curatedBySongId, loading } = useLyricMoments()
@@ -24,7 +27,7 @@ export default function LyricMomentsCatalogPage() {
   )
 
   const filtered = useMemo(
-    () => vibe === 'ALL' ? allMoments : allMoments.filter(m => m.vibes.includes(vibe)),
+    () => filterMomentsByVibe(allMoments, vibe),
     [allMoments, vibe],
   )
 
@@ -53,30 +56,40 @@ export default function LyricMomentsCatalogPage() {
     queueLyricMoment(moment, mode)
   }, [requireAuth])
 
+  const resetKey = `${vibe}:${filtered.length}`
+
   return (
-    <CatalogGrid
-      items={filtered}
-      loading={loading}
-      getKey={m => `${m.songId}_${m.lineId}_${m.start}_${m.end}`}
-      extraFilters={<DiscoverVibeFilterRow selected={vibe} onSelect={setVibe} />}
-      emptyMessage={vibe === 'ALL' ? 'No lyric moments yet.' : `No lines tagged for ${vibe} yet.`}
-      minCardWidth={240}
-      renderCard={moment => {
-        const key = momentPlayingKey(moment)
-        return (
-          <LyricMomentCard
-            moment={moment}
-            variant="grid"
-            isPlaying={playingKey === key}
-            isBuffering={bufferingKey === key}
-            onClick={() => playMoment(moment)}
-            onPlay={(e) => { e.stopPropagation(); playMoment(moment) }}
-            onSelectVibe={setVibe}
-            onPlayNext={() => queueMoment(moment, 'next')}
-            onAddQueue={() => queueMoment(moment, 'add')}
-          />
-        )
-      }}
-    />
+    <DiscoverViewMoreShell
+      title="Moments"
+      gridKind="moments"
+      vibeFilters={<DiscoverVibeFilterRow selected={vibe} onSelect={setVibe} />}
+    >
+      <DiscoverBatchedGrid
+        kind="moments"
+        items={filtered}
+        batchSize={DISCOVER_VM_BATCH.moments}
+        resetKey={resetKey}
+        loading={loading}
+        skeletonCount={DISCOVER_VM_BATCH.moments}
+        getKey={m => `${m.songId}_${m.lineId}_${m.start}_${m.end}`}
+        emptyMessage="Nothing here yet."
+        renderItem={moment => {
+          const key = momentPlayingKey(moment)
+          return (
+            <LyricMomentCard
+              moment={moment}
+              variant="grid"
+              isPlaying={playingKey === key}
+              isBuffering={bufferingKey === key}
+              onClick={() => playMoment(moment)}
+              onPlay={(e) => { e.stopPropagation(); playMoment(moment) }}
+              onSelectVibe={setVibe}
+              onPlayNext={() => queueMoment(moment, 'next')}
+              onAddQueue={() => queueMoment(moment, 'add')}
+            />
+          )
+        }}
+      />
+    </DiscoverViewMoreShell>
   )
 }

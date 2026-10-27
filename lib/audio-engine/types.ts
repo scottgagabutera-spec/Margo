@@ -285,6 +285,22 @@ export function getSnippetStopDurationMs(startSec: number, endSec: number): numb
   return Math.min(spanSec * 1000, SNIPPET_MAX_DURATION_SEC * 1000)
 }
 
+/** Remaining ms until snippet end from `currentTimeSec` (for resume after pause). */
+export function getSnippetRemainingStopMs(
+  startSec: number,
+  endSec: number,
+  currentTimeSec: number,
+): number {
+  const stopAtSec = endSec + SNIPPET_END_PAD_SEC
+  const remainSec = Math.max(0, stopAtSec - currentTimeSec)
+  return Math.min(remainSec * 1000, SNIPPET_MAX_DURATION_SEC * 1000)
+}
+
+/** Queue auto-advance from snippet end timers only while actively playing (not paused). */
+export function maySnippetEndAdvanceQueue(playing: boolean): boolean {
+  return playing
+}
+
 /** Progress across all segments in a post-moment session (0–100). */
 export function computePostMomentPlaybackProgress(
   postMoment: PostMomentPlayback,
