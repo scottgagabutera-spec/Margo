@@ -291,7 +291,7 @@ This is distinct from the marketing header above — it's the persistent bottom 
 | `marketing` | `/` | hidden (landing has its own nav) | **shown** — deliberate Margo choice |
 | `immersive` | `/song/[id]` | hidden | hidden |
 
-Landing footer (desktop): **Explore** | **Talk in Lyrics** | **For Artists** | **Support** | **Connect** (Social + Listen icon groups). Mobile: 2×2 product grid, then Social | Listen as real columns. Legal (Privacy · Terms · DMCA) lives in the © bar under a hairline — not its own column. Inter-link column gap **10px** (44px touch via `::before`). Pads with `--margo-page-padding-bottom` (+ breathing room above the tab bar). Geist for footer chrome.
+Landing footer (`MargoFooter` on `/`): two compact rows — **MARGO** (product links) and **LEGAL** (Privacy · Terms · DMCA) — plus six social icons (Instagram, Facebook, TikTok, X, YouTube, Spotify) in the closed mobile bar. Phones: **More** opens a bottom sheet with the full link grid; desktop shows the same content inline. Footer UI uses `--margo-footer-ui-font` (Geist). Pads with `--margo-page-padding-bottom` above the tab bar. Idle Stage hero stays centered at **41%**; search-active layout is separate (keyboard-aware) and does not change idle spec.
 
 ---
 
