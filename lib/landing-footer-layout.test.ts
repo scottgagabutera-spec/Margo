@@ -46,3 +46,8 @@ test('layout schema uses shared social config', () => {
   const src = fs.readFileSync('app/layout.tsx', 'utf8')
   assert.match(src, /margoSchemaSameAs\(\)/)
 })
+
+test('footer sheet closes on document scroll while open', () => {
+  const src = fs.readFileSync('components/footer/margo-footer.tsx', 'utf8')
+  assert.match(src, /document\.addEventListener\('scroll'/)
+})

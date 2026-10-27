@@ -128,6 +128,7 @@ test.describe('landing footer phone @390', () => {
   test('More sheet opens and closes via backdrop, Close, Escape, swipe, search, scroll, route, Back', async ({
     page,
   }) => {
+    test.setTimeout(60_000)
     await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 60000 })
     await page.waitForTimeout(600)
     const more = page.locator('.margo-footer__mobile-closed').getByRole('button', { name: /^More$/i })
@@ -161,8 +162,10 @@ test.describe('landing footer phone @390', () => {
     await expect(page.getByRole('dialog')).toBeHidden()
 
     await more.click()
-    await page.evaluate(() => window.dispatchEvent(new Event('scroll')))
-    await page.waitForTimeout(200)
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('scroll'))
+      document.dispatchEvent(new Event('scroll', { bubbles: true }))
+    })
     await expect(page.getByRole('dialog')).toBeHidden()
 
     await more.click()

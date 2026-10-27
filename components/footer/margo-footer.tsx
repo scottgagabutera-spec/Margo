@@ -181,9 +181,15 @@ export function MargoFooter() {
 
   useEffect(() => {
     if (!sheetOpen) return
-    const onScroll = () => closeSheet()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+    const onDismissScroll = () => closeSheet()
+    window.addEventListener('scroll', onDismissScroll, { passive: true })
+    document.addEventListener('scroll', onDismissScroll, { passive: true, capture: true })
+    window.addEventListener('wheel', onDismissScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onDismissScroll)
+      document.removeEventListener('scroll', onDismissScroll, true)
+      window.removeEventListener('wheel', onDismissScroll)
+    }
   }, [sheetOpen, closeSheet])
 
   useEffect(() => {
