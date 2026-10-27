@@ -274,7 +274,6 @@ function SearchPageInner() {
         onChange={setQuery}
         hintText={scope.placeholder}
         ariaLabel={scope.placeholder}
-        autoFocus
       />
 
       {loading && debounced.length >= 2 && (
@@ -302,8 +301,8 @@ function SearchPageInner() {
       )}
 
       {!loading && debounced.length >= 2 && !error && !hasResults && (
-        <p style={{ fontFamily: lyricFont, fontStyle: 'italic', color: 'var(--text-muted)', marginTop: '20px', fontSize: TYPE.secondary }}>
-          Nothing found for &ldquo;{debounced}&rdquo;
+        <p style={{ fontFamily: font, color: 'var(--text-muted)', marginTop: '20px', fontSize: TYPE.secondary }}>
+          Nothing here yet
         </p>
       )}
 

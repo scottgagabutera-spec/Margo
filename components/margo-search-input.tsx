@@ -35,8 +35,7 @@ interface MargoSearchInputProps {
 const SEARCH_ABOVE_OVERLAY_Z = 56
 
 /**
- * Shared pill search field — Feed / Discover / Compose / Stage / Lyric Back.
- * UI_FONT, CSS variables only (MARGO_BRAND §14–15).
+ * Shared pill search field — Stage landing reference styling via globals.css.
  */
 export function MargoSearchInput({
   value,
@@ -109,34 +108,27 @@ export function MargoSearchInput({
 
   const inputClass = compact ? 'margo-search margo-search--lb-panel' : className
   const wrapClass = [
-    compact ? 'margo-search-wrap margo-search-wrap--lb' : '',
+    'margo-search-wrap',
+    compact ? 'margo-search-wrap--lb' : 'margo-search-wrap--standard',
     hintText ? 'margo-search-wrap--catalog-hints' : '',
     showCatalogOverlay ? 'margo-search-wrap--hint-visible' : '',
     focused && hintText ? 'margo-search-wrap--hint-focus' : '',
+    value.length > 0 ? 'margo-search-wrap--has-value' : '',
   ].filter(Boolean).join(' ')
 
   return (
     <div
-      className={wrapClass || undefined}
-      style={{ position: 'relative', width: '100%', zIndex: stackAboveOverlay ? SEARCH_ABOVE_OVERLAY_Z : undefined }}
+      className={wrapClass}
+      style={{ zIndex: stackAboveOverlay ? SEARCH_ABOVE_OVERLAY_Z : undefined }}
     >
       {showLeftIcon ? (
         <span
           aria-hidden
-          className={compact ? 'margo-search-wrap__icon' : undefined}
-          style={compact ? undefined : {
-            position: 'absolute',
-            left: '14px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            pointerEvents: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: loading ? '32px' : '20px',
-            height: '20px',
-            gap: loading ? '3px' : 0,
-          }}
+          className={[
+            'margo-search-wrap__icon',
+            loading ? 'margo-search-wrap__icon--loading' : '',
+          ].filter(Boolean).join(' ')}
+          style={compact || loading ? undefined : undefined}
         >
           {loading ? (
             [0, 1, 2].map((i) => (
@@ -191,31 +183,10 @@ export function MargoSearchInput({
         aria-busy={loading}
         data-margo-search-input
         style={compact ? {
-          width: '100%',
-          color: 'var(--text)',
           fontFamily: UI_FONT,
           fontWeight: focused || value.length > 0 ? 500 : 400,
-          letterSpacing: '-0.01em',
-          lineHeight: 1.3,
-          outline: 'none',
-          boxSizing: 'border-box',
           opacity: disabled ? 0.6 : 1,
         } : {
-          width: '100%',
-          height: 'var(--margo-touch-min)',
-          padding: showLeftIcon ? '0 44px 0 40px' : '0 44px 0 16px',
-          background: 'var(--surface-2)',
-          border: `1px solid ${focused ? 'var(--gold-border)' : 'var(--border-hi)'}`,
-          borderRadius: '50px',
-          color: 'var(--text)',
-          fontFamily: UI_FONT,
-          fontSize: '0.82rem',
-          fontWeight: focused || value.length > 0 ? 500 : 400,
-          letterSpacing: '-0.01em',
-          lineHeight: 1.3,
-          outline: 'none',
-          boxSizing: 'border-box',
-          transition: 'border-color 150ms ease',
           opacity: disabled ? 0.6 : 1,
         }}
       />
@@ -224,23 +195,7 @@ export function MargoSearchInput({
           type="button"
           aria-label="Clear search"
           onClick={() => onChange('')}
-          className={compact ? 'margo-search-wrap__clear' : undefined}
-          style={compact ? undefined : {
-            position: 'absolute',
-            right: '4px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: 'var(--margo-touch-min)',
-            height: 'var(--margo-touch-min)',
-            borderRadius: '50%',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 0,
-          }}
+          className="margo-search-wrap__clear"
         >
           <CloseIcon size={14} color="var(--text-secondary)" />
         </button>

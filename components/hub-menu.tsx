@@ -271,7 +271,6 @@ function HubTiles({
           <SignInLink
             id="margo-hub-sign-in"
             returnTo={signInReturnTo}
-            onClick={close}
             data-margo-hub-root
             className="margo-hub-sign-in-btn"
           >
@@ -480,10 +479,15 @@ export function HubProvider({ children }: { children: ReactNode }) {
   const onLockedActivate = useCallback((returnTo: string) => {
     persistActivePrimaryScroll()
     persistAuthReturnScroll()
-    leavePrimaryTabSurface()
-    setOpen(false)
     router.push(buildSigninHref(returnTo))
   }, [router])
+
+  useEffect(() => {
+    const path = (pathname || '').split('?')[0]
+    if (path === '/signin' && open) {
+      close()
+    }
+  }, [pathname, open, close])
 
   useEffect(() => {
     pendingHrefRef.current = null

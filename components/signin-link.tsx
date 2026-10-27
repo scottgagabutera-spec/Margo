@@ -27,7 +27,10 @@ export function SignInLink({ returnTo, mode, onClick, ...props }: SignInLinkProp
   const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
     persistActivePrimaryScroll()
     persistAuthReturnScroll()
-    leavePrimaryTabSurface()
+    const destPath = href.split('?')[0]
+    if (destPath !== '/signin') {
+      leavePrimaryTabSurface()
+    }
     onClick?.(e)
   }
 

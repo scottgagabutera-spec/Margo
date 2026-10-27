@@ -40,10 +40,12 @@ test('nav-back has no duplicate /library/ branch after exact /library', () => {
   assert.doesNotMatch(src, /if \(p === '\/library' \|\| p\.startsWith\('\/library\/'\)\)/)
 })
 
-test('MargoSearchInput shares 0.82rem pill typography (non-compact)', () => {
-  const src = fs.readFileSync('components/margo-search-input.tsx', 'utf8')
-  assert.match(src, /fontSize: '0\.82rem'/)
-  assert.match(src, /fontFamily: UI_FONT/)
-  assert.match(src, /MARGO_SEARCH_HINT_CHAR_MS/)
-  assert.match(src, /MARGO_SEARCH_HINT_PAUSE_MS/)
+test('MargoSearchInput uses Stage landing CSS tokens (globals.css reference)', () => {
+  const css = fs.readFileSync('app/globals.css', 'utf8')
+  assert.match(css, /\.margo-search-wrap--standard \.margo-search[\s\S]*font-size: 0\.82rem/)
+  assert.match(css, /\.margo-search-wrap--standard \.margo-search[\s\S]*background: var\(--surface-2\)/)
+  assert.match(css, /\.margo-search-wrap--catalog-hints \.margo-search-hint[\s\S]*color: var\(--text-muted\)/)
+  const input = fs.readFileSync('components/margo-search-input.tsx', 'utf8')
+  assert.match(input, /margo-search-wrap--standard/)
+  assert.match(input, /MARGO_SEARCH_HINT_CHAR_MS/)
 })
