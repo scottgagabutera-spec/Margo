@@ -45,6 +45,7 @@ import {
   searchHrefForPath,
   searchScopeForPath,
   consumeHubOverlayRestore,
+  markHubOverlayRestore,
   markHubNavFromTile,
   clearHubNavFromTile,
 } from '@/lib/search-scope'
@@ -150,6 +151,7 @@ function HubTileLink({
           if (navLocked || pending) return
           persistActivePrimaryScroll()
           persistAuthReturnScroll()
+          markHubOverlayRestore()
           onLockedActivate(tile.href)
         }}
         data-margo-hub-root
@@ -207,7 +209,7 @@ type HubContextValue = {
 
 const HubContext = createContext<HubContextValue | null>(null)
 
-function useHub(): HubContextValue {
+export function useHub(): HubContextValue {
   const ctx = useContext(HubContext)
   if (!ctx) throw new Error('Hub components must be used within HubProvider')
   return ctx
@@ -273,6 +275,7 @@ function HubTiles({
             returnTo={signInReturnTo}
             data-margo-hub-root
             className="margo-hub-sign-in-btn"
+            onClick={() => markHubOverlayRestore()}
           >
             Sign in
           </SignInLink>
@@ -450,6 +453,12 @@ export function HubProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false)
   const [pendingHref, setPendingHref] = useState<string | null>(null)
   const [signInReturnTo, setSignInReturnTo] = useState('/feed?hub=1')
+
+  useEffect(() => {
+    if (!open) return
+    const base = (pathname || '/feed').split('?')[0]
+    setSignInReturnTo(`${base}?hub=1`)
+  }, [open, pathname])
   const pendingHrefRef = useRef<string | null>(null)
   const hubNavAnchorRef = useRef<HTMLButtonElement | null>(null)
   const hubTabAnchorRef = useRef<HTMLButtonElement | null>(null)
@@ -482,12 +491,15 @@ export function HubProvider({ children }: { children: ReactNode }) {
     router.push(buildSigninHref(returnTo))
   }, [router])
 
+  const prevPathRef = useRef<string | null>(null)
   useEffect(() => {
     const path = (pathname || '').split('?')[0]
-    if (path === '/signin' && open) {
+    const prev = prevPathRef.current
+    prevPathRef.current = path
+    if (path === '/signin' && prev !== null && prev !== '/signin') {
       close()
     }
-  }, [pathname, open, close])
+  }, [pathname, close])
 
   useEffect(() => {
     pendingHrefRef.current = null
