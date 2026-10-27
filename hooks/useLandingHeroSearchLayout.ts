@@ -40,17 +40,25 @@ export function useLandingHeroSearchLayout(active: boolean) {
       const height = vv?.height ?? window.innerHeight
       const goal = searchFieldTopGoalPx({ offsetTop, viewportHeight: height })
       const shellRect = shell.getBoundingClientRect()
-      const anchorRect = anchor.getBoundingClientRect()
-      const searchRect = input.getBoundingClientRect()
-      const topPx = landingHeroAnchorTopPx({
-        shellTop: shellRect.top,
-        anchorTop: anchorRect.top,
-        searchTop: searchRect.top,
-        goalSearchTop: goal,
-      })
-      root.style.setProperty('--margo-landing-hero-active-top', `${Math.round(topPx)}px`)
+
+      for (let pass = 0; pass < 3; pass++) {
+        const anchorRect = anchor.getBoundingClientRect()
+        const searchRect = input.getBoundingClientRect()
+        const topPx = landingHeroAnchorTopPx({
+          shellTop: shellRect.top,
+          anchorTop: anchorRect.top,
+          searchTop: searchRect.top,
+          goalSearchTop: goal,
+        })
+        root.style.setProperty('--margo-landing-hero-active-top', `${topPx}px`)
+        void anchor.offsetHeight
+        const after = input.getBoundingClientRect()
+        if (Math.abs(after.top - goal) <= 1) break
+      }
+
+      const searchBottom = input.getBoundingClientRect().bottom
       const visibleBottom = offsetTop + height
-      const maxH = Math.max(0, Math.round(visibleBottom - searchRect.bottom - 8))
+      const maxH = Math.max(0, Math.round(visibleBottom - searchBottom - 8))
       root.style.setProperty('--margo-landing-search-dropdown-max-h', `${maxH}px`)
     }
 

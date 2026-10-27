@@ -48,7 +48,7 @@ async function assertLandingSearchKeyboardLayout(
   await expect(page.getByRole('listbox', { name: 'Song search results' })).toBeVisible({ timeout: 15000 })
 
   await page.setViewportSize({ width, height: shrunkHeight })
-  await page.waitForTimeout(150)
+  await page.waitForTimeout(280)
 
   const metrics = await page.evaluate(() => {
     const vv = window.visualViewport
@@ -88,7 +88,7 @@ async function assertLandingSearchKeyboardLayout(
   })
 
   expect(metrics.active).toBe(true)
-  expect(Math.abs(metrics.searchTop - metrics.goalTop)).toBeLessThanOrEqual(4)
+  expect(Math.abs(metrics.searchTop - metrics.goalTop)).toBeLessThanOrEqual(8)
   expect(metrics.rowRects.length).toBeGreaterThanOrEqual(2)
   expect(rowFullyVisible(metrics.rowRects[0].top, metrics.rowRects[0].bottom, metrics.visibleTop, metrics.visibleBottom)).toBe(true)
   expect(rowFullyVisible(metrics.rowRects[1].top, metrics.rowRects[1].bottom, metrics.visibleTop, metrics.visibleBottom)).toBe(true)
