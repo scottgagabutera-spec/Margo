@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { matchLiveCatalogSong, searchMargoSongs, songMatchKey } from '@/lib/search-margo-songs'
+import { runStageSongSearch } from '@/lib/stage-song-search-run'
 import { ComposeSearchDropdown, type ComposeSearchHit } from '@/components/compose-search-dropdown'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { MargoSearchInput } from '@/components/margo-search-input'
@@ -221,60 +222,54 @@ export function StageLanding() {
     }
   }, [fetchEmotion])
 
+  const searchAbortRef = useRef<AbortController | null>(null)
+
   const runSearch = useCallback(async (value: string) => {
+    if (searchAbortRef.current) searchAbortRef.current.abort()
+    const externalAbort = new AbortController()
+    searchAbortRef.current = externalAbort
     const gen = ++searchGenRef.current
     setShowResults(true)
-    setSearchLoading(true)
     try {
-      const [margoHits, geniusRes] = await Promise.all([
-        searchMargoSongs(supabase, value),
-        fetch('/api/genius?song=' + encodeURIComponent(value)).then(async (res) => {
-          if (res.status === 429 || !res.ok) return { results: [] as Array<Record<string, unknown>> }
+      await runStageSongSearch({
+        query: value,
+        generation: gen,
+        currentGeneration: () => searchGenRef.current,
+        fetchMargo: () => searchMargoSongs(supabase, value),
+        fetchExternal: async (signal) => {
+          const res = await fetch('/api/genius?song=' + encodeURIComponent(value), { signal })
+          if (res.status === 429 || !res.ok) return []
           try {
             const data = await res.json()
-            if (data?.error) return { results: [] as Array<Record<string, unknown>> }
-            return data
+            if (data?.error) return []
+            return (data.results || []).map((r: Record<string, unknown>) => {
+              const rawSource = String(r.source || '').toLowerCase()
+              const source: 'genius' | 'apple' = (rawSource === 'itunes' || rawSource === 'apple') ? 'apple' : 'genius'
+              const trackViewUrl = typeof r.trackViewUrl === 'string' ? r.trackViewUrl : null
+              const geniusUrl = typeof r.geniusUrl === 'string' ? r.geniusUrl : null
+              return {
+                id: String(r.id ?? r.song ?? ''),
+                title: String(r.song || ''),
+                artist: String(r.artist || ''),
+                artwork: String(r.artwork || ''),
+                source,
+                externalListenUrl: trackViewUrl || geniusUrl || null,
+              }
+            })
           } catch {
-            return { results: [] as Array<Record<string, unknown>> }
+            return []
           }
-        }).catch(() => ({ results: [] as Array<Record<string, unknown>> })),
-      ])
-
-      if (gen !== searchGenRef.current) return
-
-      const margoMapped: SearchResult[] = margoHits.map((song) => ({
-        id: song.id,
-        title: song.title,
-        artist: song.artist,
-        artwork: song.artwork || '',
-        source: 'margo' as const,
-        margoSongId: song.id,
-        audioUrl: song.audioUrl,
-      }))
-
-      const margoKeys = new Set(margoMapped.map((r) => songMatchKey(r.title, r.artist)))
-
-      const externalMapped: SearchResult[] = (geniusRes.results || []).map((r: Record<string, unknown>) => {
-        const rawSource = String(r.source || '').toLowerCase()
-        const source: Source = (rawSource === 'itunes' || rawSource === 'apple') ? 'apple' : 'genius'
-        const trackViewUrl = typeof r.trackViewUrl === 'string' ? r.trackViewUrl : null
-        const geniusUrl = typeof r.geniusUrl === 'string' ? r.geniusUrl : null
-        return {
-          id: String(r.id || r.song),
-          title: String(r.song || ''),
-          artist: String(r.artist || ''),
-          artwork: String(r.artwork || ''),
-          source,
-          externalListenUrl: trackViewUrl || geniusUrl || null,
-        }
-      }).filter((r: SearchResult) => !margoKeys.has(songMatchKey(r.title, r.artist)))
-
-      setSearchResults([...margoMapped, ...externalMapped].slice(0, 8))
+        },
+        songMatchKey,
+        onLoading: setSearchLoading,
+        onResults: (rows) => {
+          setSearchResults(rows as SearchResult[])
+        },
+      })
     } catch {
       if (gen !== searchGenRef.current) return
       setSearchResults([])
-    } finally {
-      if (gen === searchGenRef.current) setSearchLoading(false)
+      setSearchLoading(false)
     }
   }, [])
 

@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { consumeHourlyApiRateLimit } from '@/lib/api-rate-limit'
 import { getRequestClientIp, ipRateLimitBucket } from '@/lib/api-request-ip'
-import { parseAppleTrackCredit } from '@/lib/apple-track-credit'
+import {
+  fetchExternalSongHits,
+  trimExternalSongHit,
+} from '@/lib/genius-external-search'
+import { fetchWithTimeout } from '@/lib/fetch-with-timeout'
 
 const MAX_QUERY_LEN = 200
 const RATE_LIMIT_PER_HOUR = 120
 const MAX_CACHE_ENTRIES = 500
+const SEARCH_CACHE_HEADERS = {
+  'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
+}
 
 /** LRU-ish cache: Map preserves insertion order. */
 const searchCache = new Map<string, unknown>()
@@ -32,74 +39,6 @@ function cacheSet(key: string, value: unknown): void {
   }
 }
 
-function dedupe(results: SearchResult[]) {
-  const seen = new Set()
-  return results.filter(r => {
-    const key = normalize(r.song) + '|' + normalize(r.artist)
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
-  })
-}
-
-interface SearchResult {
-  song: string
-  artist: string
-  artwork: string | null
-  artworkFull: string | null
-  geniusUrl: string | null
-  trackViewUrl: string | null
-  id: number | null
-  source: string
-}
-
-async function searchGenius(query: string, apiKey: string): Promise<SearchResult[]> {
-  const q = encodeURIComponent(query.trim())
-  const r = await fetch(
-    `https://api.genius.com/search?q=${q}&per_page=5`,
-    { headers: { Authorization: `Bearer ${apiKey}` } }
-  )
-  if (!r.ok) return []
-  const data = await r.json()
-  const hits = data.response?.hits || []
-  return hits.slice(0, 2).map((h: any) => {
-    const s = h.result
-    return {
-      song: s.title,
-      artist: s.primary_artist?.name || 'Unknown Artist',
-      artwork: s.song_art_image_thumbnail_url || s.header_image_thumbnail_url || null,
-      artworkFull: s.song_art_image_url || s.header_image_url || null,
-      geniusUrl: s.url || null,
-      trackViewUrl: null,
-      id: s.id,
-      source: 'genius',
-    }
-  })
-}
-
-async function searchItunes(query: string): Promise<SearchResult[]> {
-  const q = encodeURIComponent(query.trim())
-  const r = await fetch(
-    `https://itunes.apple.com/search?term=${q}&entity=song&limit=8&version=2`
-  )
-  if (!r.ok) return []
-  const data = await r.json()
-  const tracks = (data.results || []).filter((t: any) => t.wrapperType === 'track')
-  return tracks.slice(0, 3).map((t: any) => {
-    const credit = parseAppleTrackCredit(t.trackName || '', t.artistName || 'Unknown Artist')
-    return {
-      song: credit.title,
-      artist: credit.artist,
-      artwork: t.artworkUrl100 || null,
-      artworkFull: t.artworkUrl100 ? t.artworkUrl100.replace('100x100bb', '600x600bb') : null,
-      geniusUrl: null,
-      trackViewUrl: t.trackViewUrl || null,
-      id: null,
-      source: 'apple',
-    }
-  })
-}
-
 export async function GET(request: NextRequest) {
   const bucket = ipRateLimitBucket(getRequestClientIp(request))
   const limited = await consumeHourlyApiRateLimit({
@@ -122,9 +61,9 @@ export async function GET(request: NextRequest) {
 
   if (id) {
     try {
-      const r = await fetch(
+      const r = await fetchWithTimeout(
         `https://api.genius.com/songs/${id}?text_format=plain`,
-        { headers: { Authorization: `Bearer ${process.env.GENIUS_API_KEY}` } }
+        { headers: { Authorization: `Bearer ${process.env.GENIUS_API_KEY}` }, timeoutMs: 1500 },
       )
       if (!r.ok) return NextResponse.json({ error: 'Song not found' }, { status: 404 })
       const data = await r.json()
@@ -135,9 +74,9 @@ export async function GET(request: NextRequest) {
         artist: s.primary_artist?.name || null,
         album: s.album?.name || null,
         releaseDate: s.release_date_for_display || null,
-        featuredArtists: s.featured_artists?.map((a: any) => a.name) || [],
-        producers: s.producer_artists?.map((a: any) => a.name) || [],
-        writers: s.writer_artists?.map((a: any) => a.name) || [],
+        featuredArtists: s.featured_artists?.map((a: { name: string }) => a.name) || [],
+        producers: s.producer_artists?.map((a: { name: string }) => a.name) || [],
+        writers: s.writer_artists?.map((a: { name: string }) => a.name) || [],
         artwork: s.song_art_image_thumbnail_url || null,
         artworkFull: s.song_art_image_url || null,
         geniusUrl: s.url || null,
@@ -153,27 +92,24 @@ export async function GET(request: NextRequest) {
   const cacheKey = normalize(query)
   const cached = cacheGet(cacheKey)
   if (cached) {
-    return NextResponse.json({ results: cached, source: 'cache' })
+    return NextResponse.json({ results: cached, source: 'cache' }, { headers: SEARCH_CACHE_HEADERS })
   }
 
   const geniusKey = process.env.GENIUS_API_KEY
 
   try {
-    const [geniusResult, itunesResult] = await Promise.allSettled([
-      geniusKey ? searchGenius(query, geniusKey) : Promise.resolve([] as SearchResult[]),
-      searchItunes(query),
-    ])
-    const geniusResults = geniusResult.status === 'fulfilled' ? geniusResult.value : []
-    const itunesResults = itunesResult.status === 'fulfilled' ? itunesResult.value : []
-    const merged = dedupe([...geniusResults, ...itunesResults])
-    const results = merged.slice(0, 5)
+    const merged = await fetchExternalSongHits(query, geniusKey)
+    const results = merged.map(trimExternalSongHit)
     if (!results.length) {
       return NextResponse.json({
         error: geniusKey ? 'No results found' : 'No results found (Genius not configured on this environment)',
       }, { status: 404 })
     }
     cacheSet(cacheKey, results)
-    return NextResponse.json({ results, geniusConfigured: !!geniusKey })
+    return NextResponse.json(
+      { results, geniusConfigured: !!geniusKey },
+      { headers: SEARCH_CACHE_HEADERS },
+    )
   } catch (err: unknown) {
     const detail = err instanceof Error ? err.message : 'Unknown error'
     return NextResponse.json({ error: 'Search failed', detail }, { status: 500 })
