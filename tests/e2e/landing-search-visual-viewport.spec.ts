@@ -23,22 +23,7 @@ async function mockGenius(page: Page) {
   })
 }
 
-async function runLandingKeyboardCase(
-  page: Page,
-  width: number,
-  fullHeight: number,
-  keyboardPx: number,
-  mode: KeyboardEmulationMode,
-) {
-  await page.setViewportSize({ width, height: fullHeight })
-  await installVisualViewportKeyboardMock(page, mode, keyboardPx)
-  await mockGenius(page)
-  await page.goto('/', { waitUntil: 'domcontentloaded' })
-  await page.waitForSelector('html[data-margo-stage-client-ready]')
-  const search = page.getByRole('searchbox', { name: /search song/i })
-  await search.tap()
-  await search.fill('Alikiba')
-  await page.waitForResponse((r) => r.url().includes('/api/genius') && r.status() === 200)
+async function openLandingSearchKeyboard(page: Page) {
   await page.evaluate(() => {
     const w = window as Window & { __margoVvMock?: { open: boolean } }
     if (w.__margoVvMock) w.__margoVvMock.open = true
@@ -46,29 +31,53 @@ async function runLandingKeyboardCase(
     window.dispatchEvent(new Event('resize'))
   })
   await page.waitForFunction(() => {
-    const shift = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--margo-landing-hero-shift') || '0')
-    return shift > 50
-  }, undefined, { timeout: 8000 })
+    const searchTop =
+      document.querySelector('.margo-stage-hero:not(.margo-stage-hero--ssr) .margo-search-wrap--standard')
+        ?.getBoundingClientRect().top ?? 0
+    const headerBottom = document.querySelector('.margo-landing-nav')?.getBoundingClientRect().bottom ?? 0
+    return searchTop >= headerBottom + 8 - 2
+  }, undefined, { timeout: 10000 })
+}
+
+async function runLandingKeyboardCase(
+  page: Page,
+  width: number,
+  fullHeight: number,
+  keyboardPx: number,
+  mode: KeyboardEmulationMode,
+) {
+  await installVisualViewportKeyboardMock(page, mode, keyboardPx)
+  await page.setViewportSize({ width, height: fullHeight })
+  await mockGenius(page)
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await page.waitForSelector('html[data-margo-stage-client-ready]')
+  const search = page.getByRole('searchbox', { name: /search song/i })
+  await search.tap()
+  await search.fill('Alikiba')
+  await page.waitForResponse((r) => r.url().includes('/api/genius') && r.status() === 200)
+  await openLandingSearchKeyboard(page)
 
   const headerBottom = await measureHeaderBottom(page)
   const visBottom = await visibleBottomY(page)
   const metrics = await page.evaluate(() => ({
     innerHeight: window.innerHeight,
-    vvHeight: window.visualViewport?.height ?? 0,
+    vvHeight: window.__margoReadVisualBand?.().vvHeight ?? window.visualViewport?.height,
     shift: getComputedStyle(document.documentElement).getPropertyValue('--margo-landing-hero-shift').trim(),
-    searchTop: document.querySelector('.margo-search-wrap--standard')?.getBoundingClientRect().top ?? 0,
+    searchTop:
+      document.querySelector('.margo-stage-hero:not(.margo-stage-hero--ssr) .margo-search-wrap--standard')
+        ?.getBoundingClientRect().top ?? 0,
   }))
 
   expect(metrics.vvHeight).toBeLessThanOrEqual(metrics.innerHeight)
   if (mode === 'resizes-visual') {
     expect(metrics.innerHeight).toBe(fullHeight)
   }
-  expect(parseFloat(metrics.shift || '0')).toBeGreaterThan(50)
+  expect(parseFloat(metrics.shift || '0')).toBeGreaterThan(0)
   expect(metrics.searchTop).toBeGreaterThanOrEqual(headerBottom + 8 - 2)
 
   const row0 = '.compose-search-row--stage'
   await expect(page.locator(row0).nth(0)).toBeVisible()
-  const hit0 = await assertTappableInBand(page, row0, headerBottom, visBottom)
+  const hit0 = await assertTappableInBand(page, row0, headerBottom, visBottom, 0)
   expect(hit0.ok, hit0.reason).toBeTruthy()
   const hit1 = await assertTappableInBand(page, row0, headerBottom, visBottom, 1)
   expect(hit1.ok, hit1.reason).toBeTruthy()

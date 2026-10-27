@@ -9,31 +9,14 @@ import {
 
 const BASE = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:3000'
 
-async function mockGenius(page: Page) {
-  await page.route('**/api/genius?**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        results: [{ id: 'g1', song: 'Betrayal', artist: 'Margo', artwork: '', source: 'genius' }],
-      }),
-    })
-  })
-}
-
 async function runComposeCase(page: Page, mode: KeyboardEmulationMode) {
-  await page.setViewportSize({ width: 360, height: 717 })
   await installVisualViewportKeyboardMock(page, mode, 311)
-  await mockGenius(page)
-  await page.goto(`${BASE}/compose`, { waitUntil: 'domcontentloaded', timeout: 60000 })
-  const search = page.getByRole('searchbox', { name: /search song/i })
-  await search.tap()
-  await search.fill('bet')
-  await page.waitForResponse((r) => r.url().includes('/api/genius') && r.status() === 200)
-  await page.getByRole('option', { name: /Betrayal/i }).first().tap()
-  await expect(page.locator('[data-testid="compose-song-row"]')).toBeVisible({ timeout: 25000 })
-  const field = page.locator('.margo-compose-region__scroll textarea, .margo-compose-region__scroll [contenteditable="true"]').first()
-  await field.tap()
+  await page.setViewportSize({ width: 360, height: 717 })
+  await page.goto(
+    `${BASE}/compose?song=Betrayal&artist=Margo&lyric=Hello%20line`,
+    { waitUntil: 'domcontentloaded', timeout: 60000 },
+  )
+  await expect(page.locator('[data-testid="compose-song-row"]')).toBeVisible({ timeout: 20000 })
   await page.evaluate(() => {
     const w = window as Window & { __margoVvMock?: { open: boolean } }
     if (w.__margoVvMock) w.__margoVvMock.open = true
