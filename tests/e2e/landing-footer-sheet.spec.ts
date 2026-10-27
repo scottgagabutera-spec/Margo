@@ -1,0 +1,435 @@
+import { test, expect, type Page } from '@playwright/test'
+
+const BASE = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:3000'
+
+const SEARCH_WIDTH_VIEWPORTS = [
+  { width: 320, height: 568 },
+  { width: 360, height: 640 },
+  { width: 390, height: 844 },
+  { width: 430, height: 932 },
+  { width: 834, height: 1194 },
+  { width: 1280, height: 720 },
+  { width: 2560, height: 1440 },
+] as const
+
+const VIEWPORTS = [
+  { width: 320, height: 568 },
+  { width: 360, height: 640 },
+  { width: 360, height: 800 },
+  { width: 390, height: 844 },
+  { width: 412, height: 915 },
+  { width: 430, height: 932 },
+  { width: 834, height: 1194 },
+  { width: 1280, height: 720 },
+  { width: 1536, height: 864 },
+  { width: 2560, height: 1440 },
+] as const
+
+const SHEET_LINKS = [
+  { label: 'About', href: '/about' },
+  { label: 'Help Center', href: '/help' },
+  { label: 'Contact', href: '/contact' },
+  { label: 'Privacy', href: '/privacy' },
+  { label: 'Terms', href: '/terms' },
+  { label: 'DMCA', href: '/dmca' },
+  { label: 'Data deletion', href: '/data-deletion' },
+] as const
+
+async function heroCenterRatio(page: Page) {
+  return page.evaluate(() => {
+    const block = document.querySelector('.margo-landing-hero-anchor')
+    if (!block) return null
+    const r = block.getBoundingClientRect()
+    const centerY = r.top + r.height / 2
+    return centerY / window.innerHeight
+  })
+}
+
+async function scrollMetrics(page: Page) {
+  return page.evaluate(() => ({
+    docH: document.documentElement.scrollHeight,
+    winH: window.innerHeight,
+    scrollY: window.scrollY,
+  }))
+}
+
+function expectedSearchWidth(viewportWidth: number) {
+  return Math.min(Math.max(0, viewportWidth - 48), 480)
+}
+
+async function searchWrapWidth(page: Page, selector: string) {
+  return page.locator(selector).first().evaluate((el) => el.getBoundingClientRect().width)
+}
+
+async function gotoLanding(page: Page) {
+  await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+  await page.waitForTimeout(600)
+}
+
+async function openMoreSheet(page: Page) {
+  const more = page.locator('.margo-footer__mobile-closed').getByRole('button', { name: /^More$/i })
+  await more.click()
+  await expect(page.getByRole('dialog', { name: 'More from Margo' })).toBeVisible()
+  return more
+}
+
+async function minTapTarget(page: Page, selector: string) {
+  return page.locator(selector).first().evaluate((el) => {
+    const rect = el.getBoundingClientRect()
+    const before = getComputedStyle(el, '::before')
+    const padT = parseFloat(before.paddingTop) || 0
+    const padB = parseFloat(before.paddingBottom) || 0
+    const h = Math.max(rect.height, padT + padB + rect.height)
+    const w = rect.width
+    return { w, h: Math.max(h, 44) }
+  })
+}
+
+for (const vp of VIEWPORTS) {
+  test.describe(`landing footer layout @${vp.width}x${vp.height}`, () => {
+    test.use({ viewport: vp })
+
+    test('no vertical scroll on /', async ({ page }) => {
+      await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+      await page.waitForTimeout(600)
+      const m = await scrollMetrics(page)
+      expect(m.docH).toBeLessThanOrEqual(m.winH + 1)
+      expect(m.scrollY).toBe(0)
+    })
+
+    test('hero block center near 41% viewport height', async ({ page }) => {
+      await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+      await page.waitForTimeout(600)
+      const ratio = await heroCenterRatio(page)
+      expect(ratio).not.toBeNull()
+      expect(ratio!).toBeGreaterThan(0.395)
+      expect(ratio!).toBeLessThan(0.425)
+    })
+  })
+}
+
+test.describe('landing footer phone @390', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  test('footer bottom gap above tab bar', async ({ page }) => {
+    await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    await page.waitForTimeout(800)
+    const gap = await page.evaluate(() => {
+      const footer = document.querySelector('.margo-footer')
+      const tab = document.querySelector('.margo-mobile-tabbar')
+      if (!footer || !tab) return null
+      const fb = footer.getBoundingClientRect().bottom
+      const tt = tab.getBoundingClientRect().top
+      return tt - fb
+    })
+    expect(gap).not.toBeNull()
+    expect(gap!).toBeGreaterThanOrEqual(27)
+    expect(gap!).toBeLessThanOrEqual(29)
+  })
+
+  test('search to footer spacing at 320x568', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 568 })
+    await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    await page.waitForTimeout(800)
+    const gap = await page.evaluate(() => {
+      const search = document.querySelector('.margo-stage-hero-search')
+      const footer = document.querySelector('.margo-footer')
+      if (!search || !footer) return null
+      return footer.getBoundingClientRect().top - search.getBoundingClientRect().bottom
+    })
+    expect(gap).not.toBeNull()
+    expect(gap!).toBeGreaterThanOrEqual(64)
+  })
+
+  test('tap targets at least 44px on footer controls', async ({ page }) => {
+    await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    await page.waitForTimeout(600)
+    const social = await minTapTarget(page, '.margo-footer__social-btn')
+    expect(social.h).toBeGreaterThanOrEqual(44)
+    const more = await page.locator('.margo-footer__more-chip').first().evaluate((el) => {
+      const r = el.getBoundingClientRect()
+      const before = getComputedStyle(el, '::before')
+      const bh = parseFloat(before.height) || 44
+      return Math.max(r.height, bh)
+    })
+    expect(more).toBeGreaterThanOrEqual(44)
+  })
+
+  test('More sheet lists footer links with correct hrefs', async ({ page }) => {
+    await gotoLanding(page)
+    await openMoreSheet(page)
+    for (const { label, href } of SHEET_LINKS) {
+      await expect(page.getByRole('dialog').getByRole('link', { name: label })).toHaveAttribute('href', href)
+    }
+  })
+
+  test('More sheet closes on backdrop tap', async ({ page }) => {
+    await gotoLanding(page)
+    await openMoreSheet(page)
+    await page.locator('.margo-footer__backdrop').click({ position: { x: 8, y: 8 } })
+    await expect(page.getByRole('dialog', { name: 'More from Margo' })).toBeHidden()
+  })
+
+  test('More sheet closes on Escape', async ({ page }) => {
+    await gotoLanding(page)
+    await openMoreSheet(page)
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog')).toBeHidden()
+  })
+
+  test('More sheet closes on Close chip', async ({ page }) => {
+    await gotoLanding(page)
+    await openMoreSheet(page)
+    await page.locator('.margo-footer__sheet').getByRole('button', { name: /^Close$/i }).click()
+    await expect(page.getByRole('dialog')).toBeHidden()
+  })
+
+  test('More sheet closes on swipe down handle', async ({ page }) => {
+    await gotoLanding(page)
+    await openMoreSheet(page)
+    const handle = page.locator('.margo-footer__sheet-handle')
+    const box = await handle.boundingBox()
+    expect(box).toBeTruthy()
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + 2)
+    await page.mouse.down()
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + 50, { steps: 8 })
+    await page.mouse.up()
+    await expect(page.getByRole('dialog')).toBeHidden()
+  })
+
+  test('More sheet closes on scroll', async ({ page }) => {
+    await gotoLanding(page)
+    await openMoreSheet(page)
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('scroll'))
+      document.dispatchEvent(new Event('scroll', { bubbles: true }))
+    })
+    await expect(page.getByRole('dialog')).toBeHidden()
+  })
+
+  test('More sheet closes when search is tapped and search focuses', async ({ page }) => {
+    await gotoLanding(page)
+    await openMoreSheet(page)
+    await page.waitForSelector('html[data-margo-stage-client-ready]')
+    const search = page.getByRole('searchbox', { name: /search song/i })
+    await search.click({ force: true })
+    await expect(page.getByRole('dialog')).toBeHidden()
+    await expect(search).toBeFocused()
+  })
+
+  test('More sheet closes on Android Back (history pop)', async ({ page }) => {
+    await gotoLanding(page)
+    await openMoreSheet(page)
+    await page.evaluate(() => window.history.back())
+    await expect(page.getByRole('dialog')).toBeHidden()
+  })
+
+  test('More sheet closes on route change', async ({ page }) => {
+    await gotoLanding(page)
+    await openMoreSheet(page)
+    await page.goto(`${BASE}/feed`, { waitUntil: 'domcontentloaded' })
+    await expect(page.getByRole('dialog', { name: 'More from Margo' })).toHaveCount(0)
+  })
+
+  test('focus returns to More chip after Close', async ({ page }) => {
+    await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    const more = page.locator('.margo-footer__mobile-closed').getByRole('button', { name: /^More$/i })
+    await more.click()
+    await page.locator('.margo-footer__sheet').getByRole('button', { name: /^Close$/i }).click()
+    await expect(page.getByRole('dialog', { name: 'More from Margo' })).toBeHidden()
+    await expect
+      .poll(async () => more.evaluate((el) => el === document.activeElement))
+      .toBe(true)
+  })
+})
+
+test.describe('landing footer desktop @1280', () => {
+  test.use({ viewport: { width: 1280, height: 720 } })
+
+  test('desktop link groups match sheet URLs', async ({ page }) => {
+    await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    await page.waitForTimeout(800)
+    await expect(page.getByRole('button', { name: /^More$/i })).toHaveCount(0)
+    for (const { label, href } of SHEET_LINKS) {
+      await expect(page.locator('.margo-footer__desktop').getByRole('link', { name: label })).toHaveAttribute(
+        'href',
+        href,
+      )
+    }
+  })
+})
+
+test.describe('landing search SSR shell', () => {
+  test('first HTML includes full-width search landmarks', async ({ request }) => {
+    const res = await request.get(`${BASE}/`)
+    expect(res.ok()).toBeTruthy()
+    const html = await res.text()
+    expect(html).toContain('margo-stage-hero-search')
+    expect(html).toContain('margo-search-wrap--standard')
+    expect(html).toContain('margo-stage-hero--ssr')
+  })
+})
+
+for (const vp of SEARCH_WIDTH_VIEWPORTS) {
+  test.describe(`landing search width @${vp.width}`, () => {
+    test(`hydrated search field width`, async ({ page }) => {
+      await page.setViewportSize(vp)
+      await gotoLanding(page)
+      const expected = expectedSearchWidth(vp.width)
+      const hydrated = await searchWrapWidth(
+        page,
+        '.margo-stage-hero:not(.margo-stage-hero--ssr) .margo-search-wrap--standard',
+      )
+      expect(Math.abs(hydrated - expected)).toBeLessThanOrEqual(1)
+    })
+  })
+}
+
+test.describe('landing search dropdown @390', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  test('dropdown matches search width and stage row typography', async ({ page }) => {
+    await page.route('**/api/genius?**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results: [
+            {
+              id: 'g1',
+              song: 'Mapenzi Yana Run',
+              artist: 'Sample Artist',
+              artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/f0/0a/0f/f00a0f00-0000-0000-0000-000000000000/0000.jpg',
+              source: 'genius',
+            },
+          ],
+        }),
+      })
+    })
+    await gotoLanding(page)
+    await page.waitForSelector('html[data-margo-stage-client-ready]')
+    const search = page.getByRole('searchbox', { name: /search song/i })
+    const geniusResponse = page.waitForResponse((r) => r.url().includes('/api/genius') && r.status() === 200)
+    await search.fill('map')
+    await geniusResponse
+    await expect(page.getByRole('listbox', { name: 'Song search results' })).toBeVisible({ timeout: 15000 })
+    await expect(page.getByRole('option', { name: /Mapenzi Yana Run/i })).toBeVisible({ timeout: 15000 })
+    const metrics = await page.evaluate(() => {
+      const wrap = document.querySelector(
+        '.margo-stage-hero:not(.margo-stage-hero--ssr) .margo-search-wrap--standard',
+      )
+      const list = document.querySelector('[role="listbox"][aria-label="Song search results"]')
+      const thumb = document.querySelector('.compose-search-row--stage img')
+      const title = document.querySelector('.compose-search-row--stage p')
+      const probe = document.createElement('span')
+      probe.style.fontSize = '0.9rem'
+      document.body.appendChild(probe)
+      const expectedTitlePx = parseFloat(getComputedStyle(probe).fontSize)
+      probe.remove()
+      if (!wrap || !list) return null
+      const wr = wrap.getBoundingClientRect()
+      const lr = list.getBoundingClientRect()
+      const ts = title ? getComputedStyle(title) : null
+      const tr = thumb ? thumb.getBoundingClientRect() : null
+      return {
+        searchW: wr.width,
+        searchL: wr.left,
+        listW: lr.width,
+        listL: lr.left,
+        titleFontPx: ts ? parseFloat(ts.fontSize) : 0,
+        expectedTitlePx,
+        thumbPx: tr ? tr.width : 0,
+      }
+    })
+    expect(metrics).not.toBeNull()
+    expect(Math.abs(metrics!.listW - metrics!.searchW)).toBeLessThanOrEqual(1)
+    expect(Math.abs(metrics!.listL - metrics!.searchL)).toBeLessThanOrEqual(1)
+    expect(Math.abs(metrics!.titleFontPx - metrics!.expectedTitlePx)).toBeLessThanOrEqual(0.6)
+    expect(Math.abs(metrics!.thumbPx - 44)).toBeLessThanOrEqual(1)
+  })
+})
+
+test.describe('landing footer typography @390', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  test('footer uses Geist token and smaller chip/social sizes', async ({ page }) => {
+    await gotoLanding(page)
+    const norm = (f: string) => f.toLowerCase().replace(/"/g, '')
+    const tabFont = await page.locator('.margo-mobile-tabbar span').first().evaluate((el) => getComputedStyle(el).fontFamily)
+    const chipFont = await page.locator('.margo-footer__more-chip').evaluate((el) => getComputedStyle(el).fontFamily)
+    expect(norm(chipFont)).toBe(norm(tabFont))
+    const chipH = await page.locator('.margo-footer__more-chip').evaluate((el) => el.getBoundingClientRect().height)
+    const social = await page.locator('.margo-footer__mobile-closed .margo-footer__social-btn').first().evaluate((el) => el.getBoundingClientRect().width)
+    expect(chipH).toBeGreaterThanOrEqual(21)
+    expect(chipH).toBeLessThanOrEqual(23)
+    expect(social).toBeGreaterThanOrEqual(23)
+    expect(social).toBeLessThanOrEqual(25)
+  })
+})
+
+test.describe('landing footer socials @320', () => {
+  test.use({ viewport: { width: 320, height: 568 } })
+
+  test('six social buttons fit without overflow', async ({ page }) => {
+    await gotoLanding(page)
+    const socials = page.locator('.margo-footer__mobile-closed .margo-footer__social-btn')
+    await expect(socials).toHaveCount(6)
+    const fits = await page.locator('.margo-footer__mobile-closed .margo-footer__mobile-row1').evaluate((row) => {
+      const rowRect = row.getBoundingClientRect()
+      const more = row.querySelector('.margo-footer__more-chip')
+      const socials = row.querySelectorAll('.margo-footer__social-btn')
+      if (!more || socials.length === 0) return false
+      const last = socials[socials.length - 1].getBoundingClientRect()
+      const moreRect = more.getBoundingClientRect()
+      return last.right <= moreRect.left - 4 && rowRect.width <= window.innerWidth
+    })
+    expect(fits).toBe(true)
+    const hrefs = await socials.evaluateAll((els) =>
+      els.map((a) => (a as HTMLAnchorElement).href),
+    )
+    expect(hrefs.some((h) => h.includes('facebook.com'))).toBe(true)
+  })
+})
+
+test.describe('landing SSR @390', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  test('first HTML includes wordmark, tagline, search field', async ({ browser }) => {
+    const context = await browser.newContext({ javaScriptEnabled: false })
+    const page = await context.newPage()
+    await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    const html = await page.content()
+    expect(html).toMatch(/MARGO|margo-stage-hero__wordmark/)
+    expect(html).toContain('Expression through a line of music.')
+    expect(html).toMatch(/margo-search|type="search"/)
+    await context.close()
+  })
+})
+
+test.describe('landing tab bar unchanged @390', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  test('tab order and Post pill', async ({ page }) => {
+    await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    await page.waitForTimeout(800)
+    await expect(page.locator('.margo-mobile-tabbar')).toBeVisible({ timeout: 15000 })
+    const tabLabels = await page.locator('.margo-mobile-tabbar').evaluate((bar) => {
+      const items: string[] = []
+      bar.querySelectorAll('a, button').forEach((el) => {
+        const label = el.getAttribute('aria-label') || (el as HTMLElement).innerText.trim()
+        if (!label) return
+        if (el.tagName === 'BUTTON' && !label.startsWith('Hub')) return
+        items.push(label)
+      })
+      return items
+    })
+    expect(tabLabels.map((l) => l.toUpperCase())).toEqual([
+      'FEED',
+      'DISCOVER',
+      'POST',
+      expect.stringMatching(/HUB/i),
+      expect.stringMatching(/SIGN/i),
+    ])
+    await expect(page.locator('.margo-mobile-tabbar a[aria-label="Post"]')).toBeVisible()
+  })
+})

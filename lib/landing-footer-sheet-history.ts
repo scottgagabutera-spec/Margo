@@ -1,0 +1,25 @@
+export const MARGO_FOOTER_SHEET_HISTORY_KEY = 'margoFooterSheet'
+
+export type FooterSheetHistoryState = {
+  [MARGO_FOOTER_SHEET_HISTORY_KEY]?: boolean
+}
+
+export function isFooterSheetHistoryState(state: unknown): state is FooterSheetHistoryState {
+  return (
+    typeof state === 'object'
+    && state !== null
+    && (state as FooterSheetHistoryState)[MARGO_FOOTER_SHEET_HISTORY_KEY] === true
+  )
+}
+
+/** Push a history entry when opening the sheet (Android Back closes sheet). */
+export function pushFooterSheetHistory(): void {
+  if (typeof window === 'undefined') return
+  window.history.pushState({ [MARGO_FOOTER_SHEET_HISTORY_KEY]: true }, '')
+}
+
+/** Clear the sheet history entry after UI close (keep user on /). */
+export function clearFooterSheetHistoryEntry(pushed: boolean): void {
+  if (!pushed || typeof window === 'undefined') return
+  window.history.replaceState(null, '')
+}
