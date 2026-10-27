@@ -344,6 +344,34 @@ html:has(.margo-landing-page-shell) body {
   max-width: 100%;
 }
 
+html[data-margo-landing-search-active] .margo-landing-hero-anchor {
+  top: var(--margo-landing-hero-active-top, max(16px, 12dvh));
+  transform: translateY(0);
+  transition: top 200ms ease-out, transform 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-margo-landing-search-active] .margo-landing-hero-anchor {
+    transition: none;
+  }
+}
+
+html[data-margo-landing-search-active] .margo-stage-hero__intro {
+  opacity: 0;
+  transform: translateY(-12px);
+  max-height: 0;
+  overflow: hidden;
+  margin: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease-out, transform 200ms ease-out, max-height 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-margo-landing-search-active] .margo-stage-hero__intro {
+    transition: none;
+  }
+}
+
 .margo-stage-zone {
   display: flex;
   flex-direction: column;

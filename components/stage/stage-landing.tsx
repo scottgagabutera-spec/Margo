@@ -19,6 +19,7 @@ import { livingAtmosphereOrNull } from '@/lib/atmosphere'
 import { StageSendBar } from '@/components/stage/stage-send-bar'
 import MargoLogo from '@/components/MargoLogo'
 import { useStageChromePublisher, useStageSearchPublisher, useStageIdlePublisher, useStageMomentPublisher } from '@/lib/stage-chrome'
+import { useLandingHeroSearchLayout } from '@/hooks/useLandingHeroSearchLayout'
 import { resolveMargoMomentFromStage, canShareImageFiles } from '@/lib/moment'
 import { saveMargoMomentImage, shareMargoMomentImage } from '@/lib/moment-export/save-moment-image'
 import {
@@ -110,6 +111,7 @@ export function StageLanding() {
   const signedIn = !!user && !user.isAnonymous
 
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchFocused, setSearchFocused] = useState(false)
   const [showResults, setShowResults] = useState(false)
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
@@ -175,6 +177,10 @@ export function StageLanding() {
   const playbackKey = linkedSongId || linkedAudioUrl || ''
   const lineIndex = margoLines.find((l) => l.text === lyric)?.lineIndex ?? 0
   const { playing, buffering } = useSnippetPlaybackUi(canPlay ? playbackKey : null, canPlay ? lyric : null)
+
+  const landingSearchActive =
+    !selectedSong && (searchFocused || showResults || searchQuery.trim().length > 0)
+  const searchWrapRef = useLandingHeroSearchLayout(landingSearchActive)
 
   useStageChromePublisher(showResults || !!selectedSong)
   useStageSearchPublisher(showResults)
@@ -730,7 +736,11 @@ export function StageLanding() {
       )}
 
       {!selectedSong ? (
-        <div className="margo-stage-hero-search" style={{ position: 'relative', zIndex: showResults ? 60 : 50 }}>
+        <div
+          ref={searchWrapRef}
+          className="margo-stage-hero-search"
+          style={{ position: 'relative', zIndex: showResults ? 60 : 50 }}
+        >
           <MargoSearchInput
             value={searchQuery}
             onChange={handleSearchChange}
@@ -738,6 +748,8 @@ export function StageLanding() {
             hintText={MARGO_SEARCH_HINT_CATALOG}
             ariaLabel={MARGO_SEARCH_HINT_CATALOG}
             stackAboveOverlay={showResults}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
           />
           <ComposeSearchDropdown
             variant="stage"

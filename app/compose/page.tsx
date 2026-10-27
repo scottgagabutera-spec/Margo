@@ -22,6 +22,7 @@ import { MomentShareStudio } from '@/components/moment-share-studio'
 import { MargoSheet } from '@/components/margo-sheet'
 import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle, keyboardSafeSecondaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
 import { useKeyboardSafeChrome } from '@/hooks/useVisualViewport'
+import { useInlineSearchDropdownMaxHeight } from '@/hooks/useInlineSearchDropdownMaxHeight'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { POST_LINES_MAX } from '@/lib/post-lines'
 import { resolveMargoMomentFromComposeDrafts, emotionToVibeLabel, vibeLabelToEmotion } from '@/lib/moment'
@@ -392,6 +393,8 @@ function ComposeInner() {
   const [showResults, setShowResults] = useState(false)
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
+  const composeSearchWrapRef = useRef<HTMLDivElement | null>(null)
+  const composeDropdownMaxH = useInlineSearchDropdownMaxHeight(composeSearchWrapRef, showResults)
   const [selectedSong, setSelectedSong] = useState<SearchResult | null>(null)
   const [artistName, setArtistName] = useState('')
   const [songName, setSongName] = useState('')
@@ -1398,7 +1401,7 @@ function ComposeInner() {
                 </p>
               ) : null}
             </div>
-            <div style={{ position: 'relative', zIndex: showResults ? 60 : 50 }}>
+            <div ref={composeSearchWrapRef} style={{ position: 'relative', zIndex: showResults ? 60 : 50 }}>
               <MargoSearchInput
                 value={searchQuery}
                 onChange={handleSearchChange}
@@ -1414,6 +1417,7 @@ function ComposeInner() {
                 highlightQuery={searchQuery}
                 onSelect={handleSelectSong}
                 onClose={() => setShowResults(false)}
+                listMaxHeightPx={composeDropdownMaxH ?? undefined}
               />
             </div>
               </>

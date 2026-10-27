@@ -42,6 +42,8 @@ interface ComposeSearchDropdownProps {
   variant?: 'compose' | 'stage' | 'panel'
   /** When variant is panel, anchor the listbox to this element (portaled, fixed). */
   anchorRef?: React.RefObject<HTMLElement | null>
+  /** Inline stage/compose: cap list height below the field (keyboard-aware). */
+  listMaxHeightPx?: number
 }
 
 const STAGE_PLAY_HINT = {
@@ -307,6 +309,7 @@ export function ComposeSearchDropdown({
   onClose,
   variant = 'compose',
   anchorRef,
+  listMaxHeightPx,
 }: ComposeSearchDropdownProps) {
   const [mounted, setMounted] = useState(false)
   const isStage = variant === 'stage'
@@ -319,6 +322,13 @@ export function ComposeSearchDropdown({
   }, [])
 
   if (!open) return null
+
+  const inlineMaxHeight =
+    listMaxHeightPx != null && listMaxHeightPx > 0
+      ? `${listMaxHeightPx}px`
+      : isStage
+        ? 'var(--margo-landing-search-dropdown-max-h, min(52dvh, calc(var(--margo-vv-height, 100dvh) * 0.42), 420px, calc(var(--margo-vv-height, 100dvh) - var(--margo-page-bottom) - 160px)))'
+        : 'min(52dvh, calc(var(--margo-vv-height, 100dvh) * 0.42), 420px, calc(var(--margo-vv-height, 100dvh) - var(--margo-page-bottom) - 160px))'
 
   const listboxStyle: React.CSSProperties = {
     overflowY: 'auto',
@@ -449,7 +459,7 @@ export function ComposeSearchDropdown({
           right: 0,
           marginTop: '6px',
           zIndex: 55,
-          maxHeight: 'min(52dvh, calc(var(--margo-vv-height, 100dvh) * 0.42), 420px, calc(var(--margo-vv-height, 100dvh) - var(--margo-page-bottom) - 160px))',
+          maxHeight: inlineMaxHeight,
           ...listboxStyle,
         }}
       >
