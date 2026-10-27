@@ -309,8 +309,11 @@ test.describe('landing search dropdown @390', () => {
     await gotoLanding(page)
     await page.waitForSelector('html[data-margo-stage-client-ready]')
     const search = page.getByRole('searchbox', { name: /search song/i })
-    await search.fill('ma')
+    const geniusResponse = page.waitForResponse((r) => r.url().includes('/api/genius') && r.status() === 200)
+    await search.fill('map')
+    await geniusResponse
     await expect(page.getByRole('listbox', { name: 'Song search results' })).toBeVisible({ timeout: 15000 })
+    await expect(page.getByRole('option', { name: /Mapenzi Yana Run/i })).toBeVisible({ timeout: 15000 })
     const metrics = await page.evaluate(() => {
       const wrap = document.querySelector(
         '.margo-stage-hero:not(.margo-stage-hero--ssr) .margo-search-wrap--standard',
