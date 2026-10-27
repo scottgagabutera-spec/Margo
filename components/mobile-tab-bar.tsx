@@ -15,6 +15,7 @@ import { SignInLink, useSigninHref } from '@/components/signin-link'
 import { persistAuthReturnScroll } from '@/lib/auth-return'
 import { persistActivePrimaryScroll } from '@/components/primary-tab-shell'
 import { YouTabPortrait } from '@/components/you-tab-portrait'
+import { signInTabActiveOnSigninRoute } from '@/lib/mobile-tab-signin-active'
 
 const font = 'var(--font-geist-sans), system-ui, sans-serif'
 
@@ -96,7 +97,7 @@ export function MobileTabBar() {
   const youLink = usePrimaryTabLinkProps(youHref, 'you')
   const isOnProfile = activeTab === 'you' || (!!identity && isSignedIn && pathname === `/profile/${identity.username}`)
   const isOnSignInRoute = !isSignedIn && pathname?.split('?')[0] === '/signin'
-  const signInTabActive = isOnSignInRoute && !hubOpen
+  const signInTabActive = signInTabActiveOnSigninRoute(isOnSignInRoute, hubOpen)
   const youAwaitingIdentity = isSignedIn && !identity && activeTab !== 'you'
 
   const isMusicActive = engineState.mode !== 'idle'
