@@ -10,6 +10,7 @@ import {
 } from '@/lib/auth-return'
 import {
   leavePrimaryTabSurface,
+  MARGO_CLOSE_HUB_EVENT,
   persistActivePrimaryScroll,
   prepareSignInTabNavigation,
 } from '@/components/primary-tab-shell'
@@ -34,6 +35,9 @@ export function SignInLink({ returnTo, mode, onClick, ...props }: SignInLinkProp
     const destPath = href.split('?')[0]
     if (destPath === '/signin') {
       prepareSignInTabNavigation()
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event(MARGO_CLOSE_HUB_EVENT))
+      }
     } else {
       leavePrimaryTabSurface()
     }
