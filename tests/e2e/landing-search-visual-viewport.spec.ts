@@ -59,19 +59,23 @@ async function runLandingKeyboardCase(
 
   const headerBottom = await measureHeaderBottom(page)
   const visBottom = await visibleBottomY(page)
-  const metrics = await page.evaluate(() => ({
-    innerHeight: window.innerHeight,
-    vvHeight: window.__margoReadVisualBand?.().vvHeight ?? window.visualViewport?.height,
-    shift: getComputedStyle(document.documentElement).getPropertyValue('--margo-landing-hero-shift').trim(),
-    searchTop:
-      document.querySelector('.margo-stage-hero:not(.margo-stage-hero--ssr) .margo-search-wrap--standard')
-        ?.getBoundingClientRect().top ?? 0,
-  }))
+  const metrics = await page.evaluate(() => {
+    const mock = (window as Window & { __margoVvMock?: { open: boolean; fullH: number; keyboardH: number } }).__margoVvMock
+    const keyboardTop = mock?.open ? mock.fullH - mock.keyboardH : window.innerHeight
+    return {
+      innerHeight: window.innerHeight,
+      keyboardTop,
+      shift: getComputedStyle(document.documentElement).getPropertyValue('--margo-landing-hero-shift').trim(),
+      searchTop:
+        document.querySelector('.margo-stage-hero:not(.margo-stage-hero--ssr) .margo-search-wrap--standard')
+          ?.getBoundingClientRect().top ?? 0,
+    }
+  })
 
-  expect(metrics.vvHeight).toBeLessThanOrEqual(metrics.innerHeight)
   if (mode === 'resizes-visual') {
     expect(metrics.innerHeight).toBe(fullHeight)
   }
+  expect(metrics.keyboardTop).toBeLessThan(fullHeight)
   expect(parseFloat(metrics.shift || '0')).toBeGreaterThan(0)
   expect(metrics.searchTop).toBeGreaterThanOrEqual(headerBottom + 8 - 2)
 

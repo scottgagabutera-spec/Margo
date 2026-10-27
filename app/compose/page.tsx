@@ -941,13 +941,17 @@ function ComposeInner() {
     buildCurrentDraft, clearDraftFields, resetComposeViewport,
   ])
 
-  const handleChangeSong = useCallback(() => {
-    if (lyric.trim() && !window.confirm('Switch songs? Your line will be cleared.')) return
+  const handleClearSongPick = useCallback(() => {
     clearCurrentSongPick()
     setSelectMode(null)
     setPhase('find')
     resetComposeViewport()
-  }, [lyric, clearCurrentSongPick, resetComposeViewport])
+  }, [clearCurrentSongPick, resetComposeViewport])
+
+  const handleChangeSong = useCallback(() => {
+    if (lyric.trim() && !window.confirm('Switch songs? Your line will be cleared.')) return
+    handleClearSongPick()
+  }, [lyric, handleClearSongPick])
 
   const handleRemoveCommittedLine = useCallback((index: number) => {
     setCommittedLines((prev) => prev.filter((_, i) => i !== index))
@@ -1282,7 +1286,7 @@ function ComposeInner() {
               title={songName}
               artist={artistName}
               artwork={selectedSong?.artwork}
-              onClear={clearCurrentSongPick}
+              onClear={handleClearSongPick}
               onChangeSong={handleChangeSong}
             />
           )}
