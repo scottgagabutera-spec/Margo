@@ -347,11 +347,17 @@ html:has(.margo-landing-page-shell) body {
 .margo-stage-zone {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
   padding: 0;
+  box-sizing: border-box;
+}
+
+.margo-stage-client-root,
+.margo-stage-hero {
+  width: 100%;
   box-sizing: border-box;
 }
 
@@ -394,9 +400,14 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
 }
 
 .margo-stage-hero-search {
-  width: min(480px, calc(100% - 48px));
-  max-width: 100%;
+  width: 100%;
+  max-width: 480px;
   margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.margo-stage-hero-search .margo-search-wrap--standard {
+  width: 100%;
 }
 
 .margo-landing-page-shell .margo-stage-hero-search .margo-search-wrap--standard {
@@ -468,6 +479,7 @@ html[data-margo-stage] .margo-footer {
   box-sizing: border-box;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   pointer-events: none;
+  --margo-footer-ui-font: var(--font-geist-sans), system-ui, sans-serif;
 }
 
 .margo-footer a,
@@ -478,8 +490,8 @@ html[data-margo-stage] .margo-footer {
 .margo-footer__copyright {
   margin: 8px 0 0;
   text-align: center;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 10.5px;
+  font-family: var(--margo-footer-ui-font);
+  font-size: 10px;
   font-weight: 500;
   color: #8A8A98;
   letter-spacing: 0.02em;
@@ -488,14 +500,16 @@ html[data-margo-stage] .margo-footer {
 .margo-footer__social-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .margo-footer__social-btn {
   position: relative;
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -517,9 +531,9 @@ html[data-margo-stage] .margo-footer {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  height: 26px;
-  padding: 0 12px;
+  gap: 3px;
+  height: 22px;
+  padding: 0 10px;
   border-radius: 8px;
   border: 1px solid rgba(232, 197, 71, 0.4);
   background: linear-gradient(145deg, rgba(232, 197, 71, 0.22), rgba(232, 197, 71, 0.05));
@@ -527,12 +541,17 @@ html[data-margo-stage] .margo-footer {
     inset 0 1px 0 rgba(255, 235, 150, 0.3),
     0 0 14px rgba(232, 197, 71, 0.22);
   color: #F0D36A;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 10.5px;
+  font-family: var(--margo-footer-ui-font);
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 1.4px;
+  letter-spacing: 1.2px;
   text-transform: uppercase;
   cursor: pointer;
+}
+
+.margo-footer__more-chip svg {
+  width: 9px;
+  height: 9px;
 }
 
 .margo-footer__more-chip::before {
@@ -547,7 +566,8 @@ html[data-margo-stage] .margo-footer {
 
 .margo-footer__section-label {
   flex: 0 0 56px;
-  font-size: 9.5px;
+  font-family: var(--margo-footer-ui-font);
+  font-size: 9px;
   font-weight: 600;
   letter-spacing: 1.3px;
   text-transform: uppercase;
@@ -556,6 +576,7 @@ html[data-margo-stage] .margo-footer {
 
 .margo-footer__section-link {
   position: relative;
+  font-family: var(--margo-footer-ui-font);
   font-size: 12px;
   font-weight: 500;
   color: #C4C4D0;
@@ -612,7 +633,7 @@ html[data-margo-stage] .margo-footer {
     bottom: var(--margo-tabbar-h, 64px);
     z-index: 45;
     border-radius: 20px 20px 0 0;
-    padding: 10px 20px 14px;
+    padding: 8px 18px 12px;
     box-sizing: border-box;
     background: rgba(18, 18, 26, 0.96);
     border-top: 1px solid rgba(255, 255, 255, 0.14);
@@ -673,8 +694,13 @@ html[data-margo-stage] .margo-footer {
     display: flex;
     align-items: center;
     min-height: 44px;
-    padding-top: 8px;
+    padding-top: 6px;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .margo-footer__sheet-section .margo-footer__section-links {
+    min-height: 34px;
+    align-items: center;
   }
 
   .margo-footer__sheet-section:first-of-type {

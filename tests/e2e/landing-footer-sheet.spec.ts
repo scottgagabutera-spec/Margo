@@ -2,6 +2,16 @@ import { test, expect, type Page } from '@playwright/test'
 
 const BASE = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:3000'
 
+const SEARCH_WIDTH_VIEWPORTS = [
+  { width: 320, height: 568 },
+  { width: 360, height: 640 },
+  { width: 390, height: 844 },
+  { width: 430, height: 932 },
+  { width: 834, height: 1194 },
+  { width: 1280, height: 720 },
+  { width: 2560, height: 1440 },
+] as const
+
 const VIEWPORTS = [
   { width: 320, height: 568 },
   { width: 360, height: 640 },
@@ -41,6 +51,14 @@ async function scrollMetrics(page: Page) {
     winH: window.innerHeight,
     scrollY: window.scrollY,
   }))
+}
+
+function expectedSearchWidth(viewportWidth: number) {
+  return Math.min(Math.max(0, viewportWidth - 48), 480)
+}
+
+async function searchWrapWidth(page: Page, selector: string) {
+  return page.locator(selector).first().evaluate((el) => el.getBoundingClientRect().width)
 }
 
 async function gotoLanding(page: Page) {
@@ -238,6 +256,111 @@ test.describe('landing footer desktop @1280', () => {
         href,
       )
     }
+  })
+})
+
+for (const vp of SEARCH_WIDTH_VIEWPORTS) {
+  test.describe(`landing search width @${vp.width}`, () => {
+    test(`search field width before and after hydration`, async ({ page }) => {
+      await page.setViewportSize(vp)
+      await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+      const expected = expectedSearchWidth(vp.width)
+      const ssr = await searchWrapWidth(page, '.margo-stage-hero--ssr .margo-search-wrap--standard')
+      expect(Math.abs(ssr - expected)).toBeLessThanOrEqual(1)
+      await page.waitForSelector('html[data-margo-stage-client-ready]')
+      const hydrated = await searchWrapWidth(
+        page,
+        '.margo-stage-hero:not(.margo-stage-hero--ssr) .margo-search-wrap--standard',
+      )
+      expect(Math.abs(hydrated - expected)).toBeLessThanOrEqual(1)
+    })
+  })
+}
+
+test.describe('landing search dropdown @390', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  test('dropdown matches search width and stage row typography', async ({ page }) => {
+    await page.route('**/api/genius?**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results: [
+            {
+              id: 'g1',
+              song: 'Mapenzi Yana Run',
+              artist: 'Sample Artist',
+              artwork: '',
+              source: 'genius',
+            },
+          ],
+        }),
+      })
+    })
+    await gotoLanding(page)
+    await page.waitForSelector('html[data-margo-stage-client-ready]')
+    const search = page.getByRole('searchbox', { name: /search song/i })
+    await search.fill('ma')
+    await expect(page.getByRole('listbox', { name: 'Song search results' })).toBeVisible({ timeout: 15000 })
+    const metrics = await page.evaluate(() => {
+      const wrap = document.querySelector(
+        '.margo-stage-hero:not(.margo-stage-hero--ssr) .margo-search-wrap--standard',
+      )
+      const list = document.querySelector('[role="listbox"][aria-label="Song search results"]')
+      const thumb = document.querySelector('.compose-search-row--stage img')
+      const title = document.querySelector('.compose-search-row--stage p')
+      if (!wrap || !list) return null
+      const wr = wrap.getBoundingClientRect()
+      const lr = list.getBoundingClientRect()
+      const ts = title ? getComputedStyle(title) : null
+      const tr = thumb ? thumb.getBoundingClientRect() : null
+      return {
+        searchW: wr.width,
+        searchL: wr.left,
+        listW: lr.width,
+        listL: lr.left,
+        titleFontPx: ts ? parseFloat(ts.fontSize) : 0,
+        thumbPx: tr ? tr.width : 0,
+      }
+    })
+    expect(metrics).not.toBeNull()
+    expect(Math.abs(metrics!.listW - metrics!.searchW)).toBeLessThanOrEqual(1)
+    expect(Math.abs(metrics!.listL - metrics!.searchL)).toBeLessThanOrEqual(1)
+    expect(Math.abs(metrics!.titleFontPx - 14.4)).toBeLessThanOrEqual(0.6)
+    expect(Math.abs(metrics!.thumbPx - 44)).toBeLessThanOrEqual(1)
+  })
+})
+
+test.describe('landing footer typography @390', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  test('footer uses Geist token and smaller chip/social sizes', async ({ page }) => {
+    await gotoLanding(page)
+    const tabFont = await page.locator('.margo-mobile-tabbar span').first().evaluate((el) => getComputedStyle(el).fontFamily)
+    const chipFont = await page.locator('.margo-footer__more-chip').evaluate((el) => getComputedStyle(el).fontFamily)
+    const chipH = await page.locator('.margo-footer__more-chip').evaluate((el) => el.getBoundingClientRect().height)
+    const social = await page.locator('.margo-footer__social-btn').first().evaluate((el) => el.getBoundingClientRect().width)
+    expect(chipFont).toBe(tabFont)
+    expect(chipH).toBeGreaterThanOrEqual(21)
+    expect(chipH).toBeLessThanOrEqual(23)
+    expect(social).toBeGreaterThanOrEqual(23)
+    expect(social).toBeLessThanOrEqual(25)
+  })
+})
+
+test.describe('landing footer socials @320', () => {
+  test.use({ viewport: { width: 320, height: 568 } })
+
+  test('six social buttons fit without overflow', async ({ page }) => {
+    await gotoLanding(page)
+    await expect(page.locator('.margo-footer__social-btn')).toHaveCount(6)
+    const overflow = await page.locator('.margo-footer__social-row').evaluate((el) => el.scrollWidth <= el.clientWidth + 1)
+    expect(overflow).toBe(true)
+    const hrefs = await page.locator('.margo-footer__social-btn').evaluateAll((els) =>
+      els.map((a) => (a as HTMLAnchorElement).href),
+    )
+    expect(hrefs.some((h) => h.includes('facebook.com'))).toBe(true)
   })
 })
 

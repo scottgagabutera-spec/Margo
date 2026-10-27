@@ -2,7 +2,7 @@
  * Official Margo social profile URLs (footer + marketing).
  * Schema sameAs also includes Facebook separately — see MARGO_SCHEMA_EXTRA_SAME_AS.
  */
-export type MargoSocialId = 'instagram' | 'tiktok' | 'x' | 'youtube' | 'spotify'
+export type MargoSocialId = 'instagram' | 'facebook' | 'tiktok' | 'x' | 'youtube' | 'spotify'
 
 export type MargoSocialLink = {
   id: MargoSocialId
@@ -15,6 +15,11 @@ export const MARGO_SOCIAL_LINKS: readonly MargoSocialLink[] = [
     id: 'instagram',
     label: 'Instagram',
     href: 'https://www.instagram.com/officialtrymargo',
+  },
+  {
+    id: 'facebook',
+    label: 'Facebook',
+    href: 'https://www.facebook.com/share/1CiYZanmmg/',
   },
   {
     id: 'tiktok',
@@ -43,10 +48,7 @@ export function margoFooterSocialHrefs(): string[] {
   return MARGO_SOCIAL_LINKS.map((l) => l.href)
 }
 
-/** Facebook page URL used in JSON-LD only (not in footer row). */
-export const MARGO_FACEBOOK_SAME_AS = 'https://www.facebook.com/share/1CiYZanmmg/'
-
-/** Full schema.org sameAs list (five footer accounts + Facebook). */
+/** Full schema.org sameAs list (same six accounts as footer). */
 export function margoSchemaSameAs(): string[] {
-  return [...margoFooterSocialHrefs(), MARGO_FACEBOOK_SAME_AS]
+  return margoFooterSocialHrefs()
 }

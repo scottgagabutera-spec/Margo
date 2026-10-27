@@ -13,6 +13,7 @@ import {
 } from 'react'
 import {
   InstagramIcon,
+  FacebookIcon,
   TikTokIcon,
   XIcon,
   YouTubeIcon,
@@ -20,18 +21,16 @@ import {
 } from '@/components/icons'
 import { MARGO_SOCIAL_LINKS } from '@/lib/social-links'
 import { MARGO_FOOTER_SECTIONS } from '@/components/footer/margo-footer-links'
-import { UI_FONT } from '@/lib/fonts'
 import { pushFooterSheetHistory } from '@/lib/landing-footer-sheet-history'
 
 const SOCIAL_ICONS = {
   instagram: InstagramIcon,
+  facebook: FacebookIcon,
   tiktok: TikTokIcon,
   x: XIcon,
   youtube: YouTubeIcon,
   spotify: SpotifyIcon,
 } as const
-
-const ui = UI_FONT
 
 function ChevronIcon({ direction }: { direction: 'up' | 'down' }) {
   return (
@@ -67,7 +66,7 @@ function SocialButtonRow({ className }: { className?: string }) {
             aria-label={label}
             className="margo-footer__social-btn"
           >
-            <Icon size={16} color="currentColor" />
+            <Icon size={14} color="currentColor" />
           </a>
         )
       })}
