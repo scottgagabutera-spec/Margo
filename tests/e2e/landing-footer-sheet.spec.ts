@@ -261,13 +261,20 @@ test.describe('landing footer desktop @1280', () => {
 
 for (const vp of SEARCH_WIDTH_VIEWPORTS) {
   test.describe(`landing search width @${vp.width}`, () => {
-    test(`search field width before and after hydration`, async ({ page }) => {
-      await page.setViewportSize(vp)
+    test(`SSR search field width without hydration`, async ({ browser }) => {
+      const context = await browser.newContext({ viewport: vp, javaScriptEnabled: false })
+      const page = await context.newPage()
       await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 60000 })
       const expected = expectedSearchWidth(vp.width)
       const ssr = await searchWrapWidth(page, '.margo-stage-hero--ssr .margo-search-wrap--standard')
       expect(Math.abs(ssr - expected)).toBeLessThanOrEqual(1)
-      await page.waitForSelector('html[data-margo-stage-client-ready]')
+      await context.close()
+    })
+
+    test(`hydrated search field width`, async ({ page }) => {
+      await page.setViewportSize(vp)
+      await gotoLanding(page)
+      const expected = expectedSearchWidth(vp.width)
       const hydrated = await searchWrapWidth(
         page,
         '.margo-stage-hero:not(.margo-stage-hero--ssr) .margo-search-wrap--standard',
@@ -337,11 +344,12 @@ test.describe('landing footer typography @390', () => {
 
   test('footer uses Geist token and smaller chip/social sizes', async ({ page }) => {
     await gotoLanding(page)
+    const norm = (f: string) => f.toLowerCase().replace(/"/g, '')
     const tabFont = await page.locator('.margo-mobile-tabbar span').first().evaluate((el) => getComputedStyle(el).fontFamily)
     const chipFont = await page.locator('.margo-footer__more-chip').evaluate((el) => getComputedStyle(el).fontFamily)
+    expect(norm(chipFont)).toBe(norm(tabFont))
     const chipH = await page.locator('.margo-footer__more-chip').evaluate((el) => el.getBoundingClientRect().height)
     const social = await page.locator('.margo-footer__social-btn').first().evaluate((el) => el.getBoundingClientRect().width)
-    expect(chipFont).toBe(tabFont)
     expect(chipH).toBeGreaterThanOrEqual(21)
     expect(chipH).toBeLessThanOrEqual(23)
     expect(social).toBeGreaterThanOrEqual(23)
@@ -354,10 +362,11 @@ test.describe('landing footer socials @320', () => {
 
   test('six social buttons fit without overflow', async ({ page }) => {
     await gotoLanding(page)
-    await expect(page.locator('.margo-footer__social-btn')).toHaveCount(6)
-    const overflow = await page.locator('.margo-footer__social-row').evaluate((el) => el.scrollWidth <= el.clientWidth + 1)
+    const socials = page.locator('.margo-footer__mobile-closed .margo-footer__social-btn')
+    await expect(socials).toHaveCount(6)
+    const overflow = await page.locator('.margo-footer__mobile-closed .margo-footer__social-row').evaluate((el) => el.scrollWidth <= el.clientWidth + 1)
     expect(overflow).toBe(true)
-    const hrefs = await page.locator('.margo-footer__social-btn').evaluateAll((els) =>
+    const hrefs = await socials.evaluateAll((els) =>
       els.map((a) => (a as HTMLAnchorElement).href),
     )
     expect(hrefs.some((h) => h.includes('facebook.com'))).toBe(true)
