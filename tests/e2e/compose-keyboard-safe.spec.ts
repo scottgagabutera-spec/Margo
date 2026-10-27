@@ -31,7 +31,7 @@ async function runComposeCase(page: Page, mode: KeyboardEmulationMode) {
   await search.fill('bet')
   await page.waitForResponse((r) => r.url().includes('/api/genius') && r.status() === 200)
   await page.getByRole('option', { name: /Betrayal/i }).first().tap()
-  await page.getByRole('button', { name: /continue/i }).tap({ timeout: 15000 }).catch(() => {})
+  await page.getByRole('button', { name: /^continue$/i }).tap({ timeout: 15000 })
   await expect(page.locator('[data-testid="compose-song-row"]')).toBeVisible({ timeout: 20000 })
   const field = page.locator('.margo-compose-region__scroll textarea, .margo-compose-region__scroll [contenteditable="true"]').first()
   await field.tap()

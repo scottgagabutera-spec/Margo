@@ -61,7 +61,7 @@ async function runLandingKeyboardCase(
   await expect(page.locator(row0).nth(0)).toBeVisible()
   const hit0 = await assertTappableInBand(page, row0, headerBottom, visBottom)
   expect(hit0.ok, hit0.reason).toBeTruthy()
-  const hit1 = await assertTappableInBand(page, `${row0}:nth-of-type(2)`, headerBottom, visBottom)
+  const hit1 = await assertTappableInBand(page, row0, headerBottom, visBottom, 1)
   expect(hit1.ok, hit1.reason).toBeTruthy()
 }
 

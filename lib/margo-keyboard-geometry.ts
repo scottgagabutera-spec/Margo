@@ -17,7 +17,30 @@ export function estimateKeyboardHeightPx(innerHeight: number): number {
   return Math.min(311, Math.round(innerHeight * 0.45))
 }
 
+type VvMock = {
+  open: boolean
+  keyboardH: number
+  fullH: number
+  mode?: 'resizes-visual' | 'resizes-content'
+}
+
+function readVvMock(win: Window): VvMock | null {
+  const mock = (win as Window & { __margoVvMock?: VvMock }).__margoVvMock
+  return mock ?? null
+}
+
 export function readVisualBand(win: Window = window): VisualBand {
+  const mock = readVvMock(win)
+  if (mock) {
+    const vvHeight = mock.open ? mock.fullH - mock.keyboardH : mock.fullH
+    const offsetTop = 0
+    const innerHeight =
+      mock.mode === 'resizes-content' && mock.open ? vvHeight : mock.fullH
+    const keyboardTop = offsetTop + vvHeight
+    const keyboardInset = Math.max(0, innerHeight - keyboardTop)
+    return { innerHeight, vvHeight, offsetTop, keyboardTop, keyboardInset }
+  }
+
   const innerHeight = win.innerHeight
   const vv = win.visualViewport
   const vvHeight = vv?.height ?? innerHeight
