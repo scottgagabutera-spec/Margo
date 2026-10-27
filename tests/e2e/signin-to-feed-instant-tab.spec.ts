@@ -17,11 +17,15 @@ test('signin → hub → signin → feed: Feed tab gold before /feed URL', async
   await expect(page).toHaveURL(/\/signin/)
 
   await page.getByRole('button', { name: /^Hub/i }).tap()
-  await page.locator('.margo-mobile-tabbar a[href*="/signin"]').tap()
+  await page.locator('#margo-hub-sign-in').click()
   await expect(page).toHaveURL(/\/signin/)
+
+  await page.getByRole('button', { name: /^Hub/i }).tap()
+  await expect(page.getByRole('dialog', { name: 'Hub' })).toBeVisible()
 
   const feedLink = page.locator('.margo-mobile-tabbar a[href="/feed"]')
   await feedLink.tap()
+  await expect(page.getByRole('dialog', { name: 'Hub' })).toHaveCount(0, { timeout: 3000 })
 
   await expect
     .poll(async () => {

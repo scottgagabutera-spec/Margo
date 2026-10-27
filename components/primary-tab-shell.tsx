@@ -21,7 +21,7 @@ import { usePrimaryTabSwipeGesture } from '@/hooks/usePrimaryTabSwipeGesture'
 import { HubDeepNavSkeleton, PrimaryTabPaneSkeleton } from '@/components/margo-skeletons'
 import { MARGO_HUB_DEEP_NAV_EVENT, type HubDeepNavDetail } from '@/lib/hub-deep-nav'
 import { warmPrimaryTab } from '@/lib/primary-tab-prefetch'
-import { peekHubOverlayRestore } from '@/lib/search-scope'
+import { clearHubOverlayRestore, peekHubOverlayRestore } from '@/lib/search-scope'
 
 /**
  * Primary-tab keepalive + Activity + swipe strip.
@@ -410,6 +410,7 @@ export const MARGO_LEAVE_PRIMARY_TABS_EVENT = 'margo:leave-primary-tabs'
 
 function closeHubOverlay() {
   if (typeof window === 'undefined') return
+  clearHubOverlayRestore()
   window.dispatchEvent(new Event(MARGO_CLOSE_HUB_EVENT))
 }
 
@@ -648,6 +649,10 @@ export function PrimaryTabShell({
     const intentPath = normalizeTabPath(intentHrefRef.current)
     const path = normalizeTabPath(pathname)
     if (intentPath && path.toLowerCase() === intentPath.toLowerCase()) return
+    if (intentPath) {
+      const intentTab = resolvePrimaryTabId(intentPath, ownProfileHref)
+      if (intentTab && paintedTabRef.current === intentTab) return
+    }
     if (
       paintedTabRef.current === 'you' &&
       path.toLowerCase().startsWith('/profile/')
@@ -821,9 +826,13 @@ export function PrimaryTabShell({
     } catch {
       paint()
     }
-    if (pushHref) router.push(pushHref, { scroll: false })
+    if (pushHref) {
+      const leavingSignin = normalizeTabPath(pathname) === '/signin'
+      if (leavingSignin) router.replace(pushHref, { scroll: false })
+      else router.push(pushHref, { scroll: false })
+    }
     return true
-  }, [ownProfileHref, routeTab, router, endPeek, acknowledgePrimaryTab])
+  }, [ownProfileHref, routeTab, pathname, router, endPeek, acknowledgePrimaryTab])
 
   useEffect(() => {
     if (!ownProfileHref && cacheRef.current.has('you')) {
@@ -1014,7 +1023,11 @@ export function PrimaryTabShell({
   const cached = [...cacheRef.current.entries()]
   const showSkeleton = !!activeTab && !cacheRef.current.has(activeTab)
   const showDeepNavSkeleton = deepNavInFlight && !!deepNavHref
-  const showAppChildren = !showDeepNavSkeleton && activeTab === null
+  const onSigninRoute = normalizeTabPath(pathname) === '/signin'
+  const showAppChildren =
+    !showDeepNavSkeleton
+    && activeTab === null
+    && !(onSigninRoute && barTab !== null && barTab !== 'you')
 
   return (
     <PrimaryTabContext.Provider value={ctx}>

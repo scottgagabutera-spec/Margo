@@ -14,3 +14,8 @@ test('active tab paint includes acked tab before route commits', () => {
   const src = fs.readFileSync('components/primary-tab-shell.tsx', 'utf8')
   assert.match(src, /paintedTab \?\? ackedTab \?\? routeTab/)
 })
+
+test('in-flight primary intent kept while URL still on /signin', () => {
+  const src = fs.readFileSync('components/primary-tab-shell.tsx', 'utf8')
+  assert.match(src, /intentTab && paintedTabRef\.current === intentTab/)
+})

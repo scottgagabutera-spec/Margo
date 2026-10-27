@@ -206,6 +206,15 @@ export function consumeHubOverlayRestore(): boolean {
   }
 }
 
+/** Primary tab navigation — do not reopen Hub on the next /feed commit. */
+export function clearHubOverlayRestore(): void {
+  try {
+    sessionStorage.removeItem(HUB_RESTORE_KEY)
+  } catch {
+    /* private mode */
+  }
+}
+
 export function searchFromOpensHub(from: string | null | undefined): boolean {
   if (!from) return false
   const query = from.split('?')[1]

@@ -46,6 +46,7 @@ import { buildSigninHref, persistAuthReturnScroll } from '@/lib/auth-return'
 import {
   searchHrefForPath,
   searchScopeForPath,
+  clearHubOverlayRestore,
   consumeHubOverlayRestore,
   markHubOverlayRestore,
   markHubNavFromTile,
@@ -469,6 +470,7 @@ export function HubProvider({ children }: { children: ReactNode }) {
 
   const close = useCallback(() => {
     pendingHrefRef.current = null
+    clearHubOverlayRestore()
     setOpen(false)
     setPendingHref(null)
   }, [])
