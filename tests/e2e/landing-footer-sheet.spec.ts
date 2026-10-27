@@ -192,7 +192,8 @@ test.describe('landing footer phone @390', () => {
   test('More sheet closes when search is tapped and search focuses', async ({ page }) => {
     await gotoLanding(page)
     await openMoreSheet(page)
-    const search = page.locator('.margo-stage-hero-search input').first()
+    await page.waitForSelector('html[data-margo-stage-client-ready]')
+    const search = page.locator('.margo-stage-hero-search input:not([aria-hidden])')
     await search.click()
     await expect(page.getByRole('dialog')).toBeHidden()
     await expect(search).toBeFocused()
