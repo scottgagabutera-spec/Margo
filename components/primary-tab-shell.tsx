@@ -364,6 +364,7 @@ export function usePrimaryTabLinkProps(href: string, tabId?: PrimaryTabId) {
       if (event.button !== 0 && event.pointerType === 'mouse') return
       lastTabPointerSeq += 1
       pointerSeqRef.current = lastTabPointerSeq
+      closeHubOverlay()
       acknowledgePrimaryTab(tabId)
       const ok = navigatePrimaryTab(href, undefined, tabId)
       if (ok) navigatedSeqRef.current = pointerSeqRef.current
