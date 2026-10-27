@@ -13,7 +13,10 @@ interface StageSongChipProps {
 export function StageSongChip({ title, artist, artwork, onClear }: StageSongChipProps) {
   return (
     <div
+      className="margo-stage-song-chip"
       style={{
+        position: 'relative',
+        zIndex: 2,
         display: 'inline-flex',
         alignItems: 'center',
         gap: '10px',
@@ -52,7 +55,10 @@ export function StageSongChip({ title, artist, artwork, onClear }: StageSongChip
       <button
         type="button"
         aria-label="Clear song"
-        onClick={onClear}
+        onClick={(e) => {
+          e.stopPropagation()
+          onClear()
+        }}
         style={{
           width: 'var(--margo-touch-min)',
           height: 'var(--margo-touch-min)',
@@ -65,6 +71,9 @@ export function StageSongChip({ title, artist, artwork, onClear }: StageSongChip
           cursor: 'pointer',
           flexShrink: 0,
           color: 'var(--text-muted)',
+          position: 'relative',
+          zIndex: 3,
+          touchAction: 'manipulation',
         }}
       >
         <CloseIcon size={16} color="currentColor" />

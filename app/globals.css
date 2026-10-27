@@ -344,40 +344,64 @@ html:has(.margo-landing-page-shell) body {
   max-width: 100%;
 }
 
-html[data-margo-landing-search-active] .margo-landing-hero-anchor {
+html[data-margo-landing-search-active]:not([data-margo-landing-song-flow]) .margo-landing-hero-anchor {
   transform: translateY(calc(-50% - var(--margo-landing-hero-shift, 0px)));
-  transition: transform 200ms ease-out;
+}
+
+html[data-margo-landing-shift-animate]:not([data-margo-landing-song-flow]) .margo-landing-hero-anchor {
+  transition: transform 100ms ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html[data-margo-landing-search-active] .margo-landing-hero-anchor {
+  html[data-margo-landing-shift-animate] .margo-landing-hero-anchor {
     transition: none;
   }
 }
 
 html[data-margo-landing-hide-tagline] .margo-stage-hero__tagline {
   opacity: 0;
-  max-height: 0;
+  visibility: hidden;
+  height: 0;
   overflow: hidden;
   margin: 0;
   pointer-events: none;
-  transition: opacity 200ms ease-out, max-height 200ms ease-out;
 }
 
 html[data-margo-landing-hide-wordmark] .margo-stage-hero__wordmark-wrap {
   opacity: 0;
-  max-height: 0;
+  visibility: hidden;
+  height: 0;
   overflow: hidden;
   margin: 0;
   pointer-events: none;
-  transition: opacity 200ms ease-out, max-height 200ms ease-out;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  html[data-margo-landing-hide-tagline] .margo-stage-hero__tagline,
-  html[data-margo-landing-hide-wordmark] .margo-stage-hero__wordmark-wrap {
-    transition: none;
-  }
+/* After song pick: scroll below landing header — chip + lyric stay reachable (X tappable). */
+html[data-margo-landing-song-flow] .margo-landing-hero-anchor {
+  position: fixed;
+  z-index: 6;
+  top: var(--margo-header-bottom, var(--margo-header-h, 68px));
+  left: 0;
+  right: 0;
+  bottom: var(--margo-tabbar-h, 80px);
+  transform: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+  padding: 8px 0 24px;
+}
+
+html[data-margo-landing-song-flow] .margo-stage-song-chip-wrap {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 0 24px 8px;
+  background: var(--bg);
+}
+
+html[data-margo-landing-song-flow] .margo-landing-page-shell {
+  overflow: hidden;
 }
 
 .margo-compose-overlay input,
