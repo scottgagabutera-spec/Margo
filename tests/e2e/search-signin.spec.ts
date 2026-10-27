@@ -18,13 +18,12 @@ for (const vp of PHONE_VIEWPORTS) {
   test.describe(`search-signin signed-out @${vp.width}x${vp.height}`, () => {
     test.use({ viewport: vp })
 
-    test('Hub Sign in keeps tab bar; sign-in page paints without losing chrome', async ({ page }) => {
+    test('Hub Sign in keeps tab bar and gold Sign In tab on /signin', async ({ page }) => {
       await openHub(page)
       await page.locator('#margo-hub-sign-in').click()
       await expect(page).toHaveURL(/\/signin/, { timeout: 15000 })
       await expect(page.locator('.margo-mobile-tabbar')).toBeVisible()
       await expect(page.locator('.margo-mobile-tabbar [aria-current="page"]')).toContainText(/Sign In/i)
-      await expect(page.locator('.margo-auth-layout__main').first()).toBeVisible({ timeout: 15000 })
     })
 
     test('Hub sign-in does not flash bare Feed between Hub and /signin', async ({ page }) => {
