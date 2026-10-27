@@ -735,6 +735,17 @@ html[data-margo-stage] .margo-footer {
     .margo-footer__section-label {
       flex: 0 0 48px;
     }
+    .margo-footer__social-row {
+      gap: 4px;
+    }
+    .margo-footer__mobile-row1 {
+      gap: 6px;
+    }
+    .margo-footer__mobile-row1 .margo-footer__social-row {
+      flex: 1;
+      min-width: 0;
+      max-width: calc(100% - 64px);
+    }
   }
 }
 

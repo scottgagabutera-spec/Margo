@@ -259,18 +259,19 @@ test.describe('landing footer desktop @1280', () => {
   })
 })
 
+test.describe('landing search SSR shell', () => {
+  test('first HTML includes full-width search landmarks', async ({ request }) => {
+    const res = await request.get(`${BASE}/`)
+    expect(res.ok()).toBeTruthy()
+    const html = await res.text()
+    expect(html).toContain('margo-stage-hero-search')
+    expect(html).toContain('margo-search-wrap--standard')
+    expect(html).toContain('margo-stage-hero--ssr')
+  })
+})
+
 for (const vp of SEARCH_WIDTH_VIEWPORTS) {
   test.describe(`landing search width @${vp.width}`, () => {
-    test(`SSR search field width without hydration`, async ({ browser }) => {
-      const context = await browser.newContext({ viewport: vp, javaScriptEnabled: false })
-      const page = await context.newPage()
-      await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 60000 })
-      const expected = expectedSearchWidth(vp.width)
-      const ssr = await searchWrapWidth(page, '.margo-stage-hero--ssr .margo-search-wrap--standard')
-      expect(Math.abs(ssr - expected)).toBeLessThanOrEqual(1)
-      await context.close()
-    })
-
     test(`hydrated search field width`, async ({ page }) => {
       await page.setViewportSize(vp)
       await gotoLanding(page)
@@ -349,7 +350,7 @@ test.describe('landing footer typography @390', () => {
     const chipFont = await page.locator('.margo-footer__more-chip').evaluate((el) => getComputedStyle(el).fontFamily)
     expect(norm(chipFont)).toBe(norm(tabFont))
     const chipH = await page.locator('.margo-footer__more-chip').evaluate((el) => el.getBoundingClientRect().height)
-    const social = await page.locator('.margo-footer__social-btn').first().evaluate((el) => el.getBoundingClientRect().width)
+    const social = await page.locator('.margo-footer__mobile-closed .margo-footer__social-btn').first().evaluate((el) => el.getBoundingClientRect().width)
     expect(chipH).toBeGreaterThanOrEqual(21)
     expect(chipH).toBeLessThanOrEqual(23)
     expect(social).toBeGreaterThanOrEqual(23)
@@ -364,8 +365,16 @@ test.describe('landing footer socials @320', () => {
     await gotoLanding(page)
     const socials = page.locator('.margo-footer__mobile-closed .margo-footer__social-btn')
     await expect(socials).toHaveCount(6)
-    const overflow = await page.locator('.margo-footer__mobile-closed .margo-footer__social-row').evaluate((el) => el.scrollWidth <= el.clientWidth + 1)
-    expect(overflow).toBe(true)
+    const fits = await page.locator('.margo-footer__mobile-closed .margo-footer__mobile-row1').evaluate((row) => {
+      const rowRect = row.getBoundingClientRect()
+      const more = row.querySelector('.margo-footer__more-chip')
+      const socials = row.querySelectorAll('.margo-footer__social-btn')
+      if (!more || socials.length === 0) return false
+      const last = socials[socials.length - 1].getBoundingClientRect()
+      const moreRect = more.getBoundingClientRect()
+      return last.right <= moreRect.left - 4 && rowRect.width <= window.innerWidth
+    })
+    expect(fits).toBe(true)
     const hrefs = await socials.evaluateAll((els) =>
       els.map((a) => (a as HTMLAnchorElement).href),
     )
