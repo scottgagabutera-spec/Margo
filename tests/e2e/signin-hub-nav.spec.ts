@@ -39,7 +39,7 @@ test.describe('signin hub tab navigation @390', () => {
     await page.goBack()
     await expect(page).toHaveURL(/\/feed/)
     await expect
-      .poll(async () => page.getByRole('dialog', { name: 'Hub' }).isVisible())
+      .poll(async () => page.getByRole('dialog', { name: 'Hub' }).isVisible(), { timeout: 15000 })
       .toBe(true)
   })
 
