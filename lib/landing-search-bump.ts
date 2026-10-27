@@ -10,8 +10,8 @@ import {
 } from './margo-chrome-metrics.ts'
 
 export type LandingSearchBumpInput = {
-  offsetTop: number
-  viewportHeight: number
+  /** Keyboard top (visualViewport offsetTop + height). */
+  keyboardTop: number
   headerBottom: number
   blockTop: number
 }
@@ -30,23 +30,21 @@ function introHeightPx(hideTagline: boolean, hideWordmark: boolean): number {
 }
 
 function planFor(input: LandingSearchBumpInput, hideTagline: boolean, hideWordmark: boolean): LandingSearchBumpPlan {
-  const vvBottom = input.offsetTop + input.viewportHeight
-  const minBlockTop = input.headerBottom + MARGO_HEADER_CLEARANCE_PX
   const searchBottom = input.blockTop + introHeightPx(hideTagline, hideWordmark) + STAGE_SEARCH_FIELD_PX
   const neededBottomY = searchBottom + MARGO_SAFE_GAP_PX + STAGE_SEARCH_ROW_PX * 2.5 + MARGO_SAFE_GAP_PX
-  const rawShift = Math.max(0, neededBottomY - vvBottom)
+  const rawShift = Math.max(0, neededBottomY - input.keyboardTop)
+  const minBlockTop = input.headerBottom + MARGO_HEADER_CLEARANCE_PX
   const maxShift = Math.max(0, input.blockTop - minBlockTop)
   const shiftPx = Math.min(rawShift, maxShift)
   const searchBottomAfter = searchBottom - shiftPx
   const dropdownMaxPx = Math.max(
     Math.round(STAGE_SEARCH_ROW_PX * 1.5),
-    Math.round(vvBottom - searchBottomAfter - MARGO_SAFE_GAP_PX),
+    Math.round(input.keyboardTop - searchBottomAfter - MARGO_SAFE_GAP_PX),
   )
   return { shiftPx, hideTagline, hideWordmark, dropdownMaxPx }
 }
 
 function fits(plan: LandingSearchBumpPlan, input: LandingSearchBumpInput): boolean {
-  const vvBottom = input.offsetTop + input.viewportHeight
   const searchBottom =
     input.blockTop
     + introHeightPx(plan.hideTagline, plan.hideWordmark)
@@ -56,11 +54,10 @@ function fits(plan: LandingSearchBumpPlan, input: LandingSearchBumpInput): boole
   const searchTop = searchBottom - STAGE_SEARCH_FIELD_PX
   return (
     searchTop >= input.headerBottom + MARGO_HEADER_CLEARANCE_PX - 0.5
-    && neededBottomY <= vvBottom + 0.5
+    && neededBottomY <= input.keyboardTop + 0.5
   )
 }
 
-/** Small bump: minimal shift; tagline fades first, then wordmark. */
 export function computeLandingSearchBump(input: LandingSearchBumpInput): LandingSearchBumpPlan {
   const candidates = [
     planFor(input, false, false),

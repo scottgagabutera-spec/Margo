@@ -1,45 +1,41 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { readVisualBand } from '@/lib/margo-keyboard-geometry'
 
 export interface VisualViewportMetrics {
-  /** visualViewport.height (px), or window.innerHeight fallback */
   height: number
-  /** visualViewport.offsetTop */
   offsetTop: number
-  /**
-   * Distance from the layout viewport bottom to the visual viewport bottom.
-   * ≈ on-screen keyboard overlap when the keyboard is open.
-   */
   keyboardInset: number
-  /** True when keyboardInset clears a small threshold */
   keyboardOpen: boolean
+  keyboardTop: number
+  innerHeight: number
 }
 
 const KEYBOARD_OPEN_PX = 80
 
 function readMetrics(): VisualViewportMetrics {
   if (typeof window === 'undefined') {
-    return { height: 800, offsetTop: 0, keyboardInset: 0, keyboardOpen: false }
+    return {
+      height: 800,
+      offsetTop: 0,
+      keyboardInset: 0,
+      keyboardOpen: false,
+      keyboardTop: 800,
+      innerHeight: 800,
+    }
   }
-  const vv = window.visualViewport
-  const height = vv?.height ?? window.innerHeight
-  const offsetTop = vv?.offsetTop ?? 0
-  const keyboardInset = Math.max(0, window.innerHeight - height - offsetTop)
+  const band = readVisualBand()
   return {
-    height,
-    offsetTop,
-    keyboardInset,
-    keyboardOpen: keyboardInset >= KEYBOARD_OPEN_PX,
+    height: band.vvHeight,
+    offsetTop: band.offsetTop,
+    keyboardInset: band.keyboardInset,
+    keyboardOpen: band.keyboardInset >= KEYBOARD_OPEN_PX,
+    keyboardTop: band.keyboardTop,
+    innerHeight: band.innerHeight,
   }
 }
 
-/**
- * Tracks the Visual Viewport (keyboard-aware on iOS Safari + Android Chrome).
- * Optionally publishes CSS vars on <html> for sticky CTAs / sheets:
- *   --margo-vv-height
- *   --margo-keyboard-inset
- */
 export function useVisualViewport(options?: { publishCssVars?: boolean }) {
   const publish = options?.publishCssVars ?? true
   const [metrics, setMetrics] = useState<VisualViewportMetrics>(() => readMetrics())
@@ -52,6 +48,7 @@ export function useVisualViewport(options?: { publishCssVars?: boolean }) {
         const root = document.documentElement
         root.style.setProperty('--margo-vv-height', `${Math.round(next.height)}px`)
         root.style.setProperty('--margo-keyboard-inset', `${Math.round(next.keyboardInset)}px`)
+        root.style.setProperty('--margo-keyboard-top', `${Math.round(next.keyboardTop)}px`)
       }
     }
 
@@ -60,13 +57,36 @@ export function useVisualViewport(options?: { publishCssVars?: boolean }) {
     vv?.addEventListener('resize', update)
     vv?.addEventListener('scroll', update)
     window.addEventListener('resize', update)
+    document.addEventListener('focusin', update)
+    document.addEventListener('focusout', update)
+    let raf = 0
+    const poll = () => {
+      update()
+      raf = window.requestAnimationFrame(poll)
+    }
+    const startPoll = () => {
+      window.cancelAnimationFrame(raf)
+      let n = 0
+      const tick = () => {
+        update()
+        n += 1
+        if (n < 24) raf = window.requestAnimationFrame(tick)
+      }
+      raf = window.requestAnimationFrame(tick)
+    }
+    document.addEventListener('focusin', startPoll)
     return () => {
       vv?.removeEventListener('resize', update)
       vv?.removeEventListener('scroll', update)
       window.removeEventListener('resize', update)
+      document.removeEventListener('focusin', update)
+      document.removeEventListener('focusout', update)
+      document.removeEventListener('focusin', startPoll)
+      window.cancelAnimationFrame(raf)
       if (publish) {
         document.documentElement.style.removeProperty('--margo-vv-height')
         document.documentElement.style.removeProperty('--margo-keyboard-inset')
+        document.documentElement.style.removeProperty('--margo-keyboard-top')
       }
     }
   }, [publish])
@@ -74,10 +94,6 @@ export function useVisualViewport(options?: { publishCssVars?: boolean }) {
   return metrics
 }
 
-/**
- * True while an editable field (input/textarea/contenteditable) is focused.
- * Used to hide chrome (e.g. mobile tab bar) and prefer keyboard insets.
- */
 export function useTextFieldFocus() {
   const [focused, setFocused] = useState(false)
 
@@ -106,11 +122,6 @@ export function useTextFieldFocus() {
   return focused
 }
 
-/**
- * Keyboard-safe chrome: visual viewport metrics + html[data-margo-keyboard]
- * for tab-bar hide while a text field is focused or the keyboard is open.
- * No force flags — same path for every Compose step / future form.
- */
 export function useKeyboardSafeChrome(enabled = true) {
   const metrics = useVisualViewport({ publishCssVars: enabled })
   const textFocused = useTextFieldFocus()
@@ -123,5 +134,5 @@ export function useKeyboardSafeChrome(enabled = true) {
     return () => root.removeAttribute('data-margo-keyboard')
   }, [active])
 
-  return { ...metrics, textFocused, chromeHidden: active }
+  return { ...metrics, textFocused, chromeHidden: active, keyboardOpen: active }
 }

@@ -2,8 +2,9 @@
 
 import { useLayoutEffect } from 'react'
 import { usePathname } from 'next/navigation'
+import { measureMargoHeaderBottom } from '@/lib/margo-header-band'
 
-/** Publishes --margo-header-h (header band including safe-area) for layout math. */
+/** Publishes --margo-header-h and --margo-header-bottom from the real header band element. */
 export function MargoChromeInsetsPublisher() {
   const pathname = usePathname()
 
@@ -11,15 +12,10 @@ export function MargoChromeInsetsPublisher() {
     const root = document.documentElement
 
     const apply = () => {
-      const path = (pathname || '/').split('?')[0]
-      if (path === '/') {
-        const nav = document.querySelector('.margo-landing-nav') as HTMLElement | null
-        const h = nav?.offsetHeight ?? 68
-        root.style.setProperty('--margo-header-h', `${h}px`)
-        return
-      }
-      const navH = parseFloat(getComputedStyle(root).getPropertyValue('--nav-height'))
-      root.style.setProperty('--margo-header-h', `${Number.isFinite(navH) && navH > 0 ? navH : 72}px`)
+      const { bottom, height, source } = measureMargoHeaderBottom()
+      root.style.setProperty('--margo-header-h', `${Math.round(height)}px`)
+      root.style.setProperty('--margo-header-bottom', `${Math.round(bottom)}px`)
+      root.setAttribute('data-margo-header-source', source)
     }
 
     apply()
@@ -28,12 +24,13 @@ export function MargoChromeInsetsPublisher() {
     const el = document.querySelector(path === '/' ? '.margo-landing-nav' : '.margo-nav-bar')
     if (el) ro?.observe(el)
     window.addEventListener('resize', apply)
-    const mo = new MutationObserver(apply)
-    mo.observe(root, { attributes: true, attributeFilter: ['style'] })
+    window.visualViewport?.addEventListener('resize', apply)
+    window.visualViewport?.addEventListener('scroll', apply)
     return () => {
       ro?.disconnect()
       window.removeEventListener('resize', apply)
-      mo.disconnect()
+      window.visualViewport?.removeEventListener('resize', apply)
+      window.visualViewport?.removeEventListener('scroll', apply)
     }
   }, [pathname])
 
