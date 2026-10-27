@@ -96,9 +96,11 @@ for (const from of surfaces) {
   }
 }
 
-test('signin → Hub → Back returns to feed', async ({ page }) => {
-  await goSurface(page, 'signin')
+test('feed → signin → Hub → Back returns to feed', async ({ page }) => {
+  await goSurface(page, 'feed')
   await waitTabBar(page)
+  await tapTab(page, 'Sign In')
+  await expect(page).toHaveURL(/\/signin/)
   await tapHub(page)
   await expect(page.getByRole('dialog', { name: 'Hub' })).toBeVisible()
   await page.goBack()
