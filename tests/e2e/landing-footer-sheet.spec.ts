@@ -299,7 +299,7 @@ test.describe('landing search dropdown @390', () => {
               id: 'g1',
               song: 'Mapenzi Yana Run',
               artist: 'Sample Artist',
-              artwork: '',
+              artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/f0/0a/0f/f00a0f00-0000-0000-0000-000000000000/0000.jpg',
               source: 'genius',
             },
           ],
