@@ -349,7 +349,7 @@ html[data-margo-landing-search-active]:not([data-margo-landing-song-flow]) .marg
 }
 
 html[data-margo-landing-shift-animate]:not([data-margo-landing-song-flow]) .margo-landing-hero-anchor {
-  transition: transform 100ms ease-out;
+  transition: transform 200ms ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {

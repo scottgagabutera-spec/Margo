@@ -22,6 +22,7 @@ import { computeHubPanelPosition, pickVisibleHubAnchor } from '@/lib/hub-panel-p
 import { useRouter } from 'next/navigation'
 import {
   leavePrimaryTabSurface,
+  prepareSignInTabNavigation,
   MARGO_CLOSE_HUB_EVENT,
   persistActivePrimaryScroll,
   readActiveScrollTop,
@@ -489,6 +490,7 @@ export function HubProvider({ children }: { children: ReactNode }) {
   const onLockedActivate = useCallback((returnTo: string) => {
     persistActivePrimaryScroll()
     persistAuthReturnScroll()
+    prepareSignInTabNavigation()
     router.push(buildSigninHref(returnTo))
   }, [router])
 

@@ -414,6 +414,14 @@ export function leavePrimaryTabSurface() {
   window.dispatchEvent(new Event(MARGO_LEAVE_PRIMARY_TABS_EVENT))
 }
 
+/** Drop keepalive paint before /signin so the auth screen is not covered by Feed. */
+export function prepareSignInTabNavigation() {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new Event(MARGO_PREPARE_SIGNIN_TAB_EVENT))
+}
+
+export const MARGO_PREPARE_SIGNIN_TAB_EVENT = 'margo:prepare-signin-tab'
+
 const paneStyle = (
   painted: boolean,
   isCommittedActive: boolean,
@@ -480,7 +488,7 @@ export function PrimaryTabShell({
   const deepNavInFlight =
     !!intentDeepPath && currentPath.toLowerCase() !== intentDeepPath.toLowerCase()
   const suppressKeepalive =
-    deepNavInFlight || hubRestorePending || (deepNavHref !== null && routeTab !== null)
+    deepNavInFlight || (deepNavHref !== null && routeTab !== null)
 
   const activeTab = suppressKeepalive ? null : paintedTab ?? routeTab
   const onPrimarySurface =
@@ -517,26 +525,45 @@ export function PrimaryTabShell({
     return () => window.removeEventListener('popstate', onPop)
   }, [])
 
+  const clearPaintedTabSync = useCallback(() => {
+    intentHrefRef.current = null
+    intentGenRef.current += 1
+    const clear = () => {
+      paintedTabRef.current = null
+      setPaintedTab(null)
+      setNavPending(false)
+      setAckedTab(null)
+      setRingTab(null)
+    }
+    try {
+      flushSync(clear)
+    } catch {
+      clear()
+    }
+  }, [])
+
   useEffect(() => {
     const onLeavePrimary = () => {
-      intentHrefRef.current = null
-      intentGenRef.current += 1
-      const clear = () => {
-        paintedTabRef.current = null
-        setPaintedTab(null)
-        setNavPending(false)
-        setAckedTab(null)
-        setRingTab(null)
-      }
-      try {
-        flushSync(clear)
-      } catch {
-        clear()
-      }
+      clearPaintedTabSync()
     }
     window.addEventListener(MARGO_LEAVE_PRIMARY_TABS_EVENT, onLeavePrimary)
     return () => window.removeEventListener(MARGO_LEAVE_PRIMARY_TABS_EVENT, onLeavePrimary)
-  }, [])
+  }, [clearPaintedTabSync])
+
+  useEffect(() => {
+    const onPrepareSignIn = () => {
+      clearPaintedTabSync()
+    }
+    window.addEventListener(MARGO_PREPARE_SIGNIN_TAB_EVENT, onPrepareSignIn)
+    return () => window.removeEventListener(MARGO_PREPARE_SIGNIN_TAB_EVENT, onPrepareSignIn)
+  }, [clearPaintedTabSync])
+
+  useLayoutEffect(() => {
+    const path = normalizeTabPath(pathname)
+    if (path === '/signin' && paintedTabRef.current) {
+      clearPaintedTabSync()
+    }
+  }, [pathname, clearPaintedTabSync])
 
   useEffect(() => {
     const onDeepNav = (event: Event) => {
