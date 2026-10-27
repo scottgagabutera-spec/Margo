@@ -450,6 +450,12 @@ export function HubProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false)
   const [pendingHref, setPendingHref] = useState<string | null>(null)
   const [signInReturnTo, setSignInReturnTo] = useState('/feed?hub=1')
+
+  useEffect(() => {
+    if (!open) return
+    const base = (pathname || '/feed').split('?')[0]
+    setSignInReturnTo(`${base}?hub=1`)
+  }, [open, pathname])
   const pendingHrefRef = useRef<string | null>(null)
   const hubNavAnchorRef = useRef<HTMLButtonElement | null>(null)
   const hubTabAnchorRef = useRef<HTMLButtonElement | null>(null)
