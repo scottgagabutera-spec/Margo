@@ -9,13 +9,7 @@ async function mockGenius(page: Page) {
       contentType: 'application/json',
       body: JSON.stringify({
         results: [
-          {
-            id: 'g1',
-            song: 'Mapenzi Yana Run',
-            artist: 'Sample Artist',
-            artwork: '',
-            source: 'genius',
-          },
+          { id: 'g1', song: 'Test Song', artist: 'Test Artist', artwork: '', source: 'genius' },
         ],
       }),
     })
@@ -30,13 +24,15 @@ test('landing returns to idle hero after song pick and browser back', async ({ p
   await page.waitForSelector('html[data-margo-stage-client-ready]', { timeout: 20000 })
   const search = page.getByRole('searchbox', { name: /search song/i })
   await search.tap()
-  await search.fill('map')
+  await search.fill('test')
   await page.waitForResponse((r) => r.url().includes('/api/genius') && r.status() === 200)
-  await page.getByRole('option', { name: /Mapenzi/i }).first().tap()
+  await page.getByRole('option', { name: /Test Song/i }).first().tap()
   await expect(page.getByRole('button', { name: /clear song/i })).toBeVisible({ timeout: 15000 })
   await page.getByRole('button', { name: /clear song/i }).tap()
   await page.waitForFunction(
-    () => !document.documentElement.hasAttribute('data-margo-landing-search-active'),
+    () =>
+      !document.documentElement.hasAttribute('data-margo-landing-search-active')
+      && !document.documentElement.hasAttribute('data-margo-landing-song-flow'),
     undefined,
     { timeout: 5000 },
   )

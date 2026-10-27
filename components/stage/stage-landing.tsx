@@ -183,6 +183,17 @@ export function StageLanding() {
     !selectedSong && (searchFocused || showResults || searchQuery.trim().length > 0)
   const searchWrapRef = useLandingHeroSearchLayout(landingSearchActive)
 
+  useEffect(() => {
+    const root = document.documentElement
+    if (selectedSong) {
+      resetLandingSearchLayoutState()
+      root.setAttribute('data-margo-landing-song-flow', '1')
+    } else {
+      root.removeAttribute('data-margo-landing-song-flow')
+    }
+    return () => root.removeAttribute('data-margo-landing-song-flow')
+  }, [selectedSong])
+
   useStageChromePublisher(showResults || !!selectedSong)
   useStageSearchPublisher(showResults)
   useStageIdlePublisher(!selectedSong)
@@ -765,13 +776,15 @@ export function StageLanding() {
           />
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center' }}>
-          <StageSongChip
-            title={songName}
-            artist={artistName}
-            artwork={selectedSong.artwork}
-            onClear={clearSong}
-          />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center', width: '100%' }}>
+          <div className="margo-stage-song-chip-wrap" style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+            <StageSongChip
+              title={songName}
+              artist={artistName}
+              artwork={selectedSong.artwork}
+              onClear={clearSong}
+            />
+          </div>
 
           {showLinePicker && (
             <div style={{ width: '100%' }}>
