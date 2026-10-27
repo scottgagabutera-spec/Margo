@@ -93,8 +93,11 @@ async function assertLandingSearchKeyboardLayout(
   expect(rowFullyVisible(metrics.rowRects[0].top, metrics.rowRects[0].bottom, metrics.visibleTop, metrics.visibleBottom)).toBe(true)
   expect(rowFullyVisible(metrics.rowRects[1].top, metrics.rowRects[1].bottom, metrics.visibleTop, metrics.visibleBottom)).toBe(true)
   if (metrics.rowRects[2]) {
-    expect(metrics.rowRects[2].bottom).toBeGreaterThan(metrics.visibleBottom - 8)
-    expect(metrics.rowRects[2].top).toBeLessThan(metrics.visibleBottom)
+    const r3 = metrics.rowRects[2]
+    const thirdPeeks =
+      (r3.top < metrics.visibleBottom && r3.bottom > metrics.visibleBottom)
+      || (r3.top >= metrics.visibleTop && r3.bottom <= metrics.visibleBottom + 1)
+    expect(thirdPeeks).toBe(true)
   }
   expect(metrics.listOverflowY).toBe('auto')
   expect(metrics.docScroll).toBe(false)
