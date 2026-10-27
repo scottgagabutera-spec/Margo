@@ -38,7 +38,9 @@ export function readVisualBand(win: Window = window): VisualBand {
       mock.mode === 'resizes-content' && mock.open ? vvHeight : mock.fullH
     const keyboardTop = offsetTop + vvHeight
     const keyboardInset = Math.max(0, innerHeight - keyboardTop)
-    return { innerHeight, vvHeight, offsetTop, keyboardTop, keyboardInset }
+    const band = { innerHeight, vvHeight, offsetTop, keyboardTop, keyboardInset }
+    publishReadVisualBandHook()
+    return band
   }
 
   const innerHeight = win.innerHeight
@@ -69,9 +71,12 @@ export function readVisualBand(win: Window = window): VisualBand {
     keyboardTop,
     keyboardInset,
   }
-  if (typeof window !== 'undefined') {
-    (window as Window & { __margoReadVisualBand?: () => VisualBand }).__margoReadVisualBand = () =>
-      readVisualBand(window)
-  }
+  publishReadVisualBandHook()
   return band
+}
+
+function publishReadVisualBandHook() {
+  if (typeof window === 'undefined') return
+  (window as Window & { __margoReadVisualBand?: () => VisualBand }).__margoReadVisualBand = () =>
+    readVisualBand(window)
 }

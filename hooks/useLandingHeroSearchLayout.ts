@@ -43,13 +43,14 @@ export function useLandingHeroSearchLayout(active: boolean) {
     root.setAttribute('data-margo-landing-search-active', '1')
 
     const apply = () => {
-      const intro = document.querySelector('.margo-stage-hero__intro') as HTMLElement | null
+      const clientHero = '.margo-stage-hero:not(.margo-stage-hero--ssr)'
+      const wordmark = document.querySelector(`${clientHero} .margo-stage-hero__wordmark-wrap`) as HTMLElement | null
       const input = searchWrapRef.current?.querySelector('.margo-search-wrap--standard') as HTMLElement | null
-      if (!intro || !input) return
+      if (!wordmark || !input) return
 
       const { bottom: headerBottom } = measureMargoHeaderBottom()
       const band = readVisualBand()
-      const blockTop = intro.getBoundingClientRect().top
+      const blockTop = wordmark.getBoundingClientRect().top
 
       const plan = computeLandingSearchBump({
         keyboardTop: band.keyboardTop,
