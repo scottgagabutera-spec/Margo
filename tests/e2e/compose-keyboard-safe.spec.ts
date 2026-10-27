@@ -31,11 +31,16 @@ async function runComposeCase(page: Page, mode: KeyboardEmulationMode) {
   await search.fill('bet')
   await page.waitForResponse((r) => r.url().includes('/api/genius') && r.status() === 200)
   await page.getByRole('option', { name: /Betrayal/i }).first().tap()
-  await page.getByRole('button', { name: /^continue$/i }).tap({ timeout: 15000 })
-  await expect(page.locator('[data-testid="compose-song-row"]')).toBeVisible({ timeout: 20000 })
+  await expect(page.locator('[data-testid="compose-song-row"]')).toBeVisible({ timeout: 25000 })
   const field = page.locator('.margo-compose-region__scroll textarea, .margo-compose-region__scroll [contenteditable="true"]').first()
   await field.tap()
-  await page.waitForTimeout(350)
+  await page.evaluate(() => {
+    const w = window as Window & { __margoVvMock?: { open: boolean } }
+    if (w.__margoVvMock) w.__margoVvMock.open = true
+    window.visualViewport?.dispatchEvent(new Event('resize'))
+    window.dispatchEvent(new Event('resize'))
+  })
+  await page.waitForTimeout(200)
   const headerBottom = await measureHeaderBottom(page)
   const visBottom = await visibleBottomY(page)
   const hit = await assertTappableInBand(page, '[data-testid="compose-song-clear"]', headerBottom, visBottom)

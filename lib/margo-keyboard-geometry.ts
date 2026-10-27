@@ -62,11 +62,16 @@ export function readVisualBand(win: Window = window): VisualBand {
   const keyboardTop = offsetTop + effectiveVvHeight
   const keyboardInset = Math.max(0, innerHeight - keyboardTop)
 
-  return {
+  const band = {
     innerHeight,
     vvHeight: effectiveVvHeight,
     offsetTop,
     keyboardTop,
     keyboardInset,
   }
+  if (typeof window !== 'undefined') {
+    (window as Window & { __margoReadVisualBand?: () => VisualBand }).__margoReadVisualBand = () =>
+      readVisualBand(window)
+  }
+  return band
 }

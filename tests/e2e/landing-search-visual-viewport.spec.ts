@@ -39,7 +39,16 @@ async function runLandingKeyboardCase(
   await search.tap()
   await search.fill('Alikiba')
   await page.waitForResponse((r) => r.url().includes('/api/genius') && r.status() === 200)
-  await page.waitForTimeout(350)
+  await page.evaluate(() => {
+    const w = window as Window & { __margoVvMock?: { open: boolean } }
+    if (w.__margoVvMock) w.__margoVvMock.open = true
+    window.visualViewport?.dispatchEvent(new Event('resize'))
+    window.dispatchEvent(new Event('resize'))
+  })
+  await page.waitForFunction(() => {
+    const shift = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--margo-landing-hero-shift') || '0')
+    return shift > 50
+  }, undefined, { timeout: 8000 })
 
   const headerBottom = await measureHeaderBottom(page)
   const visBottom = await visibleBottomY(page)
