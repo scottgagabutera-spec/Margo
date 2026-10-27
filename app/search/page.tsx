@@ -272,7 +272,7 @@ function SearchPageInner() {
   return (
     <div style={{
       maxWidth: '640px', margin: '0 auto',
-      padding: 'calc(var(--nav-height, 72px) + 16px) 16px var(--margo-page-padding-bottom)',
+      padding: 'calc(var(--margo-header-h, var(--nav-height, 72px)) + 8px) 16px var(--margo-page-padding-bottom)',
     }}>
       <div ref={searchAnchorRef}>
         <MargoSearchInput

@@ -345,9 +345,8 @@ html:has(.margo-landing-page-shell) body {
 }
 
 html[data-margo-landing-search-active] .margo-landing-hero-anchor {
-  top: var(--margo-landing-hero-active-top, max(16px, 12dvh));
-  transform: translateY(0);
-  transition: top 200ms ease-out, transform 200ms ease-out;
+  transform: translateY(calc(-50% - var(--margo-landing-hero-shift, 0px)));
+  transition: transform 200ms ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -356,20 +355,53 @@ html[data-margo-landing-search-active] .margo-landing-hero-anchor {
   }
 }
 
-html[data-margo-landing-search-active] .margo-stage-hero__intro {
+html[data-margo-landing-hide-tagline] .margo-stage-hero__tagline {
   opacity: 0;
-  transform: translateY(-12px);
   max-height: 0;
   overflow: hidden;
   margin: 0;
   pointer-events: none;
-  transition: opacity 200ms ease-out, transform 200ms ease-out, max-height 200ms ease-out;
+  transition: opacity 200ms ease-out, max-height 200ms ease-out;
+}
+
+html[data-margo-landing-hide-wordmark] .margo-stage-hero__wordmark-wrap {
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  margin: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease-out, max-height 200ms ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html[data-margo-landing-search-active] .margo-stage-hero__intro {
+  html[data-margo-landing-hide-tagline] .margo-stage-hero__tagline,
+  html[data-margo-landing-hide-wordmark] .margo-stage-hero__wordmark-wrap {
     transition: none;
   }
+}
+
+.margo-compose-overlay input,
+.margo-compose-overlay textarea,
+.margo-compose-overlay .margo-search-wrap--standard {
+  scroll-margin-top: calc(var(--margo-header-h, var(--nav-height, 72px)) + 8px);
+}
+
+.margo-compose-sticky-song {
+  position: sticky;
+  z-index: 3;
+  top: calc(var(--margo-header-h, var(--nav-height, 72px)) + 4px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 4px 0 8px;
+  background: var(--bg);
+  box-sizing: border-box;
+}
+
+.margo-compose-sticky-song__chip {
+  flex: 1;
+  min-width: 0;
 }
 
 .margo-stage-zone {
@@ -483,7 +515,7 @@ html[data-margo-stage] .margo-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
+  padding: max(16px, env(safe-area-inset-top, 0px)) 24px 16px;
   background: var(--margo-scrim);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);

@@ -1,15 +1,3 @@
-/** Top of the search field in layout coordinates while the keyboard is open. */
-export function searchFieldTopGoalPx(input: {
-  offsetTop: number
-  viewportHeight: number
-  minPx?: number
-  fraction?: number
-}): number {
-  const minPx = input.minPx ?? 16
-  const fraction = input.fraction ?? 0.12
-  return input.offsetTop + Math.max(minPx, input.viewportHeight * fraction)
-}
-
 /** Max listbox height below the search field bottom inside the visual viewport band. */
 export function searchDropdownMaxHeightBelowPx(input: {
   anchorBottom: number

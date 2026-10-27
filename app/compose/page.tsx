@@ -16,6 +16,7 @@ import { ComposeSendTo } from '@/components/compose-send-to'
 import { ComposeReadyPreview } from '@/components/compose-ready-preview'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { ComposeSearchDropdown } from '@/components/compose-search-dropdown'
+import { ComposeStickySongRow } from '@/components/compose-sticky-song-row'
 import { MargoSearchInput } from '@/components/margo-search-input'
 import { MARGO_SEARCH_HINT_CATALOG } from '@/lib/margo-search-hints'
 import { MomentShareStudio } from '@/components/moment-share-studio'
@@ -189,17 +190,17 @@ function ComposeDismissButton({
 
 const composeOverlayStyle: React.CSSProperties = {
   position: 'fixed',
-  top: 'var(--nav-height, 72px)',
+  top: 'var(--margo-header-h, var(--nav-height, 72px))',
   left: 0,
   right: 0,
-  height: 'calc(var(--margo-vv-height, 100dvh) - var(--nav-height, 72px))',
+  height: 'calc(var(--margo-vv-height, 100dvh) - var(--margo-header-h, var(--nav-height, 72px)))',
   zIndex: 80,
   display: 'flex',
   flexDirection: 'column',
   background: 'var(--bg)',
   paddingLeft: '24px',
   paddingRight: '24px',
-  paddingTop: '12px',
+  paddingTop: '8px',
   boxSizing: 'border-box',
   overflowY: 'auto',
   WebkitOverflowScrolling: 'touch',
@@ -1285,7 +1286,7 @@ function ComposeInner() {
   return (
     <main ref={composeRootRef} style={{ minHeight: '100dvh', background: 'var(--bg)', position: 'relative' }}>
       <div style={{
-        paddingTop: 'calc(var(--nav-height, 72px) + 16px)',
+        paddingTop: 'calc(var(--margo-header-h, var(--nav-height, 72px)) + 8px)',
         paddingBottom: phase === 'moment' || phase === 'action'
           ? 'calc(var(--margo-cta-bar-h, 120px) + 16px)'
           : 'calc(var(--margo-page-padding-bottom) + 88px)',
@@ -1572,16 +1573,28 @@ function ComposeInner() {
       )}
 
       {portalMounted && showLinePicker && createPortal(
-        <div style={{
-          ...composeOverlayStyle,
-          paddingBottom: 'calc(var(--margo-cta-bar-h, 0px) + var(--margo-tabbar-h, 80px) + 16px)',
-        }}>
+        <div
+          className="margo-compose-overlay"
+          style={{
+            ...composeOverlayStyle,
+            paddingBottom: 'calc(var(--margo-cta-bar-h, 0px) + var(--margo-tabbar-h, 80px) + 16px)',
+          }}
+        >
           <div style={{ maxWidth: '640px', width: '100%', margin: '0 auto' }}>
             <ComposeTopBar
               onBack={handleLinePickerBack}
               title="Pick the line"
               trailing={<ComposeDismissButton onClick={handleCancelLine} label="Cancel line" />}
             />
+            {songName && (
+              <ComposeStickySongRow
+                title={songName}
+                artist={artistName}
+                artwork={selectedSong?.artwork}
+                onClear={clearCurrentSongPick}
+                onChangeSong={handleChangeSong}
+              />
+            )}
             <ComposeLinePicker
               hideHeader
               lines={margoLines}
@@ -1761,10 +1774,13 @@ function ComposeInner() {
       )}
 
       {portalMounted && showYourLinePanel && createPortal(
-        <div style={{
-          ...composeOverlayStyle,
-          overflowY: 'hidden',
-        }}>
+        <div
+          className="margo-compose-overlay"
+          style={{
+            ...composeOverlayStyle,
+            overflowY: 'hidden',
+          }}
+        >
           <div style={{ maxWidth: '640px', width: '100%', margin: '0 auto', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <ComposeTopBar
               onBack={handleYourLineBack}
@@ -1773,6 +1789,15 @@ function ComposeInner() {
               chromeHidden={chromeHidden}
               trailing={<ComposeDismissButton onClick={handleCancelLine} label="Cancel line" />}
             />
+            {songName && (
+              <ComposeStickySongRow
+                title={songName}
+                artist={artistName}
+                artwork={selectedSong?.artwork}
+                onClear={clearCurrentSongPick}
+                onChangeSong={handleChangeSong}
+              />
+            )}
 
             <ComposeLyricCard style={{
               flex: 1, minHeight: 0, overflow: 'hidden',

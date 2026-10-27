@@ -5,14 +5,7 @@ import {
   landingHeroCenterFractionPx,
   landingHeroAnchorTopPx,
   searchDropdownMaxHeightBelowPx,
-  searchFieldTopGoalPx,
 } from './search-viewport-layout.ts'
-
-test('search field top goal uses max(16px, 12% vv height) in visual band', () => {
-  assert.equal(searchFieldTopGoalPx({ offsetTop: 0, viewportHeight: 360 }), Math.max(16, 360 * 0.12))
-  assert.equal(searchFieldTopGoalPx({ offsetTop: 40, viewportHeight: 500 }), 40 + Math.max(16, 500 * 0.12))
-  assert.equal(searchFieldTopGoalPx({ offsetTop: 0, viewportHeight: 100 }), 16)
-})
 
 test('dropdown max height fills visual viewport below anchor', () => {
   assert.equal(
@@ -43,6 +36,6 @@ test('idle hero center fraction is 41%', () => {
 test('landing search active CSS keeps idle anchor at 41%', () => {
   const css = fs.readFileSync('app/globals.css', 'utf8')
   assert.match(css, /\.margo-landing-hero-anchor[\s\S]*top:\s*41%/)
-  assert.match(css, /html\[data-margo-landing-search-active\][\s\S]*--margo-landing-hero-active-top/)
-  assert.match(css, /html\[data-margo-landing-search-active\][\s\S]*\.margo-stage-hero__intro/)
+  assert.match(css, /html\[data-margo-landing-search-active\][\s\S]*--margo-landing-hero-shift/)
+  assert.match(css, /html\[data-margo-landing-hide-tagline\]/)
 })
