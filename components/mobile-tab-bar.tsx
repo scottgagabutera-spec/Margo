@@ -31,7 +31,7 @@ const font = 'var(--font-geist-sans), system-ui, sans-serif'
 export function MobileTabBar() {
   const pathname = usePathname()
   const { user, identity } = useIdentity()
-  const { activeTab, isTabPending, isTabAcked } = usePrimaryTab()
+  const { barTab, isTabPending, isTabAcked } = usePrimaryTab()
   const { open: hubOpen } = useHub()
   const feedLink = usePrimaryTabLinkProps('/feed', 'feed')
   const discoverLink = usePrimaryTabLinkProps('/discover', 'discover')
@@ -92,9 +92,9 @@ export function MobileTabBar() {
     }
   }, [shellHidden, stageHidden])
 
-  const feedRouteActive = activeTab === 'feed' || (!activeTab && pathname === '/feed')
-  const discoverRouteActive = activeTab === 'discover' || (!activeTab && !!pathname?.startsWith('/discover'))
-  const composeRouteActive = activeTab === 'compose' || (!activeTab && pathname === '/compose')
+  const feedRouteActive = barTab === 'feed' || (barTab === null && pathname === '/feed')
+  const discoverRouteActive = barTab === 'discover' || (barTab === null && !!pathname?.startsWith('/discover'))
+  const composeRouteActive = barTab === 'compose' || (barTab === null && pathname === '/compose')
   const isOnFeed = primaryTabBarGold(hubOpen, feedRouteActive)
   const isOnDiscover = primaryTabBarGold(hubOpen, discoverRouteActive)
   const isOnCompose = primaryTabBarGold(hubOpen, composeRouteActive)
@@ -103,11 +103,12 @@ export function MobileTabBar() {
   const signinHref = useSigninHref()
   const youHref = isSignedIn ? '/you' : signinHref
   const youLink = usePrimaryTabLinkProps(youHref, 'you')
-  const youRouteActive = activeTab === 'you' || (!!identity && isSignedIn && pathname === `/profile/${identity.username}`)
+  const youRouteActive = barTab === 'you' || (barTab === null && !!identity && isSignedIn && pathname === `/profile/${identity.username}`)
   const isOnProfile = primaryTabBarGold(hubOpen, youRouteActive)
   const isOnSignInRoute = !isSignedIn && pathname?.split('?')[0] === '/signin'
-  const signInTabActive = signInTabActiveOnSigninRoute(isOnSignInRoute, hubOpen)
-  const youAwaitingIdentity = isSignedIn && !identity && activeTab !== 'you'
+  const primaryBarSelected = barTab !== null && barTab !== 'you'
+  const signInTabActive = signInTabActiveOnSigninRoute(isOnSignInRoute, hubOpen, primaryBarSelected)
+  const youAwaitingIdentity = isSignedIn && !identity && barTab !== 'you'
 
   const isMusicActive = engineState.mode !== 'idle'
 

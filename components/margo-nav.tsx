@@ -69,7 +69,7 @@ const font = UI_FONT
 export function MargoNav() {
   const pathname = usePathname()
   const router = useRouter()
-  const { activeTab, isTabPending, isTabAcked } = usePrimaryTab()
+  const { activeTab, barTab, isTabPending, isTabAcked } = usePrimaryTab()
   const feedLink = usePrimaryTabLinkProps('/feed', 'feed')
   const discoverLink = usePrimaryTabLinkProps('/discover', 'discover')
   const composeLink = usePrimaryTabLinkProps('/compose', 'compose')
@@ -84,15 +84,15 @@ export function MargoNav() {
   const pathBack = navBackForPath(pathname)
   const navBack = activeTab === 'you' ? null : (navBackOverride ?? pathBack)
 
-  const isOnFeed = activeTab === 'feed' || (!activeTab && pathname === '/feed')
+  const isOnFeed = barTab === 'feed' || (barTab === null && pathname === '/feed')
   // Full lockup (mark + MARGO) only on Feed home. Landing has its own lockup.
   // Logo returns to Stage landing (`/`) — expression front door; Feed tab stays in-app home.
   // Elsewhere: mark/symbol only — tab or page context owns the destination name.
   const showWordmark = isOnFeed
-  const isOnDiscover = activeTab === 'discover' || (!activeTab && !!pathname?.startsWith('/discover'))
-  const isOnCompose = activeTab === 'compose' || (!activeTab && pathname === '/compose')
+  const isOnDiscover = barTab === 'discover' || (barTab === null && !!pathname?.startsWith('/discover'))
+  const isOnCompose = barTab === 'compose' || (barTab === null && pathname === '/compose')
   const isOnYou =
-    activeTab === 'you'
+    barTab === 'you'
     || pathname === '/you'
     || (!!identity && pathname === `/profile/${identity.username}`)
   const isOnSignin = pathname === '/signin'

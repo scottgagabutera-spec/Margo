@@ -311,6 +311,8 @@ let lastTabPointerSeq = 0
 
 interface PrimaryTabContextValue {
   activeTab: PrimaryTabId | null
+  /** Instant tab-bar target: painted → acked → route (Hub uses its own slot). */
+  barTab: PrimaryTabId | null
   peekTab: PrimaryTabId | null
   pendingTab: PrimaryTabId | null
   isOnPrimaryTab: boolean
@@ -330,6 +332,7 @@ interface PrimaryTabContextValue {
 
 const PrimaryTabContext = createContext<PrimaryTabContextValue>({
   activeTab: null,
+  barTab: null,
   peekTab: null,
   pendingTab: null,
   isTabActive: () => false,
@@ -491,9 +494,10 @@ export function PrimaryTabShell({
   const suppressKeepalive =
     deepNavInFlight || (deepNavHref !== null && routeTab !== null)
 
-  const activeTab = suppressKeepalive ? null : paintedTab ?? routeTab
+  const activeTab = suppressKeepalive ? null : paintedTab ?? ackedTab ?? routeTab
+  const barTab = suppressKeepalive ? null : paintedTab ?? ackedTab ?? routeTab
   const onPrimarySurface =
-    !suppressKeepalive && (routeTab !== null || paintedTab !== null)
+    !suppressKeepalive && (routeTab !== null || paintedTab !== null || ackedTab !== null)
 
   const activeTabRef = useRef<PrimaryTabId | null>(activeTab)
   activeTabRef.current = activeTab
@@ -526,9 +530,7 @@ export function PrimaryTabShell({
     return () => window.removeEventListener('popstate', onPop)
   }, [])
 
-  const clearPaintedTabSync = useCallback(() => {
-    intentHrefRef.current = null
-    intentGenRef.current += 1
+  const clearKeepalivePaintSync = useCallback(() => {
     const clear = () => {
       paintedTabRef.current = null
       setPaintedTab(null)
@@ -543,6 +545,12 @@ export function PrimaryTabShell({
     }
   }, [])
 
+  const clearPaintedTabSync = useCallback(() => {
+    intentHrefRef.current = null
+    intentGenRef.current += 1
+    clearKeepalivePaintSync()
+  }, [clearKeepalivePaintSync])
+
   useEffect(() => {
     const onLeavePrimary = () => {
       clearPaintedTabSync()
@@ -551,11 +559,15 @@ export function PrimaryTabShell({
     return () => window.removeEventListener(MARGO_LEAVE_PRIMARY_TABS_EVENT, onLeavePrimary)
   }, [clearPaintedTabSync])
 
+  const prevPathForSigninRef = useRef<string | null>(null)
   useLayoutEffect(() => {
-    if (normalizeTabPath(pathname) === '/signin') {
-      clearPaintedTabSync()
-    }
-  }, [pathname, clearPaintedTabSync])
+    const path = normalizeTabPath(pathname)
+    const prev = prevPathForSigninRef.current
+    prevPathForSigninRef.current = path
+    if (path !== '/signin') return
+    if (prev === '/signin') return
+    clearKeepalivePaintSync()
+  }, [pathname, clearKeepalivePaintSync])
 
   useEffect(() => {
     const onDeepNav = (event: Event) => {
@@ -958,6 +970,7 @@ export function PrimaryTabShell({
   const ctx = useMemo<PrimaryTabContextValue>(
     () => ({
       activeTab,
+      barTab,
       peekTab,
       pendingTab: navPending ? paintedTab : null,
       isOnPrimaryTab: activeTab !== null,
@@ -971,7 +984,7 @@ export function PrimaryTabShell({
       setStripOffset,
       endPeek,
     }),
-    [activeTab, peekTab, paintedTab, navPending, ackedTab, ringTab, hasCachedTab, acknowledgePrimaryTab, navigatePrimaryTab, beginPeek, setStripOffset, endPeek]
+    [activeTab, barTab, peekTab, paintedTab, navPending, ackedTab, ringTab, hasCachedTab, acknowledgePrimaryTab, navigatePrimaryTab, beginPeek, setStripOffset, endPeek]
   )
 
   usePrimaryTabSwipeGesture(enableSwipeGesture, ownProfileHref, {
