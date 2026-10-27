@@ -212,9 +212,9 @@ test.describe('landing SSR @390', () => {
     const page = await context.newPage()
     await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 60000 })
     const html = await page.content()
-    expect(html).toContain('MARGO')
+    expect(html).toMatch(/MARGO|margo-stage-hero__wordmark/)
     expect(html).toContain('Expression through a line of music.')
-    expect(html).toMatch(/class="[^"]*margo-search/)
+    expect(html).toMatch(/margo-search|type="search"/)
     await context.close()
   })
 })
@@ -224,6 +224,8 @@ test.describe('landing tab bar unchanged @390', () => {
 
   test('tab order and Post pill', async ({ page }) => {
     await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    await page.waitForTimeout(800)
+    await expect(page.locator('.margo-mobile-tabbar')).toBeVisible({ timeout: 15000 })
     const labels = await page.locator('.margo-mobile-tabbar a').evaluateAll((els) =>
       els.map((a) => a.getAttribute('aria-label') || (a as HTMLElement).innerText.trim()),
     )

@@ -16,14 +16,18 @@ test('hero anchor vertical center at 41%', () => {
   assert.match(css, /\.margo-landing-hero-anchor[\s\S]*translateY\(-50%\)/)
 })
 
-test('StageLandingPage renders on first paint (no mounted gate)', () => {
-  const src = fs.readFileSync('components/stage/stage-landing-page.tsx', 'utf8')
-  assert.doesNotMatch(src, /if \(!mounted\) return null/)
-  assert.doesNotMatch(src, /setMounted\(true\)/)
+test('Stage landing SSR hero ships wordmark and search for first paint', () => {
+  const src = fs.readFileSync('components/stage/stage-landing-ssr-hero.tsx', 'utf8')
+  assert.match(src, />MARGO</)
+  assert.match(src, /Expression through a line of music/)
+  assert.match(src, /type="search"/)
+  const page = fs.readFileSync('components/stage/stage-landing-page.tsx', 'utf8')
+  assert.doesNotMatch(page, /use client/)
+  assert.match(page, /StageLandingSsrHero/)
 })
 
 test('signed-in landing header uses You link when identity present', () => {
-  const src = fs.readFileSync('components/stage/stage-landing-page.tsx', 'utf8')
+  const src = fs.readFileSync('components/stage/landing-account-nav.tsx', 'utf8')
   assert.match(src, /isSignedIn \?/)
   assert.match(src, /<span>You<\/span>/)
   assert.match(src, /SignInLink/)

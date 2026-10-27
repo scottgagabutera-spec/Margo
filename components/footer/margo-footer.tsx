@@ -220,9 +220,11 @@ export function MargoFooter() {
   const onBackdropPointerDown = () => closeSheet()
 
   const onSheetPointerDown = (e: ReactPointerEvent) => {
-    if ((e.target as HTMLElement).closest('.margo-footer__sheet-handle')) {
-      dragStartY.current = e.clientY
-    }
+    const onHandle = (e.target as HTMLElement).closest('.margo-footer__sheet-handle')
+    const onSheetTop = (e.target as HTMLElement).closest('.margo-footer__sheet')
+    if (!onHandle && !onSheetTop) return
+    dragStartY.current = e.clientY
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
   }
 
   const onSheetPointerMove = (e: ReactPointerEvent) => {
@@ -233,8 +235,11 @@ export function MargoFooter() {
     }
   }
 
-  const onSheetPointerUp = () => {
+  const onSheetPointerUp = (e: ReactPointerEvent) => {
     dragStartY.current = null
+    try {
+      ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+    } catch { /* ignore */ }
   }
 
   const sheetAnimClass = reducedMotion
