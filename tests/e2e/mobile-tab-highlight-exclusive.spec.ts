@@ -1,7 +1,16 @@
 import { test, expect, type Page } from '@playwright/test'
 
 const BASE = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:3000'
-const GOLD = 'rgb(232, 197, 71)'
+
+/** Match tab label gold (var(--gold)) across browsers / rounding. */
+function isTabGoldColor(color: string): boolean {
+  const m = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
+  if (!m) return false
+  const r = Number(m[1])
+  const g = Number(m[2])
+  const b = Number(m[3])
+  return r >= 210 && g >= 175 && b >= 40 && b <= 110
+}
 
 test.use({ viewport: { width: 390, height: 844 }, hasTouch: true })
 
@@ -25,10 +34,10 @@ async function assertSingleGold(page: Page, owner: 'Feed' | 'Discover' | 'Hub' |
     hub: await tabLabelColor(page, 'Hub'),
     signIn: await tabLabelColor(page, 'Sign In'),
   }
-  const goldTabs = (['feed', 'discover', 'hub', 'signIn'] as const).filter((k) => colors[k] === GOLD)
-  expect(goldTabs.length, JSON.stringify(colors)).toBeLessThanOrEqual(1)
+  const goldTabs = (['feed', 'discover', 'hub', 'signIn'] as const).filter((k) => isTabGoldColor(colors[k]))
+  expect(goldTabs.length, JSON.stringify(colors)).toBe(1)
   const key = owner === 'Sign In' ? 'signIn' : owner.toLowerCase() as 'feed' | 'discover' | 'hub'
-  expect(colors[key]).toBe(GOLD)
+  expect(isTabGoldColor(colors[key]), colors[key]).toBe(true)
 }
 
 const hops: Array<{ from: string; to: 'Feed' | 'Discover' | 'Hub' | 'Sign In'; owner: 'Feed' | 'Discover' | 'Hub' | 'Sign In' }> = [
