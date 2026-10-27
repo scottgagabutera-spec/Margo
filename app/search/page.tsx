@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from 'react'
+import { useSearchBelowMaxHeight } from '@/hooks/useSearchBelowMaxHeight'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { MargoSearchInput } from '@/components/margo-search-input'
@@ -205,11 +206,15 @@ function SearchPageInner() {
   })
 
   const [query, setQuery] = useState('')
+  const [searchFocused, setSearchFocused] = useState(false)
   const [debounced, setDebounced] = useState('')
   const [data, setData] = useState<MargoSearchResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const reqId = useRef(0)
+  const searchAnchorRef = useRef<HTMLDivElement | null>(null)
+  const resultsScrollActive = searchFocused || query.trim().length > 0
+  const resultsMaxHeight = useSearchBelowMaxHeight(searchAnchorRef, resultsScrollActive)
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebounced(query.trim()), DEBOUNCE_MS)
@@ -269,12 +274,16 @@ function SearchPageInner() {
       maxWidth: '640px', margin: '0 auto',
       padding: 'calc(var(--nav-height, 72px) + 16px) 16px var(--margo-page-padding-bottom)',
     }}>
-      <MargoSearchInput
-        value={query}
-        onChange={setQuery}
-        hintText={scope.placeholder}
-        ariaLabel={scope.placeholder}
-      />
+      <div ref={searchAnchorRef}>
+        <MargoSearchInput
+          value={query}
+          onChange={setQuery}
+          hintText={scope.placeholder}
+          ariaLabel={scope.placeholder}
+          onFocus={() => setSearchFocused(true)}
+          onBlur={() => setSearchFocused(false)}
+        />
+      </div>
 
       {loading && debounced.length >= 2 && (
         <div style={{ marginTop: '8px' }}>
@@ -307,7 +316,19 @@ function SearchPageInner() {
       )}
 
       {!loading && results && (
-        <div style={{ marginTop: '24px' }}>
+        <div
+          style={{
+            marginTop: '24px',
+            ...(resultsMaxHeight != null && resultsMaxHeight > 0
+              ? {
+                  maxHeight: `${resultsMaxHeight}px`,
+                  overflowY: 'auto',
+                  overscrollBehavior: 'contain',
+                  WebkitOverflowScrolling: 'touch',
+                }
+              : {}),
+          }}
+        >
           {showSongs ? (
             <HitSection title="Songs" empty={!results.songs || results.songs.length === 0}>
               {(results.songs || []).map(hit => (
