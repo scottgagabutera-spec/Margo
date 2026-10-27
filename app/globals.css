@@ -2051,6 +2051,10 @@ html[data-margo-stage] .margo-footer {
   filter: saturate(0.2);
 }
 /* Hub layer (phone): same band as Library — below nav, above tab bar; tab bar stays tappable. */
+html[data-margo-hub-sheet-flush-top] .margo-hub-sheet {
+  top: 0;
+}
+
 .margo-hub-sheet {
   position: fixed;
   top: var(--nav-height, 72px);

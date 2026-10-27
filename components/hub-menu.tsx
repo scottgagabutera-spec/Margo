@@ -28,6 +28,7 @@ import {
 } from '@/components/primary-tab-shell'
 import { dispatchHubDeepNav, HUB_TILE_PREFETCH_HREFS } from '@/lib/hub-deep-nav'
 import { pickHubViewportSurface } from '@/lib/hub-menu-viewport'
+import { isHubPrimaryScrollSurface } from '@/lib/hub-overlay-surfaces'
 import {
   ArrowLeftIcon,
   BellIcon,
@@ -579,8 +580,10 @@ export function HubProvider({ children }: { children: ReactNode }) {
     window.dispatchEvent(new Event('margo:hub-overlay-open'))
   }, [open])
 
+  const hubScrollDismiss = isHubPrimaryScrollSurface(pathname)
+
   useEffect(() => {
-    if (!open) return
+    if (!open || !hubScrollDismiss) return
     scrollOriginRef.current = readActiveScrollTop()
     lastScrollRef.current = { y: scrollOriginRef.current, t: performance.now() }
 
@@ -604,7 +607,7 @@ export function HubProvider({ children }: { children: ReactNode }) {
       panes.forEach((el) => el.removeEventListener('scroll', onScroll))
       window.removeEventListener('scroll', onScroll, true)
     }
-  }, [open, close])
+  }, [open, close, hubScrollDismiss])
 
   const value = useMemo(
     () => ({
