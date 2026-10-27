@@ -605,7 +605,7 @@ html[data-margo-stage] .margo-footer {
   }
 
   .margo-footer__sheet {
-    display: block;
+    display: none;
     position: fixed;
     left: 0;
     right: 0;
@@ -633,6 +633,7 @@ html[data-margo-stage] .margo-footer {
   }
 
   .margo-footer__sheet--visible {
+    display: block;
     pointer-events: auto;
     transform: translateY(0);
   }

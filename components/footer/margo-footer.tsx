@@ -115,14 +115,11 @@ export function MargoFooter() {
   const dragStartY = useRef<number | null>(null)
 
   const closeSheet = useCallback(() => {
-    setSheetOpen((open) => {
-      if (!open) return false
-      if (historyPushedRef.current) {
-        historyPushedRef.current = false
-        popFooterSheetHistoryIfNeeded(true)
-      }
-      return false
-    })
+    setSheetOpen(false)
+    if (historyPushedRef.current) {
+      historyPushedRef.current = false
+      popFooterSheetHistoryIfNeeded(true)
+    }
   }, [])
 
   const openSheet = useCallback(() => {
@@ -177,8 +174,7 @@ export function MargoFooter() {
   }, [sheetOpen, closeSheet])
 
   useEffect(() => {
-    const onPopState = (event: PopStateEvent) => {
-      if (!historyPushedRef.current && !isFooterSheetHistoryState(event.state)) return
+    const onPopState = () => {
       historyPushedRef.current = false
       setSheetOpen(false)
     }

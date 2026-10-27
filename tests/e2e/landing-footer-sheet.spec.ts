@@ -146,7 +146,7 @@ test.describe('landing footer phone @390', () => {
     await expect(page.getByRole('dialog')).toBeHidden()
 
     await more.click()
-    await page.getByRole('button', { name: /^Close$/i }).click()
+    await page.getByRole('dialog').getByRole('button', { name: /^Close$/i }).click()
     await expect(page.getByRole('dialog')).toBeHidden()
 
     await more.click()
@@ -183,7 +183,7 @@ test.describe('landing footer phone @390', () => {
     await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 60000 })
     const more = page.getByRole('button', { name: /^More$/i })
     await more.click()
-    await page.getByRole('button', { name: /^Close$/i }).click()
+    await page.getByRole('dialog').getByRole('button', { name: /^Close$/i }).click()
     await expect(more).toBeFocused()
   })
 })
@@ -226,10 +226,22 @@ test.describe('landing tab bar unchanged @390', () => {
     await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 60000 })
     await page.waitForTimeout(800)
     await expect(page.locator('.margo-mobile-tabbar')).toBeVisible({ timeout: 15000 })
-    const labels = await page.locator('.margo-mobile-tabbar a').evaluateAll((els) =>
-      els.map((a) => a.getAttribute('aria-label') || (a as HTMLElement).innerText.trim()),
-    )
-    expect(labels).toEqual(['Feed', 'Discover', 'Post', expect.stringMatching(/Hub/i), expect.stringMatching(/Sign/i)])
+    const tabLabels = await page.locator('.margo-mobile-tabbar').evaluate((bar) => {
+      const items: string[] = []
+      bar.querySelectorAll('a').forEach((a) => {
+        items.push(a.getAttribute('aria-label') || a.textContent?.trim() || '')
+      })
+      const hub = bar.querySelector('button[aria-label^="Hub"]')
+      if (hub) items.push(hub.getAttribute('aria-label') || 'Hub')
+      return items
+    })
+    expect(tabLabels.map((l) => l.toUpperCase())).toEqual([
+      'FEED',
+      'DISCOVER',
+      'POST',
+      expect.stringMatching(/HUB/i),
+      expect.stringMatching(/SIGN/i),
+    ])
     await expect(page.locator('.margo-mobile-tabbar a[aria-label="Post"]')).toBeVisible()
   })
 })
