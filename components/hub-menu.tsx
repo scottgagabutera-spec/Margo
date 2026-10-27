@@ -45,6 +45,7 @@ import {
   searchHrefForPath,
   searchScopeForPath,
   consumeHubOverlayRestore,
+  markHubOverlayRestore,
   markHubNavFromTile,
   clearHubNavFromTile,
 } from '@/lib/search-scope'
@@ -150,6 +151,7 @@ function HubTileLink({
           if (navLocked || pending) return
           persistActivePrimaryScroll()
           persistAuthReturnScroll()
+          markHubOverlayRestore()
           onLockedActivate(tile.href)
         }}
         data-margo-hub-root
@@ -273,6 +275,7 @@ function HubTiles({
             returnTo={signInReturnTo}
             data-margo-hub-root
             className="margo-hub-sign-in-btn"
+            onClick={() => markHubOverlayRestore()}
           >
             Sign in
           </SignInLink>

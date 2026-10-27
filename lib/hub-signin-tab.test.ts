@@ -12,3 +12,8 @@ test('Sign In tab yields active state to Hub when overlay is open', () => {
   const src = fs.readFileSync('components/mobile-tab-bar.tsx', 'utf8')
   assert.match(src, /signInTabActive = isOnSignInRoute && !hubOpen/)
 })
+
+test('Hub sign-in marks overlay restore for browser Back', () => {
+  const src = fs.readFileSync('components/hub-menu.tsx', 'utf8')
+  assert.match(src, /markHubOverlayRestore/)
+})
