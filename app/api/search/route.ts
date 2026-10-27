@@ -38,11 +38,14 @@ export async function GET(request: NextRequest) {
         libraryUserId: auth.user?.id ?? null,
       }),
     )
-    return NextResponse.json({
-      query: q,
-      results: fallback.results,
-      processingTimeMs: fallback.processingTimeMs,
-    } satisfies MargoSearchResponse)
+    return NextResponse.json(
+      {
+        query: q,
+        results: fallback.results,
+        processingTimeMs: fallback.processingTimeMs,
+      } satisfies MargoSearchResponse,
+      { headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60' } },
+    )
   } catch (e) {
     console.error('[search]', e)
     const message = e instanceof Error ? e.message : 'Search failed'

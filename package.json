@@ -58,6 +58,7 @@
     "test:e2e:landing-app-nav": "playwright test tests/e2e/landing-app-nav.spec.ts",
     "test:landing-footer": "node --experimental-strip-types --test lib/social-links.test.ts lib/landing-footer-sheet-history.test.ts lib/landing-footer-layout.test.ts lib/landing-hero-search-layout.test.ts",
     "test:signin-hub": "node --experimental-strip-types --test lib/hub-signin-tab.test.ts",
+    "test:search-speed": "node --experimental-strip-types --test lib/stage-song-search-run.test.ts lib/genius-external-search.test.ts lib/fetch-with-timeout.test.ts",
     "test:e2e:signin-hub": "playwright test tests/e2e/signin-hub-nav.spec.ts --project=chromium",
     "test:e2e:landing-footer-sheet": "playwright test tests/e2e/landing-footer-sheet.spec.ts --project=chromium",
     "test:e2e:feed-horizontal-drift": "playwright test tests/e2e/feed-horizontal-drift.spec.ts",
