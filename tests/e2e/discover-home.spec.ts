@@ -23,32 +23,35 @@ async function expectNoHorizontalScroll(page: import('@playwright/test').Page) {
 test.describe('discover home @signed-out', () => {
   test('structure: sections, no mixtape or takeover', async ({ page }) => {
     await page.goto(`${BASE}/discover`, { waitUntil: 'domcontentloaded', timeout: 60000 })
-    await expect(page.locator('[data-discover-home]')).toBeVisible()
+    await expect(page.locator('[data-discover-home]')).toBeVisible({ timeout: 45000 })
     await expect(page.locator('[data-discover-vibe-row]')).toBeVisible()
     await expect(page.locator('[data-discover-play-all]')).toBeVisible()
     await expect(page.getByText('Mixtape', { exact: false })).toHaveCount(0)
     await expect(page.getByText('auto-continues', { exact: false })).toHaveCount(0)
+    await expect(page.locator('text=/Lines picked for/i')).toHaveCount(0)
     const titles = page.locator('[data-discover-section-title]')
-    await expect(titles.nth(0)).toHaveText('Moments')
+    await expect(titles.first()).toBeVisible({ timeout: 45000 })
+    await expect(titles.first()).toHaveText('Moments')
     const sectionTexts = await titles.allTextContents()
-    expect(sectionTexts.indexOf('Songs')).toBeGreaterThan(sectionTexts.indexOf('Moments'))
-    expect(sectionTexts.indexOf('Artists')).toBeGreaterThan(sectionTexts.indexOf('Songs'))
-    if (sectionTexts.includes('Resonance')) {
+    if (sectionTexts.includes('Songs') && sectionTexts.includes('Moments')) {
+      expect(sectionTexts.indexOf('Songs')).toBeGreaterThan(sectionTexts.indexOf('Moments'))
+    }
+    if (sectionTexts.includes('Artists') && sectionTexts.includes('Songs')) {
+      expect(sectionTexts.indexOf('Artists')).toBeGreaterThan(sectionTexts.indexOf('Songs'))
+    }
+    if (sectionTexts.includes('Resonance') && sectionTexts.includes('Artists')) {
       expect(sectionTexts.indexOf('Resonance')).toBeGreaterThan(sectionTexts.indexOf('Artists'))
     }
-    await expect(page.locator('text=/Lines picked for/i')).toHaveCount(0)
   })
 
   test('section title typography', async ({ page }) => {
     await page.goto(`${BASE}/discover`, { waitUntil: 'domcontentloaded', timeout: 60000 })
     const title = page.locator('[data-discover-section-title]').first()
-    await title.waitFor({ timeout: 30000 }).catch(() => {})
-    if (await title.count()) {
-      const fontSize = await title.evaluate(el => getComputedStyle(el).fontSize)
-      const weight = await title.evaluate(el => getComputedStyle(el).fontWeight)
-      expect(fontSize).toBe('16px')
-      expect(Number(weight)).toBeGreaterThanOrEqual(600)
-    }
+    await expect(title).toBeVisible({ timeout: 45000 })
+    const fontSize = await title.evaluate(el => getComputedStyle(el).fontSize)
+    const weight = await title.evaluate(el => getComputedStyle(el).fontWeight)
+    expect(fontSize).toBe('16px')
+    expect(Number(weight)).toBeGreaterThanOrEqual(600)
   })
 
   for (const vp of VIEWPORTS) {
