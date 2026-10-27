@@ -34,7 +34,7 @@ export function ConsentFirstShell({ children }: { children: ReactNode }) {
     router.replace(consentFirstRedirectHref(returnTo))
   }, [loading, signedIn, needsTermsAcceptance, mountContent, router, searchParams])
 
-  if (loading) return null
+  if (loading) return <>{children}</>
   if (signedIn && needsTermsAcceptance && !mountContent) {
     return null
   }

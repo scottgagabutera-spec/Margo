@@ -2563,14 +2563,79 @@ html[data-margo-stage-idle] .margo-stage-zone {
   justify-content: center;
   padding: 0;
 }
+.margo-search-wrap {
+  position: relative;
+  width: 100%;
+}
+.margo-search-wrap--standard .margo-search {
+  width: 100%;
+  height: var(--margo-touch-min);
+  padding: 0 44px 0 40px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-hi);
+  border-radius: 50px;
+  color: var(--text);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.82rem;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 150ms ease;
+}
+.margo-search-wrap--standard.margo-search-wrap--hint-focus .margo-search,
+.margo-search-wrap--standard .margo-search:focus,
+.margo-search-wrap--standard .margo-search:not(:placeholder-shown) {
+  font-weight: 500;
+}
+.margo-search-wrap--standard .margo-search-wrap__icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+.margo-search-wrap--standard .margo-search-wrap__icon--loading {
+  width: 32px;
+  gap: 3px;
+}
+.margo-search-wrap--standard .margo-search-wrap__clear {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: var(--margo-touch-min);
+  height: var(--margo-touch-min);
+  border-radius: 50%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
 .margo-search--lb-panel {
   height: 36px;
   min-height: 36px;
   font-size: 14px;
   padding: 0 32px 0 30px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-hi);
   border-radius: 999px;
-  background: var(--surface);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  outline: none;
+  box-sizing: border-box;
 }
 .margo-search--lb-panel:focus,
 .margo-search--lb-panel:focus-visible {
@@ -2753,15 +2818,15 @@ html[data-margo-stage-idle] .margo-stage-zone {
   background: color-mix(in srgb, var(--gold) 4%, var(--surface-2));
 }
 .margo-search-wrap--lb.margo-search-wrap--hint-visible .margo-search--lb-panel {
-  background: color-mix(in srgb, var(--gold) 5%, var(--surface));
-  border-color: color-mix(in srgb, var(--gold) 24%, var(--border));
+  background: color-mix(in srgb, var(--gold) 4%, var(--surface-2));
+  border-color: color-mix(in srgb, var(--gold) 28%, var(--border-hi));
 }
 .margo-search-wrap--hint-focus .margo-search,
 .margo-search-wrap--hint-focus .margo-search--lb-panel {
   background: var(--surface-2);
 }
 .margo-search-wrap--lb.margo-search-wrap--hint-focus .margo-search--lb-panel {
-  background: var(--surface);
+  background: var(--surface-2);
 }
 @media (prefers-reduced-motion: reduce) {
   .margo-search-hint__caret {

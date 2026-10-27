@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ComposeSearchDropdown, type ComposeSearchHit } from '@/components/compose-search-dropdown'
 import { MargoSearchInput } from '@/components/margo-search-input'
+import { MARGO_SEARCH_HINT_CATALOG } from '@/lib/margo-search-hints'
 import { CloseIcon } from '@/components/icons'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { createClient } from '@/lib/supabase/client'
@@ -256,8 +257,7 @@ export function SignatureSongPicker({
       <MargoSearchInput
         value={query}
         onChange={setQuery}
-        catalogHints
-        placeholder="Search Margo, Genius, or Apple Music"
+        hintText={MARGO_SEARCH_HINT_CATALOG}
         ariaLabel="Search songs"
         loading={loading}
       />

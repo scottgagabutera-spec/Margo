@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { searchPostgresFallback } from '@/lib/meilisearch/postgres-search'
 import type { MargoSearchResponse } from '@/lib/meilisearch/types'
+import { postgresSearchOptionsForScope } from '@/lib/search-api-scope'
 import { getSearchScope } from '@/lib/search-scope'
 import { createClient } from '@/lib/supabase/server'
 
@@ -29,15 +30,14 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
     const { data: auth } = await supabase.auth.getUser()
-    const fallback = await searchPostgresFallback(supabase, q, {
-      types: scope.types,
-      limitPerType: 8,
-      playlistId: scope.id === 'playlist' ? playlistId : null,
-      restrictToPlaylist: scope.id === 'playlist',
-      libraryUserId: scope.id === 'library' ? auth.user?.id ?? null : null,
-      restrictToLibrary: scope.id === 'library',
-      lyricsRequireSong: !!scope.lyricsRequireSong,
-    })
+    const fallback = await searchPostgresFallback(
+      supabase,
+      q,
+      postgresSearchOptionsForScope(scope, {
+        playlistId,
+        libraryUserId: auth.user?.id ?? null,
+      }),
+    )
     return NextResponse.json({
       query: q,
       results: fallback.results,

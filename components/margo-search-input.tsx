@@ -4,21 +4,16 @@ import { useId, useState, useEffect, useRef } from 'react'
 import { CloseIcon, SearchIcon } from '@/components/icons'
 import { UI_FONT } from '@/lib/fonts'
 import {
-  DEPTH_HINT_CHAR_MS,
-  DEPTH_HINT_ROTATE_MS,
-} from '@/lib/depth-search-hints'
-import {
-  MARGO_CATALOG_HINT_CHAR_MS,
-  MARGO_CATALOG_HINT_PAUSE_MS,
-  MARGO_CATALOG_SEARCH_ARIA_LABEL,
-  MARGO_CATALOG_SEARCH_HINT_FULL,
-  MARGO_CATALOG_SEARCH_STATIC_PLACEHOLDER,
+  MARGO_SEARCH_HINT_CHAR_MS,
+  MARGO_SEARCH_HINT_PAUSE_MS,
+  margoSearchStaticPlaceholder,
 } from '@/lib/margo-search-hints'
 
 interface MargoSearchInputProps {
   value: string
   onChange: (value: string) => void
-  placeholder: string
+  /** Animated typewriter line (same wording as scope placeholder). */
+  hintText: string
   /** Optional class for focus styles / tests */
   className?: string
   ariaLabel?: string
@@ -34,23 +29,18 @@ interface MargoSearchInputProps {
   autoFocus?: boolean
   /** Lyric Back panel: 36px field, CSS-owned type size (14px / 16px on iOS WebKit). */
   compact?: boolean
-  /** Premium cycling “Search with song / lyric / artist” when empty. */
-  catalogHints?: boolean
-  /** Cycle typewriter phrases (Messages / Library depth pages). */
-  rotatingHints?: readonly string[]
 }
 
 /** Must exceed ComposeSearchDropdown scrim (54) and listbox (55). */
 const SEARCH_ABOVE_OVERLAY_Z = 56
 
 /**
- * Shared pill search field — Feed / Discover / Compose / Stage / Lyric Back.
- * UI_FONT, CSS variables only (MARGO_BRAND §14–15).
+ * Shared pill search field — Stage landing reference styling via globals.css.
  */
 export function MargoSearchInput({
   value,
   onChange,
-  placeholder,
+  hintText,
   className = 'margo-search',
   ariaLabel,
   loading = false,
@@ -62,18 +52,12 @@ export function MargoSearchInput({
   id: idProp,
   autoFocus = false,
   compact = false,
-  catalogHints = false,
-  rotatingHints,
 }: MargoSearchInputProps) {
   const autoId = useId()
   const inputId = idProp ?? autoId
   const [focused, setFocused] = useState(false)
   const [typedLen, setTypedLen] = useState(0)
-  const [hintIndex, setHintIndex] = useState(0)
   const [reducedMotion, setReducedMotion] = useState(false)
-  const activeRotatingHint = rotatingHints?.length
-    ? rotatingHints[hintIndex % rotatingHints.length]
-    : null
   const inputRef = useRef<HTMLInputElement | null>(null)
   const showLeftIcon = icon === 'left'
 
@@ -92,9 +76,9 @@ export function MargoSearchInput({
   }, [])
 
   useEffect(() => {
-    if (!catalogHints || value.length > 0 || focused) return
+    if (!hintText || value.length > 0 || focused) return
     if (reducedMotion) {
-      setTypedLen(MARGO_CATALOG_SEARCH_HINT_FULL.length)
+      setTypedLen(hintText.length)
       return
     }
     setTypedLen(0)
@@ -102,94 +86,49 @@ export function MargoSearchInput({
     let pauseTimer = 0
     const tick = () => {
       len += 1
-      if (len > MARGO_CATALOG_SEARCH_HINT_FULL.length) {
+      if (len > hintText.length) {
         len = 0
         setTypedLen(0)
-        pauseTimer = window.setTimeout(tick, MARGO_CATALOG_HINT_PAUSE_MS)
+        pauseTimer = window.setTimeout(tick, MARGO_SEARCH_HINT_PAUSE_MS)
         return
       }
       setTypedLen(len)
-      pauseTimer = window.setTimeout(tick, MARGO_CATALOG_HINT_CHAR_MS)
+      pauseTimer = window.setTimeout(tick, MARGO_SEARCH_HINT_CHAR_MS)
     }
-    pauseTimer = window.setTimeout(tick, MARGO_CATALOG_HINT_CHAR_MS)
+    pauseTimer = window.setTimeout(tick, MARGO_SEARCH_HINT_CHAR_MS)
     return () => {
       if (pauseTimer) window.clearTimeout(pauseTimer)
     }
-  }, [catalogHints, focused, reducedMotion, value.length])
+  }, [hintText, focused, reducedMotion, value.length])
 
-  useEffect(() => {
-    if (!rotatingHints?.length || value.length > 0 || focused) return
-    if (reducedMotion) return
-    const rotate = window.setInterval(() => {
-      setHintIndex((i) => (i + 1) % rotatingHints.length)
-      setTypedLen(0)
-    }, DEPTH_HINT_ROTATE_MS)
-    return () => window.clearInterval(rotate)
-  }, [rotatingHints, focused, reducedMotion, value.length])
-
-  useEffect(() => {
-    if (!activeRotatingHint || value.length > 0 || focused) return
-    if (reducedMotion) {
-      setTypedLen(activeRotatingHint.length)
-      return
-    }
-    setTypedLen(0)
-    let len = 0
-    let pauseTimer = 0
-    const tick = () => {
-      len += 1
-      if (len > activeRotatingHint.length) {
-        return
-      }
-      setTypedLen(len)
-      pauseTimer = window.setTimeout(tick, DEPTH_HINT_CHAR_MS)
-    }
-    pauseTimer = window.setTimeout(tick, DEPTH_HINT_CHAR_MS)
-    return () => {
-      if (pauseTimer) window.clearTimeout(pauseTimer)
-    }
-  }, [activeRotatingHint, focused, reducedMotion, value.length])
-
-  const useAnimatedHint = catalogHints || !!activeRotatingHint
-  const hintFullText = catalogHints
-    ? MARGO_CATALOG_SEARCH_HINT_FULL
-    : activeRotatingHint ?? ''
-  const showCatalogOverlay = useAnimatedHint && value.length === 0 && !focused
-  const resolvedPlaceholder = useAnimatedHint
-    ? (reducedMotion || focused ? (catalogHints ? MARGO_CATALOG_SEARCH_STATIC_PLACEHOLDER : hintFullText) : ' ')
-    : placeholder
-  const resolvedAria = ariaLabel || (catalogHints ? MARGO_CATALOG_SEARCH_ARIA_LABEL : hintFullText || placeholder)
+  const showCatalogOverlay = hintText.length > 0 && value.length === 0 && !focused
+  const staticPlaceholder = margoSearchStaticPlaceholder(hintText)
+  const resolvedPlaceholder = reducedMotion || focused ? staticPlaceholder : ' '
+  const resolvedAria = ariaLabel || hintText
 
   const inputClass = compact ? 'margo-search margo-search--lb-panel' : className
   const wrapClass = [
-    compact ? 'margo-search-wrap margo-search-wrap--lb' : '',
-    useAnimatedHint ? 'margo-search-wrap--catalog-hints' : '',
+    'margo-search-wrap',
+    compact ? 'margo-search-wrap--lb' : 'margo-search-wrap--standard',
+    hintText ? 'margo-search-wrap--catalog-hints' : '',
     showCatalogOverlay ? 'margo-search-wrap--hint-visible' : '',
-    focused && useAnimatedHint ? 'margo-search-wrap--hint-focus' : '',
+    focused && hintText ? 'margo-search-wrap--hint-focus' : '',
+    value.length > 0 ? 'margo-search-wrap--has-value' : '',
   ].filter(Boolean).join(' ')
 
   return (
     <div
-      className={wrapClass || undefined}
-      style={{ position: 'relative', width: '100%', zIndex: stackAboveOverlay ? SEARCH_ABOVE_OVERLAY_Z : undefined }}
+      className={wrapClass}
+      style={{ zIndex: stackAboveOverlay ? SEARCH_ABOVE_OVERLAY_Z : undefined }}
     >
       {showLeftIcon ? (
         <span
           aria-hidden
-          className={compact ? 'margo-search-wrap__icon' : undefined}
-          style={compact ? undefined : {
-            position: 'absolute',
-            left: '14px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            pointerEvents: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: loading ? '32px' : '20px',
-            height: '20px',
-            gap: loading ? '3px' : 0,
-          }}
+          className={[
+            'margo-search-wrap__icon',
+            loading ? 'margo-search-wrap__icon--loading' : '',
+          ].filter(Boolean).join(' ')}
+          style={compact || loading ? undefined : undefined}
         >
           {loading ? (
             [0, 1, 2].map((i) => (
@@ -211,9 +150,9 @@ export function MargoSearchInput({
         </span>
       ) : null}
       {showCatalogOverlay ? (
-        <span className="margo-search-hint" aria-hidden>
+        <span className="margo-search-hint" aria-hidden data-margo-search-hint>
           <span className="margo-search-hint__done">
-            {hintFullText.slice(0, typedLen)}
+            {hintText.slice(0, typedLen)}
           </span>
           <span className="margo-search-hint__caret" />
         </span>
@@ -242,32 +181,12 @@ export function MargoSearchInput({
         placeholder={resolvedPlaceholder}
         aria-label={resolvedAria}
         aria-busy={loading}
+        data-margo-search-input
         style={compact ? {
-          width: '100%',
-          color: 'var(--text)',
           fontFamily: UI_FONT,
           fontWeight: focused || value.length > 0 ? 500 : 400,
-          letterSpacing: '-0.01em',
-          lineHeight: 1.3,
-          outline: 'none',
-          boxSizing: 'border-box',
           opacity: disabled ? 0.6 : 1,
         } : {
-          width: '100%',
-          height: 'var(--margo-touch-min)',
-          padding: showLeftIcon ? '0 44px 0 40px' : '0 44px 0 16px',
-          background: 'var(--surface-2)',
-          border: `1px solid ${focused ? 'var(--gold-border)' : 'var(--border-hi)'}`,
-          borderRadius: '50px',
-          color: 'var(--text)',
-          fontFamily: UI_FONT,
-          fontSize: '0.82rem',
-          fontWeight: focused || value.length > 0 ? 500 : 400,
-          letterSpacing: '-0.01em',
-          lineHeight: 1.3,
-          outline: 'none',
-          boxSizing: 'border-box',
-          transition: 'border-color 150ms ease',
           opacity: disabled ? 0.6 : 1,
         }}
       />
@@ -276,23 +195,7 @@ export function MargoSearchInput({
           type="button"
           aria-label="Clear search"
           onClick={() => onChange('')}
-          className={compact ? 'margo-search-wrap__clear' : undefined}
-          style={compact ? undefined : {
-            position: 'absolute',
-            right: '4px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: 'var(--margo-touch-min)',
-            height: 'var(--margo-touch-min)',
-            borderRadius: '50%',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 0,
-          }}
+          className="margo-search-wrap__clear"
         >
           <CloseIcon size={14} color="var(--text-secondary)" />
         </button>

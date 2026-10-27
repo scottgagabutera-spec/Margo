@@ -1,4 +1,5 @@
 import type { MargoSearchDocType } from '@/lib/meilisearch/types'
+import { margoSearchHintForScopeId } from '@/lib/margo-search-hints'
 
 export type SearchScopeId =
   | 'all'
@@ -29,68 +30,68 @@ const ALL_TYPES: MargoSearchDocType[] = ['user', 'lyric', 'artist', 'catalog_lin
 const SCOPES: Record<SearchScopeId, SearchScope> = {
   all: {
     id: 'all',
-    placeholder: 'Search lyrics, people, artists…',
+    placeholder: margoSearchHintForScopeId('all'),
     types: ALL_TYPES,
     backHref: '/feed',
   },
   feed: {
     id: 'feed',
-    placeholder: 'Search lyrics, people…',
+    placeholder: margoSearchHintForScopeId('feed'),
     types: ['lyric', 'user'],
     backHref: '/feed',
   },
   discover: {
     id: 'discover',
-    placeholder: 'Search moments, songs, artists…',
+    placeholder: margoSearchHintForScopeId('discover'),
     types: ['catalog_line', 'song', 'artist', 'lyric'],
     backHref: '/discover',
   },
   moments: {
     id: 'moments',
-    placeholder: 'Search lyric moments…',
+    placeholder: margoSearchHintForScopeId('moments'),
     types: ['catalog_line'],
     backHref: '/discover/moments',
   },
   songs: {
     id: 'songs',
-    placeholder: 'Search songs, artists…',
+    placeholder: margoSearchHintForScopeId('songs'),
     types: ['song', 'artist'],
     backHref: '/discover/songs',
   },
   artists: {
     id: 'artists',
-    placeholder: 'Search artists…',
+    placeholder: margoSearchHintForScopeId('artists'),
     types: ['artist'],
     backHref: '/artists',
   },
   resonance: {
     id: 'resonance',
-    placeholder: 'Search posts, people…',
+    placeholder: margoSearchHintForScopeId('resonance'),
     types: ['lyric', 'user'],
     backHref: '/discover/resonance',
     lyricsRequireSong: true,
   },
   library: {
     id: 'library',
-    placeholder: 'Search your library…',
+    placeholder: margoSearchHintForScopeId('library'),
     types: ['song'],
     backHref: '/library',
   },
   playlist: {
     id: 'playlist',
-    placeholder: 'Search this playlist…',
+    placeholder: margoSearchHintForScopeId('playlist'),
     types: ['song'],
     backHref: '/library',
   },
   hub: {
     id: 'hub',
-    placeholder: 'Search people…',
+    placeholder: margoSearchHintForScopeId('hub'),
     types: ['user', 'artist'],
     backHref: '/feed?hub=1',
   },
   people: {
     id: 'people',
-    placeholder: 'Search people…',
+    placeholder: margoSearchHintForScopeId('people'),
     types: ['user', 'artist'],
     backHref: '/feed',
   },

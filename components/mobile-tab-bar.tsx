@@ -11,7 +11,7 @@ import { LoadingRing } from '@/components/loading-ring'
 import { usePrimaryTab, usePrimaryTabLinkProps } from '@/components/primary-tab-shell'
 import { hidesTabBar } from '@/lib/chrome-mode'
 import { useStageChromeHidden } from '@/lib/stage-chrome'
-import { useSigninHref } from '@/components/signin-link'
+import { SignInLink, useSigninHref } from '@/components/signin-link'
 import { persistAuthReturnScroll } from '@/lib/auth-return'
 import { persistActivePrimaryScroll } from '@/components/primary-tab-shell'
 import { YouTabPortrait } from '@/components/you-tab-portrait'
@@ -33,6 +33,15 @@ export function MobileTabBar() {
   const navRef = useRef<HTMLElement | null>(null)
 
   const [libraryPlayerOpen, setLibraryPlayerOpen] = useState(false)
+  const [mobilePrimaryChrome, setMobilePrimaryChrome] = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(max-width: 639px)')
+    const apply = () => setMobilePrimaryChrome(mq.matches)
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
+  }, [])
   useEffect(() => {
     const sync = () => {
       setLibraryPlayerOpen(document.documentElement.hasAttribute('data-margo-library-player'))
@@ -43,7 +52,7 @@ export function MobileTabBar() {
     return () => mo.disconnect()
   }, [])
 
-  const shellHidden = hidesTabBar(pathname) || libraryPlayerOpen
+  const shellHidden = hidesTabBar(pathname, { mobilePrimaryChrome }) || libraryPlayerOpen
   const stageHidden = useStageChromeHidden()
   const isLanding = pathname === '/'
 
@@ -85,6 +94,7 @@ export function MobileTabBar() {
   const youHref = isSignedIn ? '/you' : signinHref
   const youLink = usePrimaryTabLinkProps(youHref, 'you')
   const isOnProfile = activeTab === 'you' || (!!identity && isSignedIn && pathname === `/profile/${identity.username}`)
+  const isOnSignInRoute = !isSignedIn && pathname?.split('?')[0] === '/signin'
   const youAwaitingIdentity = isSignedIn && !identity && activeTab !== 'you'
 
   const isMusicActive = engineState.mode !== 'idle'
@@ -177,37 +187,36 @@ export function MobileTabBar() {
 
       <HubTabButton style={tabStyle(false, false)} labelStyle={labelStyle} />
 
-      <Link
-        href={youHref}
-        aria-label={isSignedIn ? 'You' : undefined}
-        style={tabStyle(isOnProfile, tabLive('you') || youAwaitingIdentity)}
-        {...(isSignedIn ? youLink : {})}
-        onClick={(event) => {
-          if (!isSignedIn) {
-            persistActivePrimaryScroll()
-            persistAuthReturnScroll()
-            return
-          }
-          youLink.onClick(event)
-        }}
-      >
-        {tabPending('you') || youAwaitingIdentity ? (
-          <LoadingRing size={20} strokeWidth={1.5} state="spinning" />
-        ) : isSignedIn && identity ? (
-          <YouTabPortrait
-            username={identity.username}
-            displayName={identity.displayName || identity.username}
-            avatarUrl={identity.avatarUrl}
-            active={isOnProfile}
-          />
-        ) : (
+      {isSignedIn ? (
+        <Link
+          href={youHref}
+          aria-label="You"
+          style={tabStyle(isOnProfile, tabLive('you') || youAwaitingIdentity)}
+          {...youLink}
+        >
+          {tabPending('you') || youAwaitingIdentity ? (
+            <LoadingRing size={20} strokeWidth={1.5} state="spinning" />
+          ) : identity ? (
+            <YouTabPortrait
+              username={identity.username}
+              displayName={identity.displayName || identity.username}
+              avatarUrl={identity.avatarUrl}
+              active={isOnProfile}
+            />
+          ) : null}
+        </Link>
+      ) : (
+        <SignInLink
+          style={tabStyle(isOnSignInRoute, tabLive('you') || youAwaitingIdentity)}
+          aria-current={isOnSignInRoute ? 'page' : undefined}
+        >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
             <circle cx="10" cy="7" r="3" stroke="currentColor" strokeWidth="1.5"/>
             <path d="M4 17c0-3 2.7-5 6-5s6 2 6 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
-        )}
-        {!isSignedIn ? <span style={labelStyle}>Sign In</span> : null}
-      </Link>
+          <span style={labelStyle}>Sign In</span>
+        </SignInLink>
+      )}
 
       <style>{`
         @media (max-width: 639px) {

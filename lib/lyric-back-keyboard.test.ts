@@ -372,7 +372,7 @@ describe('lyric back keyboard wiring', () => {
     const compose = fs.readFileSync('components/lyric-back-panel-compose.tsx', 'utf8')
     assert.match(panel, /focusSearchOnMount=\{false\}/)
     assert.match(compose, /compact=\{isPanelLayout\}/)
-    assert.match(compose, /catalogHints/)
+    assert.match(compose, /hintText=\{MARGO_SEARCH_HINT_CATALOG\}/)
     assert.match(compose, /pinSearchInBar/)
     assert.match(panel, /emptyFirstRoot/)
     assert.match(panel, /margo-lb-focus--first-reply/)

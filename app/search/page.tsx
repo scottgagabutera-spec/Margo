@@ -272,10 +272,8 @@ function SearchPageInner() {
       <MargoSearchInput
         value={query}
         onChange={setQuery}
-        placeholder={scope.placeholder}
+        hintText={scope.placeholder}
         ariaLabel={scope.placeholder}
-        catalogHints={scope.types.includes('song') || scope.types.includes('catalog_line')}
-        autoFocus
       />
 
       {loading && debounced.length >= 2 && (
@@ -303,8 +301,8 @@ function SearchPageInner() {
       )}
 
       {!loading && debounced.length >= 2 && !error && !hasResults && (
-        <p style={{ fontFamily: lyricFont, fontStyle: 'italic', color: 'var(--text-muted)', marginTop: '20px', fontSize: TYPE.secondary }}>
-          Nothing found for &ldquo;{debounced}&rdquo;
+        <p style={{ fontFamily: font, color: 'var(--text-muted)', marginTop: '20px', fontSize: TYPE.secondary }}>
+          Nothing here yet
         </p>
       )}
 

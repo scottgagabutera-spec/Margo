@@ -131,7 +131,7 @@ export function navBackForPath(pathname: string | null | undefined): NavBackConf
   if (p === '/settings' || p === '/profile/edit' || p === '/apply-artist') {
     return { fallbackHref: '/you' }
   }
-  if (p === '/library' || p.startsWith('/library/')) {
+  if (p === '/library') {
     return { ...hubTileBack('/feed'), label: 'Music Library' }
   }
   if (p.startsWith('/library/')) return { fallbackHref: '/library' }

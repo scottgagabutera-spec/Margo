@@ -45,12 +45,21 @@ export function hidesAppNav(pathname: string | null | undefined): boolean {
   return mode === 'immersive' || mode === 'marketing' || isAuthPath(pathname) || isAdminPath(pathname)
 }
 
+export type HidesTabBarOptions = {
+  /** Phone primary chrome: keep tab bar visible on /signin (keyboard still hides via data-margo-keyboard). */
+  mobilePrimaryChrome?: boolean
+}
+
 /** Hide MobileTabBar on immersive karaoke, sign-in, and internal admin. */
-export function hidesTabBar(pathname: string | null | undefined): boolean {
-  return (
-    chromeModeForPath(pathname) === 'immersive'
-    || isAuthPath(pathname)
-    || isAdminPath(pathname)
-    || isMessageThreadPath(pathname)
-  )
+export function hidesTabBar(
+  pathname: string | null | undefined,
+  opts?: HidesTabBarOptions,
+): boolean {
+  const path = pathname?.split('?')[0] ?? ''
+  if (chromeModeForPath(pathname) === 'immersive') return true
+  if (isAuthPath(pathname)) {
+    if (opts?.mobilePrimaryChrome && path === '/signin') return false
+    return true
+  }
+  return isAdminPath(pathname) || isMessageThreadPath(pathname)
 }

@@ -40,7 +40,7 @@ import {
 } from '@/components/icons'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { SignInLink } from '@/components/signin-link'
-import { persistAuthReturnScroll } from '@/lib/auth-return'
+import { buildSigninHref, persistAuthReturnScroll } from '@/lib/auth-return'
 import {
   searchHrefForPath,
   searchScopeForPath,
@@ -271,7 +271,6 @@ function HubTiles({
           <SignInLink
             id="margo-hub-sign-in"
             returnTo={signInReturnTo}
-            onClick={close}
             data-margo-hub-root
             className="margo-hub-sign-in-btn"
           >
@@ -478,11 +477,17 @@ export function HubProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const onLockedActivate = useCallback((returnTo: string) => {
-    setSignInReturnTo(returnTo)
-    window.requestAnimationFrame(() => {
-      document.getElementById('margo-hub-sign-in')?.focus()
-    })
-  }, [])
+    persistActivePrimaryScroll()
+    persistAuthReturnScroll()
+    router.push(buildSigninHref(returnTo))
+  }, [router])
+
+  useEffect(() => {
+    const path = (pathname || '').split('?')[0]
+    if (path === '/signin' && open) {
+      close()
+    }
+  }, [pathname, open, close])
 
   useEffect(() => {
     pendingHrefRef.current = null
