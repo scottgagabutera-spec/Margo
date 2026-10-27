@@ -10,6 +10,8 @@ const VIEWPORTS = [
   { width: 412, height: 915 },
   { width: 430, height: 932 },
   { width: 834, height: 1194 },
+  { width: 980, height: 2000 },
+  { width: 1080, height: 2400 },
   { width: 1280, height: 720 },
   { width: 1536, height: 864 },
   { width: 2560, height: 1440 },
@@ -42,6 +44,29 @@ test.describe('discover home @signed-out', () => {
     if (sectionTexts.includes('Resonance') && sectionTexts.includes('Artists')) {
       expect(sectionTexts.indexOf('Resonance')).toBeGreaterThan(sectionTexts.indexOf('Artists'))
     }
+  })
+
+  test('play all in Moments header row with More link', async ({ page }) => {
+    for (const vp of [{ width: 320, height: 568 }, { width: 360, height: 640 }, { width: 390, height: 844 }] as const) {
+      await page.setViewportSize(vp)
+      await page.goto(`${BASE}/discover`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+      const header = page.locator('[data-discover-section]').first()
+      await expect(header.locator('[data-discover-section-title]')).toHaveText('Moments')
+      await expect(header.locator('[data-discover-play-all]')).toBeVisible()
+      await expect(header.locator('[data-discover-more-link]')).toBeVisible()
+    }
+  })
+
+  test('vibe chip face typography (home)', async ({ page }) => {
+    await page.goto(`${BASE}/discover`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    const face = page.locator('[data-vibe-chip-face="ALL"]')
+    await expect(face).toBeVisible({ timeout: 45000 })
+    const styles = await face.evaluate(el => {
+      const s = getComputedStyle(el)
+      return { fontSize: s.fontSize, radius: s.borderRadius }
+    })
+    expect(styles.fontSize).toBe('9px')
+    expect(styles.radius).toBe('8px')
   })
 
   test('section title typography', async ({ page }) => {

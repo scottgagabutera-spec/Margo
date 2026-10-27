@@ -47,6 +47,20 @@ test.describe('discover view-more @signed-out', () => {
     await expect(page.locator('.margo-preview-scrim')).toHaveCount(0)
   })
 
+  for (const path of ['/discover/moments', '/discover/songs', '/discover/resonance'] as const) {
+    test(`vibe chip face typography on ${path}`, async ({ page }) => {
+      await page.goto(`${BASE}${path}`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+      const face = page.locator('[data-vibe-chip-face="ALL"]')
+      await expect(face).toBeVisible()
+      const styles = await face.evaluate(el => {
+        const s = getComputedStyle(el)
+        return { fontSize: s.fontSize, radius: s.borderRadius }
+      })
+      expect(styles.fontSize).toBe('9px')
+      expect(styles.radius).toBe('8px')
+    })
+  }
+
   test('songs page has sort segment and vibe chips only', async ({ page }) => {
     await page.goto(`${BASE}/discover/songs`, { waitUntil: 'domcontentloaded', timeout: 60000 })
     await expect(page.locator('[data-discover-songs-sort]')).toBeVisible()

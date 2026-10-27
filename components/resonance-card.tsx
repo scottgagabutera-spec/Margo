@@ -38,6 +38,7 @@ export function ResonanceCard({
   const emotion = (post.emotion || '').toUpperCase()
   const hasVibeTag = (DISCOVER_VIBES as readonly string[]).includes(emotion)
   const isDiscover = variant === 'discover'
+  const isCompactCard = isDiscover || variant === 'grid'
 
   // Was reading post.text directly — the position-0 mirror, so a 2/3-line
   // Moment only ever showed its first line here. resolveMomentLines is the
@@ -95,6 +96,7 @@ export function ResonanceCard({
           textDecoration: 'none',
           boxSizing: 'border-box',
           height: '100%',
+          minHeight: isCompactCard ? '168px' : undefined,
           position: 'relative',
           isolation: 'isolate',
         }}
@@ -122,7 +124,7 @@ export function ResonanceCard({
           fontSize: isDiscover ? '14px' : '0.88rem',
           color: 'var(--text)', lineHeight: isDiscover ? 1.35 : 1.5, margin: 0,
           display: '-webkit-box', WebkitLineClamp: isDiscover ? 3 : 4, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-          minHeight: isDiscover ? '3.8em' : '4.2em',
+          minHeight: isDiscover ? 'calc(14px * 1.35 * 3)' : '4.2em',
         }}>&ldquo;{momentText}&rdquo;</p>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginTop: 'auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>

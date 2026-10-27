@@ -26,7 +26,7 @@ export function DiscoverViewMoreShell({
       <style>{`
         .discover-vm-page {
           --discover-vm-pad-x: 16px;
-          --discover-vm-header-gap: 8px;
+          --discover-vm-header-gap: 20px;
           box-sizing: border-box;
         }
         @media (min-width: 600px) {
@@ -93,6 +93,7 @@ export function DiscoverViewMoreShell({
           gap: 10px;
           width: 100%;
           min-width: 0;
+          align-items: stretch;
         }
         .discover-vm-grid[data-kind="moments"] {
           grid-template-columns: repeat(2, minmax(0, 1fr));

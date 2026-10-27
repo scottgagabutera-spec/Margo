@@ -60,6 +60,7 @@ export function LyricMomentCard({
         transition: 'border-color 200ms ease, background 200ms ease',
         boxSizing: 'border-box',
         height: '100%',
+        minHeight: isCompactCard ? '168px' : undefined,
         position: 'relative',
         isolation: 'isolate',
       }}
@@ -91,7 +92,7 @@ export function LyricMomentCard({
         display: '-webkit-box',
         WebkitLineClamp: isCompactCard ? 3 : 4,
         WebkitBoxOrient: 'vertical', overflow: 'hidden',
-        minHeight: isCompactCard ? '3.8em' : '4.2em',
+        minHeight: isCompactCard ? 'calc(14px * 1.35 * 3)' : '4.2em',
       }}>&ldquo;{moment.line}&rdquo;</p>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
         <div style={{ minWidth: 0 }}>

@@ -32,6 +32,8 @@ import {
   INITIAL_AUDIO_ENGINE_STATE,
   computePlaybackProgress,
   getSnippetStopDurationMs,
+  getSnippetRemainingStopMs,
+  maySnippetEndAdvanceQueue,
   isFullQueueItem,
   isSnippetQueueItem,
   fullSongToQueueItem,
@@ -382,6 +384,7 @@ function bindAudioHandlers(generation: number): void {
 // a next queue item so a short-clip Mixtape still plays all the way
 // through, just with a hard cut instead of a fade for that one transition.
 function pauseSnippetAtEnd(): void {
+  if (!maySnippetEndAdvanceQueue(_state.playing)) return
   const audio = activeAudio()
   if (!audio) return
   clearSnippetTimer()
@@ -493,6 +496,7 @@ function preloadInactiveForCrossfade(nextItem: LyricMomentQueueItem): void {
 // instead of the audible dip a straight linear fade produces.
 function beginCrossfade(generation: number, durationMs: number): void {
   if (generation !== _handlerGeneration) return
+  if (!maySnippetEndAdvanceQueue(_state.playing)) return
 
   const { queue, queueIndex } = _state
   const nextIndex = findNextPlayableIndex(queueIndex + 1)
@@ -640,7 +644,13 @@ function armSnippetTimer(generation: number): void {
   clearCrossfadeTimer()
   const snippet = _state.snippet
   if (!snippet || _state.mode !== 'snippet') return
-  const ms = getSnippetStopDurationMs(snippet.startSec, snippet.endSec)
+  const audio = activeAudio()
+  const currentSec = audio?.currentTime ?? snippet.startSec
+  const ms = getSnippetRemainingStopMs(snippet.startSec, snippet.endSec, currentSec)
+  if (ms <= 0) {
+    pauseSnippetAtEnd()
+    return
+  }
 
   const { queue, queueIndex } = _state
   const nextPlayableIndex = findNextPlayableIndex(queueIndex + 1)
@@ -662,14 +672,16 @@ function armSnippetTimer(generation: number): void {
     const crossfadeDurationMs = _state.postMomentPlayback
       ? Math.min(POST_MOMENT_CROSSFADE_MS, computeCrossfadeMs(ms))
       : computeCrossfadeMs(ms)
-    const crossfadeStartDelay = ms - crossfadeDurationMs
+    const crossfadeStartDelay = Math.max(0, ms - crossfadeDurationMs)
     _crossfadeTimer = setTimeout(() => {
       if (generation !== _handlerGeneration) return
+      if (!maySnippetEndAdvanceQueue(_state.playing)) return
       beginCrossfade(generation, crossfadeDurationMs)
     }, crossfadeStartDelay)
   } else {
     _snippetTimer = setTimeout(() => {
       if (generation !== _handlerGeneration) return
+      if (!maySnippetEndAdvanceQueue(_state.playing)) return
       pauseSnippetAtEnd()
     }, ms)
   }
@@ -999,13 +1011,6 @@ export async function playFull(request: PlayFullRequest): Promise<void> {
 }
 
 export function togglePlayPause(): void {
-  // FIX: if a crossfade is mid-flight, snap it to completion first. Without
-  // this, pausing during a fade only paused the outgoing track — the
-  // incoming track kept ramping up in the background — and the scheduled
-  // finishCrossfade() would then set playing:true again a moment later,
-  // silently undoing the pause the person just did.
-  resolveCrossfadeNow()
-
   // FIX: every call gets its own token. Any earlier in-flight play()
   // promise's callbacks check this before applying their result — so
   // rapid pause→play→pause taps can't have a stale resolution land after
@@ -1016,6 +1021,12 @@ export function togglePlayPause(): void {
   if (_state.mode === 'idle' || !audio) return
 
   if (_state.playing) {
+    // FIX: scheduled crossfade timers (armSnippetTimer) were not cleared on
+    // pause — beginCrossfade() still ran and advanced the queue. Mid-fade,
+    // resolveCrossfadeNow() completed the handoff to the *next* moment instead
+    // of staying paused on the current one.
+    clearCrossfadeTimer()
+    if (_crossfadeActive) cancelCrossfade()
     audio.pause()
     clearSnippetTimer()
     releaseWakeLock()

@@ -24,7 +24,7 @@ export function DiscoverSongsSortSwitch({
       style={{
         display: 'inline-flex',
         padding: '2px',
-        borderRadius: '50px',
+        borderRadius: '8px',
         border: '1px solid var(--border-hi)',
         background: 'var(--surface)',
         gap: '2px',
@@ -41,7 +41,7 @@ export function DiscoverSongsSortSwitch({
             onClick={() => onChange(opt.value)}
             style={{
               padding: '5px 10px',
-              borderRadius: '50px',
+              borderRadius: '8px',
               border: 'none',
               cursor: 'pointer',
               fontFamily: UI_FONT,

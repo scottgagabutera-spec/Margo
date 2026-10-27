@@ -5,12 +5,11 @@ import { useSongs, Song } from '@/hooks/useSongs'
 import { useLyricMoments } from '@/hooks/useLyricMoments'
 import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
-import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { SongPreviewSheet } from '@/components/song-preview-sheet'
 import { LyricMomentCard } from '@/components/lyric-moment-card'
 import { ResonanceCard } from '@/components/resonance-card'
 import { DiscoverVibeFilterRow } from '@/components/discover-vibe-filter-row'
-import { DiscoverSectionHeader } from '@/components/discover-section-header'
+import { DiscoverSectionHeader, DiscoverPlayAllButton } from '@/components/discover-section-header'
 import { DiscoverHorizontalScrollRow } from '@/components/discover-horizontal-scroll-row'
 import { DiscoverHomeSongTile, DiscoverHomeArtistTile } from '@/components/discover-home-tiles'
 import { buildLyricMomentsFromRows, momentPlayingKey, type LyricMoment } from '@/lib/lyric-moments-board'
@@ -34,7 +33,6 @@ import { useNewItemsBuffer } from '@/hooks/useNewItemsBuffer'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
 import { isExcludedDiscoverArtist } from '@/lib/discover-artist-roster'
 import { subscribeAudioEngine, togglePlayPause } from '@/lib/audio-engine'
-import { UI_FONT } from '@/lib/fonts'
 
 const supabase = createClient()
 
@@ -232,7 +230,7 @@ export default function DiscoverPage() {
         <style>{`
           .discover-home-page {
             --discover-home-pad-x: 16px;
-            --discover-home-header-gap: 16px;
+            --discover-home-header-gap: 20px;
             box-sizing: border-box;
             padding-top: calc(var(--nav-height, 72px) + var(--discover-home-header-gap));
             padding-left: var(--discover-home-pad-x);
@@ -255,19 +253,37 @@ export default function DiscoverPage() {
             }
           }
           @media (min-width: 768px) and (max-width: 1023px) {
-            .discover-home-inner { transform: scale(1.15); transform-origin: top center; }
+            .discover-home-inner {
+              width: calc(100% / 1.15);
+              max-width: calc(100% / 1.15);
+              transform: scale(1.15);
+              transform-origin: top center;
+              margin-left: auto;
+              margin-right: auto;
+            }
           }
           .discover-home-inner {
             width: 100%;
             max-width: 100%;
             margin: 0 auto;
+            box-sizing: border-box;
           }
           @media (min-width: 2560px) {
             .discover-home-inner {
-              max-width: 1500px;
+              width: calc(1500px / 1.4);
+              max-width: calc(1500px / 1.4);
               transform: scale(1.4);
               transform-origin: top center;
+              margin-left: auto;
+              margin-right: auto;
             }
+          }
+          .discover-hscroll {
+            align-items: stretch;
+          }
+          .discover-home-moment-card,
+          .discover-home-resonance-card {
+            min-height: 168px;
           }
           .discover-home-moment-card {
             width: 150px;
@@ -310,35 +326,7 @@ export default function DiscoverPage() {
 
         <div className="discover-home-inner">
           <div style={{ marginBottom: '12px' }}>
-            <DiscoverVibeFilterRow selected={selectedVibe} onSelect={setSelectedVibe} tone="home" />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '18px' }}>
-            <button
-              type="button"
-              data-discover-play-all
-              onClick={playAllMoments}
-              disabled={filteredMoments.length === 0}
-              style={{
-                fontFamily: UI_FONT,
-                fontSize: '10px',
-                fontWeight: 600,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                padding: '8px 14px',
-                minHeight: '44px',
-                borderRadius: '50px',
-                border: '1px solid var(--gold)',
-                background: 'transparent',
-                color: 'var(--gold)',
-                cursor: filteredMoments.length === 0 ? 'default' : 'pointer',
-                opacity: filteredMoments.length === 0 ? 0.45 : 1,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
-            >
-              <PlayPauseIcon playing={false} size={12} color="var(--gold)" /> Play all
-            </button>
+            <DiscoverVibeFilterRow selected={selectedVibe} onSelect={setSelectedVibe} />
           </div>
 
           <SectionBlock
@@ -347,12 +335,25 @@ export default function DiscoverPage() {
             hidden={!momentsLoading && filteredMoments.length === 0}
             skeleton={(
               <>
-                <DiscoverSectionHeader title="Moments" viewMoreHref="/discover/moments" />
+                <DiscoverSectionHeader
+                  title="Moments"
+                  viewMoreHref="/discover/moments"
+                  trailing={<DiscoverPlayAllButton disabled onClick={() => {}} />}
+                />
                 <MomentRowSkeleton />
               </>
             )}
           >
-            <DiscoverSectionHeader title="Moments" viewMoreHref="/discover/moments" />
+            <DiscoverSectionHeader
+              title="Moments"
+              viewMoreHref="/discover/moments"
+              trailing={(
+                <DiscoverPlayAllButton
+                  disabled={filteredMoments.length === 0}
+                  onClick={playAllMoments}
+                />
+              )}
+            />
             <DiscoverHorizontalScrollRow>
               {filteredMoments.map(moment => {
                 const key = momentPlayingKey(moment)
