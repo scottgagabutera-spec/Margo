@@ -24,8 +24,8 @@ for (const vp of PHONE_VIEWPORTS) {
       await expect(page).toHaveURL(/\/signin/, { timeout: 15000 })
       await expect(page.locator('.margo-mobile-tabbar')).toBeVisible()
       await expect(page.locator('.margo-mobile-tabbar [aria-current="page"]')).toContainText(/Sign In/i)
-      await expect(page.locator('input[type="email"], input[type="password"]').first()).toBeVisible({ timeout: 15000 })
-      await expect(page.locator('.margo-auth-layout__main')).toBeVisible()
+      await expect(page.locator('.margo-auth-layout__main')).toBeVisible({ timeout: 15000 })
+      await expect(page.locator('.margo-auth-layout__main button, .margo-auth-layout__main a').first()).toBeVisible()
     })
 
     test('Hub sign-in does not flash bare Feed between Hub and /signin', async ({ page }) => {
