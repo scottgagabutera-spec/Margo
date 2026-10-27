@@ -51,3 +51,9 @@ test('footer sheet closes on document scroll while open', () => {
   const src = fs.readFileSync('components/footer/margo-footer.tsx', 'utf8')
   assert.match(src, /document\.addEventListener\('scroll'/)
 })
+
+test('footer sheet closes when hero search is tapped', () => {
+  const src = fs.readFileSync('components/footer/margo-footer.tsx', 'utf8')
+  assert.match(src, /addEventListener\('pointerdown', onSearchTap/)
+  assert.match(src, /margo-stage-hero-search/)
+})

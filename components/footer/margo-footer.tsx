@@ -194,14 +194,18 @@ export function MargoFooter() {
 
   useEffect(() => {
     if (!sheetOpen) return
-    const onFocusIn = (e: FocusEvent) => {
+    const onSearchTap = (e: Event) => {
       const target = e.target as HTMLElement | null
       if (target?.closest('.margo-stage-hero-search')) {
         closeSheet()
       }
     }
-    document.addEventListener('focusin', onFocusIn, true)
-    return () => document.removeEventListener('focusin', onFocusIn, true)
+    document.addEventListener('pointerdown', onSearchTap, true)
+    document.addEventListener('focusin', onSearchTap, true)
+    return () => {
+      document.removeEventListener('pointerdown', onSearchTap, true)
+      document.removeEventListener('focusin', onSearchTap, true)
+    }
   }, [sheetOpen, closeSheet])
 
   const wasSheetOpen = useRef(false)
