@@ -13,7 +13,7 @@ import { hidesTabBar } from '@/lib/chrome-mode'
 import { useStageChromeHidden } from '@/lib/stage-chrome'
 import { useSigninHref } from '@/components/signin-link'
 import { persistAuthReturnScroll } from '@/lib/auth-return'
-import { persistActivePrimaryScroll } from '@/components/primary-tab-shell'
+import { leavePrimaryTabSurface, persistActivePrimaryScroll } from '@/components/primary-tab-shell'
 import { YouTabPortrait } from '@/components/you-tab-portrait'
 
 const font = 'var(--font-geist-sans), system-ui, sans-serif'
@@ -33,6 +33,15 @@ export function MobileTabBar() {
   const navRef = useRef<HTMLElement | null>(null)
 
   const [libraryPlayerOpen, setLibraryPlayerOpen] = useState(false)
+  const [mobilePrimaryChrome, setMobilePrimaryChrome] = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(max-width: 639px)')
+    const apply = () => setMobilePrimaryChrome(mq.matches)
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
+  }, [])
   useEffect(() => {
     const sync = () => {
       setLibraryPlayerOpen(document.documentElement.hasAttribute('data-margo-library-player'))
@@ -43,7 +52,7 @@ export function MobileTabBar() {
     return () => mo.disconnect()
   }, [])
 
-  const shellHidden = hidesTabBar(pathname) || libraryPlayerOpen
+  const shellHidden = hidesTabBar(pathname, { mobilePrimaryChrome }) || libraryPlayerOpen
   const stageHidden = useStageChromeHidden()
   const isLanding = pathname === '/'
 
@@ -186,6 +195,7 @@ export function MobileTabBar() {
           if (!isSignedIn) {
             persistActivePrimaryScroll()
             persistAuthReturnScroll()
+            leavePrimaryTabSurface()
             return
           }
           youLink.onClick(event)

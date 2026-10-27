@@ -7,6 +7,7 @@ import { matchLiveCatalogSong, searchMargoSongs, songMatchKey } from '@/lib/sear
 import { ComposeSearchDropdown, type ComposeSearchHit } from '@/components/compose-search-dropdown'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { MargoSearchInput } from '@/components/margo-search-input'
+import { MARGO_SEARCH_HINT_CATALOG } from '@/lib/margo-search-hints'
 import { StageSongChip } from '@/components/stage/stage-song-chip'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { MomentExportCustomizeBar } from '@/components/moment-export-customize-bar'
@@ -748,9 +749,8 @@ export function StageLanding() {
             value={searchQuery}
             onChange={handleSearchChange}
             loading={searchLoading}
-            placeholder="Search by lyric, song or artist…"
-            ariaLabel="Search songs on Stage"
-            catalogHints
+            hintText={MARGO_SEARCH_HINT_CATALOG}
+            ariaLabel={MARGO_SEARCH_HINT_CATALOG}
             stackAboveOverlay={showResults}
           />
           <ComposeSearchDropdown

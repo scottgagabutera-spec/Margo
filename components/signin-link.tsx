@@ -8,7 +8,7 @@ import {
   persistAuthReturnScroll,
   type AuthModeParam,
 } from '@/lib/auth-return'
-import { persistActivePrimaryScroll } from '@/components/primary-tab-shell'
+import { leavePrimaryTabSurface, persistActivePrimaryScroll } from '@/components/primary-tab-shell'
 
 type SignInLinkProps = Omit<ComponentProps<typeof Link>, 'href'> & {
   /** Destination after auth. Defaults to the page the user is on now. */
@@ -27,6 +27,7 @@ export function SignInLink({ returnTo, mode, onClick, ...props }: SignInLinkProp
   const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
     persistActivePrimaryScroll()
     persistAuthReturnScroll()
+    leavePrimaryTabSurface()
     onClick?.(e)
   }
 

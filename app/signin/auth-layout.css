@@ -22,6 +22,15 @@
     "panel";
 }
 
+@media (max-width: 639px) {
+  .margo-auth-layout {
+    padding-bottom: calc(
+      var(--margo-page-padding-bottom, 88px)
+      + var(--auth-keyboard-inset, 0px)
+    );
+  }
+}
+
 .margo-auth-layout__back {
   grid-area: back;
   display: flex;

@@ -10,7 +10,7 @@ import { RelativeTime } from '@/components/relative-time'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useMessaging, type Conversation } from '@/hooks/useMessaging'
 import { formatMessagePreview } from '@/lib/moment/message-format'
-import { MESSAGES_SEARCH_HINTS } from '@/lib/depth-search-hints'
+import { MARGO_SEARCH_HINT_PEOPLE } from '@/lib/margo-search-hints'
 import { LIST_ROW_TYPE, UI_FONT } from '@/lib/fonts'
 import { isMargoBrandUsername } from '@/lib/margo-brand-account'
 import { signedOutGateBenefitStyle, signedOutGateSignInStyle } from '@/lib/signed-out-gate-styles'
@@ -175,8 +175,7 @@ export function MessagesInbox({ embedded = false }: { embedded?: boolean }) {
       <MargoSearchInput
         value={query}
         onChange={setQuery}
-        placeholder="Search people"
-        rotatingHints={MESSAGES_SEARCH_HINTS}
+        hintText={MARGO_SEARCH_HINT_PEOPLE}
         icon="left"
       />
 

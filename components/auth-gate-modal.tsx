@@ -21,19 +21,40 @@ export function AuthGateModal({ open, onOpenChange, externalError }: AuthGateMod
   const [mode, setMode] = useState<'signup' | 'signin'>('signup')
   const { authReturnTo } = useAuthGate()
 
+  const [mobilePrimaryChrome, setMobilePrimaryChrome] = useState(false)
+
   useEffect(() => {
     if (open) setMode('signup')
   }, [open])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(max-width: 639px)')
+    const apply = () => setMobilePrimaryChrome(mq.matches)
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
+  }, [])
+
   if (!open) return null
+
+  const phoneSheet = mobilePrimaryChrome
 
   return (
     <div
       role="dialog"
       aria-modal="true"
+      data-margo-auth-gate-modal=""
       onClick={() => onOpenChange(false)}
       style={{
-        position: 'fixed', inset: 0, zIndex: 1000,
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: phoneSheet
+          ? 'calc(var(--margo-tabbar-h, 0px) + env(safe-area-inset-bottom, 0px))'
+          : 0,
+        zIndex: phoneSheet ? 45 : 1000,
         background: 'rgba(7,6,10,0.85)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '24px', boxSizing: 'border-box',

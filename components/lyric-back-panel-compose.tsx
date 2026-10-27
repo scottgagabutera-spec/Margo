@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from 'react'
 import { MargoSearchInput } from '@/components/margo-search-input'
+import { MARGO_SEARCH_HINT_CATALOG } from '@/lib/margo-search-hints'
 import { MomentComposeVibePicker } from '@/components/moment-compose-vibe-picker'
 import { emotionToVibeLabel, vibeLabelToEmotion } from '@/lib/moment/vibe'
 import { ComposeSearchDropdown, type ComposeSearchHit } from '@/components/compose-search-dropdown'
@@ -588,9 +589,8 @@ export const LyricBackPanelCompose = forwardRef<
         value={query}
         onChange={setQuery}
         loading={searchLoading}
-        placeholder={isPanelLayout ? 'Search' : 'Search by lyric, song or artist…'}
-        ariaLabel="Search by lyric, song or artist"
-        catalogHints
+        hintText={MARGO_SEARCH_HINT_CATALOG}
+        ariaLabel={MARGO_SEARCH_HINT_CATALOG}
         compact={isPanelLayout}
         stackAboveOverlay={isPanelLayout && searchOpen}
         autoFocus={focusSearchOnMount && !lockSongAndLine}

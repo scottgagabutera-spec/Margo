@@ -8,6 +8,7 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { useMessaging, type ConversationPartner } from '@/hooks/useMessaging'
 import { searchProfiles, type ProfileSearchHit } from '@/lib/search-profiles'
 import { MargoSearchInput } from '@/components/margo-search-input'
+import { MARGO_SEARCH_HINT_PEOPLE } from '@/lib/margo-search-hints'
 import { buildMomentMessageBody } from '@/lib/moment/message-format'
 import { UI_FONT } from '@/lib/fonts'
 
@@ -212,7 +213,7 @@ function SendToPanel({
         <MargoSearchInput
           value={query}
           onChange={setQuery}
-          placeholder="Search by name or @username"
+          hintText={MARGO_SEARCH_HINT_PEOPLE}
         />
       </div>
 

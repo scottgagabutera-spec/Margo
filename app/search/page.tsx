@@ -272,9 +272,8 @@ function SearchPageInner() {
       <MargoSearchInput
         value={query}
         onChange={setQuery}
-        placeholder={scope.placeholder}
+        hintText={scope.placeholder}
         ariaLabel={scope.placeholder}
-        catalogHints={scope.types.includes('song') || scope.types.includes('catalog_line')}
         autoFocus
       />
 

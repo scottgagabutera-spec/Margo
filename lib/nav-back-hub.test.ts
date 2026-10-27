@@ -17,5 +17,6 @@ test('A2 conversation back goes to inbox explicitly', () => {
 test('A2 notifications and library use hubTileBack with preferHistory false', () => {
   const src = fs.readFileSync('components/nav-back.tsx', 'utf8')
   assert.match(src, /if \(p === '\/notifications'\)/)
-  assert.match(src, /if \(p === '\/library' \|\| p\.startsWith\('\/library\/'\)\)/)
+  assert.match(src, /if \(p === '\/library'\)/)
+  assert.match(src, /if \(p\.startsWith\('\/library\/'\)\) return \{ fallbackHref: '\/library' \}/)
 })

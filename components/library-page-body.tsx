@@ -8,7 +8,7 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { useLibraryShelves } from '@/hooks/useLibraryShelves'
 import type { SongCardData } from '@/components/song-catalog-card'
 import { playSongsAsSession } from '@/lib/library/play-songs-session'
-import { LIBRARY_SEARCH_HINTS } from '@/lib/depth-search-hints'
+import { MARGO_SEARCH_HINT_LIBRARY } from '@/lib/margo-search-hints'
 import { LIST_ROW_TYPE, LYRIC_FONT, UI_FONT } from '@/lib/fonts'
 import { SignInLink } from '@/components/signin-link'
 import { signedOutGateBenefitStyle, signedOutGateSignInStyle } from '@/lib/signed-out-gate-styles'
@@ -359,8 +359,7 @@ export function LibraryPageBody({ layoutMode = 'mobile' }: { layoutMode?: Layout
       <MargoSearchInput
         value={query}
         onChange={setQuery}
-        placeholder="Search your library"
-        rotatingHints={LIBRARY_SEARCH_HINTS}
+        hintText={MARGO_SEARCH_HINT_LIBRARY}
         icon="left"
       />
       <LibraryShelfControls

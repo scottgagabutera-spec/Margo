@@ -17,6 +17,7 @@ import { ComposeReadyPreview } from '@/components/compose-ready-preview'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { ComposeSearchDropdown } from '@/components/compose-search-dropdown'
 import { MargoSearchInput } from '@/components/margo-search-input'
+import { MARGO_SEARCH_HINT_CATALOG } from '@/lib/margo-search-hints'
 import { MomentShareStudio } from '@/components/moment-share-studio'
 import { MargoSheet } from '@/components/margo-sheet'
 import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle, keyboardSafeSecondaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
@@ -1402,9 +1403,8 @@ function ComposeInner() {
                 value={searchQuery}
                 onChange={handleSearchChange}
                 loading={searchLoading}
-                placeholder="Song, artist, or lyric…"
-                ariaLabel="Search songs"
-                catalogHints
+                hintText={MARGO_SEARCH_HINT_CATALOG}
+                ariaLabel={MARGO_SEARCH_HINT_CATALOG}
                 stackAboveOverlay={showResults}
               />
               <ComposeSearchDropdown
