@@ -20,10 +20,7 @@ import {
 import { MARGO_SOCIAL_LINKS } from '@/lib/social-links'
 import { MARGO_FOOTER_SECTIONS } from '@/components/footer/margo-footer-links'
 import { UI_FONT } from '@/lib/fonts'
-import {
-  popFooterSheetHistoryIfNeeded,
-  pushFooterSheetHistory,
-} from '@/lib/landing-footer-sheet-history'
+import { pushFooterSheetHistory } from '@/lib/landing-footer-sheet-history'
 
 const SOCIAL_ICONS = {
   instagram: InstagramIcon,
@@ -207,7 +204,9 @@ export function MargoFooter() {
         sheetRef.current?.querySelector<HTMLElement>('a, button')?.focus()
       })
     } else if (wasSheetOpen.current && moreButtonRef.current) {
-      moreButtonRef.current.focus()
+      requestAnimationFrame(() => {
+        moreButtonRef.current?.focus()
+      })
     }
     wasSheetOpen.current = sheetOpen
   }, [sheetOpen])
