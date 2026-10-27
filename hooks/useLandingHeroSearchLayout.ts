@@ -1,65 +1,74 @@
 'use client'
 
-import { useLayoutEffect, useRef } from 'react'
-import {
-  landingHeroAnchorTopPx,
-  searchFieldTopGoalPx,
-} from '@/lib/search-viewport-layout'
+import { useEffect, useLayoutEffect, useRef } from 'react'
+import { computeLandingSearchBump } from '@/lib/landing-search-bump'
+import { resetLandingSearchLayoutState } from '@/lib/landing-search-layout-reset'
 import { useVisualViewport } from '@/hooks/useVisualViewport'
 
 const ACTIVE_ATTR = 'data-margo-landing-search-active'
+const HIDE_TAGLINE = 'data-margo-landing-hide-tagline'
+const HIDE_WORDMARK = 'data-margo-landing-hide-wordmark'
 
 /**
- * While landing search is active, pin the hero anchor so the field sits under
- * max(16px, 12% of visual viewport height) and publish dropdown max-height.
+ * Landing search: small bump above keyboard; tagline/wordmark fade only when needed.
  */
 export function useLandingHeroSearchLayout(active: boolean) {
   const searchWrapRef = useRef<HTMLDivElement | null>(null)
   const metrics = useVisualViewport({ publishCssVars: active })
 
+  useEffect(() => {
+    if (active) return
+    resetLandingSearchLayoutState()
+  }, [active])
+
+  useEffect(() => {
+    const onPageShow = () => {
+      if (!active) resetLandingSearchLayoutState()
+    }
+    const onPop = () => {
+      if (!active) resetLandingSearchLayoutState()
+    }
+    window.addEventListener('pageshow', onPageShow)
+    window.addEventListener('popstate', onPop)
+    return () => {
+      window.removeEventListener('pageshow', onPageShow)
+      window.removeEventListener('popstate', onPop)
+    }
+  }, [active])
+
   useLayoutEffect(() => {
     const root = document.documentElement
-    if (active) root.setAttribute(ACTIVE_ATTR, '1')
-    else root.removeAttribute(ACTIVE_ATTR)
-
     if (!active) {
-      root.style.removeProperty('--margo-landing-hero-active-top')
-      root.style.removeProperty('--margo-landing-search-dropdown-max-h')
-      return () => root.removeAttribute(ACTIVE_ATTR)
+      resetLandingSearchLayoutState()
+      return
     }
-
-    const shell = document.querySelector('.margo-landing-page-shell') as HTMLElement | null
-    const anchor = document.querySelector('.margo-landing-hero-anchor') as HTMLElement | null
-    const wrap = searchWrapRef.current
-    const input = wrap?.querySelector('.margo-search-wrap--standard') as HTMLElement | null
+    root.setAttribute(ACTIVE_ATTR, '1')
 
     const apply = () => {
-      if (!shell || !anchor || !input) return
+      const nav = document.querySelector('.margo-landing-nav') as HTMLElement | null
+      const intro = document.querySelector('.margo-stage-hero__intro') as HTMLElement | null
+      const input = searchWrapRef.current?.querySelector('.margo-search-wrap--standard') as HTMLElement | null
+      if (!nav || !intro || !input) return
+
       const vv = window.visualViewport
       const offsetTop = vv?.offsetTop ?? 0
       const height = vv?.height ?? window.innerHeight
-      const goal = searchFieldTopGoalPx({ offsetTop, viewportHeight: height })
-      const shellRect = shell.getBoundingClientRect()
+      const headerBottom = nav.getBoundingClientRect().bottom
+      const blockTop = intro.getBoundingClientRect().top
 
-      for (let pass = 0; pass < 3; pass++) {
-        const anchorRect = anchor.getBoundingClientRect()
-        const searchRect = input.getBoundingClientRect()
-        const topPx = landingHeroAnchorTopPx({
-          shellTop: shellRect.top,
-          anchorTop: anchorRect.top,
-          searchTop: searchRect.top,
-          goalSearchTop: goal,
-        })
-        root.style.setProperty('--margo-landing-hero-active-top', `${topPx}px`)
-        void anchor.offsetHeight
-        const after = input.getBoundingClientRect()
-        if (Math.abs(after.top - goal) <= 1) break
-      }
+      const plan = computeLandingSearchBump({
+        offsetTop,
+        viewportHeight: height,
+        headerBottom,
+        blockTop,
+      })
 
-      const searchBottom = input.getBoundingClientRect().bottom
-      const visibleBottom = offsetTop + height
-      const maxH = Math.max(0, Math.round(visibleBottom - searchBottom - 8))
-      root.style.setProperty('--margo-landing-search-dropdown-max-h', `${maxH}px`)
+      root.style.setProperty('--margo-landing-hero-shift', `${plan.shiftPx}px`)
+      root.style.setProperty('--margo-landing-search-dropdown-max-h', `${plan.dropdownMaxPx}px`)
+      if (plan.hideTagline) root.setAttribute(HIDE_TAGLINE, '1')
+      else root.removeAttribute(HIDE_TAGLINE)
+      if (plan.hideWordmark) root.setAttribute(HIDE_WORDMARK, '1')
+      else root.removeAttribute(HIDE_WORDMARK)
     }
 
     apply()
@@ -68,19 +77,17 @@ export function useLandingHeroSearchLayout(active: boolean) {
     vv?.addEventListener('resize', apply)
     vv?.addEventListener('scroll', apply)
     window.addEventListener('resize', apply)
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(apply) : null
-    if (wrap) ro?.observe(wrap)
-    if (anchor) ro?.observe(anchor)
+    window.addEventListener('focusin', apply)
+    window.addEventListener('focusout', apply)
 
     return () => {
       cancelAnimationFrame(raf)
       vv?.removeEventListener('resize', apply)
       vv?.removeEventListener('scroll', apply)
       window.removeEventListener('resize', apply)
-      ro?.disconnect()
-      root.removeAttribute(ACTIVE_ATTR)
-      root.style.removeProperty('--margo-landing-hero-active-top')
-      root.style.removeProperty('--margo-landing-search-dropdown-max-h')
+      window.removeEventListener('focusin', apply)
+      window.removeEventListener('focusout', apply)
+      resetLandingSearchLayoutState()
     }
   }, [active, metrics.height, metrics.offsetTop, metrics.keyboardInset])
 

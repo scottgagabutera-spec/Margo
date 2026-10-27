@@ -20,6 +20,7 @@ import { StageSendBar } from '@/components/stage/stage-send-bar'
 import MargoLogo from '@/components/MargoLogo'
 import { useStageChromePublisher, useStageSearchPublisher, useStageIdlePublisher, useStageMomentPublisher } from '@/lib/stage-chrome'
 import { useLandingHeroSearchLayout } from '@/hooks/useLandingHeroSearchLayout'
+import { resetLandingSearchLayoutState } from '@/lib/landing-search-layout-reset'
 import { resolveMargoMomentFromStage, canShareImageFiles } from '@/lib/moment'
 import { saveMargoMomentImage, shareMargoMomentImage } from '@/lib/moment-export/save-moment-image'
 import {
@@ -337,6 +338,8 @@ export function StageLanding() {
     setSearchQuery('')
     setShowResults(false)
     setSearchResults([])
+    setSearchFocused(false)
+    resetLandingSearchLayoutState()
   }, [])
 
   const enterCatalog = useCallback(async (

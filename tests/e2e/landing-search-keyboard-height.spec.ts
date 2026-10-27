@@ -63,8 +63,14 @@ async function assertLandingSearchKeyboardLayout(
     const searchEl = document.querySelector(
       '.margo-stage-hero:not(.margo-stage-hero--ssr) .margo-search-wrap--standard',
     )
+    const nav = document.querySelector('.margo-landing-nav')
+    const headerBottom = nav?.getBoundingClientRect().bottom ?? 68
     const searchTop = searchEl?.getBoundingClientRect().top ?? 0
-    const goalTop = visibleTop + Math.max(16, (vv?.height ?? window.innerHeight) * 0.12)
+    const searchBottom = searchEl?.getBoundingClientRect().bottom ?? 0
+    const wordmark = document.querySelector('.margo-stage-hero__wordmark-wrap')
+    const tagline = document.querySelector('.margo-stage-hero__tagline')
+    const wordmarkVisible = wordmark ? getComputedStyle(wordmark).opacity !== '0' : false
+    const taglineVisible = tagline ? getComputedStyle(tagline).opacity !== '0' && tagline.getBoundingClientRect().height > 2 : false
     const rows = Array.from(document.querySelectorAll('.compose-search-row--stage')).slice(0, 3)
     const rowRects = rows.map((r) => {
       const rect = r.getBoundingClientRect()
@@ -76,8 +82,11 @@ async function assertLandingSearchKeyboardLayout(
     return {
       visibleTop,
       visibleBottom,
+      headerBottom,
       searchTop,
-      goalTop,
+      searchBottom,
+      wordmarkVisible,
+      taglineVisible,
       rowRects,
       listOverflowY: listStyle?.overflowY ?? '',
       shellH,
@@ -88,7 +97,8 @@ async function assertLandingSearchKeyboardLayout(
   })
 
   expect(metrics.active).toBe(true)
-  expect(Math.abs(metrics.searchTop - metrics.goalTop)).toBeLessThanOrEqual(8)
+  expect(metrics.searchTop).toBeGreaterThanOrEqual(metrics.headerBottom + 8 - 1)
+  expect(metrics.searchBottom).toBeLessThanOrEqual(metrics.visibleBottom + 1)
   expect(metrics.rowRects.length).toBeGreaterThanOrEqual(2)
   expect(rowFullyVisible(metrics.rowRects[0].top, metrics.rowRects[0].bottom, metrics.visibleTop, metrics.visibleBottom)).toBe(true)
   expect(rowFullyVisible(metrics.rowRects[1].top, metrics.rowRects[1].bottom, metrics.visibleTop, metrics.visibleBottom)).toBe(true)
@@ -135,7 +145,9 @@ async function assertLandingSearchKeyboardLayout(
 }
 
 const cases = [
+  { width: 360, full: 640, shrunk: 406 },
   { width: 360, full: 640, shrunk: 360 },
+  { width: 360, full: 800, shrunk: 420 },
   { width: 390, full: 844, shrunk: 470 },
   { width: 412, full: 915, shrunk: 500 },
 ] as const

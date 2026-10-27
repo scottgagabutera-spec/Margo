@@ -22,9 +22,11 @@ function composeDefaultInsets() {
 
 /** Looser than default — pill can sit in the CTA band; CTAs keep a higher z-index when overlapping. */
 function composeClampInsets() {
-  const nav = readChromePx('--nav-height', 56)
+  const nav = readChromePx('--margo-header-h', readChromePx('--nav-height', 56))
   const tabbar = readChromePx('--margo-tabbar-h', 80)
-  return { top: nav + 8, right: 12, bottom: tabbar + 8, left: 12 }
+  const cta = readChromePx('--margo-cta-bar-h', 0)
+  const lift = cta > 0 ? cta + 8 + 44 : 0
+  return { top: nav + 8, right: 12, bottom: tabbar + 8 + lift, left: 12 }
 }
 
 function isInteractiveTarget(target: EventTarget | null) {
@@ -72,7 +74,7 @@ function ComposeFloatingShell({
       const vh = window.visualViewport?.height ?? window.innerHeight
       const ctaTop = vh - tab - cta
       const overlapsCta = cta > 0 && el.getBoundingClientRect().bottom > ctaTop + 4
-      setStackZ(overlapsCta ? 50 : 95)
+      setStackZ(overlapsCta ? 40 : 95)
     }
     updateZ()
     window.addEventListener('resize', updateZ)
