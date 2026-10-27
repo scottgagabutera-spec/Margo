@@ -228,11 +228,12 @@ test.describe('landing tab bar unchanged @390', () => {
     await expect(page.locator('.margo-mobile-tabbar')).toBeVisible({ timeout: 15000 })
     const tabLabels = await page.locator('.margo-mobile-tabbar').evaluate((bar) => {
       const items: string[] = []
-      bar.querySelectorAll('a').forEach((a) => {
-        items.push(a.getAttribute('aria-label') || a.textContent?.trim() || '')
+      bar.querySelectorAll('a, button').forEach((el) => {
+        const label = el.getAttribute('aria-label') || (el as HTMLElement).innerText.trim()
+        if (!label) return
+        if (el.tagName === 'BUTTON' && !label.startsWith('Hub')) return
+        items.push(label)
       })
-      const hub = bar.querySelector('button[aria-label^="Hub"]')
-      if (hub) items.push(hub.getAttribute('aria-label') || 'Hub')
       return items
     })
     expect(tabLabels.map((l) => l.toUpperCase())).toEqual([

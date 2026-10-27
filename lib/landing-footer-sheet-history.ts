@@ -18,8 +18,8 @@ export function pushFooterSheetHistory(): void {
   window.history.pushState({ [MARGO_FOOTER_SHEET_HISTORY_KEY]: true }, '')
 }
 
-/** Pop the sheet history entry if we pushed one. */
-export function popFooterSheetHistoryIfNeeded(pushed: boolean): void {
+/** Clear the sheet history entry after UI close (keep user on /). */
+export function clearFooterSheetHistoryEntry(pushed: boolean): void {
   if (!pushed || typeof window === 'undefined') return
-  window.history.back()
+  window.history.replaceState(null, '')
 }

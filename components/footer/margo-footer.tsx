@@ -21,7 +21,6 @@ import { MARGO_SOCIAL_LINKS } from '@/lib/social-links'
 import { MARGO_FOOTER_SECTIONS } from '@/components/footer/margo-footer-links'
 import { UI_FONT } from '@/lib/fonts'
 import {
-  isFooterSheetHistoryState,
   popFooterSheetHistoryIfNeeded,
   pushFooterSheetHistory,
 } from '@/lib/landing-footer-sheet-history'
@@ -116,9 +115,9 @@ export function MargoFooter() {
 
   const closeSheet = useCallback(() => {
     setSheetOpen(false)
-    if (historyPushedRef.current) {
+    if (historyPushedRef.current && typeof window !== 'undefined') {
       historyPushedRef.current = false
-      popFooterSheetHistoryIfNeeded(true)
+      window.history.replaceState(null, '')
     }
   }, [])
 
