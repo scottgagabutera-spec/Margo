@@ -318,6 +318,11 @@ test.describe('landing search dropdown @390', () => {
       const list = document.querySelector('[role="listbox"][aria-label="Song search results"]')
       const thumb = document.querySelector('.compose-search-row--stage img')
       const title = document.querySelector('.compose-search-row--stage p')
+      const probe = document.createElement('span')
+      probe.style.fontSize = '0.9rem'
+      document.body.appendChild(probe)
+      const expectedTitlePx = parseFloat(getComputedStyle(probe).fontSize)
+      probe.remove()
       if (!wrap || !list) return null
       const wr = wrap.getBoundingClientRect()
       const lr = list.getBoundingClientRect()
@@ -329,13 +334,14 @@ test.describe('landing search dropdown @390', () => {
         listW: lr.width,
         listL: lr.left,
         titleFontPx: ts ? parseFloat(ts.fontSize) : 0,
+        expectedTitlePx,
         thumbPx: tr ? tr.width : 0,
       }
     })
     expect(metrics).not.toBeNull()
     expect(Math.abs(metrics!.listW - metrics!.searchW)).toBeLessThanOrEqual(1)
     expect(Math.abs(metrics!.listL - metrics!.searchL)).toBeLessThanOrEqual(1)
-    expect(Math.abs(metrics!.titleFontPx - 14.4)).toBeLessThanOrEqual(0.6)
+    expect(Math.abs(metrics!.titleFontPx - metrics!.expectedTitlePx)).toBeLessThanOrEqual(0.6)
     expect(Math.abs(metrics!.thumbPx - 44)).toBeLessThanOrEqual(1)
   })
 })
