@@ -8,6 +8,7 @@ import { buildSnippetQueueOverflowItems } from '@/components/song-card-actions'
 import { useWarmAudioUrlOnVisible } from '@/hooks/useWarmAudioUrl'
 import type { LyricMoment } from '@/lib/lyric-moments-board'
 import { AtmosphereLayer } from '@/components/atmosphere-layer'
+import { UI_FONT } from '@/lib/fonts'
 
 export function LyricMomentCard({
   moment,
@@ -33,6 +34,8 @@ export function LyricMomentCard({
   const cardRef = useRef<HTMLDivElement>(null)
   useWarmAudioUrlOnVisible(moment.audioUrl, cardRef, true, moment.start)
   const primaryVibe = moment.vibes[0]
+  const isCatalogGrid = variant === 'grid'
+  const playSize = isCatalogGrid ? 28 : undefined
   return (
     <div
       ref={cardRef}
@@ -44,7 +47,7 @@ export function LyricMomentCard({
         scrollSnapAlign: variant === 'row' ? 'start' : undefined,
         padding: '16px',
         background: isPlaying ? 'rgba(232,197,71,0.06)' : 'rgba(255,255,255,0.025)',
-        border: `1px solid ${isPlaying ? 'rgba(232,197,71,0.28)' : 'rgba(255,255,255,0.08)'}`,
+        border: `1px solid ${isPlaying ? (isCatalogGrid ? 'var(--gold)' : 'rgba(232,197,71,0.28)') : 'rgba(255,255,255,0.08)'}`,
         borderRadius: '14px',
         display: 'flex',
         flexDirection: 'column',
@@ -73,23 +76,43 @@ export function LyricMomentCard({
         />
       </div>
       <p style={{
-        fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.88rem',
+        fontFamily: 'var(--font-lora), serif', fontStyle: 'italic',
+        fontSize: isCatalogGrid ? '14px' : '0.88rem',
         color: 'var(--text)', lineHeight: 1.5, margin: 0, whiteSpace: 'pre-line',
-        display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-        minHeight: '4.2em',
+        display: '-webkit-box',
+        WebkitLineClamp: isCatalogGrid ? 3 : 4,
+        WebkitBoxOrient: 'vertical', overflow: 'hidden',
+        minHeight: isCatalogGrid ? '4.05em' : '4.2em',
       }}>&ldquo;{moment.line}&rdquo;</p>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
         <div style={{ minWidth: 0 }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{moment.songTitle}</p>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--text-muted)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{moment.artist}</p>
+          <p style={{
+            fontFamily: isCatalogGrid ? UI_FONT : 'var(--font-lora), serif',
+            fontSize: isCatalogGrid ? '10px' : '0.6rem',
+            fontWeight: 700,
+            color: isPlaying && isCatalogGrid ? 'var(--gold)' : 'var(--text-muted)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.6px',
+            margin: 0,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}>
+            {moment.songTitle}{isPlaying && isCatalogGrid ? ' · PLAYING' : ''}
+          </p>
+          {!isCatalogGrid ? (
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--text-muted)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{moment.artist}</p>
+          ) : null}
         </div>
         <button type="button" onClick={onPlay} style={{
-          width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', flexShrink: 0,
+          width: playSize ?? 'var(--margo-touch-min)',
+          height: playSize ?? 'var(--margo-touch-min)',
+          borderRadius: '50%', flexShrink: 0,
           background: isPlaying ? 'rgba(232,197,71,0.2)' : 'rgba(232,197,71,0.1)',
           border: '1px solid rgba(232,197,71,0.25)', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxSizing: 'border-box',
         }}>
-          <PlayPauseIcon playing={isPlaying} buffering={!!isBuffering} size={15} color="var(--gold)" />
+          <PlayPauseIcon playing={isPlaying} buffering={!!isBuffering} size={isCatalogGrid ? 12 : 15} color="var(--gold)" />
         </button>
       </div>
     </div>

@@ -63,11 +63,14 @@ export function SongCatalogCard({
   song,
   badge,
   onSelect,
+  discoverTile = false,
 }: {
   song: SongCardData
   badge?: 'Trending' | 'Top' | null
   /** Opens song preview — does not navigate to karaoke. */
   onSelect?: (song: SongCardData) => void
+  /** Discover view-more tile typography (Geist 12 / 11). */
+  discoverTile?: boolean
 }) {
   const cardRef = useRef<HTMLDivElement>(null)
   const isActive = song.status === 'live' || song.status === 'active'
@@ -77,11 +80,25 @@ export function SongCatalogCard({
 
   const openPreview = () => onSelect?.(song)
 
+  const titleStyle: CSSProperties = discoverTile
+    ? { ...cardTitleStyle, fontSize: '12px', fontWeight: 500 }
+    : cardTitleStyle
+  const artistStyle: CSSProperties = discoverTile
+    ? { ...cardArtistStyle, fontSize: '11px', fontWeight: 400 }
+    : cardArtistStyle
+
   const coverInner = (
     <>
-      {badge && <EarnedTag label={badge} />}
+      {badge && !discoverTile && <EarnedTag label={badge} />}
       {song.artwork ? (
-        <Image src={song.artwork} alt="" fill style={{ objectFit: 'cover' }} sizes="220px" />
+        <Image
+          src={song.artwork}
+          alt=""
+          fill
+          loading="lazy"
+          style={{ objectFit: 'cover' }}
+          sizes={discoverTile ? '120px' : '220px'}
+        />
       ) : (
         <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, rgba(232,197,71,0.08), rgba(255,255,255,0.03))' }} />
       )}
@@ -106,12 +123,12 @@ export function SongCatalogCard({
   const metaBlock = (
     <>
       <p style={{
-        ...cardTitleStyle,
+        ...titleStyle,
         color: isActive ? 'var(--text)' : 'var(--text-secondary)',
       }}>
         {song.title}
       </p>
-      <p style={cardArtistStyle}>{song.artist}</p>
+      <p style={artistStyle}>{song.artist}</p>
     </>
   )
 
