@@ -25,6 +25,7 @@ import { GeistSans } from 'geist/font/sans'
 import { PostHogProvider } from '@/components/analytics/posthog-provider'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
+import { margoSchemaSameAs } from '@/lib/social-links'
 
 const lora = Lora({
   subsets: ['latin'],
@@ -159,13 +160,7 @@ export default function RootLayout({
                 name: 'Margo',
                 url: 'https://trymargo.com',
                 logo: 'https://trymargo.com/icon.svg',
-                sameAs: [
-                  'https://www.instagram.com/officialtrymargo',
-                  'https://www.facebook.com/share/1CiYZanmmg/',
-                  'https://x.com/OfficialUTM',
-                  'https://youtube.com/@trymargo',
-                  'https://www.tiktok.com/@officialtrymargo',
-                ],
+                sameAs: margoSchemaSameAs(),
               },
             }),
           }}

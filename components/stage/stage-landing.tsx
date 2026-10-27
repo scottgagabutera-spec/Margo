@@ -722,29 +722,20 @@ export function StageLanding() {
         onPrimary={() => { void confirmMediaReady() }}
         onClose={() => setMediaReadySheet(null)}
       />
-    <section style={{ position: 'relative', zIndex: 5, width: '100%', maxWidth: '480px', margin: '0 auto' }}>
+    <section className="margo-stage-hero" style={{ position: 'relative', zIndex: 5, width: '100%', margin: '0 auto' }}>
       {!selectedSong && (
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '14px' }}>
+        <div className="margo-stage-hero__intro">
+          <div className="margo-stage-hero__wordmark-wrap">
             <MargoLogo wordmarkOnly size={52} />
           </div>
-          <p
-            style={{
-              fontFamily: font,
-              fontSize: '0.72rem',
-              color: 'var(--text-muted)',
-              lineHeight: 1.45,
-              margin: 0,
-              fontStyle: 'italic',
-            }}
-          >
+          <p className="margo-stage-hero__tagline">
             Expression through a line of music.
           </p>
         </div>
       )}
 
       {!selectedSong ? (
-        <div style={{ position: 'relative', zIndex: showResults ? 60 : 50 }}>
+        <div className="margo-stage-hero-search" style={{ position: 'relative', zIndex: showResults ? 60 : 50 }}>
           <MargoSearchInput
             value={searchQuery}
             onChange={handleSearchChange}

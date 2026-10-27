@@ -56,6 +56,8 @@
     "test:e2e:feed-lyric-card-wide": "playwright test tests/e2e/feed-lyric-card-wide.spec.ts",
     "test:e2e:feed-shorts-v2": "playwright test tests/e2e/feed-shorts-v2.spec.ts",
     "test:e2e:landing-app-nav": "playwright test tests/e2e/landing-app-nav.spec.ts",
+    "test:landing-footer": "node --experimental-strip-types --test lib/social-links.test.ts lib/landing-footer-sheet-history.test.ts lib/landing-footer-layout.test.ts",
+    "test:e2e:landing-footer-sheet": "playwright test tests/e2e/landing-footer-sheet.spec.ts --project=chromium",
     "test:e2e:feed-horizontal-drift": "playwright test tests/e2e/feed-horizontal-drift.spec.ts",
     "test:e2e:compose-label-post": "playwright test tests/e2e/compose-label-post.spec.ts",
     "test:e2e:library-hub-only": "playwright test tests/e2e/library-hub-only.spec.ts",
