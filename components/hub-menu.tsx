@@ -482,12 +482,15 @@ export function HubProvider({ children }: { children: ReactNode }) {
     router.push(buildSigninHref(returnTo))
   }, [router])
 
+  const prevPathRef = useRef<string | null>(null)
   useEffect(() => {
     const path = (pathname || '').split('?')[0]
-    if (path === '/signin' && open) {
+    const prev = prevPathRef.current
+    prevPathRef.current = path
+    if (path === '/signin' && prev !== null && prev !== '/signin') {
       close()
     }
-  }, [pathname, open, close])
+  }, [pathname, close])
 
   useEffect(() => {
     pendingHrefRef.current = null
