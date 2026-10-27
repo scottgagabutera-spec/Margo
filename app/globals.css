@@ -386,22 +386,28 @@ html[data-margo-landing-hide-wordmark] .margo-stage-hero__wordmark-wrap {
   scroll-margin-top: calc(var(--margo-header-h, var(--nav-height, 72px)) + 8px);
 }
 
-.margo-compose-sticky-song {
+.margo-compose-song-row {
   position: sticky;
   z-index: 3;
-  top: calc(var(--margo-header-h, var(--nav-height, 72px)) + 4px);
+  top: 0;
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 40px;
-  padding: 4px 0 8px;
+  height: 40px;
+  max-height: 40px;
+  margin: 0 0 8px;
+  padding: 0;
   background: var(--bg);
   box-sizing: border-box;
 }
 
-.margo-compose-sticky-song__chip {
-  flex: 1;
-  min-width: 0;
+html[data-margo-compose-shell] {
+  overflow: hidden;
+  height: 100%;
+}
+
+html[data-margo-compose-shell] body {
+  overflow: hidden;
 }
 
 .margo-stage-zone {

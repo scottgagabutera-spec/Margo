@@ -3,14 +3,12 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { computeLandingSearchBump } from '@/lib/landing-search-bump'
 import { resetLandingSearchLayoutState } from '@/lib/landing-search-layout-reset'
+import { measureMargoHeaderBottom } from '@/lib/margo-header-band'
+import { readVisualBand } from '@/lib/margo-keyboard-geometry'
 import { useVisualViewport } from '@/hooks/useVisualViewport'
 
-const ACTIVE_ATTR = 'data-margo-landing-search-active'
-const HIDE_TAGLINE = 'data-margo-landing-hide-tagline'
-const HIDE_WORDMARK = 'data-margo-landing-hide-wordmark'
-
 /**
- * Landing search: small bump above keyboard; tagline/wordmark fade only when needed.
+ * Landing search: transform bump from visualViewport keyboard top (not innerHeight / dvh).
  */
 export function useLandingHeroSearchLayout(active: boolean) {
   const searchWrapRef = useRef<HTMLDivElement | null>(null)
@@ -42,54 +40,61 @@ export function useLandingHeroSearchLayout(active: boolean) {
       resetLandingSearchLayoutState()
       return
     }
-    root.setAttribute(ACTIVE_ATTR, '1')
+    root.setAttribute('data-margo-landing-search-active', '1')
 
     const apply = () => {
-      const nav = document.querySelector('.margo-landing-nav') as HTMLElement | null
-      const intro = document.querySelector('.margo-stage-hero__intro') as HTMLElement | null
+      const clientHero = '.margo-stage-hero:not(.margo-stage-hero--ssr)'
+      const wordmark = document.querySelector(`${clientHero} .margo-stage-hero__wordmark-wrap`) as HTMLElement | null
       const input = searchWrapRef.current?.querySelector('.margo-search-wrap--standard') as HTMLElement | null
-      if (!nav || !intro || !input) return
+      if (!wordmark || !input) return
 
-      const vv = window.visualViewport
-      const offsetTop = vv?.offsetTop ?? 0
-      const height = vv?.height ?? window.innerHeight
-      const headerBottom = nav.getBoundingClientRect().bottom
-      const blockTop = intro.getBoundingClientRect().top
+      const { bottom: headerBottom } = measureMargoHeaderBottom()
+      const band = readVisualBand()
+      const blockTop = wordmark.getBoundingClientRect().top
 
       const plan = computeLandingSearchBump({
-        offsetTop,
-        viewportHeight: height,
+        keyboardTop: band.keyboardTop,
         headerBottom,
         blockTop,
       })
 
       root.style.setProperty('--margo-landing-hero-shift', `${plan.shiftPx}px`)
       root.style.setProperty('--margo-landing-search-dropdown-max-h', `${plan.dropdownMaxPx}px`)
-      if (plan.hideTagline) root.setAttribute(HIDE_TAGLINE, '1')
-      else root.removeAttribute(HIDE_TAGLINE)
-      if (plan.hideWordmark) root.setAttribute(HIDE_WORDMARK, '1')
-      else root.removeAttribute(HIDE_WORDMARK)
+      if (plan.hideTagline) root.setAttribute('data-margo-landing-hide-tagline', '1')
+      else root.removeAttribute('data-margo-landing-hide-tagline')
+      if (plan.hideWordmark) root.setAttribute('data-margo-landing-hide-wordmark', '1')
+      else root.removeAttribute('data-margo-landing-hide-wordmark')
     }
 
     apply()
-    const raf = requestAnimationFrame(apply)
+    let raf = 0
+    const loop = () => {
+      apply()
+      raf = requestAnimationFrame(loop)
+    }
+    raf = requestAnimationFrame(loop)
+    const stopLoop = window.setTimeout(() => cancelAnimationFrame(raf), 800)
+
     const vv = window.visualViewport
     vv?.addEventListener('resize', apply)
     vv?.addEventListener('scroll', apply)
     window.addEventListener('resize', apply)
-    window.addEventListener('focusin', apply)
-    window.addEventListener('focusout', apply)
+    document.addEventListener('focusin', apply)
+    document.addEventListener('focusout', apply)
+    document.addEventListener('input', apply)
 
     return () => {
+      clearTimeout(stopLoop)
       cancelAnimationFrame(raf)
       vv?.removeEventListener('resize', apply)
       vv?.removeEventListener('scroll', apply)
       window.removeEventListener('resize', apply)
-      window.removeEventListener('focusin', apply)
-      window.removeEventListener('focusout', apply)
+      document.removeEventListener('focusin', apply)
+      document.removeEventListener('focusout', apply)
+      document.removeEventListener('input', apply)
       resetLandingSearchLayoutState()
     }
-  }, [active, metrics.height, metrics.offsetTop, metrics.keyboardInset])
+  }, [active, metrics.height, metrics.offsetTop, metrics.keyboardInset, metrics.keyboardTop])
 
   return searchWrapRef
 }

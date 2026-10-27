@@ -16,7 +16,8 @@ import { ComposeSendTo } from '@/components/compose-send-to'
 import { ComposeReadyPreview } from '@/components/compose-ready-preview'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { ComposeSearchDropdown } from '@/components/compose-search-dropdown'
-import { ComposeStickySongRow } from '@/components/compose-sticky-song-row'
+import { ComposeSongRow } from '@/components/compose-song-row'
+import { ComposeViewportRegion } from '@/components/compose-viewport-region'
 import { MargoSearchInput } from '@/components/margo-search-input'
 import { MARGO_SEARCH_HINT_CATALOG } from '@/lib/margo-search-hints'
 import { MomentShareStudio } from '@/components/moment-share-studio'
@@ -186,24 +187,6 @@ function ComposeDismissButton({
       <CloseIcon size={18} color="currentColor" />
     </button>
   )
-}
-
-const composeOverlayStyle: React.CSSProperties = {
-  position: 'fixed',
-  top: 'var(--margo-header-h, var(--nav-height, 72px))',
-  left: 0,
-  right: 0,
-  height: 'calc(var(--margo-vv-height, 100dvh) - var(--margo-header-h, var(--nav-height, 72px)))',
-  zIndex: 80,
-  display: 'flex',
-  flexDirection: 'column',
-  background: 'var(--bg)',
-  paddingLeft: '24px',
-  paddingRight: '24px',
-  paddingTop: '8px',
-  boxSizing: 'border-box',
-  overflowY: 'auto',
-  WebkitOverflowScrolling: 'touch',
 }
 
 function ComposeTopBar({
@@ -598,7 +581,12 @@ function ComposeInner() {
       if (active instanceof HTMLElement) active.blur()
     }
     if (typeof window !== 'undefined') window.scrollTo(0, 0)
-    composeRootRef.current?.scrollIntoView({ block: 'start' })
+    document.querySelector('.margo-compose-region__scroll')?.scrollTo(0, 0)
+  }, [])
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-margo-compose-shell', '1')
+    return () => document.documentElement.removeAttribute('data-margo-compose-shell')
   }, [])
 
   useEffect(() => {
@@ -953,13 +941,17 @@ function ComposeInner() {
     buildCurrentDraft, clearDraftFields, resetComposeViewport,
   ])
 
-  const handleChangeSong = useCallback(() => {
-    if (lyric.trim() && !window.confirm('Switch songs? Your line will be cleared.')) return
+  const handleClearSongPick = useCallback(() => {
     clearCurrentSongPick()
     setSelectMode(null)
     setPhase('find')
     resetComposeViewport()
-  }, [lyric, clearCurrentSongPick, resetComposeViewport])
+  }, [clearCurrentSongPick, resetComposeViewport])
+
+  const handleChangeSong = useCallback(() => {
+    if (lyric.trim() && !window.confirm('Switch songs? Your line will be cleared.')) return
+    handleClearSongPick()
+  }, [lyric, handleClearSongPick])
 
   const handleRemoveCommittedLine = useCallback((index: number) => {
     setCommittedLines((prev) => prev.filter((_, i) => i !== index))
@@ -1283,21 +1275,120 @@ function ComposeInner() {
   const showYourLinePanel = phase === 'select' && !showLinePicker
   const catalogLinePickOnly = isMargoCatalogFlow
 
+  const regionBottomReserve = phase === 'moment' || phase === 'action' || showYourLinePanel || showLinePicker ? 0 : 0
+
   return (
-    <main ref={composeRootRef} style={{ minHeight: '100dvh', background: 'var(--bg)', position: 'relative' }}>
-      <div style={{
-        paddingTop: 'calc(var(--margo-header-h, var(--nav-height, 72px)) + 8px)',
-        paddingBottom: phase === 'moment' || phase === 'action'
-          ? 'calc(var(--margo-cta-bar-h, 120px) + 16px)'
-          : 'calc(var(--margo-page-padding-bottom) + 88px)',
-        paddingLeft: '24px',
-        paddingRight: '24px',
-        transition: `padding-bottom ${composeChromeEase}`,
-      }}>
+    <main ref={composeRootRef} aria-label="Compose">
+      <ComposeViewportRegion bottomReservePx={regionBottomReserve}>
         <div style={{ maxWidth: '640px', margin: '0 auto' }}>
+          {songName.trim() && (phase === 'moment' || phase === 'action' || showYourLinePanel || showLinePicker) && (
+            <ComposeSongRow
+              title={songName}
+              artist={artistName}
+              artwork={selectedSong?.artwork}
+              onClear={handleClearSongPick}
+              onChangeSong={handleChangeSong}
+            />
+          )}
+
+          {showLinePicker && (
+            <>
+              <ComposeTopBar
+                onBack={handleLinePickerBack}
+                title="Choose a line"
+                trailing={<ComposeDismissButton onClick={handleCancelLine} label="Cancel line" />}
+              />
+              <ComposeLinePicker
+                hideHeader
+                lines={margoLines}
+                loading={linesLoading}
+                songTitle={songName}
+                artistName={artistName}
+                audioUrl={linkedAudioUrl}
+                songId={linkedSongId}
+                artwork={selectedSong?.artwork || null}
+                stickySkip
+                onPick={(line) => {
+                  setSnippetStart(line.startSec)
+                  setSnippetEnd(line.endSec)
+                  setLyric((line.text || '').slice(0, 140))
+                  setLinePickComplete(true)
+                  setSelectMode('write')
+                  handleLyricSelected()
+                  setPhase('moment')
+                  void fetchEmotionSuggestion((line.text || '').slice(0, 140), vibeUserPicked)
+                }}
+                onPickParagraph={(picked) => {
+                  const joined = picked.map((l) => l.text.trim()).filter(Boolean).join('\n')
+                  const capped = joined.slice(0, 280)
+                  setSnippetStart(picked[0].startSec)
+                  setSnippetEnd(picked[picked.length - 1].endSec)
+                  setLyric(capped)
+                  setLinePickComplete(true)
+                  setSelectMode('write')
+                  handleLyricSelected()
+                  setPhase('moment')
+                  void fetchEmotionSuggestion(capped, vibeUserPicked)
+                }}
+                onSkip={
+                  isMargoCatalogFlow
+                    ? undefined
+                    : () => {
+                        setSnippetStart(null)
+                        setSnippetEnd(null)
+                        setLinePickComplete(true)
+                        setSelectMode('write')
+                      }
+                }
+                onBack={handleLinePickerBack}
+              />
+            </>
+          )}
+
+          {showYourLinePanel && (
+            <>
+              <ComposeTopBar
+                onBack={handleYourLineBack}
+                title="Your line"
+                keyboardCompact
+                chromeHidden={chromeHidden}
+                trailing={<ComposeDismissButton onClick={handleCancelLine} label="Cancel line" />}
+              />
+              <ComposeLyricCard style={{
+                display: 'flex', flexDirection: 'column',
+                padding: chromeHidden ? '18px 20px' : '20px',
+                transition: `padding ${composeChromeEase}`,
+                marginBottom: 12,
+              }}>
+                <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', minHeight: 120 }}>
+                  {lyric.length === 0 && (
+                    <span aria-hidden style={{
+                      position: 'absolute', top: 0, left: 0, right: 0,
+                      ...composeLyricTextStyle,
+                      color: 'var(--text-on-gold-muted)',
+                      pointerEvents: 'none',
+                    }}>
+                      {YOUR_LINE_CUE.slice(0, cueRevealChars)}
+                    </span>
+                  )}
+                  <CatalogPickLyricField
+                    variant="compose"
+                    value={lyric}
+                    catalogPickOnly={catalogLinePickOnly}
+                    onOpenPicker={openCatalogLinePicker}
+                    onValueChange={setLyric}
+                    maxLength={140}
+                  />
+                </div>
+                <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
+                  <span style={{ fontFamily: UI_FONT, fontSize: '0.65rem', color: 'var(--text-on-gold-muted)' }}>{lyric.length}/140</span>
+                </div>
+              </ComposeLyricCard>
+            </>
+          )}
 
           {/* ── Step 1: Search ── */}
-          <div style={{ display: phase === 'find' ? 'block' : 'none' }}>
+          <div style={{ display: phase === 'find' && !showLinePicker && !showYourLinePanel ? 'block' : 'none' }}>
             {(committedLines.length > 0 || showStep1Resume) && (
               <ComposeTopBar
                 onBack={handleFindBack}
@@ -1428,7 +1519,7 @@ function ComposeInner() {
           {/* Step 2 UI is portaled (line picker + Your line) — see below main */}
 
           {/* ── MOMENT hub ── */}
-          <div style={{ display: phase === 'moment' || phase === 'action' ? 'block' : 'none' }}>
+          <div style={{ display: (phase === 'moment' || phase === 'action') && !showLinePicker && !showYourLinePanel ? 'block' : 'none' }}>
             <ComposeTopBar
               onBack={() => { if (!posting) setPhase('select') }}
               backDisabled={posting}
@@ -1554,7 +1645,7 @@ function ComposeInner() {
           </div>
 
         </div>
-      </div>
+      </ComposeViewportRegion>
 
       {/* Sticky primary actions — VisualViewport pins above keyboard */}
       {showLinePicker && !linesLoading && margoLines.length === 0 && portalMounted && createPortal(
@@ -1569,78 +1660,6 @@ function ComposeInner() {
             style={keyboardSafePrimaryBtnStyle}
           >Skip preview</button>
         </KeyboardSafeCtaBar>,
-        document.body,
-      )}
-
-      {portalMounted && showLinePicker && createPortal(
-        <div
-          className="margo-compose-overlay"
-          style={{
-            ...composeOverlayStyle,
-            paddingBottom: 'calc(var(--margo-cta-bar-h, 0px) + var(--margo-tabbar-h, 80px) + 16px)',
-          }}
-        >
-          <div style={{ maxWidth: '640px', width: '100%', margin: '0 auto' }}>
-            <ComposeTopBar
-              onBack={handleLinePickerBack}
-              title="Pick the line"
-              trailing={<ComposeDismissButton onClick={handleCancelLine} label="Cancel line" />}
-            />
-            {songName && (
-              <ComposeStickySongRow
-                title={songName}
-                artist={artistName}
-                artwork={selectedSong?.artwork}
-                onClear={clearCurrentSongPick}
-                onChangeSong={handleChangeSong}
-              />
-            )}
-            <ComposeLinePicker
-              hideHeader
-              lines={margoLines}
-              loading={linesLoading}
-              songTitle={songName}
-              artistName={artistName}
-              audioUrl={linkedAudioUrl}
-              songId={linkedSongId}
-              artwork={selectedSong?.artwork || null}
-              stickySkip
-              onPick={(line) => {
-                setSnippetStart(line.startSec)
-                setSnippetEnd(line.endSec)
-                setLyric((line.text || '').slice(0, 140))
-                setLinePickComplete(true)
-                setSelectMode('write')
-                handleLyricSelected()
-                setPhase('moment')
-                void fetchEmotionSuggestion((line.text || '').slice(0, 140), vibeUserPicked)
-              }}
-              onPickParagraph={(picked) => {
-                const joined = picked.map((l) => l.text.trim()).filter(Boolean).join('\n')
-                const capped = joined.slice(0, 280)
-                setSnippetStart(picked[0].startSec)
-                setSnippetEnd(picked[picked.length - 1].endSec)
-                setLyric(capped)
-                setLinePickComplete(true)
-                setSelectMode('write')
-                handleLyricSelected()
-                setPhase('moment')
-                void fetchEmotionSuggestion(capped, vibeUserPicked)
-              }}
-              onSkip={
-                isMargoCatalogFlow
-                  ? undefined
-                  : () => {
-                      setSnippetStart(null)
-                      setSnippetEnd(null)
-                      setLinePickComplete(true)
-                      setSelectMode('write')
-                    }
-              }
-              onBack={handleLinePickerBack}
-            />
-          </div>
-        </div>,
         document.body,
       )}
 
@@ -1773,137 +1792,6 @@ function ComposeInner() {
         </div>
       )}
 
-      {portalMounted && showYourLinePanel && createPortal(
-        <div
-          className="margo-compose-overlay"
-          style={{
-            ...composeOverlayStyle,
-            overflowY: 'hidden',
-          }}
-        >
-          <div style={{ maxWidth: '640px', width: '100%', margin: '0 auto', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            <ComposeTopBar
-              onBack={handleYourLineBack}
-              title="Your line"
-              keyboardCompact
-              chromeHidden={chromeHidden}
-              trailing={<ComposeDismissButton onClick={handleCancelLine} label="Cancel line" />}
-            />
-            {songName && (
-              <ComposeStickySongRow
-                title={songName}
-                artist={artistName}
-                artwork={selectedSong?.artwork}
-                onClear={clearCurrentSongPick}
-                onChangeSong={handleChangeSong}
-              />
-            )}
-
-            <ComposeLyricCard style={{
-              flex: 1, minHeight: 0, overflow: 'hidden',
-              display: 'flex', flexDirection: 'column',
-              padding: chromeHidden ? '18px 20px' : '20px',
-              transition: `padding ${composeChromeEase}`,
-            }}>
-              <div style={{
-                flexShrink: 0,
-                display: 'flex',
-                flexDirection: 'row',
-                gap: '10px',
-                marginBottom: '12px',
-              }}>
-                <div style={{ flex: '0 0 58%', minWidth: 0 }}>
-                  <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--text-on-gold-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Song</label>
-                  {catalogLinePickOnly ? (
-                    <button
-                      type="button"
-                      onClick={openCatalogLinePicker}
-                      aria-label={`${songName}. Tap to choose another line.`}
-                      style={{
-                        width: '100%', minHeight: 'var(--margo-touch-min)', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(7,6,10,0.18)',
-                        padding: '4px 0 6px', fontFamily: UI_FONT, fontWeight: 600, color: 'var(--text-on-gold)', textAlign: 'left', cursor: 'pointer',
-                        fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', WebkitTapHighlightColor: 'transparent',
-                      }}
-                    >
-                      {songName}
-                    </button>
-                  ) : (
-                    <input type="text" value={songName} onChange={(e) => setSongName(e.target.value)}
-                      style={{
-                        width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(7,6,10,0.18)',
-                        padding: '4px 0 6px', fontFamily: UI_FONT, fontWeight: 600, color: 'var(--text-on-gold)', outline: 'none', boxSizing: 'border-box',
-                        fontSize: '0.9rem',
-                        overflow: 'hidden', textOverflow: 'ellipsis',
-                      }} />
-                  )}
-                </div>
-                <div style={{ flex: '1 1 38%', minWidth: 0 }}>
-                  <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--text-on-gold-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Artist</label>
-                  {catalogLinePickOnly ? (
-                    <button
-                      type="button"
-                      onClick={openCatalogLinePicker}
-                      aria-label={`${artistName}. Tap to choose another line.`}
-                      style={{
-                        width: '100%', minHeight: 'var(--margo-touch-min)', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(7,6,10,0.18)',
-                        padding: '4px 0 6px', fontFamily: UI_FONT, fontWeight: 400, color: 'var(--text-on-gold-muted)', textAlign: 'left', cursor: 'pointer',
-                        fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', WebkitTapHighlightColor: 'transparent',
-                      }}
-                    >
-                      {artistName}
-                    </button>
-                  ) : (
-                    <input type="text" value={artistName} onChange={(e) => setArtistName(e.target.value)}
-                      style={{
-                        width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(7,6,10,0.18)',
-                        padding: '4px 0 6px', fontFamily: UI_FONT, fontWeight: 400, color: 'var(--text-on-gold-muted)', outline: 'none', boxSizing: 'border-box',
-                        fontSize: '0.75rem',
-                        overflow: 'hidden', textOverflow: 'ellipsis',
-                      }} />
-                  )}
-                </div>
-              </div>
-
-              <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-                {lyric.length === 0 && (
-                  <span aria-hidden style={{
-                    position: 'absolute', top: 0, left: 0, right: 0,
-                    ...composeLyricTextStyle,
-                    color: 'var(--text-on-gold-muted)',
-                    pointerEvents: 'none',
-                  }}>
-                    {YOUR_LINE_CUE.slice(0, cueRevealChars)}
-                  </span>
-                )}
-                <CatalogPickLyricField
-                  variant="compose"
-                  value={lyric}
-                  catalogPickOnly={catalogLinePickOnly}
-                  onOpenPicker={openCatalogLinePicker}
-                  onValueChange={setLyric}
-                  maxLength={140}
-                />
-              </div>
-
-              <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
-                <span style={{ fontFamily: UI_FONT, fontSize: '0.65rem', color: 'var(--text-on-gold-muted)' }}>{lyric.length}/140</span>
-              </div>
-            </ComposeLyricCard>
-
-            <div
-              aria-hidden
-              style={{
-                flexShrink: 0,
-                height: chromeHidden
-                  ? 'var(--margo-cta-bar-h, 0px)'
-                  : 'calc(var(--margo-cta-bar-h, 0px) + var(--margo-tabbar-h, 80px) + 24px)',
-                transition: `height ${composeChromeEase}`,
-              }}
-            />
-          </div>
-        </div>,
-        document.body,
-      )}
     </main>
   )
 }
