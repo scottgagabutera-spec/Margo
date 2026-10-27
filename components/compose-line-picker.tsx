@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowLeftIcon } from '@/components/icons'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
-import { playSnippet, warmUrl } from '@/lib/audio-engine'
+import { playPostMoment, playSnippet, warmUrl } from '@/lib/audio-engine'
+import { catalogLinesToPlaybackSegments } from '@/lib/stage-catalog-playback'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
 import { UI_FONT } from '@/lib/fonts'
 import type { CuratedMomentStored } from '@/lib/moments/curated-types'
@@ -464,18 +465,65 @@ export function ComposeLinePicker({
   }, [maxParagraphLines, showLimitHint])
 
   const confirmParagraph = useCallback(() => {
-    if (!onPickParagraph || selectedIndexes.length < 2) return
+    if (selectedIndexes.length < 1) return
     const sorted = sortedSelection(selectedIndexes)
     const picked = sorted
       .map((idx) => lines.find((l) => l.lineIndex === idx))
       .filter((l): l is ComposeLyricLine => !!l)
-    if (picked.length < 2 || !isContiguous(sorted)) return
-    onPickParagraph(picked)
+    if (picked.length === 0 || !isContiguous(sorted)) return
+
+    if (audioUrl && songId && picked.length > 0) {
+      const segments = catalogLinesToPlaybackSegments(songId, picked)
+      if (segments.length > 1) {
+        void playPostMoment({
+          postKey: `line-picker:${songId}:${sorted.join('-')}`,
+          songId: songId || audioUrl,
+          audioUrl,
+          title: songTitle,
+          artist: artistName,
+          artwork,
+          lineIndex: picked[0].lineIndex,
+          lineText: picked.map((l) => l.text).join('\n'),
+          segments,
+          source: 'feed',
+        })
+      } else if (segments.length === 1) {
+        void playSnippet({
+          songId: songId || audioUrl,
+          audioUrl,
+          title: songTitle,
+          artist: artistName,
+          artwork,
+          lineIndex: picked[0].lineIndex,
+          lineText: picked.map((l) => l.text).join('\n'),
+          startSec: segments[0].startSec,
+          endSec: segments[0].endSec,
+          source: 'feed',
+        })
+      }
+    }
+
+    if (picked.length === 1) {
+      onPick(picked[0])
+    } else if (onPickParagraph) {
+      onPickParagraph(picked)
+    }
     resetSelection()
-  }, [lines, onPickParagraph, resetSelection, selectedIndexes])
+  }, [
+    audioUrl,
+    artistName,
+    artwork,
+    lines,
+    onPick,
+    onPickParagraph,
+    resetSelection,
+    selectedIndexes,
+    songId,
+    songTitle,
+  ])
 
   const selectionCount = selectedIndexes.length
-  const canConfirmParagraph = selectionCount >= 2 && isContiguous(selectedIndexes)
+  const canConfirmParagraph = selectionCount >= 1 && isContiguous(selectedIndexes)
 
   return (
     <div>

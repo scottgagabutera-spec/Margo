@@ -696,7 +696,7 @@ export const LyricBackPanelCompose = forwardRef<
         songId={selected.catalogSongId}
         artwork={selected.artwork || null}
         enableParagraphPick
-        maxParagraphLines={2}
+        maxParagraphLines={3}
             hideHeader
             variant={isPanelLayout ? 'panel' : 'compose'}
             onPick={onPickLine}

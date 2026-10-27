@@ -34,10 +34,10 @@ export function SignInLink({ returnTo, mode, onClick, ...props }: SignInLinkProp
     persistAuthReturnScroll()
     const destPath = href.split('?')[0]
     if (destPath === '/signin') {
-      prepareSignInTabNavigation()
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new Event(MARGO_CLOSE_HUB_EVENT))
       }
+      prepareSignInTabNavigation()
     } else {
       leavePrimaryTabSurface()
     }

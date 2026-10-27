@@ -45,7 +45,8 @@ import {
 import type { MomentActionMenuItem } from '@/components/moment-action-menu'
 import { MomentActionMenu } from '@/components/moment-action-menu'
 import { buildMomentExportActionItems, buildMomentShareActionItems } from '@/lib/moment/share-action-items'
-import { playOrToggleSnippet } from '@/lib/audio-engine'
+import { playOrTogglePostMoment, playOrToggleSnippet } from '@/lib/audio-engine'
+import { catalogLinesToPlaybackSegments } from '@/lib/stage-catalog-playback'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
 import { useIdentity } from '@/hooks/useIdentity'
 import { UI_FONT } from '@/lib/fonts'
@@ -124,6 +125,7 @@ export function StageLanding() {
   const [linkedAudioUrl, setLinkedAudioUrl] = useState<string | null>(null)
   const [snippetStart, setSnippetStart] = useState<number | null>(null)
   const [snippetEnd, setSnippetEnd] = useState<number | null>(null)
+  const [playbackSegments, setPlaybackSegments] = useState<Array<{ startSec: number; endSec: number }>>([])
   const [margoLines, setMargoLines] = useState<ComposeLyricLine[]>([])
   const [linesLoading, setLinesLoading] = useState(false)
   const [linePickComplete, setLinePickComplete] = useState(false)
@@ -338,6 +340,7 @@ export function StageLanding() {
     setLinkedAudioUrl(null)
     setSnippetStart(null)
     setSnippetEnd(null)
+    setPlaybackSegments([])
     setMargoLines([])
     setLinesLoading(false)
     setLinePickComplete(false)
@@ -444,7 +447,16 @@ export function StageLanding() {
     }
   }, [enterCatalog])
 
+  const applyCatalogPlayback = useCallback((picked: ComposeLyricLine[]) => {
+    if (!linkedSongId) {
+      setPlaybackSegments([])
+      return
+    }
+    setPlaybackSegments(catalogLinesToPlaybackSegments(linkedSongId, picked))
+  }, [linkedSongId])
+
   const handleLinePick = useCallback((line: ComposeLyricLine) => {
+    applyCatalogPlayback([line])
     const text = (line.text || '').slice(0, 140)
     if (signedIn) {
       router.push(buildComposePrefillUrl({
@@ -466,10 +478,11 @@ export function StageLanding() {
     revealMoment(text, { animate: true, fetchVibe: true })
   }, [
     signedIn, router, songName, artistName, selectedSong?.artwork,
-    linkedSongId, linkedAudioUrl, revealMoment,
+    linkedSongId, linkedAudioUrl, revealMoment, applyCatalogPlayback,
   ])
 
   const handleLineParagraph = useCallback((picked: ComposeLyricLine[]) => {
+    applyCatalogPlayback(picked)
     const joined = picked.map((l) => l.text.trim()).filter(Boolean).join('\n')
     const capped = joined.slice(0, 280)
     const start = picked[0]?.startSec ?? null
@@ -494,7 +507,7 @@ export function StageLanding() {
     revealMoment(capped, { animate: true, fetchVibe: true })
   }, [
     signedIn, router, songName, artistName, selectedSong?.artwork,
-    linkedSongId, linkedAudioUrl, revealMoment,
+    linkedSongId, linkedAudioUrl, revealMoment, applyCatalogPlayback,
   ])
 
   const navigateToCompose = useCallback(() => {
@@ -529,6 +542,23 @@ export function StageLanding() {
 
   const handlePlay = useCallback(() => {
     if (!canPlay || !linkedAudioUrl) return
+    const postKey = `stage:${linkedSongId || linkedAudioUrl}:${snippetStart}:${snippetEnd}`
+    if (playbackSegments.length > 1) {
+      playOrTogglePostMoment({
+        postKey,
+        songId: linkedSongId || linkedAudioUrl,
+        audioUrl: linkedAudioUrl,
+        title: songName,
+        artist: artistName,
+        artwork: selectedSong?.artwork || null,
+        lineIndex,
+        lineText: lyric,
+        segments: playbackSegments,
+        atmosphere: livingAtmosphereOrNull(songAtmosphere),
+        source: 'feed',
+      })
+      return
+    }
     playOrToggleSnippet({
       songId: linkedSongId || linkedAudioUrl,
       audioUrl: linkedAudioUrl,
@@ -542,7 +572,7 @@ export function StageLanding() {
       atmosphere: livingAtmosphereOrNull(songAtmosphere),
       source: 'feed',
     })
-  }, [canPlay, linkedAudioUrl, linkedSongId, songName, artistName, selectedSong?.artwork, lineIndex, lyric, snippetStart, snippetEnd, songAtmosphere])
+  }, [canPlay, linkedAudioUrl, linkedSongId, songName, artistName, selectedSong?.artwork, lineIndex, lyric, snippetStart, snippetEnd, songAtmosphere, playbackSegments])
 
   const buildExportMoment = useCallback(() => {
     return resolveMargoMomentFromStage({

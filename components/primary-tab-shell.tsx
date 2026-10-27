@@ -551,17 +551,8 @@ export function PrimaryTabShell({
     return () => window.removeEventListener(MARGO_LEAVE_PRIMARY_TABS_EVENT, onLeavePrimary)
   }, [clearPaintedTabSync])
 
-  useEffect(() => {
-    const onPrepareSignIn = () => {
-      clearPaintedTabSync()
-    }
-    window.addEventListener(MARGO_PREPARE_SIGNIN_TAB_EVENT, onPrepareSignIn)
-    return () => window.removeEventListener(MARGO_PREPARE_SIGNIN_TAB_EVENT, onPrepareSignIn)
-  }, [clearPaintedTabSync])
-
   useLayoutEffect(() => {
-    const path = normalizeTabPath(pathname)
-    if (path === '/signin' && paintedTabRef.current) {
+    if (normalizeTabPath(pathname) === '/signin') {
       clearPaintedTabSync()
     }
   }, [pathname, clearPaintedTabSync])

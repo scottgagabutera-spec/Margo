@@ -370,7 +370,7 @@ export function SignatureSongPicker({
           songId={selected?.id || catalogSongId}
           artwork={selected?.artwork || null}
           enableParagraphPick
-          maxParagraphLines={2}
+          maxParagraphLines={3}
           hideHeader
           onPick={(line) => {
             onLyricPick?.(line.text.slice(0, 140))

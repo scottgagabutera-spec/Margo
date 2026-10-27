@@ -10,6 +10,7 @@ import {
 } from '@/lib/landing-search-shift-motion'
 import { measureMargoHeaderBottom } from '@/lib/margo-header-band'
 import { readVisualBand } from '@/lib/margo-keyboard-geometry'
+import { applyMonotonicLandingShift } from '@/lib/landing-search-shift-apply'
 import { attachSettledVisualViewportListener } from '@/lib/settled-visual-viewport'
 import { useVisualViewport } from '@/hooks/useVisualViewport'
 
@@ -29,6 +30,7 @@ export function useLandingHeroSearchLayout(active: boolean) {
   const lastShiftRef = useRef(0)
   const activeRef = useRef(active)
   const closingRef = useRef(false)
+  const lastKeyboardInsetRef = useRef(0)
   activeRef.current = active
 
   useEffect(() => {
@@ -51,6 +53,7 @@ export function useLandingHeroSearchLayout(active: boolean) {
     if (active) {
       closingRef.current = false
       root.setAttribute(ACTIVE_ATTR, '1')
+      root.setAttribute(HIDE_TAGLINE, '1')
       return
     }
     if (lastShiftRef.current > 0) {
@@ -82,8 +85,16 @@ export function useLandingHeroSearchLayout(active: boolean) {
     }
 
     const applyPlan = (plan: ReturnType<typeof computeLandingSearchBump>) => {
+      const band = readVisualBand()
+      lastKeyboardInsetRef.current = band.keyboardInset
+
       const prevShift = lastShiftRef.current
-      const nextShift = !activeRef.current && !closingRef.current ? 0 : plan.shiftPx
+      let nextShift = !activeRef.current && !closingRef.current ? 0 : plan.shiftPx
+      if (activeRef.current) {
+        nextShift = applyMonotonicLandingShift(prevShift, plan.shiftPx, 'open')
+      } else if (closingRef.current) {
+        nextShift = applyMonotonicLandingShift(prevShift, plan.shiftPx, 'close')
+      }
       const animate =
         !prefersReducedMotion() && shouldAnimateLandingShift(prevShift, nextShift)
 
