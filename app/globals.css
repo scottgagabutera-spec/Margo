@@ -361,6 +361,11 @@ html:has(.margo-landing-page-shell) body {
   box-sizing: border-box;
 }
 
+.margo-stage-hero--ssr {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
   display: none;
 }
