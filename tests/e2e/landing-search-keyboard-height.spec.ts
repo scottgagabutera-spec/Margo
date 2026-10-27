@@ -103,9 +103,18 @@ async function assertLandingSearchKeyboardLayout(
   expect(metrics.docScroll).toBe(false)
 
   await search.fill('')
-  await page.keyboard.press('Escape')
-  await page.waitForTimeout(250)
+  const dismiss = page.getByRole('button', { name: 'Dismiss search' })
+  if (await dismiss.isVisible().catch(() => false)) {
+    await dismiss.click()
+  }
+  await search.blur()
+  await page.waitForFunction(
+    () => !document.documentElement.hasAttribute('data-margo-landing-search-active'),
+    undefined,
+    { timeout: 5000 },
+  )
   await page.setViewportSize({ width, height: fullHeight })
+  await page.waitForTimeout(320)
 
   const idle = await page.evaluate(() => {
     const shell = document.querySelector('.margo-landing-page-shell')
