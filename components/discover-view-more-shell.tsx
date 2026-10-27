@@ -1,7 +1,6 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { BackButton } from '@/components/back-button'
 import { UI_FONT } from '@/lib/fonts'
 import type { DiscoverVmGridKind } from '@/lib/discover-view-more-layout'
 
@@ -69,13 +68,6 @@ export function DiscoverViewMoreShell({
           gap: 12px;
           margin-bottom: 14px;
           min-width: 0;
-        }
-        .discover-vm-title-start {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          min-width: 0;
-          flex: 1;
         }
         .discover-vm-title {
           font-family: ${UI_FONT};
@@ -182,10 +174,7 @@ export function DiscoverViewMoreShell({
       `}</style>
       <div className="discover-vm-inner">
         <div className="discover-vm-title-row">
-          <div className="discover-vm-title-start">
-            <BackButton fallbackHref="/discover" label={`Back to Discover`} variant="page" />
-            <h1 className="discover-vm-title" data-discover-vm-title>{title}</h1>
-          </div>
+          <h1 className="discover-vm-title" data-discover-vm-title>{title}</h1>
           {titleRowEnd ? <div style={{ flexShrink: 0 }}>{titleRowEnd}</div> : null}
         </div>
         {vibeFilters ? (

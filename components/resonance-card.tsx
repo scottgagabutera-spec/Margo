@@ -14,6 +14,7 @@ import { MargoDeleteConfirm } from '@/components/margo-delete-confirm'
 import type { Post } from '@/hooks/usePosts'
 import { DISCOVER_VIBES } from '@/lib/discover-vibes'
 import { AtmosphereLayer } from '@/components/atmosphere-layer'
+import { UI_FONT } from '@/lib/fonts'
 
 export function ResonanceCard({
   post,
@@ -28,7 +29,7 @@ export function ResonanceCard({
   post: Post
   isPlaying: boolean
   isBuffering?: boolean
-  variant?: 'row' | 'grid'
+  variant?: 'row' | 'grid' | 'discover'
   onPlay: (e: React.MouseEvent) => void
   onSelectVibe: (vibe: string) => void
   onPlayNext: () => void
@@ -36,6 +37,7 @@ export function ResonanceCard({
 }) {
   const emotion = (post.emotion || '').toUpperCase()
   const hasVibeTag = (DISCOVER_VIBES as readonly string[]).includes(emotion)
+  const isDiscover = variant === 'discover'
 
   // Was reading post.text directly — the position-0 mirror, so a 2/3-line
   // Moment only ever showed its first line here. resolveMomentLines is the
@@ -78,12 +80,13 @@ export function ResonanceCard({
     <div ref={cardRef} style={{ position: 'relative' }}>
       <PendingNavLink
         href={`/feed?highlight=${encodeURIComponent(post.id)}&openLb=1`}
+        className={isDiscover ? 'discover-home-resonance-card' : undefined}
         style={{
-          flexShrink: variant === 'row' ? 0 : undefined,
-          width: variant === 'row' ? '240px' : '100%',
-          scrollSnapAlign: variant === 'row' ? 'start' : undefined,
-          padding: '16px',
-          background: 'rgba(255,255,255,0.025)',
+          flexShrink: variant === 'row' || isDiscover ? 0 : undefined,
+          width: variant === 'row' ? '240px' : isDiscover ? undefined : '100%',
+          scrollSnapAlign: variant === 'row' || isDiscover ? 'start' : undefined,
+          padding: isDiscover ? '12px' : '16px',
+          background: isDiscover ? 'var(--surface)' : 'rgba(255,255,255,0.025)',
           border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: '14px',
           display: 'flex',
@@ -105,45 +108,70 @@ export function ResonanceCard({
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
           <div style={{ minWidth: 0, flex: 1 }}>
             {hasVibeTag && (
-              <VibeTagPill vibe={emotion} onClick={(e) => { e.preventDefault(); e.stopPropagation(); onSelectVibe(emotion) }} />
+              <VibeTagPill
+                vibe={emotion}
+                size={isDiscover ? 'discover' : 'default'}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onSelectVibe(emotion) }}
+              />
             )}
           </div>
-          <CardOverflowMenu items={overflowItems} />
+          <CardOverflowMenu compact={isDiscover} items={overflowItems} />
         </div>
         <p style={{
-          fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.88rem',
-          color: 'var(--text)', lineHeight: 1.5, margin: 0,
-          display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-          minHeight: '4.2em',
+          fontFamily: 'var(--font-lora), serif', fontStyle: 'italic',
+          fontSize: isDiscover ? '14px' : '0.88rem',
+          color: 'var(--text)', lineHeight: isDiscover ? 1.35 : 1.5, margin: 0,
+          display: '-webkit-box', WebkitLineClamp: isDiscover ? 3 : 4, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+          minHeight: isDiscover ? '3.8em' : '4.2em',
         }}>&ldquo;{momentText}&rdquo;</p>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginTop: 'auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
             {post.knowledge?.artwork && (
-              <div style={{ width: '30px', height: '30px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
+              <div style={{
+                width: isDiscover ? '22px' : '30px',
+                height: isDiscover ? '22px' : '30px',
+                borderRadius: isDiscover ? '6px' : '6px',
+                overflow: 'hidden',
+                flexShrink: 0,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+              }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={post.knowledge.artwork} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
             )}
             <div style={{ minWidth: 0 }}>
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {post.knowledge?.song || 'Margo'}
-              </p>
-              <AuthorMeta
-                authorUid={post.authorUid}
-                fallbackName={post.username || 'listener'}
-                linkProfile={false}
-                size="compact"
-              />
+              {isDiscover ? (
+                <p style={{
+                  fontFamily: UI_FONT, fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)',
+                  margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                }}>
+                  {(post.authorDisplayName || post.username || 'listener')} · {post.knowledge?.song || 'Margo'}
+                </p>
+              ) : (
+                <>
+                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {post.knowledge?.song || 'Margo'}
+                  </p>
+                  <AuthorMeta
+                    authorUid={post.authorUid}
+                    fallbackName={post.username || 'listener'}
+                    linkProfile={false}
+                    size="compact"
+                  />
+                </>
+              )}
             </div>
           </div>
           {post.audioUrl && (
             <button type="button" onClick={onPlay} style={{
-              width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', flexShrink: 0,
+              width: isDiscover ? '28px' : 'var(--margo-touch-min)',
+              height: isDiscover ? '28px' : 'var(--margo-touch-min)',
+              borderRadius: '50%', flexShrink: 0,
               background: isPlaying ? 'rgba(232,197,71,0.2)' : 'rgba(232,197,71,0.1)',
               border: '1px solid rgba(232,197,71,0.25)', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxSizing: 'border-box',
             }}>
-              <PlayPauseIcon playing={isPlaying} buffering={!!isBuffering} size={15} color="var(--gold)" />
+              <PlayPauseIcon playing={isPlaying} buffering={!!isBuffering} size={isDiscover ? 12 : 15} color="var(--gold)" />
             </button>
           )}
         </div>

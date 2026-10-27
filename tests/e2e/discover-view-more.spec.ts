@@ -30,6 +30,14 @@ async function gridColumnCount(page: import('@playwright/test').Page) {
 }
 
 test.describe('discover view-more @signed-out', () => {
+  for (const path of ['/discover/moments', '/discover/songs', '/discover/resonance', '/artists'] as const) {
+    test(`single nav back on ${path}`, async ({ page }) => {
+      await page.goto(`${BASE}${path}`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+      await expect(page.getByLabel('Back to Discover')).toHaveCount(0)
+      await expect(page.locator('.margo-nav-bar').getByLabel('Back')).toHaveCount(1)
+    })
+  }
+
   test('moments page controls and layout', async ({ page }) => {
     await page.goto(`${BASE}/discover/moments`, { waitUntil: 'domcontentloaded', timeout: 60000 })
     await expect(page.locator('[data-discover-vm-title]')).toHaveText('Moments')
