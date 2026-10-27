@@ -58,10 +58,13 @@ for (const hop of hops) {
 
     if (hop.to === 'Hub') {
       await page.getByRole('button', { name: /^Hub/i }).tap()
+      await expect(page.getByRole('dialog', { name: 'Hub' })).toBeVisible()
     } else if (hop.to === 'Sign In') {
       await page.locator('.margo-mobile-tabbar a[href*="/signin"]').tap()
+      await expect(page).toHaveURL(/\/signin/)
     } else {
       await page.locator('.margo-mobile-tabbar').getByRole('link', { name: hop.to }).tap()
+      await expect(page).toHaveURL(new RegExp(hop.to === 'Feed' ? '/feed' : hop.to === 'Discover' ? '/discover' : '/compose'))
     }
 
     await assertSingleGold(page, hop.owner)
