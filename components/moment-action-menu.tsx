@@ -29,6 +29,9 @@ interface MomentActionMenuProps {
   onOpenChange?: (open: boolean) => void
   /** z-index for the portaled menu (sheets need > sheet). */
   menuZIndex?: number
+  menuPlacement?: 'down' | 'up'
+  compact?: boolean
+  hideItemHints?: boolean
 }
 
 /**
@@ -46,6 +49,9 @@ export function MomentActionMenu({
   open: controlledOpen,
   onOpenChange,
   menuZIndex = 220,
+  menuPlacement = 'down',
+  compact = false,
+  hideItemHints = false,
 }: MomentActionMenuProps) {
   const [internalOpen, setInternalOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -69,12 +75,17 @@ export function MomentActionMenu({
       const vv = typeof window !== 'undefined' ? window.visualViewport : null
       const viewTop = vv?.offsetTop ?? 0
       const viewBottom = vv ? vv.offsetTop + vv.height : window.innerHeight
-      const top = r.bottom + MENU_GAP_PX
-      const maxHeight = Math.max(120, viewBottom - top - MENU_VIEW_PAD_PX)
+      const openDown = menuPlacement === 'down'
+      const spaceBelow = viewBottom - r.bottom - MENU_GAP_PX - MENU_VIEW_PAD_PX
+      const spaceAbove = r.top - viewTop - MENU_GAP_PX - MENU_VIEW_PAD_PX
+      const maxHeight = Math.max(88, openDown ? spaceBelow : spaceAbove)
+      const top = openDown
+        ? r.bottom + MENU_GAP_PX
+        : Math.max(viewTop + MENU_VIEW_PAD_PX, r.top - MENU_GAP_PX - maxHeight)
       setPos({
-        top: Math.max(viewTop + MENU_VIEW_PAD_PX, top),
+        top,
         left: r.left,
-        width: r.width,
+        width: compact ? Math.max(r.width, 140) : r.width,
         maxHeight,
       })
     }
@@ -90,7 +101,7 @@ export function MomentActionMenu({
       window.removeEventListener('resize', update)
       window.removeEventListener('scroll', update, true)
     }
-  }, [open])
+  }, [open, menuPlacement, compact])
 
   useEffect(() => {
     if (!open) return
@@ -120,7 +131,7 @@ export function MomentActionMenu({
   const isPrimary = variant === 'primary'
 
   return (
-    <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+    <div style={{ position: 'relative', flex: compact ? '0 0 auto' : 1, minWidth: compact ? undefined : 0 }}>
       <button
         ref={triggerRef}
         type="button"
@@ -129,9 +140,10 @@ export function MomentActionMenu({
         aria-expanded={open}
         aria-haspopup="menu"
         style={{
-          width: '100%',
-          minHeight: 'var(--margo-touch-min)',
-          padding: '0 16px',
+          width: compact ? 'auto' : '100%',
+          minWidth: compact ? '96px' : undefined,
+          minHeight: compact ? '44px' : 'var(--margo-touch-min)',
+          padding: compact ? '0 14px' : '0 16px',
           borderRadius: '50px',
           border: isPrimary ? 'none' : '1px solid var(--border-hi)',
           background: isPrimary ? 'var(--gold)' : 'var(--surface-2)',
@@ -162,7 +174,9 @@ export function MomentActionMenu({
           aria-hidden
           style={{
             display: 'inline-flex',
-            transform: open ? 'rotate(180deg)' : 'none',
+            transform: open
+              ? (menuPlacement === 'up' ? 'rotate(0deg)' : 'rotate(180deg)')
+              : (menuPlacement === 'up' ? 'rotate(180deg)' : 'none'),
             transition: 'transform 150ms ease',
           }}
         >
@@ -233,7 +247,7 @@ export function MomentActionMenu({
               }}>
                 {item.label}
               </span>
-              {item.hint ? (
+              {!hideItemHints && item.hint ? (
                 <span style={{
                   fontFamily: font,
                   fontStyle: 'italic',
