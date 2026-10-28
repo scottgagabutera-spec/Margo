@@ -16,12 +16,13 @@ import { MomentVibeRow } from '@/components/moment-vibe-row'
 import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
 import { useSongAtmosphere } from '@/hooks/useSongAtmosphere'
 import { livingAtmosphereOrNull } from '@/lib/atmosphere'
-import { StageSendBar } from '@/components/stage/stage-send-bar'
+import { MomentStudioScreen } from '@/components/moment/moment-studio-screen'
+import { useMomentStudioExport } from '@/hooks/useMomentStudioExport'
 import MargoLogo from '@/components/MargoLogo'
 import { useStageChromePublisher, useStageSearchPublisher, useStageIdlePublisher, useStageMomentPublisher } from '@/lib/stage-chrome'
 import { useLandingHeroSearchLayout } from '@/hooks/useLandingHeroSearchLayout'
 import { resetLandingSearchLayoutState } from '@/lib/landing-search-layout-reset'
-import { resolveMargoMomentFromStage, canShareImageFiles } from '@/lib/moment'
+import { resolveMargoMomentFromStage, MOMENT_VIBE_PICKER_OPTIONS } from '@/lib/moment'
 import { saveMargoMomentImage, shareMargoMomentImage } from '@/lib/moment-export/save-moment-image'
 import {
   prepareMargoMomentVideoShare,
@@ -136,19 +137,6 @@ export function StageLanding() {
   const [exportAtmosphereId, setExportAtmosphereId] = useState<AtmosphereId>('still')
   const [shapeId, setShapeId] = useState<MomentShapeId>('square')
   const songAtmosphere = useSongAtmosphere(linkedSongId)
-  const [saving, setSaving] = useState(false)
-  const [shareBusy, setShareBusy] = useState(false)
-  const [videoProgress, setVideoProgress] = useState<string | null>(null)
-  const [canExportVideo, setCanExportVideo] = useState(false)
-  const [canShareVid, setCanShareVid] = useState(false)
-  const [videoUnavailableHint, setVideoUnavailableHint] = useState('Not available on this device')
-  const videoAbortRef = useRef<AbortController | null>(null)
-  const [mediaReadySheet, setMediaReadySheet] = useState<{
-    mode: MomentVideoReadyMode
-    previewUrl: string
-    file: File
-    silent?: boolean
-  } | null>(null)
   const [momentVisible, setMomentVisible] = useState(false)
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -574,199 +562,12 @@ export function StageLanding() {
     })
   }, [canPlay, linkedAudioUrl, linkedSongId, songName, artistName, selectedSong?.artwork, lineIndex, lyric, snippetStart, snippetEnd, songAtmosphere, playbackSegments])
 
-  const buildExportMoment = useCallback(() => {
-    return resolveMargoMomentFromStage({
-      lyric,
-      songName,
-      artistName,
-      artworkUrl: selectedSong?.artwork || null,
-      songId: linkedSongId,
-      audioUrl: linkedAudioUrl,
-      snippetStart,
-      snippetEnd,
-      vibeLabel,
-      source: linkedSongId ? 'catalog' : 'external',
-      externalListenUrl: selectedSong?.externalListenUrl ?? null,
-    }, {
-      themeId: cardThemeId,
-      shapeId,
-      exportAtmosphereId,
-    })
-  }, [
-    lyric, songName, artistName, selectedSong?.artwork, linkedSongId,
-    linkedAudioUrl, snippetStart, snippetEnd, vibeLabel,
-    selectedSong?.externalListenUrl, cardThemeId, shapeId, exportAtmosphereId,
-  ])
-
-  const handleSaveImage = useCallback(async () => {
-    if (!hasMoment) return
-    setSaving(true)
-    try {
-      await saveMargoMomentImage(buildExportMoment())
-      toastMomentImageSaved()
-    } catch {
-      toastMomentExportFailed('image')
-    } finally {
-      setSaving(false)
-    }
-  }, [hasMoment, buildExportMoment])
-
-  const handleShareImage = useCallback(async () => {
-    if (!hasMoment) return
-    setShareBusy(true)
-    try {
-      const result = await shareMargoMomentImage(buildExportMoment())
-      if (result === 'shared') toastMomentShared()
-      else toastMomentShareFailed()
-    } finally {
-      setShareBusy(false)
-    }
-  }, [hasMoment, buildExportMoment])
-
-  useEffect(() => {
-    setCanShareVid(canShareVideoFiles())
-    let cancelled = false
-    void probeMomentVideoCapability().then((cap) => {
-      if (cancelled) return
-      setCanExportVideo(cap.canExport)
-      if (cap.reason) setVideoUnavailableHint(cap.reason)
-    })
-    return () => {
-      cancelled = true
-      videoAbortRef.current?.abort()
-    }
-  }, [])
-
-  const exportMomentSnapshot = useMemo(() => {
-    if (!hasMoment) return null
-    return buildExportMoment()
-  }, [hasMoment, buildExportMoment])
-
-  const hasVisualLoopExport = exportMomentSnapshot
-    ? momentUsesVisualLoopExport(exportMomentSnapshot)
-    : false
-
-  const canClipExport = canPlay || hasVisualLoopExport
-
-  const prepareVideo = useCallback(async () => {
-    if (!hasMoment || !canExportVideo || !canClipExport) return null
-    videoAbortRef.current?.abort()
-    const ac = new AbortController()
-    videoAbortRef.current = ac
-    setVideoProgress('Creating your Moment…')
-    try {
-      const out = await prepareMargoMomentVideoShare(buildExportMoment(), setVideoProgress, ac.signal)
-      if (!out) {
-        toastMomentExportFailed('video')
-        return null
-      }
-      return out
-    } catch (err) {
-      if ((err as Error)?.name !== 'AbortError') {
-        toastMomentExportFailed('video', (err as Error)?.message)
-      }
-      return null
-    } finally {
-      setVideoProgress(null)
-      if (videoAbortRef.current === ac) videoAbortRef.current = null
-    }
-  }, [hasMoment, canExportVideo, canClipExport, buildExportMoment])
-
-  const handleSaveVideo = useCallback(async () => {
-    if (!hasMoment) return
-    setSaving(true)
-    try {
-      const out = await prepareVideo()
-      if (!out) return
-      setMediaReadySheet({
-        mode: 'save',
-        file: out.file,
-        previewUrl: out.previewUrl,
-        silent: hasVisualLoopExport,
-      })
-    } finally {
-      setSaving(false)
-    }
-  }, [hasMoment, prepareVideo])
-
-  const handleShareVideo = useCallback(async () => {
-    setShareBusy(true)
-    try {
-      const out = await prepareVideo()
-      if (!out) return
-      setMediaReadySheet({
-        mode: 'share',
-        file: out.file,
-        previewUrl: out.previewUrl,
-        silent: hasVisualLoopExport,
-      })
-    } finally {
-      setShareBusy(false)
-    }
-  }, [prepareVideo])
-
-  const confirmMediaReady = useCallback(async () => {
-    if (!mediaReadySheet) return
-    const { mode, file } = mediaReadySheet
-    if (mode === 'save') {
-      setSaving(true)
-      try {
-        const result = await triggerFileDownload(file)
-        if (result !== 'failed') {
-          toastMomentVideoSaved(result)
-          setMediaReadySheet(null)
-        } else {
-          toastMomentExportFailed('video')
-        }
-      } finally {
-        setSaving(false)
-      }
-      return
-    }
-    setShareBusy(true)
-    try {
-      const result = await sharePreparedMomentVideo(file)
-      if (result === 'shared') {
-        toastMomentShared()
-        setMediaReadySheet(null)
-      } else if (result !== 'cancelled') {
-        toastMomentShareFailed()
-      }
-    } finally {
-      setShareBusy(false)
-    }
-  }, [mediaReadySheet])
-
-  const canShareImg = canShareImageFiles()
-
-  const saveItems: MomentActionMenuItem[] = buildMomentExportActionItems({
-    onExportImage: () => { void handleSaveImage() },
-    hasPlayableSnippet: canPlay,
-    hasVisualLoopExport,
-    canExportVideo,
-    videoUnavailableHint,
-    onExportVideo: () => { void handleSaveVideo() },
-  })
-
-  const shareItems = buildMomentShareActionItems({
-    canShareImage: canShareImg,
-    canShareVideo: canShareVid && canExportVideo && canClipExport,
-    onShareImage: () => { void handleShareImage() },
-    onShareVideo: () => { void handleShareVideo() },
-  })
+  const showStudioPanel = !!selectedSong && !showLinePicker && (hasMoment || showWriteLine)
+  const isMargoCatalog = selectedSong?.source === 'margo' || !!selectedSong?.margoSongId
+  const studioExport = useMomentStudioExport(stageMoment, canPlay, isMargoCatalog)
 
   return (
     <>
-      <MomentVideoReadySheet
-        open={!!mediaReadySheet}
-        mode={mediaReadySheet?.mode ?? 'save'}
-        previewUrl={mediaReadySheet?.previewUrl ?? null}
-        filename={mediaReadySheet?.file.name ?? 'MARGO_Moment.mp4'}
-        silent={mediaReadySheet?.silent}
-        busy={mediaReadySheet?.mode === 'save' ? saving : shareBusy}
-        onPrimary={() => { void confirmMediaReady() }}
-        onClose={() => setMediaReadySheet(null)}
-      />
     <section className="margo-stage-hero" style={{ position: 'relative', zIndex: 5, width: '100%', margin: '0 auto' }}>
       {!selectedSong && (
         <div className="margo-stage-hero__intro">
@@ -807,14 +608,16 @@ export function StageLanding() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center', width: '100%' }}>
-          <div className="margo-stage-song-chip-wrap" style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-            <StageSongChip
-              title={songName}
-              artist={artistName}
-              artwork={selectedSong.artwork}
-              onClear={clearSong}
-            />
-          </div>
+          {!showStudioPanel && !showLinePicker ? (
+            <div className="margo-stage-song-chip-wrap" style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+              <StageSongChip
+                title={songName}
+                artist={artistName}
+                artwork={selectedSong.artwork}
+                onClear={clearSong}
+              />
+            </div>
+          ) : null}
 
           {showLinePicker && (
             <div style={{ width: '100%' }}>
@@ -847,72 +650,42 @@ export function StageLanding() {
             </div>
           )}
 
-          {showWriteLine && (
-            <div style={{ width: '100%' }}>
-              <textarea
-                value={lyric}
-                onChange={(e) => handleWriteLineChange(e.target.value)}
-                maxLength={280}
-                rows={3}
-                placeholder="Type the line…"
-                autoFocus={selectedSong.source !== 'margo'}
-                style={{
-                  width: '100%',
-                  padding: '14px 16px',
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '12px',
-                  color: 'var(--text)',
-                  fontFamily: font,
-                  fontStyle: 'italic',
-                  fontSize: '0.95rem',
-                  lineHeight: 1.5,
-                  resize: 'none',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
-              />
-              <p style={{ textAlign: 'right', fontFamily: UI_FONT, fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-                {lyric.length}/140
-              </p>
-            </div>
-          )}
-
           <div
             style={{
               width: '100%',
-              opacity: hasMoment ? 1 : 0,
-              transform: hasMoment ? 'translateY(0)' : 'translateY(6px)',
+              opacity: showStudioPanel ? 1 : 0,
+              transform: showStudioPanel ? 'translateY(0)' : 'translateY(6px)',
               transition: 'opacity 200ms ease, transform 200ms ease',
-              pointerEvents: hasMoment ? 'auto' : 'none',
-              maxHeight: hasMoment ? 'none' : '0',
-              overflow: hasMoment ? 'visible' : 'hidden',
+              pointerEvents: showStudioPanel ? 'auto' : 'none',
+              maxHeight: showStudioPanel ? 'none' : '0',
+              overflow: showStudioPanel ? 'visible' : 'hidden',
             }}
-            aria-hidden={!hasMoment}
+            aria-hidden={!showStudioPanel}
           >
-            {hasMoment && (
+            {showStudioPanel && (
               <>
-                <MomentExportPreviewFrame shapeId={shapeId}>
-                <StageMomentCard
+                <MomentStudioScreen
+                  songRow={
+                    <div
+                      className="margo-stage-song-chip-wrap"
+                      style={{ width: '100%', display: 'flex', justifyContent: 'center' }}
+                    >
+                      <StageSongChip
+                        title={songName}
+                        artist={artistName}
+                        artwork={selectedSong.artwork}
+                        onClear={clearSong}
+                      />
+                    </div>
+                  }
                   lyric={lyric}
-                  songTitle={songName}
-                  artistName={artistName}
-                  artwork={selectedSong.artwork}
-                  vibeLabel={vibeLabel}
+                  onLyricChange={handleWriteLineChange}
                   cardThemeId={cardThemeId}
-                  atmosphereId={exportAtmosphereId}
+                  onThemeChange={setCardThemeId}
+                  exportAtmosphereId={exportAtmosphereId}
+                  onExportAtmosphereChange={setExportAtmosphereId}
                   shapeId={shapeId}
-                  hideVibeChrome
-                  effectOwnsFill
-                  canPlay={listen?.canPlayInline ?? false}
-                  playing={playing}
-                  buffering={buffering}
-                  onPlay={handlePlay}
-                  listenUrl={listen && !listen.canPlayInline ? listen.externalUrl : null}
-                />
-                </MomentExportPreviewFrame>
-                <MomentVibeRow
-                  key={`vibe-${shapeId}`}
+                  onShapeChange={setShapeId}
                   vibeLabel={vibeLabel}
                   suggestedVibeLabel={suggestedVibeLabel}
                   vibeOptions={STAGE_VIBE_OPTIONS}
@@ -920,91 +693,26 @@ export function StageLanding() {
                     setVibeLabel(label)
                     setVibeUserPicked(true)
                   }}
+                  previewLyric={lyric}
+                  previewSongTitle={songName}
+                  previewArtistName={artistName}
+                  previewArtwork={selectedSong.artwork}
+                  canPlay={listen?.canPlayInline ?? false}
+                  playing={playing}
+                  buffering={buffering}
+                  onPlay={handlePlay}
+                  listenUrl={listen && !listen.canPlayInline ? listen.externalUrl : null}
+                  exportItems={studioExport.exportItems}
+                  shareItems={studioExport.shareItems}
+                  saving={studioExport.saving}
+                  shareBusy={studioExport.shareBusy}
+                  videoProgress={studioExport.videoProgress}
+                  signedIn={signedIn}
+                  onPost={signedIn ? navigateToCompose : undefined}
+                  postLabel={signedIn ? 'Send this line' : 'Post'}
+                  mobileBottomPad="calc(var(--margo-tabbar-h, 80px) + 24px)"
                 />
-                <MomentExportCustomizeBar
-                  cardThemeId={cardThemeId}
-                  onThemeChange={setCardThemeId}
-                  exportAtmosphereId={exportAtmosphereId}
-                  onExportAtmosphereChange={setExportAtmosphereId}
-                  shapeId={shapeId}
-                  onShapeChange={setShapeId}
-                />
-                {signedIn ? (
-                  <div style={{ width: '100%', marginTop: 'var(--stage-moment-to-actions, 22px)' }}>
-                    {videoProgress ? (
-                      <p
-                        role="status"
-                        aria-live="polite"
-                        style={{
-                          margin: '0 0 10px',
-                          fontFamily: font,
-                          fontSize: '0.68rem',
-                          fontStyle: 'italic',
-                          color: 'var(--text-secondary)',
-                          textAlign: 'center',
-                          lineHeight: 1.4,
-                        }}
-                      >
-                        {videoProgress}
-                      </p>
-                    ) : null}
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'row',
-                      flexWrap: 'nowrap',
-                      gap: '8px',
-                      width: '100%',
-                      alignItems: 'flex-start',
-                      marginBottom: '10px',
-                    }}>
-                      <MomentActionMenu
-                        label="Export"
-                        items={saveItems}
-                        variant="primary"
-                        busy={saving}
-                        busyLabel={videoProgress}
-                      />
-                      <MomentActionMenu
-                        label="Share"
-                        items={shareItems.length > 0 ? shareItems : [{ id: 'none', label: 'Not available', disabled: true, onClick: () => {} }]}
-                        variant="secondary"
-                        busy={shareBusy}
-                        busyLabel={videoProgress}
-                        disabled={shareItems.length === 0}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={navigateToCompose}
-                      style={{
-                        width: '100%',
-                        minHeight: 'var(--margo-touch-min)',
-                        padding: '0 20px',
-                        borderRadius: '50px',
-                        border: 'none',
-                        background: 'var(--gold)',
-                        color: 'var(--text-on-gold, var(--bg))',
-                        fontFamily: UI_FONT,
-                        fontSize: '0.56rem',
-                        fontWeight: 700,
-                        letterSpacing: '0.9px',
-                        textTransform: 'uppercase',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Send this line
-                    </button>
-                  </div>
-                ) : (
-                  <StageSendBar
-                    saveItems={saveItems}
-                    shareItems={shareItems}
-                    saving={saving}
-                    shareBusy={shareBusy}
-                    videoProgress={videoProgress}
-                    signedIn={false}
-                  />
-                )}
+                {studioExport.videoReadySheet}
               </>
             )}
           </div>

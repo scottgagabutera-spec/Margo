@@ -1,6 +1,6 @@
 'use client'
 
-import type { CSSProperties, Dispatch, SetStateAction } from 'react'
+import { useState, type CSSProperties, type Dispatch, SetStateAction } from 'react'
 import { UI_FONT } from '@/lib/fonts'
 import {
   cycleLivingAtmosphere,
@@ -25,10 +25,15 @@ interface MomentExportCustomizeBarProps {
   cardThemeId: StageCardThemeId
   onThemeChange: (id: StageCardThemeId) => void
   exportAtmosphereId: AtmosphereId
-  onExportAtmosphereChange: Dispatch<SetStateAction<AtmosphereId>>
+  onExportAtmosphereChange: Dispatch<React.SetStateAction<AtmosphereId>>
   shapeId: MomentShapeId
   onShapeChange: (id: MomentShapeId) => void
   style?: CSSProperties
+  layout?: 'default' | 'studio'
+  vibeLabel?: string | null
+  suggestedVibeLabel?: string | null
+  vibeOptions?: string[]
+  onVibeSelect?: (label: string) => void
 }
 
 function columnLabelStyle(): CSSProperties {
@@ -108,19 +113,144 @@ function AspectGlyph({
   )
 }
 
-/**
- * Export-only customization — lives below the card, not inside it.
- * Color and Effect are mutually exclusive modes with direct switching.
- */
-export function MomentExportCustomizeBar({
+function shapeButtonLabel(id: MomentShapeId): string {
+  return `${EXPORT_SHAPE_LABELS[id]} ${EXPORT_SHAPE_HINTS[id]}`
+}
+
+function MomentExportCustomizeBarStudio({
   cardThemeId,
   onThemeChange,
   exportAtmosphereId,
   onExportAtmosphereChange,
   shapeId,
   onShapeChange,
+  vibeLabel,
+  suggestedVibeLabel,
+  vibeOptions = [],
+  onVibeSelect,
   style,
 }: MomentExportCustomizeBarProps) {
+  const theme = getStageCardTheme(cardThemeId)
+  const colorMode = exportAtmosphereId === 'still'
+  const effectMode = !colorMode
+  const effectLabel = exportAtmosphereLabel(exportAtmosphereId)
+  const [vibeOpen, setVibeOpen] = useState(false)
+
+  return (
+    <div className="margo-moment-studio__customize" style={style}>
+      <div className="margo-moment-studio__customize-row">
+        <button
+          type="button"
+          aria-expanded={vibeOpen}
+          aria-label={vibeLabel ? `Vibe: ${vibeLabel}` : 'Choose vibe'}
+          onClick={() => setVibeOpen((v) => !v)}
+          className="margo-moment-studio__studio-btn"
+        >
+          Vibe
+        </button>
+        <button
+          type="button"
+          aria-pressed={colorMode}
+          aria-label={colorMode ? `Color: ${theme.label}` : 'Gold color'}
+          onClick={() => {
+            if (effectMode) {
+              onExportAtmosphereChange('still')
+              return
+            }
+            onThemeChange(cycleStageCardTheme(cardThemeId).id)
+          }}
+          className="margo-moment-studio__studio-btn"
+        >
+          <span
+            aria-hidden
+            style={{
+              width: '10px',
+              height: '10px',
+              borderRadius: '50%',
+              background: theme.swatch,
+              border: '1px solid var(--gold-border)',
+              flexShrink: 0,
+            }}
+          />
+          Gold
+        </button>
+        <button
+          type="button"
+          aria-pressed={effectMode}
+          aria-label={effectMode ? `Effect: ${effectLabel}` : 'Effect'}
+          onClick={() => {
+            onExportAtmosphereChange((prev) => {
+              if (prev === 'still') return LIVING_ATMOSPHERE_IDS[0]
+              return cycleLivingAtmosphere(prev)
+            })
+          }}
+          className="margo-moment-studio__studio-btn"
+        >
+          Effect
+        </button>
+      </div>
+      {vibeOpen && onVibeSelect && vibeOptions.length > 0 ? (
+        <div className="margo-moment-studio__vibe-popover" role="listbox">
+          {vibeOptions.map((opt) => {
+            const on = opt === vibeLabel
+            return (
+              <button
+                key={opt}
+                type="button"
+                role="option"
+                aria-selected={on}
+                className="margo-moment-studio__vibe-chip"
+                onClick={() => {
+                  onVibeSelect(opt)
+                  setVibeOpen(false)
+                }}
+              >
+                {opt}
+              </button>
+            )
+          })}
+        </div>
+      ) : null}
+      <div className="margo-moment-studio__customize-row" role="group" aria-label="Export size">
+        {EXPORT_SHAPE_CYCLE.map((id) => {
+          const selected = shapeId === id
+          return (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={selected}
+              aria-label={shapeButtonLabel(id)}
+              onClick={() => onShapeChange(id)}
+              className="margo-moment-studio__studio-btn"
+            >
+              {shapeButtonLabel(id)}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Export-only customization — lives below the card, not inside it.
+ * Color and Effect are mutually exclusive modes with direct switching.
+ */
+export function MomentExportCustomizeBar(props: MomentExportCustomizeBarProps) {
+  if (props.layout === 'studio') {
+    return <MomentExportCustomizeBarStudio {...props} />
+  }
+
+  const {
+    cardThemeId,
+    onThemeChange,
+    exportAtmosphereId,
+    onExportAtmosphereChange,
+    shapeId,
+    onShapeChange,
+    style,
+  } = props
+
   const theme = getStageCardTheme(cardThemeId)
   const colorMode = exportAtmosphereId === 'still'
   const effectMode = !colorMode

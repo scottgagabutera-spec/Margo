@@ -20,6 +20,7 @@ export interface UseStageCardLayoutArgs {
   /** When false, omit export-style vibe pill from layout height */
   includeVibePill?: boolean
   format?: StageCardLayoutInput['format']
+  layoutVariant?: StageCardLayoutInput['layoutVariant']
   exportAtmosphereId?: StageCardLayoutInput['exportAtmosphereId']
 }
 
@@ -50,6 +51,7 @@ export function useStageCardLayout(
     outputWidthPx: width,
     includeVibePill: args.includeVibePill,
     format: args.format,
+    layoutVariant: args.layoutVariant,
     exportAtmosphereId: args.exportAtmosphereId,
   }), [
     args.lyric,
@@ -60,6 +62,7 @@ export function useStageCardLayout(
     args.themeId,
     args.includeVibePill,
     args.format,
+    args.layoutVariant,
     args.exportAtmosphereId,
     width,
   ])
