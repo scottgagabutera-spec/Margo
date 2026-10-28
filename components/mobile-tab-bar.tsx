@@ -16,6 +16,11 @@ import { persistAuthReturnScroll } from '@/lib/auth-return'
 import { persistActivePrimaryScroll } from '@/components/primary-tab-shell'
 import { YouTabPortrait } from '@/components/you-tab-portrait'
 import { signInTabActiveOnSigninRoute } from '@/lib/mobile-tab-signin-active'
+import {
+  hubTabBarGold,
+  primaryTabBarGold,
+  primaryTabBarLive,
+} from '@/lib/mobile-tab-bar-highlight'
 
 const font = 'var(--font-geist-sans), system-ui, sans-serif'
 
@@ -26,7 +31,7 @@ const font = 'var(--font-geist-sans), system-ui, sans-serif'
 export function MobileTabBar() {
   const pathname = usePathname()
   const { user, identity } = useIdentity()
-  const { activeTab, isTabPending, isTabAcked } = usePrimaryTab()
+  const { barTab, isTabPending, isTabAcked } = usePrimaryTab()
   const { open: hubOpen } = useHub()
   const feedLink = usePrimaryTabLinkProps('/feed', 'feed')
   const discoverLink = usePrimaryTabLinkProps('/discover', 'discover')
@@ -87,24 +92,31 @@ export function MobileTabBar() {
     }
   }, [shellHidden, stageHidden])
 
-  const isOnFeed = activeTab === 'feed' || (!activeTab && pathname === '/feed')
-  const isOnDiscover = activeTab === 'discover' || (!activeTab && !!pathname?.startsWith('/discover'))
-  const isOnCompose = activeTab === 'compose' || (!activeTab && pathname === '/compose')
+  const feedRouteActive = barTab === 'feed' || (barTab === null && pathname === '/feed')
+  const discoverRouteActive = barTab === 'discover' || (barTab === null && !!pathname?.startsWith('/discover'))
+  const composeRouteActive = barTab === 'compose' || (barTab === null && pathname === '/compose')
+  const isOnFeed = primaryTabBarGold(hubOpen, feedRouteActive)
+  const isOnDiscover = primaryTabBarGold(hubOpen, discoverRouteActive)
+  const isOnCompose = primaryTabBarGold(hubOpen, composeRouteActive)
 
   const isSignedIn = !!user && !user.isAnonymous
   const signinHref = useSigninHref()
   const youHref = isSignedIn ? '/you' : signinHref
   const youLink = usePrimaryTabLinkProps(youHref, 'you')
-  const isOnProfile = activeTab === 'you' || (!!identity && isSignedIn && pathname === `/profile/${identity.username}`)
+  const youRouteActive = barTab === 'you' || (barTab === null && !!identity && isSignedIn && pathname === `/profile/${identity.username}`)
+  const isOnProfile = primaryTabBarGold(hubOpen, youRouteActive)
   const isOnSignInRoute = !isSignedIn && pathname?.split('?')[0] === '/signin'
-  const signInTabActive = signInTabActiveOnSigninRoute(isOnSignInRoute, hubOpen)
-  const youAwaitingIdentity = isSignedIn && !identity && activeTab !== 'you'
+  const primaryBarSelected = barTab !== null && barTab !== 'you'
+  const signInTabActive = signInTabActiveOnSigninRoute(isOnSignInRoute, hubOpen, primaryBarSelected)
+  const youAwaitingIdentity = isSignedIn && !identity && barTab !== 'you'
 
   const isMusicActive = engineState.mode !== 'idle'
 
   const tabPending = (id: 'feed' | 'discover' | 'compose' | 'you') => isTabPending(id)
   const tabAcked = (id: 'feed' | 'discover' | 'compose' | 'you') => isTabAcked(id)
-  const tabLive = (id: 'feed' | 'discover' | 'compose' | 'you') => tabPending(id) || tabAcked(id)
+  const tabLive = (id: 'feed' | 'discover' | 'compose' | 'you') =>
+    primaryTabBarLive(hubOpen, tabPending(id) || tabAcked(id))
+  const hubGold = hubTabBarGold(hubOpen)
 
   const tabStyle = (active: boolean, live: boolean): CSSProperties => ({
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -157,7 +169,7 @@ export function MobileTabBar() {
           <CompassIcon size={20} color="currentColor" />
         )}
         <span style={labelStyle}>Discover</span>
-        {isMusicActive && !isOnDiscover && (
+        {isMusicActive && !hubOpen && !discoverRouteActive && (
           <span style={{
             position: 'absolute', top: '-2px', right: 'calc(50% - 14px)',
             width: '6px', height: '6px', borderRadius: '50%',
@@ -188,7 +200,7 @@ export function MobileTabBar() {
         )}
       </Link>
 
-      <HubTabButton style={tabStyle(hubOpen, hubOpen)} labelStyle={labelStyle} />
+      <HubTabButton style={tabStyle(hubGold, hubGold)} labelStyle={labelStyle} />
 
       {isSignedIn ? (
         <Link

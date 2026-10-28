@@ -10,9 +10,13 @@ test('Hub overlay is not auto-closed while already on /signin', () => {
 })
 
 test('Sign In tab yields active state to Hub when overlay is open', () => {
-  assert.equal(signInTabActiveOnSigninRoute(true, false), true)
-  assert.equal(signInTabActiveOnSigninRoute(true, true), false)
-  assert.equal(signInTabActiveOnSigninRoute(false, true), false)
+  assert.equal(signInTabActiveOnSigninRoute(true, false, false), true)
+  assert.equal(signInTabActiveOnSigninRoute(true, true, false), false)
+  assert.equal(signInTabActiveOnSigninRoute(false, true, false), false)
+})
+
+test('Sign In tab yields to optimistic Feed tap while URL is still /signin', () => {
+  assert.equal(signInTabActiveOnSigninRoute(true, false, true), false)
 })
 
 test('Hub scroll dismiss skipped off primary tab surfaces', () => {

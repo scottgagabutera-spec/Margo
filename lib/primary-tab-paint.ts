@@ -57,7 +57,7 @@ export function resolvePrimaryTabPaint(input: PrimaryTabPaintInput): PrimaryTabP
   const intentPath = input.deepNavHref ? normalizeTabPath(input.deepNavHref) : ''
   const atDeepIntent = !!intentPath && pathOnly.toLowerCase() !== intentPath.toLowerCase()
   const suppressKeepalive =
-    atDeepIntent || input.hubRestorePending || (input.deepNavHref !== null && routeTab !== null)
+    atDeepIntent || (input.deepNavHref !== null && routeTab !== null)
 
   const onPrimarySurface =
     !suppressKeepalive && (routeTab !== null || input.paintedTab !== null)

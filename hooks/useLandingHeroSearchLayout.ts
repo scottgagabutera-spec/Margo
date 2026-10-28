@@ -3,30 +3,42 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { computeLandingSearchBump } from '@/lib/landing-search-bump'
 import { resetLandingSearchLayoutState } from '@/lib/landing-search-layout-reset'
+import {
+  LANDING_SHIFT_TRANSITION_MS,
+  prefersReducedMotion,
+  shouldAnimateLandingShift,
+} from '@/lib/landing-search-shift-motion'
+import { measureMargoHeaderBottom } from '@/lib/margo-header-band'
+import { readVisualBand } from '@/lib/margo-keyboard-geometry'
+import { applyMonotonicLandingShift } from '@/lib/landing-search-shift-apply'
+import { attachSettledVisualViewportListener } from '@/lib/settled-visual-viewport'
 import { useVisualViewport } from '@/hooks/useVisualViewport'
 
 const ACTIVE_ATTR = 'data-margo-landing-search-active'
 const HIDE_TAGLINE = 'data-margo-landing-hide-tagline'
 const HIDE_WORDMARK = 'data-margo-landing-hide-wordmark'
+const ANIMATE_ATTR = 'data-margo-landing-shift-animate'
+
+const CLIENT_HERO = '.margo-stage-hero:not(.margo-stage-hero--ssr)'
 
 /**
- * Landing search: small bump above keyboard; tagline/wordmark fade only when needed.
+ * Landing search: keyboard bump commits once visualViewport settles; one ease-out move.
  */
 export function useLandingHeroSearchLayout(active: boolean) {
   const searchWrapRef = useRef<HTMLDivElement | null>(null)
   const metrics = useVisualViewport({ publishCssVars: active })
-
-  useEffect(() => {
-    if (active) return
-    resetLandingSearchLayoutState()
-  }, [active])
+  const lastShiftRef = useRef(0)
+  const activeRef = useRef(active)
+  const closingRef = useRef(false)
+  const lastKeyboardInsetRef = useRef(0)
+  activeRef.current = active
 
   useEffect(() => {
     const onPageShow = () => {
-      if (!active) resetLandingSearchLayoutState()
+      if (!activeRef.current) resetLandingSearchLayoutState()
     }
     const onPop = () => {
-      if (!active) resetLandingSearchLayoutState()
+      if (!activeRef.current) resetLandingSearchLayoutState()
     }
     window.addEventListener('pageshow', onPageShow)
     window.addEventListener('popstate', onPop)
@@ -34,60 +46,105 @@ export function useLandingHeroSearchLayout(active: boolean) {
       window.removeEventListener('pageshow', onPageShow)
       window.removeEventListener('popstate', onPop)
     }
+  }, [])
+
+  useLayoutEffect(() => {
+    const root = document.documentElement
+    if (active) {
+      closingRef.current = false
+      root.setAttribute(ACTIVE_ATTR, '1')
+      root.setAttribute(HIDE_TAGLINE, '1')
+      return
+    }
+    if (lastShiftRef.current > 0) {
+      closingRef.current = true
+      return
+    }
+    resetLandingSearchLayoutState()
+    root.removeAttribute(ANIMATE_ATTR)
   }, [active])
 
   useLayoutEffect(() => {
     const root = document.documentElement
-    if (!active) {
-      resetLandingSearchLayoutState()
-      return
-    }
-    root.setAttribute(ACTIVE_ATTR, '1')
+    const layoutActive = active || closingRef.current
 
-    const apply = () => {
-      const nav = document.querySelector('.margo-landing-nav') as HTMLElement | null
-      const intro = document.querySelector('.margo-stage-hero__intro') as HTMLElement | null
+    const measurePlan = () => {
+      const wordmark = document.querySelector(`${CLIENT_HERO} .margo-stage-hero__wordmark-wrap`) as HTMLElement | null
       const input = searchWrapRef.current?.querySelector('.margo-search-wrap--standard') as HTMLElement | null
-      if (!nav || !intro || !input) return
+      if (!wordmark || !input) return null
 
-      const vv = window.visualViewport
-      const offsetTop = vv?.offsetTop ?? 0
-      const height = vv?.height ?? window.innerHeight
-      const headerBottom = nav.getBoundingClientRect().bottom
-      const blockTop = intro.getBoundingClientRect().top
+      const { bottom: headerBottom } = measureMargoHeaderBottom()
+      const band = readVisualBand()
+      const blockTop = wordmark.getBoundingClientRect().top
 
-      const plan = computeLandingSearchBump({
-        offsetTop,
-        viewportHeight: height,
+      return computeLandingSearchBump({
+        keyboardTop: band.keyboardTop,
         headerBottom,
         blockTop,
       })
-
-      root.style.setProperty('--margo-landing-hero-shift', `${plan.shiftPx}px`)
-      root.style.setProperty('--margo-landing-search-dropdown-max-h', `${plan.dropdownMaxPx}px`)
-      if (plan.hideTagline) root.setAttribute(HIDE_TAGLINE, '1')
-      else root.removeAttribute(HIDE_TAGLINE)
-      if (plan.hideWordmark) root.setAttribute(HIDE_WORDMARK, '1')
-      else root.removeAttribute(HIDE_WORDMARK)
     }
 
-    apply()
-    const raf = requestAnimationFrame(apply)
-    const vv = window.visualViewport
-    vv?.addEventListener('resize', apply)
-    vv?.addEventListener('scroll', apply)
-    window.addEventListener('resize', apply)
-    window.addEventListener('focusin', apply)
-    window.addEventListener('focusout', apply)
+    const applyPlan = (plan: ReturnType<typeof computeLandingSearchBump>) => {
+      const band = readVisualBand()
+      lastKeyboardInsetRef.current = band.keyboardInset
+
+      const prevShift = lastShiftRef.current
+      let nextShift = !activeRef.current && !closingRef.current ? 0 : plan.shiftPx
+      if (activeRef.current) {
+        nextShift = applyMonotonicLandingShift(prevShift, plan.shiftPx, 'open')
+      } else if (closingRef.current) {
+        nextShift = applyMonotonicLandingShift(prevShift, plan.shiftPx, 'close')
+      }
+      const animate =
+        !prefersReducedMotion() && shouldAnimateLandingShift(prevShift, nextShift)
+
+      if (animate) root.setAttribute(ANIMATE_ATTR, '1')
+      else root.removeAttribute(ANIMATE_ATTR)
+
+      lastShiftRef.current = nextShift
+      root.style.setProperty('--margo-landing-hero-shift', `${nextShift}px`)
+      root.style.setProperty('--margo-landing-search-dropdown-max-h', `${plan.dropdownMaxPx}px`)
+
+      if (activeRef.current) {
+        if (plan.hideTagline) root.setAttribute(HIDE_TAGLINE, '1')
+        else root.removeAttribute(HIDE_TAGLINE)
+        if (plan.hideWordmark) root.setAttribute(HIDE_WORDMARK, '1')
+        else root.removeAttribute(HIDE_WORDMARK)
+      }
+
+      if (nextShift === 0 && (!activeRef.current || closingRef.current)) {
+        closingRef.current = false
+        const finish = () => {
+          resetLandingSearchLayoutState()
+          root.removeAttribute(ANIMATE_ATTR)
+        }
+        if (animate && !prefersReducedMotion()) {
+          window.setTimeout(finish, LANDING_SHIFT_TRANSITION_MS + 20)
+        } else {
+          finish()
+        }
+      }
+    }
+
+    if (!layoutActive) {
+      return
+    }
+
+    const detach = attachSettledVisualViewportListener({
+      onSettled: () => {
+        if (!activeRef.current && !closingRef.current) return
+        const plan = measurePlan()
+        if (!plan) return
+        applyPlan(plan)
+      },
+    })
 
     return () => {
-      cancelAnimationFrame(raf)
-      vv?.removeEventListener('resize', apply)
-      vv?.removeEventListener('scroll', apply)
-      window.removeEventListener('resize', apply)
-      window.removeEventListener('focusin', apply)
-      window.removeEventListener('focusout', apply)
-      resetLandingSearchLayoutState()
+      detach()
+      if (!activeRef.current && !closingRef.current) {
+        resetLandingSearchLayoutState()
+        root.removeAttribute(ANIMATE_ATTR)
+      }
     }
   }, [active, metrics.height, metrics.offsetTop, metrics.keyboardInset])
 

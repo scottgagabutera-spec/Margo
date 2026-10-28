@@ -15,13 +15,14 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react'
-import { createPortal } from 'react-dom'
+import { createPortal, flushSync } from 'react-dom'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useHubSurfaces } from '@/hooks/useHubSurfaces'
 import { computeHubPanelPosition, pickVisibleHubAnchor } from '@/lib/hub-panel-position'
 import { useRouter } from 'next/navigation'
 import {
   leavePrimaryTabSurface,
+  prepareSignInTabNavigation,
   MARGO_CLOSE_HUB_EVENT,
   persistActivePrimaryScroll,
   readActiveScrollTop,
@@ -45,6 +46,7 @@ import { buildSigninHref, persistAuthReturnScroll } from '@/lib/auth-return'
 import {
   searchHrefForPath,
   searchScopeForPath,
+  clearHubOverlayRestore,
   consumeHubOverlayRestore,
   markHubOverlayRestore,
   markHubNavFromTile,
@@ -468,6 +470,7 @@ export function HubProvider({ children }: { children: ReactNode }) {
 
   const close = useCallback(() => {
     pendingHrefRef.current = null
+    clearHubOverlayRestore()
     setOpen(false)
     setPendingHref(null)
   }, [])
@@ -489,6 +492,7 @@ export function HubProvider({ children }: { children: ReactNode }) {
   const onLockedActivate = useCallback((returnTo: string) => {
     persistActivePrimaryScroll()
     persistAuthReturnScroll()
+    prepareSignInTabNavigation()
     router.push(buildSigninHref(returnTo))
   }, [router])
 
@@ -532,7 +536,13 @@ export function HubProvider({ children }: { children: ReactNode }) {
   }, [pathname])
 
   useEffect(() => {
-    const onPrimaryTab = () => close()
+    const onPrimaryTab = () => {
+      try {
+        flushSync(() => close())
+      } catch {
+        close()
+      }
+    }
     window.addEventListener(MARGO_CLOSE_HUB_EVENT, onPrimaryTab)
     return () => window.removeEventListener(MARGO_CLOSE_HUB_EVENT, onPrimaryTab)
   }, [close])

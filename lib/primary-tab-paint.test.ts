@@ -40,13 +40,13 @@ test('A1 after route commits, deep skeleton clears and app children show', () =>
   assert.equal(feedPrimarySurfaceVisible(committed), false)
 })
 
-test('A1 back to hub restore hides feed keepalive until overlay opens', () => {
+test('A1 back to hub restore keeps feed keepalive visible under overlay', () => {
   const state = resolvePrimaryTabPaint({
     pathname: '/feed',
     ownProfileHref: null,
-    paintedTab: null,
+    paintedTab: 'feed',
     deepNavHref: null,
     hubRestorePending: true,
   })
-  assert.equal(feedPrimarySurfaceVisible(state), false)
+  assert.equal(feedPrimarySurfaceVisible(state), true)
 })
