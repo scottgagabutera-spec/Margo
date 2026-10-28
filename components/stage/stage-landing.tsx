@@ -563,7 +563,8 @@ export function StageLanding() {
   }, [canPlay, linkedAudioUrl, linkedSongId, songName, artistName, selectedSong?.artwork, lineIndex, lyric, snippetStart, snippetEnd, songAtmosphere, playbackSegments])
 
   const showStudioPanel = !!selectedSong && !showLinePicker && (hasMoment || showWriteLine)
-  const studioExport = useMomentStudioExport(stageMoment, canPlay)
+  const isMargoCatalog = selectedSong?.source === 'margo' || !!selectedSong?.margoSongId
+  const studioExport = useMomentStudioExport(stageMoment, canPlay, isMargoCatalog)
 
   return (
     <>
@@ -665,12 +666,17 @@ export function StageLanding() {
               <>
                 <MomentStudioScreen
                   songRow={
-                    <StageSongChip
-                      title={songName}
-                      artist={artistName}
-                      artwork={selectedSong.artwork}
-                      onClear={clearSong}
-                    />
+                    <div
+                      className="margo-stage-song-chip-wrap"
+                      style={{ width: '100%', display: 'flex', justifyContent: 'center' }}
+                    >
+                      <StageSongChip
+                        title={songName}
+                        artist={artistName}
+                        artwork={selectedSong.artwork}
+                        onClear={clearSong}
+                      />
+                    </div>
                   }
                   lyric={lyric}
                   onLyricChange={handleWriteLineChange}

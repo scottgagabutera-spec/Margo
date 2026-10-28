@@ -11,7 +11,14 @@ import { createClient } from '@/lib/supabase/client'
 import { matchLiveCatalogSong, searchMargoSongs, songMatchKey } from '@/lib/search-margo-songs'
 import { useIdentity } from '@/hooks/useIdentity'
 import { usePrimaryTab, clearPrimaryTabScroll } from '@/components/primary-tab-shell'
-import { toastMomentPosted, toastMomentPrivate, toastMomentSent } from '@/lib/moment-export/moment-export-toasts'
+import {
+  toastMomentExportFailed,
+  toastMomentImageSaved,
+  toastMomentPosted,
+  toastMomentPrivate,
+  toastMomentSent,
+} from '@/lib/moment-export/moment-export-toasts'
+import { saveMargoMomentImage } from '@/lib/moment-export/save-moment-image'
 import { ComposeSendTo } from '@/components/compose-send-to'
 import { MomentStudioScreen } from '@/components/moment/moment-studio-screen'
 import { useMomentStudioExport } from '@/hooks/useMomentStudioExport'
@@ -436,6 +443,7 @@ function ComposeInner() {
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const [bannerDismissed, setBannerDismissed] = useState(false)
+  const [saveBusy, setSaveBusy] = useState(false)
 
   // One-time "Write your line…" reveal — governs animation progress only.
   // Visibility (show/hide) is a separate, render-time check against
@@ -1202,10 +1210,6 @@ function ComposeInner() {
     gateAction('post', () => runPendingAction('post'))
   }, [gateAction, runPendingAction])
 
-  const handleKeepPrivate = useCallback(() => {
-    gateAction('private', () => runPendingAction('private'))
-  }, [gateAction, runPendingAction])
-
   const handleAddLineFromMoment = useCallback(() => {
     handleAddAnotherLine()
   }, [handleAddAnotherLine])
@@ -1318,7 +1322,37 @@ function ComposeInner() {
       source: 'feed',
     })
   }, [canPlaySnippet, linkedAudioUrl, linkedSongId, songName, artistName, selectedSong?.artwork, lyric, snippetStart, snippetEnd, songAtmosphere])
-  const studioExport = useMomentStudioExport(exportMoment, canPlaySnippet)
+  const isMargoCatalog = !!(linkedSongId && (selectedSong?.source === 'margo' || selectedSong?.margoSongId))
+  const studioExport = useMomentStudioExport(exportMoment, canPlaySnippet, isMargoCatalog)
+
+  const handleSaveMoment = useCallback(async () => {
+    if (!exportMoment) return
+    setSaveBusy(true)
+    try {
+      await saveMargoMomentImage(exportMoment)
+      toastMomentImageSaved()
+      if (signedIn) {
+        const postId = await persistMoment('private')
+        if (postId) toastMomentPrivate()
+      }
+    } catch {
+      toastMomentExportFailed('image')
+    } finally {
+      setSaveBusy(false)
+    }
+  }, [exportMoment, signedIn, persistMoment])
+
+  const momentShareItems = useMemo(
+    () => [
+      ...studioExport.shareItems,
+      {
+        id: 'send',
+        label: 'Send',
+        onClick: () => { handleSendToSomeone() },
+      },
+    ],
+    [studioExport.shareItems, handleSendToSomeone],
+  )
 
   const showNameBanner = phase === 'moment' && !!identity && identity.displayName === identity.username && !bannerDismissed
   const buttonsBlocked = showNameBanner && editingName
@@ -1486,6 +1520,177 @@ function ComposeInner() {
                   />
                 ) : null
               }
+              beforeLyric={
+                <>
+                  {committedLines.length > 0 ? (
+                    <div
+                      style={{
+                        marginTop: '12px',
+                        padding: '12px 14px',
+                        border: '1px solid var(--border-hi)',
+                        borderRadius: '12px',
+                        background: 'var(--surface)',
+                      }}
+                    >
+                      <p style={{
+                        fontFamily: UI_FONT,
+                        fontSize: '10px',
+                        fontWeight: 600,
+                        letterSpacing: '1px',
+                        textTransform: 'uppercase',
+                        color: 'var(--gold)',
+                        margin: '0 0 8px',
+                      }}>
+                        Lines so far · {committedLines.length}/{POST_LINES_MAX}
+                      </p>
+                      {committedLines.map((line, i) => (
+                        <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '6px' }}>
+                          <p style={{
+                            flex: 1,
+                            minWidth: 0,
+                            fontFamily: 'var(--font-lora), serif',
+                            fontStyle: 'italic',
+                            fontSize: '14px',
+                            margin: 0,
+                            lineHeight: 1.45,
+                            color: 'var(--text)',
+                          }}>
+                            {i + 1}. &ldquo;{line.lyric}&rdquo;
+                          </p>
+                          <ComposeDismissButton onClick={() => handleRemoveCommittedLine(i)} label={`Remove line ${i + 1}`} />
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  {showNameBanner && identity ? (
+                    <div style={{
+                      marginTop: '12px',
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border-hi)',
+                      borderRadius: '12px',
+                      padding: '16px',
+                    }}>
+                      {!editingName ? (
+                        <>
+                          <p style={{ fontFamily: UI_FONT, fontSize: '13px', color: 'var(--text)', margin: '0 0 4px' }}>
+                            You&apos;ll share as <strong style={{ color: 'var(--gold)' }}>{identity.displayName}</strong>
+                          </p>
+                          <p style={{ fontFamily: UI_FONT, fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 12px', lineHeight: 1.45 }}>
+                            You can change this anytime in settings.
+                          </p>
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              onClick={() => setBannerDismissed(true)}
+                              style={{
+                                padding: '0 16px',
+                                height: '32px',
+                                minHeight: '44px',
+                                background: 'var(--gold)',
+                                color: 'var(--text-on-gold, var(--bg))',
+                                borderRadius: '10px',
+                                fontFamily: UI_FONT,
+                                fontWeight: 600,
+                                fontSize: '12px',
+                                border: 'none',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Keep It
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setEditingName(true); setNameInput(identity.displayName) }}
+                              style={{
+                                padding: '0 16px',
+                                height: '32px',
+                                minHeight: '44px',
+                                background: 'transparent',
+                                color: 'var(--gold)',
+                                border: '1px solid var(--gold-border)',
+                                borderRadius: '10px',
+                                fontFamily: UI_FONT,
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Edit
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p style={{ fontFamily: UI_FONT, fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 8px' }}>Display name</p>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <input
+                              type="text"
+                              value={nameInput}
+                              onChange={(e) => setNameInput(e.target.value.slice(0, 30))}
+                              maxLength={30}
+                              autoFocus
+                              style={{
+                                flex: '1 1 140px',
+                                height: '44px',
+                                padding: '0 14px',
+                                background: 'var(--surface-2)',
+                                border: '1px solid var(--border-hi)',
+                                borderRadius: '10px',
+                                color: 'var(--text)',
+                                fontFamily: UI_FONT,
+                                fontSize: '14px',
+                                outline: 'none',
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (nameInput.trim()) {
+                                  await updateDisplayName(nameInput)
+                                  setEditingName(false)
+                                  setBannerDismissed(true)
+                                }
+                              }}
+                              disabled={!nameInput.trim()}
+                              style={{
+                                padding: '0 16px',
+                                height: '44px',
+                                background: 'var(--gold)',
+                                color: 'var(--text-on-gold, var(--bg))',
+                                borderRadius: '10px',
+                                fontFamily: UI_FONT,
+                                fontWeight: 600,
+                                fontSize: '12px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                opacity: nameInput.trim() ? 1 : 0.4,
+                              }}
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingName(false)}
+                              style={{
+                                padding: '0 14px',
+                                height: '44px',
+                                background: 'transparent',
+                                color: 'var(--text-secondary)',
+                                border: '1px solid var(--border-hi)',
+                                borderRadius: '10px',
+                                fontFamily: UI_FONT,
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ) : null}
+                </>
+              }
               lyric={lyric}
               onLyricChange={setLyric}
               cardThemeId={themeId}
@@ -1508,13 +1713,15 @@ function ComposeInner() {
               onPlay={handleStudioPlay}
               listenUrl={listen && !listen.canPlayInline ? listen.externalUrl : null}
               exportItems={studioExport.exportItems}
-              shareItems={studioExport.shareItems}
-              saving={studioExport.saving}
+              shareItems={momentShareItems}
+              onSave={() => { void handleSaveMoment() }}
+              saving={studioExport.saving || saveBusy}
               shareBusy={studioExport.shareBusy}
               videoProgress={studioExport.videoProgress}
               signedIn={signedIn}
               onPost={() => { void handlePostToFeed() }}
               posting={posting}
+              actionsBlocked={buttonsBlocked}
             />
             {studioExport.videoReadySheet}
             {postError && (

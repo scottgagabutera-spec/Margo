@@ -9,12 +9,11 @@ import type { MomentActionMenuItem } from '@/components/moment-action-menu'
 import type { AtmosphereId } from '@/lib/atmosphere'
 import type { MomentShapeId } from '@/lib/moment/types'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
-import { UI_FONT } from '@/lib/fonts'
-
-const lyricFont = 'var(--font-lora), serif'
 
 export interface MomentStudioScreenProps {
   songRow: ReactNode
+  /** Banner, multi-line summary, etc. — above lyric box */
+  beforeLyric?: ReactNode
   lyric: string
   onLyricChange: (value: string) => void
   lyricMaxLength?: number
@@ -40,6 +39,7 @@ export interface MomentStudioScreenProps {
   listenUrl: string | null
   exportItems: MomentActionMenuItem[]
   shareItems: MomentActionMenuItem[]
+  onSave?: () => void
   saving?: boolean
   shareBusy?: boolean
   videoProgress?: string | null
@@ -47,12 +47,14 @@ export interface MomentStudioScreenProps {
   onPost?: () => void
   posting?: boolean
   postLabel?: string
+  actionsBlocked?: boolean
   /** Extra bottom padding on mobile (tab bar clearance). */
   mobileBottomPad?: string
 }
 
 export function MomentStudioScreen({
   songRow,
+  beforeLyric,
   lyric,
   onLyricChange,
   lyricMaxLength = 140,
@@ -78,6 +80,7 @@ export function MomentStudioScreen({
   listenUrl,
   exportItems,
   shareItems,
+  onSave,
   saving = false,
   shareBusy = false,
   videoProgress = null,
@@ -85,6 +88,7 @@ export function MomentStudioScreen({
   onPost,
   posting = false,
   postLabel = 'Post',
+  actionsBlocked = false,
   mobileBottomPad = 'calc(var(--margo-tabbar-h, 80px) + 20px)',
 }: MomentStudioScreenProps) {
   const showCard = previewLyric.trim().length > 0 && previewSongTitle.trim().length > 0
@@ -99,34 +103,32 @@ export function MomentStudioScreen({
       }}
     >
       <div className="margo-moment-studio__inputs">
-          {songRow}
-          <div className="margo-moment-studio__lyric-box">
-            <textarea
-              value={lyric}
-              onChange={(e) => onLyricChange(e.target.value.slice(0, lyricMaxLength))}
-              readOnly={lyricReadOnly}
-              maxLength={lyricMaxLength}
-              rows={3}
-              aria-label="Your line"
-              style={{
-                width: '100%',
-                minHeight: '88px',
-                padding: 0,
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--text)',
-                fontFamily: lyricFont,
-                fontSize: '1.05rem',
-                lineHeight: 1.45,
-                resize: 'none',
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
-            <span className="margo-moment-studio__lyric-count">
-              {lyric.length}/{lyricMaxLength}
-            </span>
-          </div>
+        {songRow}
+        {beforeLyric}
+        <div className="margo-moment-studio__lyric-box">
+          <textarea
+            value={lyric}
+            onChange={(e) => onLyricChange(e.target.value.slice(0, lyricMaxLength))}
+            readOnly={lyricReadOnly}
+            maxLength={lyricMaxLength}
+            rows={3}
+            aria-label="Your line"
+            style={{
+              width: '100%',
+              minHeight: '72px',
+              padding: 0,
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text)',
+              resize: 'none',
+              outline: 'none',
+              boxSizing: 'border-box',
+            }}
+          />
+          <span className="margo-moment-studio__lyric-count">
+            {lyric.length}/{lyricMaxLength}
+          </span>
+        </div>
       </div>
 
       <div className="margo-moment-studio__preview-col">
@@ -162,7 +164,7 @@ export function MomentStudioScreen({
         </MomentPreviewSlot>
       </div>
 
-      <div className="margo-moment-studio__toolbar">
+      <div className="margo-moment-studio__customize-wrap">
         <MomentExportCustomizeBar
           layout="studio"
           cardThemeId={cardThemeId}
@@ -176,7 +178,17 @@ export function MomentStudioScreen({
           vibeOptions={vibeOptions}
           onVibeSelect={onVibeSelect}
         />
+      </div>
+
+      <div
+        className="margo-moment-studio__actions"
+        style={{
+          opacity: actionsBlocked ? 0.45 : 1,
+          pointerEvents: actionsBlocked ? 'none' : 'auto',
+        }}
+      >
         <StageSendBar
+          onSave={onSave}
           saveItems={exportItems}
           shareItems={shareItems}
           saving={saving}
@@ -186,8 +198,9 @@ export function MomentStudioScreen({
           onSendToMargo={onPost}
           sending={posting}
           postLabel={postLabel}
-          menuPlacement="up"
+          menuPlacement="down"
           compact
+          studio
         />
       </div>
     </div>

@@ -529,39 +529,74 @@ html[data-margo-stage] .margo-footer {
 
 /* Moment studio — compose + landing (fixed preview slot, laptop two-column) */
 .margo-moment-studio {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'inputs'
+    'preview'
+    'customize'
+    'actions';
+  gap: 12px;
   width: 100%;
   max-width: 1120px;
   margin: 0 auto;
-  padding: 0 16px;
+  padding: 0;
   box-sizing: border-box;
+}
+
+.margo-moment-studio__inputs {
+  grid-area: inputs;
+}
+
+.margo-moment-studio__preview-col {
+  grid-area: preview;
+}
+
+.margo-moment-studio__customize-wrap {
+  grid-area: customize;
+  margin-top: -6px;
+}
+
+.margo-moment-studio__actions {
+  grid-area: actions;
 }
 
 .margo-moment-studio__lyric-box {
   position: relative;
   margin-top: 12px;
   padding: 14px 16px 28px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid var(--border-hi);
   background: var(--surface);
   box-sizing: border-box;
 }
 
+.margo-moment-studio__lyric-box textarea {
+  font-family: var(--font-lora), serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 15.2px;
+  line-height: 1.5;
+}
+
 .margo-moment-studio__lyric-count {
   position: absolute;
-  right: 14px;
+  right: 16px;
   bottom: 10px;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.65rem;
+  font-size: 10.4px;
   color: var(--text-muted);
+}
+
+.margo-moment-preview-slot-wrap {
+  width: 100%;
+  max-width: 342px;
+  margin: 0 auto;
 }
 
 .margo-moment-preview-slot {
   width: 100%;
-  height: min(42vh, 340px);
-  min-height: 220px;
+  height: 260px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -571,7 +606,7 @@ html[data-margo-stage] .margo-footer {
 .margo-moment-preview-slot__inner {
   max-width: 100%;
   max-height: 100%;
-  border-radius: 22px;
+  border-radius: 16px;
   overflow: hidden;
   box-sizing: border-box;
 }
@@ -599,58 +634,114 @@ html[data-margo-stage] .margo-footer {
 .margo-moment-studio__customize {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
 }
 
 .margo-moment-studio__customize-row {
   display: flex;
   flex-direction: row;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
+}
+
+.margo-moment-studio__studio-btn {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  min-height: 30px;
+  padding: 0 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border-hi);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.margo-moment-studio__studio-btn[aria-pressed='true'],
+.margo-moment-studio__studio-btn[aria-expanded='true'] {
+  border-color: var(--gold-border);
+  color: var(--gold);
 }
 
 .margo-moment-studio__vibe-popover {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 6px;
   padding: 8px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid var(--border-hi);
   background: var(--surface);
 }
 
+.margo-moment-studio__vibe-chip {
+  height: 28px;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-hi);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+.margo-moment-studio__vibe-chip[aria-selected='true'] {
+  border-color: var(--gold-border);
+  color: var(--gold);
+}
+
+.margo-stage-song-chip {
+  min-height: 44px;
+  height: 44px;
+  align-items: center;
+}
+
+.margo-stage-song-chip .margo-stage-song-chip__title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
 @media (min-width: 900px) {
   .margo-moment-studio {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
-    grid-template-rows: auto 1fr auto;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 440px);
+    grid-template-areas:
+      'inputs preview'
+      'customize preview'
+      'actions preview';
     column-gap: 32px;
-    row-gap: 16px;
+    row-gap: 12px;
     align-items: start;
   }
 
-  .margo-moment-studio__inputs {
-    grid-column: 1;
-    grid-row: 1;
-  }
-
-  .margo-moment-studio__toolbar {
-    grid-column: 1;
-    grid-row: 2;
-    align-self: end;
-  }
-
   .margo-moment-studio__preview-col {
-    grid-column: 2;
-    grid-row: 1 / span 2;
     position: sticky;
     top: 88px;
   }
 
+  .margo-moment-studio__customize-wrap {
+    margin-top: 0;
+  }
+
+  .margo-moment-preview-slot-wrap {
+    max-width: 440px;
+  }
+
   .margo-moment-preview-slot {
-    height: min(520px, calc(100vh - 160px));
-    min-height: 360px;
+    height: 440px;
   }
 
   .margo-moment-preview-slot__label {

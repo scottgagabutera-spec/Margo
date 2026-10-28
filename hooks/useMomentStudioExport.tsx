@@ -21,15 +21,18 @@ import {
   toastMomentShareFailed,
   toastMomentVideoSaved,
 } from '@/lib/moment-export/moment-export-toasts'
-import { buildMomentShareActionItems } from '@/lib/moment/share-action-items'
-import { buildMomentStudioExportItems } from '@/lib/moment/studio-export-items'
+import { buildMomentExportActionItems, buildMomentShareActionItems } from '@/lib/moment/share-action-items'
 import type { MargoMoment } from '@/lib/moment/types'
 import {
   MomentVideoReadySheet,
   type MomentVideoReadyMode,
 } from '@/components/moment-video-ready-sheet'
 
-export function useMomentStudioExport(moment: MargoMoment | null, canPlaySnippet: boolean) {
+export function useMomentStudioExport(
+  moment: MargoMoment | null,
+  canPlaySnippet: boolean,
+  isMargoCatalog = false,
+) {
   const [saving, setSaving] = useState(false)
   const [shareBusy, setShareBusy] = useState(false)
   const [videoProgress, setVideoProgress] = useState<string | null>(null)
@@ -44,8 +47,9 @@ export function useMomentStudioExport(moment: MargoMoment | null, canPlaySnippet
   } | null>(null)
 
   const hasMoment = !!moment
-  const hasVisualLoopExport = moment ? momentUsesVisualLoopExport(moment) : false
-  const canClipExport = canPlaySnippet || hasVisualLoopExport
+  const hasPlayableSnippet = canPlaySnippet && isMargoCatalog
+  const hasVisualLoopExport = moment ? momentUsesVisualLoopExport(moment) && isMargoCatalog : false
+  const canClipExport = hasPlayableSnippet || hasVisualLoopExport
   const videoEnabled = canClipExport && canExportVideo
 
   useEffect(() => {
@@ -177,12 +181,20 @@ export function useMomentStudioExport(moment: MargoMoment | null, canPlaySnippet
 
   const exportItems = useMemo(
     () =>
-      buildMomentStudioExportItems({
+      buildMomentExportActionItems({
         onExportImage: () => { void handleSaveImage() },
+        hasPlayableSnippet,
+        hasVisualLoopExport,
+        canExportVideo,
         onExportVideo: () => { void handleSaveVideo() },
-        videoEnabled,
-      }),
-    [handleSaveImage, handleSaveVideo, videoEnabled],
+      }).filter((item) => item.id !== 'pdf'),
+    [
+      handleSaveImage,
+      handleSaveVideo,
+      hasPlayableSnippet,
+      hasVisualLoopExport,
+      canExportVideo,
+    ],
   )
 
   const shareItems = useMemo(

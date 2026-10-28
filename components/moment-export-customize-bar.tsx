@@ -113,29 +113,6 @@ function AspectGlyph({
   )
 }
 
-function studioPillStyle(active: boolean): CSSProperties {
-  return {
-    flex: 1,
-    minWidth: 0,
-    minHeight: '44px',
-    padding: '0 10px',
-    borderRadius: '14px',
-    border: active ? '1px solid var(--gold-border)' : '1px solid var(--border-hi)',
-    background: 'var(--surface-2)',
-    color: active ? 'var(--gold)' : 'var(--text-secondary)',
-    fontFamily: UI_FONT,
-    fontSize: '0.72rem',
-    fontWeight: 600,
-    cursor: 'pointer',
-    WebkitTapHighlightColor: 'transparent',
-    boxSizing: 'border-box',
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '6px',
-  }
-}
-
 function shapeButtonLabel(id: MomentShapeId): string {
   return `${EXPORT_SHAPE_LABELS[id]} ${EXPORT_SHAPE_HINTS[id]}`
 }
@@ -167,7 +144,7 @@ function MomentExportCustomizeBarStudio({
           aria-expanded={vibeOpen}
           aria-label={vibeLabel ? `Vibe: ${vibeLabel}` : 'Choose vibe'}
           onClick={() => setVibeOpen((v) => !v)}
-          style={studioPillStyle(vibeOpen)}
+          className="margo-moment-studio__studio-btn"
         >
           Vibe
         </button>
@@ -182,7 +159,7 @@ function MomentExportCustomizeBarStudio({
             }
             onThemeChange(cycleStageCardTheme(cardThemeId).id)
           }}
-          style={studioPillStyle(colorMode)}
+          className="margo-moment-studio__studio-btn"
         >
           <span
             aria-hidden
@@ -207,7 +184,7 @@ function MomentExportCustomizeBarStudio({
               return cycleLivingAtmosphere(prev)
             })
           }}
-          style={studioPillStyle(effectMode)}
+          className="margo-moment-studio__studio-btn"
         >
           Effect
         </button>
@@ -222,19 +199,13 @@ function MomentExportCustomizeBarStudio({
                 type="button"
                 role="option"
                 aria-selected={on}
+                className="margo-moment-studio__vibe-chip"
                 onClick={() => {
                   onVibeSelect(opt)
                   setVibeOpen(false)
                 }}
-                style={{
-                  ...studioPillStyle(on),
-                  flex: 'none',
-                  width: '100%',
-                  justifyContent: 'flex-start',
-                }}
               >
                 {opt}
-                {suggestedVibeLabel === opt && !vibeLabel ? ' · suggested' : null}
               </button>
             )
           })}
@@ -250,7 +221,7 @@ function MomentExportCustomizeBarStudio({
               aria-pressed={selected}
               aria-label={shapeButtonLabel(id)}
               onClick={() => onShapeChange(id)}
-              style={studioPillStyle(selected)}
+              className="margo-moment-studio__studio-btn"
             >
               {shapeButtonLabel(id)}
             </button>
