@@ -3,7 +3,17 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { getPromoteAdmin } from '@/lib/promote/admin-client'
 import { requirePromoteSession } from '@/lib/promote/api-auth'
 import { cleanupPromoteStagingVideoIfComplete } from '@/lib/promote/cleanup-staging'
-import { uploadPromoteVideo } from '@/lib/promote/r2-promote-upload'
+import {
+  copyPromoteStagingToFinal,
+  deletePromoteVideo,
+  getPromoteVideoBytesFromR2,
+  uploadPromoteVideo,
+} from '@/lib/promote/r2-promote-upload'
+import { promoteStagingObjectKey } from '@/lib/promote/promote-staging-path'
+import {
+  legacyPromoteStagingFlatKey,
+  legacyPromoteStagingReadableKey,
+} from '@/lib/r2/r2-object-naming'
 import { isPromotePlatformLive } from '@/lib/promote/platforms'
 import { publishVideoToPlatform } from '@/lib/promote/publish-to-platform'
 import { resolveQueueStatusFromTargets } from '@/lib/promote/resolve-queue-status'
@@ -12,51 +22,68 @@ import { resolveQueueVisualPrefs, type PromotePlatform } from '@/lib/promote/typ
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
-const STAGING_BUCKET = 'song-audio'
-
-function expectedStagingPath(userId: string, queueId: string): string {
-  return `${userId}/promote/${queueId}.mp4`
-}
-
 async function readPublishVideoBuffer(
   request: Request,
   admin: SupabaseClient,
   userId: string,
   queueId: string,
-): Promise<{ buffer: Buffer } | { error: string; status: number }> {
+): Promise<{ buffer: Buffer; stagingKey: string } | { error: string; status: number }> {
   const contentType = request.headers.get('content-type') || ''
 
   if (contentType.includes('application/json')) {
-    let body: { storagePath?: unknown }
+    let body: { stagingKey?: unknown; storagePath?: unknown }
     try {
       body = await request.json()
     } catch {
-      return { error: 'Invalid JSON body — expected { storagePath }', status: 400 }
+      return { error: 'Invalid JSON body — expected { stagingKey }', status: 400 }
     }
-    const storagePath = typeof body.storagePath === 'string' ? body.storagePath.trim() : ''
-    const expected = expectedStagingPath(userId, queueId)
-    if (storagePath !== expected) {
+    const stagingKey =
+      (typeof body.stagingKey === 'string' ? body.stagingKey.trim() : '')
+      || (typeof body.storagePath === 'string' ? body.storagePath.trim() : '')
+    const [{ data: qRow }, { data: publisher }] = await Promise.all([
+      admin
+        .from('promote_queue')
+        .select('song_title, artist_name')
+        .eq('id', queueId)
+        .eq('profile_id', userId)
+        .maybeSingle(),
+      admin.from('profiles').select('username').eq('id', userId).maybeSingle(),
+    ])
+    const songTitle = typeof qRow?.song_title === 'string' ? qRow.song_title.trim() : ''
+    const artistName = typeof qRow?.artist_name === 'string' ? qRow.artist_name.trim() : ''
+    const username = typeof publisher?.username === 'string' ? publisher.username.trim() : ''
+    const artistSlug = username || artistName
+    const expectedNew =
+      artistSlug && songTitle
+        ? promoteStagingObjectKey({
+            profileId: userId,
+            queueId,
+            artistSlug,
+            songTitle,
+          })
+        : null
+    const expectedLegacyFlat = legacyPromoteStagingFlatKey(userId, queueId)
+    const expectedLegacyReadable =
+      artistName && songTitle
+        ? legacyPromoteStagingReadableKey(artistName, userId, songTitle, queueId)
+        : null
+    const validKey =
+      (expectedNew !== null && stagingKey === expectedNew) ||
+      stagingKey === expectedLegacyFlat ||
+      (expectedLegacyReadable !== null && stagingKey === expectedLegacyReadable)
+    if (!stagingKey || !validKey) {
       return {
-        error: `storagePath must be exactly ${expected}`,
+        error: 'Invalid stagingKey for this queue',
         status: 400,
       }
     }
-    const { data, error } = await admin.storage.from(STAGING_BUCKET).download(storagePath)
-    if (error || !data) {
-      return {
-        error: `Could not read staged video from storage: ${error?.message || 'not found'}`,
-        status: 400,
-      }
+    try {
+      const buffer = await getPromoteVideoBytesFromR2(stagingKey)
+      return { buffer, stagingKey }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Could not read staged video'
+      return { error: msg, status: 400 }
     }
-    const buffer = Buffer.from(await data.arrayBuffer())
-    if (buffer.length === 0) {
-      return { error: 'Staged video is empty (0 bytes)', status: 400 }
-    }
-    const { error: removeErr } = await admin.storage.from(STAGING_BUCKET).remove([storagePath])
-    if (removeErr) {
-      console.error('[promote/publish] staging cleanup failed', removeErr)
-    }
-    return { buffer }
   }
 
   let form: FormData
@@ -70,13 +97,13 @@ async function readPublishVideoBuffer(
   }
   const video = form.get('video')
   if (!(video instanceof Blob)) {
-    return { error: 'video file is required (or JSON { storagePath })', status: 400 }
+    return { error: 'video file is required (or JSON { stagingKey } from presigned PUT flow)', status: 400 }
   }
   const buffer = Buffer.from(await video.arrayBuffer())
   if (buffer.length === 0) {
     return { error: 'Uploaded video is empty (0 bytes)', status: 400 }
   }
-  return { buffer }
+  return { buffer, stagingKey: '' }
 }
 
 type TargetRow = {
@@ -113,6 +140,7 @@ export async function POST(
     return NextResponse.json({ error: videoResult.error }, { status: videoResult.status })
   }
   const videoBuffer = videoResult.buffer
+  const stagingKeyForCleanup = videoResult.stagingKey
 
   const { data: queue, error: queueErr } = await admin
     .from('promote_queue')
@@ -181,12 +209,53 @@ export async function POST(
     )
   }
 
+  const songTitleForKey =
+    typeof queue.song_title === 'string' ? queue.song_title.trim() : ''
+  const artistNameForKey =
+    typeof queue.artist_name === 'string' ? queue.artist_name.trim() : ''
+  const { data: pubRow } = await admin
+    .from('profiles')
+    .select('username')
+    .eq('id', session.userId)
+    .maybeSingle()
+  const usernameForKey = typeof pubRow?.username === 'string' ? pubRow.username.trim() : ''
+  const artistSlug = usernameForKey || artistNameForKey
+  if (!artistSlug.trim() || !songTitleForKey.trim()) {
+    return NextResponse.json(
+      { error: 'Queue is missing song title or artist — cannot build storage key' },
+      { status: 500 },
+    )
+  }
+
   let objectKey: string
   let videoPublicUrl: string
   try {
-    const uploaded = await uploadPromoteVideo(session.userId, queueId, videoBuffer)
-    objectKey = uploaded.objectKey
-    videoPublicUrl = uploaded.publicUrl
+    if (stagingKeyForCleanup) {
+      const copied = await copyPromoteStagingToFinal(
+        stagingKeyForCleanup,
+        artistSlug,
+        session.userId,
+        songTitleForKey,
+        queueId,
+      )
+      objectKey = copied.objectKey
+      videoPublicUrl = copied.publicUrl
+      try {
+        await deletePromoteVideo(stagingKeyForCleanup)
+      } catch (e) {
+        console.error('[promote/publish] could not delete R2 staging object (orphan cleanup via cron)', e)
+      }
+    } else {
+      const uploaded = await uploadPromoteVideo(
+        artistSlug,
+        session.userId,
+        songTitleForKey,
+        queueId,
+        videoBuffer,
+      )
+      objectKey = uploaded.objectKey
+      videoPublicUrl = uploaded.publicUrl
+    }
     await admin
       .from('promote_queue')
       .update({
