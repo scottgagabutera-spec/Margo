@@ -8,7 +8,7 @@ export const runtime = 'nodejs'
  * R2 CORS allows https://trymargo.com only — preview (*.vercel.app) and
  * localhost need this to decode snippet audio in the browser.
  *
- * Only https://audio.trymargo.com/Margo/audio/* and .../artwork/* are allowed.
+ * Only https://audio.trymargo.com/Margo/audio/*, .../artwork/*, and .../artists/* are allowed.
  */
 export async function GET(req: NextRequest) {
   const raw = req.nextUrl.searchParams.get('url')

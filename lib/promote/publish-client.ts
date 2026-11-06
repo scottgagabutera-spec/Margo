@@ -66,15 +66,19 @@ export async function publishQueueMomentVideo(
   }
 
   const uid8 = shortId8FromUuid(userId)
-  const legacyPrefix = `Margo/promote/staging/${userId}/`
-  const looksLegacy = presigned.key.startsWith(legacyPrefix)
-  const looksReadable =
-    presigned.key.startsWith('Margo/promote/staging/')
-    && presigned.key.includes(`-${uid8}/`)
-  if (
-    !presigned.key.endsWith('.mp4')
-    || (!looksLegacy && !looksReadable)
-  ) {
+  const key = presigned.key
+  const isArtistStaging =
+    key.startsWith('Margo/artists/')
+    && key.includes(`-${uid8}/`)
+    && key.includes('/promote/staging/')
+  const legacyFlatPrefix = `Margo/promote/staging/${userId}/`
+  const isLegacyFlat = key.startsWith(legacyFlatPrefix)
+  const isLegacyReadable =
+    key.startsWith('Margo/promote/staging/')
+    && !key.startsWith(legacyFlatPrefix)
+    && key.includes(`-${uid8}/`)
+
+  if (!presigned.key.endsWith('.mp4') || (!isArtistStaging && !isLegacyFlat && !isLegacyReadable)) {
     throw new Error('Upload URL key mismatch — try again')
   }
   if (byteSize > presigned.maxBytes) {

@@ -1,7 +1,11 @@
 /** Trusted R2 host for catalog audio + artwork. */
 export const MARGO_AUDIO_HOST = 'audio.trymargo.com'
 
-const ALLOWED_PATH_PREFIXES = ['/Margo/audio/', '/Margo/artwork/'] as const
+const ALLOWED_PATH_PREFIXES = [
+  '/Margo/audio/',
+  '/Margo/artwork/',
+  '/Margo/artists/',
+] as const
 
 export function isAllowedExportMediaUrl(url: string): boolean {
   try {

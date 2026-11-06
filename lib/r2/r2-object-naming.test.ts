@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
-  catalogArtistFolderSegment,
-  catalogFileBaseName,
+  artistRootPrefix,
+  catalogAudioObjectKey,
+  promoteStagingObjectKeyParts,
+  promoteFinalVideoObjectKey,
   slugifySegment,
   shortId8FromUuid,
 } from './r2-object-naming.ts'
@@ -20,12 +22,25 @@ describe('r2 object naming', () => {
     )
   })
 
-  it('catalog paths match artist folder + file pattern', () => {
+  it('artist-scoped catalog + promote paths', () => {
     const uid = '063d94b6-9460-43b3-9c4a-91fa8fe9f635'
     const song = '26bd751e-32b1-4835-b772-c28157bcd4b2'
-    const folder = catalogArtistFolderSegment('TryMargo', uid)
-    assert.equal(folder, `trymargo-${shortId8FromUuid(uid)}`)
-    const file = catalogFileBaseName("Je T'Applaudis Mon Ami", song, 'mp3')
-    assert.match(file, /^je-t-applaudis-mon-ami-26bd751e\.mp3$/)
+    const queue = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+    assert.equal(artistRootPrefix('TryMargo', uid), 'Margo/artists/trymargo-063d94b6')
+    const audio = catalogAudioObjectKey('TryMargo', uid, "Je T'Applaudis Mon Ami", song, 'mp3')
+    assert.equal(
+      audio,
+      'Margo/artists/trymargo-063d94b6/audio/je-t-applaudis-mon-ami-26bd751e.mp3',
+    )
+    const staging = promoteStagingObjectKeyParts('TryMargo', uid, 'Hello World', queue)
+    assert.equal(
+      staging,
+      'Margo/artists/trymargo-063d94b6/promote/staging/hello-world-aaaaaaaa.mp4',
+    )
+    const finalK = promoteFinalVideoObjectKey('TryMargo', uid, 'Hello World', queue)
+    assert.equal(
+      finalK,
+      'Margo/artists/trymargo-063d94b6/promote/hello-world-aaaaaaaa.mp4',
+    )
   })
 })

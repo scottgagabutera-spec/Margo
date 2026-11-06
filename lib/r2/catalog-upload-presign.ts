@@ -8,7 +8,7 @@ import {
   r2SecretAccessKey,
 } from '@/lib/r2/config'
 import { publicCatalogMediaUrl } from '@/lib/r2/catalog-media-url'
-import { catalogArtistFolderSegment, catalogFileBaseName, slugifySegment } from '@/lib/r2/r2-object-naming'
+import { catalogArtworkObjectKey, catalogAudioObjectKey, slugifySegment } from '@/lib/r2/r2-object-naming'
 
 const CACHE_IMMUTABLE = 'public, max-age=31536000, immutable'
 
@@ -89,10 +89,11 @@ export function validateCatalogUploadInput(input: CatalogUploadPresignInput): st
 }
 
 export function catalogObjectKey(input: CatalogUploadPresignInput): string {
-  const prefix = input.kind === 'audio' ? 'Margo/audio' : 'Margo/artwork'
-  const folder = catalogArtistFolderSegment(input.artistLabel, input.profileId)
-  const base = catalogFileBaseName(input.songTitle, input.songId, input.extension)
-  return `${prefix}/${folder}/${base}`
+  const artist = input.artistLabel.trim()
+  if (input.kind === 'audio') {
+    return catalogAudioObjectKey(artist, input.profileId, input.songTitle, input.songId, input.extension)
+  }
+  return catalogArtworkObjectKey(artist, input.profileId, input.songTitle, input.songId, input.extension)
 }
 
 /** ASCII-only metadata values for S3 / R2. */

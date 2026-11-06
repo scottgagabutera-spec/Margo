@@ -2,10 +2,10 @@
  * Cloudflare R2 (S3-compatible) — shared server-side config.
  *
  * Production catalog audio/artwork is served read-only at audio.trymargo.com
- * (paths like Margo/audio/*, Margo/artwork/*). Auto-Promote writes rendered
- * MP4s to the same bucket under Margo/promote/* — no separate bucket required.
+ * (paths like Margo/artists/{slug}/audio/... and legacy Margo/audio/...). Auto-Promote uses
+ * Margo/artists/{slug}/promote/... (and legacy Margo/promote/...) in the same bucket.
  *
- * Studio catalog uploads use presigned PUT to this bucket (readable paths under Margo/audio/*, Margo/artwork/*).
+ * Studio catalog uploads use presigned PUT under Margo/artists/{artist}-{uid8}/audio or .../artwork.
  */
 
 const DEFAULT_SIGNED_URL_EXPIRY_SEC = 3600
