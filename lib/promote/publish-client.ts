@@ -2,7 +2,7 @@ import type { MargoMoment } from '@/lib/moment/types'
 import { getOrCreateMomentVideoFile } from '@/lib/moment-export/save-moment-video'
 import { readPromoteResponse } from '@/lib/promote/publish-error'
 import { getBrowserAccessToken } from '@/lib/supabase/client'
-import { promoteStagingObjectKey } from '@/lib/promote/promote-staging-path'
+import { shortId8FromUuid } from '@/lib/r2/r2-object-naming'
 
 function sessionUserIdFromMemoryToken(): string | null {
   const token = getBrowserAccessToken()
@@ -65,8 +65,20 @@ export async function publishQueueMomentVideo(
     throw new Error(err instanceof Error ? err.message : 'Could not get upload URL')
   }
 
-  const expectedKey = promoteStagingObjectKey(userId, queueId)
-  if (presigned.key !== expectedKey) {
+  const uid8 = shortId8FromUuid(userId)
+  const key = presigned.key
+  const isArtistStaging =
+    key.startsWith('Margo/artists/')
+    && key.includes(`-${uid8}/`)
+    && key.includes('/promote/staging/')
+  const legacyFlatPrefix = `Margo/promote/staging/${userId}/`
+  const isLegacyFlat = key.startsWith(legacyFlatPrefix)
+  const isLegacyReadable =
+    key.startsWith('Margo/promote/staging/')
+    && !key.startsWith(legacyFlatPrefix)
+    && key.includes(`-${uid8}/`)
+
+  if (!presigned.key.endsWith('.mp4') || (!isArtistStaging && !isLegacyFlat && !isLegacyReadable)) {
     throw new Error('Upload URL key mismatch — try again')
   }
   if (byteSize > presigned.maxBytes) {

@@ -31,7 +31,7 @@ export async function POST(
 
   const { data: queue, error: queueErr } = await admin
     .from('promote_queue')
-    .select('id, profile_id, status')
+    .select('id, profile_id, status, song_title, artist_name')
     .eq('id', queueId)
     .eq('profile_id', session.userId)
     .in('status', ['approved', 'publishing', 'partial', 'published'])
@@ -44,8 +44,24 @@ export async function POST(
     )
   }
 
+  const { data: publisher } = await admin
+    .from('profiles')
+    .select('username')
+    .eq('id', session.userId)
+    .maybeSingle()
+
+  const artistSlug =
+    (typeof publisher?.username === 'string' ? publisher.username.trim() : '')
+    || (typeof queue.artist_name === 'string' ? queue.artist_name.trim() : '')
+  const songTitle = typeof queue.song_title === 'string' ? queue.song_title.trim() : ''
+
   try {
-    const presigned = await presignedPutPromoteStagingVideo(session.userId, queueId)
+    const presigned = await presignedPutPromoteStagingVideo({
+      profileId: session.userId,
+      queueId,
+      artistSlug,
+      songTitle,
+    })
     return NextResponse.json({
       url: presigned.url,
       headers: presigned.headers,

@@ -15,16 +15,40 @@ import {
   r2SecretAccessKey,
   r2SignedUrlExpirySec,
 } from '@/lib/r2/config'
-import { promoteStagingObjectKey } from '@/lib/promote/promote-staging-path'
+import {
+  promoteStagingObjectKey,
+  type PromoteStagingKeyInput,
+} from '@/lib/promote/promote-staging-path'
+import {
+  legacyPromoteFinalKey,
+  promoteFinalVideoObjectKey,
+  slugifySegment,
+} from '@/lib/r2/r2-object-naming'
 
-/** Prefix alongside catalog audio (Margo/audio/*) and artwork (Margo/artwork/*). */
-export const PROMOTE_OBJECT_PREFIX = 'Margo/promote'
+/** Legacy prefix only — final videos now live under Margo/artists/.../promote/ */
+export const PROMOTE_OBJECT_PREFIX = 'Margo/promote' as const
 
-export function promoteVideoObjectKey(profileId: string, queueId: string): string {
-  return `${PROMOTE_OBJECT_PREFIX}/${profileId}/${queueId}.mp4`
+const ARTISTS_PREFIX = 'Margo/artists/' as const
+
+export function promoteVideoObjectKey(
+  artistSlug: string,
+  profileId: string,
+  songTitle: string,
+  queueId: string,
+): string {
+  return promoteFinalVideoObjectKey(artistSlug, profileId, songTitle, queueId)
 }
 
 export { promoteStagingObjectKey } from '@/lib/promote/promote-staging-path'
+
+function metaValue(raw: string): string {
+  const s = raw
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^\x20-\x7E]/g, '')
+    .trim()
+  return s.length > 200 ? s.slice(0, 200) : s
+}
 
 function r2Client(): S3Client {
   return new S3Client({
@@ -40,10 +64,12 @@ function r2Client(): S3Client {
 /** Copy staged MP4 to the public promote key (same bytes, no re-upload from app server disk). */
 export async function copyPromoteStagingToFinal(
   stagingKey: string,
+  artistSlug: string,
   profileId: string,
+  songTitle: string,
   queueId: string,
 ): Promise<{ objectKey: string; publicUrl: string }> {
-  const finalKey = promoteVideoObjectKey(profileId, queueId)
+  const finalKey = promoteVideoObjectKey(artistSlug, profileId, songTitle, queueId)
   const bucket = r2BucketName()
   const client = r2Client()
   const encodedKey = stagingKey
@@ -61,20 +87,21 @@ export async function copyPromoteStagingToFinal(
   return { objectKey: finalKey, publicUrl: publicPromoteVideoUrl(finalKey) }
 }
 
-/** Upload rendered MP4 to R2 under Margo/promote/{profileId}/{queueId}.mp4 */
+/** Multipart fallback upload — same layout as copy destination. */
 export async function uploadPromoteVideo(
+  artistSlug: string,
   profileId: string,
+  songTitle: string,
   queueId: string,
   videoBytes: Buffer,
 ): Promise<{ objectKey: string; byteSize: number; publicUrl: string }> {
-  const objectKey = promoteVideoObjectKey(profileId, queueId)
+  const objectKey = promoteVideoObjectKey(artistSlug, profileId, songTitle, queueId)
   const client = r2Client()
   await client.send(new PutObjectCommand({
     Bucket: r2BucketName(),
     Key: objectKey,
     Body: videoBytes,
     ContentType: 'video/mp4',
-    // Public via audio.trymargo.com — stable until cleanup deletes the object.
     CacheControl: 'public, max-age=86400',
   }))
   return {
@@ -84,21 +111,21 @@ export async function uploadPromoteVideo(
   }
 }
 
-/**
- * Stable public HTTPS URL for platform fetch (TikTok, Meta, etc.).
- * Requires Margo/promote/* publicly readable on the R2 custom domain.
- */
 export function publicPromoteVideoUrl(objectKey: string): string {
   const normalized = objectKey.replace(/^\/+/, '')
   return `https://${r2PublicMediaHost()}/${normalized}`
 }
 
-/** Resolve object key from a public promote URL (audio.trymargo.com/Margo/promote/...). */
+/** Resolve object key from a public promote URL (audio.trymargo.com). */
 export function parsePromoteVideoObjectKeyFromUrl(url: string | null | undefined): string | null {
   if (!url?.trim()) return null
   try {
     const key = new URL(url.trim()).pathname.replace(/^\/+/, '')
-    return key.startsWith(`${PROMOTE_OBJECT_PREFIX}/`) ? key : null
+    if (key.startsWith(`${PROMOTE_OBJECT_PREFIX}/`)) return key
+    if (key.startsWith(ARTISTS_PREFIX) && key.includes('/promote/') && !key.includes('/promote/staging/')) {
+      return key
+    }
+    return null
   } catch {
     return null
   }
@@ -110,10 +137,9 @@ export function resolvePromoteObjectKey(
   renderedVideoUrl: string | null | undefined,
 ): string {
   return parsePromoteVideoObjectKeyFromUrl(renderedVideoUrl)
-    ?? promoteVideoObjectKey(profileId, queueId)
+    ?? legacyPromoteFinalKey(profileId, queueId)
 }
 
-/** Delete a staged promote MP4. Throws on R2 errors (caller logs). */
 export async function deletePromoteVideo(objectKey: string): Promise<void> {
   const client = r2Client()
   await client.send(new DeleteObjectCommand({
@@ -122,7 +148,6 @@ export async function deletePromoteVideo(objectKey: string): Promise<void> {
   }))
 }
 
-/** Short-lived signed URL — legacy/internal only; do not pass to Buffer. */
 export async function signedPromoteVideoUrl(
   objectKey: string,
   expiresInSec = r2SignedUrlExpirySec(),
@@ -146,22 +171,28 @@ export interface PromoteStagingPresignedPut {
   maxBytes: number
 }
 
-/** Browser uploads rendered MP4 to this key only; server reads via GetObject, then copies to final promote key. */
 export async function presignedPutPromoteStagingVideo(
-  profileId: string,
-  queueId: string,
+  input: PromoteStagingKeyInput,
 ): Promise<PromoteStagingPresignedPut> {
-  const key = promoteStagingObjectKey(profileId, queueId)
+  const key = promoteStagingObjectKey(input)
   const client = r2Client()
   const expiresInSec = promoteStagingPutExpirySec()
+  const titleRaw = input.songTitle?.trim() ?? ''
+  const artistRaw = input.artistSlug?.trim() ?? ''
+  const metaTitle = metaValue(titleRaw) || slugifySegment(titleRaw)
+  const metaArtist = metaValue(artistRaw) || slugifySegment(artistRaw)
   const url = await getSignedUrl(
     client,
     new PutObjectCommand({
       Bucket: r2BucketName(),
       Key: key,
       ContentType: 'video/mp4',
-      /** Staging object is ephemeral; overwrite on retry. */
       CacheControl: 'private, max-age=60',
+      Metadata: {
+        'margo-title': metaTitle,
+        'margo-artist': metaArtist,
+        'margo-promote-staging': '1',
+      },
     }),
     {
       expiresIn: expiresInSec,
@@ -174,7 +205,9 @@ export async function presignedPutPromoteStagingVideo(
     headers: {
       'Content-Type': 'video/mp4',
       'Cache-Control': 'private, max-age=60',
-      'X-Amz-Meta-Margo-Promote-Staging': '1',
+      'x-amz-meta-margo-title': metaTitle,
+      'x-amz-meta-margo-artist': metaArtist,
+      'x-amz-meta-margo-promote-staging': '1',
     },
     key,
     expiresAt,
@@ -193,7 +226,6 @@ export async function getPromoteVideoBytesFromR2(objectKey: string): Promise<Buf
     throw new Error('R2 GetObject returned empty body')
   }
   const chunks: Uint8Array[] = []
-  // Body is SdkStreamMixin in AWS SDK v3
   for await (const chunk of out.Body as AsyncIterable<Uint8Array>) {
     chunks.push(chunk)
   }

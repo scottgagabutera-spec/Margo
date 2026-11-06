@@ -19,6 +19,8 @@ export async function POST(request: Request) {
     extension?: unknown
     contentType?: unknown
     byteLength?: unknown
+    artistLabel?: unknown
+    songTitle?: unknown
   }
   try {
     body = await request.json()
@@ -31,6 +33,9 @@ export async function POST(request: Request) {
   const extension = typeof body.extension === 'string' ? body.extension.trim().toLowerCase() : ''
   const contentType = typeof body.contentType === 'string' ? body.contentType.trim() : ''
   const byteLength = typeof body.byteLength === 'number' ? body.byteLength : NaN
+  let artistLabel =
+    typeof body.artistLabel === 'string' ? body.artistLabel.trim() : ''
+  let songTitle = typeof body.songTitle === 'string' ? body.songTitle.trim() : ''
 
   if (!songId || !kind || !extension || !contentType || !Number.isFinite(byteLength)) {
     return NextResponse.json({ error: 'songId, kind, extension, contentType, byteLength required' }, { status: 400 })
@@ -43,10 +48,36 @@ export async function POST(request: Request) {
   }
 
   try {
+    const { data: row, error: rowErr } = await supabase
+      .from('songs')
+      .select('title, artist_display_name')
+      .eq('id', songId)
+      .eq('owner_profile_id', userId)
+      .maybeSingle()
+
+    if (row && !rowErr) {
+      songTitle = typeof row.title === 'string' ? row.title.trim() : songTitle
+      artistLabel =
+        typeof row.artist_display_name === 'string'
+          ? row.artist_display_name.trim()
+          : artistLabel
+    } else if (rowErr) {
+      return NextResponse.json({ error: 'Could not verify song' }, { status: 500 })
+    }
+
+    if (!artistLabel?.trim() || !songTitle?.trim()) {
+      return NextResponse.json(
+        { error: 'artistLabel and songTitle are required for new songs' },
+        { status: 400 },
+      )
+    }
+
     const out = await presignedPutCatalogObject({
       kind,
       profileId: userId,
       songId,
+      artistLabel,
+      songTitle,
       extension,
       contentType,
       byteLength,

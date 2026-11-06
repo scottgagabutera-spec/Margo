@@ -9,7 +9,7 @@ export function catalogMediaPublicHost(): string {
   return h || DEFAULT_HOST
 }
 
-/** objectKey e.g. Margo/audio/{uid}/{songId}.mp3 */
+/** objectKey e.g. Margo/audio/{artistSlug-uid8}/{songSlug-songid8}.mp3 */
 export function publicCatalogMediaUrl(objectKey: string): string {
   const normalized = objectKey.replace(/^\/+/, '')
   return `https://${catalogMediaPublicHost()}/${normalized}`
