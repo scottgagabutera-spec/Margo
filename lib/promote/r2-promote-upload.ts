@@ -1,4 +1,5 @@
 import {
+  CopyObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
@@ -6,6 +7,7 @@ import {
 } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import {
+  promoteStagingPutExpirySec,
   r2AccessKeyId,
   r2BucketName,
   r2PublicMediaHost,
@@ -13,6 +15,7 @@ import {
   r2SecretAccessKey,
   r2SignedUrlExpirySec,
 } from '@/lib/r2/config'
+import { promoteStagingObjectKey } from '@/lib/promote/promote-staging-path'
 
 /** Prefix alongside catalog audio (Margo/audio/*) and artwork (Margo/artwork/*). */
 export const PROMOTE_OBJECT_PREFIX = 'Margo/promote'
@@ -20,6 +23,8 @@ export const PROMOTE_OBJECT_PREFIX = 'Margo/promote'
 export function promoteVideoObjectKey(profileId: string, queueId: string): string {
   return `${PROMOTE_OBJECT_PREFIX}/${profileId}/${queueId}.mp4`
 }
+
+export { promoteStagingObjectKey } from '@/lib/promote/promote-staging-path'
 
 function r2Client(): S3Client {
   return new S3Client({
@@ -30,6 +35,30 @@ function r2Client(): S3Client {
       secretAccessKey: r2SecretAccessKey(),
     },
   })
+}
+
+/** Copy staged MP4 to the public promote key (same bytes, no re-upload from app server disk). */
+export async function copyPromoteStagingToFinal(
+  stagingKey: string,
+  profileId: string,
+  queueId: string,
+): Promise<{ objectKey: string; publicUrl: string }> {
+  const finalKey = promoteVideoObjectKey(profileId, queueId)
+  const bucket = r2BucketName()
+  const client = r2Client()
+  const encodedKey = stagingKey
+    .split('/')
+    .map((seg) => encodeURIComponent(seg))
+    .join('/')
+  await client.send(new CopyObjectCommand({
+    Bucket: bucket,
+    CopySource: `${bucket}/${encodedKey}`,
+    Key: finalKey,
+    ContentType: 'video/mp4',
+    CacheControl: 'public, max-age=86400',
+    MetadataDirective: 'REPLACE',
+  }))
+  return { objectKey: finalKey, publicUrl: publicPromoteVideoUrl(finalKey) }
 }
 
 /** Upload rendered MP4 to R2 under Margo/promote/{profileId}/{queueId}.mp4 */
@@ -104,4 +133,76 @@ export async function signedPromoteVideoUrl(
     new GetObjectCommand({ Bucket: r2BucketName(), Key: objectKey }),
     { expiresIn: expiresInSec },
   )
+}
+
+const PROMOTE_MAX_VIDEO_BYTES = 120 * 1024 * 1024
+
+export interface PromoteStagingPresignedPut {
+  url: string
+  headers: Record<string, string>
+  key: string
+  expiresAt: string
+  expiresInSec: number
+  maxBytes: number
+}
+
+/** Browser uploads rendered MP4 to this key only; server reads via GetObject, then copies to final promote key. */
+export async function presignedPutPromoteStagingVideo(
+  profileId: string,
+  queueId: string,
+): Promise<PromoteStagingPresignedPut> {
+  const key = promoteStagingObjectKey(profileId, queueId)
+  const client = r2Client()
+  const expiresInSec = promoteStagingPutExpirySec()
+  const url = await getSignedUrl(
+    client,
+    new PutObjectCommand({
+      Bucket: r2BucketName(),
+      Key: key,
+      ContentType: 'video/mp4',
+      /** Staging object is ephemeral; overwrite on retry. */
+      CacheControl: 'private, max-age=60',
+    }),
+    {
+      expiresIn: expiresInSec,
+      unhoistableHeaders: new Set(['content-length']),
+    },
+  )
+  const expiresAt = new Date(Date.now() + expiresInSec * 1000).toISOString()
+  return {
+    url,
+    headers: {
+      'Content-Type': 'video/mp4',
+      'Cache-Control': 'private, max-age=60',
+      'X-Amz-Meta-Margo-Promote-Staging': '1',
+    },
+    key,
+    expiresAt,
+    expiresInSec,
+    maxBytes: PROMOTE_MAX_VIDEO_BYTES,
+  }
+}
+
+export async function getPromoteVideoBytesFromR2(objectKey: string): Promise<Buffer> {
+  const client = r2Client()
+  const out = await client.send(new GetObjectCommand({
+    Bucket: r2BucketName(),
+    Key: objectKey,
+  }))
+  if (!out.Body) {
+    throw new Error('R2 GetObject returned empty body')
+  }
+  const chunks: Uint8Array[] = []
+  // Body is SdkStreamMixin in AWS SDK v3
+  for await (const chunk of out.Body as AsyncIterable<Uint8Array>) {
+    chunks.push(chunk)
+  }
+  const buf = Buffer.concat(chunks)
+  if (buf.length > PROMOTE_MAX_VIDEO_BYTES) {
+    throw new Error(`Staged video exceeds max size (${PROMOTE_MAX_VIDEO_BYTES} bytes)`)
+  }
+  if (buf.length === 0) {
+    throw new Error('Staged video is empty (0 bytes)')
+  }
+  return buf
 }

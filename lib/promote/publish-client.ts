@@ -1,13 +1,8 @@
 import type { MargoMoment } from '@/lib/moment/types'
 import { getOrCreateMomentVideoFile } from '@/lib/moment-export/save-moment-video'
 import { readPromoteResponse } from '@/lib/promote/publish-error'
-import { createClient, getBrowserAccessToken } from '@/lib/supabase/client'
-
-const PROMOTE_STAGING_BUCKET = 'song-audio'
-
-function promoteStagingPath(userId: string, queueId: string): string {
-  return `${userId}/promote/${queueId}.mp4`
-}
+import { getBrowserAccessToken } from '@/lib/supabase/client'
+import { promoteStagingObjectKey } from '@/lib/promote/promote-staging-path'
 
 function sessionUserIdFromMemoryToken(): string | null {
   const token = getBrowserAccessToken()
@@ -45,16 +40,47 @@ export async function publishQueueMomentVideo(
   const userId = sessionUserIdFromMemoryToken()
   if (!userId) throw new Error('You must be signed in to publish')
 
-  const supabase = createClient()
-  const storagePath = promoteStagingPath(userId, queueId)
-  const { error: uploadErr } = await supabase.storage
-    .from(PROMOTE_STAGING_BUCKET)
-    .upload(storagePath, rendered.file, {
-      contentType: 'video/mp4',
-      upsert: true,
+  let presigned: {
+    url: string
+    headers: Record<string, string>
+    key: string
+    expiresAt: string
+    maxBytes: number
+  }
+  try {
+    const presignRes = await fetch(`/api/promote/queue/${queueId}/stage-upload-url`, {
+      method: 'POST',
+      credentials: 'include',
     })
-  if (uploadErr) {
-    throw new Error(`Could not stage video for publish: ${uploadErr.message}`)
+    if (!presignRes.ok) {
+      let detail = presignRes.statusText
+      try {
+        const j = (await presignRes.json()) as { error?: string }
+        if (j.error) detail = j.error
+      } catch { /* ignore */ }
+      throw new Error(detail || 'Could not get upload URL')
+    }
+    presigned = (await presignRes.json()) as typeof presigned
+  } catch (err) {
+    throw new Error(err instanceof Error ? err.message : 'Could not get upload URL')
+  }
+
+  const expectedKey = promoteStagingObjectKey(userId, queueId)
+  if (presigned.key !== expectedKey) {
+    throw new Error('Upload URL key mismatch — try again')
+  }
+  if (byteSize > presigned.maxBytes) {
+    throw new Error(`Video is too large (max ${Math.round(presigned.maxBytes / (1024 * 1024))} MB)`)
+  }
+
+  const putRes = await fetch(presigned.url, {
+    method: 'PUT',
+    body: rendered.file,
+    headers: presigned.headers,
+    signal,
+  })
+  if (!putRes.ok) {
+    throw new Error(`Could not upload video to storage: ${putRes.status} ${putRes.statusText}`)
   }
 
   onProgress?.('Publishing to connected platforms…')
@@ -66,7 +92,7 @@ export async function publishQueueMomentVideo(
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ storagePath }),
+      body: JSON.stringify({ stagingKey: presigned.key }),
       signal,
     })
   } catch (err) {
