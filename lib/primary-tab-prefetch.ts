@@ -279,7 +279,9 @@ export async function fetchSongsLight(): Promise<Song[]> {
   const { data, error } = await supabase
     .from('songs')
     .select(SONGS_SELECT_LIGHT)
-    .neq('status', 'hidden')
+    .is('deleted_at', null)
+    .not('status', 'eq', 'hidden')
+    .not('status', 'eq', 'archived')
     .order('order', { ascending: true, nullsFirst: false })
 
   if (error) {

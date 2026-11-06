@@ -23,6 +23,7 @@ import { MomentShareStudio } from '@/components/moment-share-studio'
 import { MargoSheet } from '@/components/margo-sheet'
 import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle, keyboardSafeSecondaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
 import { useKeyboardSafeChrome } from '@/hooks/useVisualViewport'
+import { useComposeSearchLayout } from '@/hooks/useComposeSearchLayout'
 import { useInlineSearchDropdownMaxHeight } from '@/hooks/useInlineSearchDropdownMaxHeight'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { POST_LINES_MAX } from '@/lib/post-lines'
@@ -391,11 +392,12 @@ function ComposeInner() {
   const [startOverConfirm, setStartOverConfirm] = useState(false)
 
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchFocused, setSearchFocused] = useState(false)
   const [showResults, setShowResults] = useState(false)
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
   const composeSearchWrapRef = useRef<HTMLDivElement | null>(null)
-  const composeDropdownMaxH = useInlineSearchDropdownMaxHeight(composeSearchWrapRef, showResults)
+  const composeDropdownMaxHInline = useInlineSearchDropdownMaxHeight(composeSearchWrapRef, showResults)
   const [selectedSong, setSelectedSong] = useState<SearchResult | null>(null)
   const [artistName, setArtistName] = useState('')
   const [songName, setSongName] = useState('')
@@ -1282,6 +1284,14 @@ function ComposeInner() {
   const showNameBanner = phase === 'moment' && !!identity && identity.displayName === identity.username && !bannerDismissed
   const buttonsBlocked = showNameBanner && editingName
   const showStep1Resume = phase === 'find' && !!selectedSong && (lyric.trim().length > 0 || linePickComplete || committedLines.length > 0)
+  const composeSearchActive =
+    phase === 'find' &&
+    !showStep1Resume &&
+    (searchFocused || showResults || searchQuery.trim().length > 0)
+  const { blockRef: composeSearchBlockRef, dropdownMaxPx: composeSearchDropdownMax } =
+    useComposeSearchLayout(composeSearchActive)
+  const composeListMaxH =
+    composeSearchDropdownMax ?? composeDropdownMaxHInline ?? undefined
   const isMargoCatalogFlow = !!(linkedSongId && (selectedSong?.source === 'margo' || selectedSong?.margoSongId))
   const showLinePicker = phase === 'select' && isMargoCatalogFlow && !linePickComplete
   const showYourLinePanel = phase === 'select' && !showLinePicker
@@ -1385,7 +1395,7 @@ function ComposeInner() {
                 >Different song</button>
               </div>
             ) : (
-              <>
+              <div ref={composeSearchBlockRef} className="margo-compose-search-shift">
             <div style={{ textAlign: 'center', marginBottom: '48px' }}>
               <h1 style={{
                 fontFamily: font,
@@ -1414,6 +1424,8 @@ function ComposeInner() {
                 hintText={MARGO_SEARCH_HINT_CATALOG}
                 ariaLabel={MARGO_SEARCH_HINT_CATALOG}
                 stackAboveOverlay={showResults}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setSearchFocused(false)}
               />
               <ComposeSearchDropdown
                 open={showResults}
@@ -1422,10 +1434,10 @@ function ComposeInner() {
                 highlightQuery={searchQuery}
                 onSelect={handleSelectSong}
                 onClose={() => setShowResults(false)}
-                listMaxHeightPx={composeDropdownMaxH ?? undefined}
+                listMaxHeightPx={composeListMaxH}
               />
             </div>
-              </>
+              </div>
             )}
           </div>
 

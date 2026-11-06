@@ -348,6 +348,21 @@ html[data-margo-landing-search-active]:not([data-margo-landing-song-flow]) .marg
   transform: translateY(calc(-50% - var(--margo-landing-hero-shift, 0px)));
 }
 
+/* Compose find-step — same keyboard lift contract as landing, scoped to the search block */
+html[data-margo-compose-search-active] .margo-compose-search-shift {
+  transform: translateY(calc(-1 * var(--margo-compose-search-shift, 0px)));
+}
+
+html[data-margo-compose-shift-animate] .margo-compose-search-shift {
+  transition: transform 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-margo-compose-shift-animate] .margo-compose-search-shift {
+    transition: none;
+  }
+}
+
 html[data-margo-landing-shift-animate]:not([data-margo-landing-song-flow]) .margo-landing-hero-anchor {
   transition: transform 200ms ease-out;
 }

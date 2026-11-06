@@ -146,6 +146,7 @@ export async function searchMargoSongs(
       .from('songs')
       .select(CATALOG_SELECT)
       .eq('status', 'live')
+      .is('deleted_at', null)
       .eq('profiles.artist_status', 'active')
 
   type Pending = PromiseLike<{ data: any[] | null; error: any }>
@@ -230,6 +231,7 @@ export async function matchLiveCatalogSong(
     .from('songs')
     .select(CATALOG_SELECT)
     .eq('status', 'live')
+    .is('deleted_at', null)
     .eq('profiles.artist_status', 'active')
     .ilike('title', `%${titleQuery}%`)
     .limit(24)

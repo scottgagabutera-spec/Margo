@@ -1,5 +1,6 @@
 'use client'
 import { Suspense, useState, useEffect, useCallback, type CSSProperties } from 'react'
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { setBrowserAccessToken, signOutBrowser } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
@@ -206,6 +207,23 @@ function LoginForm({
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [adminRecoveryHint, setAdminRecoveryHint] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/admin/recovery-hint')
+        const body = await res.json().catch(() => ({}))
+        if (!cancelled && body?.ok && typeof body.maskedEmail === 'string') {
+          setAdminRecoveryHint(body.maskedEmail)
+        }
+      } catch {
+        /* ignore */
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
 
   const handleLogin = async () => {
     setLoading(true)
@@ -279,6 +297,32 @@ function LoginForm({
           <button onClick={handleLogin} disabled={loading} style={{ ...S.btn, width: '100%', padding: '14px', opacity: loading ? 0.6 : 1 }}>
             {loading ? 'Signing in…' : 'Sign In'}
           </button>
+          <div style={{ marginTop: '16px', textAlign: 'center' }}>
+            <Link
+              href="/forgot-password"
+              style={{
+                fontFamily: 'var(--font-lora), serif',
+                fontSize: '0.72rem',
+                color: 'var(--gold)',
+                textDecoration: 'none',
+                fontWeight: 600,
+              }}
+            >
+              Forgot password?
+            </Link>
+            {adminRecoveryHint ? (
+              <p style={{
+                fontFamily: 'var(--font-lora), serif',
+                fontSize: '0.62rem',
+                color: 'rgba(255,255,255,0.35)',
+                margin: '10px 0 0',
+                lineHeight: 1.45,
+              }}>
+                Admin recovery hint: enter the same address you use for this account
+                ({adminRecoveryHint}), then tap <strong style={{ color: 'rgba(255,255,255,0.55)' }}>Send code</strong> on the next screen.
+              </p>
+            ) : null}
+          </div>
         </div>
       </div>
     </div>
