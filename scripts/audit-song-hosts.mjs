@@ -1,29 +1,39 @@
 /**
- * Read-only: classify each Firebase RTDB `songs` entry by where audio + artwork URLs are hosted.
+ * Read-only: classify each song's audio_url and artwork_url by host (audio.trymargo.com vs Supabase Storage vs other).
  *
- * Live RTDB: uses the same Firebase Admin env vars as the app
- * (see app/api/admin/featured/import-rtdb/route.ts):
- *   FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY, FIREBASE_DATABASE_URL
+ * The running app reads catalog songs from Supabase Postgres `public.songs` (e.g. hooks/useSong.ts, app/studio/page.tsx),
+ * not from Firebase RTDB. Default mode queries Supabase only.
  *
- * Or pass a JSON export (object keyed by Firebase song id) — no Firebase packages required:
- *   node scripts/audit-song-hosts.mjs ./path/to-firebase-songs-export.json
- *
- * Loads .env.local when present (same pattern as scripts/check-songs-count.mjs).
- * Does not print secrets — only whether required env vars are set (when using live RTDB).
+ * Env (from .env.local): NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_KEY / SUPABASE_SECRET_KEY).
+ * Same pattern as scripts/check-songs-count.mjs. Does not print secrets.
  *
  * Usage:
  *   node scripts/audit-song-hosts.mjs
- *   node scripts/audit-song-hosts.mjs ./margo-rtdb-songs-export.json
+ *   node scripts/audit-song-hosts.mjs ./export.json
+ *   node scripts/audit-song-hosts.mjs --firebase
+ *
+ * JSON file: array of rows or object keyed by id, with title + audio_url/audioUrl + artwork_url/artwork.
+ * --firebase: optional; uses Firebase Admin + FIREBASE_* (same as app/api/admin/featured/import-rtdb/route.ts) to read RTDB songs/.
  */
 import dotenv from 'dotenv'
 import { readFileSync } from 'node:fs'
 
-// Load secrets from .env.local without debug banner (dotenv 17+ tips)
 dotenv.config({ path: '.env.local', quiet: true })
 
 const TRY_MARGO_AUDIO_HOST = 'audio.trymargo.com'
 
-function envSummary() {
+function envSummarySupabase() {
+  return {
+    NEXT_PUBLIC_SUPABASE_URL: !!process.env.NEXT_PUBLIC_SUPABASE_URL?.trim(),
+    serviceRoleKey: !!(
+      process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
+      process.env.SUPABASE_SERVICE_KEY?.trim() ||
+      process.env.SUPABASE_SECRET_KEY?.trim()
+    ),
+  }
+}
+
+function envSummaryFirebase() {
   return {
     FIREBASE_PROJECT_ID: !!process.env.FIREBASE_PROJECT_ID?.trim(),
     FIREBASE_CLIENT_EMAIL: !!process.env.FIREBASE_CLIENT_EMAIL?.trim(),
@@ -57,22 +67,24 @@ function accumulate(counts, key) {
   counts[key] = (counts[key] || 0) + 1
 }
 
-function runAudit(songsVal, sourceLabel) {
-  if (typeof songsVal !== 'object' || songsVal === null) {
-    throw new Error('Songs data must be a non-null object')
-  }
+/** Normalize one record (Supabase row or Firebase song object). */
+function getFields(rec, fallbackId) {
+  const title = typeof rec.title === 'string' ? rec.title : '(no title)'
+  const audioRaw = rec.audio_url ?? rec.audioUrl
+  const artworkRaw = rec.artwork_url ?? rec.artworkUrl ?? rec.artwork
+  const id = rec.id ?? rec.firebase_id ?? fallbackId ?? '?'
+  return { id: String(id), title, audioRaw, artworkRaw }
+}
 
-  const entries = Object.entries(songsVal)
+function runAudit(records, sourceLabel, idLabel) {
   const audioCounts = Object.create(null)
   const artworkCounts = Object.create(null)
-  /** @type {{ title: string, firebaseId: string, field: string }[]} */
+  /** @type {{ title: string, id: string, field: string }[]} */
   const supabaseTitles = []
 
-  for (const [firebaseId, song] of entries) {
-    if (!song || typeof song !== 'object') continue
-    const title = typeof song.title === 'string' ? song.title : '(no title)'
-    const audioRaw = song.audioUrl ?? song.audio_url
-    const artworkRaw = song.artwork ?? song.artworkUrl ?? song.artwork_url
+  for (const rec of records) {
+    if (!rec || typeof rec !== 'object') continue
+    const { id, title, audioRaw, artworkRaw } = getFields(rec)
 
     const audio = classifyUrl(audioRaw)
     const artwork = classifyUrl(artworkRaw)
@@ -81,15 +93,16 @@ function runAudit(songsVal, sourceLabel) {
     accumulate(artworkCounts, artwork.bucket)
 
     if (audio.bucket === 'supabase') {
-      supabaseTitles.push({ title, firebaseId, field: 'audio' })
+      supabaseTitles.push({ title, id, field: 'audio' })
     }
     if (artwork.bucket === 'supabase') {
-      supabaseTitles.push({ title, firebaseId, field: 'artwork' })
+      supabaseTitles.push({ title, id, field: 'artwork' })
     }
   }
 
   console.log(`Source: ${sourceLabel}`)
-  console.log('\n── Songs in source:', entries.length, '──')
+  console.log(`Row id field: ${idLabel}`)
+  console.log('\n── Songs in source:', records.length, '──')
   console.log('\nAudio URL host buckets:')
   for (const [k, v] of Object.entries(audioCounts).sort((a, b) => b[1] - a[1])) {
     console.log(`  ${k}: ${v}`)
@@ -102,11 +115,41 @@ function runAudit(songsVal, sourceLabel) {
   if (supabaseTitles.length > 0) {
     console.log('\nTitles with at least one Supabase-hosted URL (audio or artwork):')
     for (const row of supabaseTitles) {
-      console.log(`  - ${row.title}  [${row.field}]  (firebase id: ${row.firebaseId})`)
+      console.log(`  - ${row.title}  [${row.field}]  (${idLabel}: ${row.id})`)
     }
   } else {
     console.log('\nNo Supabase storage URLs found on song audio/artwork fields.')
   }
+}
+
+function normalizeJsonToRecords(data) {
+  if (Array.isArray(data)) {
+    return data
+  }
+  if (typeof data === 'object' && data !== null) {
+    return Object.entries(data).map(([key, v]) =>
+      v && typeof v === 'object' ? { ...v, id: v.id ?? key } : null,
+    ).filter(Boolean)
+  }
+  throw new Error('JSON must be an array or object of songs')
+}
+
+async function loadFromSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
+    process.env.SUPABASE_SERVICE_KEY?.trim() ||
+    process.env.SUPABASE_SECRET_KEY?.trim()
+  if (!url || !key) {
+    console.error('Missing NEXT_PUBLIC_SUPABASE_URL or a service role key (.env.local)')
+    console.error('Env present:', JSON.stringify(envSummarySupabase()))
+    process.exit(1)
+  }
+  const { createClient } = await import('@supabase/supabase-js')
+  const supabase = createClient(url, key, { auth: { persistSession: false } })
+  const { data, error } = await supabase.from('songs').select('id, title, audio_url, artwork_url')
+  if (error) throw new Error(error.message)
+  return data || []
 }
 
 async function loadFromRtdb() {
@@ -119,9 +162,9 @@ async function loadFromRtdb() {
   const databaseURL = process.env.FIREBASE_DATABASE_URL?.trim()
   if (!projectId || !clientEmail || !privateKey || !databaseURL) {
     console.error(
-      'Missing Firebase env: need FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY, FIREBASE_DATABASE_URL',
+      'Missing Firebase env: FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY, FIREBASE_DATABASE_URL',
     )
-    console.error('Env present:', JSON.stringify(envSummary()))
+    console.error('Env present:', JSON.stringify(envSummaryFirebase()))
     process.exit(1)
   }
 
@@ -135,25 +178,34 @@ async function loadFromRtdb() {
   const snap = await getDatabase(app).ref('songs').get()
   if (!snap.exists()) {
     console.log('No data at RTDB path songs/ (snapshot empty).')
-    console.log('Env present (boolean):', JSON.stringify(envSummary()))
+    console.log('Env present (boolean):', JSON.stringify(envSummaryFirebase()))
     process.exit(0)
   }
-  return snap.val()
+  const val = snap.val()
+  return normalizeJsonToRecords(val)
 }
 
 async function main() {
-  const exportPath = process.argv[2]
+  const arg = process.argv[2]
 
-  if (exportPath) {
-    const raw = readFileSync(exportPath, 'utf8')
-    const data = JSON.parse(raw)
-    runAudit(data, `JSON file ${exportPath}`)
+  if (arg === '--firebase') {
+    const records = await loadFromRtdb()
+    runAudit(records, 'Firebase Realtime Database songs/', 'firebase id / key')
+    console.log('\nEnv present (boolean, no secrets):', JSON.stringify(envSummaryFirebase()))
     return
   }
 
-  const songsVal = await loadFromRtdb()
-  runAudit(songsVal, 'Firebase Realtime Database songs/')
-  console.log('\nEnv present (boolean, no secrets):', JSON.stringify(envSummary()))
+  if (arg) {
+    const raw = readFileSync(arg, 'utf8')
+    const data = JSON.parse(raw)
+    const records = normalizeJsonToRecords(data)
+    runAudit(records, `JSON file ${arg}`, 'id')
+    return
+  }
+
+  const records = await loadFromSupabase()
+  runAudit(records, 'Supabase public.songs', 'id')
+  console.log('\nEnv present (boolean, no secrets):', JSON.stringify(envSummarySupabase()))
 }
 
 main().catch((e) => {
