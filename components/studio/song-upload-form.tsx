@@ -199,6 +199,73 @@ function artworkFileError(file: File): string | null {
   return null
 }
 
+function mimeForAudioFallback(ext: string, fileType: string): string {
+  if (fileType && fileType.startsWith('audio/')) return fileType
+  const m: Record<string, string> = {
+    mp3: 'audio/mpeg',
+    wav: 'audio/wav',
+    m4a: 'audio/mp4',
+    aac: 'audio/aac',
+    flac: 'audio/flac',
+  }
+  return m[ext] || 'audio/mpeg'
+}
+
+function mimeForArtworkFallback(ext: string, fileType: string): string {
+  if (fileType && fileType.startsWith('image/')) return fileType
+  if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg'
+  if (ext === 'png') return 'image/png'
+  if (ext === 'webp') return 'image/webp'
+  return 'image/jpeg'
+}
+
+/** Presigned PUT to R2 — URLs are https://audio.trymargo.com/Margo/{audio|artwork}/… */
+async function putCatalogFileToR2(
+  songId: string,
+  kind: 'audio' | 'artwork',
+  file: File,
+): Promise<string> {
+  const extension = extFromFile(file)
+  const contentType =
+    kind === 'audio'
+      ? mimeForAudioFallback(extension, file.type)
+      : mimeForArtworkFallback(extension, file.type)
+  const presignRes = await fetch('/api/studio/catalog-upload-url', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      songId,
+      kind,
+      extension,
+      contentType,
+      byteLength: file.size,
+    }),
+  })
+  if (!presignRes.ok) {
+    let detail = presignRes.statusText
+    try {
+      const j = (await presignRes.json()) as { error?: string }
+      if (j.error) detail = j.error
+    } catch { /* ignore */ }
+    throw new Error(detail || 'Could not start upload')
+  }
+  const presigned = (await presignRes.json()) as {
+    url: string
+    headers: Record<string, string>
+    publicUrl: string
+  }
+  const putRes = await fetch(presigned.url, {
+    method: 'PUT',
+    body: file,
+    headers: presigned.headers,
+  })
+  if (!putRes.ok) {
+    throw new Error(`Could not upload file (${putRes.status})`)
+  }
+  return presigned.publicUrl
+}
+
 export function SongUploadForm({ artistDisplayName, artistUsername = null, onComplete, onCancel, songId = null }: SongUploadFormProps) {
   const { user, identity } = useIdentity()
   const canGeneratePromote = identity?.isArtist && identity.artistStatus === 'active'
@@ -425,14 +492,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
           return
         }
         setStage('uploading-audio')
-        const audioExt = extFromFile(audioFile)
-        const audioPath = `${uid}/${songId}.${audioExt}`
-        const { error: audioUploadErr } = await supabase.storage
-          .from('song-audio')
-          .upload(audioPath, audioFile, { contentType: audioFile.type || undefined, upsert: true })
-        if (audioUploadErr) throw new Error('Could not upload audio: ' + audioUploadErr.message)
-        const { data: audioPublic } = supabase.storage.from('song-audio').getPublicUrl(audioPath)
-        audioUrl = audioPublic.publicUrl
+        audioUrl = await putCatalogFileToR2(songId, 'audio', audioFile)
         setExistingAudioUrl(audioUrl)
       }
       if (!audioUrl) {
@@ -487,27 +547,13 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
 
         if (audioFile) {
           setStage('uploading-audio')
-          const audioExt = extFromFile(audioFile)
-          const audioPath = `${uid}/${songId}.${audioExt}`
-          const { error: audioUploadErr } = await supabase.storage
-            .from('song-audio')
-            .upload(audioPath, audioFile, { contentType: audioFile.type || undefined, upsert: true })
-          if (audioUploadErr) throw new Error('Could not upload audio: ' + audioUploadErr.message)
-          const { data: audioPublic } = supabase.storage.from('song-audio').getPublicUrl(audioPath)
-          audioUrl = audioPublic.publicUrl
+          audioUrl = await putCatalogFileToR2(songId, 'audio', audioFile)
           setExistingAudioUrl(audioUrl)
         }
 
         if (artworkFile) {
           setStage('uploading-artwork')
-          const artworkExt = extFromFile(artworkFile)
-          const artworkPath = `${uid}/${songId}.${artworkExt}`
-          const { error: artworkUploadErr } = await supabase.storage
-            .from('song-artwork')
-            .upload(artworkPath, artworkFile, { contentType: artworkFile.type || undefined, upsert: true })
-          if (artworkUploadErr) throw new Error('Could not upload poster: ' + artworkUploadErr.message)
-          const { data: artworkPublic } = supabase.storage.from('song-artwork').getPublicUrl(artworkPath)
-          artworkUrl = artworkPublic.publicUrl
+          artworkUrl = await putCatalogFileToR2(songId, 'artwork', artworkFile)
           setExistingArtworkUrl(artworkUrl)
         }
 
@@ -602,25 +648,11 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
       setPendingSongId(newSongId)
 
       setStage('uploading-audio')
-      const audioExt = extFromFile(audioFile)
-      const audioPath = `${uid}/${newSongId}.${audioExt}`
-      const { error: audioUploadErr } = await supabase.storage
-        .from('song-audio')
-        .upload(audioPath, audioFile, { contentType: audioFile.type || undefined, upsert: true })
-      if (audioUploadErr) throw new Error('Could not upload audio: ' + audioUploadErr.message)
-      const { data: audioPublic } = supabase.storage.from('song-audio').getPublicUrl(audioPath)
-      const audioUrl = audioPublic.publicUrl
+      const audioUrl = await putCatalogFileToR2(newSongId, 'audio', audioFile)
       setPendingAudioUrl(audioUrl)
 
       setStage('uploading-artwork')
-      const artworkExt = extFromFile(artworkFile)
-      const artworkPath = `${uid}/${newSongId}.${artworkExt}`
-      const { error: artworkUploadErr } = await supabase.storage
-        .from('song-artwork')
-        .upload(artworkPath, artworkFile, { contentType: artworkFile.type || undefined, upsert: true })
-      if (artworkUploadErr) throw new Error('Could not upload poster: ' + artworkUploadErr.message)
-      const { data: artworkPublic } = supabase.storage.from('song-artwork').getPublicUrl(artworkPath)
-      const artworkUrl = artworkPublic.publicUrl
+      const artworkUrl = await putCatalogFileToR2(newSongId, 'artwork', artworkFile)
 
       setStage('saving-song')
       const { error: insertErr } = await supabase.from('songs').upsert({

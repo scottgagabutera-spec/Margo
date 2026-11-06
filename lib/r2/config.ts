@@ -5,12 +5,11 @@
  * (paths like Margo/audio/*, Margo/artwork/*). Auto-Promote writes rendered
  * MP4s to the same bucket under Margo/promote/* — no separate bucket required.
  *
- * Note: the app has no other server-side R2 SDK usage today; Studio uploads
- * go to Supabase Storage (song-audio / song-artwork). These env vars are the
- * first server-side R2 write credentials the app needs.
+ * Studio catalog uploads use presigned PUT to this bucket (Margo/audio/*, Margo/artwork/*).
  */
 
 const DEFAULT_SIGNED_URL_EXPIRY_SEC = 3600
+const DEFAULT_PROMOTE_STAGING_PUT_EXPIRY_SEC = 600
 const DEFAULT_PUBLIC_MEDIA_HOST = 'audio.trymargo.com'
 
 function firstEnv(...names: string[]): string | undefined {
@@ -49,6 +48,26 @@ export function r2SignedUrlExpirySec(): number {
   if (!raw) return DEFAULT_SIGNED_URL_EXPIRY_SEC
   const parsed = Number(raw)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_SIGNED_URL_EXPIRY_SEC
+}
+
+/** Presigned PUT for promote staging MP4 — default 10 minutes (300–600 sec typical). */
+export function promoteStagingPutExpirySec(): number {
+  const raw = firstEnv('PROMOTE_STAGING_PUT_EXPIRY_SEC')
+  if (!raw) return DEFAULT_PROMOTE_STAGING_PUT_EXPIRY_SEC
+  const parsed = Number(raw)
+  if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_PROMOTE_STAGING_PUT_EXPIRY_SEC
+  return Math.min(Math.max(Math.floor(parsed), 300), 600)
+}
+
+const DEFAULT_CATALOG_UPLOAD_PUT_EXPIRY_SEC = 600
+
+/** Presigned PUT for Studio catalog files — default 10 min, clamp 300–600 s. */
+export function catalogUploadPutExpirySec(): number {
+  const raw = firstEnv('STUDIO_CATALOG_PUT_EXPIRY_SEC', 'CATALOG_UPLOAD_PUT_EXPIRY_SEC')
+  if (!raw) return DEFAULT_CATALOG_UPLOAD_PUT_EXPIRY_SEC
+  const parsed = Number(raw)
+  if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_CATALOG_UPLOAD_PUT_EXPIRY_SEC
+  return Math.min(Math.max(Math.floor(parsed), 300), 600)
 }
 
 export function r2S3Endpoint(): string {
