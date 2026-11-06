@@ -45,7 +45,9 @@ import {
   resolveMomentListen,
 } from '@/lib/moment'
 import { persistMomentPost } from '@/lib/moment/persist'
+import { createStoryFromPost } from '@/lib/stories/create-story-client'
 import { trackEvent } from '@/lib/analytics/track'
+import { toast } from 'sonner'
 import { ComposeLyricCard, composeLyricTextStyle } from '@/components/compose-lyric-card'
 import { CatalogPickLyricField } from '@/components/catalog-pick-lyric-field'
 import { UI_FONT } from '@/lib/fonts'
@@ -157,23 +159,6 @@ const composeToolLabelStyle: React.CSSProperties = {
   maxWidth: '100%',
   lineHeight: 1.2,
 }
-/** Post / Private share one sticky row — same 44px target, no wrap. */
-const momentSplitSecondaryStyle: React.CSSProperties = {
-  ...keyboardSafeSecondaryBtnStyle,
-  flex: 1,
-  width: 'auto',
-  minWidth: 0,
-  whiteSpace: 'nowrap',
-  letterSpacing: '0.7px',
-  background: 'var(--surface-2)',
-}
-const momentSplitPrivateStyle: React.CSSProperties = {
-  ...momentSplitSecondaryStyle,
-  background: 'transparent',
-  border: '1px solid var(--border)',
-  color: 'var(--text-muted)',
-}
-
 function ComposeDismissButton({
   onClick,
   label = 'Cancel',
@@ -444,6 +429,7 @@ function ComposeInner() {
   const [nameInput, setNameInput] = useState('')
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [saveBusy, setSaveBusy] = useState(false)
+  const [storyBusy, setStoryBusy] = useState(false)
 
   // One-time "Write your line…" reveal — governs animation progress only.
   // Visibility (show/hide) is a separate, render-time check against
@@ -1342,6 +1328,32 @@ function ComposeInner() {
     }
   }, [exportMoment, signedIn, persistMoment])
 
+  const handleAddMomentToStory = useCallback(async () => {
+    if (!signedIn) {
+      requireAuth({ returnTo: '/compose' })
+      return
+    }
+    setStoryBusy(true)
+    try {
+      let postId = postedId
+      if (!postId) {
+        postId = await persistMoment('active')
+        if (!postId) {
+          toast.error('Finish your Moment and try again.')
+          return
+        }
+      }
+      const result = await createStoryFromPost(postId)
+      if (!result.ok) throw new Error(result.error || 'Could not add to Story')
+      toast.success(result.alreadyActive ? 'Already on your Story' : 'Added to your Story — 24 hours')
+      trackEvent('moment_story_added_compose')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not add to Story')
+    } finally {
+      setStoryBusy(false)
+    }
+  }, [signedIn, requireAuth, postedId, persistMoment])
+
   const momentShareItems = useMemo(
     () => [
       ...studioExport.shareItems,
@@ -1350,8 +1362,22 @@ function ComposeInner() {
         label: 'Send',
         onClick: () => { handleSendToSomeone() },
       },
+      {
+        id: 'story',
+        label: storyBusy ? 'Story…' : 'Story',
+        hint: '24h',
+        disabled: storyBusy || studioExport.shareBusy || studioExport.saving,
+        onClick: () => { void handleAddMomentToStory() },
+      },
     ],
-    [studioExport.shareItems, handleSendToSomeone],
+    [
+      studioExport.shareItems,
+      studioExport.shareBusy,
+      studioExport.saving,
+      handleSendToSomeone,
+      storyBusy,
+      handleAddMomentToStory,
+    ],
   )
 
   const showNameBanner = phase === 'moment' && !!identity && identity.displayName === identity.username && !bannerDismissed
