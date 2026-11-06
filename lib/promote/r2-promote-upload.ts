@@ -22,7 +22,6 @@ import {
 import {
   legacyPromoteFinalKey,
   promoteFinalVideoObjectKey,
-  slugifySegment,
 } from '@/lib/r2/r2-object-naming'
 
 /** Legacy prefix only — final videos now live under Margo/artists/.../promote/ */
@@ -40,15 +39,6 @@ export function promoteVideoObjectKey(
 }
 
 export { promoteStagingObjectKey } from '@/lib/promote/promote-staging-path'
-
-function metaValue(raw: string): string {
-  const s = raw
-    .normalize('NFKD')
-    .replace(/\p{M}/gu, '')
-    .replace(/[^\x20-\x7E]/g, '')
-    .trim()
-  return s.length > 200 ? s.slice(0, 200) : s
-}
 
 function r2Client(): S3Client {
   return new S3Client({
@@ -177,10 +167,6 @@ export async function presignedPutPromoteStagingVideo(
   const key = promoteStagingObjectKey(input)
   const client = r2Client()
   const expiresInSec = promoteStagingPutExpirySec()
-  const titleRaw = input.songTitle?.trim() ?? ''
-  const artistRaw = input.artistSlug?.trim() ?? ''
-  const metaTitle = metaValue(titleRaw) || slugifySegment(titleRaw)
-  const metaArtist = metaValue(artistRaw) || slugifySegment(artistRaw)
   const url = await getSignedUrl(
     client,
     new PutObjectCommand({
@@ -188,11 +174,6 @@ export async function presignedPutPromoteStagingVideo(
       Key: key,
       ContentType: 'video/mp4',
       CacheControl: 'private, max-age=60',
-      Metadata: {
-        'margo-title': metaTitle,
-        'margo-artist': metaArtist,
-        'margo-promote-staging': '1',
-      },
     }),
     {
       expiresIn: expiresInSec,
@@ -205,9 +186,6 @@ export async function presignedPutPromoteStagingVideo(
     headers: {
       'Content-Type': 'video/mp4',
       'Cache-Control': 'private, max-age=60',
-      'x-amz-meta-margo-title': metaTitle,
-      'x-amz-meta-margo-artist': metaArtist,
-      'x-amz-meta-margo-promote-staging': '1',
     },
     key,
     expiresAt,

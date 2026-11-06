@@ -8,7 +8,7 @@ import {
   r2SecretAccessKey,
 } from '@/lib/r2/config'
 import { publicCatalogMediaUrl } from '@/lib/r2/catalog-media-url'
-import { catalogArtworkObjectKey, catalogAudioObjectKey, slugifySegment } from '@/lib/r2/r2-object-naming'
+import { catalogArtworkObjectKey, catalogAudioObjectKey } from '@/lib/r2/r2-object-naming'
 
 const CACHE_IMMUTABLE = 'public, max-age=31536000, immutable'
 
@@ -96,16 +96,6 @@ export function catalogObjectKey(input: CatalogUploadPresignInput): string {
   return catalogArtworkObjectKey(artist, input.profileId, input.songTitle, input.songId, input.extension)
 }
 
-/** ASCII-only metadata values for S3 / R2. */
-function metaValue(raw: string): string {
-  const s = raw
-    .normalize('NFKD')
-    .replace(/\p{M}/gu, '')
-    .replace(/[^\x20-\x7E]/g, '')
-    .trim()
-  return s.length > 200 ? s.slice(0, 200) : s
-}
-
 export async function presignedPutCatalogObject(
   input: CatalogUploadPresignInput,
 ): Promise<CatalogUploadPresignResult> {
@@ -115,8 +105,6 @@ export async function presignedPutCatalogObject(
   const key = catalogObjectKey(input)
   const client = r2Client()
   const expiresInSec = catalogUploadPutExpirySec()
-  const metaArtist = metaValue(input.artistLabel)
-  const metaTitle = metaValue(input.songTitle)
   const url = await getSignedUrl(
     client,
     new PutObjectCommand({
@@ -124,10 +112,6 @@ export async function presignedPutCatalogObject(
       Key: key,
       ContentType: input.contentType,
       CacheControl: CACHE_IMMUTABLE,
-      Metadata: {
-        'margo-title': metaTitle || slugifySegment(input.songTitle),
-        'margo-artist': metaArtist || slugifySegment(input.artistLabel),
-      },
     }),
     {
       expiresIn: expiresInSec,
@@ -140,8 +124,6 @@ export async function presignedPutCatalogObject(
     headers: {
       'Content-Type': input.contentType,
       'Cache-Control': CACHE_IMMUTABLE,
-      'x-amz-meta-margo-title': metaTitle || slugifySegment(input.songTitle),
-      'x-amz-meta-margo-artist': metaArtist || slugifySegment(input.artistLabel),
     },
     key,
     publicUrl: publicCatalogMediaUrl(key),
