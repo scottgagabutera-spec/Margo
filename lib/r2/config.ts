@@ -5,7 +5,7 @@
  * (paths like Margo/audio/*, Margo/artwork/*). Auto-Promote writes rendered
  * MP4s to the same bucket under Margo/promote/* — no separate bucket required.
  *
- * Studio catalog uploads use presigned PUT to this bucket (Margo/audio/*, Margo/artwork/*).
+ * Studio catalog uploads use presigned PUT to this bucket (readable paths under Margo/audio/*, Margo/artwork/*).
  */
 
 const DEFAULT_SIGNED_URL_EXPIRY_SEC = 3600

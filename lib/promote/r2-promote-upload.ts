@@ -15,7 +15,11 @@ import {
   r2SecretAccessKey,
   r2SignedUrlExpirySec,
 } from '@/lib/r2/config'
-import { promoteStagingObjectKey } from '@/lib/promote/promote-staging-path'
+import {
+  promoteStagingObjectKey,
+  type PromoteStagingKeyInput,
+} from '@/lib/promote/promote-staging-path'
+import { slugifySegment } from '@/lib/r2/r2-object-naming'
 
 /** Prefix alongside catalog audio (Margo/audio/*) and artwork (Margo/artwork/*). */
 export const PROMOTE_OBJECT_PREFIX = 'Margo/promote'
@@ -25,6 +29,15 @@ export function promoteVideoObjectKey(profileId: string, queueId: string): strin
 }
 
 export { promoteStagingObjectKey } from '@/lib/promote/promote-staging-path'
+
+function metaValue(raw: string): string {
+  const s = raw
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^\x20-\x7E]/g, '')
+    .trim()
+  return s.length > 200 ? s.slice(0, 200) : s
+}
 
 function r2Client(): S3Client {
   return new S3Client({
@@ -148,12 +161,15 @@ export interface PromoteStagingPresignedPut {
 
 /** Browser uploads rendered MP4 to this key only; server reads via GetObject, then copies to final promote key. */
 export async function presignedPutPromoteStagingVideo(
-  profileId: string,
-  queueId: string,
+  input: PromoteStagingKeyInput,
 ): Promise<PromoteStagingPresignedPut> {
-  const key = promoteStagingObjectKey(profileId, queueId)
+  const key = promoteStagingObjectKey(input)
   const client = r2Client()
   const expiresInSec = promoteStagingPutExpirySec()
+  const titleRaw = input.songTitle?.trim() ?? ''
+  const artistRaw = input.artistSlug?.trim() ?? ''
+  const metaTitle = metaValue(titleRaw) || slugifySegment(titleRaw)
+  const metaArtist = metaValue(artistRaw) || slugifySegment(artistRaw)
   const url = await getSignedUrl(
     client,
     new PutObjectCommand({
@@ -162,6 +178,11 @@ export async function presignedPutPromoteStagingVideo(
       ContentType: 'video/mp4',
       /** Staging object is ephemeral; overwrite on retry. */
       CacheControl: 'private, max-age=60',
+      Metadata: {
+        'margo-title': metaTitle,
+        'margo-artist': metaArtist,
+        'margo-promote-staging': '1',
+      },
     }),
     {
       expiresIn: expiresInSec,
@@ -174,7 +195,9 @@ export async function presignedPutPromoteStagingVideo(
     headers: {
       'Content-Type': 'video/mp4',
       'Cache-Control': 'private, max-age=60',
-      'X-Amz-Meta-Margo-Promote-Staging': '1',
+      'x-amz-meta-margo-title': metaTitle,
+      'x-amz-meta-margo-artist': metaArtist,
+      'x-amz-meta-margo-promote-staging': '1',
     },
     key,
     expiresAt,

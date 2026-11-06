@@ -224,6 +224,7 @@ async function putCatalogFileToR2(
   songId: string,
   kind: 'audio' | 'artwork',
   file: File,
+  meta: { songTitle: string; artistLabel: string },
 ): Promise<string> {
   const extension = extFromFile(file)
   const contentType =
@@ -240,6 +241,8 @@ async function putCatalogFileToR2(
       extension,
       contentType,
       byteLength: file.size,
+      songTitle: meta.songTitle.trim(),
+      artistLabel: meta.artistLabel.trim(),
     }),
   })
   if (!presignRes.ok) {
@@ -492,7 +495,13 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
           return
         }
         setStage('uploading-audio')
-        audioUrl = await putCatalogFileToR2(songId, 'audio', audioFile)
+        audioUrl = await putCatalogFileToR2(songId, 'audio', audioFile, {
+          songTitle: title,
+          artistLabel: normalizeArtistCreditForSave(artistName || artistDisplayName, {
+            displayName: artistDisplayName,
+            username: artistUsername,
+          }),
+        })
         setExistingAudioUrl(audioUrl)
       }
       if (!audioUrl) {
@@ -547,13 +556,25 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
 
         if (audioFile) {
           setStage('uploading-audio')
-          audioUrl = await putCatalogFileToR2(songId, 'audio', audioFile)
+          audioUrl = await putCatalogFileToR2(songId, 'audio', audioFile, {
+            songTitle: title,
+            artistLabel: normalizeArtistCreditForSave(artistName || artistDisplayName, {
+              displayName: artistDisplayName,
+              username: artistUsername,
+            }),
+          })
           setExistingAudioUrl(audioUrl)
         }
 
         if (artworkFile) {
           setStage('uploading-artwork')
-          artworkUrl = await putCatalogFileToR2(songId, 'artwork', artworkFile)
+          artworkUrl = await putCatalogFileToR2(songId, 'artwork', artworkFile, {
+            songTitle: title,
+            artistLabel: normalizeArtistCreditForSave(artistName || artistDisplayName, {
+              displayName: artistDisplayName,
+              username: artistUsername,
+            }),
+          })
           setExistingArtworkUrl(artworkUrl)
         }
 
@@ -648,11 +669,21 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
       setPendingSongId(newSongId)
 
       setStage('uploading-audio')
-      const audioUrl = await putCatalogFileToR2(newSongId, 'audio', audioFile)
+      const credit = normalizeArtistCreditForSave(artistName || artistDisplayName, {
+        displayName: artistDisplayName,
+        username: artistUsername,
+      })
+      const audioUrl = await putCatalogFileToR2(newSongId, 'audio', audioFile, {
+        songTitle: title,
+        artistLabel: credit,
+      })
       setPendingAudioUrl(audioUrl)
 
       setStage('uploading-artwork')
-      const artworkUrl = await putCatalogFileToR2(newSongId, 'artwork', artworkFile)
+      const artworkUrl = await putCatalogFileToR2(newSongId, 'artwork', artworkFile, {
+        songTitle: title,
+        artistLabel: credit,
+      })
 
       setStage('saving-song')
       const { error: insertErr } = await supabase.from('songs').upsert({

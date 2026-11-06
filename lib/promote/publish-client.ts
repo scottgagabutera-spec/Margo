@@ -2,7 +2,7 @@ import type { MargoMoment } from '@/lib/moment/types'
 import { getOrCreateMomentVideoFile } from '@/lib/moment-export/save-moment-video'
 import { readPromoteResponse } from '@/lib/promote/publish-error'
 import { getBrowserAccessToken } from '@/lib/supabase/client'
-import { promoteStagingObjectKey } from '@/lib/promote/promote-staging-path'
+import { shortId8FromUuid } from '@/lib/r2/r2-object-naming'
 
 function sessionUserIdFromMemoryToken(): string | null {
   const token = getBrowserAccessToken()
@@ -65,8 +65,16 @@ export async function publishQueueMomentVideo(
     throw new Error(err instanceof Error ? err.message : 'Could not get upload URL')
   }
 
-  const expectedKey = promoteStagingObjectKey(userId, queueId)
-  if (presigned.key !== expectedKey) {
+  const uid8 = shortId8FromUuid(userId)
+  const legacyPrefix = `Margo/promote/staging/${userId}/`
+  const looksLegacy = presigned.key.startsWith(legacyPrefix)
+  const looksReadable =
+    presigned.key.startsWith('Margo/promote/staging/')
+    && presigned.key.includes(`-${uid8}/`)
+  if (
+    !presigned.key.endsWith('.mp4')
+    || (!looksLegacy && !looksReadable)
+  ) {
     throw new Error('Upload URL key mismatch — try again')
   }
   if (byteSize > presigned.maxBytes) {

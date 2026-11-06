@@ -7,9 +7,9 @@ import {
   copyPromoteStagingToFinal,
   deletePromoteVideo,
   getPromoteVideoBytesFromR2,
-  promoteStagingObjectKey,
   uploadPromoteVideo,
 } from '@/lib/promote/r2-promote-upload'
+import { promoteStagingObjectKey, legacyFlatPromoteStagingKey } from '@/lib/promote/promote-staging-path'
 import { isPromotePlatformLive } from '@/lib/promote/platforms'
 import { publishVideoToPlatform } from '@/lib/promote/publish-to-platform'
 import { resolveQueueStatusFromTargets } from '@/lib/promote/resolve-queue-status'
@@ -20,7 +20,7 @@ export const maxDuration = 60
 
 async function readPublishVideoBuffer(
   request: Request,
-  _admin: SupabaseClient,
+  admin: SupabaseClient,
   userId: string,
   queueId: string,
 ): Promise<{ buffer: Buffer; stagingKey: string } | { error: string; status: number }> {
@@ -36,10 +36,27 @@ async function readPublishVideoBuffer(
     const stagingKey =
       (typeof body.stagingKey === 'string' ? body.stagingKey.trim() : '')
       || (typeof body.storagePath === 'string' ? body.storagePath.trim() : '')
-    const expected = promoteStagingObjectKey(userId, queueId)
-    if (!stagingKey || stagingKey !== expected) {
+    const { data: qRow } = await admin
+      .from('promote_queue')
+      .select('song_title, artist_name')
+      .eq('id', queueId)
+      .eq('profile_id', userId)
+      .maybeSingle()
+    const songTitle = typeof qRow?.song_title === 'string' ? qRow.song_title : ''
+    const artistName = typeof qRow?.artist_name === 'string' ? qRow.artist_name : ''
+    const expectedReadable = promoteStagingObjectKey({
+      profileId: userId,
+      queueId,
+      artistSlug: artistName,
+      songTitle,
+    })
+    const expectedLegacy = legacyFlatPromoteStagingKey(userId, queueId)
+    const validKey =
+      stagingKey === expectedReadable ||
+      stagingKey === expectedLegacy
+    if (!stagingKey || !validKey) {
       return {
-        error: `stagingKey must be exactly ${expected}`,
+        error: 'Invalid stagingKey for this queue',
         status: 400,
       }
     }

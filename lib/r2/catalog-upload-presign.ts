@@ -8,6 +8,7 @@ import {
   r2SecretAccessKey,
 } from '@/lib/r2/config'
 import { publicCatalogMediaUrl } from '@/lib/r2/catalog-media-url'
+import { catalogArtistFolderSegment, catalogFileBaseName, slugifySegment } from '@/lib/r2/r2-object-naming'
 
 const CACHE_IMMUTABLE = 'public, max-age=31536000, immutable'
 
@@ -42,6 +43,9 @@ export interface CatalogUploadPresignInput {
   kind: 'audio' | 'artwork'
   profileId: string
   songId: string
+  /** Used for readable path segment; slugified on server. */
+  artistLabel: string
+  songTitle: string
   extension: string
   contentType: string
   byteLength: number
@@ -60,6 +64,9 @@ const AUDIO_MAX = 25 * 1024 * 1024
 const ARTWORK_MAX = 5 * 1024 * 1024
 
 export function validateCatalogUploadInput(input: CatalogUploadPresignInput): string | null {
+  if (!input.artistLabel?.trim() || !input.songTitle?.trim()) {
+    return 'artistLabel and songTitle are required'
+  }
   if (!SAFE_EXT.test(input.extension)) {
     return 'Invalid file extension'
   }
@@ -83,7 +90,19 @@ export function validateCatalogUploadInput(input: CatalogUploadPresignInput): st
 
 export function catalogObjectKey(input: CatalogUploadPresignInput): string {
   const prefix = input.kind === 'audio' ? 'Margo/audio' : 'Margo/artwork'
-  return `${prefix}/${input.profileId}/${input.songId}.${input.extension}`
+  const folder = catalogArtistFolderSegment(input.artistLabel, input.profileId)
+  const base = catalogFileBaseName(input.songTitle, input.songId, input.extension)
+  return `${prefix}/${folder}/${base}`
+}
+
+/** ASCII-only metadata values for S3 / R2. */
+function metaValue(raw: string): string {
+  const s = raw
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^\x20-\x7E]/g, '')
+    .trim()
+  return s.length > 200 ? s.slice(0, 200) : s
 }
 
 export async function presignedPutCatalogObject(
@@ -95,6 +114,8 @@ export async function presignedPutCatalogObject(
   const key = catalogObjectKey(input)
   const client = r2Client()
   const expiresInSec = catalogUploadPutExpirySec()
+  const metaArtist = metaValue(input.artistLabel)
+  const metaTitle = metaValue(input.songTitle)
   const url = await getSignedUrl(
     client,
     new PutObjectCommand({
@@ -102,6 +123,10 @@ export async function presignedPutCatalogObject(
       Key: key,
       ContentType: input.contentType,
       CacheControl: CACHE_IMMUTABLE,
+      Metadata: {
+        'margo-title': metaTitle || slugifySegment(input.songTitle),
+        'margo-artist': metaArtist || slugifySegment(input.artistLabel),
+      },
     }),
     {
       expiresIn: expiresInSec,
@@ -114,6 +139,8 @@ export async function presignedPutCatalogObject(
     headers: {
       'Content-Type': input.contentType,
       'Cache-Control': CACHE_IMMUTABLE,
+      'x-amz-meta-margo-title': metaTitle || slugifySegment(input.songTitle),
+      'x-amz-meta-margo-artist': metaArtist || slugifySegment(input.artistLabel),
     },
     key,
     publicUrl: publicCatalogMediaUrl(key),
