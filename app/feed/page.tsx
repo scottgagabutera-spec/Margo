@@ -30,7 +30,7 @@ import { useFeedMemories, useFeedMemoriesGrid } from '@/hooks/useFeedMemories'
 import { MemoryFeedGridTile } from '@/components/memory-feed-grid-tile'
 import { FeedMemoriesGridSkeleton } from '@/components/margo-skeletons'
 import { buildFeedLyricsRows, type FeedLyricsPeopleSlot, type FeedLyricsPostRow, type FeedLyricsRow } from '@/lib/feed-lyrics-mix'
-import { MemoryCard } from '@/components/memory-card'
+import { FeedMemoriesCarousel } from '@/components/feed-memories-carousel'
 import { FeedPeopleStrip } from '@/components/feed-people-strip'
 import { FeedMemoryNudge } from '@/components/feed-memory-nudge'
 import { FeedOceanFooter } from '@/components/feed-ocean-footer'
@@ -727,8 +727,14 @@ function FeedPageInner() {
 
         <div className="margo-feed-post-list">
           {listReady && mixedLyricRows.map((item) => {
-            if (item.kind === 'memory') {
-              return <MemoryCard key={item.key} memory={item.memory} variant="feed" />
+            if (item.kind === 'memory-carousel') {
+              return (
+                <FeedMemoriesCarousel
+                  key={item.key}
+                  memories={item.memories}
+                  hasMore={item.hasMore}
+                />
+              )
             }
             if (item.kind === 'people') {
               return <FeedPeopleStrip key={item.key} people={item.people} />

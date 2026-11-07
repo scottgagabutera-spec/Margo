@@ -4,14 +4,13 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import MargoLogo from '@/components/MargoLogo'
 import { useIdentity } from '@/hooks/useIdentity'
-import { useArtistApplication } from '@/hooks/useArtistApplication'
+import { ProfileAccountMenu } from '@/components/profile-account-menu'
 import { signOutBrowser } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { HubIconButton, SearchNavLink } from '@/components/hub-menu'
 import { LoadingRing } from '@/components/loading-ring'
 import { usePrimaryTab, usePrimaryTabLinkProps } from '@/components/primary-tab-shell'
 import { hidesAppNav, isMessageThreadPath } from '@/lib/chrome-mode'
-import { PendingNavLink } from '@/components/pending-nav-link'
 import { SignInLink } from '@/components/signin-link'
 import { BackButton } from '@/components/back-button'
 import { navBackForPath, useNavBackOverride } from '@/components/nav-back'
@@ -73,13 +72,11 @@ export function MargoNav() {
   const feedLink = usePrimaryTabLinkProps('/feed', 'feed')
   const discoverLink = usePrimaryTabLinkProps('/discover', 'discover')
   const composeLink = usePrimaryTabLinkProps('/compose', 'compose')
-  const youLink = usePrimaryTabLinkProps('/you', 'you')
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false)
-  const avatarMenuRef = useRef<HTMLDivElement>(null)
+  const avatarMenuTriggerRef = useRef<HTMLButtonElement>(null)
   const navElRef = useRef<HTMLElement>(null)
   const { user, identity } = useIdentity()
   const { rehydrate } = useAuthGate()
-  const { application } = useArtistApplication()
   const navBackOverride = useNavBackOverride()
   const pathBack = navBackForPath(pathname)
   const navBack = activeTab === 'you' ? null : (navBackOverride ?? pathBack)
@@ -114,15 +111,6 @@ export function MargoNav() {
     (isMobile && isProfileRoute)
 
   const isSignedIn = !!user && !user.isAnonymous
-  const applicationStatus = application?.status ?? 'none'
-  const showApplyCTA = isSignedIn && !identity?.isArtist
-  const applyLabel =
-    applicationStatus === 'pending' ? 'Application Pending' :
-    applicationStatus === 'rejected' ? 'Reapply as Artist' :
-    'Apply as an Artist'
-
-  const ownProfileHref = identity ? `/you` : null
-
   const handleSignOut = async () => {
     setAvatarMenuOpen(false)
     await signOutBrowser()
@@ -131,17 +119,6 @@ export function MargoNav() {
   }
 
   useEffect(() => { setAvatarMenuOpen(false) }, [pathname])
-
-  useEffect(() => {
-    if (!avatarMenuOpen) return
-    const handleClick = (e: MouseEvent) => {
-      if (avatarMenuRef.current && !avatarMenuRef.current.contains(e.target as Node)) {
-        setAvatarMenuOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [avatarMenuOpen])
 
   // Measures the nav's real rendered height (which changes across
   // breakpoints, font load, etc.) and publishes it as a CSS var on
@@ -162,13 +139,6 @@ export function MargoNav() {
     ro.observe(el)
     return () => ro.disconnect()
   }, [shellHidden])
-
-  const avatarDropdownItems = ownProfileHref ? [
-    { href: ownProfileHref, label: 'Profile' },
-    ...(identity?.isArtist ? [{ href: '/studio', label: 'Studio' }] : []),
-    { href: '/settings', label: 'Account Settings' },
-    ...(showApplyCTA ? [{ href: '/apply-artist', label: applyLabel }] : []),
-  ] : []
 
   if (shellHidden) return null
 
@@ -307,14 +277,15 @@ export function MargoNav() {
               </span>
             ) : null}
 
-            {isSignedIn && identity && ownProfileHref && (
-              <div ref={avatarMenuRef} style={{ position: 'relative', marginLeft: '8px' }}>
+            {isSignedIn && identity ? (
+              <div className="margo-desktop-nav__avatar" style={{ position: 'relative', marginLeft: '8px' }}>
                 <button
+                  ref={avatarMenuTriggerRef}
                   type="button"
-                  onClick={() => setAvatarMenuOpen(o => !o)}
-                  aria-label="You"
+                  onClick={() => setAvatarMenuOpen((o) => !o)}
+                  aria-label="Account menu"
                   aria-expanded={avatarMenuOpen}
-                  aria-haspopup="menu"
+                  aria-haspopup="dialog"
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
@@ -331,59 +302,15 @@ export function MargoNav() {
                     active={isOnYou || avatarMenuOpen}
                   />
                 </button>
-
-                {avatarMenuOpen && (
-                  <div style={{
-                    position: 'absolute', top: 'calc(100% + 10px)', right: 0,
-                    minWidth: '200px', background: 'var(--bg)',
-                    border: '1px solid var(--border)', borderRadius: '10px',
-                    boxShadow: '0 12px 28px rgba(0,0,0,0.45)',
-                    padding: '6px', zIndex: 60,
-                  }}>
-                    {avatarDropdownItems.map(({ href, label }) => (
-                      <PendingNavLink
-                        key={href}
-                        href={href}
-                        indicator="tint"
-                        {...(href === '/you' ? youLink : {})}
-                        onClick={(event) => {
-                          setAvatarMenuOpen(false)
-                          if (href === '/you') youLink.onClick(event)
-                        }}
-                        style={{
-                          display: 'flex', alignItems: 'center',
-                          minHeight: 'var(--margo-touch-min)',
-                          fontFamily: font, fontSize: '0.8rem',
-                          textDecoration: 'none',
-                          color: pathname === href || (href === '/you' && activeTab === 'you') ? 'var(--gold)' : 'rgba(255,255,255,0.75)',
-                          padding: '0 12px', borderRadius: '6px',
-                          boxSizing: 'border-box',
-                          transition: 'background 120ms ease, color 120ms ease',
-                        }}
-                      >
-                        {label}
-                      </PendingNavLink>
-                    ))}
-                    <div style={{ height: '1px', background: 'var(--border)', margin: '6px 4px' }} />
-                    <button
-                      type="button"
-                      onClick={handleSignOut}
-                      style={{
-                        display: 'flex', alignItems: 'center', width: '100%', textAlign: 'left',
-                        minHeight: 'var(--margo-touch-min)',
-                        fontFamily: font, fontSize: '0.8rem',
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        color: 'rgba(255,255,255,0.5)',
-                        padding: '0 12px', borderRadius: '6px',
-                        boxSizing: 'border-box',
-                      }}
-                    >
-                      Sign Out
-                    </button>
-                  </div>
-                )}
+                <ProfileAccountMenu
+                  open={avatarMenuOpen}
+                  onOpenChange={setAvatarMenuOpen}
+                  triggerRef={avatarMenuTriggerRef}
+                  showStudio={!!identity.isArtist}
+                  onSignOut={handleSignOut}
+                />
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

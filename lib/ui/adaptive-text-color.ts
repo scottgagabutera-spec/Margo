@@ -79,3 +79,11 @@ export function adaptiveTextCssColor(choice: AdaptiveTextChoice): string {
 export function adaptiveTextColorOnPhotoScrim(): 'cream' {
   return 'cream'
 }
+
+const PHOTO_SCRIM_TEXT_BASE = '#16120e'
+
+/** Tile titles on photo scrims — prefer gold when contrast passes WCAG. */
+export function adaptiveTitleCssOnPhotoScrim(): string {
+  if (contrastRatio(ADAPTIVE_TEXT_GOLD, PHOTO_SCRIM_TEXT_BASE) >= MIN_CONTRAST) return 'var(--gold)'
+  return ADAPTIVE_TEXT_CREAM
+}

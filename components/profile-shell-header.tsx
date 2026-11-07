@@ -2,7 +2,7 @@
 
 import type { RefObject } from 'react'
 import { BackButton } from '@/components/back-button'
-import { MoreIcon } from '@/components/icons'
+import { MoreIcon, ShareIcon } from '@/components/icons'
 import { ProfileAccountMenu } from '@/components/profile-account-menu'
 
 export function ProfileShellHeader({
@@ -13,6 +13,9 @@ export function ProfileShellHeader({
   accountMenuTriggerRef,
   onSignOut,
   onVisitorMenuOpen,
+  onShare,
+  shareBusy,
+  showShare,
 }: {
   isOwnProfile: boolean
   showStudio: boolean
@@ -21,6 +24,9 @@ export function ProfileShellHeader({
   accountMenuTriggerRef: RefObject<HTMLButtonElement | null>
   onSignOut: () => void
   onVisitorMenuOpen?: () => void
+  onShare?: () => void
+  shareBusy?: boolean
+  showShare?: boolean
 }) {
   return (
     <header className="margo-profile-shell-header" data-testid="profile-shell-header">
@@ -32,6 +38,17 @@ export function ProfileShellHeader({
         )}
       </div>
       <div className="margo-profile-shell-header__trailing">
+        {showShare ? (
+          <button
+            type="button"
+            aria-label="Share profile"
+            disabled={shareBusy}
+            onClick={onShare}
+            className="margo-profile-shell-header__menu-btn"
+          >
+            <ShareIcon size={18} color="var(--text-secondary)" />
+          </button>
+        ) : null}
         {isOwnProfile ? (
           <div className="margo-profile-shell-header__menu">
             <button
