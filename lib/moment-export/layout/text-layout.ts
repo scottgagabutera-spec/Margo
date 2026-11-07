@@ -286,6 +286,40 @@ export function presentLyricTextWithMaxHeight(
   return best
 }
 
+/**
+ * Fit lyric in a box; shrink to fit, then scale up when the block is short.
+ */
+export function presentLyricTextFillRegion(
+  text: string,
+  maxWidth: number,
+  measure: TextMeasureFn,
+  opts: PresentLyricTextWithMaxHeightOptions,
+): LyricPresentation {
+  const fitted = presentLyricTextWithMaxHeight(text, maxWidth, measure, opts)
+  const used = lyricBlockHeightPx(fitted.lines, fitted.fontSize, opts.lineHeight, opts.stanzaGapEm)
+  if (used >= opts.maxHeightPx * 0.72) return fitted
+
+  const cap = Math.max(fitted.fontSize, Math.round(opts.maxFontSize))
+  let best = fitted
+  let bestSize = fitted.fontSize
+  for (let size = fitted.fontSize + 1; size <= cap; size++) {
+    const candidate = presentLyricTextWithMaxHeight(text, maxWidth, measure, {
+      ...opts,
+      maxFontSize: size,
+      minFontSize: Math.min(size, opts.minFontSize),
+    })
+    const h = lyricBlockHeightPx(candidate.lines, candidate.fontSize, opts.lineHeight, opts.stanzaGapEm)
+    if (h <= opts.maxHeightPx) {
+      best = candidate
+      bestSize = candidate.fontSize
+    } else {
+      break
+    }
+  }
+  if (bestSize > fitted.fontSize) return best
+  return fitted
+}
+
 export function truncateToWidth(
   text: string,
   maxWidth: number,

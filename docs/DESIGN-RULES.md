@@ -35,6 +35,10 @@ Giants way · Modern · Premium · Unique for Margo · Long term · User experie
 - Primary icon / chip buttons ~**32px** where possible.
 - Profile **⋯** menu: plain icon, no box; popover anchored under the icon, right-aligned, never over the portrait.
 
+## Adaptive text
+
+- Use `lib/ui/adaptive-text-color.ts` for text on flat fills and memory tile titles (WCAG ≥ 4.5:1). On photos use a dark scrim and cream/white — never gold on gold.
+
 ## Media and egress
 
 - User media in R2 under `users/{userId}/…` (memories, avatars). No internal storage terms in UI.

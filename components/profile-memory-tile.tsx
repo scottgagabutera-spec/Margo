@@ -6,6 +6,8 @@ import { MemoryCoverCaption } from '@/components/memory-cover-caption'
 import { memoryCaptionTitle, memoryDisplayCaption, memoryIsWordsOnly } from '@/lib/memory/display-caption'
 import { memoryGridCoverSource, memoryProfileTileThumbnailUrl } from '@/lib/memory/feed-thumbnail-url'
 import type { MemoryPublic } from '@/lib/memory/types'
+import { MemoryTileTitle } from '@/components/memory-tile-title'
+import { memoryWordsOnlyBackground, memoryWordsOnlySampleColor } from '@/lib/memory/words-only-palette'
 
 export function ProfileMemoryAddTile() {
   return (
@@ -32,9 +34,17 @@ export function ProfileMemoryTile({
       href={`/memory/${memory.id}`}
       className={`margo-profile-memory-tile margo-profile-memory-tile--captioned${wordsOnly ? ' margo-profile-memory-tile--words-only' : ''}`}
       aria-label={label}
+      style={wordsOnly ? { background: memoryWordsOnlyBackground(memory.id) } : undefined}
     >
       {wordsOnly ? (
-        <span className="margo-profile-memory-tile__words-only-title">{wordsTitle}</span>
+        <span className="margo-profile-memory-tile__words-only-title">
+          <MemoryTileTitle
+            text={wordsTitle}
+            variant="words"
+            sampleBg={memoryWordsOnlySampleColor(memory.id)}
+            useLora
+          />
+        </span>
       ) : null}
       {thumb ? (
         <Image

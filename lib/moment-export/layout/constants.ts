@@ -46,7 +46,7 @@ export const STAGE_CARD_LAYOUT_REF = {
     song: {
       fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
       fontSize: 12,
-      fontWeight: 600,
+      fontWeight: 500,
       lineHeight: 1.25,
     },
     artist: {
@@ -85,7 +85,7 @@ export const STAGE_CARD_LAYOUT_REF = {
  * Credits must sit inside the remaining safe rectangle, not on the frame edge.
  */
 export const VERTICAL_SOCIAL_SAFE = {
-  topFraction: 0.14,
+  topFraction: 0.13,
   bottomFraction: 0.20,
   sideFraction: 0.07,
 } as const

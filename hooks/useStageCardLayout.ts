@@ -22,6 +22,8 @@ export interface UseStageCardLayoutArgs {
   format?: StageCardLayoutInput['format']
   layoutVariant?: StageCardLayoutInput['layoutVariant']
   exportAtmosphereId?: StageCardLayoutInput['exportAtmosphereId']
+  outputHeightPx?: number
+  shapeId?: 'square' | 'vertical' | 'wide'
 }
 
 function defaultWidth(): number {
@@ -41,6 +43,17 @@ export function useStageCardLayout(
 
   const width = containerWidth && containerWidth > 0 ? containerWidth : defaultWidth()
 
+  const layoutVariant = args.layoutVariant ?? 'feed'
+  const outputHeightPx = args.outputHeightPx ?? (
+    layoutVariant === 'square'
+      ? width
+      : layoutVariant === 'shorts'
+        ? Math.round(width * (16 / 9))
+        : layoutVariant === 'wide'
+          ? Math.round(width * (9 / 16))
+          : undefined
+  )
+
   const input = useMemo<StageCardLayoutInput>(() => ({
     lyric: args.lyric,
     songTitle: args.songTitle,
@@ -49,6 +62,7 @@ export function useStageCardLayout(
     vibeLabel: args.vibeLabel,
     themeId: args.themeId,
     outputWidthPx: width,
+    outputHeightPx,
     includeVibePill: args.includeVibePill,
     format: args.format,
     layoutVariant: args.layoutVariant,
@@ -64,6 +78,7 @@ export function useStageCardLayout(
     args.format,
     args.layoutVariant,
     args.exportAtmosphereId,
+    outputHeightPx,
     width,
   ])
 

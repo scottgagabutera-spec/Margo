@@ -74,7 +74,9 @@ export default function MemoryDetailPage() {
 
   const toggleResonate = async () => {
     if (!memory || resonateBusy) return
-    if (!requireAuth()) return
+    if (!requireAuth()) {
+      return
+    }
     setResonateBusy(true)
     const prev = memory.viewerResonated
     const prevCount = memory.resonateCount
@@ -87,9 +89,8 @@ export default function MemoryDetailPage() {
       const res = await fetch(`/api/memories/${memory.id}/resonate`, { method: 'POST' })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error((data as { error?: string }).error || 'Could not resonate')
-      if ((data as { memory?: MemoryPublic }).memory) {
-        setMemory((data as { memory: MemoryPublic }).memory)
-      }
+      const fresh = (data as { memory?: MemoryPublic }).memory
+      if (fresh) setMemory(fresh)
     } catch {
       setMemory({ ...memory, viewerResonated: prev, resonateCount: prevCount })
       toast.error('Could not resonate')

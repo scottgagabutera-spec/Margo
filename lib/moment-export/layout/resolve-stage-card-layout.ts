@@ -23,6 +23,7 @@ import type {
   StageCardLayoutInput,
   TextMeasureFn,
 } from '@/lib/moment-export/layout/types'
+import { resolveSocialExportLayout } from '@/lib/moment-export/layout/social-export-layout'
 
 function metaSongFont(size: number, geistFamily: string): string {
   const ref = STAGE_CARD_LAYOUT_REF.meta.song
@@ -93,14 +94,18 @@ export function resolveStageCardLayout(
 ): ResolvedStageCardLayout {
   const W = Math.max(1, input.outputWidthPx)
   const s = stageCardScale(W)
+  const variant = input.layoutVariant ?? (input.format === 'shorts' ? 'shorts' : 'feed')
+  if (variant === 'square' || variant === 'shorts' || variant === 'wide') {
+    return resolveSocialExportLayout(input, measure, geistFamily)
+  }
+
   const theme = resolveExportPaintTheme(input.themeId, input.exportAtmosphereId)
   const ref = STAGE_CARD_LAYOUT_REF
   const format: StageCardFormat = input.format === 'shorts' ? 'shorts' : 'feed'
-  const variant = input.layoutVariant ?? (format === 'shorts' ? 'shorts' : 'feed')
-  const shorts = format === 'shorts' || variant === 'shorts'
-  const isWide = variant === 'wide'
-  const isSquare = variant === 'square'
-  const fixedFrame = shorts || isWide || isSquare
+  const shorts = format === 'shorts'
+  const isWide = false
+  const isSquare = false
+  const fixedFrame = shorts
   const shortsHeight = shorts
     ? Math.round(input.outputHeightPx ?? W * SHORTS_ASPECT)
     : 0

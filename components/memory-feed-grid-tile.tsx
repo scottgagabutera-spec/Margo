@@ -1,18 +1,21 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { MargoAvatar } from '@/components/margo-avatar'
 import { MemoryCoverCaption } from '@/components/memory-cover-caption'
-import { FeedIconHeart } from '@/components/feed-card-icons'
 import { MusicNoteIcon } from '@/components/icons'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { compactArtworkUrl } from '@/lib/compact-artwork-url'
 import { memoryCoverIsSongArt, memoryCaptionTitle, memoryDisplayCaption } from '@/lib/memory/display-caption'
 import { memoryGridCoverSource } from '@/lib/memory/feed-thumbnail-url'
 import type { MemoryPublic } from '@/lib/memory/types'
+import { MemoryResonateButton } from '@/components/memory-resonate-button'
 
-export function MemoryFeedGridTile({ memory }: { memory: MemoryPublic }) {
+export function MemoryFeedGridTile({ memory: initial }: { memory: MemoryPublic }) {
+  const [memory, setMemory] = useState(initial)
+  useEffect(() => setMemory(initial), [initial])
   const { src, isVideo, wordsOnly } = memoryGridCoverSource(memory)
   const caption = memoryDisplayCaption(memory)
   const songArt = memoryCoverIsSongArt(memory)
@@ -63,10 +66,7 @@ export function MemoryFeedGridTile({ memory }: { memory: MemoryPublic }) {
               {memory.songCount > 1 ? String(memory.songCount) : songArt ? '' : null}
             </span>
           </span>
-          <span className="margo-feed-memory-grid-tile__resonate">
-            <FeedIconHeart size={11} />
-            <span>{memory.resonateCount.toLocaleString()}</span>
-          </span>
+          <MemoryResonateButton memory={memory} onMemoryChange={setMemory} compact />
         </span>
       </span>
     </Link>

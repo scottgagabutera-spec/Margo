@@ -19,6 +19,8 @@ import { AtmospherePreviewRoom } from '@/components/atmosphere-layer'
 import { isLivingAtmosphere, type AtmosphereId } from '@/lib/atmosphere'
 import { resolveExportPaintTheme, type StageCardTheme, type StageCardThemeId } from '@/lib/moment/stage-theme'
 import type { MomentShapeId } from '@/lib/moment/types'
+import { shouldShowExportArtist, sentenceCaseLabel } from '@/lib/moment-export/export-copy'
+import { StageSocialCardLayers } from '@/components/stage/stage-social-card-layers'
 
 interface StageMomentCardProps {
   lyric: string
@@ -143,6 +145,10 @@ export function StageMomentCard({
   const [cardWidth, setCardWidth] = useState<number | null>(null)
   const isShorts = shapeId === 'vertical'
   const isWide = shapeId === 'wide'
+  const isSquare = shapeId === 'square'
+  const socialExport = isShorts || isWide || isSquare
+  const displaySong = sentenceCaseLabel(songTitle)
+  const displayArtist = shouldShowExportArtist(artistName) ? sentenceCaseLabel(artistName) : ''
   const stableShortsPaint = isShorts && shortsFeedStableLook
   const paintAtmosphere =
     effectOwnsFill || stableShortsPaint ? atmosphereId : 'still'
@@ -155,15 +161,16 @@ export function StageMomentCard({
 
   const layout = useStageCardLayout({
     lyric,
-    songTitle,
-    artistName,
+    songTitle: displaySong,
+    artistName: displayArtist,
     artworkUrl: artwork,
     vibeLabel,
     themeId: cardThemeId,
     includeVibePill: false,
     format: isShorts ? 'shorts' : 'feed',
-    layoutVariant: isShorts ? 'shorts' : isWide ? 'wide' : 'feed',
+    layoutVariant: isShorts ? 'shorts' : isWide ? 'wide' : 'square',
     exportAtmosphereId: paintAtmosphere,
+    shapeId,
   }, cardWidth)
 
   useLayoutEffect(() => {
@@ -182,15 +189,16 @@ export function StageMomentCard({
     return () => ro.disconnect()
   }, [])
 
-  const shellPadding = layout
-    ? isShorts
+  const shellPadding = layout && socialExport
+    ? {
+        padding: 0,
+        borderRadius: isShorts ? 0 : layout.borderRadius,
+        height: '100%',
+        minHeight: '100%',
+        width: '100%',
+      }
+    : layout
       ? {
-          padding: 0,
-          borderRadius: 0,
-          height: '100%',
-          minHeight: '100%',
-        }
-      : {
           paddingTop: layout.padding.top,
           paddingRight: layout.padding.right,
           paddingBottom: layout.padding.bottom,
@@ -198,12 +206,13 @@ export function StageMomentCard({
           borderRadius: layout.borderRadius,
           minHeight: layout.outputHeight,
         }
-    : {
-        padding: isShorts ? 0 : '20px 52px 18px 20px',
-        borderRadius: isShorts ? 0 : '16px',
-        minHeight: undefined as number | undefined,
-        height: isShorts ? '100%' : undefined,
-      }
+      : {
+          padding: socialExport ? 0 : '20px 52px 18px 20px',
+          borderRadius: socialExport ? 0 : '16px',
+          minHeight: undefined as number | undefined,
+          height: socialExport ? '100%' : undefined,
+          width: socialExport ? '100%' : undefined,
+        }
 
   const shellStyle: CSSProperties = {
     position: 'relative',
@@ -284,7 +293,7 @@ export function StageMomentCard({
   const feedShortsFixedLyric = isShorts && shortsFeedStableLook && hideShortsCreditRow
 
   return (
-    <div ref={cardRef} style={isShorts ? { width: '100%', height: '100%' } : undefined}>
+    <div ref={cardRef} style={socialExport ? { width: '100%', height: '100%' } : undefined}>
       <ComposeLyricCard style={shellStyle}>
         <div aria-hidden style={fillLayerStyle} />
         {!showAtmosphere ? <div aria-hidden style={highlightLayerStyle} /> : null}
@@ -295,7 +304,16 @@ export function StageMomentCard({
             tone={theme.markVariant === 'on-light' ? 'light' : 'dark'}
           />
         ) : null}
-        {brandWatermark ? (
+        {socialExport && layout ? (
+          <StageSocialCardLayers
+            layout={layout}
+            theme={theme}
+            lyricFallback={lyric}
+            songTitle={displaySong}
+            artistName={displayArtist}
+            artwork={artwork}
+          />
+        ) : brandWatermark ? (
           <div
             aria-hidden
             title="From Margo"
@@ -320,8 +338,8 @@ export function StageMomentCard({
           style={{
             position: 'relative',
             zIndex: 2,
-            height: isShorts ? '100%' : undefined,
-            visibility: isShorts && !layout ? 'hidden' : undefined,
+            height: socialExport ? '100%' : undefined,
+            visibility: socialExport && !layout ? 'hidden' : socialExport ? 'hidden' : undefined,
           }}
         >
           <p

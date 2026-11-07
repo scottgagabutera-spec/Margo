@@ -61,7 +61,7 @@ export const THEMES: ExportTheme[] = [
 export const SHAPES = [
   { id: 'square',   label: 'Square',  ratio: '1:1',   w: 1080, h: 1080 },
   { id: 'vertical', label: 'Shorts',  ratio: '9:16',  w: 1080, h: 1920 },
-  { id: 'wide',     label: 'Wide',    ratio: '16:9',  w: 1920, h: 1080 },
+  { id: 'wide',     label: 'Wide',    ratio: '16:9',  w: 1600, h: 900 },
 ]
 
 /* ─── Font loader ────────────────────────────────────────────── */

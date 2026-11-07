@@ -8153,3 +8153,62 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   max-width: 100%;
   text-align: left;
 }
+
+.margo-profile-memory-tile {
+  flex: 0 0 100px;
+  width: 100px;
+  height: 134px;
+  border-radius: 14px;
+}
+@media (min-width: 768px) {
+  .margo-profile-memory-tile {
+    flex: 0 0 140px;
+    width: 140px;
+    height: 186px;
+  }
+}
+.margo-profile-memories-strip__row {
+  gap: 12px;
+  scroll-snap-type: x mandatory;
+  padding-right: 24px;
+}
+.margo-memory-cover-caption--tile .margo-memory-cover-caption__text {
+  display: none;
+}
+.margo-memory-tile-title {
+  display: block;
+  width: 100%;
+  word-break: break-word;
+  text-align: left;
+}
+.margo-profile-memory-tile__words-only-title {
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  box-sizing: border-box;
+}
+.margo-memory-cover-caption--tile {
+  padding: 10px 8px 8px;
+}
+.margo-memory-resonate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.6875rem;
+  cursor: pointer;
+  padding: 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+.margo-memory-resonate-btn[aria-pressed='true'] {
+  color: var(--gold);
+}
+.margo-memory-resonate-btn--compact {
+  min-height: 28px;
+  min-width: 28px;
+}
