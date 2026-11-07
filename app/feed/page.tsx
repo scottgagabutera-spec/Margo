@@ -35,6 +35,14 @@ import { buildFeedPeoplePool } from '@/lib/feed-people-pool'
 import { FeedMemoriesCarousel } from '@/components/feed-memories-carousel'
 import { FeedPeopleStrip } from '@/components/feed-people-strip'
 import { FeedMemoryNudge } from '@/components/feed-memory-nudge'
+import {
+  clearLocalFeedMemoryNudgeDismissed,
+  feedMemoryNudgeDismissedFromSettings,
+  localFeedMemoryNudgeDismissed,
+  mergeFeedMemoryNudgeDismissed,
+  shouldShowMemoryNudge,
+} from '@/lib/feed-memory-nudge-prefs'
+import { fetchWelcomeProfileSnapshot, persistProfileSettings } from '@/lib/welcome-save'
 import { FeedOceanFooter } from '@/components/feed-ocean-footer'
 import { feedRankIds, feedSortScore } from '@/lib/feed-rank'
 import { StoryRing } from '@/components/stories/story-ring'
@@ -453,32 +461,61 @@ function FeedPageInner() {
   }, [feedContentTab, feedLive, loadMoreFeedMemories, feedGridMemories.length])
 
   const [memoryNudgeDismissed, setMemoryNudgeDismissed] = useState(false)
+  const [memoryNudgePrefsReady, setMemoryNudgePrefsReady] = useState(false)
   const [ownMemoryCount, setOwnMemoryCount] = useState<number | null>(null)
-
-  useLayoutEffect(() => {
-    if (typeof window === 'undefined') return
-    try {
-      setMemoryNudgeDismissed(localStorage.getItem('margo-feed-memory-nudge-dismissed') === '1')
-    } catch { /* ignore */ }
-  }, [])
 
   useEffect(() => {
     if (!user?.id) {
       setOwnMemoryCount(null)
+      setMemoryNudgeDismissed(false)
+      setMemoryNudgePrefsReady(false)
       return
     }
     let active = true
-    void supabase
-      .from('memories')
-      .select('id', { count: 'exact', head: true })
-      .eq('owner_profile_id', user.id)
-      .then(({ count }) => {
-        if (active) setOwnMemoryCount(count ?? 0)
-      })
+    setMemoryNudgePrefsReady(false)
+    setOwnMemoryCount(null)
+    void (async () => {
+      const [snap, countRes] = await Promise.all([
+        fetchWelcomeProfileSnapshot(user.id),
+        supabase
+          .from('memories')
+          .select('id', { count: 'exact', head: true })
+          .eq('owner_profile_id', user.id)
+          .is('content_removed_at', null),
+      ])
+      if (!active) return
+      let dismissed = feedMemoryNudgeDismissedFromSettings(snap.settings)
+      const localDismiss = localFeedMemoryNudgeDismissed()
+      if (!dismissed && localDismiss) {
+        dismissed = true
+        void persistProfileSettings(user.id, (cur) => mergeFeedMemoryNudgeDismissed(cur, true))
+        clearLocalFeedMemoryNudgeDismissed()
+      }
+      setMemoryNudgeDismissed(dismissed)
+      setMemoryNudgePrefsReady(true)
+      if (countRes.error) {
+        setOwnMemoryCount(0)
+        return
+      }
+      setOwnMemoryCount(countRes.count ?? 0)
+    })()
     return () => { active = false }
   }, [user?.id, supabase])
 
-  const showMemoryNudge = !!user?.id && ownMemoryCount === 0 && !memoryNudgeDismissed
+  const memoryNudgeDecision = shouldShowMemoryNudge({
+    signedIn: !!user?.id,
+    ownMemoryCount,
+    dismissed: memoryNudgeDismissed,
+  })
+  const showMemoryNudge = memoryNudgeDecision.show
+
+  const dismissMemoryNudge = useCallback(async () => {
+    setMemoryNudgeDismissed(true)
+    if (user?.id) {
+      await persistProfileSettings(user.id, (cur) => mergeFeedMemoryNudgeDismissed(cur, true))
+    }
+    clearLocalFeedMemoryNudgeDismissed()
+  }, [user?.id])
 
   const mixedLyricRows = useMemo((): FeedLyricsRow[] => {
     if (feedContentTab !== 'lyrics') return []
@@ -581,6 +618,8 @@ function FeedPageInner() {
   }
 
   const listReady = feedListReady(seeded, posts.length, loading)
+  const lyricsMixReady =
+    listReady || (memoryNudgePrefsReady && showMemoryNudge)
   const showFeedSkeleton = loading && posts.length === 0 && !seeded
   const hasActiveFilter = selectedVibe !== 'ALL' || selectedSort !== 'NEW'
 
@@ -818,7 +857,7 @@ function FeedPageInner() {
         )}
         {showFeedSkeleton && <FeedPostSkeletonList count={4} />}
 
-        {listReady && lyricPostRows.length === 0 && !mixedLyricRows.some((r) => r.kind === 'memory-nudge') && (
+        {lyricsMixReady && lyricPostRows.length === 0 && !mixedLyricRows.some((r) => r.kind === 'memory-nudge') && (
           <div style={{ textAlign: 'center', padding: '64px 0' }}>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '1rem', marginBottom: '16px' }}>
               {selectedVibe === 'ALL'
@@ -835,7 +874,7 @@ function FeedPageInner() {
         )}
 
         <div className="margo-feed-post-list">
-          {listReady && mixedLyricRows.map((item) => {
+          {lyricsMixReady && mixedLyricRows.map((item) => {
             if (item.kind === 'memory-carousel') {
               return (
                 <FeedMemoriesCarousel
@@ -859,7 +898,7 @@ function FeedPageInner() {
               return (
                 <FeedMemoryNudge
                   key={item.key}
-                  onDismiss={() => setMemoryNudgeDismissed(true)}
+                  onDismiss={() => { void dismissMemoryNudge() }}
                 />
               )
             }

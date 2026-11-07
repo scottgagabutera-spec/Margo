@@ -13,6 +13,13 @@ Code audit on `main` + parity fixes in this PR. Live account matrix should be re
 | Profile Add memory | `isOwnProfile` | **No** |
 | Profile Songs / Studio | `profile.isArtist` | **Yes (intentional)** |
 
+## Create memory nudge root cause (listener vs artist on preview)
+
+| Account (typical) | Cause |
+|-------------------|--------|
+| **Listener** | `showMemoryNudge` stayed false while `ownMemoryCount === null` (count loading) and again while `listReady === false` during feed load, so the mix never included the nudge row. Dismiss was **browser localStorage only** (per device, not per account). |
+| **Artist** | Same code path, but often opened Feed later after posts and count finished loading, so the nudge appeared. Not `isArtist`. |
+
 ## Observed parity gaps (before fix)
 
 1. **Empty feed hid nudge psychologically**: "Quiet for now" showed with 0 posts even when nudge was in the list. Fixed: empty hero hidden when nudge is present.
