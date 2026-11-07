@@ -119,6 +119,7 @@
     "posthog-js": "^1.434.14",
     "react": "^19",
     "react-dom": "^19",
+    "sharp": "^0.35.5",
     "sonner": "^1.7.1"
   },
   "devDependencies": {

@@ -36,6 +36,10 @@ import {
   ProfileSignatureLyricSheet,
   ProfileSignaturePill,
 } from '@/components/profile-signature-pill'
+import {
+  ProfileFavoriteArtistsRow,
+  type ProfileFavoriteArtist,
+} from '@/components/profile-favorite-artists-row'
 
 const supabase = createClient()
 
@@ -168,6 +172,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
   const [avatarLightboxOpen, setAvatarLightboxOpen] = useState(false)
   const [signatureReadOpen, setSignatureReadOpen] = useState(false)
   const [previewSong, setPreviewSong] = useState<SongPreviewSeed | null>(null)
+  const [favoriteArtists, setFavoriteArtists] = useState<ProfileFavoriteArtist[]>([])
 
   // ── Discography — public, live-only catalog for this profile, if
   // they're an artist. Only the total count + a small preview slice are
@@ -332,6 +337,21 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
   }, [profile?.signatureSongId, profile?.signatureLyric])
 
   const isOwnProfile = !!identity && !!profile && identity.username === profile.username
+
+  useEffect(() => {
+    if (!profile?.id) return
+    let active = true
+    void fetch(`/api/profile/favorite-artists?profileId=${encodeURIComponent(profile.id)}`)
+      .then((r) => r.json())
+      .then((data: { favorites?: ProfileFavoriteArtist[] }) => {
+        if (!active) return
+        setFavoriteArtists(data.favorites || [])
+      })
+      .catch(() => {
+        if (active) setFavoriteArtists([])
+      })
+    return () => { active = false }
+  }, [profile?.id])
 
   const signatureLongPress = useLongPress({
     disabled: !isOwnProfile,
@@ -745,6 +765,14 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
 
             <div className="margo-profile-block--actions">
               {renderProfileActions()}
+            </div>
+
+            <div className="margo-profile-block--favorites">
+              <ProfileFavoriteArtistsRow
+                favorites={favoriteArtists}
+                isOwnProfile={isOwnProfile}
+                showEmptyOwnerLink
+              />
             </div>
             </div>
 

@@ -1895,6 +1895,10 @@ html[data-margo-stage] .margo-footer {
   order: 5;
   margin-bottom: 4px;
 }
+.margo-profile-block--favorites {
+  order: 6;
+  margin-bottom: 16px;
+}
 @media (min-width: 835px) and (orientation: landscape) {
   .margo-profile-block--bio {
     order: 5;
@@ -2054,6 +2058,231 @@ html[data-margo-stage] .margo-footer {
   font-size: 0.75rem;
   color: var(--text-secondary);
   margin: 0;
+}
+.margo-profile-favorite-artists__label {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+  text-align: center;
+}
+@media (min-width: 835px) and (orientation: landscape) {
+  .margo-profile-favorite-artists__label {
+    text-align: left;
+  }
+}
+.margo-profile-favorite-artists__row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px 12px;
+}
+@media (min-width: 835px) and (orientation: landscape) {
+  .margo-profile-favorite-artists__row {
+    justify-content: flex-start;
+  }
+}
+.margo-profile-favorite-artists__cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 72px;
+  text-decoration: none;
+  color: inherit;
+}
+.margo-profile-favorite-artists__cell--link {
+  cursor: pointer;
+}
+.margo-profile-favorite-artists__art-wrap {
+  display: block;
+  margin-bottom: 6px;
+}
+.margo-profile-favorite-artists__art {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.margo-profile-favorite-artists__art--empty {
+  display: block;
+}
+.margo-profile-favorite-artists__name {
+  text-align: center;
+  color: var(--text-secondary);
+  line-height: 1.2;
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.margo-profile-favorite-artists__more {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 1px dashed var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.margo-profile-favorite-artists__empty-link {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  display: block;
+  text-align: center;
+}
+.margo-favorite-artists-picker__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.margo-favorite-artists-picker__title {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+.margo-favorite-artists-picker__count {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+.margo-favorite-artists-picker__selected {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.margo-favorite-artists-picker__chip {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 72px;
+  cursor: grab;
+}
+.margo-favorite-artists-picker__chip-art {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.margo-favorite-artists-picker__chip-art--empty {
+  display: block;
+}
+.margo-favorite-artists-picker__chip-name {
+  margin-top: 6px;
+  text-align: center;
+  color: var(--text);
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.margo-favorite-artists-picker__remove {
+  position: absolute;
+  top: -4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 1;
+}
+.margo-favorite-artists-picker__hint {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin: 0 0 14px;
+}
+.margo-favorite-artists-picker__search {
+  width: 100%;
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 0 16px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.82rem;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+}
+.margo-favorite-artists-picker__results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+.margo-favorite-artists-picker__result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.margo-favorite-artists-picker__result-art {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--surface-2);
+}
+.margo-favorite-artists-picker__result-art--empty {
+  display: block;
+}
+.margo-favorite-artists-picker__result-name {
+  flex: 1;
+  min-width: 0;
+  color: var(--text);
+}
+.margo-favorite-artists-picker__on-margo {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--gold-border);
+  flex-shrink: 0;
+}
+.margo-favorite-artists-picker__add {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--gold);
+  color: var(--bg);
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.margo-favorite-artists-picker__add:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 .margo-profile-signature-sheet-backdrop {
   position: fixed;
