@@ -26,7 +26,9 @@ import { useRecentReplays } from '@/hooks/useRecentReplays'
 import { usePostReplays } from '@/hooks/usePostReplays'
 import { usePrimaryTab, restoreActivePrimaryScroll } from '@/components/primary-tab-shell'
 import { FeedPostSkeletonList } from '@/components/margo-skeletons'
-import { useFeedMemories } from '@/hooks/useFeedMemories'
+import { useFeedMemories, useFeedMemoriesGrid } from '@/hooks/useFeedMemories'
+import { MemoryFeedGridTile } from '@/components/memory-feed-grid-tile'
+import { FeedMemoriesGridSkeleton } from '@/components/margo-skeletons'
 import { buildFeedLyricsRows, type FeedLyricsPeopleSlot, type FeedLyricsPostRow, type FeedLyricsRow } from '@/lib/feed-lyrics-mix'
 import { MemoryCard } from '@/components/memory-card'
 import { FeedPeopleStrip } from '@/components/feed-people-strip'
@@ -348,7 +350,29 @@ function FeedPageInner() {
     return out
   }, [posts, user?.id])
 
-  const { memories: feedMemories } = useFeedMemories(feedLive && (feedContentTab === 'lyrics' || feedContentTab === 'memories'))
+  const { memories: feedMemories } = useFeedMemories(feedLive && feedContentTab === 'lyrics')
+  const {
+    memories: feedGridMemories,
+    loading: feedGridLoading,
+    loadingMore: feedGridLoadingMore,
+    hasMore: feedGridHasMore,
+    loadMore: loadMoreFeedMemories,
+  } = useFeedMemoriesGrid(feedLive && feedContentTab === 'memories')
+  const feedMemoriesSentinelRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (feedContentTab !== 'memories' || !feedLive) return
+    const el = feedMemoriesSentinelRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) void loadMoreFeedMemories()
+      },
+      { rootMargin: '320px 0px', threshold: 0 },
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [feedContentTab, feedLive, loadMoreFeedMemories, feedGridMemories.length])
 
   const showMemoryNudge = useMemo(() => {
     if (!user?.id || typeof window === 'undefined') return false
@@ -596,19 +620,31 @@ function FeedPageInner() {
 
       {feedContentTab === 'memories' && (
         <main
-          className="margo-feed-column"
-          style={{ position: 'relative', zIndex: 5, padding: '16px 16px var(--margo-page-padding-bottom)' }}
+          className="margo-feed-column margo-feed-column--memories-grid"
+          style={{ position: 'relative', zIndex: 5, padding: '12px 14px var(--margo-page-padding-bottom)' }}
         >
-          {feedMemories.length === 0 ? (
+          {feedGridLoading && feedGridMemories.length === 0 ? (
+            <FeedMemoriesGridSkeleton count={6} />
+          ) : feedGridMemories.length === 0 ? (
             <p style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.8125rem', color: 'var(--text-muted)', textAlign: 'center', padding: '48px 0' }}>
               No memories in your feed yet.
             </p>
           ) : (
-            <div className="margo-feed-memories-list">
-              {feedMemories.map((m) => (
-                <MemoryCard key={m.id} memory={m} variant="feed" />
-              ))}
-            </div>
+            <>
+              <div className="margo-feed-memories-grid">
+                {feedGridMemories.map((m) => (
+                  <MemoryFeedGridTile key={m.id} memory={m} />
+                ))}
+              </div>
+              {feedGridLoadingMore ? (
+                <div className="margo-feed-memories-grid margo-feed-memories-grid--more" aria-hidden>
+                  <FeedMemoriesGridSkeleton count={3} />
+                </div>
+              ) : null}
+              {feedGridHasMore ? (
+                <div ref={feedMemoriesSentinelRef} className="margo-feed-memories-grid-sentinel" aria-hidden />
+              ) : null}
+            </>
           )}
         </main>
       )}

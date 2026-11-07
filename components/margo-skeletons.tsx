@@ -101,6 +101,21 @@ export function LandingPageSkeleton() {
   )
 }
 
+/** Feed → Memories tab grid (2-up phone, 3-up tablet+). */
+export function FeedMemoriesGridSkeleton({ count = 6 }: { count?: number }) {
+  return (
+    <div className="margo-feed-memories-grid margo-skeleton-pulse-scope" aria-hidden>
+      <PulseStyle />
+      {Array.from({ length: count }, (_, i) => (
+        <div key={i} className="margo-feed-memory-grid-tile margo-feed-memory-grid-tile--skeleton">
+          <div className="margo-feed-memory-grid-tile__art" style={bone({ width: '100%', aspectRatio: '4/5', borderRadius: 12, border: 'none' }, i * 50)} />
+          <div style={bone({ width: '72%', height: 10, borderRadius: 4, border: 'none', marginTop: 8 }, i * 50 + 20)} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 /** Feed-shaped post cards — layout-matched to margo-post-card. */
 export function FeedPostSkeletonList({ count = 4 }: { count?: number }) {
   return (
