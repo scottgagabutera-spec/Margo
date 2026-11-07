@@ -23,6 +23,7 @@ import { MomentShareStudio } from '@/components/moment-share-studio'
 import { MargoSheet } from '@/components/margo-sheet'
 import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle, keyboardSafeSecondaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
 import { useKeyboardSafeChrome } from '@/hooks/useVisualViewport'
+import { useComposeSearchLayout } from '@/hooks/useComposeSearchLayout'
 import { useInlineSearchDropdownMaxHeight } from '@/hooks/useInlineSearchDropdownMaxHeight'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { POST_LINES_MAX } from '@/lib/post-lines'
@@ -190,10 +191,11 @@ function ComposeDismissButton({
 
 const composeOverlayStyle: React.CSSProperties = {
   position: 'fixed',
-  top: 'var(--margo-header-h, var(--nav-height, 72px))',
+  top: 'calc(var(--margo-header-h, var(--nav-height, 72px)) + var(--margo-vv-offset-top, 0px))',
   left: 0,
   right: 0,
   height: 'calc(var(--margo-vv-height, 100dvh) - var(--margo-header-h, var(--nav-height, 72px)))',
+  maxHeight: 'calc(var(--margo-vv-height, 100dvh) - var(--margo-header-h, var(--nav-height, 72px)))',
   zIndex: 80,
   display: 'flex',
   flexDirection: 'column',
@@ -202,7 +204,7 @@ const composeOverlayStyle: React.CSSProperties = {
   paddingRight: '24px',
   paddingTop: '8px',
   boxSizing: 'border-box',
-  overflowY: 'auto',
+  overflowY: 'hidden',
   WebkitOverflowScrolling: 'touch',
 }
 
@@ -391,11 +393,12 @@ function ComposeInner() {
   const [startOverConfirm, setStartOverConfirm] = useState(false)
 
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchFocused, setSearchFocused] = useState(false)
   const [showResults, setShowResults] = useState(false)
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
   const composeSearchWrapRef = useRef<HTMLDivElement | null>(null)
-  const composeDropdownMaxH = useInlineSearchDropdownMaxHeight(composeSearchWrapRef, showResults)
+  const composeDropdownMaxHInline = useInlineSearchDropdownMaxHeight(composeSearchWrapRef, showResults)
   const [selectedSong, setSelectedSong] = useState<SearchResult | null>(null)
   const [artistName, setArtistName] = useState('')
   const [songName, setSongName] = useState('')
@@ -1282,6 +1285,14 @@ function ComposeInner() {
   const showNameBanner = phase === 'moment' && !!identity && identity.displayName === identity.username && !bannerDismissed
   const buttonsBlocked = showNameBanner && editingName
   const showStep1Resume = phase === 'find' && !!selectedSong && (lyric.trim().length > 0 || linePickComplete || committedLines.length > 0)
+  const composeSearchActive =
+    phase === 'find' &&
+    !showStep1Resume &&
+    (searchFocused || showResults || searchQuery.trim().length > 0)
+  const { blockRef: composeSearchBlockRef, dropdownMaxPx: composeSearchDropdownMax } =
+    useComposeSearchLayout(composeSearchActive)
+  const composeListMaxH =
+    composeSearchDropdownMax ?? composeDropdownMaxHInline ?? undefined
   const isMargoCatalogFlow = !!(linkedSongId && (selectedSong?.source === 'margo' || selectedSong?.margoSongId))
   const showLinePicker = phase === 'select' && isMargoCatalogFlow && !linePickComplete
   const showYourLinePanel = phase === 'select' && !showLinePicker
@@ -1302,131 +1313,135 @@ function ComposeInner() {
 
           {/* ── Step 1: Search ── */}
           <div style={{ display: phase === 'find' ? 'block' : 'none' }}>
-            {(committedLines.length > 0 || showStep1Resume) && (
-              <ComposeTopBar
-                onBack={handleFindBack}
-                title={committedLines.length > 0 ? 'Add another line' : undefined}
-                trailing={committedLines.length > 0 ? (
-                  <ComposeDismissButton onClick={handleCancelLine} label="Cancel adding a line" />
-                ) : undefined}
-              />
-            )}
-            {committedLines.length > 0 && (
-              <div style={{
-                marginBottom: '28px', padding: '14px 16px',
-                border: '1px solid var(--border)', borderRadius: '14px',
-                background: 'rgba(255,255,255,0.02)',
-              }}>
-                <p style={{
-                  fontFamily: font, fontSize: '0.58rem', fontWeight: 700,
-                  letterSpacing: '1.5px', textTransform: 'uppercase',
-                  color: 'var(--gold)', marginBottom: '10px',
+            <div ref={composeSearchBlockRef} className="margo-compose-search-shift">
+              {(committedLines.length > 0 || showStep1Resume) && (
+                <ComposeTopBar
+                  onBack={handleFindBack}
+                  title={committedLines.length > 0 ? 'Add another line' : undefined}
+                  trailing={committedLines.length > 0 ? (
+                    <ComposeDismissButton onClick={handleCancelLine} label="Cancel adding a line" />
+                  ) : undefined}
+                />
+              )}
+              {committedLines.length > 0 && (
+                <div style={{
+                  marginBottom: '28px', padding: '14px 16px',
+                  border: '1px solid var(--border)', borderRadius: '14px',
+                  background: 'rgba(255,255,255,0.02)',
                 }}>
-                  Lines so far · {committedLines.length}/{POST_LINES_MAX}
-                </p>
-                {committedLines.map((line, i) => (
-                  <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '8px' }}>
-                    <p style={{
-                      flex: 1, minWidth: 0,
-                      fontFamily: font, fontStyle: 'italic', fontSize: '0.9rem',
-                      color: 'var(--text)', margin: 0, lineHeight: 1.4,
-                    }}>
-                      {i + 1}. &ldquo;{line.lyric}&rdquo;
-                      <span style={{
-                        display: 'block', fontStyle: 'normal', fontSize: '0.6rem',
-                        color: 'var(--text-muted)', letterSpacing: '1px',
-                        textTransform: 'uppercase', marginTop: '4px',
-                      }}>
-                        {line.songName} · {line.artistName}
-                      </span>
-                    </p>
-                    <ComposeDismissButton onClick={() => handleRemoveCommittedLine(i)} label={`Remove line ${i + 1}`} />
-                  </div>
-                ))}
-              </div>
-            )}
-            {showStep1Resume ? (
-              <div style={{ marginBottom: '28px' }}>
-                <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-                  <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: '8px' }}>
-                    {committedLines.length > 0 ? 'Add another line' : 'Your song'}
-                  </h1>
-                  <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', margin: 0 }}>
-                    {songName}{artistName ? (' · ' + artistName) : ''}
-                  </p>
-                </div>
-                {lyric.trim() ? (
                   <p style={{
-                    fontFamily: font, fontStyle: 'italic', fontSize: '0.9rem', color: 'var(--text)',
-                    textAlign: 'center', margin: '0 0 20px', lineHeight: 1.45,
+                    fontFamily: font, fontSize: '0.58rem', fontWeight: 700,
+                    letterSpacing: '1.5px', textTransform: 'uppercase',
+                    color: 'var(--gold)', marginBottom: '10px',
                   }}>
-                    &ldquo;{lyric}&rdquo;
+                    Lines so far · {committedLines.length}/{POST_LINES_MAX}
                   </p>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => setPhase('select')}
-                  style={{
-                    width: '100%', minHeight: 'var(--margo-touch-min)', borderRadius: '50px', border: 'none',
-                    background: 'var(--gold)', color: 'var(--text-on-gold, var(--bg))',
-                    fontFamily: font, fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px',
-                    textTransform: 'uppercase', cursor: 'pointer', marginBottom: '10px',
-                  }}
-                >Continue</button>
-                <button
-                  type="button"
-                  onClick={clearCurrentSongPick}
-                  style={{
-                    width: '100%', minHeight: 'var(--margo-touch-min)', borderRadius: '50px',
-                    border: '1px solid var(--border-hi)', background: 'transparent',
-                    color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.6rem',
-                    letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
-                  }}
-                >Different song</button>
-              </div>
-            ) : (
-              <>
-            <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-              <h1 style={{
-                fontFamily: font,
-                fontStyle: 'italic',
-                fontSize: '1.65rem',
-                lineHeight: 1.35,
-                color: 'var(--text)',
-                margin: 0,
-                maxWidth: '18rem',
-                marginLeft: 'auto',
-                marginRight: 'auto',
-              }}>
-                {committedLines.length > 0 ? 'Add another line' : MARGO_EXPRESSION_TAGLINE}
-              </h1>
-              {committedLines.length === 0 ? (
-                <p style={{ fontFamily: UI_FONT, fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.45, margin: '10px 0 0' }}>
-                  Find a song, pick your line, send when you&apos;re ready.
-                </p>
-              ) : null}
+                  {committedLines.map((line, i) => (
+                    <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '8px' }}>
+                      <p style={{
+                        flex: 1, minWidth: 0,
+                        fontFamily: font, fontStyle: 'italic', fontSize: '0.9rem',
+                        color: 'var(--text)', margin: 0, lineHeight: 1.4,
+                      }}>
+                        {i + 1}. &ldquo;{line.lyric}&rdquo;
+                        <span style={{
+                          display: 'block', fontStyle: 'normal', fontSize: '0.6rem',
+                          color: 'var(--text-muted)', letterSpacing: '1px',
+                          textTransform: 'uppercase', marginTop: '4px',
+                        }}>
+                          {line.songName} · {line.artistName}
+                        </span>
+                      </p>
+                      <ComposeDismissButton onClick={() => handleRemoveCommittedLine(i)} label={`Remove line ${i + 1}`} />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {showStep1Resume ? (
+                <div style={{ marginBottom: '28px' }}>
+                  <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                    <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: '8px' }}>
+                      {committedLines.length > 0 ? 'Add another line' : 'Your song'}
+                    </h1>
+                    <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', margin: 0 }}>
+                      {songName}{artistName ? (' · ' + artistName) : ''}
+                    </p>
+                  </div>
+                  {lyric.trim() ? (
+                    <p style={{
+                      fontFamily: font, fontStyle: 'italic', fontSize: '0.9rem', color: 'var(--text)',
+                      textAlign: 'center', margin: '0 0 20px', lineHeight: 1.45,
+                    }}>
+                      &ldquo;{lyric}&rdquo;
+                    </p>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => setPhase('select')}
+                    style={{
+                      width: '100%', minHeight: 'var(--margo-touch-min)', borderRadius: '50px', border: 'none',
+                      background: 'var(--gold)', color: 'var(--text-on-gold, var(--bg))',
+                      fontFamily: font, fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px',
+                      textTransform: 'uppercase', cursor: 'pointer', marginBottom: '10px',
+                    }}
+                  >Continue</button>
+                  <button
+                    type="button"
+                    onClick={clearCurrentSongPick}
+                    style={{
+                      width: '100%', minHeight: 'var(--margo-touch-min)', borderRadius: '50px',
+                      border: '1px solid var(--border-hi)', background: 'transparent',
+                      color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.6rem',
+                      letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
+                    }}
+                  >Different song</button>
+                </div>
+              ) : (
+                <>
+                  <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+                    <h1 style={{
+                      fontFamily: font,
+                      fontStyle: 'italic',
+                      fontSize: '1.65rem',
+                      lineHeight: 1.35,
+                      color: 'var(--text)',
+                      margin: 0,
+                      maxWidth: '18rem',
+                      marginLeft: 'auto',
+                      marginRight: 'auto',
+                    }}>
+                      {committedLines.length > 0 ? 'Add another line' : MARGO_EXPRESSION_TAGLINE}
+                    </h1>
+                    {committedLines.length === 0 ? (
+                      <p style={{ fontFamily: UI_FONT, fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.45, margin: '10px 0 0' }}>
+                        Find a song, pick your line, send when you&apos;re ready.
+                      </p>
+                    ) : null}
+                  </div>
+                  <div ref={composeSearchWrapRef} style={{ position: 'relative', zIndex: showResults ? 60 : 50 }}>
+                    <MargoSearchInput
+                      value={searchQuery}
+                      onChange={handleSearchChange}
+                      loading={searchLoading}
+                      hintText={MARGO_SEARCH_HINT_CATALOG}
+                      ariaLabel={MARGO_SEARCH_HINT_CATALOG}
+                      stackAboveOverlay={showResults}
+                      onFocus={() => setSearchFocused(true)}
+                      onBlur={() => setSearchFocused(false)}
+                    />
+                    <ComposeSearchDropdown
+                      open={showResults}
+                      loading={searchLoading}
+                      results={searchResults}
+                      highlightQuery={searchQuery}
+                      onSelect={handleSelectSong}
+                      onClose={() => setShowResults(false)}
+                      listMaxHeightPx={composeListMaxH}
+                    />
+                  </div>
+                </>
+              )}
             </div>
-            <div ref={composeSearchWrapRef} style={{ position: 'relative', zIndex: showResults ? 60 : 50 }}>
-              <MargoSearchInput
-                value={searchQuery}
-                onChange={handleSearchChange}
-                loading={searchLoading}
-                hintText={MARGO_SEARCH_HINT_CATALOG}
-                ariaLabel={MARGO_SEARCH_HINT_CATALOG}
-                stackAboveOverlay={showResults}
-              />
-              <ComposeSearchDropdown
-                open={showResults}
-                loading={searchLoading}
-                results={searchResults}
-                highlightQuery={searchQuery}
-                onSelect={handleSelectSong}
-                onClose={() => setShowResults(false)}
-                listMaxHeightPx={composeDropdownMaxH ?? undefined}
-              />
-            </div>
-              </>
-            )}
           </div>
 
           {/* Step 2 UI is portaled (line picker + Your line) — see below main */}
@@ -1578,29 +1593,31 @@ function ComposeInner() {
 
       {portalMounted && showLinePicker && createPortal(
         <div
-          className="margo-compose-overlay"
-          style={{
-            ...composeOverlayStyle,
-            paddingBottom: 'calc(var(--margo-cta-bar-h, 0px) + var(--margo-tabbar-h, 80px) + 16px)',
-          }}
+          className="margo-compose-overlay margo-compose-overlay--picker"
+          style={composeOverlayStyle}
         >
-          <div style={{ maxWidth: '640px', width: '100%', margin: '0 auto' }}>
-            <ComposeTopBar
-              onBack={handleLinePickerBack}
-              title="Pick the line"
-              trailing={<ComposeDismissButton onClick={handleCancelLine} label="Cancel line" />}
-            />
-            {songName && (
-              <ComposeStickySongRow
-                title={songName}
-                artist={artistName}
-                artwork={selectedSong?.artwork}
-                onClear={handleClearSongPick}
-                onChangeSong={handleChangeSong}
+          <div className="margo-compose-overlay__stack" style={{ maxWidth: '640px', width: '100%', margin: '0 auto' }}>
+            <div style={{ flexShrink: 0 }}>
+              <ComposeTopBar
+                onBack={handleLinePickerBack}
+                title="Pick the line"
+                trailing={<ComposeDismissButton onClick={handleCancelLine} label="Cancel line" />}
               />
-            )}
+              {songName && (
+                <ComposeStickySongRow
+                  flushHeader
+                  title={songName}
+                  artist={artistName}
+                  artwork={selectedSong?.artwork}
+                  onClear={handleClearSongPick}
+                  onChangeSong={handleChangeSong}
+                />
+              )}
+            </div>
+            <div className="margo-compose-overlay__scroll">
             <ComposeLinePicker
               hideHeader
+              fillAvailable
               lines={margoLines}
               loading={linesLoading}
               songTitle={songName}
@@ -1643,6 +1660,7 @@ function ComposeInner() {
               }
               onBack={handleLinePickerBack}
             />
+            </div>
           </div>
         </div>,
         document.body,
@@ -1779,36 +1797,36 @@ function ComposeInner() {
 
       {portalMounted && showYourLinePanel && createPortal(
         <div
-          className="margo-compose-overlay"
-          style={{
-            ...composeOverlayStyle,
-            overflowY: 'hidden',
-          }}
+          className="margo-compose-overlay margo-compose-overlay--your-line"
+          style={composeOverlayStyle}
         >
-          <div style={{ maxWidth: '640px', width: '100%', margin: '0 auto', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            <ComposeTopBar
-              onBack={handleYourLineBack}
-              title="Your line"
-              keyboardCompact
-              chromeHidden={chromeHidden}
-              trailing={<ComposeDismissButton onClick={handleCancelLine} label="Cancel line" />}
-            />
-            {songName && (
-              <ComposeStickySongRow
-                title={songName}
-                artist={artistName}
-                artwork={selectedSong?.artwork}
-                onClear={handleClearSongPick}
-                onChangeSong={handleChangeSong}
+          <div className="margo-compose-overlay__stack" style={{ maxWidth: '640px', width: '100%', margin: '0 auto' }}>
+            <div style={{ flexShrink: 0 }}>
+              <ComposeTopBar
+                onBack={handleYourLineBack}
+                title="Your line"
+                keyboardCompact
+                chromeHidden={chromeHidden}
+                trailing={<ComposeDismissButton onClick={handleCancelLine} label="Cancel line" />}
               />
-            )}
+              {songName && (
+                <ComposeStickySongRow
+                  flushHeader
+                  title={songName}
+                  artist={artistName}
+                  artwork={selectedSong?.artwork}
+                  onClear={handleClearSongPick}
+                  onChangeSong={handleChangeSong}
+                />
+              )}
+            </div>
 
-            <ComposeLyricCard style={{
-              flex: 1, minHeight: 0, overflow: 'hidden',
-              display: 'flex', flexDirection: 'column',
-              padding: chromeHidden ? '18px 20px' : '20px',
-              transition: `padding ${composeChromeEase}`,
-            }}>
+            <ComposeLyricCard
+              className="margo-compose-your-line-card"
+              style={{
+                padding: chromeHidden ? '18px 20px' : '20px',
+              }}
+            >
               <div style={{
                 flexShrink: 0,
                 display: 'flex',
@@ -1893,17 +1911,6 @@ function ComposeInner() {
                 <span style={{ fontFamily: UI_FONT, fontSize: '0.65rem', color: 'var(--text-on-gold-muted)' }}>{lyric.length}/140</span>
               </div>
             </ComposeLyricCard>
-
-            <div
-              aria-hidden
-              style={{
-                flexShrink: 0,
-                height: chromeHidden
-                  ? 'var(--margo-cta-bar-h, 0px)'
-                  : 'calc(var(--margo-cta-bar-h, 0px) + var(--margo-tabbar-h, 80px) + 24px)',
-                transition: `height ${composeChromeEase}`,
-              }}
-            />
           </div>
         </div>,
         document.body,
