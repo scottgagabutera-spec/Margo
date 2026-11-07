@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { createClient } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useForegroundCatchup } from '@/hooks/useForegroundCatchup'
+import { WELCOME_SERIES_REFRESH_EVENT } from '@/lib/welcome-series/client-sync'
 
 // Cookie-session client (Phase 4 bridge). Reads/writes notifications under
 // RLS require the JWT from the auth cookie — the old localStorage client 401s.
@@ -190,6 +191,13 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useForegroundCatchup(refetch, !!userId)
+
+  useEffect(() => {
+    if (!userId) return
+    const onRefresh = () => { void refetch() }
+    window.addEventListener(WELCOME_SERIES_REFRESH_EVENT, onRefresh)
+    return () => window.removeEventListener(WELCOME_SERIES_REFRESH_EVENT, onRefresh)
+  }, [userId, refetch])
 
   useEffect(() => {
     if (authLoading) return
