@@ -8037,3 +8037,119 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   color: var(--text-muted);
   margin-bottom: 4px;
 }
+
+.margo-memory-entry-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.margo-memory-entry-choices__btn {
+  min-height: var(--margo-touch-min);
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.margo-memory-entry-choices__btn--active {
+  border-color: var(--gold);
+  background: var(--gold-faint);
+  color: var(--gold);
+}
+.margo-profile-memory-tile--words-only {
+  background: linear-gradient(145deg, #14121a 0%, #0b0a0f 55%, rgba(232, 197, 71, 0.12) 100%);
+  justify-content: center;
+  align-items: center;
+  padding: 8px;
+}
+.margo-profile-memory-tile__words-only-title,
+.margo-feed-memory-grid-tile__img--words-only {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.625rem;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--gold);
+  text-align: center;
+  word-break: break-word;
+  padding: 8px;
+  box-sizing: border-box;
+}
+.margo-feed-memory-grid-tile__img--words-only {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(145deg, #14121a 0%, #0b0a0f 60%, rgba(232, 197, 71, 0.1) 100%);
+}
+.margo-memory-ai-assist {
+  margin: 8px 0 12px;
+}
+.margo-memory-ai-assist__trigger {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--gold);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.margo-memory-ai-assist__trigger--busy {
+  opacity: 0.65;
+  cursor: wait;
+}
+.margo-memory-ai-assist__card {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--gold-border);
+  background: var(--gold-faint);
+}
+.margo-memory-ai-assist__card-text {
+  margin: 0 0 8px;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--text);
+}
+.margo-memory-ai-assist__card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.margo-memory-ai-assist__card-actions button {
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.margo-memory-ai-assist__err {
+  margin: 4px 0 0;
+  color: var(--destructive);
+}
+.margo-memory-ai-title-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.margo-memory-ai-title-chips__chip {
+  border: 1px solid var(--gold-border);
+  background: var(--gold-faint);
+  color: var(--gold);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  max-width: 100%;
+  text-align: left;
+}

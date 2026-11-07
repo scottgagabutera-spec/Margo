@@ -1,7 +1,9 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
+import { MemoryMediaSourceSheet } from '@/components/memory-media-source-sheet'
+import { PortraitAvatarCropSheet } from '@/components/portrait-avatar-crop-sheet'
 import {
   MAX_MEMORY_MEDIA,
   reorderMemoryPhotos,
@@ -23,7 +25,9 @@ export function MemoryMediaPicker({
 }) {
   const [uploading, setUploading] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [cropFile, setCropFile] = useState<File | null>(null)
+  const [cropOpen, setCropOpen] = useState(false)
 
   const addFile = async (file: File) => {
     if (photos.length >= MAX_MEMORY_MEDIA || uploading) return
@@ -113,21 +117,33 @@ export function MemoryMediaPicker({
             className="margo-memory-media-picker__add"
             disabled={uploading}
             aria-label="Add photo or video"
-            onClick={() => inputRef.current?.click()}
+            onClick={() => setSheetOpen(true)}
           >
             {uploading ? '…' : '+'}
           </button>
         ) : null}
       </div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
-        hidden
-        onChange={(e) => {
-          const f = e.target.files?.[0]
-          e.target.value = ''
-          if (f) void addFile(f)
+      <MemoryMediaSourceSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        onFile={(file) => {
+          const isVideo = file.type.startsWith('video/') || /\.(mp4|webm)$/i.test(file.name)
+          if (isVideo) {
+            void addFile(file)
+            return
+          }
+          setCropFile(file)
+          setCropOpen(true)
+        }}
+      />
+      <PortraitAvatarCropSheet
+        open={cropOpen}
+        onOpenChange={setCropOpen}
+        file={cropFile}
+        onConfirm={(cropped) => {
+          setCropOpen(false)
+          setCropFile(null)
+          void addFile(cropped)
         }}
       />
     </div>

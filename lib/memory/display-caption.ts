@@ -37,3 +37,8 @@ export function memoryDisplayCaption(memory: MemoryPublic): string {
 export function memoryCoverIsSongArt(memory: MemoryPublic): boolean {
   return (memory.photos?.length ?? 0) < 1
 }
+
+/** Typographic tile when no songs and no user media. */
+export function memoryIsWordsOnly(memory: MemoryPublic): boolean {
+  return memory.songCount === 0 && (memory.photos?.length ?? 0) === 0
+}

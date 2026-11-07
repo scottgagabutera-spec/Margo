@@ -8,18 +8,22 @@ import { FeedIconHeart } from '@/components/feed-card-icons'
 import { MusicNoteIcon } from '@/components/icons'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { compactArtworkUrl } from '@/lib/compact-artwork-url'
-import { memoryCoverIsSongArt, memoryDisplayCaption } from '@/lib/memory/display-caption'
+import { memoryCoverIsSongArt, memoryCaptionTitle, memoryDisplayCaption } from '@/lib/memory/display-caption'
 import { memoryGridCoverSource } from '@/lib/memory/feed-thumbnail-url'
 import type { MemoryPublic } from '@/lib/memory/types'
 
 export function MemoryFeedGridTile({ memory }: { memory: MemoryPublic }) {
-  const { src, isVideo } = memoryGridCoverSource(memory)
+  const { src, isVideo, wordsOnly } = memoryGridCoverSource(memory)
   const caption = memoryDisplayCaption(memory)
   const songArt = memoryCoverIsSongArt(memory)
   return (
     <Link href={`/memory/${memory.id}`} className="margo-feed-memory-grid-tile" aria-label={caption}>
       <span className="margo-feed-memory-grid-tile__art">
-        {src ? (
+        {wordsOnly ? (
+          <span className="margo-feed-memory-grid-tile__img margo-feed-memory-grid-tile__img--words-only">
+            {memoryCaptionTitle(memory)}
+          </span>
+        ) : src ? (
           <Image
             src={src}
             alt=""

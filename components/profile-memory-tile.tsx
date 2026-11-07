@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { MemoryCoverCaption } from '@/components/memory-cover-caption'
-import { memoryDisplayCaption } from '@/lib/memory/display-caption'
+import { memoryCaptionTitle, memoryDisplayCaption, memoryIsWordsOnly } from '@/lib/memory/display-caption'
 import { memoryGridCoverSource, memoryProfileTileThumbnailUrl } from '@/lib/memory/feed-thumbnail-url'
 import type { MemoryPublic } from '@/lib/memory/types'
 
@@ -23,15 +23,19 @@ export function ProfileMemoryTile({
   priority?: boolean
 }) {
   const label = memoryDisplayCaption(memory)
-  const { src, isVideo } = memoryGridCoverSource(memory)
-  const thumb = memoryProfileTileThumbnailUrl(src || memory.coverUrl)
+  const { src, isVideo, wordsOnly } = memoryGridCoverSource(memory)
+  const thumb = wordsOnly ? '' : memoryProfileTileThumbnailUrl(src || memory.coverUrl)
+  const wordsTitle = memoryCaptionTitle(memory)
 
   return (
     <Link
       href={`/memory/${memory.id}`}
-      className="margo-profile-memory-tile margo-profile-memory-tile--captioned"
+      className={`margo-profile-memory-tile margo-profile-memory-tile--captioned${wordsOnly ? ' margo-profile-memory-tile--words-only' : ''}`}
       aria-label={label}
     >
+      {wordsOnly ? (
+        <span className="margo-profile-memory-tile__words-only-title">{wordsTitle}</span>
+      ) : null}
       {thumb ? (
         <Image
           src={thumb}
@@ -48,7 +52,7 @@ export function ProfileMemoryTile({
           ▶
         </span>
       ) : null}
-      <MemoryCoverCaption memory={memory} variant="tile" />
+      {wordsOnly ? null : <MemoryCoverCaption memory={memory} variant="tile" />}
     </Link>
   )
 }
