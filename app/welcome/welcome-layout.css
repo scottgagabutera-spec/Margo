@@ -59,6 +59,15 @@
   align-items: center;
 }
 
+.margo-welcome-footer__row--step4-artist {
+  grid-template-columns: auto 1fr auto;
+}
+
+.margo-welcome-footer__row--step4-artist .margo-welcome-text-btn {
+  justify-self: end;
+  white-space: nowrap;
+}
+
 .margo-welcome-next--wide {
   justify-self: stretch;
   width: 100%;
@@ -333,6 +342,11 @@
   margin-left: 16px;
   margin-bottom: 12px;
   width: fit-content;
+}
+
+.margo-welcome-avatar-stack--solo {
+  margin-top: 8px;
+  margin-left: 0;
 }
 
 .margo-welcome-camera-badge {

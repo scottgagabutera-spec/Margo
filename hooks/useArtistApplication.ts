@@ -35,6 +35,7 @@ export interface ArtistApplication {
 interface ActionResult {
   success: boolean
   error?: string
+  status?: 'pending' | 'approved'
 }
 
 interface SubmitInput {
@@ -224,8 +225,10 @@ export function useArtistApplication() {
           return { success: false, error: result.error || 'Could not submit application.' }
         }
 
+        const nextStatus = (result.status === 'approved' ? 'approved' : 'pending') as 'pending' | 'approved'
+
         setApplication({
-          status: result.status,
+          status: nextStatus,
           applicantType: data.applicantType,
           displayArtistName: name,
           links: data.links,
@@ -237,11 +240,11 @@ export function useArtistApplication() {
         // Server-side trigger already flipped profiles.is_artist = true
         // on approval — pull it into identity state now so the UI
         // reflects it immediately instead of on next sign-in.
-        if (result.status === 'approved') {
+        if (nextStatus === 'approved') {
           await refreshIdentity()
         }
 
-        return { success: true }
+        return { success: true, status: nextStatus }
       } catch {
         return { success: false, error: 'Could not reach the server. Try again.' }
       }

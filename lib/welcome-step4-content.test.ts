@@ -9,8 +9,16 @@ test('step 4 defaults to listener when role skipped', () => {
 test('step 4 cards never exceed four per role', () => {
   for (const role of ['listener', 'artist'] as const) {
     assert.ok(welcomeStep4Cards(role).length <= 4)
-    assert.equal(welcomeStep4Cards(role).at(-1)?.id, 'complete-profile')
   }
+})
+
+test('listener step 4 ends with complete profile card', () => {
+  assert.equal(welcomeStep4Cards('listener').at(-1)?.id, 'complete-profile')
+})
+
+test('artist step 4 has three verification steps', () => {
+  assert.equal(welcomeStep4Cards('artist').length, 3)
+  assert.ok(!welcomeStep4Cards('artist').some((c) => c.id === 'complete-profile'))
 })
 
 test('saved both maps to artist cards via resolveWelcomeStep4Role', () => {

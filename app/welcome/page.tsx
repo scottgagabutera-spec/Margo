@@ -54,6 +54,7 @@ import {
   resolveWelcomeStep4Role,
   welcomeStep4Cards,
   welcomeStep4Subtitle,
+  welcomeStep4Title,
 } from '@/lib/welcome-step4-content'
 import { welcomeVibesHintMessage } from '@/lib/welcome-vibes-hint'
 import { welcomeAdvanceStepOptimistic } from '@/lib/welcome-step-navigation'
@@ -561,16 +562,16 @@ function WelcomePageInner() {
     )
   }
 
-  const finishWelcome = () => {
+  const finishWelcome = (destination: '/feed' | '/apply-artist' = '/feed') => {
     if (finishing) return
     setFinishing(true)
     void (async () => {
       const FINISH_TIMEOUT_MS = 8000
       let navigated = false
-      const goFeed = () => {
+      const goNext = () => {
         if (navigated) return
         navigated = true
-        completeAuthNavigation('/feed')
+        completeAuthNavigation(destination)
       }
 
       const persistCompletedAt = async () => {
@@ -593,7 +594,7 @@ function WelcomePageInner() {
         void (async () => {
           await persistCompletedAt()
           await flushWelcomeSeriesAfterOnboarding()
-          goFeed()
+          goNext()
         })()
       }, FINISH_TIMEOUT_MS)
 
@@ -608,12 +609,12 @@ function WelcomePageInner() {
           await persistCompletedAt()
           await flushWelcomeSeriesAfterOnboarding()
         }
-        goFeed()
+        goNext()
       } catch {
         window.clearTimeout(timeoutId)
         await persistCompletedAt().catch(() => undefined)
         await flushWelcomeSeriesAfterOnboarding()
-        goFeed()
+        goNext()
       }
     })()
   }
@@ -892,7 +893,7 @@ function WelcomePageInner() {
                     fontWeight: 600,
                     margin: '0 0 8px',
                   }}>
-                    Add your photos
+                    Add your photo
                   </h1>
                   <SavedFlash visible={savedFlash && step === 2} />
                 </div>
@@ -902,58 +903,11 @@ function WelcomePageInner() {
                   color: 'var(--text-secondary)',
                   margin: 0,
                 }}>
-                  Optional. You can add or change them later.
+                  Optional profile photo. You can add or change it later.
                 </p>
               </header>
 
-              <button
-                type="button"
-                className="margo-welcome-cover"
-                data-margo-welcome-cover
-                aria-label={coverPreview ? 'Change cover photo' : 'Add cover photo'}
-                onClick={() => openPhotoPicker('cover')}
-              >
-                {coverUploadState === 'uploading' ? (
-                  <span className="margo-welcome-upload-badge" aria-hidden>
-                    <LoadingRing size={22} strokeWidth={2} state="spinning" />
-                  </span>
-                ) : null}
-                {coverUploadState === 'done' ? (
-                  <span className="margo-welcome-upload-badge margo-welcome-upload-badge--ok" aria-hidden>
-                    <CheckIcon />
-                  </span>
-                ) : null}
-                {coverPreview ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={coverPreview} alt="" className="margo-welcome-cover__img" />
-                ) : (
-                  <span style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    height: '100%',
-                    color: 'var(--text-muted)',
-                    fontFamily: ui,
-                    fontSize: TYPE.secondary,
-                  }}>
-                    <CameraIcon />
-                    Add cover
-                  </span>
-                )}
-              </button>
-              {coverUploadError ? (
-                <button
-                  type="button"
-                  className="margo-welcome-retry-btn"
-                  onClick={() => openPhotoPicker('cover')}
-                >
-                  <XIcon />
-                  {'Couldn\u2019t upload. Try again.'}
-                </button>
-              ) : null}
-
-              <div className="margo-welcome-avatar-stack">
+              <div className="margo-welcome-avatar-stack margo-welcome-avatar-stack--solo">
                 <button
                   type="button"
                   data-margo-welcome-avatar
@@ -1127,7 +1081,7 @@ function WelcomePageInner() {
                   fontWeight: 600,
                   margin: '0 0 8px',
                 }}>
-                  {'You\u2019re in'}
+                  {welcomeStep4Title(step4Role)}
                 </h1>
                 <p style={{
                   fontFamily: ui,
@@ -1189,24 +1143,56 @@ function WelcomePageInner() {
           ) : null}
 
           {step === 4 ? (
-            <div className="margo-welcome-footer__row margo-welcome-footer__row--step4">
+            <div
+              className={`margo-welcome-footer__row margo-welcome-footer__row--step4${step4Role === 'artist' ? ' margo-welcome-footer__row--step4-artist' : ''}`}
+            >
               <BackButton onClick={() => goStep(3)} />
-              <button
-                type="button"
-                data-margo-welcome-feed
-                className={`margo-welcome-next margo-welcome-next--wide${finishing ? ' margo-welcome-next--busy' : ''}`}
-                disabled={finishing}
-                onClick={finishWelcome}
-              >
-                {finishing ? (
-                  <>
-                    <LoadingRing size={18} strokeWidth={2} state="spinning" color="var(--bg)" />
-                    Saving…
-                  </>
-                ) : (
-                  'Go to Feed'
-                )}
-              </button>
+              {step4Role === 'artist' ? (
+                <>
+                  <button
+                    type="button"
+                    data-margo-welcome-apply
+                    className={`margo-welcome-next margo-welcome-next--wide${finishing ? ' margo-welcome-next--busy' : ''}`}
+                    disabled={finishing}
+                    onClick={() => finishWelcome('/apply-artist')}
+                  >
+                    {finishing ? (
+                      <>
+                        <LoadingRing size={18} strokeWidth={2} state="spinning" color="var(--bg)" />
+                        Saving…
+                      </>
+                    ) : (
+                      'Start application'
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    data-margo-welcome-feed
+                    className="margo-welcome-text-btn"
+                    disabled={finishing}
+                    onClick={() => finishWelcome('/feed')}
+                  >
+                    Go to Feed
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  data-margo-welcome-feed
+                  className={`margo-welcome-next margo-welcome-next--wide${finishing ? ' margo-welcome-next--busy' : ''}`}
+                  disabled={finishing}
+                  onClick={() => finishWelcome('/feed')}
+                >
+                  {finishing ? (
+                    <>
+                      <LoadingRing size={18} strokeWidth={2} state="spinning" color="var(--bg)" />
+                      Saving…
+                    </>
+                  ) : (
+                    'Go to Feed'
+                  )}
+                </button>
+              )}
             </div>
           ) : null}
         </footer>

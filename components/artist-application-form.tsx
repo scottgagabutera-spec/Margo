@@ -1,8 +1,8 @@
 'use client'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Link from 'next/link'
+import { CheckIcon } from '@/components/icons'
 import {
-  useArtistApplication,
   generateVerificationCode,
   type ArtistApplicationLinks,
   type ApplicantType,
@@ -53,12 +53,28 @@ const goldBtn: React.CSSProperties = {
   cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
 }
 
+type SubmitFn = (data: {
+  applicantType: ApplicantType
+  displayArtistName: string
+  links: ArtistApplicationLinks
+  note?: string
+  rightsAgreed: boolean
+  sunoVerification: { code: string } | null
+}) => Promise<{ success: boolean; error?: string; status?: 'pending' | 'approved' }>
+
 interface ArtistApplicationFormProps {
-  onSubmitted?: () => void
+  submitArtistApplication: SubmitFn
+  verifySunoLink: (sunoUrl: string, code: string) => Promise<{ success: boolean; error?: string }>
+  importLinktree: (url: string) => Promise<{ success: boolean; links?: Partial<ArtistApplicationLinks>; error?: string }>
+  onSuccess?: (status: 'pending' | 'approved') => void
 }
 
-export function ArtistApplicationForm({ onSubmitted }: ArtistApplicationFormProps) {
-  const { submitArtistApplication, verifySunoLink, importLinktree } = useArtistApplication()
+export function ArtistApplicationForm({
+  submitArtistApplication,
+  verifySunoLink,
+  importLinktree,
+  onSuccess,
+}: ArtistApplicationFormProps) {
 
   const [applicantType, setApplicantType] = useState<ApplicantType>('independent')
   const [displayArtistName, setDisplayArtistName] = useState('')
@@ -67,6 +83,9 @@ export function ArtistApplicationForm({ onSubmitted }: ArtistApplicationFormProp
   const [rightsAgreed, setRightsAgreed] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const submitLock = useRef(false)
+  const errorRef = useRef<HTMLParagraphElement | null>(null)
 
   const [linktreeUrl, setLinktreeUrl] = useState('')
   const [linktreeStatus, setLinktreeStatus] = useState<{ kind: 'idle' | 'loading' | 'success' | 'error'; message?: string }>({ kind: 'idle' })
@@ -108,7 +127,7 @@ export function ArtistApplicationForm({ onSubmitted }: ArtistApplicationFormProp
     const count = Object.keys(result.links).length
     setLinktreeStatus({
       kind: 'success',
-      message: count > 0 ? `Imported ${count} link${count === 1 ? '' : 's'} — review below.` : 'No matching links found.',
+      message: count > 0 ? `Imported ${count} link${count === 1 ? '' : 's'}. Review below.` : 'No matching links found.',
     })
   }
 
@@ -131,7 +150,7 @@ export function ArtistApplicationForm({ onSubmitted }: ArtistApplicationFormProp
     setSunoVerifying(false)
     if (!result.success) {
       setSunoVerified(false)
-      setSunoStatus({ kind: 'error', message: result.error || "Couldn't confirm that yet — make sure the code is saved in your bio." })
+      setSunoStatus({ kind: 'error', message: result.error || "Couldn't confirm that yet. Make sure the code is saved in your bio." })
       return
     }
     setSunoVerified(true)
@@ -139,6 +158,8 @@ export function ArtistApplicationForm({ onSubmitted }: ArtistApplicationFormProp
   }
 
   const handleSubmit = async () => {
+    if (submitLock.current || loading || submitted) return
+    submitLock.current = true
     setError('')
     setLoading(true)
     // Same safety net on final submit — the stored link should always be
@@ -156,11 +177,17 @@ export function ArtistApplicationForm({ onSubmitted }: ArtistApplicationFormProp
       sunoVerification: sunoVerified && sunoCode ? { code: sunoCode } : null,
     })
     setLoading(false)
+    submitLock.current = false
     if (!result.success) {
       setError(result.error || 'Something went wrong. Please try again.')
+      requestAnimationFrame(() => {
+        errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      })
       return
     }
-    onSubmitted?.()
+    setSubmitted(true)
+    const status = result.status === 'approved' ? 'approved' : 'pending'
+    onSuccess?.(status)
   }
 
   return (
@@ -229,7 +256,7 @@ export function ArtistApplicationForm({ onSubmitted }: ArtistApplicationFormProp
               )}
             </div>
             <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', marginBottom: sunoCode ? '12px' : 0 }}>
-              Just your handle works — no need to paste the full link.
+              Just your handle works. No need to paste the full link.
             </p>
             {sunoCode && !sunoVerified && (
               <div>
@@ -241,12 +268,12 @@ export function ArtistApplicationForm({ onSubmitted }: ArtistApplicationFormProp
                 </div>
                 <button type="button" onClick={handleVerifySuno} disabled={sunoVerifying}
                   style={{ ...goldBtn, width: '100%', opacity: sunoVerifying ? 0.6 : 1 }}>
-                  {sunoVerifying ? 'Checking…' : "I've added it — Verify Now"}
+                  {sunoVerifying ? 'Checking…' : "I've added it. Verify now"}
                 </button>
               </div>
             )}
             {sunoVerified && (
-              <p style={{ fontFamily: font, fontSize: '0.7rem', color: '#4ade80' }}>✓ Found in your bio — keep it there until you submit. We check again when you apply.</p>
+              <p style={{ fontFamily: font, fontSize: '0.7rem', color: '#4ade80' }}>Found in your bio. Keep it there until you submit. We check again when you apply.</p>
             )}
             {sunoStatus.kind === 'error' && sunoStatus.message && (
               <p style={{ fontFamily: font, fontSize: '0.65rem', color: '#ff6060', marginTop: '6px' }}>{sunoStatus.message}</p>
@@ -290,18 +317,50 @@ export function ArtistApplicationForm({ onSubmitted }: ArtistApplicationFormProp
           </span>
         </label>
 
-        {error && <p style={{ fontFamily: font, fontSize: '0.75rem', color: '#ff6060' }}>{error}</p>}
+        {error ? (
+          <p ref={errorRef} style={{ fontFamily: font, fontSize: '0.75rem', color: '#ff6060', lineHeight: 1.5 }}>
+            {error}
+          </p>
+        ) : null}
 
-        <button onClick={handleSubmit} disabled={loading || !displayArtistName.trim() || !rightsAgreed}
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={loading || submitted || !displayArtistName.trim() || !rightsAgreed}
           style={{
-            width: '100%', padding: '14px', background: 'var(--gold)', color: 'var(--bg)',
-            border: 'none', borderRadius: '10px', fontFamily: font, fontWeight: 700,
-            fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            opacity: (loading || !displayArtistName.trim() || !rightsAgreed) ? 0.6 : 1,
+            width: '100%',
+            padding: '14px',
+            background: submitted ? 'rgba(95, 214, 138, 0.15)' : 'var(--gold)',
+            color: submitted ? '#5fd68a' : 'var(--bg)',
+            border: submitted ? '1px solid rgba(95, 214, 138, 0.4)' : 'none',
+            borderRadius: '10px',
+            fontFamily: font,
+            fontWeight: 700,
+            fontSize: '0.6rem',
+            letterSpacing: '1px',
+            textTransform: 'uppercase',
+            cursor: loading || submitted ? 'default' : 'pointer',
+            opacity: (loading || !displayArtistName.trim() || !rightsAgreed) && !submitted ? 0.6 : 1,
             marginTop: '8px',
-          }}>
-          {loading ? 'Submitting…' : sunoVerified ? 'Submit & Go Live Instantly' : 'Submit Application'}
+            minHeight: '48px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+          }}
+        >
+          {submitted ? (
+            <>
+              <CheckIcon size={16} color="#5fd68a" />
+              Submitted
+            </>
+          ) : loading ? (
+            'Submitting…'
+          ) : sunoVerified ? (
+            'Submit and open Studio'
+          ) : (
+            'Submit application'
+          )}
         </button>
       </div>
     </div>
