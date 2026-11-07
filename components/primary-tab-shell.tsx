@@ -20,7 +20,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { usePrimaryTabSwipeGesture } from '@/hooks/usePrimaryTabSwipeGesture'
 import { HubDeepNavSkeleton, PrimaryTabPaneSkeleton } from '@/components/margo-skeletons'
 import { MARGO_HUB_DEEP_NAV_EVENT, type HubDeepNavDetail } from '@/lib/hub-deep-nav'
-import { warmPrimaryTab } from '@/lib/primary-tab-prefetch'
+import { peekFeedPostsCache, warmPrimaryTab } from '@/lib/primary-tab-prefetch'
 import { clearHubOverlayRestore, peekHubOverlayRestore } from '@/lib/search-scope'
 
 /**
@@ -1021,7 +1021,11 @@ export function PrimaryTabShell({
   })
 
   const cached = [...cacheRef.current.entries()]
-  const showSkeleton = !!activeTab && !cacheRef.current.has(activeTab)
+  const feedPrefetched = !!peekFeedPostsCache()
+  const showSkeleton =
+    !!activeTab
+    && !cacheRef.current.has(activeTab)
+    && !(activeTab === 'feed' && feedPrefetched)
   const showDeepNavSkeleton = deepNavInFlight && !!deepNavHref
   const onSigninRoute = normalizeTabPath(pathname) === '/signin'
   const showAppChildren =
