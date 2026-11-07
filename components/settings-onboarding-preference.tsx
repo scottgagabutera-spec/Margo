@@ -7,6 +7,8 @@ import {
   mergeOnboardingSettings,
   onboardingFromSettings,
 } from '@/lib/welcome-profile-settings'
+import { mergeWelcomeSeriesOnboarding } from '@/lib/welcome-series/merge-flags'
+import { WELCOME_SERIES_VERSION } from '@/lib/welcome-series/kinds'
 import type { WelcomeDraftRole } from '@/lib/welcome-draft'
 import {
   WELCOME_LISTENER_ROLE_LABEL,
@@ -34,9 +36,17 @@ export function SettingsOnboardingPreference({ userId, settingsJson }: Props) {
     setRole(next)
     setSaving(true)
     setError(false)
-    const result = await persistProfileSettings(userId, (current) =>
-      mergeOnboardingSettings(current, { role: next }),
-    )
+    const result = await persistProfileSettings(userId, (current) => {
+      let merged = mergeOnboardingSettings(current, { role: next })
+      const onboarding = merged.onboarding as { welcomeSeriesVersion?: number } | undefined
+      if (
+        next === 'artist'
+        && onboarding?.welcomeSeriesVersion === WELCOME_SERIES_VERSION
+      ) {
+        merged = mergeWelcomeSeriesOnboarding(merged, { artistGuideIntent: true })
+      }
+      return merged
+    })
     setSaving(false)
     if (!result.ok) {
       setError(true)
