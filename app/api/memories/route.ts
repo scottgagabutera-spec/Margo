@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { assembleMemoryPublic } from '@/lib/memory/assemble'
+import { assembleMemoriesPublicBatch } from '@/lib/memory/assemble-batch'
 import { memoryDefaultTitle, validateMemoryTitle } from '@/lib/memory/title'
 import type { MemoryPhotoInput, MemorySongInput, MemoryVisibility } from '@/lib/memory/types'
 import { MEMORY_ROW_SELECT } from '@/lib/memory/columns'
@@ -38,11 +39,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ memories: [] })
   }
 
-  const memories = []
-  for (const row of rows || []) {
-    const pub = await assembleMemoryPublic(row, viewerId)
-    if (pub) memories.push(pub)
-  }
+  const memories = await assembleMemoriesPublicBatch(rows || [], viewerId)
 
   const isOwner = viewerId === ownerId
   if (!isOwner) {

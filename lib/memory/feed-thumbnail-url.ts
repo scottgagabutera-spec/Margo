@@ -3,24 +3,40 @@ import type { MemoryPublic } from '@/lib/memory/types'
 import { memoryCoverIsSongArt } from '@/lib/memory/display-caption'
 
 const GRID_THUMB_PX = 400
+const PROFILE_TILE_PX = 160
+const FAVORITE_ART_PX = 112
 
 /** Request ~400px cover via Cloudflare image resizing on Margo media host. */
-export function memoryFeedThumbnailUrl(url: string | null | undefined): string {
-  if (!url) return ''
+function resizedMargoOrArtwork(url: string, widthPx: number): string {
   try {
     const u = new URL(url)
     const host = u.hostname.toLowerCase()
     if (host.includes('trymargo.com') || host.includes('mzstatic.com') || host.includes('itunes')) {
       if (host.includes('mzstatic.com') || host.includes('itunes')) {
-        return compactArtworkUrl(url, GRID_THUMB_PX)
+        return compactArtworkUrl(url, widthPx)
       }
       const path = u.pathname.replace(/^\//, '')
-      return `https://${u.hostname}/cdn-cgi/image/width=${GRID_THUMB_PX},format=webp,quality=84,fit=cover/${path}`
+      return `https://${u.hostname}/cdn-cgi/image/width=${widthPx},format=webp,quality=84,fit=cover/${path}`
     }
   } catch {
     /* keep raw */
   }
   return url
+}
+
+export function memoryFeedThumbnailUrl(url: string | null | undefined): string {
+  if (!url) return ''
+  return resizedMargoOrArtwork(url, GRID_THUMB_PX)
+}
+
+export function memoryProfileTileThumbnailUrl(url: string | null | undefined): string {
+  if (!url) return ''
+  return resizedMargoOrArtwork(url, PROFILE_TILE_PX)
+}
+
+export function favoriteArtistThumbnailUrl(url: string | null | undefined): string {
+  if (!url) return ''
+  return resizedMargoOrArtwork(url, FAVORITE_ART_PX)
 }
 
 export function memoryGridCoverSource(memory: MemoryPublic): { src: string; isVideo: boolean } {

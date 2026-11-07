@@ -301,6 +301,24 @@ export default function MemoryDetailPage() {
                   boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
                 }}
               >
+                <Link
+                  href={`/memories/${memory.id}/edit`}
+                  onClick={() => setMenuOpen(false)}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    textAlign: 'left',
+                    minHeight: 'var(--margo-touch-min)',
+                    color: 'var(--text)',
+                    fontFamily: font,
+                    fontSize: TYPE.secondary,
+                    padding: '0 12px',
+                    lineHeight: 'var(--margo-touch-min)',
+                    textDecoration: 'none',
+                  }}
+                >
+                  Edit memory
+                </Link>
                 <p style={{ margin: '4px 8px 8px', fontFamily: font, fontSize: TYPE.label, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Visibility</p>
                 {(['public', 'followers', 'only_me'] as MemoryVisibility[]).map((v) => (
                   <button

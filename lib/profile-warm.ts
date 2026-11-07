@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/client'
 import type { ArtistStatus } from '@/components/artist-badge'
 import type { ArtistApplicationLinks } from '@/lib/artist-music-group'
+import type { ProfileFavoriteArtist } from '@/components/profile-favorite-artists-row'
+import type { MemoryPublic } from '@/lib/memory/types'
 
 const supabase = createClient()
 const STALE_MS = 60_000
@@ -31,6 +33,10 @@ export interface WarmProfileBundle {
   postsCount: number
   /** Present when peek RPC includes the viewer's follow row (authenticated). */
   viewerFollowStatus?: 'pending' | 'accepted' | null
+  favoriteArtists?: ProfileFavoriteArtist[]
+  memories?: MemoryPublic[]
+  memoriesIsOwner?: boolean
+  surfaceLoadedAt?: number
   loadedAt: number
 }
 
@@ -62,6 +68,48 @@ export function peekProfileCache(username: string): WarmProfileBundle | null {
   const hit = cache.get(username.toLowerCase())
   if (!hit?.data) return null
   return hit.data
+}
+
+export function peekProfileSurface(username: string): {
+  favoriteArtists: ProfileFavoriteArtist[]
+  memories: MemoryPublic[]
+  memoriesIsOwner: boolean
+} | null {
+  const hit = peekProfileCache(username)
+  if (!hit?.surfaceLoadedAt || !hit.favoriteArtists) return null
+  return {
+    favoriteArtists: hit.favoriteArtists,
+    memories: hit.memories || [],
+    memoriesIsOwner: !!hit.memoriesIsOwner,
+  }
+}
+
+async function fetchProfileSurfaceExtras(username: string): Promise<{
+  favoriteArtists: ProfileFavoriteArtist[]
+  memories: MemoryPublic[]
+  memoriesIsOwner: boolean
+  viewerFollowStatus?: 'pending' | 'accepted' | null
+} | null> {
+  try {
+    const res = await fetch(`/api/profile/surface?username=${encodeURIComponent(username)}`, {
+      credentials: 'same-origin',
+    })
+    if (!res.ok) return null
+    const data = (await res.json()) as {
+      favoriteArtists?: ProfileFavoriteArtist[]
+      memories?: MemoryPublic[]
+      memoriesIsOwner?: boolean
+      viewerFollowStatus?: 'pending' | 'accepted' | null
+    }
+    return {
+      favoriteArtists: data.favoriteArtists || [],
+      memories: data.memories || [],
+      memoriesIsOwner: !!data.memoriesIsOwner,
+      viewerFollowStatus: data.viewerFollowStatus,
+    }
+  } catch {
+    return null
+  }
 }
 
 function bundleFromPeekPayload(payload: Record<string, unknown>): WarmProfileBundle | null {
@@ -152,13 +200,24 @@ export function warmProfile(username: string, opts?: { force?: boolean }): Promi
   if (!force && fresh && existing?.data) return Promise.resolve(existing.data)
   if (!force && existing?.inflight) return existing.inflight
 
-  const p = fetchProfileBundle(username).then((bundle) => {
-    const slot = cache.get(key) || { data: bundle as WarmProfileBundle, inflight: null }
-    slot.inflight = null
-    if (bundle) slot.data = bundle
-    cache.set(key, slot)
-    return bundle
-  }).catch((err) => {
+  const p = Promise.all([fetchProfileBundle(username), fetchProfileSurfaceExtras(username)]).then(
+    ([bundle, surface]) => {
+      const slot = cache.get(key) || { data: bundle as WarmProfileBundle, inflight: null }
+      slot.inflight = null
+      if (bundle && surface) {
+        bundle.favoriteArtists = surface.favoriteArtists
+        bundle.memories = surface.memories
+        bundle.memoriesIsOwner = surface.memoriesIsOwner
+        bundle.surfaceLoadedAt = Date.now()
+        if (surface.viewerFollowStatus !== undefined) {
+          bundle.viewerFollowStatus = surface.viewerFollowStatus
+        }
+      }
+      if (bundle) slot.data = bundle
+      cache.set(key, slot)
+      return bundle
+    },
+  ).catch((err) => {
     const slot = cache.get(key)
     if (slot) slot.inflight = null
     throw err

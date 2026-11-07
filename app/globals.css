@@ -7260,6 +7260,108 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   justify-content: flex-end;
   overflow: hidden;
 }
+.margo-profile-memory-tile__img {
+  object-fit: cover;
+  z-index: 0;
+}
+.margo-profile-memory-tile__video-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 1;
+  font-size: 8px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  pointer-events: none;
+}
+.margo-memory-media-picker {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  background: var(--surface-2);
+  margin-bottom: 20px;
+}
+.margo-memory-media-picker__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.margo-memory-media-picker__title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+  margin: 0;
+}
+.margo-memory-media-picker__hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+}
+.margo-memory-media-picker__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.margo-memory-media-picker__thumb {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.margo-memory-media-picker__thumb--cover {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+.margo-memory-media-picker__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.margo-memory-media-picker__add {
+  width: 76px;
+  height: 76px;
+  border-radius: 10px;
+  border: 1px dashed var(--border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+.margo-memory-media-picker__toolbar {
+  display: flex;
+  gap: 4px;
+  position: absolute;
+  top: 2px;
+  right: 2px;
+}
+.margo-memory-media-picker__icon-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 .margo-memory-cover-caption {
   position: absolute;
   left: 0;
