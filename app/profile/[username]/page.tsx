@@ -14,7 +14,7 @@ import { SongPreviewSheet, type SongPreviewSeed } from '@/components/song-previe
 import { PostCard } from '@/components/post-card'
 import { CardExportModal } from '@/components/card-export-modal'
 import { resolveMargoMomentFromPost } from '@/lib/moment'
-import { MoreIcon, ImagePlusIcon } from '@/components/icons'
+import { MoreIcon } from '@/components/icons'
 import type { Post } from '@/hooks/usePosts'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
 import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
@@ -26,15 +26,16 @@ import { readViewerFollowCache, writeViewerFollowCache } from '@/lib/viewer-foll
 import { ProfileSocialActionsSkeleton } from '@/components/margo-skeletons'
 import { resolvePublicArtistCredit } from '@/lib/artist-identity'
 import { PendingNavLink } from '@/components/pending-nav-link'
-import { PlayPauseIcon } from '@/components/play-pause-icon'
-import { playSnippet, togglePlayPause } from '@/lib/audio-engine'
 import { MargoActionSheet } from '@/components/margo-action-sheet'
 import { MargoLongPressHint } from '@/components/margo-long-press-hint'
 import { resolveSignatureMomentSnippet } from '@/lib/signature-snippet'
-import { useIsBuffering, useIsPlaying } from '@/hooks/useAudioEngine'
 import { useLongPress } from '@/hooks/useLongPress'
 import { ProfilePortraitIdentity, ProfilePortraitActions } from '@/components/profile-portrait-identity'
 import { ProfileAccountMenu } from '@/components/profile-account-menu'
+import {
+  ProfileSignatureLyricSheet,
+  ProfileSignaturePill,
+} from '@/components/profile-signature-pill'
 
 const supabase = createClient()
 
@@ -125,64 +126,6 @@ function ProfileStat({
   return <span style={style}>{inner}</span>
 }
 
-function SignaturePlayButton({
-  track,
-}: {
-  track: {
-    id: string
-    title: string
-    artist: string
-    artwork: string | null
-    audioUrl: string
-    lineIndex: number
-    lineText: string
-    startSec: number
-    endSec: number
-  }
-}) {
-  const playing = useIsPlaying(track.id)
-  const buffering = useIsBuffering(track.id)
-  return (
-    <button
-      type="button"
-      aria-label={playing ? 'Pause signature' : 'Play signature'}
-      onClick={() => {
-        if (playing) {
-          togglePlayPause()
-          return
-        }
-        void playSnippet({
-          songId: track.id,
-          audioUrl: track.audioUrl,
-          title: track.title,
-          artist: track.artist,
-          artwork: track.artwork,
-          lineIndex: track.lineIndex ?? 0,
-          lineText: track.lineText || '',
-          startSec: track.startSec,
-          endSec: track.endSec,
-          source: 'feed',
-        })
-      }}
-      style={{
-        width: 'var(--margo-touch-min)',
-        height: 'var(--margo-touch-min)',
-        borderRadius: '50%',
-        border: '1px solid var(--gold-border)',
-        background: 'var(--gold-faint)',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 0,
-        cursor: 'pointer',
-        flexShrink: 0,
-      }}
-    >
-      <PlayPauseIcon playing={playing} buffering={buffering} size={16} color="var(--gold)" />
-    </button>
-  )
-}
-
 type ProfileData = WarmProfileRow
 
 interface ArtistSongRow {
@@ -194,7 +137,7 @@ interface ArtistSongRow {
   is_ai_generated: boolean
 }
 
-type ProfileContentTab = 'lyrics' | 'replays' | 'backs' | 'private'
+type ProfileContentTab = 'lyrics' | 'reposts' | 'backs' | 'private'
 
 type FollowRelationState = {
   ready: boolean
@@ -223,7 +166,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
   const [followRelation, setFollowRelation] = useState<FollowRelationState>({ ready: true, status: null })
   const [followBusy, setFollowBusy] = useState(false)
   const [avatarLightboxOpen, setAvatarLightboxOpen] = useState(false)
-  const [coverLightboxOpen, setCoverLightboxOpen] = useState(false)
+  const [signatureReadOpen, setSignatureReadOpen] = useState(false)
   const [previewSong, setPreviewSong] = useState<SongPreviewSeed | null>(null)
 
   // ── Discography — public, live-only catalog for this profile, if
@@ -247,8 +190,6 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
     startSec: number
     endSec: number
   } | null>(null)
-  const signaturePlaying = useIsPlaying(signatureTrack?.id ?? '')
-
   useEffect(() => {
     if (!username) return
     let active = true
@@ -478,9 +419,9 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
     [profile?.whoCanMessage, followStatus, isOwnProfile, followKnown],
   )
 
-  const { items: profileReplays, loading: replaysLoading } = useProfileReplays(
+  const { items: profileReposts, loading: repostsLoading } = useProfileReplays(
     profile?.id ?? null,
-    !!canViewContent && contentTab === 'replays'
+    !!canViewContent && contentTab === 'reposts'
   )
   const { posts: lyricBacks, loading: backsLoading } = useAuthorLyricBacks(
     profile?.id ?? null,
@@ -488,9 +429,9 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
   )
 
   const allTabPosts = useMemo(() => {
-    const replayPosts = profileReplays.map(r => r.post)
-    return [...ownPosts, ...privatePosts, ...replayPosts, ...lyricBacks]
-  }, [ownPosts, privatePosts, profileReplays, lyricBacks])
+    const repostPosts = profileReposts.map(r => r.post)
+    return [...ownPosts, ...privatePosts, ...repostPosts, ...lyricBacks]
+  }, [ownPosts, privatePosts, profileReposts, lyricBacks])
 
   const toggleResonate = async (postId: string) => {
     if (!requireAuth()) return
@@ -580,8 +521,131 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
     followStatus === 'pending' ? 'Requested' :
     'Follow'
 
-  const coverUrl = profile?.coverUrl ?? null
-  const hasCover = !!coverUrl
+  const renderProfileActions = () => (
+    <ProfilePortraitActions>
+      {isOwnProfile && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, flexWrap: 'nowrap' }}>
+          <Link
+            href="/profile/edit"
+            style={{
+              minHeight: 'var(--margo-touch-min)', padding: '0 18px',
+              display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
+              background: 'var(--surface-2)', color: 'var(--text-secondary)',
+              border: '1px solid var(--border)', borderRadius: '50px',
+              fontFamily: font, fontWeight: 600, fontSize: TYPE.label,
+              letterSpacing: '1.5px', textTransform: 'uppercase',
+              textDecoration: 'none', cursor: 'pointer',
+              whiteSpace: 'nowrap', flexShrink: 0,
+            }}
+          >Edit Profile</Link>
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <button
+              ref={accountMenuTriggerRef}
+              type="button"
+              aria-label="Account menu"
+              aria-expanded={accountMenuOpen}
+              aria-haspopup="dialog"
+              onClick={() => setAccountMenuOpen(o => !o)}
+              style={{
+                width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
+                minWidth: 'var(--margo-touch-min)', minHeight: 'var(--margo-touch-min)',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                background: accountMenuOpen ? 'var(--surface-2)' : 'transparent',
+                border: '1px solid var(--border)', borderRadius: '50%',
+                cursor: 'pointer', padding: 0, boxSizing: 'border-box',
+                WebkitTapHighlightColor: 'transparent', flexShrink: 0,
+              }}
+            >
+              <MoreIcon size={18} color="var(--text-secondary)" />
+            </button>
+            <ProfileAccountMenu
+              open={accountMenuOpen}
+              onOpenChange={setAccountMenuOpen}
+              triggerRef={accountMenuTriggerRef}
+              showStudio={!!identity?.isArtist}
+              onSignOut={() => { void handleSignOut() }}
+            />
+          </div>
+        </div>
+      )}
+
+      {!isOwnProfile && user && (
+        !socialActionsReady ? (
+          <ProfileSocialActionsSkeleton />
+        ) : (
+        <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
+          {messageEligibility.canOpenThread ? (
+            <Link
+              href={`/messages/${profile!.username}`}
+              style={{
+                height: '32px', padding: '0 14px',
+                display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
+                background: 'var(--surface-2)', color: 'var(--text)',
+                border: '1px solid var(--gold-border)', borderRadius: '50px',
+                fontFamily: font, fontWeight: 700, fontSize: TYPE.label,
+                letterSpacing: '0.14em', textTransform: 'uppercase',
+                textDecoration: 'none', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+              }}
+            >Message</Link>
+          ) : (
+            <span
+              role="button"
+              aria-disabled="true"
+              title={messageEligibility.blockedReason || undefined}
+              style={{
+                height: '32px', padding: '0 14px',
+                display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
+                background: 'transparent', color: 'var(--text-muted)',
+                border: '1px solid var(--border)', borderRadius: '50px',
+                fontFamily: font, fontWeight: 700, fontSize: TYPE.label,
+                letterSpacing: '0.14em', textTransform: 'uppercase',
+                whiteSpace: 'nowrap', flexShrink: 0, opacity: 0.55, cursor: 'not-allowed',
+              }}
+            >Message</span>
+          )}
+          <button
+            type="button"
+            onClick={handleFollowClick}
+            disabled={followBusy || !socialActionsReady}
+            style={{
+              height: '32px', padding: '0 16px',
+              display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
+              background: followStatus ? 'transparent' : 'var(--gold)',
+              color: followStatus ? 'var(--text-secondary)' : 'var(--bg)',
+              border: followStatus ? '1px solid var(--border)' : 'none',
+              borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: TYPE.label,
+              letterSpacing: '0.14em', textTransform: 'uppercase',
+              cursor: followBusy ? 'not-allowed' : 'pointer',
+              opacity: followBusy ? 0.7 : 1,
+              whiteSpace: 'nowrap', flexShrink: 0,
+            }}
+          >{followLabel}</button>
+        </div>
+        )
+      )}
+    </ProfilePortraitActions>
+  )
+
+  const renderStats = () => (
+    <div className="margo-profile-stats">
+      <ProfileStat
+        count={postsCount ?? (isOwnProfile ? ownPosts.length : null)}
+        label="lyrics"
+        showDivider
+      />
+      <ProfileStat
+        href={(isOwnProfile || !profile!.followListsPrivate) ? `/profile/${profile!.username}/followers` : undefined}
+        count={followerCount}
+        label="followers"
+        showDivider
+      />
+      <ProfileStat
+        href={(isOwnProfile || !profile!.followListsPrivate) ? `/profile/${profile!.username}/following` : undefined}
+        count={followingCount}
+        label="following"
+      />
+    </div>
+  )
 
   return (
     <main style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
@@ -603,62 +667,9 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
       ) : null}
 
       {!loading && profile && (
-        <div>
-          <div style={{ marginTop: 'var(--nav-height, 72px)', position: 'relative' }}>
-          {hasCover ? (
-            <div className="margo-profile-cover" style={{
-              position: 'relative',
-              width: '100%',
-              height: '148px',
-              background: 'var(--surface-2)',
-              overflow: 'hidden',
-            }}>
-              <button
-                type="button"
-                onClick={() => setCoverLightboxOpen(true)}
-                aria-label={`View ${profile.displayName}'s cover photo`}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  height: '100%',
-                  padding: 0,
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  WebkitTapHighlightColor: 'transparent',
-                }}
-              >
-                <img
-                  src={coverUrl}
-                  alt=""
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                />
-              </button>
-            </div>
-          ) : isOwnProfile ? (
-            <Link
-              href="/profile/edit"
-              aria-label="Add cover photo in Edit profile"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '100%',
-                minHeight: '100px',
-                padding: 0,
-                border: 'none',
-                borderBottom: '1px dashed var(--gold-border)',
-                background: 'var(--surface)',
-                cursor: 'pointer',
-                WebkitTapHighlightColor: 'transparent',
-                textDecoration: 'none',
-              }}
-            >
-              <ImagePlusIcon size={28} color="var(--gold)" />
-            </Link>
-          ) : null}
-
-          <div className={hasCover ? 'margo-profile-sheet margo-profile-sheet--on-cover' : 'margo-profile-sheet margo-profile-sheet--no-cover'}>
+        <div className="margo-profile-page">
+          <div className="margo-profile-shell">
+            <div className="margo-profile-shell__left">
             <ProfilePortraitIdentity
               displayName={profile.displayName || profile.username}
               username={profile.username}
@@ -669,161 +680,15 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
               onAvatarClick={() => setAvatarLightboxOpen(true)}
             />
 
-            <ProfilePortraitActions>
-              {isOwnProfile && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, flexWrap: 'nowrap' }}>
-                  <Link
-                    href="/profile/edit"
-                    style={{
-                      minHeight: 'var(--margo-touch-min)', padding: '0 18px',
-                      display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                      background: 'var(--surface-2)', color: 'var(--text-secondary)',
-                      border: '1px solid var(--border)', borderRadius: '50px',
-                      fontFamily: font, fontWeight: 600, fontSize: TYPE.label,
-                      letterSpacing: '1.5px', textTransform: 'uppercase',
-                      textDecoration: 'none', cursor: 'pointer',
-                      whiteSpace: 'nowrap', flexShrink: 0,
-                    }}
-                  >Edit Profile</Link>
-                  <div style={{ position: 'relative', flexShrink: 0 }}>
-                    <button
-                      ref={accountMenuTriggerRef}
-                      type="button"
-                      aria-label="Account menu"
-                      aria-expanded={accountMenuOpen}
-                      aria-haspopup="dialog"
-                      onClick={() => setAccountMenuOpen(o => !o)}
-                      style={{
-                        width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
-                        minWidth: 'var(--margo-touch-min)', minHeight: 'var(--margo-touch-min)',
-                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                        background: accountMenuOpen ? 'var(--surface-2)' : 'transparent',
-                        border: '1px solid var(--border)', borderRadius: '50%',
-                        cursor: 'pointer', padding: 0, boxSizing: 'border-box',
-                        WebkitTapHighlightColor: 'transparent', flexShrink: 0,
-                      }}
-                    >
-                      <MoreIcon size={18} color="var(--text-secondary)" />
-                    </button>
-                    <ProfileAccountMenu
-                      open={accountMenuOpen}
-                      onOpenChange={setAccountMenuOpen}
-                      triggerRef={accountMenuTriggerRef}
-                      showStudio={!!identity?.isArtist}
-                      onSignOut={() => { void handleSignOut() }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {!isOwnProfile && user && (
-                !socialActionsReady ? (
-                  <ProfileSocialActionsSkeleton />
-                ) : (
-                <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
-                  {messageEligibility.canOpenThread ? (
-                    <Link
-                      href={`/messages/${profile.username}`}
-                      style={{
-                        height: '32px', padding: '0 14px',
-                        display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                        background: 'var(--surface-2)', color: 'var(--text)',
-                        border: '1px solid var(--gold-border)', borderRadius: '50px',
-                        fontFamily: font, fontWeight: 700, fontSize: TYPE.label,
-                        letterSpacing: '0.14em', textTransform: 'uppercase',
-                        textDecoration: 'none', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
-                      }}
-                    >Message</Link>
-                  ) : (
-                    <span
-                      role="button"
-                      aria-disabled="true"
-                      title={messageEligibility.blockedReason || undefined}
-                      style={{
-                        height: '32px', padding: '0 14px',
-                        display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                        background: 'transparent', color: 'var(--text-muted)',
-                        border: '1px solid var(--border)', borderRadius: '50px',
-                        fontFamily: font, fontWeight: 700, fontSize: TYPE.label,
-                        letterSpacing: '0.14em', textTransform: 'uppercase',
-                        whiteSpace: 'nowrap', flexShrink: 0, opacity: 0.55, cursor: 'not-allowed',
-                      }}
-                    >Message</span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={handleFollowClick}
-                    disabled={followBusy || !socialActionsReady}
-                    style={{
-                      height: '32px', padding: '0 16px',
-                      display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                      background: followStatus ? 'transparent' : 'var(--gold)',
-                      color: followStatus ? 'var(--text-secondary)' : 'var(--bg)',
-                      border: followStatus ? '1px solid var(--border)' : 'none',
-                      borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: TYPE.label,
-                      letterSpacing: '0.14em', textTransform: 'uppercase',
-                      cursor: followBusy ? 'not-allowed' : 'pointer',
-                      opacity: followBusy ? 0.7 : 1,
-                      whiteSpace: 'nowrap', flexShrink: 0,
-                    }}
-                  >{followLabel}</button>
-                </div>
-                )
-              )}
-            </ProfilePortraitActions>
-
-            {/* Stats row — Songs added as a third, clickable stat matching
-                the same visual weight as followers/following, instead of
-                the full catalog being dumped inline further down. Only
-                shown for artists. */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'stretch',
-              marginBottom: '16px',
-            }}>
-              <ProfileStat
-                href={(isOwnProfile || !profile.followListsPrivate) ? `/profile/${profile.username}/followers` : undefined}
-                count={followerCount}
-                label="followers"
-                showDivider
-              />
-              <ProfileStat
-                href={(isOwnProfile || !profile.followListsPrivate) ? `/profile/${profile.username}/following` : undefined}
-                count={followingCount}
-                label="following"
-                showDivider
-              />
-              <ProfileStat
-                count={postsCount ?? (isOwnProfile ? ownPosts.length : null)}
-                label="lyrics"
-                showDivider={!!profile.isArtist}
-              />
-              {profile.isArtist && (
-                <ProfileStat
-                  href={`/profile/${profile.username}/songs`}
-                  count={artistSongsLoading ? '—' : artistSongs.length}
-                  label="songs"
-                />
-              )}
-            </div>
-
-            {profile.bio || isOwnProfile ? (
-              <div style={{ marginBottom: '24px' }}>
-                <p style={sectionLabelStyle}>Bio</p>
+            {(profile.bio || isOwnProfile) ? (
+              <div className="margo-profile-block--bio">
                 {profile.bio ? (
-                  <p style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                    {profile.bio}
-                  </p>
+                  <p className="margo-profile-bio">{profile.bio}</p>
                 ) : (
                   <Link
                     href="/profile/edit"
-                    style={{
-                      fontFamily: font,
-                      fontSize: TYPE.meta,
-                      color: 'var(--text-muted)',
-                      textDecoration: 'none',
-                    }}
+                    className="margo-profile-bio"
+                    style={{ color: 'var(--text-muted)', textDecoration: 'none', display: 'block' }}
                   >
                     Add bio
                   </Link>
@@ -831,125 +696,38 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
               </div>
             ) : null}
 
-            {profile.isArtist && (
-              <ProfileArtistLinks links={profile.artistLinks} />
-            )}
-
-            {profile.signatureLyric ? (
-            <MargoLongPressHint
-              active={isOwnProfile ? signatureLongPress.pressing : false}
-              progress={signatureLongPress.progress}
-              style={{
-                background: 'var(--gold-faint)',
-                border: '1px solid var(--gold-border)',
-                borderRadius: '20px',
-                padding: '24px',
-                textAlign: 'left',
-                marginBottom: '28px',
-              }}
-            >
-              <div
-                {...(isOwnProfile && profile.signatureLyric ? signatureLongPress.handlers : {})}
-                role={isOwnProfile && profile.signatureLyric ? 'button' : undefined}
-                tabIndex={isOwnProfile && profile.signatureLyric ? 0 : undefined}
-                aria-label={isOwnProfile && profile.signatureLyric ? 'Signature lyric. Tap to play when available. Hold anywhere on this card for options.' : undefined}
-                onClick={isOwnProfile && profile.signatureLyric ? () => {
-                  if (signatureLongPress.consumeClick()) return
-                  if (!signatureTrack) return
-                  if (signaturePlaying) {
-                    togglePlayPause()
-                    return
-                  }
-                  void playSnippet({
-                    songId: signatureTrack.id,
-                    audioUrl: signatureTrack.audioUrl,
-                    title: signatureTrack.title,
-                    artist: signatureTrack.artist,
-                    artwork: signatureTrack.artwork,
-                    lineIndex: signatureTrack.lineIndex ?? 0,
-                    lineText: signatureTrack.lineText || '',
-                    startSec: signatureTrack.startSec,
-                    endSec: signatureTrack.endSec,
-                    source: 'feed',
-                  })
-                } : undefined}
-                onKeyDown={isOwnProfile && profile.signatureLyric ? (e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    ;(e.currentTarget as HTMLDivElement).click()
-                  }
-                } : undefined}
-                style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  cursor: isOwnProfile && signatureTrack ? 'pointer' : 'default',
-                  WebkitTapHighlightColor: 'transparent',
-                }}
-              >
-              <p style={sectionLabelStyle}>Signature lyric</p>
-                {isOwnProfile ? (
-                  <>
-                      <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--gold)', lineHeight: 1.5, marginBottom: '8px' }}>
-                        &ldquo;{profile.signatureLyric}&rdquo;
-                      </p>
-                      {(profile.signatureSong || profile.signatureArtist || signatureTrack) && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          {signatureTrack ? (
-                            <span
-                              onPointerDown={(e) => e.stopPropagation()}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <SignaturePlayButton track={signatureTrack} />
-                            </span>
-                          ) : null}
-                          <p style={{
-                            fontFamily: font,
-                            fontSize: TYPE.meta,
-                            color: 'var(--text-secondary)',
-                            margin: 0,
-                          }}>
-                            {profile.signatureSong}{profile.signatureSong && profile.signatureArtist ? ' · ' : ''}{profile.signatureArtist}
-                          </p>
-                        </div>
-                      )}
-                      <p style={{
-                        fontFamily: font,
-                        fontSize: TYPE.label,
-                        letterSpacing: '0.12em',
-                        textTransform: 'uppercase',
-                        color: 'var(--text-muted)',
-                        margin: '10px 0 0',
-                      }}>
-                        Hold for options
-                      </p>
-                  </>
-                ) : (
-                  <>
-                    <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--gold)', lineHeight: 1.5, marginBottom: '8px' }}>
-                      &ldquo;{profile.signatureLyric}&rdquo;
-                    </p>
-                    {(profile.signatureSong || profile.signatureArtist || signatureTrack) && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        {signatureTrack ? <SignaturePlayButton track={signatureTrack} /> : null}
-                        <p style={{
-                          fontFamily: font,
-                          fontSize: TYPE.meta,
-                          color: 'var(--text-secondary)',
-                          margin: 0,
-                        }}>
-                          {profile.signatureSong}{profile.signatureSong && profile.signatureArtist ? ' · ' : ''}{profile.signatureArtist}
-                        </p>
-                      </div>
-                    )}
-                  </>
-                )}
+            {profile.isArtist ? (
+              <div style={{ marginTop: '12px' }}>
+                <ProfileArtistLinks links={profile.artistLinks} />
               </div>
-            </MargoLongPressHint>
+            ) : null}
+
+            <div className="margo-profile-block--stats">
+              {renderStats()}
+            </div>
+
+            <div className="margo-profile-block--signature">
+            {profile.signatureLyric ? (
+              <MargoLongPressHint
+                active={isOwnProfile ? signatureLongPress.pressing : false}
+                progress={signatureLongPress.progress}
+                style={{ marginBottom: 0 }}
+              >
+                <ProfileSignaturePill
+                  lyric={profile.signatureLyric}
+                  track={signatureTrack}
+                  isOwner={isOwnProfile}
+                  longPressHandlers={isOwnProfile ? signatureLongPress.handlers : undefined}
+                  onOpenLyric={() => {
+                    if (isOwnProfile && signatureLongPress.consumeClick()) return
+                    setSignatureReadOpen(true)
+                  }}
+                />
+              </MargoLongPressHint>
             ) : isOwnProfile ? (
-              <div style={{ marginBottom: '20px' }}>
-                <p style={sectionLabelStyle}>Signature lyric</p>
+              <div style={{ marginBottom: '12px', textAlign: 'center' }}>
                 <Link
-                  href="/profile/edit"
+                  href="/profile/edit#signature"
                   style={{
                     fontFamily: font,
                     fontSize: TYPE.meta,
@@ -961,7 +739,14 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 </Link>
               </div>
             ) : null}
+            </div>
 
+            <div className="margo-profile-block--actions">
+              {renderProfileActions()}
+            </div>
+            </div>
+
+            <div className="margo-profile-shell__right">
             {/* ── Discography preview — a taste, not the whole catalog.
                 Capped at DISCOGRAPHY_PREVIEW_COUNT and horizontally
                 scrollable (same row pattern Discover already uses for
@@ -1063,8 +848,8 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 }}
               >
                 {([
-                  { id: 'lyrics' as const, label: isOwnProfile ? 'Your Lyrics' : 'Lyrics' },
-                  { id: 'replays' as const, label: 'Reposts' },
+                  { id: 'lyrics' as const, label: 'Lyrics' },
+                  { id: 'reposts' as const, label: 'Reposts' },
                   { id: 'backs' as const, label: 'Lyric Backs' },
                   ...(isOwnProfile ? [{ id: 'private' as const, label: 'Private' }] : []),
                 ]).map(tab => {
@@ -1116,16 +901,16 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                     ))}
                   </div>
                 )
-              ) : contentTab === 'replays' ? (
-                replaysLoading ? (
+              ) : contentTab === 'reposts' ? (
+                repostsLoading ? (
                   <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-muted)' }}>
                     Loading reposts…
                   </p>
-                ) : profileReplays.length === 0 ? (
+                ) : profileReposts.length === 0 ? (
                   null
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {profileReplays.map(item => (
+                    {profileReposts.map(item => (
                       <div key={item.id}>
                         {item.quoteText ? (
                           <p style={{
@@ -1193,10 +978,18 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
               </>
               )}
             </div>
-          </div>
+            </div>
           </div>
         </div>
       )}
+      <ProfileSignatureLyricSheet
+        open={signatureReadOpen && !!profile?.signatureLyric}
+        onOpenChange={setSignatureReadOpen}
+        lyric={profile?.signatureLyric ?? ''}
+        song={profile?.signatureSong}
+        artist={profile?.signatureArtist}
+        track={signatureTrack}
+      />
       <CardExportModal
         open={!!exportPost}
         onOpenChange={(o) => { if (!o) setExportPost(null) }}
@@ -1208,14 +1001,6 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
           onClose={() => setAvatarLightboxOpen(false)}
           src={profile.avatarUrl}
           alt={profile.displayName || profile.username}
-        />
-      ) : null}
-      {profile?.coverUrl ? (
-        <ProfileImageLightbox
-          open={coverLightboxOpen}
-          onClose={() => setCoverLightboxOpen(false)}
-          src={profile.coverUrl}
-          alt={`${profile.displayName || profile.username} cover photo`}
         />
       ) : null}
       {previewSong ? (
