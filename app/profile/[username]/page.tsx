@@ -807,7 +807,7 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
                               id: song.id,
                               title: song.title,
                               artist: song.artist_display_name,
-                              artworkUrl: song.artwork_url,
+                              artwork: song.artwork_url,
                             })
                           }
                         />
