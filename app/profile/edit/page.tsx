@@ -27,6 +27,7 @@ import {
   USERNAME_MAX_LENGTH,
   validateUsernameChoice,
 } from '@/lib/username-validator'
+import { FavoriteArtistsPicker, type FavoriteArtistPick } from '@/components/favorite-artists-picker'
 
 const font = UI_FONT
 const lyricFont = LYRIC_FONT
@@ -62,6 +63,8 @@ function EditProfilePageInner() {
   const [catalogSongId, setCatalogSongId] = useState<string | null>(null)
   const [isPrivate, setIsPrivateLocal] = useState(false)
   const [artistLinkDraft, setArtistLinkDraft] = useState<Record<string, string>>({})
+  const [favoriteArtists, setFavoriteArtists] = useState<FavoriteArtistPick[]>([])
+  const favoriteArtistsInitialRef = useRef<string>('[]')
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -87,6 +90,26 @@ function EditProfilePageInner() {
     const next = normalizeUsernameInput(username)
     return next.length > 0 && next !== normalizeUsernameInput(identity.username)
   }, [username, identity])
+
+  useEffect(() => {
+    if (!user?.id) return
+    let active = true
+    void fetch(`/api/profile/favorite-artists?profileId=${encodeURIComponent(user.id)}`)
+      .then((r) => r.json())
+      .then((data: { favorites?: Array<FavoriteArtistPick & { position?: number }> }) => {
+        if (!active) return
+        const list = (data.favorites || []).map((f) => ({
+          id: f.id,
+          name: f.name,
+          artworkUrl: f.artworkUrl,
+          onMargo: f.onMargo,
+        }))
+        setFavoriteArtists(list)
+        favoriteArtistsInitialRef.current = JSON.stringify(list.map((x) => x.id))
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [user?.id])
 
   const usernameBlocksSave =
     usernameChangedForSave
@@ -225,21 +248,45 @@ function EditProfilePageInner() {
       }
     }
 
-    if (tasks.length === 0) {
+    const favoritesChanged =
+      JSON.stringify(favoriteArtists.map((f) => f.id)) !== favoriteArtistsInitialRef.current
+
+    if (favoritesChanged) {
+      const favRes = await fetch('/api/profile/favorite-artists', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          favorites: favoriteArtists.map((f, position) => ({
+            catalogArtistId: f.id,
+            position,
+          })),
+        }),
+      })
+      if (!favRes.ok) {
+        setSaving(false)
+        setError('Could not save favorite artists.')
+        return
+      }
+      favoriteArtistsInitialRef.current = JSON.stringify(favoriteArtists.map((f) => f.id))
+    }
+
+    if (tasks.length === 0 && !favoritesChanged) {
       router.push(`/profile/${destinationUsername}`)
       return
     }
 
-    const results = await Promise.all(tasks)
-    const failed = results.find(r => !r.success)
-    if (failed) {
-      setSaving(false)
-      setError(failed.error || 'Something went wrong saving your profile.')
-    } else {
-      if (user?.id) clearProfileEditDraft(user.id)
-      router.push(`/profile/${destinationUsername}`)
+    if (tasks.length > 0) {
+      const results = await Promise.all(tasks)
+      const failed = results.find(r => !r.success)
+      if (failed) {
+        setSaving(false)
+        setError(failed.error || 'Something went wrong saving your profile.')
+        return
+      }
     }
-  }, [identity, user?.id, displayName, username, bio, lyric, song, artist, catalogSongId, isPrivate, artistLinkDraft, usernameBlocksSave, updateDisplayName, changeUsername, updateBio, updateSignatureLyric, setPrivate, updateArtistLinks, router])
+    if (user?.id) clearProfileEditDraft(user.id)
+    router.push(`/profile/${destinationUsername}`)
+  }, [identity, user?.id, displayName, username, bio, lyric, song, artist, catalogSongId, isPrivate, artistLinkDraft, favoriteArtists, usernameBlocksSave, updateDisplayName, changeUsername, updateBio, updateSignatureLyric, setPrivate, updateArtistLinks, router])
 
   if (!loading && !user) {
     return (
@@ -421,6 +468,11 @@ function EditProfilePageInner() {
                 style={{ ...inputStyle, height: 'auto', padding: '14px 16px', resize: 'none', lineHeight: 1.5 }}
               />
             </div>
+
+            <FavoriteArtistsPicker
+              initial={favoriteArtists}
+              onChange={setFavoriteArtists}
+            />
 
             {identity.isArtist && ARTIST_LINK_FIELDS.map((field) => (
               <div key={field.key}>
