@@ -20,7 +20,12 @@ export function MemoryFeedGridTile({ memory: initial }: { memory: MemoryPublic }
   const caption = memoryDisplayCaption(memory)
   const songArt = memoryCoverIsSongArt(memory)
   return (
-    <Link href={`/memory/${memory.id}`} className="margo-feed-memory-grid-tile" aria-label={caption}>
+    <Link
+      href={`/memory/${memory.id}`}
+      className="margo-feed-memory-grid-tile"
+      data-margo-memory-tile={memory.id}
+      aria-label={caption}
+    >
       <span className="margo-feed-memory-grid-tile__art">
         {wordsOnly ? (
           <span className="margo-feed-memory-grid-tile__img margo-feed-memory-grid-tile__img--words-only">

@@ -60,7 +60,7 @@ export interface CatalogUploadPresignResult {
   expiresInSec: number
 }
 
-const AUDIO_MAX = 25 * 1024 * 1024
+const AUDIO_MAX = 50 * 1024 * 1024
 const ARTWORK_MAX = 5 * 1024 * 1024
 
 export function validateCatalogUploadInput(input: CatalogUploadPresignInput): string | null {
@@ -75,7 +75,7 @@ export function validateCatalogUploadInput(input: CatalogUploadPresignInput): st
       return 'Audio must use a supported content type'
     }
     if (input.byteLength <= 0 || input.byteLength > AUDIO_MAX) {
-      return 'Audio size must be between 1 byte and 25 MB'
+      return 'Audio size must be between 1 byte and 50 MB'
     }
   } else {
     if (!IMAGE_TYPES.has(input.contentType)) {

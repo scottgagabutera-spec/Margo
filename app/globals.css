@@ -8820,3 +8820,9 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   border: 1px solid var(--gold-border);
   cursor: default;
 }
+
+.margo-live-new-shine {
+  outline: 2px solid var(--gold);
+  box-shadow: 0 0 0 4px rgba(232, 197, 71, 0.28);
+  transition: box-shadow 200ms ease;
+}
