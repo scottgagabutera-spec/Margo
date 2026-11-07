@@ -45,6 +45,10 @@ import {
   ProfileFavoriteArtistsRow,
   type ProfileFavoriteArtist,
 } from '@/components/profile-favorite-artists-row'
+import { ProfileMemoriesStrip } from '@/components/profile-memories-strip'
+import { MemoryCard } from '@/components/memory-card'
+import { useProfileMemories } from '@/hooks/useProfileMemories'
+import { memoryTimelineYear } from '@/lib/memory/date-label'
 
 const supabase = createClient()
 
@@ -146,7 +150,7 @@ interface ArtistSongRow {
   is_ai_generated: boolean
 }
 
-type ProfileContentTab = 'lyrics' | 'reposts' | 'backs' | 'private'
+type ProfileContentTab = 'lyrics' | 'memories' | 'reposts' | 'backs' | 'private'
 
 type FollowRelationState = {
   ready: boolean
@@ -403,6 +407,8 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
   )
 
   const [contentTab, setContentTab] = useState<ProfileContentTab>('lyrics')
+  const [memoryLayout, setMemoryLayout] = useState<'grid' | 'timeline'>('grid')
+  const { memories: profileMemories } = useProfileMemories(profile?.id ?? null, profile?.username ?? null)
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
   const accountMenuTriggerRef = useRef<HTMLButtonElement>(null)
   const [shareBusy, setShareBusy] = useState(false)
@@ -750,6 +756,12 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
             ) : null}
             </div>
 
+            {(isOwnProfile || profileMemories.length > 0) ? (
+              <div className="margo-profile-block--memories">
+                <ProfileMemoriesStrip memories={profileMemories} isOwnProfile={isOwnProfile} />
+              </div>
+            ) : null}
+
             <div className="margo-profile-block--favorites">
               <ProfileFavoriteArtistsRow
                 favorites={favoriteArtists}
@@ -862,6 +874,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
               >
                 {([
                   { id: 'lyrics' as const, label: 'Lyrics' },
+                  { id: 'memories' as const, label: 'Memories' },
                   { id: 'reposts' as const, label: 'Reposts' },
                   { id: 'backs' as const, label: 'Lyric Backs' },
                   ...(isOwnProfile ? [{ id: 'private' as const, label: 'Private' }] : []),
@@ -891,7 +904,68 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 })}
               </div>
 
-              {contentTab === 'lyrics' ? (
+              {contentTab === 'memories' ? (
+                profileMemories.length === 0 ? (
+                  isOwnProfile ? (
+                    <Link href="/memories/new" style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)', textDecoration: 'none' }}>
+                      Create your first memory
+                    </Link>
+                  ) : null
+                ) : (
+                  <>
+                    <div className="margo-profile-memories-tab__toggle">
+                      <button
+                        type="button"
+                        className={memoryLayout === 'grid' ? 'margo-profile-memories-tab__btn--active' : 'margo-profile-memories-tab__btn'}
+                        onClick={() => setMemoryLayout('grid')}
+                      >
+                        Grid
+                      </button>
+                      <button
+                        type="button"
+                        className={memoryLayout === 'timeline' ? 'margo-profile-memories-tab__btn--active' : 'margo-profile-memories-tab__btn'}
+                        onClick={() => setMemoryLayout('timeline')}
+                      >
+                        Timeline
+                      </button>
+                    </div>
+                    {memoryLayout === 'grid' ? (
+                      <div className="margo-profile-memories-tab__grid">
+                        {profileMemories.map((m) => (
+                          <MemoryCard key={m.id} memory={m} variant="profileGrid" />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="margo-profile-memories-tab__timeline">
+                        {(() => {
+                          const groups = new Map<string, typeof profileMemories>()
+                          for (const m of profileMemories) {
+                            const y = m.dateStart
+                              ? memoryTimelineYear(m.dateStart, m.createdAt)
+                              : 'Undated'
+                            const list = groups.get(y) || []
+                            list.push(m)
+                            groups.set(y, list)
+                          }
+                          const years = [...groups.keys()].sort((a, b) => {
+                            if (a === 'Undated') return 1
+                            if (b === 'Undated') return -1
+                            return Number(b) - Number(a)
+                          })
+                          return years.map((y) => (
+                            <div key={y} className="margo-profile-memories-tab__year">
+                              <p className="margo-profile-memories-tab__year-label">{y}</p>
+                              {groups.get(y)!.map((m) => (
+                                <MemoryCard key={m.id} memory={m} variant="profileTimelineRow" />
+                              ))}
+                            </div>
+                          ))
+                        })()}
+                      </div>
+                    )}
+                  </>
+                )
+              ) : contentTab === 'lyrics' ? (
                 ownPosts.length === 0 ? (
                   isOwnProfile ? (
                     <Link href="/compose" style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)', textDecoration: 'none' }}>
