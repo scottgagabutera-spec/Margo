@@ -34,6 +34,8 @@ import { FeedPostSkeletonList, ProfilePageSkeleton, ProfileSocialActionsSkeleton
 import { MargoPaneErrorBoundary } from '@/components/margo-pane-error-boundary'
 import { resolvePublicArtistCredit } from '@/lib/artist-identity'
 import { PendingNavLink } from '@/components/pending-nav-link'
+import { MargoCtaButton } from '@/components/margo-cta-button'
+import { PenLineIcon, PlusIcon } from '@/components/icons'
 import { MargoActionSheet } from '@/components/margo-action-sheet'
 import { MargoLongPressHint } from '@/components/margo-long-press-hint'
 import { resolveSignatureMomentSnippet } from '@/lib/signature-snippet'
@@ -950,9 +952,9 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
                   </div>
                 ) : artistSongs.length === 0 ? (
                   isOwnProfile ? (
-                    <Link href="/studio" style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)', textDecoration: 'none' }}>
-                      Studio
-                    </Link>
+                    <MargoCtaButton href="/studio" variant="outline" icon={<PenLineIcon size={18} color="var(--gold)" />}>
+                      Open Studio
+                    </MargoCtaButton>
                   ) : null
                 ) : (
                   <div className="discog-row">
@@ -1030,9 +1032,9 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
               {contentTab === 'memories' ? (
                 profileMemories.length === 0 ? (
                   isOwnProfile ? (
-                    <Link href="/memories/new" style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)', textDecoration: 'none' }}>
+                    <MargoCtaButton href="/memories/new" icon={<PlusIcon size={18} color="var(--bg)" />}>
                       Create your first memory
-                    </Link>
+                    </MargoCtaButton>
                   ) : null
                 ) : (
                   <>
@@ -1091,9 +1093,9 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
               ) : contentTab === 'lyrics' ? (
                 ownPosts.length === 0 ? (
                   isOwnProfile ? (
-                    <Link href="/compose" style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)', textDecoration: 'none' }}>
+                    <MargoCtaButton href="/compose" icon={<PenLineIcon size={18} color="var(--bg)" />}>
                       Compose
-                    </Link>
+                    </MargoCtaButton>
                   ) : null
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

@@ -78,7 +78,7 @@ export function buildFeedLyricsRows(input: {
       })
     }
 
-    if (lyricOrdinal > 0 && lyricOrdinal % PEOPLE_EVERY === 0) {
+    if (lyricOrdinal >= 14 && (lyricOrdinal - 14) % PEOPLE_EVERY === 0) {
       const prev = out[out.length - 2]
       const prevPrev = out[out.length - 3]
       if (prev?.kind === 'memory-carousel' || prevPrev?.kind === 'memory-carousel') continue

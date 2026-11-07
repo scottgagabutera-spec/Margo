@@ -54,26 +54,38 @@ export function StageSocialCardLayers({
       {layout.meta && (songTitle || artistName) ? (
         <div style={{ position: 'absolute', left: layout.meta.x, top: layout.meta.y, zIndex: 2, maxWidth: layout.contentWidth }}>
           {layout.meta.song ? (
-            <p style={{
-              margin: 0,
-              fontFamily: UI_FONT,
-              fontSize: layout.meta.song.style.fontSize,
-              fontWeight: layout.meta.song.style.fontWeight,
-              color: layout.meta.song.style.color,
-              lineHeight: layout.meta.song.style.lineHeight,
-            }}>
+            <p
+              title={layout.meta.song.truncated ? layout.meta.song.fullText ?? layout.meta.song.text : undefined}
+              style={{
+                margin: 0,
+                fontFamily: UI_FONT,
+                fontSize: layout.meta.song.style.fontSize,
+                fontWeight: layout.meta.song.style.fontWeight,
+                color: layout.meta.song.style.color,
+                lineHeight: layout.meta.song.style.lineHeight,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
               {layout.meta.song.text}
             </p>
           ) : null}
           {layout.meta.artist ? (
-            <p style={{
-              margin: layout.meta.song ? '3px 0 0' : 0,
-              fontFamily: UI_FONT,
-              fontSize: layout.meta.artist.style.fontSize,
-              fontWeight: layout.meta.artist.style.fontWeight,
-              color: layout.meta.artist.style.color,
-              lineHeight: layout.meta.artist.style.lineHeight,
-            }}>
+            <p
+              title={layout.meta.artist.truncated ? layout.meta.artist.fullText ?? layout.meta.artist.text : undefined}
+              style={{
+                margin: layout.meta.song ? '3px 0 0' : 0,
+                fontFamily: UI_FONT,
+                fontSize: layout.meta.artist.style.fontSize,
+                fontWeight: layout.meta.artist.style.fontWeight,
+                color: layout.meta.artist.style.color,
+                lineHeight: layout.meta.artist.style.lineHeight,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
               {layout.meta.artist.text}
             </p>
           ) : null}

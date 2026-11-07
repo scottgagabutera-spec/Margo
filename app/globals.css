@@ -8626,3 +8626,162 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   min-height: 28px;
   min-width: 28px;
 }
+
+.margo-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 0 4px;
+}
+.margo-section-header__title {
+  margin: 0;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--gold);
+}
+.margo-section-header__action {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.margo-cta-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 12px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.margo-cta-button--fill {
+  background: var(--gold);
+  color: var(--bg);
+  box-shadow: 0 4px 20px var(--gold-glow), 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+.margo-cta-button--outline {
+  background: rgba(232, 197, 71, 0.08);
+  color: var(--gold);
+  border-color: var(--gold-border);
+  box-shadow: 0 0 16px rgba(232, 197, 71, 0.12);
+}
+.margo-cta-button:active {
+  transform: scale(0.98);
+}
+.margo-cta-button:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+.margo-cta-button__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.margo-portrait-avatar--brand .margo-portrait-avatar__frame {
+  background: var(--gold);
+}
+.margo-portrait-avatar--brand .margo-portrait-avatar__brand-mark path {
+  stroke: var(--bg);
+}
+.margo-portrait-avatar--brand .margo-portrait-avatar__brand-mark rect {
+  fill: var(--bg);
+  opacity: 0.45;
+}
+
+.margo-feed-people-strip__label {
+  display: none;
+}
+.margo-feed-people-strip__row {
+  gap: 14px;
+  padding-bottom: 4px;
+}
+.margo-feed-people-strip__cell {
+  flex: 0 0 88px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.margo-feed-people-strip__identity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.margo-feed-people-strip__portrait {
+  --mpa-w: 72px;
+  --mpa-h: 90px;
+  --mpa-r: 12px;
+}
+.margo-feed-people-strip__display {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.2;
+  max-width: 88px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.margo-feed-people-strip__handle {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  line-height: 1.2;
+  max-width: 88px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.margo-feed-people-strip__follow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 10px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+.margo-feed-people-strip__follow--gold {
+  background: var(--gold);
+  color: var(--bg);
+  box-shadow: 0 2px 10px var(--gold-glow);
+}
+.margo-feed-people-strip__follow--following {
+  background: rgba(232, 197, 71, 0.12);
+  color: var(--gold);
+  border: 1px solid var(--gold-border);
+  cursor: default;
+}

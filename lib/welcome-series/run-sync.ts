@@ -86,7 +86,7 @@ export async function runWelcomeSeriesSync(input: {
 
   const { data: profile, error } = await admin
     .from('profiles')
-    .select('settings, display_name')
+    .select('settings, display_name, username')
     .eq('id', input.profileId)
     .maybeSingle()
 
@@ -115,7 +115,8 @@ export async function runWelcomeSeriesSync(input: {
   let settingsCursor = settings
 
   const displayName = (profile.display_name as string | null) ?? null
-  const firstName = firstNameFromDisplayName(displayName)
+  const username = (profile.username as string | null) ?? null
+  const firstName = firstNameFromDisplayName(displayName, username)
 
   for (const item of plan) {
     const copy = welcomeSeriesCopy(item.kind, firstName)

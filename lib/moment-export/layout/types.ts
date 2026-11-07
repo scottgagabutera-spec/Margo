@@ -50,6 +50,8 @@ export interface LayoutLyricBlock {
 
 export interface LayoutMetaLine {
   text: string
+  /** Full string for export when `text` is visually truncated */
+  fullText?: string
   style: LayoutTextStyle
   y: number
   truncated: boolean

@@ -183,8 +183,12 @@ export function resolveMargoMomentFromPost(
   const postArtwork = post.knowledge?.artwork ?? null
   const lines = postLines.map((line) => {
     const mapped = postLineToMomentLine(line, rootSongUrls)
+    const artistName = (mapped.artistName || post.knowledge?.artist || '').trim()
+    const songTitle = (mapped.songTitle || post.knowledge?.song || '').trim()
     return {
       ...mapped,
+      artistName,
+      songTitle,
       artworkUrl: mapped.artworkUrl ?? postArtwork,
     }
   })

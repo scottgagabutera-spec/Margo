@@ -82,7 +82,6 @@ export function welcomeSeriesBodyFromNotification(
   kind: WelcomeSeriesKind,
   data: { firstName?: string | null; body?: string } | null | undefined,
 ): string {
-  if (data?.body && typeof data.body === 'string') return data.body
   const stored = data?.firstName
   return welcomeSeriesCopy(kind, stored).body
 }

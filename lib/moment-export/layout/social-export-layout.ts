@@ -104,7 +104,9 @@ export function resolveSocialExportLayout(
     : {
         top: scaleStageToken(ref.padding.top, W),
         right: scaleStageToken(ref.padding.right, W),
-        bottom: scaleStageToken(ref.padding.bottom, W),
+        bottom: isSquare
+          ? Math.max(scaleStageToken(ref.padding.bottom, W), Math.round(frameHeight * 0.08))
+          : scaleStageToken(ref.padding.bottom, W),
         left: scaleStageToken(ref.padding.left, W),
       }
 
@@ -236,13 +238,14 @@ export function resolveSocialExportLayout(
     const songLine = songTitle
       ? {
           text: songTrunc,
+          fullText: songTitle,
           style: {
             fontFamily: geistFamily,
             fontStyle: 'normal' as const,
             fontWeight: 500,
             fontSize: songFS,
             lineHeight: ref.meta.song.lineHeight,
-            color: theme.ink,
+            color: '#ffffff',
           },
           y: metaCursor,
           truncated: songTrunc !== songTitle,
@@ -256,13 +259,14 @@ export function resolveSocialExportLayout(
       const truncated = truncateToWidth(artistName, metaMaxW, measure, artistFont)
       artistLine = {
         text: truncated,
+        fullText: artistName,
         style: {
           fontFamily: geistFamily,
           fontStyle: 'normal' as const,
           fontWeight: ref.meta.artist.fontWeight,
           fontSize: artistFS,
           lineHeight: ref.meta.artist.lineHeight,
-          color: theme.inkMuted,
+          color: 'rgba(232,197,71,0.88)',
         },
         y: metaCursor,
         truncated: truncated !== artistName,

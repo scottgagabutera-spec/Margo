@@ -52,7 +52,7 @@ export const ATMOSPHERE_OPTIONS: { id: AtmosphereId; label: string; hint: string
 ]
 
 /** Live song fields joined onto posts / post_lines. Never copied onto those rows. */
-export const SONG_POST_EMBED = 'audio_url, artwork_url, is_ai_generated, atmosphere'
+export const SONG_POST_EMBED = 'audio_url, artwork_url, is_ai_generated, atmosphere, artist_name, title'
 
 export function parseAtmosphere(raw: string | null | undefined): AtmosphereId {
   if (raw === 'breath' || raw === 'drift' || raw === 'pulse' || raw === 'weight') return raw

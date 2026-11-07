@@ -44,6 +44,7 @@ import { FeedPostActions } from '@/components/feed-post-actions'
 import { echoToPost } from '@/lib/echo-to-post'
 import { SongMeta } from '@/components/song-meta'
 import { AtmosphereLayer } from '@/components/atmosphere-layer'
+import { isPreciseTap, type PreciseTapStart } from '@/lib/touch/precise-tap'
 
 const supabase = createClient()
 
@@ -758,12 +759,31 @@ export function PostCard({
 
   const evictFeedPost = useFeedPostEvict()
 
-  const goToPost = (e: React.MouseEvent) => {
+  const cardTapRef = useRef<PreciseTapStart | null>(null)
+
+  const goToPost = (e: React.PointerEvent | React.MouseEvent) => {
     if (disableCardNav || isRow) return
     const t = e.target as HTMLElement | null
     if (t?.closest?.('a, button, textarea, input, [data-no-card-nav]')) return
     persistActivePrimaryScroll()
     navigateToPostThread(router, post.id, postLive)
+  }
+
+  const onCardPointerDown = (e: React.PointerEvent) => {
+    if (!disableCardNav && !isRow) {
+      cardTapRef.current = { x: e.clientX, y: e.clientY, t: Date.now() }
+      persistActivePrimaryScroll()
+    }
+  }
+
+  const onCardPointerUp = (e: React.PointerEvent) => {
+    if (disableCardNav || isRow) return
+    if (!isPreciseTap(cardTapRef.current, e.clientX, e.clientY, Date.now())) {
+      cardTapRef.current = null
+      return
+    }
+    cardTapRef.current = null
+    goToPost(e)
   }
 
   return (
@@ -780,10 +800,9 @@ export function PostCard({
       ].filter(Boolean).join(' ')}
       data-lb-panel-open={suggestionsOpen ? '1' : undefined}
       data-lb-first-reply={suggestionsOpen && echoCountLive === 0 ? '1' : undefined}
-      onClick={goToPost}
-      onPointerDown={() => {
-        if (!disableCardNav && !isRow) persistActivePrimaryScroll()
-      }}
+      onPointerDown={onCardPointerDown}
+      onPointerUp={onCardPointerUp}
+      onPointerCancel={() => { cardTapRef.current = null }}
       style={{
         ...vibeThemeStyleVars(vibeTheme),
         ...(isTier1 ? { borderColor: 'var(--gold-border)' } : null),
@@ -791,6 +810,7 @@ export function PostCard({
         isolation: 'isolate',
         cursor: disableCardNav || isRow ? 'default' : 'pointer',
         ...(isRow ? { margin: '6px 0 10px' } : null),
+        touchAction: disableCardNav || isRow ? undefined : 'pan-y',
       }}
     >
       {isRow && (

@@ -3,7 +3,7 @@
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useNotifications } from '@/hooks/useNotifications'
-import { MargoAvatar } from '@/components/margo-avatar'
+import { MargoSystemAvatar } from '@/components/margo-system-avatar'
 import { UI_FONT, TYPE } from '@/lib/fonts'
 import { notificationHref } from '@/lib/navigation/notification-routes'
 import {
@@ -76,7 +76,7 @@ export default function NotificationTipDetailPage() {
         background: 'var(--surface)',
       }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 16 }}>
-          <MargoAvatar size="sm" displayName="Margo" brandMark />
+          <MargoSystemAvatar size="sm" />
           <h1 style={{
             margin: 0,
             fontFamily: UI_FONT,

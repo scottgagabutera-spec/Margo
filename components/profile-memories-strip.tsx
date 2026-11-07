@@ -1,6 +1,7 @@
 'use client'
 
 import { ProfileMemoryAddTile, ProfileMemoryMoreTile, ProfileMemoryTile } from '@/components/profile-memory-tile'
+import { MargoSectionHeader } from '@/components/margo-section-header'
 import type { MemoryPublic } from '@/lib/memory/types'
 
 export function ProfileMemoriesStrip({
@@ -22,7 +23,7 @@ export function ProfileMemoriesStrip({
 
   return (
     <div className="margo-profile-memories-strip">
-      <p className="margo-profile-ui-label margo-profile-memories-strip__label">Memories</p>
+      <MargoSectionHeader title="Memories" className="margo-profile-memories-strip__head" />
       <div className="margo-profile-memories-strip__row">
         {isOwnProfile ? <ProfileMemoryAddTile labeled={ownerEmpty} /> : null}
         {row.map((m, i) => (

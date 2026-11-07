@@ -1,10 +1,15 @@
 import type { Notification } from '@/hooks/useNotifications'
-import { welcomeSeriesCopy, welcomeSeriesKindFromData } from '@/lib/welcome-series/copy'
+import {
+  welcomeSeriesBodyFromNotification,
+  welcomeSeriesKindFromData,
+} from '@/lib/welcome-series/copy'
 
 export function messageFor(n: Notification): string {
   if (n.type === 'system_welcome') {
     const kind = welcomeSeriesKindFromData(n.data)
-    if (kind) return welcomeSeriesCopy(kind).body
+    if (kind) {
+      return welcomeSeriesBodyFromNotification(kind, n.data as { firstName?: string; body?: string })
+    }
     return n.data?.title || 'Tips from Margo'
   }
   const name = n.actor?.displayName || n.actor?.username || 'Someone'

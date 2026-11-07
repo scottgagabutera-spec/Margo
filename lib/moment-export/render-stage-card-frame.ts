@@ -190,14 +190,14 @@ export function renderStageCardFrame(
       ctx.textAlign = 'left'
       ctx.font = `${s.style.fontWeight} ${s.style.fontSize}px ${s.style.fontFamily}`
       ctx.fillStyle = s.style.color
-      ctx.fillText(s.text, metaX, s.y + s.style.fontSize)
+      ctx.fillText(s.fullText && s.truncated ? s.fullText : s.text, metaX, s.y + s.style.fontSize)
     }
     if (layout.meta.artist) {
       const a = layout.meta.artist
       ctx.textAlign = 'left'
       ctx.font = `${a.style.fontWeight} ${a.style.fontSize}px ${a.style.fontFamily}`
       ctx.fillStyle = a.style.color
-      ctx.fillText(a.text, metaX, a.y + a.style.fontSize)
+      ctx.fillText(a.fullText && a.truncated ? a.fullText : a.text, metaX, a.y + a.style.fontSize)
     }
   }
 

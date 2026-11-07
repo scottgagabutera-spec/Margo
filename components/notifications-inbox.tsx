@@ -11,6 +11,7 @@ import {
   type NotificationFilter,
 } from '@/lib/notifications/display'
 import { notificationHref } from '@/lib/navigation/notification-routes'
+import { MargoSystemAvatar } from '@/components/margo-system-avatar'
 import { MargoAvatar } from '@/components/margo-avatar'
 import { LIST_ROW_TYPE, UI_FONT } from '@/lib/fonts'
 import { signedOutGateBenefitStyle, signedOutGateSignInStyle } from '@/lib/signed-out-gate-styles'
@@ -65,7 +66,7 @@ function SystemWelcomeNotificationRow({
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-        <MargoAvatar size="sm" displayName="Margo" brandMark />
+        <MargoSystemAvatar size="sm" />
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{
             fontFamily: UI_FONT,
@@ -363,18 +364,7 @@ export function NotificationsInbox({
             >
               Load more
             </button>
-          ) : (
-            <p style={{
-              fontFamily: UI_FONT,
-              fontSize: LIST_ROW_TYPE.time,
-              color: 'var(--text-muted)',
-              textAlign: 'center',
-              padding: '16px 0',
-              margin: 0,
-            }}>
-              Older items load as you scroll.
-            </p>
-          )}
+          ) : null}
         </div>
       )}
     </div>

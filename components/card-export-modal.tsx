@@ -35,8 +35,12 @@ export function CardExportModal({
       onOpenChange={onOpenChange}
       title="Your Moment"
       zIndex={200}
-      heightMode="auto"
-      maxHeight="min(82dvh, 620px)"
+      heightMode="fixed"
+      anchor="bottom"
+      fullViewport
+      dismissOnBack
+      maxHeight="96dvh"
+      bottomInset="tabbar-tight"
       panelOverflow="visible"
       contentOverflow="auto"
     >

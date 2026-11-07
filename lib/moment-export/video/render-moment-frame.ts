@@ -277,13 +277,13 @@ export function renderMomentFrame(
       const s = layout.meta.song
       ctx.font = `${s.style.fontWeight} ${s.style.fontSize}px ${s.style.fontFamily}`
       ctx.fillStyle = s.style.color
-      ctx.fillText(s.text, layout.meta.x, s.y + s.style.fontSize - lift)
+      ctx.fillText(s.fullText && s.truncated ? s.fullText : s.text, layout.meta.x, s.y + s.style.fontSize - lift)
     }
     if (layout.meta.artist) {
       const a = layout.meta.artist
       ctx.font = `${a.style.fontWeight} ${a.style.fontSize}px ${a.style.fontFamily}`
       ctx.fillStyle = a.style.color
-      ctx.fillText(a.text, layout.meta.x, a.y + a.style.fontSize - lift)
+      ctx.fillText(a.fullText && a.truncated ? a.fullText : a.text, layout.meta.x, a.y + a.style.fontSize - lift)
     }
     ctx.restore()
   }

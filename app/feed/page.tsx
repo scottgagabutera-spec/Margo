@@ -128,11 +128,37 @@ function FeedPageInner() {
   } = usePostReplays(feedLive)
   const [postStats, setPostStats] = useState<Record<string, { views?: number; resonateCount?: number; echoCount?: number; replayCount?: number }>>({})
   const [exportPost, setExportPost] = useState<Post | null>(null)
+  const [acceptedFollowIds, setAcceptedFollowIds] = useState<Set<string>>(new Set())
+  const [followedFromStrip, setFollowedFromStrip] = useState<Set<string>>(new Set())
   const postStatsLoadedAtRef = useRef(0)
   const resonatesLoadedAtRef = useRef(0)
   const highlightHandledRef = useRef<string | null>(null)
   const [sharedLabel, setSharedLabel] = useState(false)
   const [highlightPostId, setHighlightPostId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!user?.id) {
+      setAcceptedFollowIds(new Set())
+      return
+    }
+    let active = true
+    void supabase
+      .from('follows')
+      .select('followee_id')
+      .eq('follower_id', user.id)
+      .eq('status', 'accepted')
+      .then(({ data, error }) => {
+        if (!active || error) return
+        setAcceptedFollowIds(new Set((data || []).map((r) => r.followee_id as string)))
+      })
+    return () => { active = false }
+  }, [user?.id])
+
+  const followingIds = useMemo(() => {
+    const merged = new Set(acceptedFollowIds)
+    followedFromStrip.forEach((id) => merged.add(id))
+    return merged
+  }, [acceptedFollowIds, followedFromStrip])
 
   useEffect(() => {
     if (!feedLive) return
@@ -336,7 +362,7 @@ function FeedPageInner() {
     const myId = user?.id
     for (const p of posts) {
       const id = p.authorUid
-      if (!id || id === myId || seen.has(id)) continue
+      if (!id || id === myId || seen.has(id) || followingIds.has(id)) continue
       seen.add(id)
       if (!p.username) continue
       out.push({
@@ -348,7 +374,7 @@ function FeedPageInner() {
       if (out.length >= 24) break
     }
     return out
-  }, [posts, user?.id])
+  }, [posts, user?.id, followingIds])
 
   const { memories: feedMemories } = useFeedMemories(feedLive && feedContentTab === 'lyrics')
   const {
@@ -737,7 +763,14 @@ function FeedPageInner() {
               )
             }
             if (item.kind === 'people') {
-              return <FeedPeopleStrip key={item.key} people={item.people} />
+              return (
+                <FeedPeopleStrip
+                  key={item.key}
+                  people={item.people}
+                  followingIds={followingIds}
+                  onFollowed={(id) => setFollowedFromStrip((prev) => new Set(prev).add(id))}
+                />
+              )
             }
             if (item.kind === 'memory-nudge') {
               return (
