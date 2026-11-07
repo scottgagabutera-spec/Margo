@@ -5,7 +5,9 @@ export function isConsentEnforcementExemptPath(pathname: string): boolean {
   if (pathname === '/terms' || pathname === '/privacy') return true
   if (pathname.startsWith('/auth/callback')) return true
   if (pathname.startsWith('/api/auth/')) return true
+  if (pathname.startsWith('/api/admin')) return true
   if (pathname.startsWith('/api/promote/oauth/')) return true
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) return true
   return false
 }
 

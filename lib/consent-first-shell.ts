@@ -1,3 +1,5 @@
+import { isAdminAppPath } from '@/lib/admin-path'
+
 /** When true, product routes must not mount feed / You / data panes — terms only. */
 export function shouldMountAppContent(input: {
   signedIn: boolean
@@ -8,6 +10,7 @@ export function shouldMountAppContent(input: {
   const path = (input.pathname || '').split('?')[0]
   if (path === '/auth/callback') return false
   if (!input.signedIn || !input.needsTermsAcceptance) return true
+  if (isAdminAppPath(path)) return true
   // Allow the whole sign-in surface (LegalConsentEnforcer adds step=terms) — avoids blank flash.
   if (path === '/signin') return true
   return false
