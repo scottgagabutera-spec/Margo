@@ -193,11 +193,8 @@ function ComposeDismissButton({
 
 const composeOverlayStyle: React.CSSProperties = {
   position: 'fixed',
-  top: 'calc(var(--margo-header-h, var(--nav-height, 72px)) + var(--margo-vv-offset-top, 0px))',
   left: 0,
   right: 0,
-  height: 'calc(var(--margo-vv-height, 100dvh) - var(--margo-header-h, var(--nav-height, 72px)))',
-  maxHeight: 'calc(var(--margo-vv-height, 100dvh) - var(--margo-header-h, var(--nav-height, 72px)))',
   zIndex: 80,
   display: 'flex',
   flexDirection: 'column',
@@ -217,6 +214,7 @@ function ComposeTopBar({
   trailing,
   keyboardCompact,
   chromeHidden,
+  layoutCompact,
 }: {
   onBack?: () => void
   backDisabled?: boolean
@@ -225,10 +223,13 @@ function ComposeTopBar({
   /** Collapse centered title when the keyboard is open (Your Line). */
   keyboardCompact?: boolean
   chromeHidden?: boolean
+  layoutCompact?: boolean
 }) {
-  const compact = !!(keyboardCompact && chromeHidden && title)
+  const compact = layoutCompact || !!(keyboardCompact && chromeHidden && title)
   return (
-    <div style={{
+    <div
+      className="margo-compose-top-bar"
+      style={{
       display: 'grid',
       gridTemplateColumns: 'minmax(64px, 1fr) auto minmax(64px, 1fr)',
       alignItems: 'center',
@@ -274,7 +275,9 @@ function ComposeTopBar({
         ) : null}
       </div>
       {title && !compact ? (
-        <h1 style={{
+        <h1
+          className="margo-compose-top-bar__title"
+          style={{
           fontFamily: font,
           fontStyle: 'italic',
           fontSize: '1.15rem',
@@ -596,7 +599,7 @@ function ComposeInner() {
 
   // Must run before any early return (Rules of Hooks). Publishes --margo-keyboard-inset
   // and hides the mobile tab bar while typing / search sheet is open.
-  const { keyboardOpen, chromeHidden } = useKeyboardSafeChrome(composeLive)
+  const { keyboardOpen, chromeHidden, compact: viewportCompact } = useKeyboardSafeChrome(composeLive)
 
   const resetComposeViewport = useCallback(() => {
     if (typeof document !== 'undefined') {
@@ -1418,6 +1421,7 @@ function ComposeInner() {
               {(committedLines.length > 0 || showStep1Resume) && (
                 <ComposeTopBar
                   onBack={handleFindBack}
+                  layoutCompact={viewportCompact}
                   title={committedLines.length > 0 ? 'Add another line' : undefined}
                   trailing={committedLines.length > 0 ? (
                     <ComposeDismissButton onClick={handleCancelLine} label="Cancel adding a line" />
@@ -1425,7 +1429,7 @@ function ComposeInner() {
                 />
               )}
               {committedLines.length > 0 && (
-                <div style={{
+                <div className="margo-compose-find-chrome--optional" style={{
                   marginBottom: '28px', padding: '14px 16px',
                   border: '1px solid var(--border)', borderRadius: '14px',
                   background: 'rgba(255,255,255,0.02)',
@@ -1798,6 +1802,7 @@ function ComposeInner() {
             <div style={{ flexShrink: 0 }}>
               <ComposeTopBar
                 onBack={handleLinePickerBack}
+                layoutCompact={viewportCompact}
                 title="Pick the line"
                 trailing={<ComposeDismissButton onClick={handleCancelLine} label="Cancel line" />}
               />
@@ -1957,6 +1962,7 @@ function ComposeInner() {
                 title="Your line"
                 keyboardCompact
                 chromeHidden={chromeHidden}
+                layoutCompact={viewportCompact}
                 trailing={<ComposeDismissButton onClick={handleCancelLine} label="Cancel line" />}
               />
               {songName && (
@@ -1977,7 +1983,9 @@ function ComposeInner() {
                 padding: chromeHidden ? '18px 20px' : '20px',
               }}
             >
-              <div style={{
+              <div
+                className="margo-compose-meta-row"
+                style={{
                 flexShrink: 0,
                 display: 'flex',
                 flexDirection: 'row',

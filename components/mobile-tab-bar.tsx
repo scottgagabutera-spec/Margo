@@ -118,7 +118,7 @@ export function MobileTabBar() {
     primaryTabBarLive(hubOpen, tabPending(id) || tabAcked(id))
   const hubGold = hubTabBarGold(hubOpen)
 
-  const tabStyle = (active: boolean, live: boolean, showIndicator: boolean): CSSProperties => ({
+  const tabStyle = (active: boolean, live: boolean): CSSProperties => ({
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
     gap: '2px', textDecoration: 'none',
     minHeight: 'var(--margo-touch-min)',
@@ -127,7 +127,6 @@ export function MobileTabBar() {
     color: live || active ? 'var(--gold)' : 'var(--text-muted)',
     WebkitTapHighlightColor: 'transparent',
     transition: 'color 80ms var(--ease-out), opacity 80ms var(--ease-out)',
-    ...(showIndicator ? { '--margo-tab-indicator': 1 } as CSSProperties : {}),
   })
 
   const tabIndicator = (visible: boolean) => visible ? (
@@ -173,7 +172,7 @@ export function MobileTabBar() {
       boxShadow: isLanding ? 'none' : '0 -1px 24px rgba(0,0,0,0.35)',
       borderTop: isLanding ? '1px solid var(--border)' : 'none',
     }}>
-      <Link href="/feed" style={tabStyle(isOnFeed, tabLive('feed'), isOnFeed || tabAcked('feed'))} {...feedLink}>
+      <Link href="/feed" style={tabStyle(isOnFeed, tabLive('feed'))} {...feedLink}>
         {tabPending('feed') ? (
           <LoadingRing size={20} strokeWidth={1.5} state="spinning" />
         ) : (
@@ -183,7 +182,7 @@ export function MobileTabBar() {
         {tabIndicator((isOnFeed || tabAcked('feed')) && !tabPending('feed'))}
       </Link>
 
-      <Link href="/discover" style={tabStyle(isOnDiscover, tabLive('discover'), isOnDiscover || tabAcked('discover'))} {...discoverLink}>
+      <Link href="/discover" style={tabStyle(isOnDiscover, tabLive('discover'))} {...discoverLink}>
         {tabPending('discover') ? (
           <LoadingRing size={20} strokeWidth={1.5} state="spinning" />
         ) : (
@@ -222,13 +221,13 @@ export function MobileTabBar() {
         )}
       </Link>
 
-      <HubTabButton style={tabStyle(hubGold, hubGold, hubGold)} labelStyle={labelStyle} hubIndicator={hubGold} />
+      <HubTabButton style={tabStyle(hubGold, hubGold)} labelStyle={labelStyle} hubIndicator={hubGold} />
 
       {isSignedIn ? (
         <Link
           href={youHref}
           aria-label="You"
-          style={tabStyle(isOnProfile, tabLive('you') || youAwaitingIdentity, isOnProfile || tabAcked('you'))}
+          style={tabStyle(isOnProfile, tabLive('you') || youAwaitingIdentity)}
           {...youLink}
         >
           {tabPending('you') || youAwaitingIdentity ? (
@@ -245,7 +244,7 @@ export function MobileTabBar() {
         </Link>
       ) : (
         <SignInLink
-          style={tabStyle(signInTabActive, tabLive('you') || youAwaitingIdentity, signInTabActive)}
+          style={tabStyle(signInTabActive, tabLive('you') || youAwaitingIdentity)}
           aria-current={signInTabActive ? 'page' : undefined}
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>

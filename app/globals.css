@@ -427,7 +427,61 @@ html[data-margo-landing-song-flow] .margo-landing-page-shell {
 
 .margo-compose-overlay {
   overflow: hidden;
-  /* Height uses --margo-vv-height; do not pad by keyboard-inset again (double-count). */
+  top: calc(var(--margo-header-h, var(--nav-height, 72px)) + var(--margo-vv-offset-top, 0px));
+  height: calc(var(--margo-vv-height, 100dvh) - var(--margo-header-h, var(--nav-height, 72px)));
+  max-height: calc(var(--margo-vv-height, 100dvh) - var(--margo-header-h, var(--nav-height, 72px)));
+}
+
+html[data-margo-compose-compact="1"] .margo-nav .margo-desktop-nav,
+html[data-margo-compose-compact="1"] .margo-nav [data-margo-nav-search],
+html[data-margo-compose-compact="1"] .margo-compose-find-chrome--optional {
+  display: none !important;
+}
+
+html[data-margo-compose-compact="1"] .margo-compose-sticky-song--flush {
+  min-height: 34px;
+  padding: 2px 0 4px;
+  gap: 6px;
+}
+
+html[data-margo-compose-compact="1"] .margo-compose-sticky-song--flush .margo-stage-song-chip-wrap {
+  padding: 4px 8px;
+  min-height: 30px;
+}
+
+html[data-margo-compose-compact="1"] .margo-compose-your-line-card .margo-compose-meta-row label {
+  font-size: 0.5rem;
+  margin-bottom: 2px;
+  letter-spacing: 1px;
+}
+
+html[data-margo-compose-compact="1"] .margo-compose-your-line-card .margo-compose-meta-row input,
+html[data-margo-compose-compact="1"] .margo-compose-your-line-card .margo-compose-meta-row button {
+  font-size: 0.78rem;
+  min-height: 36px;
+  padding: 2px 0 4px;
+}
+
+html[data-margo-compose-compact="1"] .margo-compose-your-line-card .margo-compose-meta-row {
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+html[data-margo-compose-compact="1"] .margo-compose-your-line-card {
+  padding: 14px 16px !important;
+}
+
+html[data-margo-compose-compact="1"] .margo-compose-overlay__stack {
+  padding-top: 0;
+}
+
+html[data-margo-compose-compact="1"] .margo-compose-top-bar {
+  min-height: 36px;
+  margin-bottom: 6px !important;
+}
+
+html[data-margo-compose-compact="1"] .margo-compose-top-bar .margo-compose-top-bar__title {
+  font-size: 0.95rem;
 }
 
 .margo-compose-overlay__stack {
@@ -465,7 +519,7 @@ html:not([data-margo-keyboard="1"]) .margo-compose-overlay--your-line .margo-com
 .margo-compose-your-line-card .margo-catalog-pick-lyric__input,
 .margo-compose-your-line-card textarea {
   flex: 1 1 auto;
-  min-height: 0;
+  min-height: calc(3 * 1.45em + 6px);
   max-height: 100%;
   overflow-y: auto;
   overscroll-behavior: contain;

@@ -1,74 +1,95 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { attachSettledVisualViewportListener } from '@/lib/settled-visual-viewport'
+import {
+  publishComposeViewportCss,
+  readComposeViewportMetrics,
+  scheduleComposeViewportBurst,
+  type ComposeViewportMetrics,
+} from '@/lib/compose-viewport-metrics'
 
 export interface VisualViewportMetrics {
-  /** visualViewport.height (px), or window.innerHeight fallback */
   height: number
-  /** visualViewport.offsetTop */
   offsetTop: number
-  /**
-   * Distance from the layout viewport bottom to the visual viewport bottom.
-   * ≈ on-screen keyboard overlap when the keyboard is open.
-   */
   keyboardInset: number
-  /** True when keyboardInset clears a small threshold */
   keyboardOpen: boolean
+  compact: boolean
 }
 
-const KEYBOARD_OPEN_PX = 80
+const KEYBOARD_OPEN_INSET_PX = 36
 
-function readMetrics(): VisualViewportMetrics {
-  if (typeof window === 'undefined') {
-    return { height: 800, offsetTop: 0, keyboardInset: 0, keyboardOpen: false }
-  }
-  const vv = window.visualViewport
-  const height = vv?.height ?? window.innerHeight
-  const offsetTop = vv?.offsetTop ?? 0
-  const keyboardInset = Math.max(0, window.innerHeight - height - offsetTop)
+function toPublicMetrics(m: ComposeViewportMetrics, textFocused: boolean): VisualViewportMetrics {
+  const keyboardOpen =
+    textFocused && (m.keyboardLikely || m.keyboardInset >= KEYBOARD_OPEN_INSET_PX)
   return {
-    height,
-    offsetTop,
-    keyboardInset,
-    keyboardOpen: keyboardInset >= KEYBOARD_OPEN_PX,
+    height: m.height,
+    offsetTop: m.offsetTop,
+    keyboardInset: m.keyboardInset,
+    keyboardOpen,
+    compact: m.compact,
   }
 }
 
 /**
  * Tracks the Visual Viewport (keyboard-aware on iOS Safari + Android Chrome).
- * Optionally publishes CSS vars on <html> for sticky CTAs / sheets:
- *   --margo-vv-height
- *   --margo-keyboard-inset
+ * Publishes CSS vars on <html> for sticky CTAs / Compose overlays.
  */
 export function useVisualViewport(options?: { publishCssVars?: boolean }) {
   const publish = options?.publishCssVars ?? true
-  const [metrics, setMetrics] = useState<VisualViewportMetrics>(() => readMetrics())
+  const [metrics, setMetrics] = useState<VisualViewportMetrics>(() =>
+    typeof window === 'undefined'
+      ? { height: 800, offsetTop: 0, keyboardInset: 0, keyboardOpen: false, compact: false }
+      : toPublicMetrics(readComposeViewportMetrics(), false),
+  )
 
   useEffect(() => {
-    const update = () => {
-      const next = readMetrics()
+    const textFocusedRef = { current: false }
+    let burstCancel: (() => void) | null = null
+
+    const sync = () => {
+      const raw = readComposeViewportMetrics()
+      const next = toPublicMetrics(raw, textFocusedRef.current)
       setMetrics(next)
-      if (publish && typeof document !== 'undefined') {
-        const root = document.documentElement
-        root.style.setProperty('--margo-vv-height', `${Math.round(next.height)}px`)
-        root.style.setProperty('--margo-vv-offset-top', `${Math.round(next.offsetTop)}px`)
-        root.style.setProperty('--margo-keyboard-inset', `${Math.round(next.keyboardInset)}px`)
-      }
+      if (publish) publishComposeViewportCss(raw, document.documentElement)
     }
 
-    update()
-    const vv = window.visualViewport
-    vv?.addEventListener('resize', update)
-    vv?.addEventListener('scroll', update)
-    window.addEventListener('resize', update)
+    const scheduleBurst = () => {
+      burstCancel?.()
+      burstCancel = scheduleComposeViewportBurst(sync)
+    }
+
+    const onFocusIn = () => {
+      textFocusedRef.current = true
+      sync()
+      scheduleBurst()
+    }
+    const onFocusOut = () => {
+      textFocusedRef.current = false
+      scheduleBurst()
+    }
+    const onOrientation = () => scheduleBurst()
+
+    sync()
+    const detachSettled = attachSettledVisualViewportListener({ onSettled: sync })
+
+    window.addEventListener('orientationchange', onOrientation)
+    document.addEventListener('focusin', onFocusIn)
+    document.addEventListener('focusout', onFocusOut)
+
     return () => {
-      vv?.removeEventListener('resize', update)
-      vv?.removeEventListener('scroll', update)
-      window.removeEventListener('resize', update)
+      detachSettled()
+      burstCancel?.()
+      window.removeEventListener('orientationchange', onOrientation)
+      document.removeEventListener('focusin', onFocusIn)
+      document.removeEventListener('focusout', onFocusOut)
       if (publish) {
-        document.documentElement.style.removeProperty('--margo-vv-height')
-        document.documentElement.style.removeProperty('--margo-vv-offset-top')
-        document.documentElement.style.removeProperty('--margo-keyboard-inset')
+        const root = document.documentElement
+        root.style.removeProperty('--margo-vv-height')
+        root.style.removeProperty('--margo-vv-offset-top')
+        root.style.removeProperty('--margo-keyboard-inset')
+        root.style.removeProperty('--margo-compose-available-h')
+        root.removeAttribute('data-margo-compose-compact')
       }
     }
   }, [publish])
@@ -76,10 +97,6 @@ export function useVisualViewport(options?: { publishCssVars?: boolean }) {
   return metrics
 }
 
-/**
- * True while an editable field (input/textarea/contenteditable) is focused.
- * Used to hide chrome (e.g. mobile tab bar) and prefer keyboard insets.
- */
 export function useTextFieldFocus() {
   const [focused, setFocused] = useState(false)
 
@@ -108,22 +125,23 @@ export function useTextFieldFocus() {
   return focused
 }
 
-/**
- * Keyboard-safe chrome: visual viewport metrics + html[data-margo-keyboard]
- * for tab-bar hide while a text field is focused or the keyboard is open.
- * No force flags — same path for every Compose step / future form.
- */
 export function useKeyboardSafeChrome(enabled = true) {
   const metrics = useVisualViewport({ publishCssVars: enabled })
   const textFocused = useTextFieldFocus()
-  const active = enabled && (textFocused || metrics.keyboardOpen)
+  const keyboardOpen = enabled && (metrics.keyboardOpen || textFocused)
 
   useEffect(() => {
     const root = document.documentElement
-    if (active) root.setAttribute('data-margo-keyboard', '1')
+    if (keyboardOpen) root.setAttribute('data-margo-keyboard', '1')
     else root.removeAttribute('data-margo-keyboard')
     return () => root.removeAttribute('data-margo-keyboard')
-  }, [active])
+  }, [keyboardOpen])
 
-  return { ...metrics, textFocused, chromeHidden: active }
+  return {
+    ...metrics,
+    textFocused,
+    keyboardOpen,
+    chromeHidden: keyboardOpen,
+    compact: metrics.compact,
+  }
 }

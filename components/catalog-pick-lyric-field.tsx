@@ -103,6 +103,17 @@ export function CatalogPickLyricField({
       onChange={(e) => {
         if (catalogPickOnly) return
         onValueChange(e.target.value.slice(0, maxLength))
+        if (variant === 'compose') {
+          const el = e.currentTarget
+          const pos = el.selectionStart
+          requestAnimationFrame(() => {
+            try {
+              el.setSelectionRange(pos, pos)
+            } catch {
+              /* ignore */
+            }
+          })
+        }
       }}
       onFocus={(e) => {
         if (!catalogPickOnly) return
