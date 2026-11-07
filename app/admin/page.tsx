@@ -207,23 +207,6 @@ function LoginForm({
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [adminRecoveryHint, setAdminRecoveryHint] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        const res = await fetch('/api/admin/recovery-hint')
-        const body = await res.json().catch(() => ({}))
-        if (!cancelled && body?.ok && typeof body.maskedEmail === 'string') {
-          setAdminRecoveryHint(body.maskedEmail)
-        }
-      } catch {
-        /* ignore */
-      }
-    })()
-    return () => { cancelled = true }
-  }, [])
 
   const handleLogin = async () => {
     setLoading(true)
@@ -310,18 +293,6 @@ function LoginForm({
             >
               Forgot password?
             </Link>
-            {adminRecoveryHint ? (
-              <p style={{
-                fontFamily: 'var(--font-lora), serif',
-                fontSize: '0.62rem',
-                color: 'rgba(255,255,255,0.35)',
-                margin: '10px 0 0',
-                lineHeight: 1.45,
-              }}>
-                Admin recovery hint: enter the same address you use for this account
-                ({adminRecoveryHint}), then tap <strong style={{ color: 'rgba(255,255,255,0.55)' }}>Send code</strong> on the next screen.
-              </p>
-            ) : null}
           </div>
         </div>
       </div>
@@ -1434,6 +1405,7 @@ function AdminShell() {
   const [isAdmin, setIsAdmin] = useState(false)
   /** KPIs from session?overview=1; consumed once by OverviewPanel, then cleared */
   const [overviewInitial, setOverviewInitial] = useState<OverviewData | null>(null)
+  const [adminRecoveryHint, setAdminRecoveryHint] = useState<string | null>(null)
 
   useEffect(() => {
     if (authLoading) return
@@ -1471,6 +1443,26 @@ function AdminShell() {
     // Gate once after auth boot — not on every section change (panels fetch their own data).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading])
+
+  useEffect(() => {
+    if (!isAdmin || !sessionChecked) {
+      setAdminRecoveryHint(null)
+      return
+    }
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await adminFetch('/api/admin/recovery-hint')
+        const body = await res.json().catch(() => ({}))
+        if (!cancelled && body?.ok && typeof body.maskedEmail === 'string') {
+          setAdminRecoveryHint(body.maskedEmail)
+        }
+      } catch {
+        /* ignore */
+      }
+    })()
+    return () => { cancelled = true }
+  }, [isAdmin, sessionChecked])
 
   const setSection = useCallback((next: AdminSection) => {
     if (next !== 'overview') setOverviewInitial(null)
@@ -1570,6 +1562,18 @@ function AdminShell() {
           <button type="button" onClick={handleSignOut} style={{ ...S.ghostBtn, width: '100%' }}>
             Sign Out
           </button>
+          {adminRecoveryHint ? (
+            <p style={{
+              fontFamily: 'var(--font-lora), serif',
+              fontSize: '0.55rem',
+              color: 'rgba(255,255,255,0.28)',
+              margin: '20px 0 0',
+              lineHeight: 1.5,
+            }}>
+              Reset: use <Link href="/forgot-password" style={{ color: 'var(--gold)', textDecoration: 'none' }}>Forgot password?</Link>
+              {' '}with <strong style={{ color: 'rgba(255,255,255,0.42)' }}>{adminRecoveryHint}</strong> if needed.
+            </p>
+          ) : null}
         </aside>
 
         <main style={{ minWidth: 0 }}>

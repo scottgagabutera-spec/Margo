@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -49,30 +49,28 @@ function PauseCircleIcon() {
   )
 }
 
-function statusLabel(status: StudioSong['status'], inTrash: boolean): string | null {
-  if (inTrash && status === 'archived') return 'Trash'
+function TrashIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6v10m4-10v10M5 9h14v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9z" stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function MoreIcon() {
+  return (
+    <span style={{ fontSize: '1.1rem', lineHeight: 1, color: 'var(--text)', fontWeight: 700 }} aria-hidden>⋯</span>
+  )
+}
+
+function statusLabel(status: StudioSong['status']): string | null {
   switch (status) {
     case 'processing': return 'Processing'
     case 'coming_soon': return 'Coming Soon'
     case 'hidden': return 'Hidden'
     case 'draft': return 'Draft'
-    case 'archived': return 'Trash'
     default: return null
   }
-}
-
-const pillBtn: React.CSSProperties = {
-  fontFamily: font,
-  fontSize: '0.62rem',
-  fontWeight: 600,
-  letterSpacing: '0.5px',
-  textTransform: 'uppercase',
-  padding: '10px 14px',
-  borderRadius: '999px',
-  border: '1px solid var(--gold-border)',
-  background: 'transparent',
-  color: 'var(--gold)',
-  cursor: 'pointer',
 }
 
 const sheetActionBtn: React.CSSProperties = {
@@ -97,6 +95,24 @@ const sheetDangerBtn: React.CSSProperties = {
   background: 'rgba(255,96,96,0.06)',
 }
 
+const promoteLinkStyle: React.CSSProperties = {
+  fontFamily: font,
+  fontSize: '0.65rem',
+  fontWeight: 600,
+  letterSpacing: '0.5px',
+  textTransform: 'uppercase',
+  color: 'var(--gold)',
+  textDecoration: 'none',
+  padding: '10px 14px',
+  borderRadius: '999px',
+  border: '1px solid var(--gold-border)',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '6px',
+}
+
+const LONG_PRESS_MS = 520
+
 export default function StudioPage() {
   const router = useRouter()
   const { user, identity, loading: identityLoading } = useIdentity()
@@ -106,13 +122,16 @@ export default function StudioPage() {
   const [showUpload, setShowUpload] = useState(false)
   const [editingSongId, setEditingSongId] = useState<string | null>(null)
 
-  const [sheetSong, setSheetSong] = useState<StudioSong | null>(null)
+  const [overflowSong, setOverflowSong] = useState<StudioSong | null>(null)
   const [deleteConfirmSong, setDeleteConfirmSong] = useState<StudioSong | null>(null)
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
-  const [trashView, setTrashView] = useState(false)
+  const [trashOpen, setTrashOpen] = useState(false)
   const [actionBusy, setActionBusy] = useState(false)
+
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressFired = useRef(false)
 
   const userId = user?.id ?? null
 
@@ -132,12 +151,12 @@ export default function StudioPage() {
     const list = (songRows || []) as StudioSong[]
     setSongs(list)
 
-    const visibleIds = list.filter((s) => s.status !== 'archived').map((s) => s.id)
-    if (visibleIds.length > 0) {
+    const libraryIds = list.filter((s) => s.status !== 'archived').map((s) => s.id)
+    if (libraryIds.length > 0) {
       const { data: statRows } = await supabase
         .from('song_stats')
         .select('song_id, plays, resonate_count')
-        .in('song_id', visibleIds)
+        .in('song_id', libraryIds)
 
       const statMap: Record<string, SongStat> = {}
       ;(statRows || []).forEach((s: SongStat) => { statMap[s.song_id] = s })
@@ -164,12 +183,15 @@ export default function StudioPage() {
     [songs],
   )
 
-  const displayedSongs = trashView ? trashSongs : librarySongs
-
-  const totalPlays = useMemo(() => Object.values(stats).reduce((sum, s) => sum + (s.plays || 0), 0), [stats])
-  const totalResonates = useMemo(() => Object.values(stats).reduce((sum, s) => sum + (s.resonate_count || 0), 0), [stats])
-
   const selectedCount = selectedIds.size
+  const selectableLibraryIds = useMemo(() => librarySongs.map((s) => s.id), [librarySongs])
+
+  const clearLongPressTimer = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }, [])
 
   const toggleSelected = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -180,7 +202,8 @@ export default function StudioPage() {
     })
   }, [])
 
-  const clearSelection = useCallback(() => {
+  const exitSelectMode = useCallback(() => {
+    setSelectMode(false)
     setSelectedIds(new Set())
   }, [])
 
@@ -234,22 +257,24 @@ export default function StudioPage() {
     } : undefined,
   })
 
-  const onSheetHideToggle = async () => {
-    if (!sheetSong || actionBusy) return
+  const totalPlays = Object.values(stats).reduce((sum, s) => sum + (s.plays || 0), 0)
+  const totalResonates = Object.values(stats).reduce((sum, s) => sum + (s.resonate_count || 0), 0)
+
+  const onOverflowHideToggle = async (song: StudioSong) => {
+    if (actionBusy) return
     try {
-      await patchSong(sheetSong.id, 'hide')
-      toast(sheetSong.status === 'hidden' ? 'Song is visible again' : 'Song hidden from feed & search')
-      setSheetSong(null)
+      await patchSong(song.id, 'hide')
+      toast(song.status === 'hidden' ? 'Song is visible again' : 'Song hidden from feed & search')
+      setOverflowSong(null)
       await loadSongs()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not update')
     }
   }
 
-  const onSheetSoftDelete = async () => {
-    const target = deleteConfirmSong ?? sheetSong
-    if (!target || actionBusy) return
-    const id = target.id
+  const onSoftDelete = async (song: StudioSong) => {
+    if (actionBusy) return
+    const id = song.id
     try {
       await patchSong(id, 'soft_delete')
       toast('Moved to Trash', {
@@ -267,24 +292,10 @@ export default function StudioPage() {
         },
       })
       setDeleteConfirmSong(null)
-      setSheetSong(null)
+      setOverflowSong(null)
       await loadSongs()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not delete')
-    }
-  }
-
-  const onHideInsteadFromConfirm = async () => {
-    const target = deleteConfirmSong
-    if (!target || actionBusy) return
-    try {
-      await patchSong(target.id, 'hide')
-      toast(target.status === 'hidden' ? 'Song is visible again' : 'Song hidden from feed & search')
-      setDeleteConfirmSong(null)
-      setSheetSong(null)
-      await loadSongs()
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not update')
     }
   }
 
@@ -303,9 +314,8 @@ export default function StudioPage() {
     if (selectedIds.size === 0 || actionBusy) return
     try {
       await bulkPost([...selectedIds], 'hide')
-      toast('Updated visibility')
-      clearSelection()
-      setSelectMode(false)
+      toast('Hidden from feed & search')
+      exitSelectMode()
       await loadSongs()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Bulk action failed')
@@ -314,14 +324,15 @@ export default function StudioPage() {
 
   const handleBulkSoftDelete = async () => {
     if (selectedIds.size === 0 || actionBusy) return
+    const ids = [...selectedIds]
     try {
-      await bulkPost([...selectedIds], 'soft_delete')
+      await bulkPost(ids, 'soft_delete')
       toast('Moved to Trash', {
         action: {
           label: 'Undo',
           onClick: async () => {
-            for (const id of selectedIds) {
-              try { await patchSong(id, 'restore') } catch { /* one failure */ }
+            for (const id of ids) {
+              try { await patchSong(id, 'restore') } catch { /* ignore */ }
             }
             await loadSongs()
             toast('Restored')
@@ -329,12 +340,31 @@ export default function StudioPage() {
         },
       })
       setBulkDeleteOpen(false)
-      clearSelection()
-      setSelectMode(false)
+      exitSelectMode()
       await loadSongs()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Bulk delete failed')
     }
+  }
+
+  const startSelectFromOverflow = (song: StudioSong) => {
+    setOverflowSong(null)
+    setSelectMode(true)
+    setSelectedIds(new Set([song.id]))
+  }
+
+  const onCardPointerDown = (song: StudioSong) => {
+    if (selectMode) return
+    longPressFired.current = false
+    clearLongPressTimer()
+    longPressTimer.current = setTimeout(() => {
+      longPressFired.current = true
+      setOverflowSong(song)
+    }, LONG_PRESS_MS)
+  }
+
+  const onCardPointerUp = () => {
+    clearLongPressTimer()
   }
 
   if (identityLoading) {
@@ -402,87 +432,121 @@ export default function StudioPage() {
     )
   }
 
+  const bulkBar = selectMode && !showUpload ? (
+    <div style={{
+      position: 'sticky',
+      top: 'calc(var(--nav-height, 72px) + 8px)',
+      zIndex: 30,
+      marginBottom: '16px',
+      padding: '12px 14px',
+      borderRadius: '14px',
+      border: '1px solid var(--border)',
+      background: 'var(--surface)',
+      display: 'flex',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      gap: '8px',
+    }}>
+      <span style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--text)', fontWeight: 600, marginRight: '4px' }}>
+        {selectedCount} selected
+      </span>
+      <button
+        type="button"
+        disabled={actionBusy || selectableLibraryIds.length === 0 || selectedCount === selectableLibraryIds.length}
+        onClick={() => setSelectedIds(new Set(selectableLibraryIds))}
+        style={{
+          padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--surface-2)',
+          color: 'var(--gold)', fontFamily: font, fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.5px',
+          textTransform: 'uppercase', cursor: 'pointer',
+        }}
+      >
+        Select all
+      </button>
+      <button
+        type="button"
+        disabled={actionBusy || selectedCount === 0}
+        onClick={() => { void handleBulkHide() }}
+        style={{
+          padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--gold-border)', background: 'transparent',
+          color: 'var(--gold)', fontFamily: font, fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.5px',
+          textTransform: 'uppercase', cursor: 'pointer',
+        }}
+      >
+        Hide
+      </button>
+      <button
+        type="button"
+        disabled={actionBusy || selectedCount === 0}
+        onClick={() => setBulkDeleteOpen(true)}
+        style={{
+          padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(255,96,96,0.35)', background: 'transparent',
+          color: '#ff8a8a', fontFamily: font, fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.5px',
+          textTransform: 'uppercase', cursor: 'pointer',
+        }}
+      >
+        Delete
+      </button>
+      <button
+        type="button"
+        disabled={actionBusy}
+        onClick={exitSelectMode}
+        style={{
+          padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'transparent',
+          color: 'var(--text-muted)', fontFamily: font, fontSize: '0.62rem', fontWeight: 600, marginLeft: 'auto',
+          cursor: 'pointer',
+        }}
+      >
+        Cancel
+      </button>
+    </div>
+  ) : null
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <div style={{ maxWidth: '860px', margin: '0 auto', padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: '200px' }}>
+        {bulkBar}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1 }}>
             <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '4px' }}>
               Margo
             </p>
             <h1 style={{ fontFamily: font, fontSize: '1.5rem', color: 'var(--text)', fontWeight: 400 }}>
-              {showUpload ? (editingSongId ? 'Edit song' : 'Upload') : trashView ? 'Trash' : 'Studio'}
+              {showUpload ? (editingSongId ? 'Edit song' : 'Upload') : 'Studio'}
             </h1>
           </div>
           {!showUpload && (
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setTrashView((v) => !v)
-                  setSelectMode(false)
-                  clearSelection()
-                }}
-                style={pillBtn}
-              >
-                {trashView ? 'Library' : 'Trash'}
-              </button>
-              {!trashView && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectMode((s) => {
-                      if (s) clearSelection()
-                      return !s
-                    })
-                  }}
-                  style={pillBtn}
-                >
-                  {selectMode ? 'Done' : 'Select'}
-                </button>
-              )}
-              {identity.artistStatus === 'active' && !trashView && (
-                <Link
-                  href="/studio/promote"
-                  style={{ ...pillBtn, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
-                >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              {identity.artistStatus === 'active' && (
+                <Link href="/studio/promote" style={promoteLinkStyle}>
                   Promote
                 </Link>
+              )}
+              {trashSongs.length > 0 && (
+                <button
+                  type="button"
+                  aria-label="Trash"
+                  title="Trash"
+                  onClick={() => setTrashOpen(true)}
+                  style={{
+                    ...promoteLinkStyle,
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    background: 'var(--surface-2)',
+                  }}
+                >
+                  <TrashIcon />
+                  <span>Trash</span>
+                  <span style={{
+                    fontSize: '0.55rem', color: 'var(--text-muted)', fontWeight: 700,
+                  }}>({trashSongs.length})</span>
+                </button>
               )}
             </div>
           )}
         </div>
 
-        {selectMode && !trashView && !showUpload && selectedCount > 0 && (
-          <div style={{
-            display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px',
-            padding: '12px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--surface)',
-          }}>
-            <button
-              type="button"
-              disabled={actionBusy}
-              onClick={() => { void handleBulkHide() }}
-              style={{ ...pillBtn, opacity: actionBusy ? 0.6 : 1 }}
-            >
-              Hide ({selectedCount})
-            </button>
-            <button
-              type="button"
-              disabled={actionBusy}
-              onClick={() => setBulkDeleteOpen(true)}
-              style={{
-                ...pillBtn,
-                borderColor: 'rgba(255,96,96,0.35)',
-                color: '#ff8a8a',
-                opacity: actionBusy ? 0.6 : 1,
-              }}
-            >
-              Delete ({selectedCount})
-            </button>
-          </div>
-        )}
-
-        {!songsLoading && librarySongs.length > 0 && !showUpload && !trashView && (
+        {!songsLoading && librarySongs.length > 0 && !showUpload && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '32px' }}>
             {[
               ['Songs', librarySongs.length],
@@ -519,23 +583,21 @@ export default function StudioPage() {
           <div style={{
             display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '16px',
           }}>
-            {!trashView && (
-              <button
-                onClick={() => { setEditingSongId(null); setShowUpload(true) }}
-                aria-label="Upload a song"
-                style={{
-                  aspectRatio: '1 / 1', borderRadius: '16px',
-                  border: '1.5px dashed var(--gold-border)', background: 'var(--gold-faint)',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                  cursor: 'pointer', transition: 'transform 150ms ease, background 150ms ease',
-                }}
-              >
-                <PlusIcon />
-                <span style={{ fontFamily: font, fontSize: '0.65rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: 700 }}>
-                  Upload
-                </span>
-              </button>
-            )}
+            <button
+              onClick={() => { setEditingSongId(null); setShowUpload(true) }}
+              aria-label="Upload a song"
+              style={{
+                aspectRatio: '1 / 1', borderRadius: '16px',
+                border: '1.5px dashed var(--gold-border)', background: 'var(--gold-faint)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                cursor: 'pointer', transition: 'transform 150ms ease, background 150ms ease',
+              }}
+            >
+              <PlusIcon />
+              <span style={{ fontFamily: font, fontSize: '0.65rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: 700 }}>
+                Upload
+              </span>
+            </button>
 
             {songsLoading && (
               <div style={{
@@ -543,165 +605,153 @@ export default function StudioPage() {
               }} />
             )}
 
-            {displayedSongs.map((song) => {
+            {librarySongs.map((song) => {
               const stat = stats[song.id]
-              const label = statusLabel(song.status, trashView)
+              const label = statusLabel(song.status)
               const selected = selectedIds.has(song.id)
-              const dim = song.status === 'hidden' || song.status === 'archived'
               return (
-                <button
-                  type="button"
-                  key={song.id}
-                  onClick={() => {
-                    if (selectMode && !trashView) {
-                      toggleSelected(song.id)
-                      return
-                    }
-                    if (trashView) {
-                      void onRestore(song)
-                      return
-                    }
-                    setSheetSong(song)
-                  }}
-                  aria-label={trashView ? `Restore ${song.title}` : selectMode ? `Select ${song.title}` : `Open actions for ${song.title}`}
-                  style={{
-                    position: 'relative', aspectRatio: '1 / 1', borderRadius: '16px',
-                    overflow: 'hidden', background: 'var(--surface-2)',
-                    opacity: dim ? 0.55 : 1,
-                    border: selected ? '2px solid var(--gold)' : 'none', padding: 0, cursor: 'pointer',
-                    width: '100%', textAlign: 'left',
-                    minHeight: 'var(--margo-touch-min)',
-                  }}
-                >
-                  {selectMode && !trashView && (
-                    <span style={{
-                      position: 'absolute', top: '10px', left: '10px', zIndex: 2,
-                      width: '22px', height: '22px', borderRadius: '6px',
-                      border: '2px solid var(--gold)',
-                      background: selected ? 'var(--gold)' : 'rgba(7,6,10,0.5)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '0.75rem', color: 'var(--bg)', fontWeight: 800,
-                    }}>
-                      {selected ? '✓' : ''}
-                    </span>
-                  )}
-                  {song.artwork_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={song.artwork_url} alt="" style={{
-                      position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
+                <div key={song.id} style={{ position: 'relative' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (longPressFired.current) {
+                        longPressFired.current = false
+                        return
+                      }
+                      if (selectMode) {
+                        toggleSelected(song.id)
+                        return
+                      }
+                      setEditingSongId(song.id)
+                      setShowUpload(true)
+                    }}
+                    onPointerDown={() => onCardPointerDown(song)}
+                    onPointerUp={onCardPointerUp}
+                    onPointerLeave={onCardPointerUp}
+                    onPointerCancel={onCardPointerUp}
+                    onContextMenu={(e) => {
+                      e.preventDefault()
+                      setOverflowSong(song)
+                    }}
+                    aria-label={selectMode ? `Select ${song.title}` : `Edit ${song.title}`}
+                    style={{
+                      position: 'relative', aspectRatio: '1 / 1', borderRadius: '16px',
+                      overflow: 'hidden', background: 'var(--surface-2)',
+                      opacity: song.status === 'hidden' ? 0.5 : 1,
+                      border: selected ? '2px solid var(--gold)' : 'none', padding: 0, cursor: 'pointer',
+                      width: '100%', textAlign: 'left',
+                      minHeight: 'var(--margo-touch-min)',
+                    }}
+                  >
+                    {selectMode && (
+                      <span style={{
+                        position: 'absolute', top: '10px', left: '10px', zIndex: 2,
+                        width: '22px', height: '22px', borderRadius: '6px',
+                        border: '2px solid var(--gold)',
+                        background: selected ? 'var(--gold)' : 'rgba(7,6,10,0.5)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '0.75rem', color: 'var(--bg)', fontWeight: 800,
+                      }}>
+                        {selected ? '✓' : ''}
+                      </span>
+                    )}
+                    {song.artwork_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={song.artwork_url} alt="" style={{
+                        position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
+                      }} />
+                    )}
+                    <div style={{
+                      position: 'absolute', inset: 0,
+                      background: 'linear-gradient(to top, rgba(7,6,10,0.92) 0%, rgba(7,6,10,0.25) 55%, rgba(7,6,10,0) 75%)',
                     }} />
+                    {label && (
+                      <span style={{
+                        position: 'absolute', top: '10px', right: '10px',
+                        fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
+                        color: 'var(--text)', background: 'rgba(7,6,10,0.7)',
+                        padding: '4px 8px', borderRadius: '50px',
+                        textTransform: 'uppercase', letterSpacing: '0.5px',
+                      }}>
+                        {label}
+                      </span>
+                    )}
+                    <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '12px' }}>
+                      <p style={{
+                        fontFamily: font, fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)',
+                        marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis',
+                        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const,
+                        lineHeight: 1.25,
+                      }}>
+                        {song.title}
+                      </p>
+                      <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        {stat ? `${stat.plays} plays · ${stat.resonate_count} resonates` : '—'}
+                      </p>
+                    </div>
+                  </button>
+                  {!selectMode && (
+                    <button
+                      type="button"
+                      aria-label={`More actions for ${song.title}`}
+                      className="studio-card-more"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        e.preventDefault()
+                        setOverflowSong(song)
+                      }}
+                      style={{
+                        position: 'absolute', top: '8px', left: '8px', zIndex: 3,
+                        width: '32px', height: '32px', borderRadius: '10px',
+                        border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(7,6,10,0.55)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0,
+                      }}
+                    >
+                      <MoreIcon />
+                    </button>
                   )}
-                  <div style={{
-                    position: 'absolute', inset: 0,
-                    background: 'linear-gradient(to top, rgba(7,6,10,0.92) 0%, rgba(7,6,10,0.25) 55%, rgba(7,6,10,0) 75%)',
-                  }} />
-                  {label && (
-                    <span style={{
-                      position: 'absolute', top: '10px', right: '10px',
-                      fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
-                      color: 'var(--text)', background: 'rgba(7,6,10,0.7)',
-                      padding: '4px 8px', borderRadius: '50px',
-                      textTransform: 'uppercase', letterSpacing: '0.5px',
-                    }}>
-                      {label}
-                    </span>
-                  )}
-                  <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '12px' }}>
-                    <p style={{
-                      fontFamily: font, fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)',
-                      marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis',
-                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const,
-                      lineHeight: 1.25,
-                    }}>
-                      {song.title}
-                    </p>
-                    <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      {trashView
-                        ? 'Tap to restore'
-                        : (stat ? `${stat.plays} plays · ${stat.resonate_count} resonates` : '—')}
-                    </p>
-                  </div>
-                </button>
+                </div>
               )
             })}
           </div>
         )}
 
-        {!songsLoading && displayedSongs.length === 0 && !showUpload && (
+        {!songsLoading && librarySongs.length === 0 && !showUpload && (
           <p style={{
             fontFamily: font, fontSize: '0.82rem', fontStyle: 'italic', color: 'var(--text-secondary)',
             textAlign: 'center', marginTop: '16px',
           }}>
-            {trashView ? 'Trash is empty.' : 'No songs yet — upload your first.'}
+            No songs yet — upload your first.
           </p>
         )}
       </div>
 
-      <MargoSheet
-        open={!!sheetSong && !deleteConfirmSong}
-        onOpenChange={(o) => { if (!o) setSheetSong(null) }}
-        title="Song"
-        anchor="bottom"
-        zIndex={220}
-      >
-        {sheetSong && (
+      <MargoSheet open={!!overflowSong} onOpenChange={(o) => { if (!o) setOverflowSong(null) }} title="Song actions" anchor="bottom" zIndex={220}>
+        {overflowSong && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text)', margin: '0 0 4px', fontWeight: 600 }}>
-              {sheetSong.title}
-            </p>
-            <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-muted)', margin: '0 0 8px' }}>
-              {sheetSong.artist_display_name}
-            </p>
-            <button
-              type="button"
-              style={sheetActionBtn}
-              disabled={sheetSong.status === 'archived' || actionBusy}
-              onClick={() => {
-                if (sheetSong.status === 'archived') {
-                  toast.error('Restore from Trash to edit.')
-                  return
-                }
-                setEditingSongId(sheetSong.id)
-                setShowUpload(true)
-                setSheetSong(null)
-              }}
-            >
-              Edit
+            <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 4px' }}>{overflowSong.title}</p>
+            <button type="button" style={sheetActionBtn} onClick={() => startSelectFromOverflow(overflowSong)}>
+              Select
             </button>
             <button
               type="button"
               style={sheetActionBtn}
-              disabled={actionBusy || sheetSong.status === 'archived'}
-              onClick={() => { void onSheetHideToggle() }}
+              disabled={actionBusy || overflowSong.status === 'archived'}
+              onClick={() => { void onOverflowHideToggle(overflowSong) }}
             >
-              {sheetSong.status === 'hidden' ? 'Unhide' : 'Hide from feed'}
-            </button>
-            <button
-              type="button"
-              style={sheetActionBtn}
-              disabled={actionBusy || identity.artistStatus !== 'active'}
-              onClick={() => {
-                setSheetSong(null)
-                router.push('/studio/promote')
-              }}
-            >
-              Promote
+              {overflowSong.status === 'hidden' ? 'Unhide' : 'Hide from feed'}
             </button>
             <button
               type="button"
               style={sheetActionBtn}
               disabled={actionBusy}
               onClick={async () => {
-                if (!sheetSong) return
-                const r = await shareSong({
-                  id: sheetSong.id,
-                  title: sheetSong.title,
-                  artist: sheetSong.artist_display_name,
-                })
+                const s = overflowSong
+                setOverflowSong(null)
+                const r = await shareSong({ id: s.id, title: s.title, artist: s.artist_display_name })
                 if (r === 'shared') toast('Shared')
                 else if (r === 'copied') toast('Link copied')
                 else toast('Could not share')
-                setSheetSong(null)
               }}
             >
               Share
@@ -711,18 +761,28 @@ export default function StudioPage() {
               style={sheetActionBtn}
               disabled={actionBusy}
               onClick={() => {
-                if (!sheetSong) return
-                router.push(`/song/${sheetSong.id}`)
-                setSheetSong(null)
+                router.push(`/song/${overflowSong.id}`)
+                setOverflowSong(null)
               }}
             >
               Stats
             </button>
             <button
               type="button"
+              style={sheetActionBtn}
+              disabled={actionBusy || identity.artistStatus !== 'active'}
+              onClick={() => {
+                setOverflowSong(null)
+                router.push('/studio/promote')
+              }}
+            >
+              Promote
+            </button>
+            <button
+              type="button"
               style={sheetDangerBtn}
-              disabled={actionBusy || sheetSong.status === 'archived'}
-              onClick={() => setDeleteConfirmSong(sheetSong)}
+              disabled={actionBusy || overflowSong.status === 'archived'}
+              onClick={() => { setDeleteConfirmSong(overflowSong); setOverflowSong(null) }}
             >
               Delete…
             </button>
@@ -730,82 +790,100 @@ export default function StudioPage() {
         )}
       </MargoSheet>
 
-      <MargoSheet
-        open={!!deleteConfirmSong}
-        onOpenChange={(o) => { if (!o) setDeleteConfirmSong(null) }}
-        title="Move to Trash?"
-        anchor="bottom"
-        zIndex={230}
-      >
+      <MargoSheet open={!!deleteConfirmSong} onOpenChange={(o) => { if (!o) setDeleteConfirmSong(null) }} title="Move to Trash?" anchor="bottom" zIndex={230}>
         {deleteConfirmSong && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
               <strong style={{ color: 'var(--text)' }}>{deleteConfirmSong.title}</strong>
-              {' '}will leave feeds, Discover, search, and Hub. You can restore for 30 days from Trash.
+              {' '}will leave feeds, Discover, search, and Hub. Restore within 30 days from Trash.
             </p>
             <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
               {(() => {
                 const st = stats[deleteConfirmSong.id]
-                const p = st?.plays ?? 0
-                const r = st?.resonate_count ?? 0
-                return `${p} plays · ${r} resonates`
+                return `${st?.plays ?? 0} plays · ${st?.resonate_count ?? 0} resonates`
               })()}
             </p>
             <button
               type="button"
               style={sheetActionBtn}
               disabled={actionBusy}
-              onClick={() => { void onHideInsteadFromConfirm() }}
+              onClick={async () => {
+                const s = deleteConfirmSong
+                try {
+                  await patchSong(s.id, 'hide')
+                  toast(s.status === 'hidden' ? 'Song is visible again' : 'Song hidden from feed & search')
+                  setDeleteConfirmSong(null)
+                  await loadSongs()
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : 'Could not update')
+                }
+              }}
             >
               Hide instead
             </button>
-            <button
-              type="button"
-              style={sheetDangerBtn}
-              disabled={actionBusy}
-              onClick={() => { void onSheetSoftDelete() }}
-            >
+            <button type="button" style={sheetDangerBtn} disabled={actionBusy} onClick={() => { void onSoftDelete(deleteConfirmSong) }}>
               Move to Trash
             </button>
-            <button
-              type="button"
-              style={{ ...sheetActionBtn, border: 'none', background: 'transparent', color: 'var(--text-muted)' }}
-              onClick={() => setDeleteConfirmSong(null)}
-            >
+            <button type="button" style={{ ...sheetActionBtn, border: 'none', background: 'transparent', color: 'var(--text-muted)' }} onClick={() => setDeleteConfirmSong(null)}>
               Cancel
             </button>
           </div>
         )}
       </MargoSheet>
 
-      <MargoSheet
-        open={bulkDeleteOpen}
-        onOpenChange={setBulkDeleteOpen}
-        title="Move to Trash?"
-        anchor="bottom"
-        zIndex={230}
-      >
+      <MargoSheet open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen} title="Move to Trash?" anchor="bottom" zIndex={230}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
-            {selectedCount} song{selectedCount === 1 ? '' : 's'} will move to Trash. Restore within 30 days if you change your mind.
+            {selectedCount} song{selectedCount === 1 ? '' : 's'} will move to Trash. Undo from the toast or restore in Trash.
           </p>
-          <button
-            type="button"
-            style={sheetDangerBtn}
-            disabled={actionBusy}
-            onClick={() => { void handleBulkSoftDelete() }}
-          >
+          <button type="button" style={sheetDangerBtn} disabled={actionBusy} onClick={() => { void handleBulkSoftDelete() }}>
             Move to Trash
           </button>
-          <button
-            type="button"
-            style={{ ...sheetActionBtn, border: 'none', background: 'transparent', color: 'var(--text-muted)' }}
-            onClick={() => setBulkDeleteOpen(false)}
-          >
+          <button type="button" style={{ ...sheetActionBtn, border: 'none', background: 'transparent', color: 'var(--text-muted)' }} onClick={() => setBulkDeleteOpen(false)}>
             Cancel
           </button>
         </div>
       </MargoSheet>
+
+      <MargoSheet open={trashOpen} onOpenChange={setTrashOpen} title="Trash" anchor="bottom" zIndex={220} heightMode="fixed" maxHeight="min(70dvh, 520px)">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.45 }}>
+            Songs stay here for 30 days, then they are removed permanently.
+          </p>
+          {trashSongs.length === 0 ? (
+            <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>Trash is empty.</p>
+          ) : (
+            trashSongs.map((song) => (
+              <button
+                key={song.id}
+                type="button"
+                onClick={() => { void onRestore(song) }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '12px',
+                  border: '1px solid var(--border)', background: 'var(--surface-2)', cursor: 'pointer', textAlign: 'left', width: '100%',
+                }}
+              >
+                {song.artwork_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={song.artwork_url} alt="" width={48} height={48} style={{ borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                ) : (
+                  <div style={{ width: 48, height: 48, borderRadius: 8, background: 'var(--surface)', flexShrink: 0 }} />
+                )}
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ fontFamily: font, fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>{song.title}</p>
+                  <p style={{ fontFamily: font, fontSize: '0.65rem', color: 'var(--gold)', margin: '4px 0 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Tap to restore</p>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      </MargoSheet>
+
+      <style>{`
+        @media (max-width: 520px) {
+          .studio-card-more { display: none; }
+        }
+      `}</style>
     </div>
   )
 }
