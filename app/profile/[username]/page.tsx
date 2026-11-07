@@ -715,6 +715,8 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
               >
                 <ProfileSignaturePill
                   lyric={profile.signatureLyric}
+                  songTitle={profile.signatureSong}
+                  artistName={profile.signatureArtist}
                   track={signatureTrack}
                   isOwner={isOwnProfile}
                   longPressHandlers={isOwnProfile ? signatureLongPress.handlers : undefined}
