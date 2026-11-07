@@ -6878,7 +6878,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
     border-radius: 20px;
     background: var(--surface);
     min-height: auto;
-    overflow: hidden;
+    overflow: visible;
   }
 }
 

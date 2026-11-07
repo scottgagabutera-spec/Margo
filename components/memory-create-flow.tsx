@@ -21,6 +21,7 @@ import type {
 import { TYPE, UI_FONT } from '@/lib/fonts'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useKeyboardSafeChrome } from '@/hooks/useVisualViewport'
+import { useInlineSearchDropdownMaxHeight } from '@/hooks/useInlineSearchDropdownMaxHeight'
 import { toast } from 'sonner'
 
 const font = UI_FONT
@@ -104,6 +105,9 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
   const [searchLoading, setSearchLoading] = useState(false)
   const [showResults, setShowResults] = useState(false)
   const searchGen = useRef(0)
+  const songSearchWrapRef = useRef<HTMLDivElement | null>(null)
+  const songSearchOpen = showResults && query.trim().length >= 2
+  const songListMaxH = useInlineSearchDropdownMaxHeight(songSearchWrapRef, songSearchOpen)
 
   const [songs, setSongs] = useState<DraftSong[]>([])
   const [dragIndex, setDragIndex] = useState<number | null>(null)
@@ -438,23 +442,29 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
             <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', margin: '0 0 16px' }}>
               Add up to {MAX_SONGS} songs. Drag to reorder.
             </p>
-            <MargoSearchInput
-              value={query}
-              onChange={setQuery}
-              hintText={MARGO_SEARCH_HINT_SONGS}
-              ariaLabel="Search songs"
-              loading={searchLoading}
-              stackAboveOverlay
-            />
-            <ComposeSearchDropdown
-              open={showResults && query.trim().length >= 2}
-              loading={searchLoading}
-              results={hits}
-              highlightQuery={query}
-              onSelect={addSong}
-              onClose={() => setShowResults(false)}
-              variant="compose"
-            />
+            <div
+              ref={songSearchWrapRef}
+              style={{ position: 'relative', zIndex: songSearchOpen ? 60 : 1 }}
+            >
+              <MargoSearchInput
+                value={query}
+                onChange={setQuery}
+                hintText={MARGO_SEARCH_HINT_SONGS}
+                ariaLabel="Search songs"
+                loading={searchLoading}
+                stackAboveOverlay={songSearchOpen}
+              />
+              <ComposeSearchDropdown
+                open={songSearchOpen}
+                loading={searchLoading}
+                results={hits}
+                highlightQuery={query}
+                onSelect={addSong}
+                onClose={() => setShowResults(false)}
+                variant="compose"
+                listMaxHeightPx={songListMaxH}
+              />
+            </div>
             {songs.length > 0 ? (
               <ul style={{ listStyle: 'none', margin: '20px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {songs.map((s, index) => (

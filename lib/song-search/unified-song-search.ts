@@ -13,6 +13,20 @@ export async function fetchUnifiedSongSearchHits(
   const value = query.trim()
   if (value.length < 2) return []
 
+  if (typeof window !== 'undefined') {
+    const res = await fetch(
+      `/api/songs/search?q=${encodeURIComponent(value)}&limit=${limit}`,
+    )
+    if (res.status === 429 || !res.ok) return []
+    try {
+      const data = (await res.json()) as { hits?: ComposeSearchHit[]; error?: string }
+      if (data?.error && !data.hits?.length) return []
+      return (data.hits || []).slice(0, limit)
+    } catch {
+      return []
+    }
+  }
+
   const [margoHits, geniusRes] = await Promise.all([
     searchMargoSongs(supabase, value, limit),
     fetch(`/api/genius?song=${encodeURIComponent(value)}`).then(async (res) => {
