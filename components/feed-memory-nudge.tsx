@@ -9,7 +9,7 @@ export function FeedMemoryNudge() {
   return (
     <div className="margo-feed-memory-nudge">
       <p className="margo-feed-memory-nudge__copy" style={{ fontFamily: font }}>
-        Turn your soundtrack into a memory — songs, photos, and the story behind them.
+        Share your memories. Link them to a song or a photo and tell the story behind them.
       </p>
       <Link
         href="/memories/new"
