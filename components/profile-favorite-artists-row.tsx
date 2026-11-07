@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { FavoriteArtistAvatar } from '@/components/favorite-artist-avatar'
+import { PlusIcon } from '@/components/icons'
 import { UI_FONT, TYPE } from '@/lib/fonts'
 
 const font = UI_FONT
@@ -31,7 +32,9 @@ export function ProfileFavoriteArtistsRow({
         <div className="margo-profile-favorite-artists margo-profile-favorite-artists--empty">
           <p className="margo-profile-ui-label margo-profile-favorite-artists__label">Favorite artists</p>
           <Link href="/profile/edit#favorite-artists" className="margo-profile-favorite-artists__empty-cta">
-            <span className="margo-profile-favorite-artists__empty-plus" aria-hidden>+</span>
+            <span className="margo-profile-favorite-artists__empty-plus" aria-hidden>
+              <PlusIcon size={20} color="var(--bg)" />
+            </span>
             <span className="margo-profile-favorite-artists__empty-text">Add your favorite artists</span>
           </Link>
         </div>
