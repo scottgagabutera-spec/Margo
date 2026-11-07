@@ -12,7 +12,7 @@ export type NotificationType =
   | 'message' | 'resonate' | 'follow' | 'follow_request'
   | 'lyric_back' | 'memory_reply' | 'memory_lyric_reply'
   | 'warned' | 'frozen' | 'removed' | 'restored'
-  | 'artist_approved' | 'artist_rejected'
+  | 'artist_submitted' | 'artist_approved' | 'artist_rejected'
 
 export interface Notification {
   id: string

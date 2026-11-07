@@ -21,10 +21,12 @@ export function messageFor(n: Notification): string {
       return `${name} started following you`
     case 'follow_request':
       return `${name} wants to follow you`
+    case 'artist_submitted':
+      return `We have your artist application. We review every independent artist by hand, and you will hear from us here in Margo within 3 business days. Thank you for sharing your music with us.`
     case 'artist_approved':
-      return `You're approved as an artist on Margo`
+      return `You are approved as an artist on Margo. Studio is open, so you can upload your music now. Post what is true to you.`
     case 'artist_rejected':
-      return `Your artist application wasn't approved this time`
+      return `We could not approve this application yet. It is not a judgment on your music. You can add at least 3 links to your streaming or social profiles, or verify with Suno, and apply again.`
     case 'warned':
       return `You received a warning on your artist account`
     case 'frozen':

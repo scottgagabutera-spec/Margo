@@ -750,7 +750,7 @@ export default function AccountSettingsPage() {
               <span style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text)' }}>
                 Become an artist
               </span>
-              {artistRow.kind === 'pending' ? (
+              {artistRow.kind === 'pending' || artistRow.kind === 'approved' ? (
                 <span style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-muted)' }}>
                   {artistRow.label}
                 </span>

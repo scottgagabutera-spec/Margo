@@ -2,19 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { normalizeSunoUrl } from '@/lib/suno'
+import {
+  cleanedArtistLinksMap,
+  validateArtistApplicationLinks,
+} from '@/lib/artist-application-links'
+import { insertAppNotification } from '@/lib/notifications/insert-app-notification'
 
 export const runtime = 'nodejs'
 
-// Session is resolved from the auth cookie via @supabase/ssr.
-// profile_id is never trusted from the request body — always derived
-// from the verified user, so a request can never claim to apply on
-// someone else's behalf.
-
 async function checkSunoCode(url: string, code: string): Promise<boolean> {
   try {
-    // Accept a bare handle here too, same as /api/verify-artist-link —
-    // this is the route that actually decides approval, so it can't
-    // rely on the browser having already normalized the value.
     const normalizedUrl = normalizeSunoUrl(url)
     const parsed = new URL(normalizedUrl)
     if (!/(^|\.)suno\.com$/.test(parsed.hostname)) return false
@@ -39,14 +36,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'Not signed in.' }, { status: 401 })
   }
 
-  let body: any
+  let body: unknown
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ success: false, error: 'Invalid request body.' }, { status: 400 })
   }
 
-  const { applicantType, displayArtistName, links, note, rightsAgreed, sunoVerification } = body || {}
+  const {
+    applicantType,
+    displayArtistName,
+    links,
+    note,
+    rightsAgreed,
+    sunoVerification,
+  } = (body || {}) as Record<string, unknown>
 
   const name = String(displayArtistName || '').trim()
   if (!name) {
@@ -56,33 +60,49 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'You must agree to the rights warranty to continue.' }, { status: 400 })
   }
 
-  const cleanedLinks: Record<string, string> = {}
-  for (const [key, value] of Object.entries(links || {})) {
-    if (typeof value === 'string' && value.trim()) cleanedLinks[key] = value.trim()
-  }
+  const rawLinks = (links && typeof links === 'object' ? links : {}) as Record<string, string>
+  const cleanedLinks = cleanedArtistLinksMap(rawLinks)
 
-  // Store the fully-normalized Suno URL, not whatever partial handle the
-  // artist typed — so the admin tab and any future re-checks always see
-  // a real, clickable profile link.
   if (cleanedLinks.suno) {
     cleanedLinks.suno = normalizeSunoUrl(cleanedLinks.suno)
   }
 
-  if (Object.keys(cleanedLinks).length === 0) {
-    return NextResponse.json({ success: false, error: 'Add at least one link so we can verify you.' }, { status: 400 })
-  }
-
   const type = applicantType === 'label' ? 'label' : 'independent'
 
-  // Independently re-check the Suno code server-side — never trust a
-  // client claim of "already verified." This is the one place the
-  // approval decision is actually made.
+  const sunoCode =
+    typeof sunoVerification === 'object' && sunoVerification && 'code' in sunoVerification
+      ? String((sunoVerification as { code?: string }).code || '')
+      : ''
+
   let verified = false
-  if (type === 'independent' && sunoVerification?.code && cleanedLinks.suno) {
-    verified = await checkSunoCode(cleanedLinks.suno, sunoVerification.code)
+  if (type === 'independent' && sunoCode && cleanedLinks.suno) {
+    verified = await checkSunoCode(cleanedLinks.suno, sunoCode)
+  }
+
+  const linkCheck = validateArtistApplicationLinks({ links: cleanedLinks, sunoVerified: verified })
+  if (!linkCheck.ok) {
+    return NextResponse.json({ success: false, error: linkCheck.error }, { status: 400 })
   }
 
   const admin = getSupabaseAdmin()
+
+  const { data: existingPending } = await admin
+    .from('artist_applications')
+    .select('id')
+    .eq('profile_id', profileId)
+    .eq('status', 'pending')
+    .maybeSingle()
+
+  if (existingPending) {
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          'You already have an application under review. We will notify you here in Margo when there is a decision.',
+      },
+      { status: 409 },
+    )
+  }
 
   const { data: inserted, error: insertErr } = await admin
     .from('artist_applications')
@@ -91,17 +111,37 @@ export async function POST(req: NextRequest) {
       applicant_type: type,
       display_artist_name: name,
       links: cleanedLinks,
-      note: note?.trim() || null,
+      note: typeof note === 'string' ? note.trim() || null : null,
       rights_agreed: true,
       verification_method: verified ? 'suno' : null,
-      verification_code: verified ? sunoVerification.code : null,
+      verification_code: verified ? sunoCode : null,
     })
     .select('id')
     .single()
 
-  if (insertErr || !inserted) {
+  if (insertErr) {
+    if (insertErr.code === '23505') {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'You already have an application under review. We will notify you here in Margo when there is a decision.',
+        },
+        { status: 409 },
+      )
+    }
     return NextResponse.json({ success: false, error: 'Could not submit application.' }, { status: 500 })
   }
+
+  if (!inserted) {
+    return NextResponse.json({ success: false, error: 'Could not submit application.' }, { status: 500 })
+  }
+
+  await insertAppNotification(admin, {
+    recipientId: profileId,
+    type: 'artist_submitted',
+    actorId: null,
+  })
 
   let status: 'pending' | 'approved' = 'pending'
   let verifiedAt: string | null = null
@@ -116,9 +156,12 @@ export async function POST(req: NextRequest) {
     if (!approveErr) {
       status = 'approved'
       verifiedAt = now
+      await insertAppNotification(admin, {
+        recipientId: profileId,
+        type: 'artist_approved',
+        actorId: null,
+      })
     }
-    // If this update fails, the application still exists as 'pending' —
-    // falls through to manual review instead of the submission being lost.
   }
 
   return NextResponse.json({ success: true, status, verifiedAt })

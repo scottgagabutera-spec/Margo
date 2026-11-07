@@ -1,23 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { assertAdmin } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
+import { insertAppNotification } from '@/lib/notifications/insert-app-notification'
 
 type ArtistStatus = 'active' | 'warned' | 'frozen' | 'removed'
 type NotifyType = 'warned' | 'frozen' | 'removed' | 'restored'
-
-async function notifyProfile(
-  admin: ReturnType<typeof getSupabaseAdmin>,
-  recipientId: string,
-  type: NotifyType,
-  actorId: string,
-) {
-  const { error } = await admin.from('notifications').insert({
-    recipient_id: recipientId,
-    actor_id: actorId,
-    type,
-  })
-  if (error) console.error('[admin/artist-moderation] notify failed:', error.message)
-}
 
 /**
  * GET — list profiles where is_artist = true (all moderation standings).
@@ -99,7 +86,11 @@ export async function PATCH(request: NextRequest) {
 
   const notifyType: NotifyType =
     status === 'active' ? 'restored' : (status as NotifyType)
-  await notifyProfile(admin, id, notifyType, gate.userId)
+  await insertAppNotification(admin, {
+    recipientId: id,
+    type: notifyType,
+    actorId: gate.userId,
+  })
 
   return NextResponse.json({
     id: data.id,
