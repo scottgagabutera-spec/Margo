@@ -1,4 +1,4 @@
-export type MargoSearchDocType = 'user' | 'lyric' | 'artist' | 'catalog_line' | 'song'
+export type MargoSearchDocType = 'user' | 'lyric' | 'artist' | 'catalog_line' | 'song' | 'memory'
 
 export type RelatedSongHit = {
   id: string

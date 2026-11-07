@@ -2,11 +2,13 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { deleteMargoDocuments, upsertMargoDocuments } from './client'
 import {
   lyricLineToCatalogDoc,
+  memoryToSearchDoc,
   postToLyricDoc,
   profileToArtistDoc,
   profileToUserDoc,
   songToSearchDoc,
 } from './documents'
+import { publicCatalogMediaUrl } from '@/lib/r2/catalog-media-url'
 import type { MargoSearchDocument } from './types'
 
 type WebhookPayload = {
@@ -30,6 +32,8 @@ export async function syncMargoSearchFromWebhook(payload: WebhookPayload): Promi
       ids.push(`post:${row.id}`)
     } else if (table === 'lyric_lines') {
       ids.push(`line:${row.song_id}:${row.line_index}`)
+    } else if (table === 'memories') {
+      ids.push(`memory:${row.id}`)
     } else if (table === 'songs') {
       const sid = String(row.id)
       ids.push(`song:${sid}`)
@@ -100,6 +104,26 @@ export async function syncMargoSearchFromWebhook(payload: WebhookPayload): Promi
     }
     const doc = data ? lyricLineToCatalogDoc(data as any) : null
     if (doc) docs.push(doc)
+  } else if (table === 'memories') {
+    const admin = getSupabaseAdmin()
+    const r = row as any
+    if (r.visibility !== 'public' || r.content_removed_at) {
+      await deleteMargoDocuments([`memory:${r.id}`])
+      return
+    }
+    const { data: owner } = await admin
+      .from('profiles')
+      .select('username, display_name, is_admin')
+      .eq('id', r.owner_profile_id)
+      .maybeSingle()
+    if (!owner || owner.is_admin) {
+      await deleteMargoDocuments([`memory:${r.id}`])
+      return
+    }
+    const coverUrl = r.cover_r2_key ? publicCatalogMediaUrl(r.cover_r2_key) : null
+    const doc = memoryToSearchDoc(r, owner as any, coverUrl)
+    if (doc) docs.push(doc)
+    else await deleteMargoDocuments([`memory:${r.id}`])
   } else if (table === 'songs') {
     const admin = getSupabaseAdmin()
     const r = row as any

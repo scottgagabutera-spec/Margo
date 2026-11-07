@@ -108,6 +108,40 @@ export function songToSearchDoc(row: {
   }
 }
 
+export function memoryToSearchDoc(row: {
+  id: string
+  title: string
+  story?: string | null
+  mood?: string | null
+  owner_profile_id: string
+  visibility: string
+  content_removed_at?: string | null
+  cover_r2_key?: string | null
+  resonate_count?: number | null
+  created_at?: string
+}, owner?: {
+  username?: string | null
+  display_name?: string | null
+  is_admin?: boolean | null
+}, coverUrl?: string | null): MargoSearchDocument | null {
+  if (row.visibility !== 'public' || row.content_removed_at) return null
+  if (owner?.is_admin) return null
+  if (!owner?.username) return null
+  const story = (row.story || '').trim()
+  return {
+    id: `memory:${row.id}`,
+    type: 'memory',
+    title: row.title,
+    subtitle: `@${owner.username}`,
+    text: [story, row.mood].filter(Boolean).join(' '),
+    username: owner.username,
+    profileId: row.owner_profile_id,
+    artworkUrl: coverUrl ?? null,
+    resonateCount: row.resonate_count ?? 0,
+    createdAt: row.created_at ? Date.parse(row.created_at) : Date.now(),
+  }
+}
+
 export function lyricLineToCatalogDoc(
   row: {
     song_id: string
