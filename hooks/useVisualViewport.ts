@@ -51,6 +51,7 @@ export function useVisualViewport(options?: { publishCssVars?: boolean }) {
       if (publish && typeof document !== 'undefined') {
         const root = document.documentElement
         root.style.setProperty('--margo-vv-height', `${Math.round(next.height)}px`)
+        root.style.setProperty('--margo-vv-offset-top', `${Math.round(next.offsetTop)}px`)
         root.style.setProperty('--margo-keyboard-inset', `${Math.round(next.keyboardInset)}px`)
       }
     }
@@ -66,6 +67,7 @@ export function useVisualViewport(options?: { publishCssVars?: boolean }) {
       window.removeEventListener('resize', update)
       if (publish) {
         document.documentElement.style.removeProperty('--margo-vv-height')
+        document.documentElement.style.removeProperty('--margo-vv-offset-top')
         document.documentElement.style.removeProperty('--margo-keyboard-inset')
       }
     }

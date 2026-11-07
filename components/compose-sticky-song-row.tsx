@@ -9,12 +9,14 @@ type Props = {
   artwork?: string | null
   onClear: () => void
   onChangeSong: () => void
+  /** Pin in overlay header — no sticky overlap with card content. */
+  flushHeader?: boolean
 }
 
 /** Sticky song row for compose overlays (keyboard-safe). */
-export function ComposeStickySongRow({ title, artist, artwork, onClear, onChangeSong }: Props) {
+export function ComposeStickySongRow({ title, artist, artwork, onClear, onChangeSong, flushHeader }: Props) {
   return (
-    <div className="margo-compose-sticky-song">
+    <div className={'margo-compose-sticky-song' + (flushHeader ? ' margo-compose-sticky-song--flush' : '')}>
       <div className="margo-compose-sticky-song__chip">
         <StageSongChip title={title} artist={artist} artwork={artwork} onClear={onClear} />
       </div>
