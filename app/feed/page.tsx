@@ -31,6 +31,7 @@ import { useFeedMemories, useFeedMemoriesGrid } from '@/hooks/useFeedMemories'
 import { MemoryFeedGridTile } from '@/components/memory-feed-grid-tile'
 import { FeedMemoriesGridSkeleton } from '@/components/margo-skeletons'
 import { buildFeedLyricsRows, type FeedLyricsPeopleSlot, type FeedLyricsPostRow, type FeedLyricsRow } from '@/lib/feed-lyrics-mix'
+import { buildFeedPeoplePool } from '@/lib/feed-people-pool'
 import { FeedMemoriesCarousel } from '@/components/feed-memories-carousel'
 import { FeedPeopleStrip } from '@/components/feed-people-strip'
 import { FeedMemoryNudge } from '@/components/feed-memory-nudge'
@@ -113,6 +114,8 @@ function FeedPageInner() {
     mq.addEventListener('change', apply)
     return () => mq.removeEventListener('change', apply)
   }, [])
+  const { requireAuth } = useAuthGate()
+  const { user, identity } = useIdentity()
   const livePill = useLiveUpdatePillQueue(
     {
       posts: pendingCount,
@@ -120,10 +123,8 @@ function FeedPageInner() {
       songs: songCount,
       memories: 0,
     },
-    feedLive && !ptrBusy,
+    feedLive && !ptrBusy && !!user?.id,
   )
-  const { requireAuth } = useAuthGate()
-  const { user, identity } = useIdentity()
   const { refetch: refetchNotifications } = useNotifications()
   const { refetch: refetchMessages } = useMessaging()
   const [selectedSort, setSelectedSort] = useState('NEW')
@@ -375,25 +376,57 @@ function FeedPageInner() {
       })
   }, [feedItems])
 
+  const [peopleSuggestions, setPeopleSuggestions] = useState<FeedLyricsPeopleSlot[]>([])
+
+  useEffect(() => {
+    if (!user?.id || !feedLive) {
+      setPeopleSuggestions([])
+      return
+    }
+    let active = true
+    void (async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, username, display_name, avatar_url, deactivated_at')
+        .is('deactivated_at', null)
+        .neq('id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(32)
+      if (!active || error) return
+      setPeopleSuggestions(
+        (data || [])
+          .filter((row) => row.username)
+          .map((row) => ({
+            id: row.id as string,
+            username: row.username as string,
+            displayName: (row.display_name as string) || (row.username as string),
+            avatarUrl: (row.avatar_url as string) || null,
+          })),
+      )
+    })()
+    return () => { active = false }
+  }, [user?.id, feedLive])
+
   const peoplePool = useMemo((): FeedLyricsPeopleSlot[] => {
-    const seen = new Set<string>()
-    const out: FeedLyricsPeopleSlot[] = []
+    const fromPosts: FeedLyricsPeopleSlot[] = []
     const myId = user?.id
     for (const p of posts) {
       const id = p.authorUid
-      if (!id || id === myId || seen.has(id) || followingIds.has(id)) continue
-      seen.add(id)
-      if (!p.username) continue
-      out.push({
+      if (!id || !p.username) continue
+      fromPosts.push({
         id,
         username: p.username,
         displayName: p.authorDisplayName || p.username,
         avatarUrl: p.authorAvatarUrl || null,
       })
-      if (out.length >= 24) break
     }
-    return out
-  }, [posts, user?.id, followingIds])
+    return buildFeedPeoplePool({
+      fromPosts,
+      suggestions: peopleSuggestions,
+      myId,
+      followingIds,
+    })
+  }, [posts, user?.id, followingIds, peopleSuggestions])
 
   const { memories: feedMemories } = useFeedMemories(feedLive && feedContentTab === 'lyrics')
   const {
@@ -785,7 +818,7 @@ function FeedPageInner() {
         )}
         {showFeedSkeleton && <FeedPostSkeletonList count={4} />}
 
-        {listReady && lyricPostRows.length === 0 && (
+        {listReady && lyricPostRows.length === 0 && !mixedLyricRows.some((r) => r.kind === 'memory-nudge') && (
           <div style={{ textAlign: 'center', padding: '64px 0' }}>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '1rem', marginBottom: '16px' }}>
               {selectedVibe === 'ALL'
