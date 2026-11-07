@@ -25,7 +25,31 @@ export function MomentExportPreviewFrame({
   fillParent = false,
 }: MomentExportPreviewFrameProps) {
   if (shapeId !== 'vertical') {
-    return <div style={style}>{children}</div>
+    return (
+      <div
+        style={{
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'center',
+          ...style,
+        }}
+      >
+        <div
+          aria-label="Square preview, 1:1"
+          style={{
+            width: 'min(100%, 360px)',
+            aspectRatio: '1 / 1',
+            border: framed ? '1px solid var(--border-hi)' : 'none',
+            borderRadius: '18px',
+            overflow: 'hidden',
+            boxSizing: 'border-box',
+            background: 'var(--bg)',
+          }}
+        >
+          {children}
+        </div>
+      </div>
+    )
   }
 
   if (fillParent) {
@@ -62,7 +86,8 @@ export function MomentExportPreviewFrame({
       <div
         aria-label="Shorts preview, 9:16"
         style={{
-          width: 'min(100%, 320px)',
+          width: 'min(100%, 280px)',
+          maxHeight: 'min(72vh, 560px)',
           aspectRatio: '9 / 16',
           border: framed ? '1px solid var(--border-hi)' : 'none',
           borderRadius: '18px',
