@@ -1,7 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import { MemoryCoverCaption } from '@/components/memory-cover-caption'
 import { UI_FONT, TYPE } from '@/lib/fonts'
+import { memoryDisplayCaption } from '@/lib/memory/display-caption'
 import { formatMemoryDatePublic } from '@/lib/memory/date-label'
 import type { MemoryPublic } from '@/lib/memory/types'
 
@@ -42,29 +44,35 @@ export function MemoryCard({
   }
 
   const grid = variant === 'profileGrid'
+  const compactVisual = grid || variant === 'feed'
+  const caption = memoryDisplayCaption(memory)
   return (
     <Link
       href={to}
       className={`margo-memory-card${grid ? ' margo-memory-card--grid' : ''}${variant === 'feed' ? ' margo-memory-card--feed' : ''}`}
+      aria-label={caption}
     >
       <span
         className="margo-memory-card__cover"
         style={{ backgroundImage: memory.coverUrl ? `url(${memory.coverUrl})` : undefined }}
-      />
-      {dateChip ? <span className="margo-memory-card__date-chip">{dateChip}</span> : null}
-      <span className="margo-memory-card__body">
-        <span className="margo-memory-card__title" style={{ fontFamily: font, fontSize: grid ? TYPE.label : TYPE.secondary }}>
-          {memory.title}
-        </span>
-        {story ? (
-          <span className={`margo-memory-card__story${variant === 'feed' ? ' margo-memory-card__story--clamp' : ''}`} style={{ fontFamily: font, fontSize: TYPE.meta }}>
-            {story}
-          </span>
+      >
+        {compactVisual ? (
+          <MemoryCoverCaption memory={memory} variant={variant === 'feed' ? 'feed' : 'grid'} />
         ) : null}
-        {variant === 'feed' ? (
-          <span className="margo-memory-card__see-more" style={{ fontFamily: font, fontSize: '0.8125rem', fontWeight: 500 }}>See more</span>
-        ) : null}
+        {dateChip && !compactVisual ? <span className="margo-memory-card__date-chip">{dateChip}</span> : null}
       </span>
+      {compactVisual ? null : (
+        <span className="margo-memory-card__body">
+          <span className="margo-memory-card__title" style={{ fontFamily: font, fontSize: TYPE.secondary }}>
+            {caption}
+          </span>
+          {story ? (
+            <span className="margo-memory-card__story" style={{ fontFamily: font, fontSize: TYPE.meta }}>
+              {story}
+            </span>
+          ) : null}
+        </span>
+      )}
     </Link>
   )
 }
