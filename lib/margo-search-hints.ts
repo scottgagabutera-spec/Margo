@@ -8,6 +8,8 @@ export const MARGO_SEARCH_HINT_CATALOG = 'Search song, artist, lyrics'
 export const MARGO_SEARCH_HINT_SONGS = 'Search songs, artists'
 export const MARGO_SEARCH_HINT_MOMENTS = 'Search moments, lyrics'
 export const MARGO_SEARCH_HINT_ARTISTS = 'Search artists'
+/** Edit Profile favorite-artists picker — animated hint line. */
+export const MARGO_SEARCH_HINT_ARTIST_PICKER = 'Search artist'
 export const MARGO_SEARCH_HINT_RESONANCE = 'Search posts, people'
 export const MARGO_SEARCH_HINT_FEED = 'Search lyrics, people'
 export const MARGO_SEARCH_HINT_PEOPLE = 'Search people'

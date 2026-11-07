@@ -1,7 +1,15 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { UI_FONT, TYPE } from '@/lib/fonts'
+import { MargoSearchInput } from '@/components/margo-search-input'
+import { MARGO_SEARCH_HINT_ARTIST_PICKER } from '@/lib/margo-search-hints'
+import { ArtistSearchDropdown } from '@/components/artist-search-dropdown'
+import {
+  peekArtistSearchCache,
+  runArtistSearch,
+  type ArtistSearchResult,
+} from '@/lib/catalog-artist/search-client'
 
 const font = UI_FONT
 
@@ -12,8 +20,6 @@ export type FavoriteArtistPick = {
   onMargo: boolean
 }
 
-type SearchHit = FavoriteArtistPick & { margoUsername?: string | null }
-
 export function FavoriteArtistsPicker({
   initial,
   onChange,
@@ -23,9 +29,10 @@ export function FavoriteArtistsPicker({
 }) {
   const [selected, setSelected] = useState<FavoriteArtistPick[]>(initial)
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<SearchHit[]>([])
+  const [results, setResults] = useState<ArtistSearchResult[]>([])
   const [searching, setSearching] = useState(false)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
 
   useEffect(() => {
     setSelected(initial)
@@ -43,34 +50,57 @@ export function FavoriteArtistsPicker({
     const q = query.trim()
     if (q.length < 2) {
       setResults([])
+      setSearching(false)
+      setDropdownOpen(false)
       return
     }
-    const t = setTimeout(() => {
-      setSearching(true)
-      void fetch(`/api/artists/search?q=${encodeURIComponent(q)}`)
-        .then((r) => r.json())
-        .then((data: { artists?: SearchHit[] }) => {
-          setResults(data.artists || [])
-        })
-        .catch(() => setResults([]))
-        .finally(() => setSearching(false))
-    }, 280)
-    return () => clearTimeout(t)
+    setDropdownOpen(true)
+    const cached = peekArtistSearchCache(q)
+    if (cached) {
+      setResults(cached)
+      setSearching(false)
+    }
+    const t = window.setTimeout(() => {
+      void runArtistSearch({
+        query: q,
+        onLoading: setSearching,
+        onResults: setResults,
+      })
+    }, 150)
+    return () => window.clearTimeout(t)
   }, [query])
 
   const selectedIds = useMemo(() => new Set(selected.map((s) => s.id)), [selected])
 
-  const addArtist = (hit: SearchHit) => {
+  const addArtist = async (hit: ArtistSearchResult) => {
     if (selected.length >= 10 || selectedIds.has(hit.id)) return
+    let artworkUrl = hit.artworkUrl
+    if (!artworkUrl) {
+      try {
+        const res = await fetch('/api/artists/materialize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ catalogArtistId: hit.id }),
+        })
+        if (res.ok) {
+          const data = (await res.json()) as { artist?: { artworkUrl?: string | null } }
+          artworkUrl = data.artist?.artworkUrl ?? null
+        }
+      } catch {
+        /* keep null artwork */
+      }
+    }
     persist([
       ...selected,
       {
         id: hit.id,
         name: hit.name,
-        artworkUrl: hit.artworkUrl,
+        artworkUrl,
         onMargo: hit.onMargo,
       },
     ])
+    setQuery('')
+    setDropdownOpen(false)
   }
 
   const removeAt = (index: number) => {
@@ -130,49 +160,25 @@ export function FavoriteArtistsPicker({
         </>
       ) : null}
 
-      <div className="margo-favorite-artists-picker__search-wrap">
-        <input
-          type="search"
-          className="margo-favorite-artists-picker__search"
-          placeholder="Search artist"
+      <div className="margo-favorite-artists-picker__search-field">
+        <MargoSearchInput
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          aria-label="Search artist"
+          onChange={setQuery}
+          hintText={MARGO_SEARCH_HINT_ARTIST_PICKER}
+          ariaLabel={MARGO_SEARCH_HINT_ARTIST_PICKER}
+          loading={searching}
+          compact
+          onFocus={() => {
+            if (query.trim().length >= 2) setDropdownOpen(true)
+          }}
+        />
+        <ArtistSearchDropdown
+          open={dropdownOpen && query.trim().length >= 2}
+          loading={searching}
+          results={results}
+          onPick={(hit) => { void addArtist(hit) }}
         />
       </div>
-
-      {searching ? (
-        <p className="margo-favorite-artists-picker__status" style={{ fontFamily: font, fontSize: TYPE.secondary }}>
-          Searching…
-        </p>
-      ) : null}
-
-      <ul className="margo-favorite-artists-picker__results">
-        {results.map((hit) => (
-          <li key={hit.id} className="margo-favorite-artists-picker__result">
-            {hit.artworkUrl ? (
-              <img src={hit.artworkUrl} alt="" className="margo-favorite-artists-picker__result-art" loading="lazy" />
-            ) : (
-              <span className="margo-favorite-artists-picker__result-art margo-favorite-artists-picker__result-art--empty" />
-            )}
-            <span className="margo-favorite-artists-picker__result-name" style={{ fontFamily: font, fontSize: TYPE.secondary }}>
-              {hit.name}
-            </span>
-            {hit.onMargo ? (
-              <span className="margo-favorite-artists-picker__on-margo">On Margo</span>
-            ) : null}
-            <button
-              type="button"
-              className="margo-favorite-artists-picker__add"
-              aria-label={`Add ${hit.name}`}
-              disabled={selected.length >= 10 || selectedIds.has(hit.id)}
-              onClick={() => addArtist(hit)}
-            >
-              +
-            </button>
-          </li>
-        ))}
-      </ul>
     </div>
   )
 }
