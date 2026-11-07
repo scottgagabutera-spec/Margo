@@ -22,7 +22,7 @@ import { ProfileImageLightbox } from '@/components/profile-image-lightbox'
 import { fetchProfilePeek, peekProfileCache, warmProfile, type WarmProfileRow } from '@/lib/profile-warm'
 import { resolveMessageEligibility, type FollowStatus } from '@/lib/message-eligibility'
 import { readViewerFollowCache, writeViewerFollowCache } from '@/lib/viewer-follow-cache'
-import { ProfileSocialActionsSkeleton } from '@/components/margo-skeletons'
+import { ProfilePageSkeleton, ProfileSocialActionsSkeleton } from '@/components/margo-skeletons'
 import { resolvePublicArtistCredit } from '@/lib/artist-identity'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { MargoActionSheet } from '@/components/margo-action-sheet'
@@ -410,6 +410,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
   const [memoryLayout, setMemoryLayout] = useState<'grid' | 'timeline'>('grid')
   const { memories: profileMemories } = useProfileMemories(profile?.id ?? null, profile?.username ?? null)
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
+  const [visitorMenuOpen, setVisitorMenuOpen] = useState(false)
   const accountMenuTriggerRef = useRef<HTMLButtonElement>(null)
   const [shareBusy, setShareBusy] = useState(false)
 
@@ -650,13 +651,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
         .discog-row::-webkit-scrollbar { display: none; }
       `}</style>
 
-      {loading && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: 'calc(var(--nav-height, 72px) + 88px) 0' }}>
-          {[0, 1, 2].map(i => (
-            <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--gold)', opacity: 0.5 }} />
-          ))}
-        </div>
-      )}
+      {loading && <ProfilePageSkeleton />}
 
       {!loading && notFound ? (
         <p className="margo-sr-only">Founding Listener — profile not available.</p>
@@ -674,6 +669,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 onAccountMenuOpenChange={setAccountMenuOpen}
                 accountMenuTriggerRef={accountMenuTriggerRef}
                 onSignOut={() => { void handleSignOut() }}
+                onVisitorMenuOpen={() => setVisitorMenuOpen(true)}
               />
             </div>
 
@@ -1097,6 +1093,23 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
           artistUsernameHint={profile?.username}
         />
       ) : null}
+      <MargoActionSheet
+        open={visitorMenuOpen}
+        onOpenChange={setVisitorMenuOpen}
+        title="Profile"
+        actions={[
+          {
+            id: 'share',
+            label: 'Share profile',
+            onSelect: () => { void handleShareProfile() },
+          },
+          {
+            id: 'report',
+            label: 'Report',
+            onSelect: () => { router.push('/help') },
+          },
+        ]}
+      />
       <MargoActionSheet
         open={signatureSheetOpen}
         onOpenChange={setSignatureSheetOpen}
