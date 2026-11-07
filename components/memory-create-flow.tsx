@@ -462,7 +462,7 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
                 onSelect={addSong}
                 onClose={() => setShowResults(false)}
                 variant="compose"
-                listMaxHeightPx={songListMaxH}
+                listMaxHeightPx={songListMaxH ?? undefined}
               />
             </div>
             {songs.length > 0 ? (
