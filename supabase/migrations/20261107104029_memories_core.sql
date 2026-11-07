@@ -1,5 +1,5 @@
--- Memories core (additive). Apply only after Scott approves this PR migration.
--- Next filename must match production version after MCP apply (drift check: latest prod 20261107100006).
+-- Memories core (additive).
+-- Production applied: version 20261107104029, name 20261108100007_memories_core.
 
 create type public.memory_visibility as enum ('public', 'followers', 'only_me');
 create type public.memory_date_granularity as enum ('day', 'month', 'year', 'period', 'none');
@@ -116,13 +116,7 @@ as $$
       and p.is_admin is not true
       and (
         m.owner_profile_id = p_viewer_id
-        or (
-          m.visibility = 'public'
-          and (
-            p_viewer_id is not null
-            or true
-          )
-        )
+        or m.visibility = 'public'
         or (
           m.visibility = 'followers'
           and p_viewer_id is not null

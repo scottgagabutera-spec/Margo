@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { assembleMemoryPublic } from '@/lib/memory/assemble'
 import { memoryDefaultTitle, validateMemoryTitle } from '@/lib/memory/title'
 import type { MemoryPhotoInput, MemorySongInput, MemoryVisibility } from '@/lib/memory/types'
+import { MEMORY_ROW_SELECT } from '@/lib/memory/columns'
 
 export async function GET(request: NextRequest) {
   const profileId = request.nextUrl.searchParams.get('profileId')?.trim()
@@ -26,11 +27,11 @@ export async function GET(request: NextRequest) {
 
   const { data: rows, error } = await supabase
     .from('memories')
-    .select('*')
+    .select(MEMORY_ROW_SELECT)
     .eq('owner_profile_id', ownerId)
     .is('content_removed_at', null)
     .order('created_at', { ascending: false })
-    .limit(120)
+    .limit(60)
 
   if (error) {
     console.error('[memories] list', error)
@@ -118,7 +119,7 @@ export async function POST(request: NextRequest) {
       date_end: body.dateEnd || null,
       cover_r2_key: coverKey,
     })
-    .select('*')
+    .select(MEMORY_ROW_SELECT)
     .single()
 
   if (insErr || !memory) {

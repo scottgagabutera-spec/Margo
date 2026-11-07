@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { assembleMemoryPublic } from '@/lib/memory/assemble'
+import { MEMORY_ROW_SELECT } from '@/lib/memory/columns'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -18,7 +19,7 @@ export async function POST(_request: Request, ctx: Ctx) {
     .eq('id', id)
     .eq('owner_profile_id', user.id)
     .not('content_removed_at', 'is', null)
-    .select('*')
+    .select(MEMORY_ROW_SELECT)
     .maybeSingle()
 
   if (updErr || !row) {

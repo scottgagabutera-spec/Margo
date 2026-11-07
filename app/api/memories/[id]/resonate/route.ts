@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { assembleMemoryPublic } from '@/lib/memory/assemble'
+import { MEMORY_ROW_SELECT } from '@/lib/memory/columns'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -10,7 +11,12 @@ export async function POST(_request: Request, ctx: Ctx) {
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error || !user) return NextResponse.json({ error: 'Sign in required' }, { status: 401 })
 
-  const { data: memory } = await supabase.from('memories').select('*').eq('id', id).is('content_removed_at', null).maybeSingle()
+  const { data: memory } = await supabase
+    .from('memories')
+    .select(MEMORY_ROW_SELECT)
+    .eq('id', id)
+    .is('content_removed_at', null)
+    .maybeSingle()
   if (!memory) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const { data: existing } = await supabase
@@ -32,7 +38,7 @@ export async function POST(_request: Request, ctx: Ctx) {
     }
   }
 
-  const { data: fresh } = await supabase.from('memories').select('*').eq('id', id).maybeSingle()
+  const { data: fresh } = await supabase.from('memories').select(MEMORY_ROW_SELECT).eq('id', id).maybeSingle()
   const pub = fresh ? await assembleMemoryPublic(fresh, user.id) : null
   return NextResponse.json({ memory: pub })
 }

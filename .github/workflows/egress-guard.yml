@@ -1,0 +1,14 @@
+name: Egress guard
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  egress-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run egress guard
+        run: python3 scripts/egress_guard.py

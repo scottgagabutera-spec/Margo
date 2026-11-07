@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { assembleMemoryPublic } from '@/lib/memory/assemble'
 import type { MemoryVisibility } from '@/lib/memory/types'
+import { MEMORY_ROW_SELECT } from '@/lib/memory/columns'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -13,7 +14,7 @@ export async function GET(_request: NextRequest, ctx: Ctx) {
 
   const { data: row, error } = await supabase
     .from('memories')
-    .select('*')
+    .select(MEMORY_ROW_SELECT)
     .eq('id', id)
     .is('content_removed_at', null)
     .maybeSingle()
@@ -65,7 +66,7 @@ export async function PATCH(request: NextRequest, ctx: Ctx) {
     .update(patch)
     .eq('id', id)
     .eq('owner_profile_id', user.id)
-    .select('*')
+    .select(MEMORY_ROW_SELECT)
     .maybeSingle()
 
   if (updErr || !row) {
