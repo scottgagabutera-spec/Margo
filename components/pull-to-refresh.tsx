@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { LoadingRing } from '@/components/loading-ring'
-import { MargoSymbol } from '@/components/margo-symbol'
+import { MargoLogo } from '@/components/margo-logo'
 import { readActiveScrollTop } from '@/components/primary-tab-shell'
 
 const THRESHOLD = 52
@@ -158,7 +158,7 @@ export function PullToRefresh({
           state={ringState}
           progress={progress}
         >
-          <MargoSymbol size={14} />
+          <MargoLogo size="xs" variant="mark" />
         </LoadingRing>
       </div>
     </div>

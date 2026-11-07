@@ -181,10 +181,12 @@ export function resolveMargoMomentFromPost(
     youtubeUrl: post.youtubeUrlFromSong ?? null,
   }
   const postArtwork = post.knowledge?.artwork ?? null
+  const rootArtist = (post.knowledge?.artist || '').trim()
+  const rootSong = (post.knowledge?.song || '').trim()
   const lines = postLines.map((line) => {
     const mapped = postLineToMomentLine(line, rootSongUrls)
-    const artistName = (mapped.artistName || post.knowledge?.artist || '').trim()
-    const songTitle = (mapped.songTitle || post.knowledge?.song || '').trim()
+    const artistName = (mapped.artistName || rootArtist).trim()
+    const songTitle = (mapped.songTitle || rootSong).trim()
     return {
       ...mapped,
       artistName,

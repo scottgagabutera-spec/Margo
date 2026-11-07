@@ -8655,10 +8655,12 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  min-height: 48px;
-  padding: 0 18px;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
   border-radius: 12px;
+  width: fit-content;
+  max-width: 100%;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 0.875rem;
   font-weight: 600;
@@ -8693,16 +8695,37 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   justify-content: center;
   flex-shrink: 0;
 }
+.margo-cta-button--compact {
+  min-height: 44px;
+  padding: 0 12px;
+  font-size: 0.8125rem;
+  gap: 6px;
+}
+.margo-cta-button--stacked {
+  flex-direction: column;
+  padding: 8px 12px;
+  min-width: 88px;
+}
+.margo-cta-button--stacked .margo-cta-button__label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
 
+.margo-logo-plate__mark {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
 .margo-portrait-avatar--brand .margo-portrait-avatar__frame {
-  background: var(--gold);
+  background: #0a090d;
+  box-shadow: inset 0 0 0 1px var(--gold-border);
 }
 .margo-portrait-avatar--brand .margo-portrait-avatar__brand-mark path {
-  stroke: var(--bg);
+  stroke: var(--gold);
 }
 .margo-portrait-avatar--brand .margo-portrait-avatar__brand-mark rect {
-  fill: var(--bg);
-  opacity: 0.45;
+  fill: var(--gold);
+  opacity: 0.55;
 }
 
 .margo-feed-people-strip__label {

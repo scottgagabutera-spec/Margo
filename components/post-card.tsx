@@ -776,7 +776,7 @@ export function PostCard({
     }
   }
 
-  const onCardPointerUp = (e: React.PointerEvent) => {
+  const onCardClick = (e: React.MouseEvent) => {
     if (disableCardNav || isRow) return
     if (!isPreciseTap(cardTapRef.current, e.clientX, e.clientY, Date.now())) {
       cardTapRef.current = null
@@ -801,8 +801,8 @@ export function PostCard({
       data-lb-panel-open={suggestionsOpen ? '1' : undefined}
       data-lb-first-reply={suggestionsOpen && echoCountLive === 0 ? '1' : undefined}
       onPointerDown={onCardPointerDown}
-      onPointerUp={onCardPointerUp}
       onPointerCancel={() => { cardTapRef.current = null }}
+      onClick={onCardClick}
       style={{
         ...vibeThemeStyleVars(vibeTheme),
         ...(isTier1 ? { borderColor: 'var(--gold-border)' } : null),

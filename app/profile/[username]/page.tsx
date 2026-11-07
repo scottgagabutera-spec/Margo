@@ -17,7 +17,7 @@ import { PostCard } from '@/components/post-card'
 import { CardExportModal } from '@/components/card-export-modal'
 import { resolveMargoMomentFromPost } from '@/lib/moment'
 import type { Post } from '@/hooks/usePosts'
-import { usePrimaryTab } from '@/components/primary-tab-shell'
+import { usePrimaryTab, usePrimaryTabLinkProps } from '@/components/primary-tab-shell'
 import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { ProfileArtistLinks } from '@/components/profile-artist-links'
 import { ProfileImageLightbox } from '@/components/profile-image-lightbox'
@@ -186,6 +186,7 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
   const router = useRouter()
   const { user, identity, updateSignatureLyric } = useIdentity()
   const { isTabActive } = usePrimaryTab()
+  const composeTabLink = usePrimaryTabLinkProps('/compose', 'compose')
   const username = (usernameProp || (typeof params.username === 'string' ? params.username : '')).trim()
   // Own profile is a keepalive "you" pane — pause posts Realtime while hidden.
   // Other profiles are full navigations (enabled stays true).
@@ -1032,8 +1033,8 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
               {contentTab === 'memories' ? (
                 profileMemories.length === 0 ? (
                   isOwnProfile ? (
-                    <MargoCtaButton href="/memories/new" icon={<PlusIcon size={18} color="var(--bg)" />}>
-                      Create your first memory
+                    <MargoCtaButton href="/memories/new" icon={<PlusIcon size={16} color="var(--bg)" />}>
+                      Create memory
                     </MargoCtaButton>
                   ) : null
                 ) : (
@@ -1093,7 +1094,11 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
               ) : contentTab === 'lyrics' ? (
                 ownPosts.length === 0 ? (
                   isOwnProfile ? (
-                    <MargoCtaButton href="/compose" icon={<PenLineIcon size={18} color="var(--bg)" />}>
+                    <MargoCtaButton
+                      href="/compose"
+                      linkProps={composeTabLink}
+                      icon={<PenLineIcon size={16} color="var(--bg)" />}
+                    >
                       Compose
                     </MargoCtaButton>
                   ) : null

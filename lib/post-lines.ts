@@ -42,7 +42,7 @@ export function mapPostLinesRows(raw: any[] | null | undefined): PostLine[] | un
         text: row.text ?? '',
         songId: row.song_id ?? null,
         songTitle: row.song_title ?? linked?.title ?? null,
-        artistName: row.artist_name ?? linked?.artist_name ?? null,
+        artistName: row.artist_name ?? linked?.artist_display_name ?? null,
         artworkUrl: row.artwork_url ?? linked?.artwork_url ?? null,
         audioUrl: linked?.audio_url ?? null,
         snippetStart: row.snippet_start_sec ?? null,

@@ -131,8 +131,8 @@ const postsCache: CacheEntry<Post[]> = { data: null, loadedAt: 0, inflight: null
 bindFeedPostsCache(postsCache)
 export { evictFeedPostFromCache }
 
-const FEED_PAGE_SIZE = 200
-const FEED_OLDER_PAGE_SIZE = 40
+export const FEED_PAGE_SIZE = 200
+export const FEED_OLDER_PAGE_SIZE = 40
 
 export async function fetchFeedPosts(): Promise<Post[]> {
   const { data, error } = await supabase

@@ -1,15 +1,13 @@
 'use client'
 
-import { MargoPortraitAvatar } from '@/components/margo-portrait-avatar'
+import { MargoLogo, type MargoLogoSize } from '@/components/margo-logo'
 
-/** Official Margo mark in the portrait frame (welcome + tips). */
+const SIZE_MAP: Record<'tab' | 'sm', MargoLogoSize> = {
+  tab: 'xs',
+  sm: 'sm',
+}
+
+/** Official Margo logo tile for system tips and notifications. */
 export function MargoSystemAvatar({ size = 'tab' }: { size?: 'tab' | 'sm' }) {
-  return (
-    <MargoPortraitAvatar
-      size={size}
-      brandMark
-      fallbackInitial="M"
-      separationRingColor="var(--bg)"
-    />
-  )
+  return <MargoLogo size={SIZE_MAP[size]} variant="plate" />
 }

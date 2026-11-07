@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useCallback, useEffect, useRef } from 'react'
 import { ComposeLyricCard } from '@/components/compose-lyric-card'
-import { MargoSymbol } from '@/components/margo-symbol'
+import { MargoLogo } from '@/components/margo-logo'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { VibeTag } from '@/components/vibe-tag'
 import { playSnippet } from '@/lib/audio-engine'
@@ -94,7 +94,7 @@ export function MomentRecipientView({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <MargoSymbol size={28} variant="gold" />
+          <MargoLogo size="sm" variant="mark" />
           <span
             style={{
               fontFamily: UI_FONT,
