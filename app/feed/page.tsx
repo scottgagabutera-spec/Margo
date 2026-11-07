@@ -52,7 +52,7 @@ const FEED_STALE_MS = 60_000
 export default function FeedPage() {
   return (
     <MargoPaneErrorBoundary surface="feed-pane">
-      <Suspense fallback={<FeedPostSkeletonList count={4} />}>
+      <Suspense fallback={null}>
         <FeedPageInner />
       </Suspense>
     </MargoPaneErrorBoundary>
@@ -387,7 +387,7 @@ function FeedPageInner() {
   }
 
   const listReady = feedListReady(seeded, posts.length, loading)
-  const showFeedSkeleton = !listReady && posts.length === 0
+  const showFeedSkeleton = loading && posts.length === 0 && !seeded
   const hasActiveFilter = selectedVibe !== 'ALL' || selectedSort !== 'NEW'
 
   useEffect(() => {
