@@ -1,5 +1,5 @@
 import type { MemoryPublic } from '@/lib/memory/types'
-import { memoryDefaultTitle } from './title'
+import { memoryDefaultTitle } from './title.ts'
 
 const STORY_PREVIEW_WORDS = 14
 
