@@ -26,6 +26,8 @@ export interface Post {
   emotion?: string
   status?: string
   knowledge?: { song?: string; artist?: string; artwork?: string | null }
+  /** From `songs` join when post mirror `artwork_url` is empty */
+  catalogArtworkUrl?: string | null
   youtubeMeta?: { videoId?: string | null; title?: string | null; thumbnail?: string | null; thumbnailSm?: string | null; channel?: string | null; youtubeUrl?: string | null; embedUrl?: string | null } | null
   username?: string | null
   authorUid?: string | null

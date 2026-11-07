@@ -27,6 +27,7 @@ test('square and story credit plate includes art, title, and artist', () => {
     )
     assert.ok(layout.creditPlate, variant)
     assert.ok(layout.artwork, variant)
+    if (!baseInput.artworkUrl) assert.equal(layout.artwork?.placeholder, true, variant)
     assert.ok(layout.meta?.song?.text, variant)
     assert.ok(layout.meta?.artist?.text, variant)
     assert.ok(contrastRatio(layout.meta!.song!.style.color, CREDIT_PLATE_FILL_SOLID) >= 4.5, variant)

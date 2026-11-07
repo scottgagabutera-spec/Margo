@@ -30,6 +30,7 @@
     "test:feed-content-tab": "node --experimental-strip-types --test lib/feed-content-tab.test.ts",
     "test:feed-lyrics-mix": "node --experimental-strip-types --test lib/feed-lyrics-mix.test.ts",
     "test:social-export-credit": "npx --yes tsx --test lib/moment-export/social-export-credit.test.ts",
+    "test:post-artwork": "node --experimental-strip-types --test lib/post-artwork.test.ts",
     "test:shorts-shelf-rotation": "node --experimental-strip-types --test lib/shorts-shelf-rotation.test.ts",
     "test:shorts-looks": "node --experimental-strip-types --test lib/shorts-looks.test.ts",
     "test:shorts-frame-layout": "node --experimental-strip-types --test lib/shorts-frame-layout.test.ts",

@@ -6,6 +6,8 @@ export interface LayoutRect {
   y: number
   width: number
   height: number
+  /** Catalog art missing: draw gold note tile */
+  placeholder?: boolean
 }
 
 /** Resolved typography for one text run */

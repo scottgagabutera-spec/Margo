@@ -8094,15 +8094,6 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   line-height: 1.45;
   max-width: 36em;
 }
-.margo-feed-memory-nudge__cta {
-  display: none;
-  text-decoration: none;
-  font-size: 0.8125rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  box-shadow: 0 6px 20px rgba(232, 197, 71, 0.28);
-}
-
 .margo-memory-detail__section-label {
   margin: 0;
   font-family: var(--font-geist-sans), system-ui, sans-serif;

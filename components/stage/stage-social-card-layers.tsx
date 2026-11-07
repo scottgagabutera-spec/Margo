@@ -1,6 +1,7 @@
 'use client'
 
 import { MargoSymbol } from '@/components/margo-symbol'
+import { CreditArtworkTile } from '@/components/stage/credit-artwork-tile'
 import { UI_FONT } from '@/lib/fonts'
 import { stageCardLyricStyle, lyricLineOffset, stageCardMarkStyle } from '@/hooks/useStageCardLayout'
 import type { ResolvedStageCardLayout } from '@/lib/moment-export/layout'
@@ -107,18 +108,14 @@ export function StageSocialCardLayers({
           ) : null}
         </div>
       ) : null}
-      {artwork && layout.artwork ? (
-        <img
-          src={artwork}
-          alt=""
+      {layout.artwork ? (
+        <CreditArtworkTile
+          size={layout.artwork.width}
+          src={layout.artwork.placeholder ? null : artwork}
           style={{
             position: 'absolute',
             left: layout.artwork.x,
             top: layout.artwork.y,
-            width: layout.artwork.width,
-            height: layout.artwork.height,
-            borderRadius: layout.artwork.width * 0.18,
-            objectFit: 'cover',
             zIndex: 3,
           }}
         />

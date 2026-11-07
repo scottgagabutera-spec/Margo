@@ -148,14 +148,15 @@ export function resolveSocialExportLayout(
     metaHeight += artistFS * ref.meta.artist.lineHeight
   }
 
-  const hasArt = !!input.artworkUrl
-  const hasCredit = hasArt || !!songTitle || !!artistName
+  const hasArtImage = !!(input.artworkUrl || '').trim()
+  const hasCredit = hasArtImage || !!songTitle || !!artistName
+  const showArtSlot = hasCredit
 
   const markX = W - padding.right - markContainer
   const markY = padding.top
 
   const creditBottom = frameHeight - padding.bottom
-  const innerRowH = Math.max(hasArt ? artSize : 0, metaHeight)
+  const innerRowH = Math.max(showArtSlot ? artSize : 0, metaHeight)
   const plateH = hasCredit ? innerRowH + platePad * 2 : 0
   const plateW = contentWidth
   const plateX = padding.left
@@ -260,9 +261,9 @@ export function resolveSocialExportLayout(
   if (hasCredit) {
     const metaMaxW = Math.max(
       24,
-      plateW - platePad * 2 - (hasArt ? artSize + artGap : 0),
+      plateW - platePad * 2 - (showArtSlot ? artSize + artGap : 0),
     )
-    const metaX = hasArt ? artX + artSize + artGap : plateX + platePad
+    const metaX = showArtSlot ? artX + artSize + artGap : plateX + platePad
 
     const songFont = metaSongFont(songFS, geistFamily)
     const artistFont = metaArtistFont(artistFS, geistFamily)
@@ -309,8 +310,14 @@ export function resolveSocialExportLayout(
     meta = { song: songLine, artist: artistLine, x: metaX, y: metaY, height: metaHeight }
   }
 
-  const artwork: ResolvedStageCardLayout['artwork'] = hasArt
-    ? { x: artX, y: artY, width: artSize, height: artSize }
+  const artwork: ResolvedStageCardLayout['artwork'] = showArtSlot
+    ? {
+        x: artX,
+        y: artY,
+        width: artSize,
+        height: artSize,
+        placeholder: !hasArtImage,
+      }
     : null
 
   const mark: ResolvedStageCardLayout['mark'] = {

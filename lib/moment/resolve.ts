@@ -25,6 +25,7 @@ export interface PostLikeForMoment {
   snippetStart?: number | null
   snippetEnd?: number | null
   knowledge?: { song?: string; artist?: string; artwork?: string | null }
+  catalogArtworkUrl?: string | null
   isAiGenerated?: boolean
   atmosphere?: AtmosphereId
   lines?: PostLine[]
@@ -180,7 +181,7 @@ export function resolveMargoMomentFromPost(
     spotifyUrl: post.spotifyUrl ?? null,
     youtubeUrl: post.youtubeUrlFromSong ?? null,
   }
-  const postArtwork = post.knowledge?.artwork ?? null
+  const postArtwork = post.knowledge?.artwork ?? post.catalogArtworkUrl ?? null
   const rootArtist = (post.knowledge?.artist || '').trim()
   const rootSong = (post.knowledge?.song || '').trim()
   const lines = postLines.map((line) => {

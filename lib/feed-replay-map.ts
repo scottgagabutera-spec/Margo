@@ -4,6 +4,8 @@
  */
 import type { Post } from '@/hooks/usePosts'
 import { mapPostLinesRows } from '@/lib/post-lines'
+import { SONG_POST_EMBED } from '@/lib/atmosphere'
+import { resolveCatalogArtworkUrl } from '@/lib/post-artwork'
 import { applyPostContentRemoved } from '@/lib/post-content-removed'
 
 export interface FeedReplay {
@@ -46,15 +48,19 @@ export const REPLAY_FEED_SELECT = `
     content_removed_at,
     profiles:author_profile_id ( username, display_name, avatar_url ),
     post_stats ( resonate_count, echo_count, replay_count ),
-    songs:song_id ( audio_url ),
+    songs:song_id ( ${SONG_POST_EMBED} ),
     post_lines (
+      id,
       position,
       text,
       song_id,
       song_title,
       artist_name,
+      artwork_url,
       snippet_start_sec,
-      snippet_end_sec
+      snippet_end_sec,
+      source,
+      songs:song_id ( ${SONG_POST_EMBED} )
     )
   )
 `
@@ -70,11 +76,11 @@ export function mapReplayPost(row: any): Post | null {
     text: row.text ?? undefined,
     emotion: row.emotion ?? undefined,
     status: row.status ?? undefined,
-    knowledge: (row.song_title || row.artist_name || row.artwork_url)
+    knowledge: (row.song_title || row.artist_name || row.artwork_url || linkedSong?.artwork_url || row.song_id)
       ? {
-          song: row.song_title ?? undefined,
-          artist: row.artist_name ?? undefined,
-          artwork: row.artwork_url ?? null,
+          song: row.song_title ?? linkedSong?.title ?? undefined,
+          artist: row.artist_name ?? linkedSong?.artist_display_name ?? undefined,
+          artwork: resolveCatalogArtworkUrl(row.artwork_url, linkedSong),
         }
       : undefined,
     youtubeMeta: row.youtube_video_id
@@ -100,7 +106,8 @@ export function mapReplayPost(row: any): Post | null {
     audioUrl: linkedSong?.audio_url ?? null,
     snippetStart: row.snippet_start_sec ?? null,
     snippetEnd: row.snippet_end_sec ?? null,
-    lines: mapPostLinesRows(row.post_lines),
+    catalogArtworkUrl: resolveCatalogArtworkUrl(row.artwork_url, linkedSong),
+    lines: mapPostLinesRows(row.post_lines, resolveCatalogArtworkUrl(row.artwork_url, linkedSong)),
     contentRemovedAt: row.content_removed_at ?? null,
   })
 }

@@ -1,6 +1,7 @@
 import { parseAtmosphere, type AtmosphereId } from '@/lib/atmosphere'
 import type { StageCardTheme } from '@/lib/moment/stage-theme'
 import { drawExportAtmosphere } from '@/lib/moment-export/draw-export-atmosphere'
+import { drawCreditArtworkPlaceholder } from '@/lib/moment-export/draw-credit-artwork'
 import type { ResolvedStageCardLayout } from '@/lib/moment-export/layout/types'
 
 const MARGO_GOLD = '#E8C547'
@@ -216,18 +217,17 @@ export function renderStageCardFrame(
 
   if (layout.artwork) {
     const art = layout.artwork
-    const radius = art.width * (8 / 48)
-    ctx.save()
-    ctx.beginPath()
-    ctx.roundRect(art.x, art.y, art.width, art.height, radius)
-    if (assets.artworkImage) {
+    if (art.placeholder || !assets.artworkImage) {
+      drawCreditArtworkPlaceholder(ctx, art.x, art.y, art.width)
+    } else {
+      const radius = art.width * (8 / 48)
+      ctx.save()
+      ctx.beginPath()
+      ctx.roundRect(art.x, art.y, art.width, art.height, radius)
       ctx.clip()
       ctx.drawImage(assets.artworkImage, art.x, art.y, art.width, art.height)
-    } else {
-      ctx.fillStyle = light ? 'rgba(7,6,10,0.1)' : 'rgba(255,255,255,0.08)'
-      ctx.fill()
+      ctx.restore()
     }
-    ctx.restore()
   }
 
   drawVibePill(ctx, layout, theme)

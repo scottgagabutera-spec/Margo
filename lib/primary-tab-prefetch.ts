@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Post } from '@/hooks/usePosts'
 import type { Song } from '@/hooks/useSongs'
 import { mapPostLinesRows } from '@/lib/post-lines'
+import { resolveCatalogArtworkUrl } from '@/lib/post-artwork'
 import type { CatalogLyricAtom } from '@/lib/catalog-lyric-unit'
 import { warmProfile } from '@/lib/profile-warm'
 import { embedProfile, resolvePublicArtistCredit } from '@/lib/artist-identity'
@@ -84,11 +85,11 @@ function mapPostRow(row: any): Post {
     text: row.text ?? undefined,
     emotion: row.emotion ?? undefined,
     status: row.status ?? undefined,
-    knowledge: (row.song_title || row.artist_name || row.artwork_url || linkedSong?.artwork_url)
+    knowledge: (row.song_title || row.artist_name || row.artwork_url || linkedSong?.artwork_url || row.song_id)
       ? {
-          song: row.song_title ?? undefined,
-          artist: row.artist_name ?? undefined,
-          artwork: row.artwork_url ?? linkedSong?.artwork_url ?? null,
+          song: row.song_title ?? linkedSong?.title ?? undefined,
+          artist: row.artist_name ?? linkedSong?.artist_display_name ?? undefined,
+          artwork: resolveCatalogArtworkUrl(row.artwork_url, linkedSong),
         }
       : undefined,
     youtubeMeta: row.youtube_video_id
@@ -116,7 +117,8 @@ function mapPostRow(row: any): Post {
     snippetEnd: row.snippet_end_sec ?? null,
     isAiGenerated: linkedSong?.is_ai_generated ?? false,
     atmosphere: parseAtmosphere(linkedSong?.atmosphere),
-    lines: mapPostLinesRows(row.post_lines),
+    catalogArtworkUrl: resolveCatalogArtworkUrl(row.artwork_url, linkedSong),
+    lines: mapPostLinesRows(row.post_lines, resolveCatalogArtworkUrl(row.artwork_url, linkedSong)),
     contentRemovedAt: row.content_removed_at ?? null,
   })
 }
