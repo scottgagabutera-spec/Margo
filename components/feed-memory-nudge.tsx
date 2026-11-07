@@ -5,19 +5,10 @@ import { CloseIcon, PlusIcon } from '@/components/icons'
 import { MargoCtaButton } from '@/components/margo-cta-button'
 import { UI_FONT } from '@/lib/fonts'
 
-const DISMISS_KEY = 'margo-feed-memory-nudge-dismissed'
-
 const font = UI_FONT
-
-export function dismissFeedMemoryNudge() {
-  try {
-    localStorage.setItem(DISMISS_KEY, '1')
-  } catch { /* ignore */ }
-}
 
 export function FeedMemoryNudge({ onDismiss }: { onDismiss?: () => void }) {
   const dismiss = useCallback(() => {
-    dismissFeedMemoryNudge()
     onDismiss?.()
   }, [onDismiss])
 

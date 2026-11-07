@@ -30,6 +30,8 @@ export const FEED_LYRICS_MEMORY_CAROUSEL_SIZE = 5
 
 const MEMORY_EVERY = 6
 const PEOPLE_EVERY = 15
+const PEOPLE_EARLY = 5
+const PEOPLE_FIRST_REGULAR = 14
 const NUDGE_AFTER = 8
 
 function pickPeople(authors: FeedLyricsPeopleSlot[], used: Set<string>, count = 4): FeedLyricsPeopleSlot[] {
@@ -43,6 +45,16 @@ function pickPeople(authors: FeedLyricsPeopleSlot[], used: Set<string>, count = 
   return out
 }
 
+function shouldInsertPeople(lyricOrdinal: number, nonReplayTotal: number, earlyPeopleDone: boolean): boolean {
+  if (nonReplayTotal > 0 && nonReplayTotal < PEOPLE_FIRST_REGULAR && lyricOrdinal === PEOPLE_EARLY && !earlyPeopleDone) {
+    return true
+  }
+  if (lyricOrdinal >= PEOPLE_FIRST_REGULAR && (lyricOrdinal - PEOPLE_FIRST_REGULAR) % PEOPLE_EVERY === 0) {
+    return true
+  }
+  return false
+}
+
 export function buildFeedLyricsRows(input: {
   lyricPosts: FeedLyricsPostRow[]
   memories: MemoryPublic[]
@@ -52,9 +64,10 @@ export function buildFeedLyricsRows(input: {
 }): FeedLyricsRow[] {
   const { lyricPosts, memories, peoplePool, showMemoryNudge } = input
   let memIdx = input.memoryCursorStart ?? 0
-  let peopleUsed = new Set<string>()
+  const peopleUsed = new Set<string>()
   const out: FeedLyricsRow[] = []
   let lyricOrdinal = 0
+  let earlyPeopleDone = false
   const nonReplayTotal = lyricPosts.filter((row) => row.kind === 'post' && !row.isReplay).length
   const nudgeAtStart = showMemoryNudge && nonReplayTotal < NUDGE_AFTER
   if (nudgeAtStart) {
@@ -83,12 +96,13 @@ export function buildFeedLyricsRows(input: {
       })
     }
 
-    if (lyricOrdinal >= 14 && (lyricOrdinal - 14) % PEOPLE_EVERY === 0) {
+    if (shouldInsertPeople(lyricOrdinal, nonReplayTotal, earlyPeopleDone)) {
       const prev = out[out.length - 2]
       const prevPrev = out[out.length - 3]
       if (prev?.kind === 'memory-carousel' || prevPrev?.kind === 'memory-carousel') continue
       const people = pickPeople(peoplePool, peopleUsed)
       if (people.length > 0) {
+        if (lyricOrdinal === PEOPLE_EARLY && nonReplayTotal < PEOPLE_FIRST_REGULAR) earlyPeopleDone = true
         out.push({ kind: 'people', key: `people-${lyricOrdinal}`, people })
       }
     }
