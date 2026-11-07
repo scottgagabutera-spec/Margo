@@ -4,6 +4,10 @@ export function memoryDefaultTitle(songCount: number): string {
   return `${songCount} songs`
 }
 
+export function memoryTitlePlaceholder(): string {
+  return 'Give your memory a title'
+}
+
 export function validateMemoryTitle(title: string, songCount: number): string | null {
   const t = title.trim()
   if (songCount >= 2 && !t) return 'Title is required for memories with two or more songs.'

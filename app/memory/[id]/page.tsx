@@ -21,6 +21,7 @@ import { MemoryReplyComposer } from '@/components/memory-reply-composer'
 import { MemoryRepliesList } from '@/components/memory-replies-list'
 import type { MemoryReplyRow } from '@/app/api/memories/[id]/replies/route'
 import { memoryCaptionTitle } from '@/lib/memory/display-caption'
+import { MargoAvatar } from '@/components/margo-avatar'
 
 const font = UI_FONT
 
@@ -222,7 +223,6 @@ export default function MemoryDetailPage() {
   const firstSong = memory.songs[0]
   const story = (memory.story || '').trim()
   const heading = memoryCaptionTitle(memory)
-  const avatar = memory.ownerAvatarUrl ? compactArtworkUrl(memory.ownerAvatarUrl, 64) : null
   const songCountLabel = memory.songCount === 1 ? '1 song' : `${memory.songCount} songs`
 
   return (
@@ -237,42 +237,37 @@ export default function MemoryDetailPage() {
         boxSizing: 'border-box',
       }}
     >
-      {memory.coverUrl ? (
-        <div
-          style={{
-            width: '100%',
-            aspectRatio: '16/10',
-            borderRadius: 16,
-            background: `center/cover no-repeat url(${memory.coverUrl})`,
-            marginBottom: 16,
-            border: '1px solid var(--border)',
-          }}
-        />
-      ) : null}
-
-      <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 style={{ margin: '0 0 10px', fontFamily: font, fontSize: '1.25rem', fontWeight: 600, color: 'var(--text)', lineHeight: 1.3 }}>
-            {heading}
-          </h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-            <Link href={`/profile/${memory.ownerUsername}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: font, fontSize: '0.8125rem', color: 'var(--text-secondary)', textDecoration: 'none' }}>
-              {avatar ? <img src={avatar} alt="" width={22} height={22} style={{ borderRadius: '50%', objectFit: 'cover' }} /> : null}
-              <span>@{memory.ownerUsername}</span>
-            </Link>
-            {dateChip ? (
-              <span style={{ fontFamily: font, fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-                {dateChip}
-                <span aria-hidden> · </span>
-                {songCountLabel}
-              </span>
-            ) : (
-              <span style={{ fontFamily: font, fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{songCountLabel}</span>
-            )}
+      <div style={{ position: 'relative', marginBottom: 12 }}>
+        <div className="margo-memory-detail__hero-row" style={{ marginBottom: 0, paddingRight: memory.isOwner ? 44 : 0 }}>
+          {memory.coverUrl ? (
+            <div
+              className="margo-memory-detail__hero-cover"
+              role="img"
+              aria-label=""
+              style={{ backgroundImage: `url(${memory.coverUrl})` }}
+            />
+          ) : null}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h1 className="margo-memory-detail__hero-title">{heading}</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+              <Link href={`/profile/${memory.ownerUsername}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: font, fontSize: '0.8125rem', color: 'var(--text-secondary)', textDecoration: 'none' }}>
+                <MargoAvatar size="xs" imageUrl={memory.ownerAvatarUrl} username={memory.ownerUsername} displayName={memory.ownerDisplayName} />
+                <span>@{memory.ownerUsername}</span>
+              </Link>
+              {dateChip ? (
+                <span style={{ fontFamily: font, fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                  {dateChip}
+                  <span aria-hidden> · </span>
+                  {songCountLabel}
+                </span>
+              ) : (
+                <span style={{ fontFamily: font, fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{songCountLabel}</span>
+              )}
+            </div>
           </div>
         </div>
         {memory.isOwner ? (
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: 'absolute', top: 0, right: 0 }}>
             <button
               type="button"
               aria-label="Memory options"
@@ -357,9 +352,9 @@ export default function MemoryDetailPage() {
             ) : null}
           </div>
         ) : null}
-      </header>
+      </div>
 
-      {story ? (
+      {story && story !== heading ? (
         <p className="margo-memory-detail__story" style={{ fontFamily: font, fontSize: '1rem', color: 'var(--text)', lineHeight: 1.6, margin: '0 0 22px', whiteSpace: 'pre-wrap' }}>
           {story}
         </p>

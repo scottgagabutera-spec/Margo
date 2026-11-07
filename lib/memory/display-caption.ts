@@ -1,17 +1,22 @@
 import type { MemoryPublic } from '@/lib/memory/types'
-import { memoryDefaultTitle } from './title.ts'
+import { memoryDefaultTitle } from './title'
 
 export function memoryTitleIsPlaceholder(memory: MemoryPublic): boolean {
   const rawTitle = (memory.title || '').trim()
   return !rawTitle || rawTitle === memoryDefaultTitle(memory.songCount)
 }
 
-/** Primary line for memory tiles — full text, no ellipsis. */
+/** Display title — memory title, else full story, else first song title. */
 export function memoryCaptionTitle(memory: MemoryPublic): string {
   const rawTitle = (memory.title || '').trim()
   if (!memoryTitleIsPlaceholder(memory)) return rawTitle
+
+  const story = (memory.story || '').trim()
+  if (story) return story
+
   const firstSong = memory.songs[0]
   if (firstSong?.songTitle?.trim()) return firstSong.songTitle.trim()
+
   return rawTitle || 'Memory'
 }
 
@@ -21,7 +26,7 @@ export function memoryCaptionArtists(memory: MemoryPublic): string {
   return names.slice(0, 3).join(', ')
 }
 
-/** User-facing label for compact memory surfaces (tiles, grid, feed card). */
+/** User-facing aria / compact string. */
 export function memoryDisplayCaption(memory: MemoryPublic): string {
   const artists = memoryCaptionArtists(memory)
   const title = memoryCaptionTitle(memory)

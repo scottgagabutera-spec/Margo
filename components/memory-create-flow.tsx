@@ -5,12 +5,15 @@ import { useRouter } from 'next/navigation'
 import { ComposeSearchDropdown, type ComposeSearchHit } from '@/components/compose-search-dropdown'
 import { MargoSearchInput } from '@/components/margo-search-input'
 import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
-import { ArrowLeftIcon, CloseIcon } from '@/components/icons'
+import { CloseIcon } from '@/components/icons'
 import { compactArtworkUrl } from '@/lib/compact-artwork-url'
 import { createClient } from '@/lib/supabase/client'
 import { fetchUnifiedSongSearchHits } from '@/lib/song-search/unified-song-search'
 import { MARGO_SEARCH_HINT_SONGS } from '@/lib/margo-search-hints'
-import { memoryDefaultTitle, validateMemoryTitle } from '@/lib/memory/title'
+import { memoryDefaultTitle, memoryTitlePlaceholder, validateMemoryTitle } from '@/lib/memory/title'
+import { memoryCaptionTitle } from '@/lib/memory/display-caption'
+import { ProfileMemoryTile } from '@/components/profile-memory-tile'
+import type { MemoryPublic } from '@/lib/memory/types'
 import { formatMemoryDatePublic } from '@/lib/memory/date-label'
 import type {
   MemoryDateGranularity,
@@ -100,6 +103,7 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
   const [visibility, setVisibility] = useState<MemoryVisibility>('public')
   const [showInLyricsFeed, setShowInLyricsFeed] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [titleTouched, setTitleTouched] = useState(false)
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 835px)')
@@ -216,7 +220,10 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
 
   const goNext = () => {
     if (step === 1 && !canAdvanceStep1) return
-    if (step === 2 && !canAdvanceStep2) return
+    if (step === 2) {
+      setTitleTouched(true)
+      if (!canAdvanceStep2) return
+    }
     setStep((s) => Math.min(4, s + 1) as Step)
   }
 
@@ -305,12 +312,82 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
   const labelStyle: CSSProperties = {
     display: 'block',
     fontFamily: font,
-    fontSize: TYPE.label,
-    color: 'var(--text-muted)',
-    letterSpacing: '0.08em',
-    textTransform: 'uppercase',
+    fontSize: TYPE.secondary,
+    fontWeight: 500,
+    color: 'var(--gold)',
+    letterSpacing: '-0.01em',
+    textTransform: 'none',
     marginBottom: '8px',
   }
+
+  const previewMemory = useMemo((): MemoryPublic => {
+    const { dateStart, dateEnd } = buildDatePayload()
+    const coverFromPhoto = photos[0]?.previewUrl || null
+    const coverFromSong = songs[0]?.artwork ? compactArtworkUrl(songs[0].artwork, 400) : null
+    const resolvedTitle = title.trim() || memoryDefaultTitle(songs.length)
+    return {
+      id: 'preview',
+      ownerProfileId: '',
+      ownerUsername: 'you',
+      ownerDisplayName: 'You',
+      ownerAvatarUrl: null,
+      title: resolvedTitle,
+      story: story.trim() || null,
+      mood: mood.trim() || null,
+      visibility,
+      showInLyricsFeed,
+      showDatePublicly,
+      dateGranularity,
+      dateStart,
+      dateEnd,
+      coverUrl: coverFromPhoto || coverFromSong,
+      songCount: songs.length,
+      resonateCount: 0,
+      lyricBackCount: 0,
+      createdAt: new Date().toISOString(),
+      songs: songs.map((s, i) => ({
+        id: s.id,
+        position: i,
+        songId: s.songId,
+        songTitle: s.songTitle,
+        artistName: s.artistName,
+        lyricExcerpt: null,
+        isLyricOnly: s.isLyricOnly,
+        artworkUrl: s.artwork || null,
+        audioUrl: null,
+      })),
+      photos: photos.map((p, i) => ({
+        id: p.r2Key,
+        position: i,
+        url: p.previewUrl,
+        width: null,
+        height: null,
+        mediaType: p.mediaType,
+        posterUrl: null,
+        durationSec: p.durationSec ?? null,
+      })),
+      viewerResonated: false,
+      isOwner: true,
+    }
+  }, [
+    songs,
+    story,
+    title,
+    photos,
+    mood,
+    visibility,
+    showInLyricsFeed,
+    showDatePublicly,
+    dateGranularity,
+    dayValue,
+    monthValue,
+    yearValue,
+    periodStart,
+    periodEnd,
+  ])
+
+  const previewHeading = memoryCaptionTitle(previewMemory)
+  const showTitleErr = titleTouched && titleErr
 
   return (
     <div
@@ -323,42 +400,26 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
     >
       <header
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
           padding: 'calc(var(--nav-height, 72px) + 12px) 20px 16px',
         }}
       >
-        <button
-          type="button"
-          aria-label="Back"
-          onClick={goBack}
-          style={{
-            width: 'var(--margo-touch-min)',
-            height: 'var(--margo-touch-min)',
-            borderRadius: '50%',
-            border: '1px solid var(--border)',
-            background: 'var(--surface)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            padding: 0,
-          }}
-        >
-          <ArrowLeftIcon size={18} color="var(--text)" />
-        </button>
-        <div style={{ flex: 1 }}>
-          <p style={{ margin: 0, fontFamily: font, fontSize: TYPE.label, color: 'var(--gold)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>
-            New memory
-          </p>
-          <p style={{ margin: '4px 0 0', fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-muted)' }}>
-            Step {step} of 4
-          </p>
-        </div>
+        <p style={{ margin: 0, fontFamily: font, fontSize: TYPE.secondary, fontWeight: 500, color: 'var(--gold)' }}>
+          New memory
+        </p>
+        <p style={{ margin: '4px 0 0', fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)' }}>
+          Step {step} of 4
+        </p>
       </header>
 
-      <div style={{ padding: '0 20px 120px', maxWidth: 560, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+      <div
+        style={{
+          padding: `0 20px ${step === 4 ? '200px' : '120px'}`,
+          maxWidth: 560,
+          margin: '0 auto',
+          width: '100%',
+          boxSizing: 'border-box',
+        }}
+      >
         {step === 1 ? (
           <>
             <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', margin: '0 0 16px' }}>
@@ -472,13 +533,14 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value.slice(0, 80))}
-              placeholder={memoryDefaultTitle(songs.length)}
+              placeholder={memoryTitlePlaceholder()}
+              onBlur={() => setTitleTouched(true)}
               style={inputStyle}
             />
             <p style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)', margin: '6px 0 0', textAlign: 'right' }}>
               {title.length}/80
             </p>
-            {titleErr ? (
+            {showTitleErr ? (
               <p style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--danger, #e57373)', margin: '6px 0 0' }}>{titleErr}</p>
             ) : null}
           </>
@@ -551,27 +613,33 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
 
         {step === 4 ? (
           <>
-            <div style={{ borderRadius: 16, border: '1px solid var(--border)', background: 'var(--surface)', padding: 16, marginBottom: 20 }}>
-              {photos[0] ? (
-                <div style={{ width: '100%', aspectRatio: '16/10', borderRadius: 12, background: `center/cover no-repeat url(${photos[0].previewUrl})`, marginBottom: 12 }} />
-              ) : songs[0]?.artwork ? (
-                <div style={{ width: '100%', aspectRatio: '16/10', borderRadius: 12, background: `center/cover no-repeat url(${compactArtworkUrl(songs[0].artwork, 400)})`, marginBottom: 12 }} />
-              ) : null}
-              <h2 style={{ margin: '0 0 8px', fontFamily: font, fontSize: TYPE.body, fontWeight: 600, color: 'var(--text)' }}>
-                {title.trim() || memoryDefaultTitle(songs.length)}
-              </h2>
-              {previewDate ? (
-                <p style={{ margin: '0 0 8px', fontFamily: font, fontSize: TYPE.meta, color: 'var(--gold)' }}>{previewDate}</p>
-              ) : null}
-              {mood.trim() ? (
-                <p style={{ margin: '0 0 8px', fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)' }}>{mood.trim()}</p>
-              ) : null}
-              <p style={{ margin: 0, fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', lineHeight: 1.45, whiteSpace: 'pre-wrap' }}>
-                {story.trim()}
-              </p>
-              <p style={{ margin: '12px 0 0', fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)' }}>
-                {songs.length} song{songs.length === 1 ? '' : 's'}
-              </p>
+            <p style={{ ...labelStyle, marginBottom: 12 }}>Preview</p>
+            <div className="margo-memory-create-preview">
+              <div className="margo-memory-create-preview__tile-wrap">
+                <ProfileMemoryTile memory={previewMemory} />
+              </div>
+              <div>
+                <div className="margo-memory-detail__hero-row" style={{ marginBottom: 8 }}>
+                  {previewMemory.coverUrl ? (
+                    <div
+                      className="margo-memory-detail__hero-cover"
+                      style={{ backgroundImage: `url(${previewMemory.coverUrl})` }}
+                    />
+                  ) : null}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h2 className="margo-memory-detail__hero-title">{previewHeading}</h2>
+                    <p style={{ margin: 0, fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-secondary)' }}>@you</p>
+                    {previewDate ? (
+                      <p style={{ margin: '6px 0 0', fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)' }}>{previewDate}</p>
+                    ) : null}
+                  </div>
+                </div>
+                {story.trim() && story.trim() !== previewHeading ? (
+                  <p style={{ margin: 0, fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', lineHeight: 1.45, whiteSpace: 'pre-wrap' }}>
+                    {story.trim()}
+                  </p>
+                ) : null}
+              </div>
             </div>
             <label style={labelStyle}>Who can see this?</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>

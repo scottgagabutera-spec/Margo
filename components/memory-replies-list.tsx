@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { compactArtworkUrl } from '@/lib/compact-artwork-url'
+import { MargoAvatar } from '@/components/margo-avatar'
 import type { MemoryReplyRow } from '@/app/api/memories/[id]/replies/route'
 import { TYPE, UI_FONT } from '@/lib/fonts'
 
@@ -21,11 +22,7 @@ export function MemoryRepliesList({ replies }: { replies: MemoryReplyRow[] }) {
         <li key={r.id} className="margo-memory-replies-list__item">
           <div className="margo-memory-replies-list__head">
             <Link href={`/profile/${r.actorUsername}`} className="margo-memory-replies-list__user">
-              {r.actorAvatarUrl ? (
-                <img src={compactArtworkUrl(r.actorAvatarUrl, 48)} alt="" width={24} height={24} />
-              ) : (
-                <span className="margo-memory-replies-list__avatar-empty" />
-              )}
+              <MargoAvatar size="xs" imageUrl={r.actorAvatarUrl} username={r.actorUsername} />
               <span>@{r.actorUsername}</span>
             </Link>
             <span className="margo-memory-replies-list__kind">{r.kind === 'lyric' ? 'Lyric back' : 'Reply'}</span>

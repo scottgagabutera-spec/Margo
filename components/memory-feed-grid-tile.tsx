@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
+import { MargoAvatar } from '@/components/margo-avatar'
 import { MemoryCoverCaption } from '@/components/memory-cover-caption'
 import { FeedIconHeart } from '@/components/feed-card-icons'
 import { MusicNoteIcon } from '@/components/icons'
@@ -15,7 +16,6 @@ export function MemoryFeedGridTile({ memory }: { memory: MemoryPublic }) {
   const { src, isVideo } = memoryGridCoverSource(memory)
   const caption = memoryDisplayCaption(memory)
   const songArt = memoryCoverIsSongArt(memory)
-  const avatar = memory.ownerAvatarUrl ? compactArtworkUrl(memory.ownerAvatarUrl, 48) : null
   return (
     <Link href={`/memory/${memory.id}`} className="margo-feed-memory-grid-tile" aria-label={caption}>
       <span className="margo-feed-memory-grid-tile__art">
@@ -42,19 +42,12 @@ export function MemoryFeedGridTile({ memory }: { memory: MemoryPublic }) {
       </span>
       <span className="margo-feed-memory-grid-tile__meta">
         <span className="margo-feed-memory-grid-tile__author">
-          {avatar ? (
-            <Image
-              src={avatar}
-              alt=""
-              width={20}
-              height={20}
-              className="margo-feed-memory-grid-tile__avatar"
-              loading="lazy"
-              unoptimized
-            />
-          ) : (
-            <span className="margo-feed-memory-grid-tile__avatar margo-feed-memory-grid-tile__avatar--empty" />
-          )}
+          <MargoAvatar
+            size="xs"
+            imageUrl={memory.ownerAvatarUrl}
+            username={memory.ownerUsername}
+            displayName={memory.ownerDisplayName}
+          />
           <span className="margo-feed-memory-grid-tile__name">@{memory.ownerUsername}</span>
         </span>
         <span className="margo-feed-memory-grid-tile__stats">

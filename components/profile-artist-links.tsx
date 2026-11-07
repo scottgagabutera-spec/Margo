@@ -151,8 +151,8 @@ export function ProfileArtistLinks({
 
   if (items.length === 0 && !margoProfileUsername) return null
 
-  const iconSize = resolvedVariant === 'compact' ? 16 : 18
-  const btnSize = resolvedVariant === 'compact' ? 36 : undefined
+  const iconSize = resolvedVariant === 'compact' ? 14 : 15
+  const btnSize = resolvedVariant === 'compact' ? 32 : 30
 
   const linkStyle = (size?: number): CSSProperties => ({
     width: size ?? 'var(--margo-touch-min)',
@@ -162,7 +162,7 @@ export function ProfileArtistLinks({
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: '50%',
+    borderRadius: '8px',
     border: '1px solid var(--gold-border)',
     background: 'var(--gold-faint)',
     color: 'var(--gold)',
@@ -175,11 +175,11 @@ export function ProfileArtistLinks({
     <div style={{ marginBottom: resolvedVariant === 'compact' ? 0 : '24px' }}>
       {resolvedVariant === 'default' ? (
         <p style={{
-          fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)',
-          textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '10px',
+          fontFamily: font, fontSize: '0.7rem', fontWeight: 500, color: 'var(--gold)',
+          textTransform: 'none', letterSpacing: '-0.01em', marginBottom: '8px',
         }}>Listen &amp; follow</p>
       ) : null}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: resolvedVariant === 'compact' ? '5px' : '6px' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: resolvedVariant === 'compact' ? '5px' : '8px', alignItems: 'center' }}>
         {items.map((item) => {
           const Icon = ICONS[item.key]
           return (

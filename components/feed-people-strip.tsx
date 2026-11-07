@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { MargoAvatar } from '@/components/margo-avatar'
 import { UI_FONT } from '@/lib/fonts'
 import type { FeedLyricsPeopleSlot } from '@/lib/feed-lyrics-mix'
 
@@ -14,13 +15,9 @@ export function FeedPeopleStrip({ people }: { people: FeedLyricsPeopleSlot[] }) 
       <div className="margo-feed-people-strip__row">
         {people.map((p) => (
           <Link key={p.id} href={`/profile/${p.username}`} className="margo-feed-people-strip__cell">
-            {p.avatarUrl ? (
-              <img src={p.avatarUrl} alt="" className="margo-feed-people-strip__avatar" loading="lazy" />
-            ) : (
-              <span className="margo-feed-people-strip__avatar margo-feed-people-strip__avatar--empty" />
-            )}
+            <MargoAvatar size="sm" imageUrl={p.avatarUrl} username={p.username} displayName={p.displayName} />
             <span className="margo-feed-people-strip__name" style={{ fontFamily: font }}>
-              {p.displayName || p.username}
+              @{p.username}
             </span>
           </Link>
         ))}
