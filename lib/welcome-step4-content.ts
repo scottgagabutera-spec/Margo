@@ -24,9 +24,13 @@ export function resolveWelcomeStep4Role(role: WelcomeDraftRole | null): WelcomeS
   return 'listener'
 }
 
+export function welcomeStep4Title(_role: WelcomeStep4Role): string {
+  return 'You\u2019re in'
+}
+
 export function welcomeStep4Subtitle(role: WelcomeStep4Role): string {
   if (role === 'artist') {
-    return 'Share your voice when you are ready. Listeners can still discover you here.'
+    return 'Let\u2019s get you verified'
   }
   return 'Your feed, Discover, and lyric moments are ready when you are.'
 }
@@ -64,8 +68,8 @@ const ARTIST_CARDS: WelcomeStep4CardDef[] = [
   {
     id: 'apply-artist',
     icon: 'apply',
-    title: 'Apply to share your music',
-    line: 'Build your artist profile and apply when you are ready. Studio unlocks after approval.',
+    title: 'Share your application',
+    line: 'Add streaming and social links, or verify with Suno. We review every artist by hand.',
   },
   {
     id: 'lyrics-find-people',
@@ -76,10 +80,9 @@ const ARTIST_CARDS: WelcomeStep4CardDef[] = [
   {
     id: 'promote-music',
     icon: 'promote',
-    title: 'Promote your music',
-    line: 'After approval, prepare clips for TikTok and YouTube Shorts from Studio.',
+    title: 'Promote after approval',
+    line: 'Studio unlocks when you are approved. Prepare clips for TikTok and YouTube Shorts there.',
   },
-  COMPLETE_PROFILE_CARD,
 ]
 
 export function welcomeStep4Cards(role: WelcomeStep4Role): WelcomeStep4CardDef[] {

@@ -111,11 +111,9 @@ export async function presignedPutCatalogObject(
       Bucket: r2BucketName(),
       Key: key,
       ContentType: input.contentType,
-      CacheControl: CACHE_IMMUTABLE,
     }),
     {
       expiresIn: expiresInSec,
-      unhoistableHeaders: new Set(['content-length']),
     },
   )
   const expiresAt = new Date(Date.now() + expiresInSec * 1000).toISOString()
@@ -123,7 +121,6 @@ export async function presignedPutCatalogObject(
     url,
     headers: {
       'Content-Type': input.contentType,
-      'Cache-Control': CACHE_IMMUTABLE,
     },
     key,
     publicUrl: publicCatalogMediaUrl(key),

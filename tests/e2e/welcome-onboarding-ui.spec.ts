@@ -131,8 +131,7 @@ for (const width of [360, 390] as const) {
       await expect(page.getByRole('button', { name: 'Take photo' })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Choose from gallery' })).toBeVisible()
       await page.getByRole('button', { name: 'Cancel' }).click()
-      await page.locator('[data-margo-welcome-cover]').click()
-      await expect(page.getByRole('button', { name: 'Take photo' })).toBeVisible()
+      await expect(page.locator('[data-margo-welcome-cover]')).toHaveCount(0)
     })
 
     test('step 3 chip gating message', async ({ page }) => {

@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 // ── Types ──
 interface ArtistApplicationRow {
@@ -344,12 +345,13 @@ function ApplicationsSection() {
         )
       })}
 
-      {confirm && (
+      {confirm && typeof document !== 'undefined' ? createPortal(
         <div
           role="dialog"
           aria-modal="true"
+          aria-labelledby="margo-admin-app-confirm-title"
           style={{
-            position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.65)',
+            position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.65)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
           }}
           onClick={() => setConfirm(null)}
@@ -360,7 +362,7 @@ function ApplicationsSection() {
               ...S.card, maxWidth: '400px', width: '100%', margin: 0, cursor: 'default',
             }}
           >
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.9rem', color: 'var(--text)', marginBottom: '12px' }}>
+            <p id="margo-admin-app-confirm-title" style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.9rem', color: 'var(--text)', marginBottom: '12px' }}>
               {confirm.decision === 'approved'
                 ? `Approve ${confirm.app.display_artist_name}?`
                 : `Reject ${confirm.app.display_artist_name}?`}
@@ -379,8 +381,9 @@ function ApplicationsSection() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+        </div>,
+        document.body,
+      ) : null}
     </div>
   )
 }
@@ -588,7 +591,7 @@ function ModerationSection() {
                       onChange={e => setReason(e.target.value)}
                       rows={2}
                       style={{ ...S.input, resize: 'vertical', marginBottom: '10px' }}
-                      placeholder="Explain why — this becomes their notification and, if frozen, the message on their status page."
+                      placeholder="Explain why. This becomes their notification and, if frozen, the message on their status page."
                     />
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button type="button" onClick={applyAction} disabled={!reason.trim()} style={{ ...S.btn, opacity: reason.trim() ? 1 : 0.5 }}>
@@ -614,7 +617,7 @@ export function ArtistApplicationsTab() {
   return (
     <div>
       <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: '20px', lineHeight: 1.6 }}>
-        Applications become artists on approval — this sets profiles.is_artist directly via a
+        Applications become artists on approval. This sets profiles.is_artist directly via a
         database trigger. Once approved, use Moderation to warn, freeze, or remove standing as
         issues come up. Click a row to expand details and actions.
       </p>

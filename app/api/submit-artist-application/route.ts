@@ -101,14 +101,11 @@ export async function POST(req: NextRequest) {
     .maybeSingle()
 
   if (existingPending) {
-    return NextResponse.json(
-      {
-        success: false,
-        error:
-          'You already have an application under review. We will notify you here in Margo when there is a decision.',
-      },
-      { status: 409 },
-    )
+    return NextResponse.json({
+      success: true,
+      status: 'pending' as const,
+      alreadySubmitted: true,
+    })
   }
 
   const { data: inserted, error: insertErr } = await admin
@@ -128,14 +125,11 @@ export async function POST(req: NextRequest) {
 
   if (insertErr) {
     if (insertErr.code === '23505') {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            'You already have an application under review. We will notify you here in Margo when there is a decision.',
-        },
-        { status: 409 },
-      )
+      return NextResponse.json({
+        success: true,
+        status: 'pending' as const,
+        alreadySubmitted: true,
+      })
     }
     return NextResponse.json({ success: false, error: 'Could not submit application.' }, { status: 500 })
   }

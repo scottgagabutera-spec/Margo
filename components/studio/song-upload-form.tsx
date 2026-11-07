@@ -10,6 +10,7 @@ import {
   type AtmosphereId,
 } from '@/lib/atmosphere'
 import { GeneratePromotionBlock } from '@/components/studio/generate-promotion-block'
+import { putCatalogFileWithRetry } from '@/lib/r2/client-catalog-upload'
 
 const supabase = createClient()
 
@@ -148,7 +149,7 @@ const STAGE_LABEL: Record<Stage, string> = {
   'uploading-audio': 'Uploading audio…',
   'uploading-artwork': 'Uploading artwork…',
   'saving-song': 'Saving song…',
-  transcribing: 'Reading lyrics with Whisper AI — this can take a minute…',
+  transcribing: 'Reading lyrics with Whisper AI. This can take a minute…',
   tagging: 'Tagging vibes with AI…',
   publishing: 'Publishing…',
   done: 'Live on Margo.',
@@ -179,7 +180,7 @@ async function readApiPayload(res: Response): Promise<{ error?: string; detail?:
   const text = await res.text()
   if (!text) {
     if (res.status === 504 || res.status === 524) {
-      return { error: 'Lyric reading took too long. Try again — the song is still here.' }
+      return { error: 'Lyric reading took too long. Try again. The song is still here.' }
     }
     return { error: `Request failed (${res.status})` }
   }
@@ -187,7 +188,7 @@ async function readApiPayload(res: Response): Promise<{ error?: string; detail?:
     return JSON.parse(text) as { error?: string; detail?: unknown; srt?: string }
   } catch {
     if (res.status === 504 || res.status === 524) {
-      return { error: 'Lyric reading took too long. Try again — the song is still here.' }
+      return { error: 'Lyric reading took too long. Try again. The song is still here.' }
     }
     return { error: `Request failed (${res.status})` }
   }
@@ -219,12 +220,13 @@ function mimeForArtworkFallback(ext: string, fileType: string): string {
   return 'image/jpeg'
 }
 
-/** Presigned PUT to R2 — URLs are https://audio.trymargo.com/Margo/{audio|artwork}/… */
+/** Presigned PUT to R2 with retry; proxy fallback for smaller files when CORS blocks the browser. */
 async function putCatalogFileToR2(
   songId: string,
   kind: 'audio' | 'artwork',
   file: File,
   meta: { songTitle: string; artistLabel: string },
+  onProgress?: (pct: number) => void,
 ): Promise<string> {
   const extension = extFromFile(file)
   const contentType =
@@ -258,15 +260,33 @@ async function putCatalogFileToR2(
     headers: Record<string, string>
     publicUrl: string
   }
-  const putRes = await fetch(presigned.url, {
-    method: 'PUT',
-    body: file,
-    headers: presigned.headers,
-  })
-  if (!putRes.ok) {
-    throw new Error(`Could not upload file (${putRes.status})`)
+  try {
+    await putCatalogFileWithRetry(presigned, file, kind, onProgress)
+    return presigned.publicUrl
+  } catch (directErr) {
+    if (file.size <= 6 * 1024 * 1024) {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('songId', songId)
+      fd.append('kind', kind)
+      fd.append('extension', extension)
+      fd.append('contentType', contentType)
+      fd.append('artistLabel', meta.artistLabel.trim())
+      fd.append('songTitle', meta.songTitle.trim())
+      const proxyRes = await fetch('/api/studio/catalog-upload', {
+        method: 'POST',
+        credentials: 'include',
+        body: fd,
+      })
+      if (!proxyRes.ok) {
+        const j = (await proxyRes.json().catch(() => ({}))) as { error?: string }
+        throw new Error(j.error || (directErr instanceof Error ? directErr.message : 'Upload failed'))
+      }
+      const j = (await proxyRes.json()) as { publicUrl: string }
+      return j.publicUrl
+    }
+    throw directErr
   }
-  return presigned.publicUrl
 }
 
 export function SongUploadForm({ artistDisplayName, artistUsername = null, onComplete, onCancel, songId = null }: SongUploadFormProps) {
@@ -829,7 +849,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
             }}>
               Shown on songs as your public name
               {artistDisplayName ? ` (${artistDisplayName})` : ''}.
-              {artistUsername ? ` @${artistUsername} is your unique handle — not the credit.` : ' Your @username stays unique and is not the song credit.'}
+              {artistUsername ? ` @${artistUsername} is your unique handle, not the credit.` : ' Your @username stays unique and is not the song credit.'}
             </p>
           </div>
 
@@ -894,7 +914,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
           margin: '0 0 10px',
           lineHeight: 1.5,
         }}>
-          How the room feels while this song plays — not the lyric vibe tag.
+          How the room feels while this song plays. Not the lyric vibe tag.
           Leave Still for none.
         </p>
         <div
@@ -1082,14 +1102,14 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
             <label style={labelStyle}>Key Lyrics Hint (optional)</label>
             <input
               value={lyricsHint} onChange={e => setLyricsHint(e.target.value)}
-              placeholder="Paste hook or chorus — helps Whisper get words right"
+              placeholder="Paste hook or chorus. Helps Whisper get words right"
               style={inputStyle} disabled={busy}
             />
           </div>
         </div>
         <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '10px', lineHeight: 1.5 }}>
           {isEdit
-            ? 'Whisper reads the audio already on this song. You do not need to upload it again. Zulu, Xhosa, Kinyarwanda, and Igbo have no Whisper language code — Margo auto-detects them and uses your lyric hint.'
+            ? 'Whisper reads the audio already on this song. You do not need to upload it again. Zulu, Xhosa, Kinyarwanda, and Igbo have no Whisper language code. Margo auto-detects them and uses your lyric hint.'
             : 'Whisper AI reads the audio and tags every line with a vibe automatically once you publish.'}
         </p>
         {isEdit && (existingAudioUrl || audioFile) && (

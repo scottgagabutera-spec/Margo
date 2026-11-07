@@ -16,6 +16,7 @@ import { validatePasswordPair } from '@/lib/auth-password-confirm'
 import { AuthPasswordField } from '@/components/auth-password-field'
 import { SettingsOnboardingPreference } from '@/components/settings-onboarding-preference'
 import { resolveBecomeArtistSettingsState } from '@/lib/become-artist-settings-row'
+import { MargoCtaButton } from '@/components/margo-cta-button'
 
 const supabase = createClient()
 
@@ -732,44 +733,37 @@ export default function AccountSettingsPage() {
       )}
 
       <Card>
-        <SectionLabel>Membership</SectionLabel>
+        <SectionLabel>Artist</SectionLabel>
         {(() => {
           const artistRow = resolveBecomeArtistSettingsState({
             isArtist: profile.is_artist,
             applicationStatus: application?.status,
           })
+          const ctaHeight = { minHeight: 40, height: 40, padding: '0 14px' }
           return (
-            <div
-              data-margo-become-artist-row
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '12px',
-                minHeight: 'var(--margo-touch-min)',
-                padding: '4px 0',
-              }}
-            >
-              <span style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text)' }}>
-                Become an artist
-              </span>
+            <div data-margo-become-artist-row style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {artistRow.kind === 'pending' || artistRow.kind === 'approved' ? (
-                <span style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-muted)' }}>
+                <p style={{
+                  fontFamily: font,
+                  fontSize: TYPE.secondary,
+                  color: 'var(--text-secondary)',
+                  margin: 0,
+                  lineHeight: 1.45,
+                }}>
+                  Application status:{' '}
+                  <span style={{ color: 'var(--text)', fontWeight: 600 }}>
+                    {artistRow.label}
+                  </span>
+                </p>
+              ) : null}
+              {artistRow.kind === 'open_studio' ? (
+                <MargoCtaButton href={artistRow.href} density="compact" style={ctaHeight}>
                   {artistRow.label}
-                </span>
-              ) : (
-                <Link
-                  href={artistRow.href}
-                  style={{
-                    fontFamily: font,
-                    fontSize: TYPE.secondary,
-                    fontWeight: 600,
-                    color: 'var(--gold)',
-                    textDecoration: 'none',
-                  }}
-                >
-                  {artistRow.label}
-                </Link>
+                </MargoCtaButton>
+              ) : artistRow.kind === 'pending' || artistRow.kind === 'approved' ? null : (
+                <MargoCtaButton href={artistRow.href} density="compact" style={ctaHeight}>
+                  {artistRow.kind === 'not_approved' ? 'Apply as an artist' : artistRow.label}
+                </MargoCtaButton>
               )}
             </div>
           )
