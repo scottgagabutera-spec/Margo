@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { PlusIcon } from '@/components/icons'
 import Image from 'next/image'
 import { MemoryCoverCaption } from '@/components/memory-cover-caption'
 import { memoryCaptionTitle, memoryDisplayCaption, memoryIsWordsOnly } from '@/lib/memory/display-caption'
@@ -29,7 +30,9 @@ export function ProfileMemoryAddTile({ labeled }: { labeled?: boolean }) {
       className={`margo-profile-memory-tile margo-profile-memory-tile--add${labeled ? ' margo-profile-memory-tile--add-cta' : ''}`}
       aria-label="Add a memory"
     >
-      <span className="margo-profile-memory-tile__plus" aria-hidden>+</span>
+      <span className="margo-profile-memory-tile__plus" aria-hidden>
+        <PlusIcon size={22} color="var(--gold)" />
+      </span>
       {labeled ? <span className="margo-profile-memory-tile__add-label">Add a memory</span> : null}
     </Link>
   )
