@@ -9,6 +9,8 @@ import {
   warmFeedPosts,
   fetchFeedPostsOlder,
   evictFeedPostFromCache,
+  FEED_PAGE_SIZE,
+  FEED_OLDER_PAGE_SIZE,
 } from '@/lib/primary-tab-prefetch'
 import type { PostLine } from '@/lib/post-lines'
 import type { AtmosphereId } from '@/lib/atmosphere'
@@ -24,6 +26,8 @@ export interface Post {
   emotion?: string
   status?: string
   knowledge?: { song?: string; artist?: string; artwork?: string | null }
+  /** From `songs` join when post mirror `artwork_url` is empty */
+  catalogArtworkUrl?: string | null
   youtubeMeta?: { videoId?: string | null; title?: string | null; thumbnail?: string | null; thumbnailSm?: string | null; channel?: string | null; youtubeUrl?: string | null; embedUrl?: string | null } | null
   username?: string | null
   authorUid?: string | null
@@ -148,8 +152,10 @@ export function usePosts(options: UsePostsOptions = {}) {
   const [hasMoreOlder, setHasMoreOlder] = useState(true)
 
   useEffect(() => {
-    if (posts.length > 0 && posts.length < 200) {
+    if (posts.length > 0 && posts.length < FEED_PAGE_SIZE) {
       setHasMoreOlder(false)
+    } else if (posts.length >= FEED_PAGE_SIZE) {
+      setHasMoreOlder(true)
     }
   }, [posts.length])
 
@@ -166,7 +172,8 @@ export function usePosts(options: UsePostsOptions = {}) {
     try {
       const iso = new Date(oldest).toISOString()
       const rows = await fetchFeedPostsOlder(iso)
-      if (rows.length < 40) setHasMoreOlder(false)
+      if (rows.length < FEED_OLDER_PAGE_SIZE) setHasMoreOlder(false)
+      else setHasMoreOlder(true)
       if (rows.length === 0) return
       setPosts((prev) => {
         const seen = new Set(prev.map((p) => p.id))

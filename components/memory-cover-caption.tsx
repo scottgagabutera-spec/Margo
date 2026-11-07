@@ -2,6 +2,7 @@
 
 import { MusicNoteIcon } from '@/components/icons'
 import { memoryCaptionArtists, memoryCaptionTitle, memoryCoverIsSongArt } from '@/lib/memory/display-caption'
+import { formatMemoryDatePublic } from '@/lib/memory/date-label'
 import { MemoryTileTitle } from '@/components/memory-tile-title'
 import type { MemoryPublic } from '@/lib/memory/types'
 
@@ -15,6 +16,12 @@ export function MemoryCoverCaption({
   const title = memoryCaptionTitle(memory)
   const artists = variant === 'tile' ? '' : memoryCaptionArtists(memory)
   const songArt = memoryCoverIsSongArt(memory)
+  const dateChip = formatMemoryDatePublic({
+    granularity: memory.dateGranularity,
+    dateStart: memory.dateStart,
+    dateEnd: memory.dateEnd,
+    showDatePublicly: memory.showDatePublicly,
+  })
   return (
     <span className={`margo-memory-cover-caption margo-memory-cover-caption--${variant}`}>
       {songArt ? (
@@ -23,7 +30,12 @@ export function MemoryCoverCaption({
         </span>
       ) : null}
       {variant === 'tile' ? (
-        <MemoryTileTitle text={title} variant="scrim" sampleBg="#16120e" />
+        <>
+          <MemoryTileTitle text={title} variant="scrim" sampleBg="#16120e" />
+          {dateChip ? (
+            <span className="margo-memory-cover-caption__date">{dateChip}</span>
+          ) : null}
+        </>
       ) : (
         <span className="margo-memory-cover-caption__text">{title}</span>
       )}

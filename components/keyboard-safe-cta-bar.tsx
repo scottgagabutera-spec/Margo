@@ -22,6 +22,11 @@ interface KeyboardSafeCtaBarProps {
    * Compose destination CTAs use a larger gutter so they don't hug the tab bar.
    */
   bottomGutter?: number
+  /**
+   * Pin to layout bottom (tab bar inset) even when the keyboard is open.
+   * Use on memory create so the bar does not ride above the keyboard and cover inputs.
+   */
+  pinToLayoutBottom?: boolean
 }
 
 /**
@@ -47,6 +52,7 @@ export function KeyboardSafeCtaBar({
   zIndex = 55,
   contentMaxWidth = 640,
   bottomGutter = 12,
+  pinToLayoutBottom = false,
 }: KeyboardSafeCtaBarProps) {
   const rootRef = useRef<HTMLDivElement | null>(null)
 
@@ -69,14 +75,16 @@ export function KeyboardSafeCtaBar({
     position: 'fixed',
     left: 0,
     right: 0,
-    bottom: 'var(--margo-keyboard-inset, 0px)',
+    bottom: pinToLayoutBottom
+      ? 'var(--margo-page-bottom, var(--margo-tabbar-h, 0px))'
+      : 'var(--margo-keyboard-inset, 0px)',
     zIndex,
     paddingTop: '12px',
     paddingLeft: '24px',
     paddingRight: '24px',
-    paddingBottom: keyboardOpen
-      ? `${bottomGutter}px`
-      : `calc(${bottomGutter}px + var(--margo-page-bottom, var(--margo-tabbar-h, 0px)))`,
+    paddingBottom: pinToLayoutBottom || !keyboardOpen
+      ? `calc(${bottomGutter}px + var(--margo-page-bottom, var(--margo-tabbar-h, 0px)))`
+      : `${bottomGutter}px`,
     background: solidBackground
       ? 'var(--bg)'
       : 'linear-gradient(to top, var(--bg) 55%, transparent)',

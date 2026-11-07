@@ -35,6 +35,7 @@ import {
   tasteVibesFromSettings,
 } from '@/lib/welcome-profile-settings'
 import { stampWelcomeSeriesEligibility } from '@/lib/welcome-series/merge-flags'
+import { flushWelcomeSeriesAfterOnboarding } from '@/lib/welcome-series/client-sync'
 import {
   isTemporaryMemberUsername,
   normalizeUsernameInput,
@@ -589,8 +590,11 @@ function WelcomePageInner() {
       }
 
       const timeoutId = window.setTimeout(() => {
-        goFeed()
-        void persistCompletedAt()
+        void (async () => {
+          await persistCompletedAt()
+          await flushWelcomeSeriesAfterOnboarding()
+          goFeed()
+        })()
       }, FINISH_TIMEOUT_MS)
 
       try {
@@ -598,12 +602,18 @@ function WelcomePageInner() {
         if (role) await saveOnboardingRole(role)
         const saved = await persistCompletedAt()
         window.clearTimeout(timeoutId)
-        if (!saved.ok) void persistCompletedAt()
+        if (saved.ok) {
+          await flushWelcomeSeriesAfterOnboarding()
+        } else {
+          await persistCompletedAt()
+          await flushWelcomeSeriesAfterOnboarding()
+        }
         goFeed()
       } catch {
         window.clearTimeout(timeoutId)
+        await persistCompletedAt().catch(() => undefined)
+        await flushWelcomeSeriesAfterOnboarding()
         goFeed()
-        void persistCompletedAt()
       }
     })()
   }

@@ -55,6 +55,11 @@ export function buildFeedLyricsRows(input: {
   let peopleUsed = new Set<string>()
   const out: FeedLyricsRow[] = []
   let lyricOrdinal = 0
+  const nonReplayTotal = lyricPosts.filter((row) => row.kind === 'post' && !row.isReplay).length
+  const nudgeAtStart = showMemoryNudge && nonReplayTotal < NUDGE_AFTER
+  if (nudgeAtStart) {
+    out.push({ kind: 'memory-nudge', key: 'memory-nudge-once' })
+  }
 
   for (const item of lyricPosts) {
     if (item.kind !== 'post') continue
@@ -62,7 +67,7 @@ export function buildFeedLyricsRows(input: {
     if (item.isReplay) continue
     lyricOrdinal += 1
 
-    if (showMemoryNudge && lyricOrdinal === NUDGE_AFTER) {
+    if (showMemoryNudge && !nudgeAtStart && lyricOrdinal === NUDGE_AFTER) {
       out.push({ kind: 'memory-nudge', key: 'memory-nudge-once' })
     }
 
@@ -78,7 +83,7 @@ export function buildFeedLyricsRows(input: {
       })
     }
 
-    if (lyricOrdinal > 0 && lyricOrdinal % PEOPLE_EVERY === 0) {
+    if (lyricOrdinal >= 14 && (lyricOrdinal - 14) % PEOPLE_EVERY === 0) {
       const prev = out[out.length - 2]
       const prevPrev = out[out.length - 3]
       if (prev?.kind === 'memory-carousel' || prevPrev?.kind === 'memory-carousel') continue

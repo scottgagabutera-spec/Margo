@@ -128,11 +128,37 @@ function FeedPageInner() {
   } = usePostReplays(feedLive)
   const [postStats, setPostStats] = useState<Record<string, { views?: number; resonateCount?: number; echoCount?: number; replayCount?: number }>>({})
   const [exportPost, setExportPost] = useState<Post | null>(null)
+  const [acceptedFollowIds, setAcceptedFollowIds] = useState<Set<string>>(new Set())
+  const [followedFromStrip, setFollowedFromStrip] = useState<Set<string>>(new Set())
   const postStatsLoadedAtRef = useRef(0)
   const resonatesLoadedAtRef = useRef(0)
   const highlightHandledRef = useRef<string | null>(null)
   const [sharedLabel, setSharedLabel] = useState(false)
   const [highlightPostId, setHighlightPostId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!user?.id) {
+      setAcceptedFollowIds(new Set())
+      return
+    }
+    let active = true
+    void supabase
+      .from('follows')
+      .select('followee_id')
+      .eq('follower_id', user.id)
+      .eq('status', 'accepted')
+      .then(({ data, error }) => {
+        if (!active || error) return
+        setAcceptedFollowIds(new Set((data || []).map((r) => r.followee_id as string)))
+      })
+    return () => { active = false }
+  }, [user?.id])
+
+  const followingIds = useMemo(() => {
+    const merged = new Set(acceptedFollowIds)
+    followedFromStrip.forEach((id) => merged.add(id))
+    return merged
+  }, [acceptedFollowIds, followedFromStrip])
 
   useEffect(() => {
     if (!feedLive) return
@@ -336,7 +362,7 @@ function FeedPageInner() {
     const myId = user?.id
     for (const p of posts) {
       const id = p.authorUid
-      if (!id || id === myId || seen.has(id)) continue
+      if (!id || id === myId || seen.has(id) || followingIds.has(id)) continue
       seen.add(id)
       if (!p.username) continue
       out.push({
@@ -348,7 +374,7 @@ function FeedPageInner() {
       if (out.length >= 24) break
     }
     return out
-  }, [posts, user?.id])
+  }, [posts, user?.id, followingIds])
 
   const { memories: feedMemories } = useFeedMemories(feedLive && feedContentTab === 'lyrics')
   const {
@@ -374,14 +400,33 @@ function FeedPageInner() {
     return () => obs.disconnect()
   }, [feedContentTab, feedLive, loadMoreFeedMemories, feedGridMemories.length])
 
-  const showMemoryNudge = useMemo(() => {
-    if (!user?.id || typeof window === 'undefined') return false
+  const [memoryNudgeDismissed, setMemoryNudgeDismissed] = useState(false)
+  const [ownMemoryCount, setOwnMemoryCount] = useState<number | null>(null)
+
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return
     try {
-      const dismissed = localStorage.getItem('margo-feed-memory-nudge-dismissed')
-      if (dismissed && Date.now() - Number(dismissed) < 7 * 86_400_000) return false
+      setMemoryNudgeDismissed(localStorage.getItem('margo-feed-memory-nudge-dismissed') === '1')
     } catch { /* ignore */ }
-    return true
-  }, [user?.id])
+  }, [])
+
+  useEffect(() => {
+    if (!user?.id) {
+      setOwnMemoryCount(null)
+      return
+    }
+    let active = true
+    void supabase
+      .from('memories')
+      .select('id', { count: 'exact', head: true })
+      .eq('owner_profile_id', user.id)
+      .then(({ count }) => {
+        if (active) setOwnMemoryCount(count ?? 0)
+      })
+    return () => { active = false }
+  }, [user?.id, supabase])
+
+  const showMemoryNudge = !!user?.id && ownMemoryCount === 0 && !memoryNudgeDismissed
 
   const mixedLyricRows = useMemo((): FeedLyricsRow[] => {
     if (feedContentTab !== 'lyrics') return []
@@ -737,11 +782,21 @@ function FeedPageInner() {
               )
             }
             if (item.kind === 'people') {
-              return <FeedPeopleStrip key={item.key} people={item.people} />
+              return (
+                <FeedPeopleStrip
+                  key={item.key}
+                  people={item.people}
+                  followingIds={followingIds}
+                  onFollowed={(id) => setFollowedFromStrip((prev) => new Set(prev).add(id))}
+                />
+              )
             }
             if (item.kind === 'memory-nudge') {
               return (
-                <FeedMemoryNudge key={item.key} />
+                <FeedMemoryNudge
+                  key={item.key}
+                  onDismiss={() => setMemoryNudgeDismissed(true)}
+                />
               )
             }
             const post = item.post
@@ -808,6 +863,7 @@ function FeedPageInner() {
       <CardExportModal
         open={!!exportPost}
         onOpenChange={(o) => { if (!o) setExportPost(null) }}
+        returnFocusPostId={exportPost?.id ?? null}
         moment={exportMoment}
         enablePromote={
           !!exportPost

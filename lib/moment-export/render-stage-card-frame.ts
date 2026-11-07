@@ -1,6 +1,7 @@
 import { parseAtmosphere, type AtmosphereId } from '@/lib/atmosphere'
 import type { StageCardTheme } from '@/lib/moment/stage-theme'
 import { drawExportAtmosphere } from '@/lib/moment-export/draw-export-atmosphere'
+import { drawCreditArtworkPlaceholder } from '@/lib/moment-export/draw-credit-artwork'
 import type { ResolvedStageCardLayout } from '@/lib/moment-export/layout/types'
 
 const MARGO_GOLD = '#E8C547'
@@ -183,6 +184,19 @@ export function renderStageCardFrame(
     ctx.fillText(line.text, originX, line.y + lyric.style.fontSize * 0.92)
   }
 
+  if (layout.creditPlate) {
+    const plate = layout.creditPlate
+    ctx.save()
+    ctx.fillStyle = plate.fill
+    ctx.strokeStyle = plate.border
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.roundRect(plate.x, plate.y, plate.width, plate.height, plate.radius)
+    ctx.fill()
+    ctx.stroke()
+    ctx.restore()
+  }
+
   if (layout.meta) {
     const metaX = layout.meta.x
     if (layout.meta.song) {
@@ -190,31 +204,30 @@ export function renderStageCardFrame(
       ctx.textAlign = 'left'
       ctx.font = `${s.style.fontWeight} ${s.style.fontSize}px ${s.style.fontFamily}`
       ctx.fillStyle = s.style.color
-      ctx.fillText(s.text, metaX, s.y + s.style.fontSize)
+      ctx.fillText(s.fullText && s.truncated ? s.fullText : s.text, metaX, s.y + s.style.fontSize)
     }
     if (layout.meta.artist) {
       const a = layout.meta.artist
       ctx.textAlign = 'left'
       ctx.font = `${a.style.fontWeight} ${a.style.fontSize}px ${a.style.fontFamily}`
       ctx.fillStyle = a.style.color
-      ctx.fillText(a.text, metaX, a.y + a.style.fontSize)
+      ctx.fillText(a.fullText && a.truncated ? a.fullText : a.text, metaX, a.y + a.style.fontSize)
     }
   }
 
   if (layout.artwork) {
     const art = layout.artwork
-    const radius = art.width * (8 / 48)
-    ctx.save()
-    ctx.beginPath()
-    ctx.roundRect(art.x, art.y, art.width, art.height, radius)
-    if (assets.artworkImage) {
+    if (art.placeholder || !assets.artworkImage) {
+      drawCreditArtworkPlaceholder(ctx, art.x, art.y, art.width)
+    } else {
+      const radius = art.width * (8 / 48)
+      ctx.save()
+      ctx.beginPath()
+      ctx.roundRect(art.x, art.y, art.width, art.height, radius)
       ctx.clip()
       ctx.drawImage(assets.artworkImage, art.x, art.y, art.width, art.height)
-    } else {
-      ctx.fillStyle = light ? 'rgba(7,6,10,0.1)' : 'rgba(255,255,255,0.08)'
-      ctx.fill()
+      ctx.restore()
     }
-    ctx.restore()
   }
 
   drawVibePill(ctx, layout, theme)

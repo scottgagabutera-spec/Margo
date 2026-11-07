@@ -6,6 +6,8 @@ export interface LayoutRect {
   y: number
   width: number
   height: number
+  /** Catalog art missing: draw gold note tile */
+  placeholder?: boolean
 }
 
 /** Resolved typography for one text run */
@@ -50,6 +52,8 @@ export interface LayoutLyricBlock {
 
 export interface LayoutMetaLine {
   text: string
+  /** Full string for export when `text` is visually truncated */
+  fullText?: string
   style: LayoutTextStyle
   y: number
   truncated: boolean
@@ -61,6 +65,12 @@ export interface LayoutMetaBlock {
   x: number
   y: number
   height: number
+}
+
+export interface LayoutCreditPlate extends LayoutRect {
+  radius: number
+  fill: string
+  border: string
 }
 
 export interface LayoutMarkBadge {
@@ -104,6 +114,7 @@ export interface ResolvedStageCardLayout {
   theme: StageCardTheme
   lyric: LayoutLyricBlock
   meta: LayoutMetaBlock | null
+  creditPlate: LayoutCreditPlate | null
   artwork: LayoutRect | null
   mark: LayoutMarkBadge
   vibePill: LayoutVibePill | null

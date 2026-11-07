@@ -1,5 +1,16 @@
 import { resolveExportPaintTheme } from '@/lib/moment/stage-theme'
 import {
+  adaptiveTextColorOnBackground,
+  ADAPTIVE_TEXT_CREAM,
+  ADAPTIVE_TEXT_GOLD,
+  ADAPTIVE_TEXT_INK,
+} from '@/lib/ui/adaptive-text-color'
+import {
+  CREDIT_PLATE_ART_PX,
+  CREDIT_PLATE_BORDER,
+  CREDIT_PLATE_FILL,
+} from '@/lib/moment-export/layout/credit-plate'
+import {
   roundStageToken,
   scaleStageToken,
   STAGE_CARD_LAYOUT_REF,
@@ -21,8 +32,6 @@ import type {
   StageCardLayoutInput,
   TextMeasureFn,
 } from '@/lib/moment-export/layout/types'
-
-const ART_SHORT_SIDE_FRAC = 0.14
 
 function metaSongFont(size: number, geistFamily: string): string {
   const ref = STAGE_CARD_LAYOUT_REF.meta.song
@@ -104,23 +113,25 @@ export function resolveSocialExportLayout(
     : {
         top: scaleStageToken(ref.padding.top, W),
         right: scaleStageToken(ref.padding.right, W),
-        bottom: scaleStageToken(ref.padding.bottom, W),
+        bottom: isSquare
+          ? Math.max(scaleStageToken(ref.padding.bottom, W), Math.round(frameHeight * 0.08))
+          : scaleStageToken(ref.padding.bottom, W),
         left: scaleStageToken(ref.padding.left, W),
       }
 
   const theme = resolveExportPaintTheme(input.themeId, input.exportAtmosphereId)
   const s = stageCardScale(W)
   const contentWidth = W - padding.left - padding.right
-  const shortSide = Math.min(W, frameHeight)
 
   const markContainer = roundStageToken(ref.mark.container, W)
   const markSymbol = roundStageToken(ref.mark.symbol, W)
   const markInset = scaleStageToken(ref.mark.inset, W)
   const markGap = scaleStageToken(ref.markContentGap, W)
 
-  const artSize = Math.max(32, Math.round(shortSide * ART_SHORT_SIDE_FRAC))
-  const artRadius = Math.round(artSize * 0.18)
+  const artSize = roundStageToken(CREDIT_PLATE_ART_PX, W)
   const artGap = scaleStageToken(ref.artwork.gap, W)
+  const platePad = scaleStageToken(10, W)
+  const plateRadius = scaleStageToken(12, W)
   const lyricCreditGap = scaleStageToken(isShorts ? STAGE_SHORTS_LAYOUT_REF.lyricCreditGap : ref.meta.gap, W)
 
   const songTitle = sentenceCaseLabel(input.songTitle || '')
@@ -137,24 +148,30 @@ export function resolveSocialExportLayout(
     metaHeight += artistFS * ref.meta.artist.lineHeight
   }
 
-  const hasArt = !!input.artworkUrl
-  const artX = padding.left
+  const hasArtImage = !!(input.artworkUrl || '').trim()
+  const hasCredit = hasArtImage || !!songTitle || !!artistName
+  const showArtSlot = hasCredit
 
   const markX = W - padding.right - markContainer
   const markY = padding.top
 
-  const creditH = Math.max(artSize, metaHeight)
   const creditBottom = frameHeight - padding.bottom
+  const innerRowH = Math.max(showArtSlot ? artSize : 0, metaHeight)
+  const plateH = hasCredit ? innerRowH + platePad * 2 : 0
+  const plateW = contentWidth
+  const plateX = padding.left
+  const plateY = hasCredit ? creditBottom - plateH : creditBottom
+
+  const artX = hasCredit ? plateX + platePad : padding.left
   const bottomPinnedArtY = creditBottom - artSize
 
   const lyricTop = padding.top
-  const lyricBottom = isShorts
-    ? creditBottom
-    : bottomPinnedArtY - lyricCreditGap
+  const creditTop = hasCredit ? plateY : bottomPinnedArtY
+  const lyricBottom = isShorts ? creditTop - lyricCreditGap : creditTop - lyricCreditGap
   const markReserve = markContainer + markGap
   const lyricColWidth = Math.max(48, contentWidth - markReserve)
   const lyricX = padding.left
-  const creditBlockH = Math.max(artSize, metaHeight)
+  const creditBlockH = plateH + lyricCreditGap
 
   const lyricSizeRef = isShorts
     ? STAGE_SHORTS_LAYOUT_REF.lyric.fontSize
@@ -168,7 +185,7 @@ export function resolveSocialExportLayout(
   const safeLyricSpan = lyricBottom - lyricTop
   const maxLyricHeight = Math.max(
     roundStageToken(lyricMinRef, W) * lyricLeading,
-    isShorts ? safeLyricSpan - lyricCreditGap - creditBlockH : safeLyricSpan,
+    safeLyricSpan,
   )
 
   const presented = presentLyricTextFillRegion(input.lyric || '', lyricColWidth, measure, {
@@ -191,17 +208,21 @@ export function resolveSocialExportLayout(
   let artY: number
   let metaY: number
 
-  if (isShorts) {
-    const groupHeight = lyricHeight + lyricCreditGap + creditH
-    const groupTop = lyricTop + Math.max(0, (available - groupHeight) / 2)
-    cursorY = groupTop
-    artY = groupTop + lyricHeight + lyricCreditGap
-    metaY = artY + Math.max(0, (creditH - metaHeight) / 2)
-  } else {
-    cursorY = lyricTop + Math.max(0, (available - lyricHeight) / 2)
-    artY = bottomPinnedArtY
-    metaY = artY + Math.max(0, (creditH - metaHeight) / 2)
-  }
+  cursorY = lyricTop + Math.max(0, (available - lyricHeight) / 2)
+  artY = hasCredit
+    ? plateY + platePad + Math.max(0, (innerRowH - artSize) / 2)
+    : bottomPinnedArtY
+  metaY = hasCredit
+    ? plateY + platePad + Math.max(0, (innerRowH - metaHeight) / 2)
+    : artY + Math.max(0, (artSize - metaHeight) / 2)
+
+  const lyricChoice = adaptiveTextColorOnBackground(theme.bg)
+  const lyricColor =
+    lyricChoice === 'ink'
+      ? ADAPTIVE_TEXT_INK
+      : lyricChoice === 'gold'
+        ? ADAPTIVE_TEXT_GOLD
+        : ADAPTIVE_TEXT_CREAM
 
   const lyricLines = placeLyricLines(presented.lines, cursorY, lyricLineHeight, stanzaGap)
   const lyric: LayoutLyricBlock = {
@@ -216,7 +237,7 @@ export function resolveSocialExportLayout(
       fontWeight: ref.lyric.fontWeight,
       fontSize: lyricFontSize,
       lineHeight: lyricLeading,
-      color: theme.ink,
+      color: lyricColor,
     },
     x: lyricX,
     y: cursorY,
@@ -225,9 +246,24 @@ export function resolveSocialExportLayout(
   }
 
   let meta: LayoutMetaBlock | null = null
-  if (songTitle || artistName) {
-    const metaMaxW = Math.max(24, contentWidth - artSize - artGap - markReserve)
-    const metaX = hasArt ? artX + artSize + artGap : padding.left
+  const creditPlate = hasCredit
+    ? {
+        x: plateX,
+        y: plateY,
+        width: plateW,
+        height: plateH,
+        radius: plateRadius,
+        fill: CREDIT_PLATE_FILL,
+        border: CREDIT_PLATE_BORDER,
+      }
+    : null
+
+  if (hasCredit) {
+    const metaMaxW = Math.max(
+      24,
+      plateW - platePad * 2 - (showArtSlot ? artSize + artGap : 0),
+    )
+    const metaX = showArtSlot ? artX + artSize + artGap : plateX + platePad
 
     const songFont = metaSongFont(songFS, geistFamily)
     const artistFont = metaArtistFont(artistFS, geistFamily)
@@ -236,13 +272,14 @@ export function resolveSocialExportLayout(
     const songLine = songTitle
       ? {
           text: songTrunc,
+          fullText: songTitle,
           style: {
             fontFamily: geistFamily,
             fontStyle: 'normal' as const,
             fontWeight: 500,
             fontSize: songFS,
             lineHeight: ref.meta.song.lineHeight,
-            color: theme.ink,
+            color: ADAPTIVE_TEXT_CREAM,
           },
           y: metaCursor,
           truncated: songTrunc !== songTitle,
@@ -256,13 +293,14 @@ export function resolveSocialExportLayout(
       const truncated = truncateToWidth(artistName, metaMaxW, measure, artistFont)
       artistLine = {
         text: truncated,
+        fullText: artistName,
         style: {
           fontFamily: geistFamily,
           fontStyle: 'normal' as const,
           fontWeight: ref.meta.artist.fontWeight,
           fontSize: artistFS,
           lineHeight: ref.meta.artist.lineHeight,
-          color: theme.inkMuted,
+          color: ADAPTIVE_TEXT_GOLD,
         },
         y: metaCursor,
         truncated: truncated !== artistName,
@@ -272,8 +310,14 @@ export function resolveSocialExportLayout(
     meta = { song: songLine, artist: artistLine, x: metaX, y: metaY, height: metaHeight }
   }
 
-  const artwork: ResolvedStageCardLayout['artwork'] = hasArt
-    ? { x: artX, y: artY, width: artSize, height: artSize }
+  const artwork: ResolvedStageCardLayout['artwork'] = showArtSlot
+    ? {
+        x: artX,
+        y: artY,
+        width: artSize,
+        height: artSize,
+        placeholder: !hasArtImage,
+      }
     : null
 
   const mark: ResolvedStageCardLayout['mark'] = {
@@ -304,6 +348,7 @@ export function resolveSocialExportLayout(
     theme,
     lyric,
     meta,
+    creditPlate,
     artwork,
     mark,
     vibePill: null,

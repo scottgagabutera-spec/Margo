@@ -1,7 +1,5 @@
 export function shouldShowExportArtist(name: string): boolean {
-  const n = (name || '').trim().toLowerCase()
-  if (!n) return false
-  return n !== 'margo' && n !== 'trymargo'
+  return !!(name || '').trim()
 }
 
 export function sentenceCaseLabel(text: string): string {

@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { type ProfileSettingsJson } from '@/lib/welcome-profile-settings'
 import { onboardingFromSettings } from '@/lib/welcome-profile-settings'
 import { welcomeSeriesCopy } from '@/lib/welcome-series/copy'
+import { firstNameFromDisplayName } from '@/lib/welcome-series/first-name'
 import {
   planWelcomeSeriesSends,
   type WelcomeSeriesActivity,
@@ -85,7 +86,7 @@ export async function runWelcomeSeriesSync(input: {
 
   const { data: profile, error } = await admin
     .from('profiles')
-    .select('settings')
+    .select('settings, display_name, username')
     .eq('id', input.profileId)
     .maybeSingle()
 
@@ -113,8 +114,12 @@ export async function runWelcomeSeriesSync(input: {
   const sent: string[] = []
   let settingsCursor = settings
 
+  const displayName = (profile.display_name as string | null) ?? null
+  const username = (profile.username as string | null) ?? null
+  const firstName = firstNameFromDisplayName(displayName, username)
+
   for (const item of plan) {
-    const copy = welcomeSeriesCopy(item.kind)
+    const copy = welcomeSeriesCopy(item.kind, firstName)
     const { error: insertErr } = await admin.from('notifications').insert({
       recipient_id: input.profileId,
       type: 'system_welcome',
@@ -123,6 +128,8 @@ export async function runWelcomeSeriesSync(input: {
         kind: item.kind,
         title: copy.title,
         buttonLabel: copy.buttonLabel,
+        body: copy.body,
+        firstName,
       },
     })
 

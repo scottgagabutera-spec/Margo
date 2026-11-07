@@ -30,6 +30,7 @@ interface MomentExportCustomizeBarProps {
   onShapeChange: (id: MomentShapeId) => void
   style?: CSSProperties
   layout?: 'default' | 'studio'
+  hideShapeFooterHint?: boolean
   vibeLabel?: string | null
   suggestedVibeLabel?: string | null
   vibeOptions?: string[]
@@ -249,6 +250,7 @@ export function MomentExportCustomizeBar(props: MomentExportCustomizeBarProps) {
     shapeId,
     onShapeChange,
     style,
+    hideShapeFooterHint = false,
   } = props
 
   const theme = getStageCardTheme(cardThemeId)
@@ -415,6 +417,7 @@ export function MomentExportCustomizeBar(props: MomentExportCustomizeBarProps) {
           {EXPORT_SHAPE_LABELS[shapeId]} · {EXPORT_SHAPE_HINTS[shapeId]}
         </span>
       </div>
+      {hideShapeFooterHint ? null : (
       <p style={{
         gridColumn: '1 / -1',
         margin: '10px 0 0',
@@ -426,6 +429,7 @@ export function MomentExportCustomizeBar(props: MomentExportCustomizeBarProps) {
       }}>
         {exportShapePromoteHint(shapeId)}
       </p>
+      )}
     </div>
   )
 }

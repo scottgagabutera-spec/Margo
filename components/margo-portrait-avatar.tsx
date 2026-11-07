@@ -70,7 +70,7 @@ export function MargoPortraitAvatar({
     : null
 
   const tileBg = brandMark
-    ? 'var(--surface-2)'
+    ? '#0a090d'
     : tierGoldTile
       ? 'var(--gold)'
       : seededFallback?.background

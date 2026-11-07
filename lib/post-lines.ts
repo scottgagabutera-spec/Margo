@@ -30,7 +30,10 @@ export const POST_LINES_MAX = 3
  * every query that joins post_lines (usePost.ts, primary-tab-prefetch.ts,
  * useOwnPrivatePosts.ts, useProfileReplays.ts) rather than each keeping its
  * own copy of the same ~20 lines. */
-export function mapPostLinesRows(raw: any[] | null | undefined): PostLine[] | undefined {
+export function mapPostLinesRows(
+  raw: any[] | null | undefined,
+  catalogArtworkFallback?: string | null,
+): PostLine[] | undefined {
   if (!raw || raw.length === 0) return undefined
   return [...raw]
     .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
@@ -41,9 +44,9 @@ export function mapPostLinesRows(raw: any[] | null | undefined): PostLine[] | un
         position: row.position ?? 0,
         text: row.text ?? '',
         songId: row.song_id ?? null,
-        songTitle: row.song_title ?? null,
-        artistName: row.artist_name ?? null,
-        artworkUrl: row.artwork_url ?? linked?.artwork_url ?? null,
+        songTitle: row.song_title ?? linked?.title ?? null,
+        artistName: row.artist_name ?? linked?.artist_display_name ?? null,
+        artworkUrl: row.artwork_url ?? linked?.artwork_url ?? catalogArtworkFallback ?? null,
         audioUrl: linked?.audio_url ?? null,
         snippetStart: row.snippet_start_sec ?? null,
         snippetEnd: row.snippet_end_sec ?? null,

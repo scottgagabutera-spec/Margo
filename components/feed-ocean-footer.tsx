@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import { TYPE, UI_FONT } from '@/lib/fonts'
 
 const font = UI_FONT
@@ -16,8 +17,27 @@ export function FeedOceanFooter({
   hasMore?: boolean
   onLoadOlder?: () => void
 }) {
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!hasMore || !onLoadOlder) return
+    const el = sentinelRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting) && !loadingOlder) {
+          onLoadOlder()
+        }
+      },
+      { rootMargin: '480px 0px 240px 0px', threshold: 0 },
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [hasMore, onLoadOlder, loadingOlder])
+
   return (
     <div
+      ref={sentinelRef}
       aria-hidden={!hasMore && !loadingOlder}
       style={{
         position: 'relative',

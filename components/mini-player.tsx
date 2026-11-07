@@ -325,10 +325,17 @@ export function MiniPlayer() {
           }}
         >
 
-          {/* Gold progress line — top edge */}
+          {/* Progress scrubber — 44px touch target, 2px visible track */}
           <div
             data-no-drag
-            style={{ position: 'relative', minHeight: 'var(--margo-touch-min)', height: '2px', display: 'flex', alignItems: 'center', background: 'rgba(232,197,71,0.08)', cursor: 'pointer', boxSizing: 'border-box' }}
+            style={{
+              position: 'relative',
+              height: 'var(--margo-touch-min)',
+              display: 'flex',
+              alignItems: 'center',
+              cursor: 'pointer',
+              boxSizing: 'border-box',
+            }}
             onClick={(e) => {
               const rect = e.currentTarget.getBoundingClientRect()
               const pct = ((e.clientX - rect.left) / rect.width) * 100
@@ -336,11 +343,27 @@ export function MiniPlayer() {
               else if (duration > 0) playFullSeek((pct / 100) * duration)
             }}
           >
+            <div
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                top: 'calc(50% - 1px)',
+                height: '2px',
+                background: 'rgba(232,197,71,0.08)',
+                pointerEvents: 'none',
+              }}
+            />
             <div style={{
-              height: '100%', width: `${progress}%`,
+              position: 'absolute',
+              left: 0,
+              top: 'calc(50% - 1px)',
+              height: '2px',
+              width: `${progress}%`,
               background: `linear-gradient(90deg, ${vibeColor}88, ${vibeColor})`,
               transition: dragging ? 'none' : 'width 200ms linear',
               boxShadow: `0 0 8px ${vibeColor}66`,
+              pointerEvents: 'none',
             }} />
           </div>
 

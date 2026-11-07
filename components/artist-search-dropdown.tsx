@@ -1,5 +1,6 @@
 'use client'
 
+import { PlusIcon } from '@/components/icons'
 import { UI_FONT } from '@/lib/fonts'
 import { compactArtworkUrl } from '@/lib/compact-artwork-url'
 import type { ArtistSearchResult } from '@/lib/catalog-artist/search-client'
@@ -91,12 +92,8 @@ export function ArtistSearchDropdown({
                     On Margo
                   </span>
                 ) : null}
-                <span
-                  className="margo-favorite-artists-picker__add"
-                  style={{ width: 28, height: 28, fontSize: '1rem' }}
-                  aria-hidden
-                >
-                  +
+                <span className="margo-favorite-artists-picker__add" aria-hidden>
+                  <PlusIcon size={18} color="var(--bg)" />
                 </span>
               </button>
             )

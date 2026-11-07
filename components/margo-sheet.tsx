@@ -17,9 +17,13 @@ export interface MargoSheetProps {
   /** Card export menus expand outside the panel body */
   panelOverflow?: 'visible' | 'hidden'
   contentOverflow?: 'visible' | 'hidden' | 'auto'
-  bottomInset?: 'tabbar' | 'tabbar-tight'
+  bottomInset?: 'tabbar' | 'tabbar-tight' | 'none'
   /** top = legacy header sheet; bottom = thumb reach (report, send-to). */
   anchor?: 'top' | 'bottom'
+  /** Nearly full viewport height (export studio). */
+  fullViewport?: boolean
+  /** Android/hardware back closes the sheet (pushes one history entry while open). */
+  dismissOnBack?: boolean
 }
 
 const SCRIM_TOP = 'rgba(7,6,10,0.92)'
@@ -43,6 +47,8 @@ export function MargoSheet({
   contentOverflow = 'auto',
   bottomInset = 'tabbar',
   anchor = 'top',
+  fullViewport = false,
+  dismissOnBack = false,
 }: MargoSheetProps) {
   const [mounted, setMounted] = useState(false)
   const [viewportBottomPad, setViewportBottomPad] = useState(0)
@@ -89,23 +95,51 @@ export function MargoSheet({
     }
   }, [open, anchor])
 
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !closeDisabled) onOpenChange(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, closeDisabled, onOpenChange])
+
+  useEffect(() => {
+    if (!open || !dismissOnBack) return
+    const token = { margoSheet: true, t: Date.now() }
+    window.history.pushState(token, '')
+    const onPop = () => onOpenChange(false)
+    window.addEventListener('popstate', onPop)
+    return () => {
+      window.removeEventListener('popstate', onPop)
+    }
+  }, [open, dismissOnBack, onOpenChange])
+
   if (!open || !mounted) return null
 
   const scrim = anchor === 'bottom' ? SCRIM_BOTTOM : SCRIM_TOP
 
-  const bottomPadBase = bottomInset === 'tabbar-tight'
-    ? 'calc(12px + var(--margo-tabbar-h, 64px) + 16px)'
-    : 'calc(12px + var(--margo-tabbar-h, 64px) + 28px)'
+  const chromeFree = bottomInset === 'none'
+  const bottomPadBase = bottomInset === 'none'
+    ? '0px'
+    : bottomInset === 'tabbar-tight'
+      ? 'calc(12px + var(--margo-tabbar-h, 64px) + 16px)'
+      : 'calc(12px + var(--margo-tabbar-h, 64px) + 28px)'
   const bottomPad = anchor === 'bottom'
     ? `calc(${bottomPadBase} + ${viewportBottomPad}px + env(safe-area-inset-bottom, 0px))`
     : bottomPadBase
 
   const topPad = 'max(16px, env(safe-area-inset-top, 0px))'
+  const viewportCap = fullViewport && chromeFree
+    ? '100dvh'
+    : fullViewport
+      ? `calc(100dvh - ${topPad} - env(safe-area-inset-bottom, 0px) - 8px)`
+      : `calc(100dvh - ${topPad} - 12px - ${bottomPad})`
   const panelMaxHeight = heightMode === 'fixed'
-    ? maxHeight
+    ? (fullViewport ? viewportCap : maxHeight)
     : anchor === 'bottom'
-      ? `min(${maxHeight}, calc(100dvh - ${topPad} - 12px - ${bottomPad}))`
-      : `min(${maxHeight}, calc(100dvh - ${topPad} - 12px - ${bottomPad}))`
+      ? `min(${maxHeight}, ${viewportCap})`
+      : `min(${maxHeight}, ${viewportCap})`
 
   const bodyMaxHeight = heightMode === 'fixed'
     ? undefined
@@ -120,7 +154,10 @@ export function MargoSheet({
         zIndex,
         overscrollBehavior: 'none',
         overflow: 'hidden',
+        touchAction: 'none',
       }}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
     >
       <button
         type="button"
@@ -132,6 +169,8 @@ export function MargoSheet({
           border: 'none',
           background: scrim,
           cursor: 'default',
+          pointerEvents: 'auto',
+          touchAction: 'none',
         }}
       />
       <div
@@ -144,9 +183,9 @@ export function MargoSheet({
           justifyContent: 'center',
           alignItems: anchor === 'bottom' ? 'flex-end' : 'flex-start',
           boxSizing: 'border-box',
-          padding: '12px',
-          paddingTop: anchor === 'bottom' ? '12px' : `calc(12px + ${topPad})`,
-          paddingBottom: bottomPad,
+          padding: chromeFree ? 0 : '12px',
+          paddingTop: chromeFree ? 0 : anchor === 'bottom' ? '12px' : `calc(12px + ${topPad})`,
+          paddingBottom: chromeFree ? 0 : bottomPad,
           pointerEvents: 'none',
           overflow: 'hidden',
         }}
@@ -154,14 +193,15 @@ export function MargoSheet({
         <div
           className="margo-sheet-panel"
           onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
           style={{
             width: '100%',
-            maxWidth: '460px',
+            maxWidth: chromeFree ? '100%' : fullViewport ? '100%' : '460px',
             maxHeight: panelMaxHeight,
             ...(heightMode === 'fixed' ? { height: panelMaxHeight } : { height: 'fit-content' }),
             background: 'var(--surface, #0F0E13)',
-            border: '1px solid var(--border)',
-            borderRadius: anchor === 'bottom' ? '20px 20px 0 0' : '20px',
+            border: chromeFree ? 'none' : '1px solid var(--border)',
+            borderRadius: chromeFree ? 0 : fullViewport && anchor === 'bottom' ? '16px 16px 0 0' : anchor === 'bottom' ? '20px 20px 0 0' : '20px',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
@@ -176,11 +216,15 @@ export function MargoSheet({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: '18px 18px 12px',
+              padding: '14px 14px 12px',
+              paddingTop: 'max(14px, env(safe-area-inset-top, 0px))',
               flexShrink: 0,
               gap: '12px',
               background: 'var(--surface, #0F0E13)',
               borderRadius: '20px 20px 0 0',
+              position: 'sticky',
+              top: 0,
+              zIndex: 2,
             }}
           >
             <p style={{
@@ -201,9 +245,9 @@ export function MargoSheet({
               onClick={() => onOpenChange(false)}
               disabled={closeDisabled}
               style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
+                width: 'var(--margo-touch-min, 44px)',
+                height: 'var(--margo-touch-min, 44px)',
+                borderRadius: '12px',
                 flexShrink: 0,
                 background: 'rgba(255,255,255,0.05)',
                 border: '1px solid var(--border-hi)',
@@ -215,7 +259,7 @@ export function MargoSheet({
                 opacity: closeDisabled ? 0.5 : 1,
               }}
             >
-              <CloseIcon size={14} color="var(--text-secondary)" />
+              <CloseIcon size={16} color="var(--text-secondary)" />
             </button>
           </div>
           <div
@@ -224,7 +268,7 @@ export function MargoSheet({
               flex: heightMode === 'fixed' ? 1 : '0 1 auto',
               minHeight: 0,
               maxHeight: bodyMaxHeight,
-              padding: '0 18px 20px',
+              padding: '0 18px calc(20px + env(safe-area-inset-bottom, 0px))',
               overflowY: contentOverflow === 'visible' ? 'visible' : 'auto',
               overflowX: panelOverflow === 'visible' ? 'visible' : 'hidden',
               WebkitOverflowScrolling: 'touch',

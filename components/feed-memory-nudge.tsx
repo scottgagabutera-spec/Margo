@@ -1,26 +1,48 @@
 'use client'
 
-import Link from 'next/link'
+import { useCallback } from 'react'
+import { CloseIcon, PlusIcon } from '@/components/icons'
+import { MargoCtaButton } from '@/components/margo-cta-button'
 import { UI_FONT } from '@/lib/fonts'
+
+const DISMISS_KEY = 'margo-feed-memory-nudge-dismissed'
 
 const font = UI_FONT
 
-export function FeedMemoryNudge() {
+export function dismissFeedMemoryNudge() {
+  try {
+    localStorage.setItem(DISMISS_KEY, '1')
+  } catch { /* ignore */ }
+}
+
+export function FeedMemoryNudge({ onDismiss }: { onDismiss?: () => void }) {
+  const dismiss = useCallback(() => {
+    dismissFeedMemoryNudge()
+    onDismiss?.()
+  }, [onDismiss])
+
   return (
     <div className="margo-feed-memory-nudge">
-      <p className="margo-feed-memory-nudge__copy" style={{ fontFamily: font }}>
-        Turn your soundtrack into a memory — songs, photos, and the story behind them.
-      </p>
-      <Link
-        href="/memories/new"
-        className="margo-feed-memory-nudge__cta"
-        style={{ fontFamily: font }}
-        onClick={() => {
-          try { localStorage.setItem('margo-feed-memory-nudge-dismissed', String(Date.now())) } catch { /* ignore */ }
-        }}
+      <button
+        type="button"
+        className="margo-feed-memory-nudge__dismiss"
+        aria-label="Dismiss"
+        onClick={dismiss}
       >
-        Create your first memory
-      </Link>
+        <CloseIcon size={14} color="var(--text-muted)" />
+      </button>
+      <p className="margo-feed-memory-nudge__copy" style={{ fontFamily: font }}>
+        Share your memories. Link them to a song or a photo and tell the story behind them.
+      </p>
+      <MargoCtaButton
+        href="/memories/new"
+        variant="fill"
+        density="compact"
+        icon={<PlusIcon size={16} color="var(--bg)" />}
+        onClick={dismiss}
+      >
+        Create memory
+      </MargoCtaButton>
     </div>
   )
 }
