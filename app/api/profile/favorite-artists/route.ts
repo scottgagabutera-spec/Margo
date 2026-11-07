@@ -41,11 +41,19 @@ export async function GET(request: NextRequest) {
 
   const artistMap = new Map((artists || []).map((a) => [a.id as string, a]))
   const profileIds = [...new Set((artists || []).map((a) => a.margo_profile_id).filter(Boolean))] as string[]
-  const profileUsernames = new Map<string, { username: string; is_admin: boolean }>()
+  const profileUsernames = new Map<string, { username: string; is_admin: boolean; avatarUrl: string | null }>()
   if (profileIds.length > 0) {
-    const { data: profs } = await admin.from('profiles').select('id, username, is_admin').in('id', profileIds)
+    const { data: profs } = await admin
+      .from('profiles')
+      .select('id, username, is_admin, avatar_url, is_artist')
+      .in('id', profileIds)
     for (const p of profs || []) {
-      profileUsernames.set(p.id as string, { username: p.username as string, is_admin: !!p.is_admin })
+      if (!p.is_artist) continue
+      profileUsernames.set(p.id as string, {
+        username: p.username as string,
+        is_admin: !!p.is_admin,
+        avatarUrl: ((p.avatar_url as string | null)?.trim() || null),
+      })
     }
   }
 
@@ -54,11 +62,12 @@ export async function GET(request: NextRequest) {
     if (!ca) return null
     const prof = ca.margo_profile_id ? profileUsernames.get(ca.margo_profile_id as string) : undefined
     const username = prof && !prof.is_admin ? prof.username : null
+    const r2Art = ca.artwork_r2_key ? publicCatalogMediaUrl(ca.artwork_r2_key as string) : null
     return {
       position: row.position as number,
       id: ca.id as string,
       name: ca.name as string,
-      artworkUrl: ca.artwork_r2_key ? publicCatalogMediaUrl(ca.artwork_r2_key as string) : null,
+      artworkUrl: r2Art ?? (username ? prof?.avatarUrl ?? null : null),
       onMargo: !!username,
       margoUsername: username,
     }

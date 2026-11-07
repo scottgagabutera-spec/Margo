@@ -1,10 +1,14 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { normalizeArtistName } from '@/lib/catalog-artist/normalize'
 import { ingestCatalogArtistArtwork } from '@/lib/catalog-artist/artwork-ingest'
-import { findMargoArtistProfileId } from '@/lib/catalog-artist/margo-profile-match'
+import {
+  findMargoArtistProfileId,
+  loadMargoArtistProfileForCatalog,
+} from '@/lib/catalog-artist/margo-profile-match'
 import { publicCatalogMediaUrl } from '@/lib/r2/catalog-media-url'
 import { catalogArtistArtworkKey } from '@/lib/catalog-artist/artwork-ingest'
 import { searchDeezerArtists, type DeezerArtistHit } from '@/lib/catalog-artist/deezer-search'
+import { catalogArtistDeezerR2IngestEnabled } from '@/lib/catalog-artist/config'
 
 export type CatalogArtistPublic = {
   id: string
@@ -16,11 +20,62 @@ export type CatalogArtistPublic = {
   source: string
 }
 
+function resolveCatalogArtistArtwork(opts: {
+  artworkKey: string | null
+  deezerPreview: string | null
+  margoAvatarUrl: string | null
+}): { artworkUrl: string | null; previewArtworkUrl: string | null } {
+  if (opts.artworkKey) {
+    return {
+      artworkUrl: publicCatalogMediaUrl(opts.artworkKey),
+      previewArtworkUrl: null,
+    }
+  }
+  if (catalogArtistDeezerR2IngestEnabled()) {
+    return {
+      artworkUrl: null,
+      previewArtworkUrl: opts.deezerPreview,
+    }
+  }
+  return {
+    artworkUrl: opts.margoAvatarUrl,
+    previewArtworkUrl: null,
+  }
+}
+
+async function resolveMargoPublicFields(
+  margoProfileId: string | null,
+  artistName: string,
+  rowId: string,
+): Promise<{ margoProfileId: string | null; margoUsername: string | null; margoAvatarUrl: string | null }> {
+  const admin = getSupabaseAdmin()
+  let profileId = margoProfileId
+  if (!profileId) {
+    const margo = await findMargoArtistProfileId(artistName)
+    if (margo) {
+      profileId = margo.profileId
+      await admin.from('catalog_artists').update({ margo_profile_id: margo.profileId }).eq('id', rowId)
+    }
+  }
+  if (!profileId) {
+    return { margoProfileId: null, margoUsername: null, margoAvatarUrl: null }
+  }
+  const prof = await loadMargoArtistProfileForCatalog(profileId)
+  if (!prof) {
+    return { margoProfileId: null, margoUsername: null, margoAvatarUrl: null }
+  }
+  return {
+    margoProfileId: profileId,
+    margoUsername: prof.username,
+    margoAvatarUrl: prof.avatarUrl,
+  }
+}
+
 export async function ensureCatalogArtistFromDeezer(
   hit: DeezerArtistHit,
   opts?: { materializeArtwork?: boolean },
 ): Promise<CatalogArtistPublic> {
-  const materializeArtwork = opts?.materializeArtwork === true
+  const materializeArtwork = opts?.materializeArtwork === true && catalogArtistDeezerR2IngestEnabled()
   const admin = getSupabaseAdmin()
   const nameNormalized = normalizeArtistName(hit.name)
 
@@ -67,29 +122,25 @@ export async function ensureCatalogArtistFromDeezer(
     }
   }
 
-  let margoProfileId = row?.margo_profile_id as string | null
-  let margoUsername: string | null = null
-  if (margoProfileId) {
-    const { data: prof } = await admin.from('profiles').select('username, is_admin').eq('id', margoProfileId).maybeSingle()
-    if (prof?.is_admin) margoProfileId = null
-    else margoUsername = prof?.username ?? null
-  } else {
-    const margo = await findMargoArtistProfileId(hit.name)
-    if (margo) {
-      margoProfileId = margo.profileId
-      margoUsername = margo.username
-      await admin.from('catalog_artists').update({ margo_profile_id: margo.profileId }).eq('id', rowId)
-    }
-  }
+  const margo = await resolveMargoPublicFields(
+    (row?.margo_profile_id as string | null) ?? null,
+    hit.name,
+    rowId,
+  )
+  const art = resolveCatalogArtistArtwork({
+    artworkKey,
+    deezerPreview: hit.pictureUrl,
+    margoAvatarUrl: margo.margoAvatarUrl,
+  })
 
   return {
     id: rowId,
     name: row?.name || hit.name,
-    artworkUrl: artworkKey ? publicCatalogMediaUrl(artworkKey) : null,
-    previewArtworkUrl: !artworkKey && hit.pictureUrl ? hit.pictureUrl : null,
-    onMargo: !!margoProfileId && !!margoUsername,
-    margoUsername,
-    source: hit.source,
+    artworkUrl: art.artworkUrl,
+    previewArtworkUrl: art.previewArtworkUrl,
+    onMargo: !!margo.margoProfileId && !!margo.margoUsername,
+    margoUsername: margo.margoUsername,
+    source: row?.source || hit.source,
   }
 }
 
@@ -101,34 +152,67 @@ export async function materializeCatalogArtistArtwork(catalogArtistId: string): 
     .eq('id', catalogArtistId)
     .maybeSingle()
   if (!row) return null
-  if (row.artwork_r2_key) {
-    return {
-      id: row.id,
-      name: row.name,
-      artworkUrl: publicCatalogMediaUrl(row.artwork_r2_key),
-      previewArtworkUrl: null,
-      onMargo: false,
-      margoUsername: null,
-      source: row.source,
+
+  const margo = await resolveMargoPublicFields(
+    row.margo_profile_id as string | null,
+    row.name as string,
+    row.id as string,
+  )
+
+  let artworkKey = row.artwork_r2_key as string | null
+
+  if (artworkKey) {
+    return assemblePublicFromRow(row, artworkKey, margo)
+  }
+
+  if (catalogArtistDeezerR2IngestEnabled() && row.source === 'deezer') {
+    const hits = await searchDeezerArtists(row.name as string, 3)
+    const hit = hits.find((h) => h.sourceId === row.source_id) || hits[0]
+    if (hit?.pictureUrl) {
+      try {
+        const ingested = await ingestCatalogArtistArtwork(row.id as string, hit.pictureUrl)
+        artworkKey = ingested.key96
+        await admin
+          .from('catalog_artists')
+          .update({ artwork_r2_key: artworkKey, updated_at: new Date().toISOString() })
+          .eq('id', row.id)
+        return assemblePublicFromRow(row, artworkKey, margo)
+      } catch (e) {
+        console.warn('[catalog-artist] materialize ingest failed', row.id, e)
+      }
     }
   }
-  if (row.source !== 'deezer') return null
-  const hits = await searchDeezerArtists(row.name, 3)
-  const hit = hits.find((h) => h.sourceId === row.source_id) || hits[0]
-  if (!hit?.pictureUrl) return null
-  const ingested = await ingestCatalogArtistArtwork(row.id, hit.pictureUrl)
-  await admin
-    .from('catalog_artists')
-    .update({ artwork_r2_key: ingested.key96, updated_at: new Date().toISOString() })
-    .eq('id', row.id)
+
+  const art = resolveCatalogArtistArtwork({
+    artworkKey: null,
+    deezerPreview: null,
+    margoAvatarUrl: margo.margoAvatarUrl,
+  })
+
   return {
-    id: row.id,
-    name: row.name,
-    artworkUrl: ingested.publicUrl96,
+    id: row.id as string,
+    name: row.name as string,
+    artworkUrl: art.artworkUrl,
+    previewArtworkUrl: art.previewArtworkUrl,
+    onMargo: !!margo.margoProfileId && !!margo.margoUsername,
+    margoUsername: margo.margoUsername,
+    source: row.source as string,
+  }
+}
+
+function assemblePublicFromRow(
+  row: { id: string; name: string; source: string },
+  artworkKey: string,
+  margo: { margoProfileId: string | null; margoUsername: string | null },
+): CatalogArtistPublic {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    artworkUrl: publicCatalogMediaUrl(artworkKey),
     previewArtworkUrl: null,
-    onMargo: false,
-    margoUsername: null,
-    source: row.source,
+    onMargo: !!margo.margoProfileId && !!margo.margoUsername,
+    margoUsername: margo.margoUsername,
+    source: row.source as string,
   }
 }
 

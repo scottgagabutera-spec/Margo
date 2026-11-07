@@ -59,7 +59,8 @@ export function ArtistSearchDropdown({
       ) : null}
       {!loading
         ? results.map((hit, index) => {
-            const art = hit.previewArtworkUrl ? compactArtworkUrl(hit.previewArtworkUrl, 80) : ''
+            const artSrc = hit.artworkUrl || hit.previewArtworkUrl
+            const art = artSrc ? compactArtworkUrl(artSrc, 80) : ''
             const isLast = index === results.length - 1
             return (
               <button
