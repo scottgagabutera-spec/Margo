@@ -9,6 +9,18 @@ import type { MemoryPublic } from '@/lib/memory/types'
 import { MemoryTileTitle } from '@/components/memory-tile-title'
 import { memoryWordsOnlyBackground, memoryWordsOnlySampleColor } from '@/lib/memory/words-only-palette'
 
+export function ProfileMemoryMoreTile({ href, label }: { href: string; label?: string }) {
+  return (
+    <Link
+      href={href}
+      className="margo-profile-memory-tile margo-profile-memory-tile--more"
+      aria-label={label ?? 'More memories'}
+    >
+      <span className="margo-profile-memory-tile__more-label">{label ?? 'More'}</span>
+    </Link>
+  )
+}
+
 export function ProfileMemoryAddTile({ labeled }: { labeled?: boolean }) {
   return (
     <Link
@@ -56,7 +68,7 @@ export function ProfileMemoryTile({
           src={thumb}
           alt=""
           fill
-          sizes="80px"
+          sizes="(max-width: 767px) 140px, 140px"
           className="margo-profile-memory-tile__img"
           priority={priority}
           loading={priority ? 'eager' : 'lazy'}

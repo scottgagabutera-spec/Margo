@@ -128,6 +128,7 @@ function RoundFlankAction({
 }
 
 export function ProfileHeroVisitorActions({
+  signedOut,
   messageHref,
   messageDisabled,
   messageTitle,
@@ -138,6 +139,7 @@ export function ProfileHeroVisitorActions({
   socialReady,
   messageUnreadCount,
 }: {
+  signedOut?: boolean
   messageHref?: string
   messageDisabled?: boolean
   messageTitle?: string
@@ -148,6 +150,21 @@ export function ProfileHeroVisitorActions({
   socialReady: boolean
   messageUnreadCount?: number
 }) {
+  if (signedOut) {
+    return {
+      left: null,
+      right: (
+        <RoundFlankAction
+          label="Follow"
+          ariaLabel="Follow"
+          onClick={onFollow}
+          tone="gold"
+        >
+          <UserPlusIcon size={18} color="var(--bg)" />
+        </RoundFlankAction>
+      ),
+    }
+  }
   const following = followAccepted || followLabel === 'Following'
   const rightLabel =
     followLabel === 'Follow back' ? 'Follow back' : following ? 'Following' : 'Follow'

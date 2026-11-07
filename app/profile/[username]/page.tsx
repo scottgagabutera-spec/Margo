@@ -559,6 +559,15 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
     router.push('/feed')
   }
 
+  const handleVisitorFollowClick = () => {
+    if (!profile || followBusy) return
+    if (!user) {
+      requireAuth()
+      return
+    }
+    void handleFollowClick()
+  }
+
   const handleFollowClick = async () => {
     if (!user || !profile || followBusy) return
     setFollowBusy(true)
@@ -667,14 +676,15 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
       : null
 
   const visitorHeroActions =
-    profile && !isOwnProfile && user
+    profile && !isOwnProfile
       ? ProfileHeroVisitorActions({
+          signedOut: !user,
           messageHref: messageEligibility.canOpenThread ? `/messages/${profile.username}` : undefined,
           messageDisabled: !messageEligibility.canOpenThread,
           messageTitle: messageEligibility.blockedReason || undefined,
           followLabel,
           followAccepted: followStatus === 'accepted',
-          onFollow: () => { void handleFollowClick() },
+          onFollow: handleVisitorFollowClick,
           followBusy,
           socialReady: socialActionsReady,
           messageUnreadCount: partnerUnread,

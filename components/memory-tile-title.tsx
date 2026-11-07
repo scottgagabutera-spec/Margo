@@ -2,7 +2,11 @@
 
 import { useLayoutEffect, useRef, useState } from 'react'
 import { LYRIC_FONT, UI_FONT } from '@/lib/fonts'
-import { adaptiveTextColorOnBackground, adaptiveTextCssColor } from '@/lib/ui/adaptive-text-color'
+import {
+  adaptiveTextColorOnBackground,
+  adaptiveTextCssColor,
+  adaptiveTitleCssOnPhotoScrim,
+} from '@/lib/ui/adaptive-text-color'
 
 const MIN_PX = 11
 const MAX_PX = 15
@@ -22,7 +26,7 @@ export function MemoryTileTitle({
   const [fontSize, setFontSize] = useState(MAX_PX)
   const color =
     variant === 'scrim'
-      ? '#F4F1ED'
+      ? adaptiveTitleCssOnPhotoScrim()
       : adaptiveTextCssColor(adaptiveTextColorOnBackground(sampleBg))
 
   useLayoutEffect(() => {

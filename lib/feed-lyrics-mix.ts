@@ -22,9 +22,11 @@ export type FeedLyricsPostRow = {
 
 export type FeedLyricsRow =
   | FeedLyricsPostRow
-  | { kind: 'memory'; key: string; memory: MemoryPublic }
+  | { kind: 'memory-carousel'; key: string; memories: MemoryPublic[]; hasMore: boolean }
   | { kind: 'people'; key: string; people: FeedLyricsPeopleSlot[] }
   | { kind: 'memory-nudge'; key: string }
+
+export const FEED_LYRICS_MEMORY_CAROUSEL_SIZE = 5
 
 const MEMORY_EVERY = 6
 const PEOPLE_EVERY = 15
@@ -65,15 +67,21 @@ export function buildFeedLyricsRows(input: {
     }
 
     if (lyricOrdinal > 0 && lyricOrdinal % MEMORY_EVERY === 0 && memories[memIdx]) {
-      const memory = memories[memIdx]
-      memIdx += 1
-      out.push({ kind: 'memory', key: `memory-${memory.id}-${lyricOrdinal}`, memory })
+      const chunk = memories.slice(memIdx, memIdx + FEED_LYRICS_MEMORY_CAROUSEL_SIZE)
+      const hasMore = memIdx + chunk.length < memories.length
+      memIdx += chunk.length
+      out.push({
+        kind: 'memory-carousel',
+        key: `memory-carousel-${chunk[0]?.id ?? lyricOrdinal}-${lyricOrdinal}`,
+        memories: chunk,
+        hasMore,
+      })
     }
 
     if (lyricOrdinal > 0 && lyricOrdinal % PEOPLE_EVERY === 0) {
       const prev = out[out.length - 2]
       const prevPrev = out[out.length - 3]
-      if (prev?.kind === 'memory' || prevPrev?.kind === 'memory') continue
+      if (prev?.kind === 'memory-carousel' || prevPrev?.kind === 'memory-carousel') continue
       const people = pickPeople(peoplePool, peopleUsed)
       if (people.length > 0) {
         out.push({ kind: 'people', key: `people-${lyricOrdinal}`, people })

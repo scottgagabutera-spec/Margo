@@ -1,6 +1,6 @@
 'use client'
 
-import { ProfileMemoryAddTile, ProfileMemoryTile } from '@/components/profile-memory-tile'
+import { ProfileMemoryAddTile, ProfileMemoryMoreTile, ProfileMemoryTile } from '@/components/profile-memory-tile'
 import type { MemoryPublic } from '@/lib/memory/types'
 
 export function ProfileMemoriesStrip({
@@ -12,8 +12,13 @@ export function ProfileMemoriesStrip({
 }) {
   if (!isOwnProfile && memories.length === 0) return null
 
-  const row = memories.slice(0, 12)
+  const maxVisible = 12
+  const row = memories.slice(0, maxVisible)
+  const showMore = memories.length > maxVisible
   const ownerEmpty = isOwnProfile && memories.length === 0
+  const moreHref = isOwnProfile
+    ? '/you?tab=memories'
+    : (memories[0]?.ownerUsername ? `/profile/${memories[0].ownerUsername}?tab=memories` : '/feed?tab=memories')
 
   return (
     <div className="margo-profile-memories-strip">
@@ -23,6 +28,7 @@ export function ProfileMemoriesStrip({
         {row.map((m, i) => (
           <ProfileMemoryTile key={m.id} memory={m} priority={i < 6} />
         ))}
+        {showMore ? <ProfileMemoryMoreTile href={moreHref} label="More" /> : null}
       </div>
     </div>
   )

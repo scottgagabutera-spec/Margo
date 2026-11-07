@@ -2190,6 +2190,16 @@ html[data-margo-stage] .margo-footer {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+.margo-profile-favorite-artists__art--initials .margo-profile-favorite-artists__initial {
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
 }
 .margo-profile-favorite-artists__initial {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
@@ -7473,10 +7483,10 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   }
 }
 .margo-profile-memory-tile {
-  flex: 0 0 68px;
-  width: 68px;
-  height: 68px;
-  border-radius: 12px;
+  flex: 0 0 140px;
+  width: 140px;
+  height: 186px;
+  border-radius: 14px;
   background: var(--surface-2);
   background-size: cover;
   background-position: center;
@@ -7487,6 +7497,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   justify-content: center;
   text-decoration: none;
   scroll-snap-align: start;
+  scroll-snap-stop: normal;
 }
 .margo-profile-memory-tile--captioned {
   position: relative;
@@ -7494,9 +7505,24 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   justify-content: flex-end;
   overflow: hidden;
 }
+.margo-profile-memory-tile--captioned::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    to top,
+    rgba(7, 6, 10, 0.72) 0%,
+    rgba(7, 6, 10, 0.55) 38%,
+    rgba(7, 6, 10, 0.28) 62%,
+    rgba(7, 6, 10, 0.12) 100%
+  );
+}
 .margo-profile-memory-tile__img {
   object-fit: cover;
   z-index: 0;
+  filter: brightness(0.68) saturate(0.92);
 }
 .margo-profile-memory-tile__video-badge {
   position: absolute;
@@ -8455,19 +8481,6 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   text-align: left;
 }
 
-.margo-profile-memory-tile {
-  flex: 0 0 100px;
-  width: 100px;
-  height: 134px;
-  border-radius: 14px;
-}
-@media (min-width: 768px) {
-  .margo-profile-memory-tile {
-    flex: 0 0 140px;
-    width: 140px;
-    height: 186px;
-  }
-}
 .margo-profile-memories-strip__row {
   gap: 12px;
   scroll-snap-type: x mandatory;
@@ -8491,7 +8504,32 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   box-sizing: border-box;
 }
 .margo-memory-cover-caption--tile {
+  position: relative;
+  z-index: 2;
   padding: 10px 8px 8px;
+}
+.margo-profile-memory-tile--more {
+  flex-direction: column;
+  gap: 6px;
+  border-style: dashed;
+  color: var(--gold);
+  background: var(--gold-faint);
+}
+.margo-profile-memory-tile__more-label {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.margo-feed-memory-carousel {
+  margin: 8px 0 20px;
+  padding: 0 4px;
+}
+.margo-feed-memory-carousel__row {
+  scroll-snap-type: x mandatory;
+  gap: 12px;
+  padding-right: 28px;
+  -webkit-overflow-scrolling: touch;
 }
 .margo-memory-resonate-btn {
   display: inline-flex;

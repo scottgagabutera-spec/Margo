@@ -13,7 +13,7 @@ export function MemoryCoverCaption({
   variant: 'tile' | 'grid' | 'feed'
 }) {
   const title = memoryCaptionTitle(memory)
-  const artists = memoryCaptionArtists(memory)
+  const artists = variant === 'tile' ? '' : memoryCaptionArtists(memory)
   const songArt = memoryCoverIsSongArt(memory)
   return (
     <span className={`margo-memory-cover-caption margo-memory-cover-caption--${variant}`}>
@@ -23,7 +23,7 @@ export function MemoryCoverCaption({
         </span>
       ) : null}
       {variant === 'tile' ? (
-        <MemoryTileTitle text={title} variant="scrim" sampleBg="#14121a" />
+        <MemoryTileTitle text={title} variant="scrim" sampleBg="#16120e" />
       ) : (
         <span className="margo-memory-cover-caption__text">{title}</span>
       )}
