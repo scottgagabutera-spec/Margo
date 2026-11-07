@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 const BASE = process.env.PLAYWRIGHT_BASE_URL ?? 'https://trymargo.com'
 
-const MAIN_NAME_PX = 0.95 * 16
+const MAIN_NAME_PX = 1.375 * 16
 const MAIN_HANDLE_PX = 0.7 * 16
 
 async function openProfile(page: import('@playwright/test').Page) {

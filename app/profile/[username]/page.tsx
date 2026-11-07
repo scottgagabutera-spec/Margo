@@ -14,7 +14,6 @@ import { SongPreviewSheet, type SongPreviewSeed } from '@/components/song-previe
 import { PostCard } from '@/components/post-card'
 import { CardExportModal } from '@/components/card-export-modal'
 import { resolveMargoMomentFromPost } from '@/lib/moment'
-import { MoreIcon } from '@/components/icons'
 import type { Post } from '@/hooks/usePosts'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
 import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
@@ -30,8 +29,14 @@ import { MargoActionSheet } from '@/components/margo-action-sheet'
 import { MargoLongPressHint } from '@/components/margo-long-press-hint'
 import { resolveSignatureMomentSnippet } from '@/lib/signature-snippet'
 import { useLongPress } from '@/hooks/useLongPress'
-import { ProfilePortraitIdentity, ProfilePortraitActions } from '@/components/profile-portrait-identity'
-import { ProfileAccountMenu } from '@/components/profile-account-menu'
+import {
+  ProfilePortraitPhoto,
+  ProfileIdentityBlock,
+  ProfilePortraitActions,
+} from '@/components/profile-portrait-identity'
+import { ProfileShellHeader } from '@/components/profile-shell-header'
+import { ProfileBioClamp } from '@/components/profile-bio-clamp'
+import { shareProfile } from '@/lib/profile-share'
 import {
   ProfileSignatureLyricSheet,
   ProfileSignaturePill,
@@ -400,6 +405,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
   const [contentTab, setContentTab] = useState<ProfileContentTab>('lyrics')
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
   const accountMenuTriggerRef = useRef<HTMLButtonElement>(null)
+  const [shareBusy, setShareBusy] = useState(false)
 
   const { requireAuth, rehydrate } = useAuthGate()
   const [resonated, setResonated] = useState<Set<string>>(() => {
@@ -541,51 +547,34 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
     followStatus === 'pending' ? 'Requested' :
     'Follow'
 
+  const handleShareProfile = async () => {
+    if (!profile || shareBusy) return
+    setShareBusy(true)
+    try {
+      await shareProfile({
+        username: profile.username,
+        displayName: profile.displayName || profile.username,
+      })
+    } finally {
+      setShareBusy(false)
+    }
+  }
+
   const renderProfileActions = () => (
     <ProfilePortraitActions>
       {isOwnProfile && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, flexWrap: 'nowrap' }}>
-          <Link
-            href="/profile/edit"
-            style={{
-              minHeight: 'var(--margo-touch-min)', padding: '0 18px',
-              display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-              background: 'var(--surface-2)', color: 'var(--text-secondary)',
-              border: '1px solid var(--border)', borderRadius: '50px',
-              fontFamily: font, fontWeight: 600, fontSize: TYPE.label,
-              letterSpacing: '1.5px', textTransform: 'uppercase',
-              textDecoration: 'none', cursor: 'pointer',
-              whiteSpace: 'nowrap', flexShrink: 0,
-            }}
-          >Edit Profile</Link>
-          <div style={{ position: 'relative', flexShrink: 0 }}>
-            <button
-              ref={accountMenuTriggerRef}
-              type="button"
-              aria-label="Account menu"
-              aria-expanded={accountMenuOpen}
-              aria-haspopup="dialog"
-              onClick={() => setAccountMenuOpen(o => !o)}
-              style={{
-                width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
-                minWidth: 'var(--margo-touch-min)', minHeight: 'var(--margo-touch-min)',
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                background: accountMenuOpen ? 'var(--surface-2)' : 'transparent',
-                border: '1px solid var(--border)', borderRadius: '50%',
-                cursor: 'pointer', padding: 0, boxSizing: 'border-box',
-                WebkitTapHighlightColor: 'transparent', flexShrink: 0,
-              }}
-            >
-              <MoreIcon size={18} color="var(--text-secondary)" />
-            </button>
-            <ProfileAccountMenu
-              open={accountMenuOpen}
-              onOpenChange={setAccountMenuOpen}
-              triggerRef={accountMenuTriggerRef}
-              showStudio={!!identity?.isArtist}
-              onSignOut={() => { void handleSignOut() }}
-            />
-          </div>
+        <div className="margo-profile-action-row">
+          <Link href="/profile/edit" className="margo-profile-action-btn margo-profile-action-btn--secondary">
+            Edit profile
+          </Link>
+          <button
+            type="button"
+            className="margo-profile-action-btn margo-profile-action-btn--secondary"
+            disabled={shareBusy}
+            onClick={() => { void handleShareProfile() }}
+          >
+            Share profile
+          </button>
         </div>
       )}
 
@@ -593,54 +582,35 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
         !socialActionsReady ? (
           <ProfileSocialActionsSkeleton />
         ) : (
-        <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
-          {messageEligibility.canOpenThread ? (
-            <Link
-              href={`/messages/${profile!.username}`}
-              style={{
-                height: '32px', padding: '0 14px',
-                display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                background: 'var(--surface-2)', color: 'var(--text)',
-                border: '1px solid var(--gold-border)', borderRadius: '50px',
-                fontFamily: font, fontWeight: 700, fontSize: TYPE.label,
-                letterSpacing: '0.14em', textTransform: 'uppercase',
-                textDecoration: 'none', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
-              }}
-            >Message</Link>
-          ) : (
-            <span
-              role="button"
-              aria-disabled="true"
-              title={messageEligibility.blockedReason || undefined}
-              style={{
-                height: '32px', padding: '0 14px',
-                display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                background: 'transparent', color: 'var(--text-muted)',
-                border: '1px solid var(--border)', borderRadius: '50px',
-                fontFamily: font, fontWeight: 700, fontSize: TYPE.label,
-                letterSpacing: '0.14em', textTransform: 'uppercase',
-                whiteSpace: 'nowrap', flexShrink: 0, opacity: 0.55, cursor: 'not-allowed',
-              }}
-            >Message</span>
-          )}
-          <button
-            type="button"
-            onClick={handleFollowClick}
-            disabled={followBusy || !socialActionsReady}
-            style={{
-              height: '32px', padding: '0 16px',
-              display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-              background: followStatus ? 'transparent' : 'var(--gold)',
-              color: followStatus ? 'var(--text-secondary)' : 'var(--bg)',
-              border: followStatus ? '1px solid var(--border)' : 'none',
-              borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: TYPE.label,
-              letterSpacing: '0.14em', textTransform: 'uppercase',
-              cursor: followBusy ? 'not-allowed' : 'pointer',
-              opacity: followBusy ? 0.7 : 1,
-              whiteSpace: 'nowrap', flexShrink: 0,
-            }}
-          >{followLabel}</button>
-        </div>
+          <div className="margo-profile-action-row">
+            <button
+              type="button"
+              className={`margo-profile-action-btn${
+                followStatus ? ' margo-profile-action-btn--secondary' : ' margo-profile-action-btn--primary'
+              }`}
+              onClick={handleFollowClick}
+              disabled={followBusy || !socialActionsReady}
+            >
+              {followLabel}
+            </button>
+            {messageEligibility.canOpenThread ? (
+              <Link
+                href={`/messages/${profile!.username}`}
+                className="margo-profile-action-btn margo-profile-action-btn--secondary"
+              >
+                Message
+              </Link>
+            ) : (
+              <span
+                role="button"
+                aria-disabled="true"
+                title={messageEligibility.blockedReason || undefined}
+                className="margo-profile-action-btn margo-profile-action-btn--secondary margo-profile-action-btn--disabled"
+              >
+                Message
+              </span>
+            )}
+          </div>
         )
       )}
     </ProfilePortraitActions>
@@ -690,40 +660,57 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
         <div className="margo-profile-page">
           <div className="margo-profile-shell">
             <div className="margo-profile-shell__left">
-            <ProfilePortraitIdentity
-              displayName={profile.displayName || profile.username}
-              username={profile.username}
-              avatarUrl={profile.avatarUrl}
-              isPrivate={profile.isPrivate}
-              isArtist={profile.isArtist}
-              artistStatus={profile.artistStatus}
-              onAvatarClick={() => setAvatarLightboxOpen(true)}
-            />
+            <div className="margo-profile-block--header">
+              <ProfileShellHeader
+                isOwnProfile={isOwnProfile}
+                showStudio={!!identity?.isArtist}
+                accountMenuOpen={accountMenuOpen}
+                onAccountMenuOpenChange={setAccountMenuOpen}
+                accountMenuTriggerRef={accountMenuTriggerRef}
+                onSignOut={() => { void handleSignOut() }}
+              />
+            </div>
+
+            <div className="margo-profile-block--portrait">
+              <ProfilePortraitPhoto
+                displayName={profile.displayName || profile.username}
+                username={profile.username}
+                avatarUrl={profile.avatarUrl}
+                onAvatarClick={() => setAvatarLightboxOpen(true)}
+              />
+            </div>
+
+            <div className="margo-profile-block--identity">
+              <ProfileIdentityBlock
+                displayName={profile.displayName || profile.username}
+                username={profile.username}
+                isPrivate={profile.isPrivate}
+                isArtist={profile.isArtist}
+                artistStatus={profile.artistStatus}
+              />
+            </div>
 
             {(profile.bio || isOwnProfile) ? (
               <div className="margo-profile-block--bio">
-                {profile.bio ? (
-                  <p className="margo-profile-bio">{profile.bio}</p>
-                ) : (
-                  <Link
-                    href="/profile/edit"
-                    className="margo-profile-bio"
-                    style={{ color: 'var(--text-muted)', textDecoration: 'none', display: 'block' }}
-                  >
-                    Add bio
-                  </Link>
-                )}
+                <ProfileBioClamp
+                  bio={profile.bio || ''}
+                  editHref={isOwnProfile ? '/profile/edit' : undefined}
+                />
               </div>
             ) : null}
 
             {profile.isArtist ? (
-              <div style={{ marginTop: '12px' }}>
+              <div className="margo-profile-block--artist-links">
                 <ProfileArtistLinks links={profile.artistLinks} />
               </div>
             ) : null}
 
             <div className="margo-profile-block--stats">
               {renderStats()}
+            </div>
+
+            <div className="margo-profile-block--actions">
+              {renderProfileActions()}
             </div>
 
             <div className="margo-profile-block--signature">
@@ -761,10 +748,6 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 </Link>
               </div>
             ) : null}
-            </div>
-
-            <div className="margo-profile-block--actions">
-              {renderProfileActions()}
             </div>
 
             <div className="margo-profile-block--favorites">

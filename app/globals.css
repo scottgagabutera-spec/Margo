@@ -1863,17 +1863,98 @@ html[data-margo-stage] .margo-footer {
     border-radius: 18px;
   }
 }
-.margo-profile-bio {
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: var(--type-body, 0.82rem);
-  color: var(--text-secondary);
-  line-height: 1.55;
-  margin: 8px 0 0;
-  max-width: 100%;
+.margo-profile-shell-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  margin: 0 0 12px;
+  box-sizing: border-box;
+}
+.margo-profile-shell-header__leading,
+.margo-profile-shell-header__trailing {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.margo-profile-shell-header__trailing {
+  margin-left: auto;
+}
+.margo-profile-shell-header__logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--margo-touch-min);
+  min-height: var(--margo-touch-min);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.margo-profile-shell-header__menu {
+  position: relative;
+  flex-shrink: 0;
+}
+.margo-profile-shell-header__menu-btn {
+  width: var(--margo-touch-min);
+  height: var(--margo-touch-min);
+  min-width: var(--margo-touch-min);
+  min-height: var(--margo-touch-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+.margo-profile-shell-header__menu-btn[aria-expanded='true'] {
+  background: var(--surface-2);
+}
+.margo-profile-bio-wrap {
+  width: 100%;
   text-align: center;
 }
+.margo-profile-bio {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 6px 0 0;
+  max-width: 100%;
+  text-align: center;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.margo-profile-bio--expanded {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+.margo-profile-bio-more {
+  margin: 4px 0 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--gold);
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  -webkit-tap-highlight-color: transparent;
+}
 @media (min-width: 835px) and (orientation: landscape) {
+  .margo-profile-bio-wrap,
   .margo-profile-bio {
+    text-align: left;
+  }
+  .margo-profile-bio-more {
     text-align: left;
   }
 }
@@ -1882,38 +1963,90 @@ html[data-margo-stage] .margo-footer {
   flex-direction: column;
   align-items: stretch;
 }
-.margo-profile-block--bio {
+.margo-profile-block--header {
+  order: 0;
+}
+.margo-profile-block--portrait {
+  order: 1;
+}
+.margo-profile-block--identity {
   order: 2;
 }
-.margo-profile-block--stats {
+.margo-profile-block--bio {
   order: 3;
 }
-.margo-profile-block--signature {
+.margo-profile-block--artist-links {
   order: 4;
+  margin-top: 8px;
+}
+.margo-profile-block--stats {
+  order: 5;
 }
 .margo-profile-block--actions {
-  order: 5;
+  order: 6;
   margin-bottom: 4px;
 }
+.margo-profile-block--signature {
+  order: 7;
+}
 .margo-profile-block--favorites {
-  order: 6;
+  order: 8;
   margin-bottom: 16px;
 }
-@media (min-width: 835px) and (orientation: landscape) {
-  .margo-profile-block--bio {
-    order: 5;
-    margin-top: 4px;
-  }
-  .margo-profile-block--stats {
-    order: 2;
-  }
-  .margo-profile-block--signature {
-    order: 4;
-  }
-  .margo-profile-block--actions {
-    order: 3;
-    margin-bottom: 16px;
-  }
+.margo-profile-action-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  align-items: stretch;
+}
+.margo-profile-action-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 40px;
+  min-height: 40px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border-radius: 12px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.margo-profile-action-btn--primary {
+  background: var(--gold);
+  color: var(--bg);
+  border: none;
+}
+.margo-profile-action-btn--secondary {
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+.margo-profile-action-btn--disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.margo-profile-action-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+.margo-profile-hero--portrait-only {
+  margin-bottom: 0;
+}
+.margo-profile-hero--portrait-only .margo-profile-hero__portrait {
+  margin-bottom: 10px;
+}
+.margo-profile-block--identity .margo-profile-identity {
+  margin-top: 0;
 }
 .margo-profile-stats {
   display: flex;
@@ -2324,7 +2457,7 @@ html[data-margo-stage] .margo-footer {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 1px;
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -2340,9 +2473,9 @@ html[data-margo-stage] .margo-footer {
 }
 .margo-profile-identity__name {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.95rem;
+  font-size: 1.375rem;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.15;
   color: var(--text);
   margin: 0;
   min-width: 0;
@@ -2429,8 +2562,8 @@ html[data-margo-stage] .margo-footer {
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: 8px;
-  margin: 12px 0 16px;
+  gap: 0;
+  margin: 8px 0 12px;
   width: 100%;
 }
 .margo-post-card__header-tools {
