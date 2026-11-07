@@ -412,14 +412,16 @@ function EditProfilePageInner() {
               />
             </div>
 
-            <div>
-              <label style={labelStyle}>Cover</label>
-              <CoverUpload
-                currentCoverUrl={identity.coverUrl ?? null}
-                onBeforePick={persistDraftNow}
-                onUploaded={(url) => syncCoverUrl(url)}
-              />
-            </div>
+            {false ? (
+              <div>
+                <label style={labelStyle}>Cover</label>
+                <CoverUpload
+                  currentCoverUrl={identity?.coverUrl ?? null}
+                  onBeforePick={persistDraftNow}
+                  onUploaded={(url) => syncCoverUrl(url)}
+                />
+              </div>
+            ) : null}
 
             <div>
               <label style={labelStyle}>Name</label>
