@@ -28,14 +28,13 @@ for (const width of [360, 390, 834, 1440]) {
       const layout = await page.evaluate(() => {
         const heroEl = document.querySelector('[data-testid="profile-portrait-hero"]') as HTMLElement | null
         const frame = document.querySelector('[data-testid="profile-portrait-photo"] .margo-portrait-avatar__frame') as HTMLElement | null
-        const cover = document.querySelector('.margo-profile-cover') as HTMLElement | null
+        const shell = document.querySelector('.margo-profile-shell') as HTMLElement | null
         const identity = document.querySelector('[data-testid="profile-identity-block"]') as HTMLElement | null
         const name = document.querySelector('.margo-profile-identity__name') as HTMLElement | null
         const handle = document.querySelector('.margo-profile-identity__handle') as HTMLElement | null
-        const stats = document.querySelector('.margo-profile-sheet')?.querySelector('a[href*="followers"]')?.parentElement as HTMLElement | null
+        const stats = document.querySelector('.margo-profile-stats') as HTMLElement | null
 
         const fr = frame?.getBoundingClientRect()
-        const cr = cover?.getBoundingClientRect()
         const ir = identity?.getBoundingClientRect()
         const nr = name?.getBoundingClientRect()
         const hr = handle?.getBoundingClientRect()
@@ -48,22 +47,16 @@ for (const width of [360, 390, 834, 1440]) {
         const roleSlot = document.querySelector('[data-testid="profile-author-role-slot"]') as HTMLElement | null
         const thirdSlot = document.querySelector('[data-testid="profile-role-third-slot"]') as HTMLElement | null
 
-        const coverBottom = cr?.bottom ?? null
         const portraitTop = fr?.top ?? null
-        const portraitVisibleAboveCover =
-          coverBottom != null && portraitTop != null
-            ? coverBottom - portraitTop >= (fr?.height ?? 0) * 0.45
-            : null
 
         const heroCenter = heroEl ? heroEl.getBoundingClientRect().left + heroEl.getBoundingClientRect().width / 2 : null
         const frameCenter = fr ? fr.left + fr.width / 2 : null
 
         return {
           viewportW: document.documentElement.clientWidth,
+          hasShell: !!shell,
           portraitTop,
           portraitBottom: fr?.bottom,
-          coverBottom,
-          portraitVisibleAboveCover,
           nameHandleGap,
           nameFs,
           handleFs,
@@ -75,11 +68,9 @@ for (const width of [360, 390, 834, 1440]) {
         }
       })
 
+      expect(layout.hasShell).toBe(true)
       expect(layout.portraitTop ?? 0).toBeGreaterThanOrEqual(-2)
       expect(layout.portraitBottom ?? 0).toBeLessThanOrEqual(layout.viewportW + 2)
-      if (layout.coverBottom != null && layout.portraitVisibleAboveCover != null) {
-        expect(layout.portraitVisibleAboveCover).toBe(true)
-      }
       if (layout.nameHandleGap != null) expect(layout.nameHandleGap).toBeLessThanOrEqual(4)
       if (layout.nameFs != null) expect(Math.abs(layout.nameFs - MAIN_NAME_PX)).toBeLessThan(1.5)
       if (layout.handleFs != null) expect(Math.abs(layout.handleFs - MAIN_HANDLE_PX)).toBeLessThan(1.5)
