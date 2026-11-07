@@ -15,8 +15,8 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { useNotifications } from '@/hooks/useNotifications'
 import { useMessaging } from '@/hooks/useMessaging'
 import { PullToRefresh } from '@/components/pull-to-refresh'
-import { FeedNewMomentsPill } from '@/components/feed-new-moments-pill'
-import { ContentUpdatesBar } from '@/components/content-updates-bar'
+import { FeedLiveUpdatePill } from '@/components/feed-live-update-pill'
+import { useLiveUpdatePillQueue } from '@/hooks/useLiveUpdatePillQueue'
 import { useNewItemsBuffer } from '@/hooks/useNewItemsBuffer'
 import { useContentUpdates } from '@/hooks/useContentUpdates'
 import { PostCard, normalizeEmotion } from '@/components/post-card'
@@ -24,7 +24,7 @@ import { FeedPostEvictProvider } from '@/components/feed-post-evict-context'
 import { ReplayAttribution } from '@/components/replay-attribution'
 import { useRecentReplays } from '@/hooks/useRecentReplays'
 import { usePostReplays } from '@/hooks/usePostReplays'
-import { usePrimaryTab, restoreActivePrimaryScroll } from '@/components/primary-tab-shell'
+import { usePrimaryTab, restoreActivePrimaryScroll, scrollActiveTo } from '@/components/primary-tab-shell'
 import { FeedPostSkeletonList } from '@/components/margo-skeletons'
 import { useFeedMemories, useFeedMemoriesGrid } from '@/hooks/useFeedMemories'
 import { MemoryFeedGridTile } from '@/components/memory-feed-grid-tile'
@@ -103,6 +103,24 @@ function FeedPageInner() {
   })
   const { replays: recentReplays } = useRecentReplays(80, { enabled: feedLive })
   const [ptrBusy, setPtrBusy] = useState(false)
+  const [reducedMotion, setReducedMotion] = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const apply = () => setReducedMotion(mq.matches)
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
+  }, [])
+  const livePill = useLiveUpdatePillQueue(
+    {
+      posts: pendingCount,
+      artists: artistCount,
+      songs: songCount,
+      memories: 0,
+    },
+    feedLive && !ptrBusy,
+  )
   const { requireAuth } = useAuthGate()
   const { user, identity } = useIdentity()
   const { refetch: refetchNotifications } = useNotifications()
@@ -646,17 +664,28 @@ function FeedPageInner() {
           onClear={clearVibeFilter}
         />
       )}
-      {!ptrBusy && feedLive && pendingCount > 0 && (
-        <FeedNewMomentsPill visible onReveal={flushPending} />
-      )}
-      {!ptrBusy && feedLive && (songCount > 0 || artistCount > 0) && (
-        <ContentUpdatesBar
-          songCount={songCount}
-          artistCount={artistCount}
-          onSongs={openSongs}
-          onArtists={openArtists}
-          topOffsetPx={pendingCount > 0 ? 52 : 0}
+      {!ptrBusy && feedLive && livePill.active ? (
+        <FeedLiveUpdatePill
+          kind={livePill.active.kind}
+          count={livePill.active.count}
+          reducedMotion={reducedMotion}
+          onDismiss={livePill.dismissActive}
+          onActivate={() => {
+            const kind = livePill.active?.kind
+            if (kind === 'posts') {
+              flushPending()
+              scrollActiveTo(0)
+            } else if (kind === 'songs') {
+              openSongs()
+            } else if (kind === 'artists') {
+              openArtists()
+            } else if (kind === 'memories') {
+              handleFeedContentTab('memories')
+            }
+          }}
         />
+      ) : (
+        <div className="margo-feed-live-update-row" style={{ minHeight: 0, height: 0 }} aria-hidden />
       )}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
         <div style={{ position: 'absolute', top: '-128px', left: '-128px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.04)', borderRadius: '50%', filter: 'blur(80px)' }} />
