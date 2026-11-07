@@ -15,6 +15,8 @@ export type MemoryPhotoInput = {
   r2Key: string
   width?: number | null
   height?: number | null
+  mediaType?: 'image' | 'video'
+  durationSec?: number | null
 }
 
 export type MemoryPublic = {

@@ -1,7 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { UI_FONT, TYPE } from '@/lib/fonts'
+import { favoriteArtistThumbnailUrl } from '@/lib/memory/feed-thumbnail-url'
 
 const font = UI_FONT
 
@@ -43,12 +45,21 @@ export function ProfileFavoriteArtistsRow({
     <div className="margo-profile-favorite-artists">
       <p className="margo-profile-ui-label margo-profile-favorite-artists__label">Favorite artists</p>
       <div className="margo-profile-favorite-artists__row">
-        {shown.map((a) => {
+        {shown.map((a, index) => {
+          const thumb = favoriteArtistThumbnailUrl(a.artworkUrl)
           const inner = (
             <>
               <span className="margo-profile-favorite-artists__art-wrap">
-                {a.artworkUrl ? (
-                  <img src={a.artworkUrl} alt="" className="margo-profile-favorite-artists__art" loading="lazy" />
+                {thumb ? (
+                  <Image
+                    src={thumb}
+                    alt=""
+                    width={56}
+                    height={56}
+                    className="margo-profile-favorite-artists__art"
+                    priority={index < 5}
+                    loading={index < 5 ? 'eager' : 'lazy'}
+                  />
                 ) : (
                   <span className="margo-profile-favorite-artists__art margo-profile-favorite-artists__art--empty" />
                 )}

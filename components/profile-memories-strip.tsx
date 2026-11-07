@@ -17,8 +17,8 @@ export function ProfileMemoriesStrip({
       <p className="margo-profile-ui-label margo-profile-memories-strip__label">Memories</p>
       <div className="margo-profile-memories-strip__row">
         {isOwnProfile ? <ProfileMemoryAddTile /> : null}
-        {row.map((m) => (
-          <ProfileMemoryTile key={m.id} memory={m} />
+        {row.map((m, i) => (
+          <ProfileMemoryTile key={m.id} memory={m} priority={i < 6} />
         ))}
       </div>
     </div>

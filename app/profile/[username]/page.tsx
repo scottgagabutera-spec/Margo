@@ -187,7 +187,9 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
   const [avatarLightboxOpen, setAvatarLightboxOpen] = useState(false)
   const [signatureReadOpen, setSignatureReadOpen] = useState(false)
   const [previewSong, setPreviewSong] = useState<SongPreviewSeed | null>(null)
-  const [favoriteArtists, setFavoriteArtists] = useState<ProfileFavoriteArtist[]>([])
+  const [favoriteArtists, setFavoriteArtists] = useState<ProfileFavoriteArtist[]>(
+    () => cached?.favoriteArtists ?? [],
+  )
 
   // ── Discography — public, live-only catalog for this profile, if
   // they're an artist. Only the total count + a small preview slice are
@@ -219,6 +221,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
       setFollowerCount(cachedNow.followerCount)
       setFollowingCount(cachedNow.followingCount)
       setPostsCount(cachedNow.postsCount)
+      if (cachedNow.favoriteArtists) setFavoriteArtists(cachedNow.favoriteArtists)
       setLoading(false)
       setNotFound(false)
     } else {
@@ -232,6 +235,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
         setFollowerCount(bundle.followerCount)
         setFollowingCount(bundle.followingCount)
         setPostsCount(bundle.postsCount)
+        if (bundle.favoriteArtists) setFavoriteArtists(bundle.favoriteArtists)
         setNotFound(false)
         setLoading(false)
         if (bundle.viewerFollowStatus !== undefined) {
@@ -352,21 +356,6 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
   }, [profile?.signatureSongId, profile?.signatureLyric])
 
   const isOwnProfile = !!identity && !!profile && identity.username === profile.username
-
-  useEffect(() => {
-    if (!profile?.id) return
-    let active = true
-    void fetch(`/api/profile/favorite-artists?profileId=${encodeURIComponent(profile.id)}`)
-      .then((r) => r.json())
-      .then((data: { favorites?: ProfileFavoriteArtist[] }) => {
-        if (!active) return
-        setFavoriteArtists(data.favorites || [])
-      })
-      .catch(() => {
-        if (active) setFavoriteArtists([])
-      })
-    return () => { active = false }
-  }, [profile?.id])
 
   const signatureLongPress = useLongPress({
     disabled: !isOwnProfile,

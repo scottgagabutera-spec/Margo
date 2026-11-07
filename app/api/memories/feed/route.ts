@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { assembleMemoryPublic } from '@/lib/memory/assemble'
+import { assembleMemoriesPublicBatch } from '@/lib/memory/assemble-batch'
 import { MEMORY_ROW_SELECT } from '@/lib/memory/columns'
 import { createClient } from '@/lib/supabase/server'
 
@@ -39,11 +39,8 @@ export async function GET(request: NextRequest) {
   const hasMore = (rows || []).length > limit
   const nextCursor = hasMore && slice.length ? (slice[slice.length - 1].created_at as string) : null
 
-  const memories = []
-  for (const row of slice) {
-    const pub = await assembleMemoryPublic(row, user?.id ?? null)
-    if (pub && pub.visibility === 'public') memories.push(pub)
-  }
+  const assembled = await assembleMemoriesPublicBatch(slice, user?.id ?? null)
+  const memories = assembled.filter((m) => m.visibility === 'public')
 
   return NextResponse.json({ memories, nextCursor, hasMore }, { headers: CACHE })
 }
