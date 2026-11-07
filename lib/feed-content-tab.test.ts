@@ -18,6 +18,10 @@ describe('feed content tab URL', () => {
     assert.equal(parseFeedContentTab(' Shorts '), 'shorts')
   })
 
+  it('parses memories tab', () => {
+    assert.equal(parseFeedContentTab('memories'), 'memories')
+  })
+
   it('preserves vibe when switching tab', () => {
     const params = new URLSearchParams('vibe=hope&highlight=abc')
     const next = applyFeedContentTab(params, 'shorts')
@@ -32,5 +36,6 @@ describe('feed content tab URL', () => {
   it('feedTabQueryValue', () => {
     assert.equal(feedTabQueryValue('lyrics'), null)
     assert.equal(feedTabQueryValue('shorts'), 'shorts')
+    assert.equal(feedTabQueryValue('memories'), 'memories')
   })
 })

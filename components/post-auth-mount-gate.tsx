@@ -12,6 +12,7 @@ import {
 import { loadWelcomeOnboardingContext } from '@/lib/resolve-post-auth-destination'
 import { sanitizeAuthReturnPath } from '@/lib/auth-return'
 import { createClient } from '@/lib/supabase/client'
+import { FeedPageSkeleton } from '@/components/margo-skeletons'
 
 const supabase = createClient()
 
@@ -83,7 +84,7 @@ export function PostAuthMountGate({ children }: { children: ReactNode }) {
   }, [authLoading, identityLoading, user, identity, pathname, router, onFeed])
 
   if (onFeed && user && !feedReady && !authLoading && !identityLoading) {
-    return null
+    return <FeedPageSkeleton />
   }
 
   return <>{children}</>

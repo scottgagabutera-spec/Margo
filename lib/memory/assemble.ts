@@ -1,5 +1,10 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { publicCatalogMediaUrl } from '@/lib/r2/catalog-media-url'
+import {
+  isMemoryPosterR2Key,
+  isMemoryVideoR2Key,
+  memoryVideoPosterKey,
+} from '@/lib/r2/memory-media-keys'
 import type { MemoryPublic } from '@/lib/memory/types'
 
 type Row = Record<string, unknown>
@@ -87,13 +92,25 @@ export async function assembleMemoryPublic(
         audioUrl: meta?.audio_url ?? null,
       }
     }),
-    photos: (photos || []).map((p) => ({
-      id: p.id as string,
-      position: p.position as number,
-      url: publicCatalogMediaUrl(p.r2_key as string),
-      width: (p.width as number | null) ?? null,
-      height: (p.height as number | null) ?? null,
-    })),
+    photos: (photos || [])
+      .filter((p) => !isMemoryPosterR2Key(p.r2_key as string))
+      .map((p) => {
+        const r2Key = p.r2_key as string
+        const video = isMemoryVideoR2Key(r2Key)
+        const posterKey =
+          (p.poster_r2_key as string | null | undefined)?.trim()
+          || (video ? memoryVideoPosterKey(r2Key) : null)
+        return {
+          id: p.id as string,
+          position: p.position as number,
+          url: publicCatalogMediaUrl(r2Key),
+          width: (p.width as number | null) ?? null,
+          height: (p.height as number | null) ?? null,
+          mediaType: (video ? 'video' : 'image') as 'image' | 'video',
+          posterUrl: posterKey ? publicCatalogMediaUrl(posterKey) : null,
+          durationSec: (p.duration_sec as number | null) ?? null,
+        }
+      }),
     viewerResonated: !!resonateHit?.data,
     isOwner: viewerId === ownerId,
   }

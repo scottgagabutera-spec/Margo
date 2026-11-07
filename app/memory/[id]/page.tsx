@@ -16,6 +16,7 @@ import { useRegisterNavBack } from '@/components/nav-back'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { MARGO_SITE_ORIGIN } from '@/lib/moment/site-origin'
 import { toast } from 'sonner'
+import { MemoryDetailPageSkeleton } from '@/components/margo-skeletons'
 
 const font = UI_FONT
 
@@ -199,11 +200,7 @@ export default function MemoryDetailPage() {
   }
 
   if (loading) {
-    return (
-      <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ fontFamily: font, color: 'var(--text-muted)', fontSize: TYPE.secondary }}>Loading…</p>
-      </div>
-    )
+    return <MemoryDetailPageSkeleton />
   }
 
   if (error || !memory) {
@@ -411,13 +408,25 @@ export default function MemoryDetailPage() {
       {memory.photos.length > 0 ? (
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 24, paddingBottom: 4 }}>
           {memory.photos.map((p) => (
-            <img
-              key={p.id}
-              src={p.url}
-              alt=""
-              loading="lazy"
-              style={{ height: 120, width: 'auto', borderRadius: 12, border: '1px solid var(--border)', flexShrink: 0 }}
-            />
+            p.mediaType === 'video' ? (
+              <video
+                key={p.id}
+                src={p.url}
+                poster={p.posterUrl ?? undefined}
+                controls
+                playsInline
+                preload="metadata"
+                style={{ height: 120, width: 'auto', borderRadius: 12, border: '1px solid var(--border)', flexShrink: 0, background: '#000' }}
+              />
+            ) : (
+              <img
+                key={p.id}
+                src={p.url}
+                alt=""
+                loading="lazy"
+                style={{ height: 120, width: 'auto', borderRadius: 12, border: '1px solid var(--border)', flexShrink: 0 }}
+              />
+            )
           ))}
         </div>
       ) : null}

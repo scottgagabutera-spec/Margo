@@ -41,7 +41,7 @@ export function ProfileFavoriteArtistsRow({
 
   return (
     <div className="margo-profile-favorite-artists">
-      <p className="margo-profile-favorite-artists__label">Favorite artists</p>
+      <p className="margo-profile-ui-label margo-profile-favorite-artists__label">Favorite artists</p>
       <div className="margo-profile-favorite-artists__row">
         {shown.map((a) => {
           const inner = (
@@ -53,7 +53,7 @@ export function ProfileFavoriteArtistsRow({
                   <span className="margo-profile-favorite-artists__art margo-profile-favorite-artists__art--empty" />
                 )}
               </span>
-              <span className="margo-profile-favorite-artists__name" style={{ fontFamily: font, fontSize: TYPE.label }}>
+              <span className="margo-profile-favorite-artists__name" style={{ fontFamily: font, fontSize: '0.6875rem' }}>
                 {a.name}
               </span>
             </>

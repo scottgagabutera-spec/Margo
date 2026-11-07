@@ -27,7 +27,8 @@ import { toast } from 'sonner'
 const font = UI_FONT
 const supabase = createClient()
 const MAX_SONGS = 30
-const MAX_PHOTOS = 8
+const MAX_MEDIA = 10
+const MAX_VIDEO_SEC = 60
 const STORY_MAX = 500
 
 type DraftSong = {
@@ -45,6 +46,8 @@ type DraftPhoto = {
   previewUrl: string
   width: number
   height: number
+  mediaType: 'image' | 'video'
+  durationSec?: number
 }
 
 type Step = 1 | 2 | 3 | 4
@@ -92,6 +95,74 @@ async function encodeImageWebp(file: File): Promise<{ blob: Blob; width: number;
   return { blob, width: w, height: h }
 }
 
+async function readVideoMeta(file: File): Promise<{ durationSec: number; width: number; height: number }> {
+  const url = URL.createObjectURL(file)
+  try {
+    return await new Promise((resolve, reject) => {
+      const v = document.createElement('video')
+      v.preload = 'metadata'
+      v.src = url
+      v.onloadedmetadata = () => {
+        if (!Number.isFinite(v.duration) || v.duration > MAX_VIDEO_SEC + 0.25) {
+          reject(new Error(`Video must be ${MAX_VIDEO_SEC} seconds or shorter`))
+          return
+        }
+        resolve({ durationSec: v.duration, width: v.videoWidth, height: v.videoHeight })
+      }
+      v.onerror = () => reject(new Error('Could not read video'))
+    })
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
+async function captureVideoPoster(
+  file: File,
+): Promise<{ blob: Blob; width: number; height: number }> {
+  const url = URL.createObjectURL(file)
+  try {
+    return await new Promise((resolve, reject) => {
+      const v = document.createElement('video')
+      v.preload = 'auto'
+      v.muted = true
+      v.playsInline = true
+      v.src = url
+      v.onloadeddata = () => {
+        v.currentTime = Math.min(0.12, v.duration * 0.08)
+      }
+      v.onseeked = () => {
+        const w = v.videoWidth
+        const h = v.videoHeight
+        const canvas = document.createElement('canvas')
+        canvas.width = w
+        canvas.height = h
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          reject(new Error('Could not capture poster'))
+          return
+        }
+        ctx.drawImage(v, 0, 0, w, h)
+        canvas.toBlob(
+          (b) => (b ? resolve({ blob: b, width: w, height: h }) : reject(new Error('Could not encode poster'))),
+          'image/webp',
+          0.86,
+        )
+      }
+      v.onerror = () => reject(new Error('Could not load video for poster'))
+    })
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
+async function putToPresignedUrl(
+  presign: { url: string; headers: Record<string, string> },
+  body: Blob,
+): Promise<void> {
+  const res = await fetch(presign.url, { method: 'PUT', headers: presign.headers, body })
+  if (!res.ok) throw new Error('Upload failed')
+}
+
 export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
   const router = useRouter()
   const { requireAuth } = useAuthGate()
@@ -116,6 +187,7 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
   const [title, setTitle] = useState('')
   const [photos, setPhotos] = useState<DraftPhoto[]>([])
   const [photoUploading, setPhotoUploading] = useState(false)
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null)
 
   const [dateGranularity, setDateGranularity] = useState<MemoryDateGranularity>('none')
   const [showDatePublicly, setShowDatePublicly] = useState(true)
@@ -197,51 +269,121 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
   }
 
   const uploadPhoto = async (file: File) => {
-    if (photos.length >= MAX_PHOTOS || photoUploading) return
+    if (photos.length >= MAX_MEDIA || photoUploading) return
+    const isVideo = file.type.startsWith('video/') || /\.(mp4|webm)$/i.test(file.name)
     setPhotoUploading(true)
+    setUploadStatus(isVideo ? 'Processing video…' : 'Processing photo…')
     try {
-      const { blob, width, height } = await encodeImageWebp(file)
       const position = photos.length
-      const presignRes = await fetch('/api/memories/photo-upload-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          draftId: draftId.current,
-          position,
-          contentType: 'image/webp',
-          byteLength: blob.size,
-        }),
-      })
-      if (!presignRes.ok) {
-        const err = await presignRes.json().catch(() => ({}))
-        throw new Error((err as { error?: string }).error || 'Upload failed')
+      if (isVideo) {
+        if (file.size > 50 * 1024 * 1024) throw new Error('Video must be under 50 MB')
+        if (!['video/mp4', 'video/webm'].includes(file.type) && !/\.(mp4|webm)$/i.test(file.name)) {
+          throw new Error('Use mp4 or webm video')
+        }
+        const contentType = file.type || (file.name.toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4')
+        const { durationSec, width, height } = await readVideoMeta(file)
+        setUploadStatus('Uploading poster…')
+        const poster = await captureVideoPoster(file)
+        const posterPresignRes = await fetch('/api/memories/photo-upload-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            draftId: draftId.current,
+            position,
+            contentType: 'image/webp',
+            byteLength: poster.blob.size,
+            kind: 'poster',
+          }),
+        })
+        if (!posterPresignRes.ok) {
+          const err = await posterPresignRes.json().catch(() => ({}))
+          throw new Error((err as { error?: string }).error || 'Poster upload failed')
+        }
+        const posterPresign = (await posterPresignRes.json()) as {
+          url: string
+          headers: Record<string, string>
+          key: string
+          publicUrl: string
+        }
+        await putToPresignedUrl(posterPresign, poster.blob)
+
+        setUploadStatus('Uploading video…')
+        const videoPresignRes = await fetch('/api/memories/photo-upload-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            draftId: draftId.current,
+            position,
+            contentType,
+            byteLength: file.size,
+            kind: 'video',
+          }),
+        })
+        if (!videoPresignRes.ok) {
+          const err = await videoPresignRes.json().catch(() => ({}))
+          throw new Error((err as { error?: string }).error || 'Video upload failed')
+        }
+        const videoPresign = (await videoPresignRes.json()) as {
+          url: string
+          headers: Record<string, string>
+          key: string
+          publicUrl: string
+        }
+        await putToPresignedUrl(videoPresign, file)
+        setPhotos((prev) => [
+          ...prev,
+          {
+            position,
+            r2Key: videoPresign.key,
+            previewUrl: posterPresign.publicUrl,
+            width,
+            height,
+            mediaType: 'video',
+            durationSec,
+          },
+        ])
+      } else {
+        const { blob, width, height } = await encodeImageWebp(file)
+        setUploadStatus('Uploading photo…')
+        const presignRes = await fetch('/api/memories/photo-upload-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            draftId: draftId.current,
+            position,
+            contentType: 'image/webp',
+            byteLength: blob.size,
+            kind: 'image',
+          }),
+        })
+        if (!presignRes.ok) {
+          const err = await presignRes.json().catch(() => ({}))
+          throw new Error((err as { error?: string }).error || 'Upload failed')
+        }
+        const presign = (await presignRes.json()) as {
+          url: string
+          headers: Record<string, string>
+          key: string
+          publicUrl: string
+        }
+        await putToPresignedUrl(presign, blob)
+        setPhotos((prev) => [
+          ...prev,
+          {
+            position,
+            r2Key: presign.key,
+            previewUrl: presign.publicUrl,
+            width,
+            height,
+            mediaType: 'image',
+          },
+        ])
       }
-      const presign = (await presignRes.json()) as {
-        url: string
-        headers: Record<string, string>
-        key: string
-        publicUrl: string
-      }
-      const putRes = await fetch(presign.url, {
-        method: 'PUT',
-        headers: presign.headers,
-        body: blob,
-      })
-      if (!putRes.ok) throw new Error('Could not upload photo')
-      setPhotos((prev) => [
-        ...prev,
-        {
-          position,
-          r2Key: presign.key,
-          previewUrl: presign.publicUrl,
-          width,
-          height,
-        },
-      ])
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not add photo')
+      toast.error(e instanceof Error ? e.message : 'Could not add media')
     } finally {
       setPhotoUploading(false)
+      setUploadStatus(null)
     }
   }
 
@@ -556,11 +698,19 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
               <p style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--danger, #e57373)', margin: '6px 0 0' }}>{titleErr}</p>
             ) : null}
             <div style={{ marginTop: 24 }}>
-              <label style={labelStyle}>Photos ({photos.length}/{MAX_PHOTOS})</label>
+              <label style={labelStyle}>Photos &amp; videos ({photos.length}/{MAX_MEDIA})</label>
+              {uploadStatus ? (
+                <p style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)', margin: '4px 0 8px' }}>
+                  {uploadStatus}
+                </p>
+              ) : null}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {photos.map((p) => (
                   <div key={p.r2Key} style={{ position: 'relative', width: 72, height: 72, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
                     <img src={p.previewUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {p.mediaType === 'video' ? (
+                      <span style={{ position: 'absolute', left: 4, bottom: 4, fontSize: 10, padding: '2px 4px', borderRadius: 4, background: 'rgba(0,0,0,0.6)', color: '#fff' }}>Video</span>
+                    ) : null}
                     <button
                       type="button"
                       aria-label="Remove photo"
@@ -571,7 +721,7 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
                     </button>
                   </div>
                 ))}
-                {photos.length < MAX_PHOTOS ? (
+                {photos.length < MAX_MEDIA ? (
                   <label
                     style={{
                       width: 72,
@@ -590,7 +740,7 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
                     {photoUploading ? '…' : '+'}
                     <input
                       type="file"
-                      accept="image/jpeg,image/png,image/webp"
+                      accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
                       hidden
                       disabled={photoUploading}
                       onChange={(e) => {

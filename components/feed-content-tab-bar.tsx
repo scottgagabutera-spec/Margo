@@ -24,6 +24,15 @@ export function FeedContentTabBar({ active, onChange, shortsAvailable = true }: 
       <button
         type="button"
         role="tab"
+        aria-selected={active === 'memories'}
+        className={`margo-feed-content-tab${active === 'memories' ? ' margo-feed-content-tab--active' : ''}`}
+        onClick={() => onChange('memories')}
+      >
+        Memories
+      </button>
+      <button
+        type="button"
+        role="tab"
         aria-selected={active === 'shorts'}
         className={`margo-feed-content-tab${active === 'shorts' ? ' margo-feed-content-tab--active' : ''}`}
         onClick={() => onChange('shorts')}

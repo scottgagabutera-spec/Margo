@@ -33,6 +33,74 @@ function bone(
   }
 }
 
+function feedTabBones() {
+  return (
+    <div className="margo-feed-content-tab-bar margo-skeleton-bone-row" aria-hidden style={{ pointerEvents: 'none' }}>
+      {['Lyrics', 'Memories', 'Shorts'].map((label, i) => (
+        <span
+          key={label}
+          className="margo-skeleton-bone"
+          style={bone({ flex: 1, height: 36, borderRadius: 8, border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }, i * 40)}
+        >
+          <span style={{ opacity: 0, fontSize: 13 }}>{label}</span>
+        </span>
+      ))}
+    </div>
+  )
+}
+
+/** Feed route / primary tab — tab bar + post cards (matches /feed layout). */
+export function FeedPageSkeleton({ count = 4 }: { count?: number }) {
+  return (
+    <div
+      className="margo-skeleton-pulse-scope"
+      style={{
+        minHeight: '100vh',
+        background: 'var(--bg)',
+        position: 'relative',
+        overflowX: 'hidden',
+      }}
+    >
+      <PulseStyle />
+      {feedTabBones()}
+      <div
+        style={{
+          maxWidth: 'var(--margo-feed-max-width, 720px)',
+          margin: '0 auto',
+          paddingTop: 12,
+          paddingLeft: 16,
+          paddingRight: 16,
+          paddingBottom: 'var(--margo-page-padding-bottom)',
+        }}
+      >
+        <FeedPostSkeletonList count={count} />
+      </div>
+    </div>
+  )
+}
+
+/** Marketing landing shell — matches StageLandingPage landmarks. */
+export function LandingPageSkeleton() {
+  return (
+    <div className="margo-landing-page-shell margo-skeleton-pulse-scope" style={{ minHeight: '100dvh', background: 'var(--bg)' }}>
+      <PulseStyle />
+      <nav className="margo-landing-nav" aria-hidden>
+        <div className="margo-skeleton-bone" style={bone({ width: 120, height: 36, borderRadius: 10, border: 'none' }, 0)} />
+        <div className="margo-skeleton-bone" style={bone({ width: 72, height: 32, borderRadius: 999, border: 'none' }, 60)} />
+      </nav>
+      <div className="margo-landing-hero-anchor">
+        <section className="margo-stage-zone">
+          <div className="margo-stage-hero margo-stage-hero--ssr" style={{ alignItems: 'center' }}>
+            <div style={bone({ width: 'min(280px, 72vw)', height: 48, borderRadius: 12, border: 'none', marginBottom: 12 }, 100)} />
+            <div style={bone({ width: 'min(320px, 86vw)', height: 14, borderRadius: 6, border: 'none', marginBottom: 24 }, 140)} />
+            <div style={bone({ width: 'min(360px, 92vw)', height: 44, borderRadius: 999, border: 'none' }, 180)} />
+          </div>
+        </section>
+      </div>
+    </div>
+  )
+}
+
 /** Feed-shaped post cards — layout-matched to margo-post-card. */
 export function FeedPostSkeletonList({ count = 4 }: { count?: number }) {
   return (
@@ -377,23 +445,39 @@ export function HubDeepNavSkeleton({ href }: { href: string }) {
   )
 }
 
+export function MemoryDetailPageSkeleton() {
+  return (
+    <main style={{ minHeight: '100vh', background: 'var(--bg)', padding: 'calc(var(--nav-height, 72px) + 12px) 20px var(--margo-page-padding-bottom)', maxWidth: 1120, margin: '0 auto' }}>
+      <PulseStyle />
+      <div style={bone({ width: '100%', maxWidth: 420, aspectRatio: '4/5', borderRadius: 16, border: 'none', marginBottom: 16 }, 0)} />
+      <div style={bone({ height: 14, width: '62%', borderRadius: 6, border: 'none', marginBottom: 10 }, 40)} />
+      <div style={bone({ height: 12, width: '88%', borderRadius: 6, border: 'none', marginBottom: 8 }, 80)} />
+      <div style={bone({ height: 12, width: '72%', borderRadius: 6, border: 'none' }, 120)} />
+    </main>
+  )
+}
+
 export function PrimaryTabPaneSkeleton({
   tab,
 }: {
   tab: 'feed' | 'discover' | 'compose' | 'you'
 }) {
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'var(--bg)',
-      padding: 'calc(var(--nav-height, 72px) + 24px) 20px var(--margo-page-padding-bottom)',
-    }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       {tab === 'discover' ? (
-        <DiscoverPageSkeleton />
+        <div style={{ padding: 'calc(var(--nav-height, 72px) + 12px) 16px var(--margo-page-padding-bottom)' }}>
+          <DiscoverPageSkeleton />
+        </div>
       ) : tab === 'you' ? (
         <ProfilePageSkeleton />
+      ) : tab === 'feed' ? (
+        <div style={{ paddingTop: 'var(--nav-height, 72px)' }}>
+          <FeedPageSkeleton count={4} />
+        </div>
       ) : (
-        <FeedPostSkeletonList count={tab === 'compose' ? 2 : 4} />
+        <div style={{ padding: 'calc(var(--nav-height, 72px) + 12px) 16px var(--margo-page-padding-bottom)', maxWidth: 720, margin: '0 auto' }}>
+          <FeedPostSkeletonList count={2} />
+        </div>
       )}
     </div>
   )

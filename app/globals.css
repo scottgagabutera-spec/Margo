@@ -270,6 +270,24 @@
   100% { transform: translateX(100%); opacity: 0.4; }
 }
 
+/* Primary-tab chrome (nav + tab bar) stays above fixed tab panes (z-index 2). */
+.margo-primary-chrome {
+  position: relative;
+  z-index: 300;
+  pointer-events: none;
+}
+.margo-primary-chrome > * {
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .margo-skeleton-pulse-scope [style*='margoSkeletonPulse'],
+  .margo-skeleton-pulse-scope .margo-skeleton-bone {
+    animation: none !important;
+    opacity: 0.45 !important;
+  }
+}
+
 /* Hide scrollbar globally — modern, clean */
 ::-webkit-scrollbar { display: none; }
 * { scrollbar-width: none; -ms-overflow-style: none; }
@@ -1803,16 +1821,16 @@ html[data-margo-stage] .margo-footer {
   z-index: 2;
   box-sizing: border-box;
 }
-@media (min-width: 835px) and (orientation: landscape) {
+@media (min-width: 768px) {
   .margo-profile-shell {
     flex-direction: row;
     align-items: flex-start;
     gap: 48px;
   }
   .margo-profile-shell__left {
-    flex: 0 0 340px;
-    width: 340px;
-    max-width: 340px;
+    flex: 0 0 330px;
+    width: 330px;
+    max-width: 330px;
     position: sticky;
     top: calc(var(--nav-height, 72px) + 12px);
     align-self: flex-start;
@@ -1844,15 +1862,15 @@ html[data-margo-stage] .margo-footer {
   }
 }
 .margo-profile-shell .margo-profile-hero__portrait .margo-portrait-avatar {
-  width: 68px;
-  max-width: 68px;
-  height: 86px;
-  max-height: 86px;
+  width: 64px;
+  max-width: 64px;
+  height: 80px;
+  max-height: 80px;
 }
 .margo-profile-shell .margo-profile-hero__portrait .margo-portrait-avatar__frame {
   border-radius: 14px;
 }
-@media (min-width: 835px) and (orientation: landscape) {
+@media (min-width: 768px) {
   .margo-profile-shell .margo-profile-hero__portrait .margo-portrait-avatar {
     width: 96px;
     max-width: 96px;
@@ -1872,7 +1890,7 @@ html[data-margo-stage] .margo-footer {
   margin: 0 0 12px;
   box-sizing: border-box;
 }
-@media (min-width: 835px) and (orientation: landscape) {
+@media (min-width: 768px) {
   .margo-profile-block--header {
     display: none;
   }
@@ -1883,7 +1901,7 @@ html[data-margo-stage] .margo-footer {
   height: var(--margo-touch-min);
   flex-shrink: 0;
 }
-@media (max-width: 834px) {
+@media (max-width: 767px) {
   .margo-profile-page {
     margin-top: 0;
     padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
@@ -1966,7 +1984,7 @@ html[data-margo-stage] .margo-footer {
   letter-spacing: 0.02em;
   -webkit-tap-highlight-color: transparent;
 }
-@media (min-width: 835px) and (orientation: landscape) {
+@media (min-width: 768px) {
   .margo-profile-bio-wrap,
   .margo-profile-bio {
     text-align: left;
@@ -2016,27 +2034,36 @@ html[data-margo-stage] .margo-footer {
 }
 .margo-profile-action-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   width: 100%;
-  align-items: stretch;
+  align-items: center;
+  justify-content: center;
+  margin: 4px 0 8px;
+}
+@media (min-width: 768px) {
+  .margo-profile-action-row {
+    justify-content: flex-start;
+  }
 }
 .margo-profile-action-btn {
-  flex: 1 1 0;
+  flex: 0 0 auto;
+  width: auto;
   min-width: 0;
-  height: 34px;
-  min-height: 34px;
-  max-height: 34px;
+  height: 32px;
+  min-height: 32px;
+  max-height: 32px;
   padding: 0 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  border-radius: 12px;
+  border-radius: 10px;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-transform: none;
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
@@ -2074,8 +2101,34 @@ html[data-margo-stage] .margo-footer {
   display: flex;
   justify-content: center;
   align-items: stretch;
-  margin: 16px 0;
+  margin: 10px 0 8px;
   width: 100%;
+}
+@media (max-width: 390px) {
+  .margo-profile-page {
+    padding-top: 10px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .margo-profile-shell {
+    gap: 10px;
+  }
+  .margo-profile-stats {
+    margin: 6px 0 6px;
+  }
+  .margo-profile-hero__portrait {
+    width: 60px !important;
+    height: 76px !important;
+  }
+  .margo-profile-block--signature {
+    margin-bottom: 8px;
+  }
+  .margo-profile-block--memories {
+    margin-bottom: 8px;
+  }
+  .margo-profile-block--favorites {
+    margin-bottom: 10px;
+  }
 }
 .margo-profile-signature-pill-wrap {
   width: 100%;
@@ -2216,15 +2269,15 @@ html[data-margo-stage] .margo-footer {
 }
 .margo-profile-favorite-artists__label {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-transform: none;
   color: var(--text-muted);
   margin: 0 0 10px;
   text-align: center;
 }
-@media (min-width: 835px) and (orientation: landscape) {
+@media (min-width: 768px) {
   .margo-profile-favorite-artists__label {
     text-align: left;
   }
@@ -2235,7 +2288,7 @@ html[data-margo-stage] .margo-footer {
   justify-content: center;
   gap: 14px 12px;
 }
-@media (min-width: 835px) and (orientation: landscape) {
+@media (min-width: 768px) {
   .margo-profile-favorite-artists__row {
     justify-content: flex-start;
   }
@@ -2424,7 +2477,7 @@ html[data-margo-stage] .margo-footer {
   padding: 24px 16px calc(16px + env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
 }
-@media (min-width: 835px) and (orientation: landscape) {
+@media (min-width: 768px) {
   .margo-profile-signature-sheet-backdrop {
     align-items: center;
   }
@@ -3230,6 +3283,18 @@ html[data-margo-hub-sheet-flush-top] .margo-hub-sheet {
   max-width: 100%;
   box-sizing: border-box;
   justify-content: center;
+}
+.margo-hub-build-stamp {
+  margin: 10px 0 0;
+  padding: 6px 0 2px;
+  text-align: center;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  opacity: 0.85;
+  border-top: 1px solid var(--border);
 }
 .margo-hub-identity {
   grid-column: 1 / -1;
@@ -7087,3 +7152,245 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   margin-bottom: 18px;
 }
 
+/* Profile UI labels — Geist Sans, 13px medium, sentence case */
+.margo-profile-ui-label {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+}
+.margo-profile-content-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+.margo-profile-content-tab {
+  flex: 1;
+  min-height: 36px;
+  padding: 6px 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  -webkit-tap-highlight-color: transparent;
+}
+.margo-profile-content-tab--active {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+.margo-profile-tabs-sticky {
+  position: sticky;
+  top: calc(env(safe-area-inset-top, 0px) + 2px);
+  z-index: 6;
+  background: var(--bg);
+  padding-bottom: 2px;
+}
+@media (min-width: 768px) {
+  .margo-profile-tabs-sticky {
+    top: calc(var(--nav-height, 72px) + 6px);
+  }
+}
+.margo-profile-memories--desktop {
+  display: none;
+}
+@media (min-width: 768px) {
+  .margo-profile-memories--mobile {
+    display: none;
+  }
+  .margo-profile-memories--desktop {
+    display: block;
+    margin-bottom: 16px;
+  }
+}
+@media (max-width: 767px) {
+  .margo-profile-shell {
+    gap: 14px;
+  }
+  .margo-profile-page {
+    padding-bottom: calc(var(--margo-tabbar-h, 80px) + env(safe-area-inset-bottom, 0px) + 12px);
+  }
+  .margo-profile-discography-preview {
+    display: none;
+  }
+  .margo-profile-memories--desktop {
+    display: none;
+  }
+}
+.margo-profile-action-overflow {
+  flex: 0 0 34px;
+  width: 34px;
+  min-width: 34px;
+  max-width: 34px;
+  padding: 0;
+}
+@media (max-width: 767px) {
+  .margo-profile-action-overflow {
+    display: none;
+  }
+}
+.margo-profile-memory-tile {
+  flex: 0 0 68px;
+  width: 68px;
+  height: 68px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--border);
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  scroll-snap-align: start;
+}
+.margo-profile-memory-tile--add {
+  border: 1px dashed var(--gold-border);
+  background: var(--gold-faint);
+}
+.margo-profile-memory-tile__plus {
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--gold);
+  font-weight: 500;
+}
+.margo-profile-memories-strip__row {
+  gap: 8px;
+}
+.margo-profile-favorite-artists__art-wrap,
+.margo-profile-favorite-artists__art {
+  width: 40px;
+  height: 40px;
+}
+.margo-profile-favorite-artists__label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+.margo-profile-memories-strip__label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+.margo-memory-card--feed {
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  min-height: 0;
+}
+.margo-memory-card--feed .margo-memory-card__cover {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  aspect-ratio: 1;
+  border-radius: 10px;
+}
+.margo-memory-card--feed .margo-memory-card__date-chip {
+  display: none;
+}
+.margo-memory-card--feed .margo-memory-card__body {
+  padding: 0;
+  flex: 1;
+  justify-content: center;
+}
+.margo-memory-card--feed .margo-memory-card__story--clamp {
+  -webkit-line-clamp: 2;
+}
+.margo-feed-memories-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.margo-feed-people-strip {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+.margo-feed-people-strip__label {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+}
+.margo-feed-people-strip__row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+}
+.margo-feed-people-strip__cell {
+  flex: 0 0 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  color: inherit;
+}
+.margo-feed-people-strip__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--surface-2);
+}
+.margo-feed-people-strip__avatar--empty {
+  display: block;
+  border: 1px solid var(--border);
+}
+.margo-feed-people-strip__name {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.2;
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.margo-feed-memory-nudge {
+  border: 1px solid var(--gold-border);
+  border-radius: 14px;
+  background: var(--gold-faint);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.margo-feed-memory-nudge__copy {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin: 0 0 10px;
+  line-height: 1.4;
+}
+.margo-feed-memory-nudge__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}

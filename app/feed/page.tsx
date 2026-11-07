@@ -26,6 +26,11 @@ import { useRecentReplays } from '@/hooks/useRecentReplays'
 import { usePostReplays } from '@/hooks/usePostReplays'
 import { usePrimaryTab, restoreActivePrimaryScroll } from '@/components/primary-tab-shell'
 import { FeedPostSkeletonList } from '@/components/margo-skeletons'
+import { useFeedMemories } from '@/hooks/useFeedMemories'
+import { buildFeedLyricsRows, type FeedLyricsPeopleSlot, type FeedLyricsPostRow, type FeedLyricsRow } from '@/lib/feed-lyrics-mix'
+import { MemoryCard } from '@/components/memory-card'
+import { FeedPeopleStrip } from '@/components/feed-people-strip'
+import { FeedMemoryNudge } from '@/components/feed-memory-nudge'
 import { FeedOceanFooter } from '@/components/feed-ocean-footer'
 import { feedRankIds, feedSortScore } from '@/lib/feed-rank'
 import { StoryRing } from '@/components/stories/story-ring'
@@ -296,6 +301,74 @@ function FeedPageInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [posts, recentReplays, selectedVibe, selectedSort, postStats])
 
+  const lyricPostRows = useMemo((): FeedLyricsPostRow[] => {
+    return feedItems
+      .filter((item) => item.kind === 'post' || item.kind === 'replay')
+      .map((item) => {
+        if (item.kind === 'replay') {
+          return {
+            kind: 'post' as const,
+            key: item.key,
+            post: item.post,
+            sortAt: item.sortAt,
+            isReplay: true,
+            quoteText: item.quoteText,
+            replayerUsername: item.replayerUsername,
+            replayerDisplayName: item.replayerDisplayName,
+            replayerAvatarUrl: item.replayerAvatarUrl,
+          }
+        }
+        return {
+          kind: 'post' as const,
+          key: item.key,
+          post: item.post,
+          sortAt: item.sortAt,
+          isReplay: false,
+        }
+      })
+  }, [feedItems])
+
+  const peoplePool = useMemo((): FeedLyricsPeopleSlot[] => {
+    const seen = new Set<string>()
+    const out: FeedLyricsPeopleSlot[] = []
+    const myId = user?.id
+    for (const p of posts) {
+      const id = p.authorUid
+      if (!id || id === myId || seen.has(id)) continue
+      seen.add(id)
+      if (!p.username) continue
+      out.push({
+        id,
+        username: p.username,
+        displayName: p.authorDisplayName || p.username,
+        avatarUrl: p.authorAvatarUrl || null,
+      })
+      if (out.length >= 24) break
+    }
+    return out
+  }, [posts, user?.id])
+
+  const { memories: feedMemories } = useFeedMemories(feedLive && (feedContentTab === 'lyrics' || feedContentTab === 'memories'))
+
+  const showMemoryNudge = useMemo(() => {
+    if (!user?.id || typeof window === 'undefined') return false
+    try {
+      const dismissed = localStorage.getItem('margo-feed-memory-nudge-dismissed')
+      if (dismissed && Date.now() - Number(dismissed) < 7 * 86_400_000) return false
+    } catch { /* ignore */ }
+    return true
+  }, [user?.id])
+
+  const mixedLyricRows = useMemo((): FeedLyricsRow[] => {
+    if (feedContentTab !== 'lyrics') return []
+    return buildFeedLyricsRows({
+      lyricPosts: lyricPostRows,
+      memories: feedMemories,
+      peoplePool,
+      showMemoryNudge,
+    })
+  }, [feedContentTab, lyricPostRows, feedMemories, peoplePool, showMemoryNudge])
+
   const notifyResonate = async (post: Post) => {
     if (!user?.id) return
     if (!post.authorUid || post.authorUid === user.id) return
@@ -356,7 +429,7 @@ function FeedPageInner() {
     setExportPost(post)
   }
 
-  const handleFeedContentTab = (tab: 'lyrics' | 'shorts') => {
+  const handleFeedContentTab = (tab: 'lyrics' | 'memories' | 'shorts') => {
     const params = applyFeedContentTab(new URLSearchParams(searchParams.toString()), tab)
     const qs = params.toString()
     router.push(qs ? `/feed?${qs}` : '/feed', { scroll: false })
@@ -473,7 +546,7 @@ function FeedPageInner() {
     <StoryFeedAuthorSync authorIds={feedAuthorIds} />
     <FeedPostEvictProvider evict={evictFeedPost}>
     <PullToRefresh
-      enabled={feedContentTab !== 'shorts'}
+      enabled={feedContentTab === 'lyrics'}
       onRefreshingChange={setPtrBusy}
       onRefresh={async () => {
         const [latest] = await Promise.all([
@@ -521,6 +594,25 @@ function FeedPageInner() {
         <div style={{ position: 'absolute', bottom: '-160px', right: '-160px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.03)', borderRadius: '50%', filter: 'blur(80px)' }} />
       </div>
 
+      {feedContentTab === 'memories' && (
+        <main
+          className="margo-feed-column"
+          style={{ position: 'relative', zIndex: 5, padding: '16px 16px var(--margo-page-padding-bottom)' }}
+        >
+          {feedMemories.length === 0 ? (
+            <p style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.8125rem', color: 'var(--text-muted)', textAlign: 'center', padding: '48px 0' }}>
+              No memories in your feed yet.
+            </p>
+          ) : (
+            <div className="margo-feed-memories-list">
+              {feedMemories.map((m) => (
+                <MemoryCard key={m.id} memory={m} variant="feed" />
+              ))}
+            </div>
+          )}
+        </main>
+      )}
+
       {feedContentTab === 'shorts' && (
         <FeedShortsPager
           clips={resolvedShortsClips}
@@ -534,9 +626,9 @@ function FeedPageInner() {
       )}
 
       <main
-        className={`margo-feed-column${feedContentTab === 'shorts' ? ' margo-feed-lyrics-pane--hidden' : ''}`}
+        className={`margo-feed-column${feedContentTab !== 'lyrics' ? ' margo-feed-lyrics-pane--hidden' : ''}`}
         style={{ position: 'relative', zIndex: 5, padding: '16px 16px var(--margo-page-padding-bottom)' }}
-        aria-hidden={feedContentTab === 'shorts'}
+        aria-hidden={feedContentTab !== 'lyrics'}
       >
         {feedLive && isMobileViewport !== true && (
           <div className="margo-story-ring-tray">
@@ -581,7 +673,7 @@ function FeedPageInner() {
         )}
         {showFeedSkeleton && <FeedPostSkeletonList count={4} />}
 
-        {listReady && feedItems.length === 0 && (
+        {listReady && lyricPostRows.length === 0 && (
           <div style={{ textAlign: 'center', padding: '64px 0' }}>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '1rem', marginBottom: '16px' }}>
               {selectedVibe === 'ALL'
@@ -598,7 +690,18 @@ function FeedPageInner() {
         )}
 
         <div className="margo-feed-post-list">
-          {listReady && feedItems.map(item => {
+          {listReady && mixedLyricRows.map((item) => {
+            if (item.kind === 'memory') {
+              return <MemoryCard key={item.key} memory={item.memory} variant="feed" />
+            }
+            if (item.kind === 'people') {
+              return <FeedPeopleStrip key={item.key} people={item.people} />
+            }
+            if (item.kind === 'memory-nudge') {
+              return (
+                <FeedMemoryNudge key={item.key} />
+              )
+            }
             const post = item.post
             const cardProps = {
               post,
@@ -622,14 +725,14 @@ function FeedPageInner() {
               onSelectVibe: handleSelectVibe,
               onSelectRank: handleSelectRank,
             }
-            if (item.kind === 'replay') {
+            if (item.isReplay) {
               return (
                 <ReplayAttribution
                   key={item.key}
-                  username={item.replayerUsername}
-                  displayName={item.replayerDisplayName}
-                  avatarUrl={item.replayerAvatarUrl}
-                  quoteText={item.quoteText}
+                  username={item.replayerUsername ?? null}
+                  displayName={item.replayerDisplayName ?? null}
+                  avatarUrl={item.replayerAvatarUrl ?? null}
+                  quoteText={item.quoteText ?? null}
                   cardProps={{ ...cardProps, variant: 'compact' }}
                 />
               )
@@ -651,7 +754,7 @@ function FeedPageInner() {
           })}
         </div>
 
-        {listReady && feedItems.length > 0 && (
+        {listReady && lyricPostRows.length > 0 && (
           <FeedOceanFooter
             hasMore={hasMoreOlder}
             loadingOlder={loadingOlder}
