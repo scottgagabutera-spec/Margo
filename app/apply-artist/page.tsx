@@ -23,6 +23,16 @@ export default function ApplyArtistPage() {
     }
   }, [loading, user, router])
 
+  useEffect(() => {
+    if (!user || user.isAnonymous) return
+    void fetch('/api/welcome-series/sync', {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ artistGuideIntent: true }),
+    })
+  }, [user?.id, user?.isAnonymous])
+
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

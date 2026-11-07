@@ -1,6 +1,7 @@
 import { AdminTrigger } from '@/components/admin-trigger'
 import { AudioEngineProvider } from '@/components/audio-engine-provider'
 import { SupabaseAuthProvider } from '@/components/supabase-auth-provider'
+import { WelcomeSeriesSync } from '@/components/welcome-series-sync'
 import { IdentityProvider } from '@/hooks/useIdentity'
 import { NotificationsProvider } from '@/hooks/useNotifications'
 import { MessagingProvider } from '@/hooks/useMessaging'
@@ -189,6 +190,7 @@ export default function RootLayout({
         />
         <PostHogProvider>
         <SupabaseAuthProvider>
+          <WelcomeSeriesSync />
           <IdentityProvider>
             <AudioEngineProvider>
               <NotificationsProvider>

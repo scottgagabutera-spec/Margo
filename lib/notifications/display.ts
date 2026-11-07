@@ -12,6 +12,7 @@ const UPDATES: NotificationType[] = [
   'artist_submitted',
   'artist_approved',
   'artist_rejected',
+  'system_welcome',
 ]
 
 export function filterNotifications(list: Notification[], filter: NotificationFilter): Notification[] {

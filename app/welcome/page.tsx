@@ -34,6 +34,7 @@ import {
   onboardingFromSettings,
   tasteVibesFromSettings,
 } from '@/lib/welcome-profile-settings'
+import { stampWelcomeSeriesEligibility } from '@/lib/welcome-series/merge-flags'
 import {
   isTemporaryMemberUsername,
   normalizeUsernameInput,
@@ -574,11 +575,14 @@ function WelcomePageInner() {
       const persistCompletedAt = async () => {
         if (!user?.id) return { ok: false as const }
         return persistProfileSettings(user.id, (current) => {
-          const merged = mergeOnboardingSettings(current, {
-            completedAt: new Date().toISOString(),
+          const completedAt = new Date().toISOString()
+          const artistGuideIntent = role === 'artist' || role === 'both'
+          let merged = mergeOnboardingSettings(current, {
+            completedAt,
             role: role ?? undefined,
             creatorType: creatorType ?? undefined,
           })
+          merged = stampWelcomeSeriesEligibility(merged, completedAt, { artistGuideIntent })
           profileSettingsRef.current = merged
           return merged
         })
