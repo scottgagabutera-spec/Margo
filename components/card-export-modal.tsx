@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import { MargoSheet } from '@/components/margo-sheet'
 import { MomentShareStudio } from '@/components/moment-share-studio'
 import type { MargoMoment } from '@/lib/moment/types'
@@ -17,6 +18,7 @@ interface CardExportModalProps {
   moment?: MargoMoment | null
   lines?: MomentLineInput[]
   enablePromote?: boolean
+  returnFocusPostId?: string | null
 }
 
 export function CardExportModal({
@@ -28,21 +30,39 @@ export function CardExportModal({
   moment,
   lines,
   enablePromote = false,
+  returnFocusPostId = null,
 }: CardExportModalProps) {
+  const openedRef = useRef(false)
+
+  useEffect(() => {
+    if (open) {
+      openedRef.current = true
+      return
+    }
+    if (!openedRef.current) return
+    openedRef.current = false
+    const id = returnFocusPostId
+    if (!id) return
+    const run = () => {
+      const el = document.querySelector<HTMLElement>(`[data-margo-card-trigger="${id}"]`)
+      el?.focus({ preventScroll: true })
+    }
+    window.requestAnimationFrame(run)
+  }, [open, returnFocusPostId])
+
   return (
     <MargoSheet
       open={open}
       onOpenChange={onOpenChange}
       title="Your Moment"
-      zIndex={200}
+      zIndex={1400}
       heightMode="fixed"
-      anchor="bottom"
+      anchor="top"
       fullViewport
       dismissOnBack
-      maxHeight="96dvh"
-      bottomInset="tabbar-tight"
-      panelOverflow="visible"
-      contentOverflow="auto"
+      bottomInset="none"
+      panelOverflow="hidden"
+      contentOverflow="hidden"
     >
       <MomentShareStudio
         moment={moment}

@@ -400,14 +400,33 @@ function FeedPageInner() {
     return () => obs.disconnect()
   }, [feedContentTab, feedLive, loadMoreFeedMemories, feedGridMemories.length])
 
-  const showMemoryNudge = useMemo(() => {
-    if (!user?.id || typeof window === 'undefined') return false
+  const [memoryNudgeDismissed, setMemoryNudgeDismissed] = useState(false)
+  const [ownMemoryCount, setOwnMemoryCount] = useState<number | null>(null)
+
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return
     try {
-      const dismissed = localStorage.getItem('margo-feed-memory-nudge-dismissed')
-      if (dismissed && Date.now() - Number(dismissed) < 7 * 86_400_000) return false
+      setMemoryNudgeDismissed(localStorage.getItem('margo-feed-memory-nudge-dismissed') === '1')
     } catch { /* ignore */ }
-    return true
-  }, [user?.id])
+  }, [])
+
+  useEffect(() => {
+    if (!user?.id) {
+      setOwnMemoryCount(null)
+      return
+    }
+    let active = true
+    void supabase
+      .from('memories')
+      .select('id', { count: 'exact', head: true })
+      .eq('owner_profile_id', user.id)
+      .then(({ count }) => {
+        if (active) setOwnMemoryCount(count ?? 0)
+      })
+    return () => { active = false }
+  }, [user?.id, supabase])
+
+  const showMemoryNudge = !!user?.id && ownMemoryCount === 0 && !memoryNudgeDismissed
 
   const mixedLyricRows = useMemo((): FeedLyricsRow[] => {
     if (feedContentTab !== 'lyrics') return []
@@ -774,7 +793,10 @@ function FeedPageInner() {
             }
             if (item.kind === 'memory-nudge') {
               return (
-                <FeedMemoryNudge key={item.key} />
+                <FeedMemoryNudge
+                  key={item.key}
+                  onDismiss={() => setMemoryNudgeDismissed(true)}
+                />
               )
             }
             const post = item.post
@@ -841,6 +863,7 @@ function FeedPageInner() {
       <CardExportModal
         open={!!exportPost}
         onOpenChange={(o) => { if (!o) setExportPost(null) }}
+        returnFocusPostId={exportPost?.id ?? null}
         moment={exportMoment}
         enablePromote={
           !!exportPost

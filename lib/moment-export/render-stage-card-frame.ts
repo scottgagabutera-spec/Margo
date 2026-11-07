@@ -183,6 +183,19 @@ export function renderStageCardFrame(
     ctx.fillText(line.text, originX, line.y + lyric.style.fontSize * 0.92)
   }
 
+  if (layout.creditPlate) {
+    const plate = layout.creditPlate
+    ctx.save()
+    ctx.fillStyle = plate.fill
+    ctx.strokeStyle = plate.border
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.roundRect(plate.x, plate.y, plate.width, plate.height, plate.radius)
+    ctx.fill()
+    ctx.stroke()
+    ctx.restore()
+  }
+
   if (layout.meta) {
     const metaX = layout.meta.x
     if (layout.meta.song) {

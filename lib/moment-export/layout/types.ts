@@ -65,6 +65,12 @@ export interface LayoutMetaBlock {
   height: number
 }
 
+export interface LayoutCreditPlate extends LayoutRect {
+  radius: number
+  fill: string
+  border: string
+}
+
 export interface LayoutMarkBadge {
   container: LayoutRect
   symbolSize: number
@@ -106,6 +112,7 @@ export interface ResolvedStageCardLayout {
   theme: StageCardTheme
   lyric: LayoutLyricBlock
   meta: LayoutMetaBlock | null
+  creditPlate: LayoutCreditPlate | null
   artwork: LayoutRect | null
   mark: LayoutMarkBadge
   vibePill: LayoutVibePill | null

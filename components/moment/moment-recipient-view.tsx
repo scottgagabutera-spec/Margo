@@ -225,7 +225,7 @@ export function MomentRecipientView({
           ) : (
             <span />
           )}
-          <MargoSymbol size={20} variant="ink" style={{ opacity: 0.32 }} />
+          <MargoLogo size="xs" variant="mark" />
         </div>
 
         {moment.vibeLabel ? (

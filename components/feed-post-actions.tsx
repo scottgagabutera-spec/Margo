@@ -114,6 +114,7 @@ export function FeedPostActions({
 
       <button
         type="button"
+        data-margo-card-trigger={postId}
         className={`margo-feed-action${inert ? ' margo-feed-action--inactive' : ''}`}
         aria-label="Export lyric card"
         aria-hidden={inert ? true : undefined}

@@ -504,6 +504,7 @@ export function resolveStageCardLayout(
     theme,
     lyric,
     meta,
+    creditPlate: null,
     artwork,
     mark,
     vibePill,

@@ -51,8 +51,24 @@ export function StageSocialCardLayers({
             ))
           : lyricFallback}
       </p>
-      {layout.meta && (songTitle || artistName) ? (
-        <div style={{ position: 'absolute', left: layout.meta.x, top: layout.meta.y, zIndex: 2, maxWidth: layout.contentWidth }}>
+      {layout.creditPlate ? (
+        <div
+          style={{
+            position: 'absolute',
+            left: layout.creditPlate.x,
+            top: layout.creditPlate.y,
+            width: layout.creditPlate.width,
+            height: layout.creditPlate.height,
+            borderRadius: layout.creditPlate.radius,
+            background: layout.creditPlate.fill,
+            border: `1px solid ${layout.creditPlate.border}`,
+            zIndex: 1,
+            pointerEvents: 'none',
+          }}
+        />
+      ) : null}
+      {layout.meta ? (
+        <div style={{ position: 'absolute', left: layout.meta.x, top: layout.meta.y, zIndex: 3, maxWidth: layout.contentWidth }}>
           {layout.meta.song ? (
             <p
               title={layout.meta.song.truncated ? layout.meta.song.fullText ?? layout.meta.song.text : undefined}
@@ -103,7 +119,7 @@ export function StageSocialCardLayers({
             height: layout.artwork.height,
             borderRadius: layout.artwork.width * 0.18,
             objectFit: 'cover',
-            zIndex: 2,
+            zIndex: 3,
           }}
         />
       ) : null}

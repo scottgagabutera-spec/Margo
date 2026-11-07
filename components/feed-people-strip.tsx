@@ -101,7 +101,7 @@ export function FeedPeopleStrip({
   return (
     <div className="margo-feed-people-strip">
       <MargoSectionHeader
-        title="Find your people"
+        title="Who to follow"
         actionHref="/search?scope=people"
         actionLabel="See all"
       />

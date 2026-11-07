@@ -13,7 +13,6 @@ import { MomentVibeRow } from '@/components/moment-vibe-row'
 import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
 import { MomentActionMenu, type MomentActionMenuItem } from '@/components/moment-action-menu'
 import { MomentOutreachActions } from '@/components/moment-outreach-actions'
-import { MomentExportScrollHint } from '@/components/moment-export-scroll-hint'
 import { recordCardExport } from '@/lib/engagement/card-exports'
 import {
   normalizeLine,
@@ -522,6 +521,7 @@ export function MomentShareStudio({
             onExportAtmosphereChange={setExportAtmosphereId}
             shapeId={shapeId}
             onShapeChange={setShapeId}
+            hideShapeFooterHint={isModal}
           />
         </>
       ) : null}
@@ -617,28 +617,114 @@ export function MomentShareStudio({
     return (
       <>
         {mediaReadySheetEl}
-        <MomentExportScrollHint active={shapeId === 'vertical'} />
-        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap }}>
-        {openMenu ? (
-          <button
-            type="button"
-            aria-label="Close menu"
-            onClick={() => setOpenMenu(null)}
+        <div
+          style={{
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%',
+            minHeight: 0,
+            gap: 0,
+          }}
+        >
+          {openMenu ? (
+            <button
+              type="button"
+              aria-label="Close menu"
+              onClick={() => setOpenMenu(null)}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: modalMenuScrimZIndex,
+                border: 'none',
+                background: 'rgba(7,6,10,0.42)',
+                cursor: 'default',
+              }}
+            />
+          ) : null}
+          <div style={{ flexShrink: 0, paddingBottom: gap }}>
+            {previewLine ? (
+              <>
+                {isMulti && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: gap }}>
+                    <button
+                      type="button"
+                      aria-label="Previous line"
+                      onClick={() => setLineIndex((i) => (i - 1 + momentLines.length) % momentLines.length)}
+                      style={navBtnStyle}
+                    >
+                      <span style={{ display: 'flex', transform: 'rotate(180deg)' }}>
+                        <ChevronRightIcon size={14} color="var(--text-secondary)" />
+                      </span>
+                    </button>
+                    <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.62rem', color: 'var(--text-muted)' }}>
+                      Line {lineIndex + 1} of {momentLines.length}
+                    </span>
+                    <button
+                      type="button"
+                      aria-label="Next line"
+                      onClick={() => setLineIndex((i) => (i + 1) % momentLines.length)}
+                      style={navBtnStyle}
+                    >
+                      <ChevronRightIcon size={14} color="var(--text-secondary)" />
+                    </button>
+                  </div>
+                )}
+                <MomentExportPreviewFrame shapeId={shapeId}>
+                  <StageMomentCard
+                    lyric={previewLine.lyric}
+                    songTitle={previewLine.songTitle}
+                    artistName={previewLine.artistName}
+                    artwork={previewLine.artworkUrl}
+                    vibeLabel={exportVibeLabel}
+                    cardThemeId={cardThemeId}
+                    atmosphereId={exportAtmosphereId}
+                    shapeId={shapeId}
+                    hideVibeChrome
+                    effectOwnsFill
+                    canPlay={canPlayInline}
+                    playing={playing}
+                    buffering={buffering}
+                    onPlay={startPreviewPlayback}
+                  />
+                </MomentExportPreviewFrame>
+              </>
+            ) : null}
+          </div>
+          <div
             style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: modalMenuScrimZIndex,
-              border: 'none',
-              background: 'rgba(7,6,10,0.42)',
-              cursor: 'default',
+              flex: 1,
+              minHeight: 0,
+              overflowY: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              display: 'flex',
+              flexDirection: 'column',
+              gap,
+              paddingBottom: 'calc(28px + env(safe-area-inset-bottom, 0px))',
             }}
-          />
-        ) : null}
-        {cardSection}
-        <div style={{ position: 'relative', zIndex: 1, flexShrink: 0 }}>
-          {progressBanner}
-          {actionRow}
-        </div>
+          >
+            {previewLine ? (
+              <>
+                <MomentVibeRow
+                  key={`vibe-${shapeId}`}
+                  vibeLabel={exportVibeLabel}
+                  vibeOptions={MOMENT_VIBE_PICKER_OPTIONS}
+                  onVibeSelect={setExportVibeLabel}
+                />
+                <MomentExportCustomizeBar
+                  cardThemeId={cardThemeId}
+                  onThemeChange={setCardThemeId}
+                  exportAtmosphereId={exportAtmosphereId}
+                  onExportAtmosphereChange={setExportAtmosphereId}
+                  shapeId={shapeId}
+                  onShapeChange={setShapeId}
+                  hideShapeFooterHint
+                />
+              </>
+            ) : null}
+            {progressBanner}
+            {actionRow}
+          </div>
         </div>
       </>
     )
