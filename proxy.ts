@@ -4,6 +4,11 @@ import { supabaseCookieOptions } from '@/lib/supabase/cookie-options'
 import { userNeedsTermsAcceptance } from '@/lib/legal/consent'
 import { isConsentEnforcementExemptPath } from '@/lib/legal/consent-paths'
 import { sanitizeAuthReturnPath } from '@/lib/auth-return'
+import { profileIsAdminByUserId } from '@/lib/admin-profile-check'
+import {
+  ADMIN_OPERATOR_HOME,
+  shouldProxyRedirectAdminFromConsumerPage,
+} from '@/lib/admin-operator-routes'
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -40,6 +45,17 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   const pathname = request.nextUrl.pathname
+
+  if (user && shouldProxyRedirectAdminFromConsumerPage(pathname)) {
+    const isOperator = await profileIsAdminByUserId(user.id)
+    if (isOperator) {
+      const url = request.nextUrl.clone()
+      url.pathname = ADMIN_OPERATOR_HOME
+      url.search = ''
+      return NextResponse.redirect(url)
+    }
+  }
+
   if (user && userNeedsTermsAcceptance(user) && !isConsentEnforcementExemptPath(pathname)) {
     const url = request.nextUrl.clone()
     const existingReturn = request.nextUrl.searchParams.get('returnTo')

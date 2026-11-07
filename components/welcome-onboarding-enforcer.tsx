@@ -53,12 +53,15 @@ export function WelcomeOnboardingEnforcer() {
         `${pathname}${typeof window !== 'undefined' ? window.location.search : ''}`,
       ) || '/feed'
 
+      if (profileCtx.isAdminOperator) return
+
       if (!needsOnboarding({
         identity: identity ?? profileCtx.identity,
         settings: profileCtx.settings,
         profileReadOk: profileCtx.profileReadStatus === 'ok',
         authUserCreatedAt,
         activity: profileCtx.activity,
+        isAdminOperator: profileCtx.isAdminOperator,
       })) {
         return
       }

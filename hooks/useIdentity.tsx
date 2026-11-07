@@ -73,6 +73,8 @@ function mapRow(row: any): Identity {
 interface IdentityContextValue {
   user: IdentityUser | null
   identity: Identity | null
+  /** Management-only account — must not use consumer app surfaces. */
+  isAdminOperator: boolean
   loading: boolean
   waitUntilReady: (timeoutMs?: number) => Promise<Identity | null>
   updateDisplayName: (newName: string) => Promise<ActionResult>
@@ -132,6 +134,7 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
   const { user: supabaseUser, loading: authLoading } = useAuthGate()
   const [identityUser, setIdentityUser] = useState<IdentityUser | null>(null)
   const [identity, setIdentityState] = useState<Identity | null>(null)
+  const [isAdminOperator, setIsAdminOperator] = useState(false)
   const [profileLoading, setProfileLoading] = useState(true)
   const syncedUidRef = useRef<string | null>(null)
 
@@ -146,6 +149,7 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
     if (existing) {
       const mapped = mapRow(existing)
       setIdentityState(mapped)
+      setIsAdminOperator(!!existing.is_admin)
       const legal = legalConsentFromUserMetadata(meta as Record<string, unknown>)
       if (legal && !(existing.settings as Record<string, unknown> | null)?.legal) {
         const settings = mergeLegalConsentIntoSettings(
@@ -183,6 +187,7 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
       if (data) {
         const mapped = mapRow(data)
         setIdentityState(mapped)
+        setIsAdminOperator(!!data.is_admin)
         return mapped
       }
       if (error?.code === '23505') {
@@ -260,6 +265,7 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
       syncedUidRef.current = null
       setIdentityUser(null)
       setIdentityState(null)
+      setIsAdminOperator(false)
       if (active) {
         setProfileLoading(false)
         flushReadyWaiters(null)
@@ -409,7 +415,10 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
       console.error('Failed to refresh identity:', error)
       return
     }
-    if (data) setIdentityState(mapRow(data))
+    if (data) {
+      setIdentityState(mapRow(data))
+      setIsAdminOperator(!!data.is_admin)
+    }
   }, [identityUser])
 
   return (
@@ -417,6 +426,7 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
       value={{
         user: identityUser,
         identity,
+        isAdminOperator,
         loading: authLoading || profileLoading,
         waitUntilReady,
         updateDisplayName,

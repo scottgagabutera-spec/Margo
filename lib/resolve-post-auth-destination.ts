@@ -35,6 +35,7 @@ export type ProfileSettingsReadResult = {
   profileReadStatus: 'ok' | 'error'
   identity: WelcomeOnboardingProfileContext['identity']
   activity: WelcomeOnboardingProfileContext['activity']
+  isAdminOperator?: boolean
 }
 
 export async function loadWelcomeOnboardingContext(
@@ -43,13 +44,22 @@ export async function loadWelcomeOnboardingContext(
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('username, display_name, settings, posts_count, followers_count, following_count, avatar_url')
+      .select('username, display_name, settings, posts_count, followers_count, following_count, avatar_url, is_admin')
       .eq('id', userId)
       .maybeSingle()
-    if (error) return { settings: null, profileReadStatus: 'error', identity: null, activity: undefined }
+    if (error) {
+      return {
+        settings: null,
+        profileReadStatus: 'error',
+        identity: null,
+        activity: undefined,
+        isAdminOperator: false,
+      }
+    }
     return {
       settings: (data?.settings as WelcomeOnboardingProfileContext['settings']) ?? null,
       profileReadStatus: 'ok',
+      isAdminOperator: data?.is_admin === true,
       identity: data
         ? {
             username: data.username as string,
@@ -59,7 +69,7 @@ export async function loadWelcomeOnboardingContext(
       activity: activityFromProfileRow(data),
     }
   } catch {
-    return { settings: null, profileReadStatus: 'error', identity: null, activity: undefined }
+    return { settings: null, profileReadStatus: 'error', identity: null, activity: undefined, isAdminOperator: false }
   }
 }
 
@@ -71,7 +81,7 @@ export async function resolvePostAuthDestination(
 ): Promise<string> {
   if (!identity || !userId) {
     return resolvePostAuthNavigation(
-      { identity, settings: null, profileReadOk: false, authUserCreatedAt },
+      { identity, settings: null, profileReadOk: false, authUserCreatedAt, isAdminOperator: false },
       returnTo,
     )
   }
@@ -83,6 +93,7 @@ export async function resolvePostAuthDestination(
       profileReadOk: profileCtx.profileReadStatus === 'ok',
       authUserCreatedAt,
       activity: profileCtx.activity,
+      isAdminOperator: profileCtx.isAdminOperator === true,
     },
     returnTo,
   )

@@ -7,6 +7,7 @@ export function buildPostAuthContext(
   profileReadStatus: 'ok' | 'error',
   authUserCreatedAt: string | null | undefined,
   activity?: ProfileActivitySignals,
+  isAdminOperator?: boolean,
 ): WelcomeOnboardingProfileContext {
   return {
     identity,
@@ -14,5 +15,6 @@ export function buildPostAuthContext(
     profileReadOk: profileReadStatus === 'ok',
     authUserCreatedAt,
     activity,
+    isAdminOperator: isAdminOperator === true,
   }
 }

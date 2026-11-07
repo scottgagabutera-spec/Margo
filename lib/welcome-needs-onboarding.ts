@@ -1,3 +1,4 @@
+import { ADMIN_OPERATOR_HOME } from './admin-operator-routes.ts'
 import { sanitizeOAuthReturnPath } from './oauth-return.ts'
 import { isTemporaryMemberUsername } from './username-validator.ts'
 import {
@@ -41,6 +42,8 @@ export type WelcomeOnboardingProfileContext = {
   profileReadOk: boolean
   authUserCreatedAt: string | null | undefined
   activity?: ProfileActivitySignals
+  /** Management account — always land on /admin, never consumer onboarding. */
+  isAdminOperator?: boolean
 }
 
 /** True when created_at is not yet available for cutoff logic (null, empty, or unparseable). */
@@ -127,6 +130,9 @@ export function resolvePostAuthNavigation(
   ctx: WelcomeOnboardingProfileContext,
   returnTo?: string | null,
 ): string {
+  if (ctx.isAdminOperator === true) {
+    return ADMIN_OPERATOR_HOME
+  }
   if (needsOnboarding(ctx)) {
     return welcomeOnboardingPath(returnTo)
   }
@@ -134,6 +140,7 @@ export function resolvePostAuthNavigation(
 }
 
 const EXEMPT_PREFIXES = [
+  '/admin',
   '/welcome',
   '/signin',
   '/signup',
@@ -153,6 +160,7 @@ const EXEMPT_PREFIXES = [
 export function isWelcomeOnboardingExemptPath(pathname: string | null | undefined): boolean {
   if (!pathname) return true
   const path = pathname.split('?')[0]
+  if (path === '/admin' || path.startsWith('/admin/')) return true
   if (path === '/welcome' || path.startsWith('/welcome/')) return true
   for (const prefix of EXEMPT_PREFIXES) {
     if (prefix.endsWith('/')) {

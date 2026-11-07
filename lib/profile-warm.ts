@@ -101,7 +101,21 @@ function normalizeViewerFollowStatus(raw: unknown): 'pending' | 'accepted' | nul
   return undefined
 }
 
+async function isConsumerVisibleUsernameClient(username: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/profile/is-public?username=${encodeURIComponent(username)}`, {
+      credentials: 'same-origin',
+    })
+    if (!res.ok) return false
+    const body = await res.json().catch(() => ({}))
+    return body?.visible === true
+  } catch {
+    return false
+  }
+}
+
 export async function fetchProfilePeek(username: string): Promise<WarmProfileBundle | null> {
+  if (!(await isConsumerVisibleUsernameClient(username))) return null
   const { data, error } = await supabase.rpc('profile_peek_for_username', {
     p_username: username,
   })
@@ -110,6 +124,7 @@ export async function fetchProfilePeek(username: string): Promise<WarmProfileBun
 }
 
 export async function fetchProfileBundle(username: string): Promise<WarmProfileBundle | null> {
+  if (!(await isConsumerVisibleUsernameClient(username))) return null
   const { data, error } = await supabase
     .from('profiles')
     .select('id, username, display_name, is_artist, artist_status, bio, avatar_url, cover_url, signature_lyric, signature_song, signature_artist, signature_song_id, is_private, follow_lists_private, who_can_message, artist_links, followers_count, following_count, posts_count')

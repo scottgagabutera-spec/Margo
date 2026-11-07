@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { stripHandlePrefix } from '@/lib/artist-identity'
+import { filterOutAdminProfileRows } from '@/lib/profile-public-server'
 import {
   lyricLineToCatalogDoc,
   postToLyricDoc,
@@ -105,15 +106,24 @@ export async function searchPostgresFallback(
       : Promise.resolve({ data: [] as Record<string, unknown>[], error: null }),
   ])
 
+  const userRows = await filterOutAdminProfileRows([
+    ...rows('users.username', usersByName),
+    ...rows('users.display', usersByDisplay),
+  ])
+  const artistRows = await filterOutAdminProfileRows([
+    ...rows('artists.username', artistsByName),
+    ...rows('artists.display', artistsByDisplay),
+  ])
+
   const users = dedupe(
-    [...rows('users.username', usersByName), ...rows('users.display', usersByDisplay)]
+    userRows
       .map((row) => profileToUserDoc(row as never))
       .filter((d): d is NonNullable<typeof d> => !!d),
     limitPerType,
   )
 
   const artists = dedupe(
-    [...rows('artists.username', artistsByName), ...rows('artists.display', artistsByDisplay)]
+    artistRows
       .map((row) => profileToArtistDoc(row as never))
       .filter((d): d is NonNullable<typeof d> => !!d),
     limitPerType,

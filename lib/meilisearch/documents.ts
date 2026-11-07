@@ -7,8 +7,9 @@ export function profileToUserDoc(row: {
   display_name: string | null
   avatar_url?: string | null
   is_artist?: boolean | null
+  is_admin?: boolean | null
 }): MargoSearchDocument | null {
-  if (!row.username) return null
+  if (!row.username || row.is_admin === true) return null
   return {
     id: `user:${row.id}`,
     type: 'user',
@@ -28,11 +29,12 @@ export function profileToArtistDoc(
     display_name: string | null
     avatar_url?: string | null
     is_artist?: boolean | null
+    is_admin?: boolean | null
   },
   songCount = 0,
   totalPlays = 0,
 ): MargoSearchDocument | null {
-  if (!row.is_artist || !row.username) return null
+  if (!row.is_artist || !row.username || row.is_admin === true) return null
   return {
     id: `artist:${row.id}`,
     type: 'artist',

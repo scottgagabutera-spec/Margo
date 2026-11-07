@@ -56,6 +56,7 @@ export async function resolvePostAuthDestinationWithWait(
           'ok',
           null,
           profileCtx.activity,
+          profileCtx.isAdminOperator,
         )
         if (needsOnboarding(pendingCtx)) {
           return {
@@ -74,6 +75,7 @@ export async function resolvePostAuthDestinationWithWait(
           'ok',
           authUserCreatedAt,
           profileCtx.activity,
+          profileCtx.isAdminOperator,
         ),
         returnTo,
       )
@@ -92,7 +94,7 @@ export async function resolvePostAuthDestinationWithWait(
   const lastCreatedAt = await fetchAuthUserCreatedAt()
   const lastProfile = userId
     ? await loadWelcomeOnboardingContext(userId)
-    : { settings: null, profileReadStatus: 'error' as const, identity: null, activity: undefined }
+    : { settings: null, profileReadStatus: 'error' as const, identity: null, activity: undefined, isAdminOperator: false }
   if (lastIdentity && lastProfile.profileReadStatus === 'ok') {
     const dest = resolvePostAuthNavigation(
       buildPostAuthContext(
@@ -101,6 +103,7 @@ export async function resolvePostAuthDestinationWithWait(
         'ok',
         lastCreatedAt,
         lastProfile.activity,
+        lastProfile.isAdminOperator,
       ),
       returnTo,
     )

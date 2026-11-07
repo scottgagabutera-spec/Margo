@@ -16,6 +16,7 @@ import { AuthReturnRestorer } from '@/components/auth-return-restorer'
 import { AuthGateHost } from '@/components/auth-gate-host'
 import { WelcomeOnboardingEnforcer } from '@/components/welcome-onboarding-enforcer'
 import { ConsentFirstShell } from '@/components/consent-first-shell'
+import { AdminConsumerGuard } from '@/components/admin-consumer-guard'
 import { PostAuthMountGate } from '@/components/post-auth-mount-gate'
 import { TabSwipeProvider } from '@/hooks/useTabSwipe'
 import { Toaster } from '@/components/ui/sonner'
@@ -210,6 +211,7 @@ export default function RootLayout({
                     </ConsentFirstShell>
                   </Suspense>
                   <AuthGateHost />
+                  <AdminConsumerGuard />
                   </NavBackProvider>
                   </HubProvider>
                 </MessagingProvider>
