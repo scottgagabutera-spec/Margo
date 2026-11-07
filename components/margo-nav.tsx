@@ -106,9 +106,12 @@ export function MargoNav() {
   }, [])
   const isLanding = pathname === '/'
   // Landing uses app top bar at ≥640px (Stage 3); phone keeps in-page landing nav + bottom tab bar.
+  const isProfileRoute =
+    !!pathname?.startsWith('/profile') || pathname === '/you'
   const shellHidden =
     (hidesAppNav(pathname) && !(isLanding && !isMobile)) ||
-    (isMobile && isMessageThreadPath(pathname))
+    (isMobile && isMessageThreadPath(pathname)) ||
+    (isMobile && isProfileRoute)
 
   const isSignedIn = !!user && !user.isAnonymous
   const applicationStatus = application?.status ?? 'none'

@@ -215,28 +215,47 @@ export function NotificationRowSkeletonList({ count = 6 }: { count?: number }) {
   )
 }
 
-/** You tab / profile: avatar, name, bio, content tabs. */
+/** Profile shell: portrait column + signature + tab strip (matches margo-profile-page). */
 export function ProfilePageSkeleton() {
   return (
-    <div style={{ paddingTop: 8 }}>
+    <main className="margo-profile-page" style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <PulseStyle />
-      <div style={bone({ height: 160, width: '100%', borderRadius: 0, border: 'none', margin: '0 -20px 16px' }, 0)} />
-      <div style={bone({ width: 88, height: 88, borderRadius: '50%', border: 'none', marginTop: -52, marginBottom: 16 }, 40)} />
-      <div style={bone({ height: 14, width: '42%', borderRadius: 4, border: 'none', marginBottom: 8 }, 80)} />
-      <div style={bone({ height: 10, width: '28%', borderRadius: 4, border: 'none', marginBottom: 20 }, 100)} />
-      <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
-        <div style={bone({ height: 12, width: 72, borderRadius: 4, border: 'none' }, 120)} />
-        <div style={bone({ height: 12, width: 72, borderRadius: 4, border: 'none' }, 140)} />
+      <div className="margo-profile-shell">
+        <div className="margo-profile-shell__left">
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+            <div style={bone({ width: 76, height: 96, borderRadius: 14, border: 'none' }, 0)} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+            <div style={bone({ height: 14, width: 120, borderRadius: 4, border: 'none' }, 40)} />
+            <div style={bone({ height: 10, width: 88, borderRadius: 4, border: 'none' }, 80)} />
+            <div style={bone({ height: 10, width: '72%', maxWidth: 280, borderRadius: 4, border: 'none' }, 100)} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 16 }}>
+            {[0, 1, 2].map((i) => (
+              <div key={i} style={bone({ width: 72, height: 36, borderRadius: 8, border: 'none' }, 120 + i * 30)} />
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            <div style={bone({ flex: 1, height: 34, borderRadius: 10, border: 'none' }, 200)} />
+            <div style={bone({ flex: 1, height: 34, borderRadius: 10, border: 'none' }, 220)} />
+          </div>
+          <div style={bone({ height: 56, width: '100%', borderRadius: 14, border: 'none', marginBottom: 20 }, 260)} />
+        </div>
+        <div className="margo-profile-shell__right">
+          <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+            {Array.from({ length: 4 }, (_, i) => (
+              <div key={i} style={bone({ width: 52, height: 52, borderRadius: 12, border: 'none' }, 300 + i * 40)} />
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+            {['Lyrics', 'Reposts', 'Backs'].map((_, i) => (
+              <div key={i} style={bone({ height: 10, width: 56, borderRadius: 4, border: 'none' }, 420 + i * 30)} />
+            ))}
+          </div>
+          <div style={bone({ height: 120, width: '100%', borderRadius: 16, border: 'none' }, 520)} />
+        </div>
       </div>
-      <div style={bone({ height: 10, width: '88%', borderRadius: 4, border: 'none', marginBottom: 8 }, 160)} />
-      <div style={bone({ height: 10, width: '70%', borderRadius: 4, border: 'none', marginBottom: 28 }, 180)} />
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
-        {['48%', '28%', '22%'].map((w, i) => (
-          <div key={w} style={bone({ height: 12, width: w, borderRadius: 4, border: 'none' }, 200 + i * 40)} />
-        ))}
-      </div>
-      <div style={bone({ height: 72, width: '100%', borderRadius: 12 }, 280)} />
-    </div>
+    </main>
   )
 }
 
@@ -303,8 +322,8 @@ export function ProfileSocialActionsSkeleton() {
   return (
     <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
       <PulseStyle />
-      <div style={bone({ width: 96, height: 32, borderRadius: 50, border: 'none' })} />
-      <div style={bone({ width: 96, height: 32, borderRadius: 50, border: 'none' }, 80)} />
+      <div style={bone({ flex: 1, height: 34, borderRadius: 10, border: 'none' })} />
+      <div style={bone({ flex: 1, height: 34, borderRadius: 10, border: 'none' }, 80)} />
     </div>
   )
 }

@@ -141,7 +141,11 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${lora.variable} ${sora.variable} ${GeistSans.variable}`}>
+    <html
+      lang="en"
+      className={`${lora.variable} ${sora.variable} ${GeistSans.variable}`}
+      style={{ backgroundColor: '#07060A' }}
+    >
       <head>
         <link rel="dns-prefetch" href="https://audio.trymargo.com" />
         <link rel="preconnect" href="https://audio.trymargo.com" crossOrigin="anonymous" />
@@ -170,8 +174,12 @@ export default function RootLayout({
         />
       </head>
       <body
-        className="antialiased bg-gradient-to-br from-[#08070C] via-[#0a0909] to-[#0f0e14] min-h-screen"
-        style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', color: '#F4F1ED' }}
+        className="antialiased min-h-screen"
+        style={{
+          fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
+          color: '#F4F1ED',
+          backgroundColor: '#07060A',
+        }}
       >
         <div
           className="fixed inset-0 pointer-events-none z-50 opacity-[0.03]"

@@ -19,6 +19,7 @@ import { SessionQueueList } from '@/components/session-queue-list'
 import { MiniPlayerFeedChrome } from '@/components/mini-player-feed-chrome'
 import { useAudioEngine, useQueueNavigation, usePlaybackProgress } from '@/hooks/useAudioEngine'
 import { isMessageThreadPath } from '@/lib/chrome-mode'
+import { usePrimaryTab } from '@/components/primary-tab-shell'
 
 const VIBE_COLORS: Record<string, string> = {
   love: '#FF6B9D', heartbreak: '#ff6060', hope: '#7B9FFF',
@@ -35,6 +36,7 @@ const DISMISS_VELOCITY = 0.5 // px/ms
 
 export function MiniPlayer() {
   const pathname = usePathname()
+  const { barTab } = usePrimaryTab()
   const engineState = useAudioEngine()
   const { canPrev, canNext } = useQueueNavigation()
   const progress = usePlaybackProgress()
@@ -62,7 +64,11 @@ export function MiniPlayer() {
   // full-width bar — same reasoning as Feed: a single-object creation
   // screen shouldn't have its layout pushed around by player chrome.
   const isOnCompose = !!pathname?.startsWith('/compose')
-  const usesFloatingChrome = isOnFeed || isOnCompose
+  const isOnProfileSurface =
+    barTab === 'you'
+    || pathname === '/you'
+    || !!pathname?.startsWith('/profile')
+  const usesFloatingChrome = (isOnFeed || isOnCompose) && !isOnProfileSurface
 
   // Feed shows pill/orb (A.3); karaoke page owns immersive chrome.
   const isHidden =
