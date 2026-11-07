@@ -214,7 +214,7 @@ export function MargoNav() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', pointerEvents: 'none' }}>
           {isLanding ? null : (
-            <div style={{ pointerEvents: 'auto' }}><SearchNavLink /></div>
+            <div data-margo-nav-search style={{ pointerEvents: 'auto' }}><SearchNavLink /></div>
           )}
 
           <div style={{ display: 'none' }} className="margo-desktop-nav">

@@ -52,6 +52,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
+  interactiveWidget: 'resizes-visual',
 }
 
 const SITE_TITLE = 'Margo | Talk, Listen & Share Through Song Lyrics'
