@@ -85,8 +85,8 @@ export const STAGE_CARD_LAYOUT_REF = {
  * Credits must sit inside the remaining safe rectangle, not on the frame edge.
  */
 export const VERTICAL_SOCIAL_SAFE = {
-  topFraction: 0.10,
-  bottomFraction: 0.22,
+  topFraction: 0.14,
+  bottomFraction: 0.20,
   sideFraction: 0.07,
 } as const
 
@@ -96,10 +96,10 @@ export const STAGE_SHORTS_LAYOUT_REF = {
   borderRadius: 0,
   lyric: {
     /** Maximum Shorts lyric size — stacked poem, not a feed card scaled up */
-    fontSize: 15,
-    minFontSize: 13,
-    lineHeight: 1.26,
-    stanzaGapEm: 0.36,
+    fontSize: 17,
+    minFontSize: 14,
+    lineHeight: 1.28,
+    stanzaGapEm: 0.38,
   },
   artwork: { size: 56, radius: 10, gap: 16 },
   /** Space under the last lyric line before cover / song / artist. */
@@ -107,6 +107,9 @@ export const STAGE_SHORTS_LAYOUT_REF = {
 } as const
 
 export const SHORTS_ASPECT = 16 / 9
+
+/** Native 16:9 wide export — height = width × WIDE_HEIGHT_FRACTION */
+export const WIDE_HEIGHT_FRACTION = 9 / 16
 
 export function stageCardScale(outputWidthPx: number): number {
   return outputWidthPx / STAGE_CARD_REF_WIDTH

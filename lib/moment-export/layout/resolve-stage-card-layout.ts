@@ -6,10 +6,12 @@ import {
   STAGE_CARD_LAYOUT_REF,
   STAGE_SHORTS_LAYOUT_REF,
   VERTICAL_SOCIAL_SAFE,
+  WIDE_HEIGHT_FRACTION,
   stageCardScale,
 } from '@/lib/moment-export/layout/constants'
 import {
   presentLyricText,
+  presentLyricTextWithMaxHeight,
   truncateToWidth,
 } from '@/lib/moment-export/layout/text-layout'
 import type { LayoutLyricLine } from '@/lib/moment-export/layout/types'
@@ -79,8 +81,10 @@ function placeLyricLines(
  * Pure layout — no canvas drawing.
  *
  * Feed: content-height quote card, left-aligned lyric, uniform type.
+ * Square: fixed 1:1, centered lyric, Margo mark in a reserved bottom band.
  * Shorts: native 9:16 full-bleed, lyric + credits in the vertical-social
- * safe rectangle (above YouTube / TikTok / Reels chrome).
+ * safe rectangle; mark anchored in the bottom safe band.
+ * Wide: fixed 16:9 — artwork left, lyric/meta right, mark clear of text.
  */
 export function resolveStageCardLayout(
   input: StageCardLayoutInput,
@@ -92,9 +96,18 @@ export function resolveStageCardLayout(
   const theme = resolveExportPaintTheme(input.themeId, input.exportAtmosphereId)
   const ref = STAGE_CARD_LAYOUT_REF
   const format: StageCardFormat = input.format === 'shorts' ? 'shorts' : 'feed'
-  const shorts = format === 'shorts'
-  const isWide = input.layoutVariant === 'wide'
-  const shortsHeight = shorts ? Math.round(W * SHORTS_ASPECT) : 0
+  const variant = input.layoutVariant ?? (format === 'shorts' ? 'shorts' : 'feed')
+  const shorts = format === 'shorts' || variant === 'shorts'
+  const isWide = variant === 'wide'
+  const isSquare = variant === 'square'
+  const fixedFrame = shorts || isWide || isSquare
+  const shortsHeight = shorts
+    ? Math.round(input.outputHeightPx ?? W * SHORTS_ASPECT)
+    : 0
+  const squareHeight = isSquare ? Math.round(input.outputHeightPx ?? W) : 0
+  const wideHeight = isWide
+    ? Math.round(input.outputHeightPx ?? W * WIDE_HEIGHT_FRACTION)
+    : 0
   const padding = shorts
     ? {
         top: Math.round(shortsHeight * VERTICAL_SOCIAL_SAFE.topFraction),
@@ -119,27 +132,6 @@ export function resolveStageCardLayout(
     : roundStageToken(ref.borderRadius, W)
   const contentWidth = W - padding.left - padding.right
 
-  const lyricSource = input.lyric || ''
-  const lyricSizeRef = shorts
-    ? STAGE_SHORTS_LAYOUT_REF.lyric.fontSize
-    : isWide
-      ? 19
-      : ref.lyric.fontSize
-  const lyricMinRef = shorts ? STAGE_SHORTS_LAYOUT_REF.lyric.minFontSize : ref.lyric.minFontSize
-  const lyricLeading = shorts ? STAGE_SHORTS_LAYOUT_REF.lyric.lineHeight : ref.lyric.lineHeight
-  const lyricGapEm = shorts ? STAGE_SHORTS_LAYOUT_REF.lyric.stanzaGapEm : ref.lyric.stanzaGapEm
-  const presented = presentLyricText(lyricSource, contentWidth, measure, {
-    fontStyle: ref.lyric.fontStyle,
-    fontFamily: ref.lyric.fontFamily,
-    maxFontSize: roundStageToken(lyricSizeRef, W),
-    minFontSize: roundStageToken(lyricMinRef, W),
-  })
-  const lyricFontSize = presented.fontSize
-  const displayLines = presented.lines.map((line) => line.text)
-  const lyricLineHeight = lyricFontSize * lyricLeading
-  const stanzaGap = lyricFontSize * lyricGapEm
-  const lyricHeight = lyricBlockHeight(presented.lines, lyricLineHeight, stanzaGap)
-
   const songTitle = (input.songTitle || '').trim()
   const artistName = (input.artistName || '').trim()
   const songFS = roundStageToken(ref.meta.song.fontSize, W)
@@ -152,6 +144,7 @@ export function resolveStageCardLayout(
     : artGap
   const artSize = roundStageToken(artRef.size, W)
   const hasArt = !!input.artworkUrl
+  const wideArtSize = isWide ? roundStageToken(Math.max(artRef.size, 72), W) : artSize
 
   let metaHeight = 0
   if (songTitle) metaHeight += songFS * ref.meta.song.lineHeight
@@ -161,7 +154,7 @@ export function resolveStageCardLayout(
   }
 
   const includeVibe = input.includeVibePill !== false && !!(input.vibeLabel || '').trim()
-  const vibeH = includeVibe && !shorts
+  const vibeH = includeVibe && !shorts && !isWide && !isSquare
     ? scaleStageToken(ref.vibePill.rowGap, W) + roundStageToken(ref.vibePill.height, W)
     : 0
   const vibePillH = includeVibe ? roundStageToken(ref.vibePill.height, W) : 0
@@ -172,15 +165,84 @@ export function resolveStageCardLayout(
   const markContainer = roundStageToken(ref.mark.container, W)
   const markSymbol = roundStageToken(ref.mark.symbol, W)
   const markInset = scaleStageToken(ref.mark.inset, W)
-  const creditH = Math.max(hasArt ? artSize : 0, metaHeight, vibePillH)
+  const markGap = scaleStageToken(ref.markContentGap, W)
+  const creditH = Math.max(
+    shorts && hasArt ? artSize : isWide && hasArt ? wideArtSize : hasArt ? artSize : 0,
+    metaHeight,
+    vibePillH,
+  )
   const creditBlock = creditH > 0 ? creditH + lyricCreditGap : 0
+
+  const frameHeight = shorts
+    ? shortsHeight
+    : isSquare
+      ? squareHeight
+      : isWide
+        ? wideHeight
+        : 0
+  const logoBand = markContainer + markInset
+  const markSideReserve = isWide ? markContainer + markInset + markGap : 0
+  const lyricColWidth = isWide
+    ? Math.max(
+      48,
+      contentWidth - (hasArt ? wideArtSize + artGap : 0) - markSideReserve,
+    )
+    : contentWidth
+  const lyricX = isWide && hasArt ? padding.left + wideArtSize + artGap : padding.left
+
+  const lyricSource = input.lyric || ''
+  const lyricSizeRef = shorts
+    ? STAGE_SHORTS_LAYOUT_REF.lyric.fontSize
+    : isWide
+      ? 20
+      : isSquare
+        ? 18
+        : ref.lyric.fontSize
+  const lyricMinRef = shorts ? STAGE_SHORTS_LAYOUT_REF.lyric.minFontSize : ref.lyric.minFontSize
+  const lyricLeading = shorts ? STAGE_SHORTS_LAYOUT_REF.lyric.lineHeight : ref.lyric.lineHeight
+  const lyricGapEm = shorts ? STAGE_SHORTS_LAYOUT_REF.lyric.stanzaGapEm : ref.lyric.stanzaGapEm
+  const presentOpts = {
+    fontStyle: ref.lyric.fontStyle,
+    fontFamily: ref.lyric.fontFamily,
+    maxFontSize: roundStageToken(lyricSizeRef, W),
+    minFontSize: roundStageToken(lyricMinRef, W),
+  }
+
+  let maxLyricHeight = 0
+  if (fixedFrame && frameHeight > 0) {
+    let bodyBottom = frameHeight - padding.bottom
+    if (isSquare) bodyBottom -= logoBand
+    if (shorts) bodyBottom -= 0
+    const bodyTop = padding.top
+    const footer = isSquare || isWide ? creditBlock + (isSquare || isWide ? metaGap : 0) : creditBlock
+    maxLyricHeight = Math.max(
+      roundStageToken(lyricMinRef, W) * lyricLeading,
+      bodyBottom - bodyTop - footer,
+    )
+  }
+
+  const presented = fixedFrame && maxLyricHeight > 0
+    ? presentLyricTextWithMaxHeight(lyricSource, lyricColWidth, measure, {
+      ...presentOpts,
+      maxHeightPx: maxLyricHeight,
+      lineHeight: lyricLeading,
+      stanzaGapEm: lyricGapEm,
+    })
+    : presentLyricText(lyricSource, lyricColWidth, measure, presentOpts)
+  const lyricFontSize = presented.fontSize
+  const displayLines = presented.lines.map((line) => line.text)
+  const lyricLineHeight = lyricFontSize * lyricLeading
+  const stanzaGap = lyricFontSize * lyricGapEm
+  const lyricHeight = lyricBlockHeight(presented.lines, lyricLineHeight, stanzaGap)
 
   let cursorY = padding.top
   let shortsCreditY = 0
-  let outputHeight = shortsHeight
+  let outputHeight = shorts ? shortsHeight : isSquare ? squareHeight : isWide ? wideHeight : 0
+  let squareCreditY = 0
+  let wideArtY = 0
+
   if (shorts) {
-    const markReserve = markContainer + artGap
-    const bodyTop = padding.top + markReserve
+    const bodyTop = padding.top
     const bodyBottom = shortsHeight - padding.bottom
     const available = Math.max(lyricLineHeight, bodyBottom - bodyTop - creditBlock)
     cursorY = lyricHeight <= available
@@ -189,7 +251,29 @@ export function resolveStageCardLayout(
     shortsCreditY = cursorY + lyricHeight + lyricCreditGap
     if (creditH > 0 && shortsCreditY + creditH > bodyBottom) {
       shortsCreditY = bodyBottom - creditH
-      cursorY = bodyTop
+      cursorY = Math.max(bodyTop, shortsCreditY - lyricCreditGap - lyricHeight)
+    }
+  } else if (isSquare && squareHeight > 0) {
+    const bodyTop = padding.top
+    const bodyBottom = squareHeight - padding.bottom - logoBand
+    const footer = creditBlock > 0 ? creditBlock + metaGap : 0
+    const available = Math.max(lyricLineHeight, bodyBottom - bodyTop - footer)
+    cursorY = bodyTop + Math.max(0, (available - lyricHeight) / 2)
+    squareCreditY = bodyBottom - (creditH > 0 ? creditH : 0)
+  } else if (isWide && wideHeight > 0) {
+    const bodyTop = padding.top
+    const bodyBottom = wideHeight - padding.bottom
+    const metaReserve = (songTitle || artistName)
+      ? metaHeight + metaGap
+      : 0
+    const available = Math.max(
+      lyricLineHeight,
+      bodyBottom - bodyTop - metaReserve - (includeVibe ? vibePillH + metaGap : 0),
+    )
+    cursorY = bodyTop + Math.max(0, (available - lyricHeight) / 2)
+    if (hasArt) {
+      const artH = wideArtSize
+      wideArtY = padding.top + Math.max(0, (bodyBottom - bodyTop - artH) / 2)
     }
   }
 
@@ -199,7 +283,7 @@ export function resolveStageCardLayout(
     displayLines,
     lines: lyricLines,
     stanzaGap,
-    align: shorts ? 'center' : 'left',
+    align: shorts || isSquare ? 'center' : 'left',
     style: {
       fontFamily: ref.lyric.fontFamily,
       fontStyle: ref.lyric.fontStyle,
@@ -208,9 +292,9 @@ export function resolveStageCardLayout(
       lineHeight: lyricLeading,
       color: theme.ink,
     },
-    x: padding.left,
+    x: lyricX,
     y: cursorY,
-    maxWidth: contentWidth,
+    maxWidth: lyricColWidth,
     height: lyricHeight,
   }
 
@@ -222,14 +306,26 @@ export function resolveStageCardLayout(
     const artistFont = metaArtistFont(artistFS, geistFamily)
     const metaMaxW = shorts
       ? Math.max(24, contentWidth - (hasArt ? artSize + artGap : 0) - vibeReserve)
-      : contentWidth
-    const metaX = shorts && hasArt
-      ? padding.left + artSize + artGap
-      : padding.left
+      : isWide
+        ? lyricColWidth
+        : contentWidth
+    let metaX = padding.left
+    if (shorts && hasArt) metaX = padding.left + artSize + artGap
+    else if (isWide) metaX = lyricX
+    else if (isSquare && hasArt) {
+      metaX = padding.left
+        + (contentWidth - Math.min(metaMaxW, contentWidth - artSize - artGap)) / 2
+        + artSize
+        + artGap
+    }
 
     let metaY: number
     if (shorts) {
       metaY = shortsCreditY + Math.max(0, (creditH - metaHeight) / 2)
+    } else if (isSquare) {
+      metaY = squareCreditY + Math.max(0, (creditH - metaHeight) / 2)
+    } else if (isWide) {
+      metaY = lyric.y + lyric.height + metaGap
     } else {
       metaY = cursorY + metaGap
     }
@@ -273,7 +369,7 @@ export function resolveStageCardLayout(
     }
 
     meta = { song: songLine, artist: artistLine, x: metaX, y: metaY, height: metaHeight }
-    if (!shorts) cursorY = metaY + metaHeight
+    if (!shorts && !isSquare && !isWide) cursorY = metaY + metaHeight
   }
 
   let artwork: ResolvedStageCardLayout['artwork'] = null
@@ -284,6 +380,26 @@ export function resolveStageCardLayout(
         y: shortsCreditY + Math.max(0, (creditH - artSize) / 2),
         width: artSize,
         height: artSize,
+      }
+    } else if (isWide) {
+      artwork = {
+        x: padding.left,
+        y: wideArtY,
+        width: wideArtSize,
+        height: wideArtSize,
+      }
+    } else if (isSquare) {
+      const squareArtSize = artSize
+      const hasMeta = !!(songTitle || artistName)
+      const rowW = hasMeta
+        ? squareArtSize + artGap + contentWidth * 0.5
+        : squareArtSize
+      const artX = padding.left + Math.max(0, (contentWidth - rowW) / 2)
+      artwork = {
+        x: artX,
+        y: squareCreditY + Math.max(0, (creditH - squareArtSize) / 2),
+        width: squareArtSize,
+        height: squareArtSize,
       }
     } else {
       cursorY += artGap
@@ -297,10 +413,26 @@ export function resolveStageCardLayout(
     }
   }
 
+  let markX = W - markInset - markContainer
+  let markY = markInset
+  if (shorts) {
+    markX = padding.left
+    markY = shortsHeight - padding.bottom + Math.max(0, Math.round((padding.bottom - markContainer) / 2))
+  } else if (isSquare) {
+    markX = W - markInset - markContainer
+    markY = squareHeight - padding.bottom - markContainer
+  } else if (isWide) {
+    markX = W - markInset - markContainer
+    markY = wideHeight - padding.bottom - markContainer
+  } else {
+    markX = W - markInset - markContainer
+    markY = markInset
+  }
+
   const mark: ResolvedStageCardLayout['mark'] = {
     container: {
-      x: shorts ? padding.left : W - markInset - markContainer,
-      y: shorts ? padding.top : markInset,
+      x: markX,
+      y: markY,
       width: markContainer,
       height: markContainer,
     },
@@ -310,10 +442,12 @@ export function resolveStageCardLayout(
       : ref.mark.insetShadowDark,
   }
 
-  if (!shorts) {
+  if (!fixedFrame) {
     outputHeight = Math.ceil(
       Math.max(cursorY + padding.bottom + vibeH, padding.top + lyricLineHeight + padding.bottom),
     )
+  } else if (!outputHeight) {
+    outputHeight = frameHeight
   }
 
   let vibePill: ResolvedStageCardLayout['vibePill'] = null
@@ -326,10 +460,16 @@ export function resolveStageCardLayout(
     const display = truncateToWidth(input.vibeLabel.toUpperCase(), maxPillW - padH * 2, measure, font)
     const textW = measure(display, font)
     const pillW = Math.min(maxPillW, Math.max(scaleStageToken(ref.vibePill.minWidth, W), textW + padH * 2))
-    const x = W - padding.right - pillW
+    const x = isWide
+      ? lyricX
+      : W - padding.right - pillW
     const y = shorts
       ? shortsCreditY + Math.max(0, (creditH - pillH) / 2)
-      : outputHeight! - padding.bottom - pillH
+      : isWide
+        ? (meta ? meta.y + meta.height + metaGap : lyric.y + lyric.height + metaGap)
+        : isSquare
+          ? squareHeight - padding.bottom - logoBand - markGap - pillH
+          : outputHeight! - padding.bottom - pillH
     vibePill = {
       label: display,
       rect: { x, y, width: pillW, height: pillH },

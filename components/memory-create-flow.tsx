@@ -471,10 +471,13 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
             <input
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value.slice(0, 120))}
+              onChange={(e) => setTitle(e.target.value.slice(0, 80))}
               placeholder={memoryDefaultTitle(songs.length)}
               style={inputStyle}
             />
+            <p style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)', margin: '6px 0 0', textAlign: 'right' }}>
+              {title.length}/80
+            </p>
             {titleErr ? (
               <p style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--danger, #e57373)', margin: '6px 0 0' }}>{titleErr}</p>
             ) : null}

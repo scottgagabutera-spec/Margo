@@ -7,6 +7,6 @@ export function memoryDefaultTitle(songCount: number): string {
 export function validateMemoryTitle(title: string, songCount: number): string | null {
   const t = title.trim()
   if (songCount >= 2 && !t) return 'Title is required for memories with two or more songs.'
-  if (t.length > 120) return 'Title is too long.'
+  if (t.length > 80) return 'Title is too long (80 characters max).'
   return null
 }

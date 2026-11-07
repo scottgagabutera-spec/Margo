@@ -17,6 +17,10 @@ import { useAuthGate } from '@/components/supabase-auth-provider'
 import { MARGO_SITE_ORIGIN } from '@/lib/moment/site-origin'
 import { toast } from 'sonner'
 import { MemoryDetailPageSkeleton } from '@/components/margo-skeletons'
+import { MemoryReplyComposer } from '@/components/memory-reply-composer'
+import { MemoryRepliesList } from '@/components/memory-replies-list'
+import type { MemoryReplyRow } from '@/app/api/memories/[id]/replies/route'
+import { memoryCaptionTitle } from '@/lib/memory/display-caption'
 
 const font = UI_FONT
 
@@ -31,8 +35,7 @@ export default function MemoryDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [cardOpen, setCardOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [lyricBackText, setLyricBackText] = useState('')
-  const [lyricBackBusy, setLyricBackBusy] = useState(false)
+  const [replies, setReplies] = useState<MemoryReplyRow[]>([])
   const [resonateBusy, setResonateBusy] = useState(false)
 
   const load = useCallback(async () => {
@@ -54,9 +57,17 @@ export default function MemoryDetailPage() {
     }
   }, [id])
 
+  const loadReplies = useCallback(async () => {
+    if (!id) return
+    const res = await fetch(`/api/memories/${id}/replies`)
+    const data = (await res.json().catch(() => ({}))) as { replies?: MemoryReplyRow[] }
+    setReplies(data.replies || [])
+  }, [id])
+
   useEffect(() => {
     void load()
-  }, [load])
+    void loadReplies()
+  }, [load, loadReplies])
 
   useRegisterNavBack({ preferHistory: true, fallbackHref: '/feed' })
 
@@ -104,29 +115,20 @@ export default function MemoryDetailPage() {
     })
   }
 
-  const submitLyricBack = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!memory || lyricBackBusy) return
-    if (!requireAuth()) return
-    const body = lyricBackText.trim()
-    if (!body) return
-    setLyricBackBusy(true)
-    try {
-      const res = await fetch(`/api/memories/${memory.id}/lyric-back`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ body }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error((data as { error?: string }).error || 'Could not post')
-      setLyricBackText('')
-      toast('Lyric back posted')
-      void load()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not post')
-    } finally {
-      setLyricBackBusy(false)
+  const playSong = (song: MemoryPublic['songs'][0]) => {
+    if (!song.songId || !song.audioUrl || song.isLyricOnly) {
+      toast('No Margo audio for this song')
+      return
     }
+    void playFull({
+      songId: song.songId,
+      audioUrl: song.audioUrl,
+      title: song.songTitle,
+      artist: song.artistName,
+      artwork: song.artworkUrl,
+      autoplay: true,
+      source: 'feed-tier1',
+    })
   }
 
   const patchVisibility = async (v: MemoryVisibility) => {
@@ -219,6 +221,9 @@ export default function MemoryDetailPage() {
   })
   const firstSong = memory.songs[0]
   const story = (memory.story || '').trim()
+  const heading = memoryCaptionTitle(memory)
+  const avatar = memory.ownerAvatarUrl ? compactArtworkUrl(memory.ownerAvatarUrl, 64) : null
+  const songCountLabel = memory.songCount === 1 ? '1 song' : `${memory.songCount} songs`
 
   return (
     <article
@@ -245,27 +250,26 @@ export default function MemoryDetailPage() {
         />
       ) : null}
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-        {dateChip ? (
-          <span style={{ fontFamily: font, fontSize: TYPE.label, color: 'var(--gold)', letterSpacing: '0.06em', textTransform: 'uppercase', padding: '6px 10px', borderRadius: 999, border: '1px solid var(--gold-border)', background: 'var(--gold-faint)' }}>
-            {dateChip}
-          </span>
-        ) : null}
-        {memory.mood ? (
-          <span style={{ fontFamily: font, fontSize: TYPE.label, color: 'var(--text-muted)', padding: '6px 10px', borderRadius: 999, border: '1px solid var(--border)', background: 'var(--surface)' }}>
-            {memory.mood}
-          </span>
-        ) : null}
-      </div>
-
-      <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+      <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 style={{ margin: '0 0 8px', fontFamily: font, fontSize: TYPE.pageTitle, fontWeight: 600, color: 'var(--text)', lineHeight: 1.25 }}>
-            {memory.title}
+          <h1 style={{ margin: '0 0 10px', fontFamily: font, fontSize: '1.25rem', fontWeight: 600, color: 'var(--text)', lineHeight: 1.3 }}>
+            {heading}
           </h1>
-          <Link href={`/profile/${memory.ownerUsername}`} style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', textDecoration: 'none' }}>
-            {memory.ownerDisplayName}
-          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+            <Link href={`/profile/${memory.ownerUsername}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: font, fontSize: '0.8125rem', color: 'var(--text-secondary)', textDecoration: 'none' }}>
+              {avatar ? <img src={avatar} alt="" width={22} height={22} style={{ borderRadius: '50%', objectFit: 'cover' }} /> : null}
+              <span>@{memory.ownerUsername}</span>
+            </Link>
+            {dateChip ? (
+              <span style={{ fontFamily: font, fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                {dateChip}
+                <span aria-hidden> · </span>
+                {songCountLabel}
+              </span>
+            ) : (
+              <span style={{ fontFamily: font, fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{songCountLabel}</span>
+            )}
+          </div>
         </div>
         {memory.isOwner ? (
           <div style={{ position: 'relative' }}>
@@ -356,71 +360,80 @@ export default function MemoryDetailPage() {
       </header>
 
       {story ? (
-        <p style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text-secondary)', lineHeight: 1.55, margin: '0 0 20px', whiteSpace: 'pre-wrap' }}>
+        <p className="margo-memory-detail__story" style={{ fontFamily: font, fontSize: '1rem', color: 'var(--text)', lineHeight: 1.6, margin: '0 0 22px', whiteSpace: 'pre-wrap' }}>
           {story}
         </p>
       ) : null}
 
-      <section style={{ marginBottom: 20 }}>
+      <section style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <h2 style={{ margin: 0, fontFamily: font, fontSize: TYPE.label, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Songs</h2>
-          <button
-            type="button"
-            onClick={playAll}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              minHeight: 'var(--margo-touch-min)',
-              padding: '0 12px',
-              borderRadius: 999,
-              border: '1px solid var(--gold-border)',
-              background: 'var(--gold-faint)',
-              color: 'var(--gold)',
-              fontFamily: font,
-              fontSize: TYPE.label,
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-            }}
-          >
-            <PlayPauseIcon playing={false} buffering={false} size={14} color="var(--gold)" />
-            Play all
-          </button>
-        </div>
-        <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {memory.songs.map((s) => (
-            <li
-              key={s.id}
+          <h2 className="margo-memory-detail__section-label">Songs</h2>
+          {memory.songs.length >= 2 ? (
+            <button
+              type="button"
+              onClick={playAll}
               style={{
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
-                gap: 10,
-                padding: '10px 12px',
-                borderRadius: 12,
-                border: '1px solid var(--border)',
-                background: 'var(--surface)',
+                gap: 6,
+                minHeight: 32,
+                padding: '0 12px',
+                borderRadius: 999,
+                border: '1px solid var(--gold-border)',
+                background: 'var(--gold-faint)',
+                color: 'var(--gold)',
+                fontFamily: font,
+                fontSize: '0.6875rem',
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                cursor: 'pointer',
               }}
             >
-              {s.artworkUrl ? (
-                <img src={compactArtworkUrl(s.artworkUrl, 80)} alt="" width={44} height={44} style={{ borderRadius: 8, objectFit: 'cover' }} />
-              ) : (
-                <span style={{ width: 44, height: 44, borderRadius: 8, background: 'var(--surface-2)' }} />
-              )}
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.songTitle}</span>
-                <span style={{ display: 'block', fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)' }}>{s.artistName}</span>
-              </span>
-              {s.isLyricOnly ? (
-                <span style={{ fontFamily: font, fontSize: TYPE.label, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Lyric only</span>
-              ) : s.songId ? (
-                <Link href={`/song/${s.songId}`} style={{ fontFamily: font, fontSize: TYPE.label, color: 'var(--gold)', textDecoration: 'none', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                  On Margo
-                </Link>
-              ) : null}
-            </li>
-          ))}
-        </ul>
+              <PlayPauseIcon playing={false} buffering={false} size={14} color="var(--gold)" />
+              Play all
+            </button>
+          ) : null}
+        </div>
+        {memory.songs.length === 1 && firstSong ? (
+          <div className="margo-memory-detail__song-row">
+            {firstSong.artworkUrl ? (
+              <img src={compactArtworkUrl(firstSong.artworkUrl, 80)} alt="" width={40} height={40} style={{ borderRadius: 8, objectFit: 'cover' }} />
+            ) : (
+              <span style={{ width: 40, height: 40, borderRadius: 8, background: 'var(--surface-2)' }} />
+            )}
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text)' }}>{firstSong.songTitle}</span>
+              <span style={{ display: 'block', fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)' }}>{firstSong.artistName}</span>
+            </span>
+            <button type="button" onClick={() => playSong(firstSong)} aria-label="Play song" style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--gold-border)', background: 'var(--gold-faint)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              <PlayPauseIcon playing={false} buffering={false} size={16} color="var(--gold)" />
+            </button>
+          </div>
+        ) : (
+          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {memory.songs.map((s) => (
+              <li
+                key={s.id}
+                className="margo-memory-detail__song-row"
+              >
+                {s.artworkUrl ? (
+                  <img src={compactArtworkUrl(s.artworkUrl, 80)} alt="" width={40} height={40} style={{ borderRadius: 8, objectFit: 'cover' }} />
+                ) : (
+                  <span style={{ width: 40, height: 40, borderRadius: 8, background: 'var(--surface-2)' }} />
+                )}
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'block', fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text)' }}>{s.songTitle}</span>
+                  <span style={{ display: 'block', fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)' }}>{s.artistName}</span>
+                </span>
+                {!s.isLyricOnly && s.songId ? (
+                  <button type="button" onClick={() => playSong(s)} aria-label={`Play ${s.songTitle}`} style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <PlayPauseIcon playing={false} buffering={false} size={14} color="var(--text-secondary)" />
+                  </button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       {memory.photos.length > 0 ? (
@@ -499,51 +512,8 @@ export default function MemoryDetailPage() {
         </button>
       </div>
 
-      <form onSubmit={(e) => void submitLyricBack(e)} style={{ marginBottom: 24 }}>
-        <label style={{ display: 'block', fontFamily: font, fontSize: TYPE.label, color: 'var(--text-muted)', marginBottom: 8, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-          Lyric back
-        </label>
-        <textarea
-          value={lyricBackText}
-          onChange={(e) => setLyricBackText(e.target.value.slice(0, 500))}
-          rows={3}
-          placeholder="Reply with a lyric"
-          style={{
-            width: '100%',
-            boxSizing: 'border-box',
-            borderRadius: 12,
-            border: '1px solid var(--border)',
-            background: 'var(--surface-2)',
-            color: 'var(--text)',
-            fontFamily: font,
-            fontSize: TYPE.secondary,
-            padding: 12,
-            marginBottom: 10,
-            resize: 'vertical',
-          }}
-        />
-        <button
-          type="submit"
-          disabled={lyricBackBusy || !lyricBackText.trim()}
-          style={{
-            minHeight: 'var(--margo-touch-min)',
-            padding: '0 20px',
-            borderRadius: 999,
-            border: 'none',
-            background: 'var(--gold)',
-            color: 'var(--bg)',
-            fontFamily: font,
-            fontSize: TYPE.label,
-            fontWeight: 700,
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase',
-            cursor: 'pointer',
-            opacity: lyricBackText.trim() ? 1 : 0.5,
-          }}
-        >
-          {lyricBackBusy ? 'Posting…' : 'Post'}
-        </button>
-      </form>
+      <MemoryReplyComposer memoryId={memory.id} onPosted={() => void loadReplies()} />
+      <MemoryRepliesList replies={replies} />
 
       <CardExportModal
         open={cardOpen}

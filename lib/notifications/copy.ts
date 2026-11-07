@@ -9,6 +9,14 @@ export function messageFor(n: Notification): string {
       return `${name} resonated with your lyric`
     case 'lyric_back':
       return `${name} replied with a Lyric Back`
+    case 'memory_reply': {
+      const u = n.actor?.username || 'someone'
+      return `@${u} replied on your memory`
+    }
+    case 'memory_lyric_reply': {
+      const u = n.actor?.username || 'someone'
+      return `@${u} lyric-backed your memory`
+    }
     case 'follow':
       return `${name} started following you`
     case 'follow_request':

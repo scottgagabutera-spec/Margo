@@ -2,7 +2,7 @@ import type { Notification, NotificationType } from '@/hooks/useNotifications'
 
 export type NotificationFilter = 'all' | 'likes' | 'follows' | 'updates'
 
-const LIKES: NotificationType[] = ['resonate', 'lyric_back']
+const LIKES: NotificationType[] = ['resonate', 'lyric_back', 'memory_reply', 'memory_lyric_reply']
 const FOLLOWS: NotificationType[] = ['follow', 'follow_request']
 const UPDATES: NotificationType[] = [
   'warned',

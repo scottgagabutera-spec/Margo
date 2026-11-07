@@ -55,7 +55,7 @@ export function MemoryFeedGridTile({ memory }: { memory: MemoryPublic }) {
           ) : (
             <span className="margo-feed-memory-grid-tile__avatar margo-feed-memory-grid-tile__avatar--empty" />
           )}
-          <span className="margo-feed-memory-grid-tile__name">{memory.ownerDisplayName || memory.ownerUsername}</span>
+          <span className="margo-feed-memory-grid-tile__name">@{memory.ownerUsername}</span>
         </span>
         <span className="margo-feed-memory-grid-tile__stats">
           <span className="margo-feed-memory-grid-tile__song">
