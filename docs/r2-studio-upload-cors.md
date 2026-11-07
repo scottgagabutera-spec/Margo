@@ -1,25 +1,53 @@
-# Studio catalog upload and R2 CORS
+# Studio upload and R2 CORS
 
-Browser uploads use a presigned `PUT` to `https://<account>.r2.cloudflarestorage.com/...`. If CORS is wrong, the client shows **Failed to fetch** even though presign succeeded.
+## Cause of today's failure
 
-## Cloudflare dashboard (tap by tap)
+The browser sends audio directly to `*.r2.cloudflarestorage.com` with a presigned PUT. If the bucket CORS policy does not allow your site origin, the browser blocks the request and Studio shows **Upload could not reach storage** (a failed `fetch`, not a bad file). Vercel previews also fail because their hostname is usually not in CORS.
 
-1. Open Cloudflare dashboard → R2 → bucket **margo** (or your `R2_BUCKET_NAME`).
-2. Settings → CORS policy → Add rule.
-3. Allowed origins (one rule or separate rules):
-   - `https://trymargo.com`
-   - `https://www.trymargo.com`
-   - Your Vercel preview origin if you test uploads on preview builds
-4. Allowed methods: `GET`, `PUT`, `HEAD`.
-5. Allowed headers: `Content-Type`, `x-amz-content-sha256`, `x-amz-date`, `Authorization`.
-6. Expose headers: `ETag`.
-7. Max age: `3600`.
-8. Save.
+Production fix: correct R2 CORS on **trymargo.com** plus chunked server upload fallback in the app.
 
-## App fallbacks (this PR)
+## Cloudflare: set CORS on your phone
 
-- Presigned PUT sends only `Content-Type` (no signed `Cache-Control`).
-- `credentials: 'omit'`, retry with backoff.
-- Files ≤ 6 MB can use `POST /api/studio/catalog-upload` (server-side PutObject) when the browser PUT fails.
+1. Open the Cloudflare app (or Safari/Chrome) and sign in.
+2. Tap **R2** in the menu.
+3. Tap your bucket (**margo** or your production bucket name).
+4. Tap **Settings**.
+5. Find **CORS policy** and tap **Add CORS policy** (or **Edit**).
+6. Paste the JSON below into the policy editor.
+7. Tap **Save**.
 
-Larger audio (up to 25 MB) still requires working R2 CORS for direct PUT.
+## JSON to paste
+
+```json
+[
+  {
+    "AllowedOrigins": [
+      "https://trymargo.com",
+      "https://www.trymargo.com"
+    ],
+    "AllowedMethods": [
+      "GET",
+      "PUT",
+      "HEAD"
+    ],
+    "AllowedHeaders": [
+      "Content-Type",
+      "Content-Length",
+      "x-amz-content-sha256",
+      "x-amz-date",
+      "Authorization"
+    ],
+    "ExposeHeaders": [
+      "ETag"
+    ],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+No API keys or secrets go in this policy.
+
+## App behavior (chunked fallback)
+
+- Fast path: presigned PUT when CORS works.
+- Fallback: 3 MB chunks through `/api/studio/catalog-upload/multipart/*` with resume in `sessionStorage`, up to **50 MB** audio.

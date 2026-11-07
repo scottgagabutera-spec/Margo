@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { createPortal } from 'react-dom'
+import { toast } from 'sonner'
+import { AdminApplicationConfirmModal } from '@/components/admin-application-confirm-modal'
 
 // ── Types ──
 interface ArtistApplicationRow {
@@ -117,6 +118,9 @@ function ApplicationsSection() {
     app: ArtistApplicationRow
     decision: 'approved' | 'rejected'
   } | null>(null)
+  const [confirmPhase, setConfirmPhase] = useState<'confirm' | 'loading' | 'success' | 'error'>('confirm')
+  const [confirmError, setConfirmError] = useState<string | null>(null)
+  const [rejectNote, setRejectNote] = useState('')
 
   const priorFor = (app: ArtistApplicationRow) =>
     applications.filter((a) => a.profile_id === app.profile_id && a.id !== app.id)
@@ -140,22 +144,37 @@ function ApplicationsSection() {
 
   useEffect(() => { load() }, [])
 
-  const review = async (app: ArtistApplicationRow, decision: 'approved' | 'rejected') => {
+  const runReview = async () => {
+    if (!confirm) return
+    const app = confirm.app
+    const decision = confirm.decision
+    setConfirmPhase('loading')
+    setConfirmError(null)
     setActioningId(app.id)
-    setError(null)
     try {
       const res = await adminFetch('/api/admin/artist-applications', {
         method: 'PATCH',
-        body: JSON.stringify({ id: app.id, status: decision }),
+        body: JSON.stringify({
+          id: app.id,
+          status: decision,
+          rejectionNote: decision === 'rejected' ? rejectNote.trim() || undefined : undefined,
+        }),
       })
       const body = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(body.error || ('HTTP ' + res.status))
-      setConfirm(null)
-      await load()
-    } catch (e: any) {
-      console.error('Failed to review application:', e)
-      setError(e?.message || 'Failed to review application')
-    } finally {
+      if (!res.ok) throw new Error(body.error || 'Could not save decision')
+      setConfirmPhase('success')
+      toast.success(decision === 'approved' ? 'Artist approved' : 'Application rejected')
+      window.setTimeout(async () => {
+        setConfirm(null)
+        setConfirmPhase('confirm')
+        setRejectNote('')
+        await load()
+        setActioningId(null)
+      }, 900)
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Could not save decision'
+      setConfirmPhase('error')
+      setConfirmError(msg)
       setActioningId(null)
     }
   }
@@ -323,7 +342,12 @@ function ApplicationsSection() {
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <button
                       type="button"
-                      onClick={() => setConfirm({ app, decision: 'approved' })}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setConfirmPhase('confirm')
+                        setRejectNote('')
+                        setConfirm({ app, decision: 'approved' })
+                      }}
                       disabled={actioningId === app.id}
                       style={{ ...S.btn, opacity: actioningId === app.id ? 0.5 : 1 }}
                     >
@@ -331,7 +355,12 @@ function ApplicationsSection() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setConfirm({ app, decision: 'rejected' })}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setConfirmPhase('confirm')
+                        setRejectNote('')
+                        setConfirm({ app, decision: 'rejected' })
+                      }}
                       disabled={actioningId === app.id}
                       style={{ ...S.dangerBtn, opacity: actioningId === app.id ? 0.5 : 1 }}
                     >
@@ -345,45 +374,34 @@ function ApplicationsSection() {
         )
       })}
 
-      {confirm && typeof document !== 'undefined' ? createPortal(
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="margo-admin-app-confirm-title"
-          style={{
-            position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.65)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
-          }}
-          onClick={() => setConfirm(null)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              ...S.card, maxWidth: '400px', width: '100%', margin: 0, cursor: 'default',
-            }}
-          >
-            <p id="margo-admin-app-confirm-title" style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.9rem', color: 'var(--text)', marginBottom: '12px' }}>
-              {confirm.decision === 'approved'
-                ? `Approve ${confirm.app.display_artist_name}?`
-                : `Reject ${confirm.app.display_artist_name}?`}
-            </p>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                style={confirm.decision === 'approved' ? S.btn : S.dangerBtn}
-                disabled={actioningId === confirm.app.id}
-                onClick={() => review(confirm.app, confirm.decision)}
-              >
-                Confirm
-              </button>
-              <button type="button" style={S.ghostBtn} onClick={() => setConfirm(null)}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body,
-      ) : null}
+      <AdminApplicationConfirmModal
+        open={!!confirm}
+        title={
+          confirm
+            ? confirm.decision === 'approved'
+              ? `Approve ${confirm.app.display_artist_name}?`
+              : `Reject ${confirm.app.display_artist_name}?`
+            : ''
+        }
+        body={
+          confirm?.decision === 'approved'
+            ? 'They become an artist and get a notification in Margo.'
+            : 'They stay a listener and get a notification in Margo.'
+        }
+        confirmLabel="Confirm"
+        confirmTone={confirm?.decision === 'rejected' ? 'danger' : 'gold'}
+        rejectReason={confirm?.decision === 'rejected' ? rejectNote : undefined}
+        onRejectReason={confirm?.decision === 'rejected' ? setRejectNote : undefined}
+        phase={confirmPhase}
+        errorMessage={confirmError}
+        onConfirm={() => void runReview()}
+        onCancel={() => {
+          if (confirmPhase === 'loading') return
+          setConfirm(null)
+          setConfirmPhase('confirm')
+          setRejectNote('')
+        }}
+      />
     </div>
   )
 }

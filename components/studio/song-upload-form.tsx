@@ -11,6 +11,7 @@ import {
 } from '@/lib/atmosphere'
 import { GeneratePromotionBlock } from '@/components/studio/generate-promotion-block'
 import { putCatalogFileWithRetry } from '@/lib/r2/client-catalog-upload'
+import { uploadCatalogFileResilient, CATALOG_AUDIO_MAX_BYTES } from '@/lib/studio/chunked-catalog-upload'
 
 const supabase = createClient()
 
@@ -157,7 +158,7 @@ const STAGE_LABEL: Record<Stage, string> = {
 }
 
 const ARTWORK_MAX_BYTES = 5 * 1024 * 1024
-const AUDIO_MAX_BYTES = 25 * 1024 * 1024
+const AUDIO_MAX_BYTES = CATALOG_AUDIO_MAX_BYTES
 
 function pipelineErrorMessage(data: { error?: string; detail?: unknown } | null, fallback: string): string {
   const detail = data?.detail
@@ -220,7 +221,6 @@ function mimeForArtworkFallback(ext: string, fileType: string): string {
   return 'image/jpeg'
 }
 
-/** Presigned PUT to R2 with retry; proxy fallback for smaller files when CORS blocks the browser. */
 async function putCatalogFileToR2(
   songId: string,
   kind: 'audio' | 'artwork',
@@ -233,60 +233,42 @@ async function putCatalogFileToR2(
     kind === 'audio'
       ? mimeForAudioFallback(extension, file.type)
       : mimeForArtworkFallback(extension, file.type)
-  const presignRes = await fetch('/api/studio/catalog-upload-url', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      songId,
-      kind,
-      extension,
-      contentType,
-      byteLength: file.size,
-      songTitle: meta.songTitle.trim(),
-      artistLabel: meta.artistLabel.trim(),
-    }),
-  })
-  if (!presignRes.ok) {
-    let detail = presignRes.statusText
-    try {
-      const j = (await presignRes.json()) as { error?: string }
-      if (j.error) detail = j.error
-    } catch { /* ignore */ }
-    throw new Error(detail || 'Could not start upload')
-  }
-  const presigned = (await presignRes.json()) as {
-    url: string
-    headers: Record<string, string>
-    publicUrl: string
-  }
-  try {
-    await putCatalogFileWithRetry(presigned, file, kind, onProgress)
-    return presigned.publicUrl
-  } catch (directErr) {
-    if (file.size <= 6 * 1024 * 1024) {
-      const fd = new FormData()
-      fd.append('file', file)
-      fd.append('songId', songId)
-      fd.append('kind', kind)
-      fd.append('extension', extension)
-      fd.append('contentType', contentType)
-      fd.append('artistLabel', meta.artistLabel.trim())
-      fd.append('songTitle', meta.songTitle.trim())
-      const proxyRes = await fetch('/api/studio/catalog-upload', {
+
+  return uploadCatalogFileResilient({
+    songId,
+    kind,
+    file,
+    meta,
+    extension,
+    contentType,
+    onProgress,
+    tryDirectPresign: async () => {
+      const presignRes = await fetch('/api/studio/catalog-upload-url', {
         method: 'POST',
         credentials: 'include',
-        body: fd,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          songId,
+          kind,
+          extension,
+          contentType,
+          byteLength: file.size,
+          songTitle: meta.songTitle.trim(),
+          artistLabel: meta.artistLabel.trim(),
+        }),
       })
-      if (!proxyRes.ok) {
-        const j = (await proxyRes.json().catch(() => ({}))) as { error?: string }
-        throw new Error(j.error || (directErr instanceof Error ? directErr.message : 'Upload failed'))
+      if (!presignRes.ok) {
+        throw new Error('presign failed')
       }
-      const j = (await proxyRes.json()) as { publicUrl: string }
-      return j.publicUrl
-    }
-    throw directErr
-  }
+      const presigned = (await presignRes.json()) as {
+        url: string
+        headers: Record<string, string>
+        publicUrl: string
+      }
+      await putCatalogFileWithRetry(presigned, file, kind)
+      return presigned.publicUrl
+    },
+  })
 }
 
 export function SongUploadForm({ artistDisplayName, artistUsername = null, onComplete, onCancel, songId = null }: SongUploadFormProps) {
@@ -325,6 +307,11 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
   const [stage, setStage] = useState<Stage>('idle')
   const [error, setError] = useState('')
   const [statusNote, setStatusNote] = useState('')
+  const [uploadPct, setUploadPct] = useState<number | null>(null)
+  const onUploadProgress = (pct: number) => {
+    setUploadPct(pct)
+    setStatusNote(`Uploading ${pct}%`)
+  }
   const [pendingSongId, setPendingSongId] = useState<string | null>(null)
   const [pendingAudioUrl, setPendingAudioUrl] = useState<string | null>(null)
 
@@ -510,7 +497,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
       let audioUrl = existingAudioUrl
       if (audioFile) {
         if (audioFile.size > AUDIO_MAX_BYTES) {
-          setError('Audio must be 25 MB or smaller so lyrics can be read.')
+          setError('Audio must be 50 MB or smaller.')
           setStage('error')
           return
         }
@@ -521,7 +508,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
             displayName: artistDisplayName,
             username: artistUsername,
           }),
-        })
+        }, onUploadProgress)
         setExistingAudioUrl(audioUrl)
       }
       if (!audioUrl) {
@@ -562,7 +549,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
           return
         }
         if (audioFile && audioFile.size > AUDIO_MAX_BYTES) {
-          setError('Audio must be 25 MB or smaller so lyrics can be read.')
+          setError('Audio must be 50 MB or smaller.')
           setStage('error')
           return
         }
@@ -678,7 +665,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
       if (!audioFile) { setError('Add an audio file.'); setStage('error'); return }
       if (!artworkFile) { setError('Artwork is required. Tap the poster to add a cover.'); setStage('error'); return }
       if (audioFile.size > AUDIO_MAX_BYTES) {
-        setError('Audio must be 25 MB or smaller so lyrics can be read.')
+        setError('Audio must be 50 MB or smaller.')
         setStage('error')
         return
       }
@@ -869,7 +856,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
                 onChange={e => {
                   const next = e.target.files?.[0] || null
                   if (next && next.size > AUDIO_MAX_BYTES) {
-                    setError('Audio must be 25 MB or smaller so lyrics can be read.')
+                    setError('Audio must be 50 MB or smaller.')
                     setStage('error')
                     e.target.value = ''
                     return

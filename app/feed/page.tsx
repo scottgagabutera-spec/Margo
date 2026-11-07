@@ -17,6 +17,7 @@ import { useMessaging } from '@/hooks/useMessaging'
 import { PullToRefresh } from '@/components/pull-to-refresh'
 import { FeedLiveUpdatePill } from '@/components/feed-live-update-pill'
 import { useLiveUpdatePillQueue } from '@/hooks/useLiveUpdatePillQueue'
+import { highlightNewItems } from '@/lib/live-updates/highlight'
 import { useNewItemsBuffer } from '@/hooks/useNewItemsBuffer'
 import { useContentUpdates } from '@/hooks/useContentUpdates'
 import { PostCard, normalizeEmotion } from '@/components/post-card'
@@ -675,18 +676,19 @@ function FeedPageInner() {
             if (kind === 'posts') {
               flushPending()
               scrollActiveTo(0)
+              window.requestAnimationFrame(() => highlightNewItems('[id^="feed-post-"]', 3))
             } else if (kind === 'songs') {
               openSongs()
             } else if (kind === 'artists') {
               openArtists()
             } else if (kind === 'memories') {
               handleFeedContentTab('memories')
+              window.requestAnimationFrame(() => highlightNewItems('[data-margo-memory-tile]', 3))
             }
+            livePill.acknowledge()
           }}
         />
-      ) : (
-        <div className="margo-feed-live-update-row" style={{ minHeight: 0, height: 0 }} aria-hidden />
-      )}
+      ) : null}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
         <div style={{ position: 'absolute', top: '-128px', left: '-128px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.04)', borderRadius: '50%', filter: 'blur(80px)' }} />
         <div style={{ position: 'absolute', bottom: '-160px', right: '-160px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.03)', borderRadius: '50%', filter: 'blur(80px)' }} />

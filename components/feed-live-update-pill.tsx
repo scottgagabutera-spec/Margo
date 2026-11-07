@@ -100,15 +100,18 @@ export function FeedLiveUpdatePill({
 
   return (
     <div
-      className="margo-feed-live-update-row"
+      className="margo-feed-live-update-float"
       style={{
-        minHeight: '48px',
+        position: 'fixed',
+        top: 'calc(var(--nav-height, 72px) + var(--margo-feed-tab-bar-h, 40px) + env(safe-area-inset-top, 0px) + 6px)',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 45,
+        pointerEvents: 'none',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        position: 'relative',
-        zIndex: 4,
-        pointerEvents: 'none',
+        minHeight: '44px',
       }}
     >
       <button
