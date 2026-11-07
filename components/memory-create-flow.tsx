@@ -11,6 +11,8 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchUnifiedSongSearchHits } from '@/lib/song-search/unified-song-search'
 import { MARGO_SEARCH_HINT_SONGS } from '@/lib/margo-search-hints'
 import { memoryDefaultTitle, memoryTitlePlaceholder, validateMemoryTitle } from '@/lib/memory/title'
+import { hasMemoryContent } from '@/lib/memory/validate-payload'
+import { MemoryImproveWithAi, MemorySuggestTitles } from '@/components/memory-ai-field-actions'
 import { memoryCaptionTitle } from '@/lib/memory/display-caption'
 import { ProfileMemoryTile } from '@/components/profile-memory-tile'
 import type { MemoryPublic } from '@/lib/memory/types'
@@ -46,6 +48,7 @@ type DraftSong = {
 }
 
 type Step = 1 | 2 | 3 | 4
+type MemoryEntryKind = 'song' | 'media' | 'words'
 
 const btnSecondary: CSSProperties = {
   flex: 1,
@@ -104,6 +107,7 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
   const [showInLyricsFeed, setShowInLyricsFeed] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [titleTouched, setTitleTouched] = useState(false)
+  const [entryKind, setEntryKind] = useState<MemoryEntryKind | null>(null)
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 835px)')
@@ -214,9 +218,25 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
     showDatePublicly,
   ])
 
-  const canAdvanceStep1 = songs.length >= 1
-  const titleErr = validateMemoryTitle(title, songs.length)
-  const canAdvanceStep2 = story.trim().length > 0 && !titleErr
+  const canAdvanceStep1 =
+    entryKind === 'song'
+      ? songs.length >= 1
+      : entryKind === 'media' || entryKind === 'words'
+        ? true
+        : false
+  const titleErr = validateMemoryTitle(title)
+  const hasContent = hasMemoryContent({
+    songs: songs.map((s, i) => ({
+      position: i,
+      songId: s.songId,
+      songTitle: s.songTitle,
+      artistName: s.artistName,
+      isLyricOnly: s.isLyricOnly,
+    })),
+    photos: photos.map((p, i) => ({ position: i, r2Key: p.r2Key })),
+    story,
+  })
+  const canAdvanceStep2 = hasContent && !titleErr
 
   const goNext = () => {
     if (step === 1 && !canAdvanceStep1) return
@@ -237,8 +257,12 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
 
   const submit = async () => {
     if (!requireAuth()) return
-    if (submitting || songs.length < 1) return
-    const err = validateMemoryTitle(title, songs.length)
+    if (submitting) return
+    if (!hasContent) {
+      toast.error('Add at least one song, photo or video, or write your story.')
+      return
+    }
+    const err = validateMemoryTitle(title)
     if (err) {
       toast.error(err)
       return
@@ -263,7 +287,7 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: title.trim() || memoryDefaultTitle(songs.length),
+          title: title.trim(),
           story: story.trim(),
           mood: mood.trim() || null,
           visibility,
@@ -422,9 +446,39 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
       >
         {step === 1 ? (
           <>
-            <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', margin: '0 0 16px' }}>
+            <p style={{ ...labelStyle, marginBottom: 12 }}>What is this memory about?</p>
+            <div className="margo-memory-entry-choices">
+              {([
+                ['song', 'A song'],
+                ['media', 'A photo or video'],
+                ['words', 'Just my words'],
+              ] as const).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={`margo-memory-entry-choices__btn${entryKind === id ? ' margo-memory-entry-choices__btn--active' : ''}`}
+                  onClick={() => setEntryKind(id)}
+                  style={{ fontFamily: font }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {entryKind === 'song' ? (
+            <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', margin: '16px 0' }}>
               Add up to {MAX_SONGS} songs. Drag to reorder.
             </p>
+            ) : entryKind === 'media' ? (
+              <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', margin: '16px 0' }}>
+                You will add photos or videos on the next step. Songs are optional.
+              </p>
+            ) : entryKind === 'words' ? (
+              <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', margin: '16px 0' }}>
+                Write your story and title on the next step. Songs are optional.
+              </p>
+            ) : null}
+            {entryKind === 'song' ? (
+            <>
             <div
               ref={songSearchWrapRef}
               style={{ position: 'relative', zIndex: songSearchOpen ? 60 : 1 }}
@@ -509,12 +563,16 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
                 ))}
               </ul>
             ) : null}
+            </>
+            ) : null}
           </>
         ) : null}
 
         {step === 2 ? (
           <>
-            <MemoryMediaPicker draftOrMemoryId={draftId.current} photos={photos} onChange={setPhotos} />
+            {entryKind !== 'words' ? (
+              <MemoryMediaPicker draftOrMemoryId={draftId.current} photos={photos} onChange={setPhotos} />
+            ) : null}
             <label style={labelStyle}>What does this mean to you?</label>
             <textarea
               value={story}
@@ -523,12 +581,11 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
               placeholder="Your story"
               style={{ ...inputStyle, resize: 'vertical', minHeight: 120, lineHeight: 1.45 }}
             />
+            <MemoryImproveWithAi field="story" text={story} onUseSuggestion={(s) => setStory(s.slice(0, STORY_MAX))} />
             <p style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)', margin: '6px 0 20px', textAlign: 'right' }}>
               {story.length}/{STORY_MAX}
             </p>
-            <label style={labelStyle}>
-              Title{songs.length >= 2 ? ' (required)' : ' (optional)'}
-            </label>
+            <label style={labelStyle}>Title</label>
             <input
               type="text"
               value={title}
@@ -536,6 +593,12 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
               placeholder={memoryTitlePlaceholder()}
               onBlur={() => setTitleTouched(true)}
               style={inputStyle}
+            />
+            <MemoryImproveWithAi field="title" text={title} onUseSuggestion={(s) => setTitle(s.slice(0, 80))} />
+            <MemorySuggestTitles
+              story={story}
+              songs={songs.map((s) => `${s.songTitle} — ${s.artistName}`)}
+              onPick={(t) => { setTitle(t); setTitleTouched(true) }}
             />
             <p style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)', margin: '6px 0 0', textAlign: 'right' }}>
               {title.length}/80

@@ -1,6 +1,6 @@
 import { compactArtworkUrl } from '@/lib/compact-artwork-url'
 import type { MemoryPublic } from '@/lib/memory/types'
-import { memoryCoverIsSongArt } from '@/lib/memory/display-caption'
+import { memoryCoverIsSongArt, memoryIsWordsOnly } from '@/lib/memory/display-caption'
 
 const GRID_THUMB_PX = 400
 const PROFILE_TILE_PX = 160
@@ -39,7 +39,10 @@ export function favoriteArtistThumbnailUrl(url: string | null | undefined): stri
   return resizedMargoOrArtwork(url, FAVORITE_ART_PX)
 }
 
-export function memoryGridCoverSource(memory: MemoryPublic): { src: string; isVideo: boolean } {
+export function memoryGridCoverSource(memory: MemoryPublic): { src: string; isVideo: boolean; wordsOnly?: boolean } {
+  if (memoryIsWordsOnly(memory)) {
+    return { src: '', isVideo: false, wordsOnly: true }
+  }
   const video = memory.photos.find((p) => p.mediaType === 'video')
   if (video) {
     const poster = video.posterUrl || memory.photos.find((p) => p.mediaType === 'image')?.url

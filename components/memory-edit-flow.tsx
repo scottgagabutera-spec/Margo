@@ -8,6 +8,8 @@ import { ArrowLeftIcon } from '@/components/icons'
 import type { MemoryPublic } from '@/lib/memory/types'
 import type { MemoryDraftPhoto } from '@/lib/memory/client-media-upload'
 import { validateMemoryTitle } from '@/lib/memory/title'
+import { hasMemoryContent } from '@/lib/memory/validate-payload'
+import { MemoryImproveWithAi, MemorySuggestTitles } from '@/components/memory-ai-field-actions'
 import { TYPE, UI_FONT } from '@/lib/fonts'
 import { toast } from 'sonner'
 
@@ -47,8 +49,21 @@ export function MemoryEditFlow({
   const [photos, setPhotos] = useState<MemoryDraftPhoto[]>(() => photosFromMemory(memory))
   const [busy, setBusy] = useState(false)
 
-  const titleErr = useMemo(() => validateMemoryTitle(title, memory.songCount), [title, memory.songCount])
-  const canSave = story.trim().length > 0 && !titleErr
+  const titleErr = useMemo(() => validateMemoryTitle(title), [title])
+  const canSave = useMemo(() => {
+    if (titleErr) return false
+    return hasMemoryContent({
+      songs: memory.songs.map((s, i) => ({
+        position: i,
+        songId: s.songId,
+        songTitle: s.songTitle,
+        artistName: s.artistName,
+        isLyricOnly: s.isLyricOnly,
+      })),
+      photos: photos.map((p, i) => ({ position: i, r2Key: p.r2Key })),
+      story,
+    })
+  }, [titleErr, memory.songs, photos, story])
 
   const save = async () => {
     if (!canSave || busy) return
@@ -106,13 +121,20 @@ export function MemoryEditFlow({
         rows={5}
         style={{ width: '100%', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', padding: 12, fontFamily: font, fontSize: TYPE.secondary, lineHeight: 1.45, boxSizing: 'border-box' }}
       />
+      <MemoryImproveWithAi field="story" text={story} onUseSuggestion={(s) => setStory(s.slice(0, STORY_MAX))} />
 
-      <label style={{ fontFamily: font, fontSize: TYPE.label, fontWeight: 600, display: 'block', margin: '20px 0 8px' }}>Title</label>
+      <label style={{ fontFamily: font, fontSize: TYPE.secondary, fontWeight: 500, color: 'var(--gold)', display: 'block', margin: '20px 0 8px' }}>Title</label>
       <input
         type="text"
         value={title}
-        onChange={(e) => setTitle(e.target.value.slice(0, 120))}
+        onChange={(e) => setTitle(e.target.value.slice(0, 80))}
         style={{ width: '100%', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', padding: 12, fontFamily: font, fontSize: TYPE.secondary, boxSizing: 'border-box' }}
+      />
+      <MemoryImproveWithAi field="title" text={title} onUseSuggestion={(s) => setTitle(s.slice(0, 80))} />
+      <MemorySuggestTitles
+        story={story}
+        songs={memory.songs.map((s) => `${s.songTitle} — ${s.artistName}`)}
+        onPick={setTitle}
       />
       {titleErr ? <p style={{ color: 'var(--danger, #e57373)', fontSize: TYPE.meta, fontFamily: font }}>{titleErr}</p> : null}
 

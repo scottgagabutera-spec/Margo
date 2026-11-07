@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { assembleMemoryPublic } from '@/lib/memory/assemble'
 import { assembleMemoriesPublicBatch } from '@/lib/memory/assemble-batch'
-import { memoryDefaultTitle, validateMemoryTitle } from '@/lib/memory/title'
+import { validateMemoryCreatePayload } from '@/lib/memory/validate-payload'
 import type { MemoryPhotoInput, MemorySongInput, MemoryVisibility } from '@/lib/memory/types'
 import { MEMORY_ROW_SELECT } from '@/lib/memory/columns'
 
@@ -79,16 +79,17 @@ export async function POST(request: NextRequest) {
   }
 
   const songs = (body.songs || []).slice(0, 30)
-  if (songs.length < 1) {
-    return NextResponse.json({ error: 'Add at least one song' }, { status: 400 })
-  }
-
-  const titleRaw = (body.title || '').trim()
-  const title = titleRaw || memoryDefaultTitle(songs.length)
-  const titleErr = validateMemoryTitle(title, songs.length)
-  if (titleErr) return NextResponse.json({ error: titleErr }, { status: 400 })
-
+  const photos = (body.photos || []).slice(0, 10)
   const story = (body.story || '').trim().slice(0, 500) || null
+  const title = (body.title || '').trim().slice(0, 80)
+
+  const payloadErr = validateMemoryCreatePayload({
+    title,
+    songs,
+    photos,
+    story: story || '',
+  })
+  if (payloadErr) return NextResponse.json({ error: payloadErr }, { status: 400 })
   const mood = (body.mood || '').trim().slice(0, 40) || null
   const visibility = (body.visibility || 'public') as MemoryVisibility
   const allowedVis = new Set(['public', 'followers', 'only_me'])
@@ -140,7 +141,6 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const photos = (body.photos || []).slice(0, 10)
   if (photos.length) {
     await admin.from('memory_photos').insert(
       photos.map((p, i) => ({

@@ -8,9 +8,9 @@ export function memoryTitlePlaceholder(): string {
   return 'Give your memory a title'
 }
 
-export function validateMemoryTitle(title: string, songCount: number): string | null {
+export function validateMemoryTitle(title: string, _songCount?: number): string | null {
   const t = title.trim()
-  if (songCount >= 2 && !t) return 'Title is required for memories with two or more songs.'
+  if (!t) return 'Title is required.'
   if (t.length > 80) return 'Title is too long (80 characters max).'
   return null
 }
