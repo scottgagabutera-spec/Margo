@@ -3441,6 +3441,25 @@ html[data-margo-hub-sheet-flush-top] .margo-hub-sheet {
     opacity: 0.5;
   }
 }
+.margo-nav-tab-indicator {
+  animation: margo-tab-indicator-in 160ms var(--ease-out);
+}
+
+.margo-mobile-tab-indicator {
+  animation: margo-tab-indicator-in 160ms var(--ease-out);
+}
+
+@keyframes margo-tab-indicator-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scaleX(0.35);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scaleX(1);
+  }
+}
+
 html.margo-keyboard-open .margo-mobile-tabbar {
   visibility: hidden;
   pointer-events: none;
