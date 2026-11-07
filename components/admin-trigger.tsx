@@ -30,6 +30,10 @@ export function AdminTrigger() {
 
     const goAdmin = () => {
       if (isAdminTriggerExemptPath(pathnameRef.current)) return
+      if (typeof window !== 'undefined') {
+        window.location.assign('/admin')
+        return
+      }
       router.push('/admin')
     }
 

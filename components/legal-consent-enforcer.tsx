@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useAuthGate } from '@/components/supabase-auth-provider'
-import { isTermsCompletionPage } from '@/lib/legal/consent-paths'
+import { isConsentEnforcementExemptPath, isTermsCompletionPage } from '@/lib/legal/consent-paths'
 import { AUTH_RETURN_QUERY, buildSigninHref } from '@/lib/auth-return'
 
 /**
@@ -23,6 +23,7 @@ export function LegalConsentEnforcer() {
   useEffect(() => {
     if (loading || !user || !needsTermsAcceptance) return
     if (onTermsPage) return
+    if (pathname && isConsentEnforcementExemptPath(pathname)) return
     if (pathname === '/signin') {
       router.replace(buildSigninHref(searchParams.get(AUTH_RETURN_QUERY), { step: 'terms' }))
     }

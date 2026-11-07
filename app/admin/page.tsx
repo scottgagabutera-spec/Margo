@@ -7,6 +7,8 @@ import { useAuthGate } from '@/components/supabase-auth-provider'
 import { ArtistApplicationsTab } from '@/components/artist-applications-tab'
 import { PostReportsTab } from '@/components/post-reports-tab'
 import { BackButton } from '@/components/back-button'
+import { useAdminShellGateVerified } from '@/components/admin-shell-gate'
+import { SIGN_IN_NEUTRAL_MESSAGE } from '@/lib/auth-login-errors'
 
 type AdminSection = 'overview' | 'posts' | 'catalog' | 'artists' | 'reports' | 'featured'
 
@@ -203,6 +205,7 @@ function LoginForm({
   onSuccess: (overview: OverviewData | null) => void
 }) {
   const { rehydrate } = useAuthGate()
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -220,7 +223,10 @@ function LoginForm({
       })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setError('Invalid credentials.')
+        const msg = typeof body?.error === 'string' && body.error.trim()
+          ? body.error.trim()
+          : SIGN_IN_NEUTRAL_MESSAGE
+        setError(msg)
         return
       }
 
@@ -231,22 +237,18 @@ function LoginForm({
 
       // Default admin landing is Overview — one assertAdmin + KPIs (no second hop).
       const sessionRes = await adminFetch('/api/admin/session?overview=1')
-      if (sessionRes.status === 403) {
-        await signOutBrowser()
-        setError("This account doesn't have admin access.")
-        return
-      }
       if (!sessionRes.ok) {
         await signOutBrowser()
-        setError('Invalid credentials.')
+        setError(SIGN_IN_NEUTRAL_MESSAGE)
         return
       }
       const sessionBody = await sessionRes.json().catch(() => ({}))
       const overview = parseOverviewPayload(sessionBody?.overview)
 
+      router.refresh()
       onSuccess(overview)
     } catch {
-      setError('Invalid credentials.')
+      setError(SIGN_IN_NEUTRAL_MESSAGE)
     } finally {
       setLoading(false)
     }
@@ -1397,6 +1399,7 @@ function SignupSparkline({ days }: { days: { date: string; count: number }[] }) 
 // ── Main Admin Page ──
 function AdminShell() {
   const { loading: authLoading } = useAuthGate()
+  const serverAdminVerified = useAdminShellGateVerified()
   const router = useRouter()
   const searchParams = useSearchParams()
   const section = parseSection(searchParams.get('section'))
@@ -1405,7 +1408,6 @@ function AdminShell() {
   const [isAdmin, setIsAdmin] = useState(false)
   /** KPIs from session?overview=1; consumed once by OverviewPanel, then cleared */
   const [overviewInitial, setOverviewInitial] = useState<OverviewData | null>(null)
-  const [adminRecoveryHint, setAdminRecoveryHint] = useState<string | null>(null)
 
   useEffect(() => {
     if (authLoading) return
@@ -1444,26 +1446,6 @@ function AdminShell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading])
 
-  useEffect(() => {
-    if (!isAdmin || !sessionChecked) {
-      setAdminRecoveryHint(null)
-      return
-    }
-    let cancelled = false
-    void (async () => {
-      try {
-        const res = await adminFetch('/api/admin/recovery-hint')
-        const body = await res.json().catch(() => ({}))
-        if (!cancelled && body?.ok && typeof body.maskedEmail === 'string') {
-          setAdminRecoveryHint(body.maskedEmail)
-        }
-      } catch {
-        /* ignore */
-      }
-    })()
-    return () => { cancelled = true }
-  }, [isAdmin, sessionChecked])
-
   const setSection = useCallback((next: AdminSection) => {
     if (next !== 'overview') setOverviewInitial(null)
     const params = new URLSearchParams(searchParams.toString())
@@ -1497,6 +1479,14 @@ function AdminShell() {
           setOverviewInitial(overview)
         }}
       />
+    )
+  }
+
+  if (!serverAdminVerified) {
+    return (
+      <div style={{ ...ADMIN_PAGE_BG, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ fontFamily: 'var(--font-lora), serif', color: 'rgba(255,255,255,0.3)' }}>Verifying…</p>
+      </div>
     )
   }
 
@@ -1562,18 +1552,15 @@ function AdminShell() {
           <button type="button" onClick={handleSignOut} style={{ ...S.ghostBtn, width: '100%' }}>
             Sign Out
           </button>
-          {adminRecoveryHint ? (
-            <p style={{
-              fontFamily: 'var(--font-lora), serif',
-              fontSize: '0.55rem',
-              color: 'rgba(255,255,255,0.28)',
-              margin: '20px 0 0',
-              lineHeight: 1.5,
-            }}>
-              Reset: use <Link href="/forgot-password" style={{ color: 'var(--gold)', textDecoration: 'none' }}>Forgot password?</Link>
-              {' '}with <strong style={{ color: 'rgba(255,255,255,0.42)' }}>{adminRecoveryHint}</strong> if needed.
-            </p>
-          ) : null}
+          <p style={{
+            fontFamily: 'var(--font-lora), serif',
+            fontSize: '0.55rem',
+            color: 'rgba(255,255,255,0.28)',
+            margin: '20px 0 0',
+            lineHeight: 1.5,
+          }}>
+            <Link href="/forgot-password" style={{ color: 'var(--gold)', textDecoration: 'none' }}>Forgot password?</Link>
+          </p>
         </aside>
 
         <main style={{ minWidth: 0 }}>
