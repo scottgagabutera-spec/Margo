@@ -19,10 +19,17 @@ import { usePrimaryTab } from '@/components/primary-tab-shell'
 import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { ProfileArtistLinks } from '@/components/profile-artist-links'
 import { ProfileImageLightbox } from '@/components/profile-image-lightbox'
-import { fetchProfilePeek, peekProfileCache, warmProfile, type WarmProfileRow } from '@/lib/profile-warm'
+import {
+  fetchProfilePeek,
+  peekProfileCache,
+  warmProfile,
+  type WarmProfileRow,
+} from '@/lib/profile-warm'
+import { PROFILE_SURFACE_READY } from '@/lib/profile/surface-ready'
 import { resolveMessageEligibility, type FollowStatus } from '@/lib/message-eligibility'
 import { readViewerFollowCache, writeViewerFollowCache } from '@/lib/viewer-follow-cache'
 import { FeedPostSkeletonList, ProfilePageSkeleton, ProfileSocialActionsSkeleton } from '@/components/margo-skeletons'
+import { MargoPaneErrorBoundary } from '@/components/margo-pane-error-boundary'
 import { resolvePublicArtistCredit } from '@/lib/artist-identity'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { MargoActionSheet } from '@/components/margo-action-sheet'
@@ -162,7 +169,15 @@ type FollowRelationState = {
   status: FollowStatus
 }
 
-export default function ProfilePage({ username: usernameProp }: { username?: string } = {}) {
+export default function ProfilePage(props: { username?: string } = {}) {
+  return (
+    <MargoPaneErrorBoundary surface="profile-pane">
+      <ProfilePageInner {...props} />
+    </MargoPaneErrorBoundary>
+  )
+}
+
+function ProfilePageInner({ username: usernameProp }: { username?: string } = {}) {
   const params = useParams<{ username: string }>()
   const router = useRouter()
   const { user, identity, updateSignatureLyric } = useIdentity()
@@ -225,6 +240,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
       setNotFound(false)
     } else {
       setProfile((prev) => (prev?.username === username ? prev : null))
+      setLoading(true)
     }
 
     void warmProfile(username).then(async (bundle) => {
@@ -262,6 +278,17 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
       setLoading(false)
     })
     return () => { active = false }
+  }, [username])
+
+  useEffect(() => {
+    const onSurface = (e: Event) => {
+      const detail = (e as CustomEvent<{ username?: string }>).detail
+      if (detail?.username !== username.toLowerCase()) return
+      const peek = peekProfileCache(username)
+      if (peek?.favoriteArtists) setFavoriteArtists(peek.favoriteArtists)
+    }
+    window.addEventListener(PROFILE_SURFACE_READY, onSurface)
+    return () => window.removeEventListener(PROFILE_SURFACE_READY, onSurface)
   }, [username])
 
   useEffect(() => {
@@ -563,9 +590,9 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
 
   const memoriesVisibleCount = profileMemories.length
 
-  const renderStats = () => (
+  const renderStats = (p: WarmProfileRow) => (
     <div className="margo-profile-stats">
-      {profile.isArtist ? (
+      {p.isArtist ? (
         <ProfileStat
           count={artistSongs.length}
           label="songs"
@@ -578,7 +605,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
           showDivider
         />
       )}
-      {profile.isArtist ? (
+      {p.isArtist ? (
         <ProfileStat
           count={postsCount ?? (isOwnProfile ? ownPosts.length : null)}
           label="lyrics"
@@ -592,27 +619,28 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
         />
       )}
       <ProfileStat
-        href={(isOwnProfile || !profile!.followListsPrivate) ? `/profile/${profile!.username}/followers` : undefined}
+        href={(isOwnProfile || !p.followListsPrivate) ? `/profile/${p.username}/followers` : undefined}
         count={followerCount}
         label="followers"
         showDivider
       />
       <ProfileStat
-        href={(isOwnProfile || !profile!.followListsPrivate) ? `/profile/${profile!.username}/following` : undefined}
+        href={(isOwnProfile || !p.followListsPrivate) ? `/profile/${p.username}/following` : undefined}
         count={followingCount}
         label="following"
       />
     </div>
   )
 
-  const ownerHeroActions = isOwnProfile
-    ? ProfileHeroOwnerActions({ onShare: () => { void handleShareProfile() }, shareBusy })
-    : null
+  const ownerHeroActions =
+    profile && isOwnProfile
+      ? ProfileHeroOwnerActions({ onShare: () => { void handleShareProfile() }, shareBusy })
+      : null
 
   const visitorHeroActions =
-    !isOwnProfile && user
+    profile && !isOwnProfile && user
       ? ProfileHeroVisitorActions({
-          messageHref: messageEligibility.canOpenThread ? `/messages/${profile!.username}` : undefined,
+          messageHref: messageEligibility.canOpenThread ? `/messages/${profile.username}` : undefined,
           messageDisabled: !messageEligibility.canOpenThread,
           messageTitle: messageEligibility.blockedReason || undefined,
           followLabel,
@@ -689,7 +717,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
             ) : null}
 
             <div className="margo-profile-block--stats">
-              {renderStats()}
+              {renderStats(profile)}
             </div>
 
             {profile.isArtist ? (

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { dispatchProfileSurfaceReady } from '@/lib/profile/surface-ready'
 import type { ArtistStatus } from '@/components/artist-badge'
 import type { ArtistApplicationLinks } from '@/lib/artist-music-group'
 import type { ProfileFavoriteArtist } from '@/components/profile-favorite-artists-row'
@@ -200,24 +201,37 @@ export function warmProfile(username: string, opts?: { force?: boolean }): Promi
   if (!force && fresh && existing?.data) return Promise.resolve(existing.data)
   if (!force && existing?.inflight) return existing.inflight
 
-  const p = Promise.all([fetchProfileBundle(username), fetchProfileSurfaceExtras(username)]).then(
-    ([bundle, surface]) => {
-      const slot = cache.get(key) || { data: bundle as WarmProfileBundle, inflight: null }
-      slot.inflight = null
-      if (bundle && surface) {
-        bundle.favoriteArtists = surface.favoriteArtists
-        bundle.memories = surface.memories
-        bundle.memoriesIsOwner = surface.memoriesIsOwner
-        bundle.surfaceLoadedAt = Date.now()
-        if (surface.viewerFollowStatus !== undefined) {
-          bundle.viewerFollowStatus = surface.viewerFollowStatus
-        }
-      }
-      if (bundle) slot.data = bundle
+  const mergeSurface = (bundle: WarmProfileBundle, surface: NonNullable<Awaited<ReturnType<typeof fetchProfileSurfaceExtras>>>) => {
+    bundle.favoriteArtists = surface.favoriteArtists
+    bundle.memories = surface.memories
+    bundle.memoriesIsOwner = surface.memoriesIsOwner
+    bundle.surfaceLoadedAt = Date.now()
+    if (surface.viewerFollowStatus !== undefined) {
+      bundle.viewerFollowStatus = surface.viewerFollowStatus
+    }
+  }
+
+  const p = fetchProfileBundle(username).then((bundle) => {
+    const slot = cache.get(key) || { data: bundle as WarmProfileBundle | null, inflight: null }
+    slot.inflight = null
+    if (bundle) {
+      slot.data = bundle
       cache.set(key, slot)
-      return bundle
-    },
-  ).catch((err) => {
+      void fetchProfileSurfaceExtras(username).then((surface) => {
+        if (!bundle || !surface) return
+        mergeSurface(bundle, surface)
+        const current = cache.get(key)
+        if (current?.data) {
+          mergeSurface(current.data, surface)
+          cache.set(key, current)
+        }
+        dispatchProfileSurfaceReady(username)
+      })
+    } else {
+      cache.set(key, slot)
+    }
+    return bundle
+  }).catch((err) => {
     const slot = cache.get(key)
     if (slot) slot.inflight = null
     throw err

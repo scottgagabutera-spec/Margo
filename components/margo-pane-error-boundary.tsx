@@ -2,6 +2,7 @@
 
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { reportError } from '@/lib/observability/report-error'
+import { errorReferenceLine } from '@/lib/error-reference'
 
 type Props = {
   children: ReactNode
@@ -30,7 +31,7 @@ export class MargoPaneErrorBoundary extends Component<Props, State> {
   render() {
     const { error } = this.state
     if (error) {
-      const ref = error.digest || error.message?.slice(0, 12) || 'pane-error'
+      const ref = errorReferenceLine(error) || 'pane-error'
       return (
         <div
           role="alert"

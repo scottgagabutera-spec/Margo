@@ -34,11 +34,11 @@ export function FavoriteArtistAvatar({
 
   if (!src || failed) {
     const initial = (name || '?').trim().charAt(0).toUpperCase() || '?'
-    const gradient = portraitFallbackFromSeed(name)
+    const tile = portraitFallbackFromSeed(name)
     return (
       <span
         className="margo-profile-favorite-artists__art margo-profile-favorite-artists__art--initials"
-        style={{ background: gradient }}
+        style={{ background: tile.background }}
         aria-hidden
       >
         <span className="margo-profile-favorite-artists__initial">{initial}</span>

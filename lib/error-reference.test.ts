@@ -6,8 +6,12 @@ test('error reference prefers Next digest', () => {
   assert.equal(errorReferenceLine({ digest: 'abc123digest' }), 'abc123digest')
 })
 
-test('error reference falls back to message prefix', () => {
-  assert.equal(errorReferenceLine({ message: 'Cannot read properties of undefined' }), 'Cannot read ')
+test('error reference masks generic runtime TypeError text', () => {
+  assert.equal(errorReferenceLine({ message: 'Cannot read properties of undefined' }), 'runtime-error')
+})
+
+test('error reference falls back to short message prefix', () => {
+  assert.equal(errorReferenceLine({ message: 'Network request failed' }), 'Network requ')
 })
 
 test('error reference empty when no digest or message', () => {

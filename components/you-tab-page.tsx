@@ -7,7 +7,6 @@ import { useAuthGate } from '@/components/supabase-auth-provider'
 import { buildSigninHref } from '@/lib/auth-return'
 import { ProfilePageSkeleton } from '@/components/margo-skeletons'
 import ProfilePage from '@/app/profile/[username]/page'
-import { MargoPaneErrorBoundary } from '@/components/margo-pane-error-boundary'
 
 /**
  * Static You tab body — mounted in the keepalive cache as soon as the
@@ -37,9 +36,5 @@ export function YouTabPage() {
     )
   }
 
-  return (
-    <MargoPaneErrorBoundary surface="you-pane">
-      <ProfilePage username={identity.username} />
-    </MargoPaneErrorBoundary>
-  )
+  return <ProfilePage username={identity.username} />
 }

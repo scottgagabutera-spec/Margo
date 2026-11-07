@@ -4,6 +4,9 @@ export function errorReferenceLine(error: { digest?: string; message?: string } 
   const digest = error.digest?.trim()
   if (digest) return digest
   const msg = error.message?.trim()
-  if (msg) return msg.slice(0, 12)
+  if (msg) {
+    if (/^Cannot read /i.test(msg) || /^undefined is not/i.test(msg)) return 'runtime-error'
+    return msg.slice(0, 12)
+  }
   return null
 }

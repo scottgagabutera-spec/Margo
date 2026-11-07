@@ -1,5 +1,4 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
-import { searchDeezerArtists } from '@/lib/catalog-artist/deezer-search'
 import { publicCatalogMediaUrl } from '@/lib/r2/catalog-media-url'
 import type { ProfileFavoriteArtist } from '@/components/profile-favorite-artists-row'
 
@@ -40,22 +39,6 @@ export async function loadProfileFavoriteArtists(profileId: string): Promise<Pro
     }
   }
 
-  const deezerFallbackById = new Map<string, string | null>()
-  const deezerRows = (artists || []).filter((a) => (a.source as string) === 'deezer')
-  await Promise.all(
-    deezerRows.map(async (a) => {
-      try {
-        const hits = await searchDeezerArtists(a.name as string, 4)
-        const hit =
-          hits.find((h) => h.sourceId === (a.source_id as string)) ||
-          hits[0]
-        deezerFallbackById.set(a.id as string, hit?.pictureUrl ?? null)
-      } catch {
-        deezerFallbackById.set(a.id as string, null)
-      }
-    }),
-  )
-
   return links
     .map((row) => {
       const ca = artistMap.get(row.catalog_artist_id as string)
@@ -63,16 +46,13 @@ export async function loadProfileFavoriteArtists(profileId: string): Promise<Pro
       const prof = ca.margo_profile_id ? profileUsernames.get(ca.margo_profile_id as string) : undefined
       const username = prof && !prof.is_admin ? prof.username : null
       const r2Art = ca.artwork_r2_key ? publicCatalogMediaUrl(ca.artwork_r2_key as string) : null
-      const deezerPreview =
-        deezerFallbackById.get(ca.id as string) ??
-        (ca.source === 'deezer' ? deezerFallbackById.get(ca.id as string) : null)
       const margoAvatar = username ? prof?.avatarUrl ?? null : null
       return {
         position: row.position as number,
         id: ca.id as string,
         name: ca.name as string,
-        artworkUrl: r2Art ?? margoAvatar ?? deezerPreview,
-        fallbackArtworkUrl: r2Art ? deezerPreview ?? null : deezerPreview,
+        artworkUrl: r2Art ?? margoAvatar,
+        fallbackArtworkUrl: null,
         onMargo: !!username,
         margoUsername: username,
       }
