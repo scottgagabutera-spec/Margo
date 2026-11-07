@@ -8,9 +8,13 @@ import {
   r2SecretAccessKey,
 } from '@/lib/r2/config'
 import { publicCatalogMediaUrl } from '@/lib/r2/catalog-media-url'
+import { memoryMediaObjectKey, type MemoryMediaFileKind } from '@/lib/r2/memory-media-keys'
 
-const MAX_BYTES = 5 * 1024 * 1024
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+const MAX_VIDEO_BYTES = 50 * 1024 * 1024
+
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
+const VIDEO_TYPES = new Set(['video/mp4', 'video/webm'])
 
 function r2Client(): S3Client {
   return new S3Client({
@@ -23,9 +27,19 @@ function r2Client(): S3Client {
   })
 }
 
+/** @deprecated use memoryMediaObjectKey */
 export function memoryPhotoObjectKey(profileId: string, draftId: string, position: number): string {
-  const p = Math.max(0, Math.min(29, position))
-  return `Margo/memories/${profileId.slice(0, 8)}/${draftId}/${p}.webp`
+  return memoryMediaObjectKey(profileId, draftId, position, 'image', 'webp')
+}
+
+function extForContentType(contentType: string, kind: MemoryMediaFileKind): string {
+  if (kind === 'poster') return 'webp'
+  if (VIDEO_TYPES.has(contentType)) {
+    return contentType === 'video/webm' ? 'webm' : 'mp4'
+  }
+  if (contentType === 'image/png') return 'png'
+  if (contentType === 'image/jpeg') return 'jpg'
+  return 'webp'
 }
 
 export async function presignMemoryPhotoUpload(opts: {
@@ -34,6 +48,7 @@ export async function presignMemoryPhotoUpload(opts: {
   position: number
   contentType: string
   byteLength: number
+  kind?: MemoryMediaFileKind
 }): Promise<{
   url: string
   headers: Record<string, string>
@@ -41,14 +56,28 @@ export async function presignMemoryPhotoUpload(opts: {
   publicUrl: string
   expiresInSec: number
 }> {
-  if (!IMAGE_TYPES.has(opts.contentType)) {
-    throw new Error('Unsupported image type')
-  }
-  if (opts.byteLength < 1 || opts.byteLength > MAX_BYTES) {
-    throw new Error('Image must be under 5 MB')
+  const kind = opts.kind ?? 'image'
+  if (kind === 'poster') {
+    if (opts.contentType !== 'image/webp') throw new Error('Poster must be image/webp')
+    if (opts.byteLength < 1 || opts.byteLength > MAX_IMAGE_BYTES) {
+      throw new Error('Poster must be under 5 MB')
+    }
+  } else if (VIDEO_TYPES.has(opts.contentType) || kind === 'video') {
+    if (!VIDEO_TYPES.has(opts.contentType)) throw new Error('Unsupported video type')
+    if (opts.byteLength < 1 || opts.byteLength > MAX_VIDEO_BYTES) {
+      throw new Error('Video must be under 50 MB')
+    }
+  } else {
+    if (!IMAGE_TYPES.has(opts.contentType)) throw new Error('Unsupported image type')
+    if (opts.byteLength < 1 || opts.byteLength > MAX_IMAGE_BYTES) {
+      throw new Error('Image must be under 5 MB')
+    }
   }
 
-  const key = memoryPhotoObjectKey(opts.profileId, opts.draftId, opts.position)
+  const fileKind: MemoryMediaFileKind =
+    kind === 'poster' ? 'poster' : VIDEO_TYPES.has(opts.contentType) ? 'video' : 'image'
+  const ext = extForContentType(opts.contentType, fileKind)
+  const key = memoryMediaObjectKey(opts.profileId, opts.draftId, opts.position, fileKind, ext)
   const expiresInSec = catalogUploadPutExpirySec()
   const command = new PutObjectCommand({
     Bucket: r2BucketName(),

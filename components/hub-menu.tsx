@@ -19,6 +19,7 @@ import { createPortal, flushSync } from 'react-dom'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useHubSurfaces } from '@/hooks/useHubSurfaces'
 import { computeHubPanelPosition, pickVisibleHubAnchor } from '@/lib/hub-panel-position'
+import { HubBuildStamp } from '@/components/hub-build-stamp'
 import { useRouter } from 'next/navigation'
 import {
   leavePrimaryTabSurface,
@@ -321,6 +322,7 @@ function HubPanelBody({
           onLockedActivate={onLockedActivate}
         />
       </div>
+      <HubBuildStamp />
     </div>
   )
 }

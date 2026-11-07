@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
     position?: number
     contentType?: string
     byteLength?: number
+    kind?: 'image' | 'video' | 'poster'
   }
   try {
     body = await request.json()
@@ -36,10 +37,19 @@ export async function POST(request: NextRequest) {
       position,
       contentType,
       byteLength,
+      kind: body.kind,
     })
     return NextResponse.json(presign)
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Presign failed'
-    return NextResponse.json({ error: msg }, { status: 400 })
+    const configGap = /not configured/i.test(msg)
+    return NextResponse.json(
+      {
+        error: configGap
+          ? 'Upload storage is not configured on this deployment (R2 env vars missing on Vercel preview).'
+          : msg,
+      },
+      { status: configGap ? 503 : 400 },
+    )
   }
 }

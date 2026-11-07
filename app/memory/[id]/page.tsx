@@ -16,6 +16,7 @@ import { useRegisterNavBack } from '@/components/nav-back'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { MARGO_SITE_ORIGIN } from '@/lib/moment/site-origin'
 import { toast } from 'sonner'
+import { MemoryDetailPageSkeleton } from '@/components/margo-skeletons'
 
 const font = UI_FONT
 
@@ -199,11 +200,7 @@ export default function MemoryDetailPage() {
   }
 
   if (loading) {
-    return (
-      <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ fontFamily: font, color: 'var(--text-muted)', fontSize: TYPE.secondary }}>Loading…</p>
-      </div>
-    )
+    return <MemoryDetailPageSkeleton />
   }
 
   if (error || !memory) {

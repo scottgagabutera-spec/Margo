@@ -1803,16 +1803,16 @@ html[data-margo-stage] .margo-footer {
   z-index: 2;
   box-sizing: border-box;
 }
-@media (min-width: 835px) and (orientation: landscape) {
+@media (min-width: 768px) {
   .margo-profile-shell {
     flex-direction: row;
     align-items: flex-start;
     gap: 48px;
   }
   .margo-profile-shell__left {
-    flex: 0 0 340px;
-    width: 340px;
-    max-width: 340px;
+    flex: 0 0 330px;
+    width: 330px;
+    max-width: 330px;
     position: sticky;
     top: calc(var(--nav-height, 72px) + 12px);
     align-self: flex-start;
@@ -1852,7 +1852,7 @@ html[data-margo-stage] .margo-footer {
 .margo-profile-shell .margo-profile-hero__portrait .margo-portrait-avatar__frame {
   border-radius: 14px;
 }
-@media (min-width: 835px) and (orientation: landscape) {
+@media (min-width: 768px) {
   .margo-profile-shell .margo-profile-hero__portrait .margo-portrait-avatar {
     width: 96px;
     max-width: 96px;
@@ -1872,7 +1872,7 @@ html[data-margo-stage] .margo-footer {
   margin: 0 0 12px;
   box-sizing: border-box;
 }
-@media (min-width: 835px) and (orientation: landscape) {
+@media (min-width: 768px) {
   .margo-profile-block--header {
     display: none;
   }
@@ -1883,7 +1883,7 @@ html[data-margo-stage] .margo-footer {
   height: var(--margo-touch-min);
   flex-shrink: 0;
 }
-@media (max-width: 834px) {
+@media (max-width: 767px) {
   .margo-profile-page {
     margin-top: 0;
     padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
@@ -1966,7 +1966,7 @@ html[data-margo-stage] .margo-footer {
   letter-spacing: 0.02em;
   -webkit-tap-highlight-color: transparent;
 }
-@media (min-width: 835px) and (orientation: landscape) {
+@media (min-width: 768px) {
   .margo-profile-bio-wrap,
   .margo-profile-bio {
     text-align: left;
@@ -2016,16 +2016,25 @@ html[data-margo-stage] .margo-footer {
 }
 .margo-profile-action-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   width: 100%;
-  align-items: stretch;
+  align-items: center;
+  justify-content: center;
+  margin: 4px 0 8px;
+}
+@media (min-width: 768px) {
+  .margo-profile-action-row {
+    justify-content: flex-start;
+  }
 }
 .margo-profile-action-btn {
-  flex: 1 1 0;
+  flex: 0 0 auto;
+  width: auto;
   min-width: 0;
-  height: 34px;
-  min-height: 34px;
-  max-height: 34px;
+  height: 32px;
+  min-height: 32px;
+  max-height: 32px;
   padding: 0 12px;
   display: inline-flex;
   align-items: center;
@@ -2074,8 +2083,34 @@ html[data-margo-stage] .margo-footer {
   display: flex;
   justify-content: center;
   align-items: stretch;
-  margin: 16px 0;
+  margin: 10px 0 8px;
   width: 100%;
+}
+@media (max-width: 390px) {
+  .margo-profile-page {
+    padding-top: 10px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .margo-profile-shell {
+    gap: 10px;
+  }
+  .margo-profile-stats {
+    margin: 6px 0 6px;
+  }
+  .margo-profile-hero__portrait {
+    width: 60px !important;
+    height: 76px !important;
+  }
+  .margo-profile-block--signature {
+    margin-bottom: 8px;
+  }
+  .margo-profile-block--memories {
+    margin-bottom: 8px;
+  }
+  .margo-profile-block--favorites {
+    margin-bottom: 10px;
+  }
 }
 .margo-profile-signature-pill-wrap {
   width: 100%;
@@ -2216,15 +2251,15 @@ html[data-margo-stage] .margo-footer {
 }
 .margo-profile-favorite-artists__label {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-transform: none;
   color: var(--text-muted);
   margin: 0 0 10px;
   text-align: center;
 }
-@media (min-width: 835px) and (orientation: landscape) {
+@media (min-width: 768px) {
   .margo-profile-favorite-artists__label {
     text-align: left;
   }
@@ -2235,7 +2270,7 @@ html[data-margo-stage] .margo-footer {
   justify-content: center;
   gap: 14px 12px;
 }
-@media (min-width: 835px) and (orientation: landscape) {
+@media (min-width: 768px) {
   .margo-profile-favorite-artists__row {
     justify-content: flex-start;
   }
@@ -2424,7 +2459,7 @@ html[data-margo-stage] .margo-footer {
   padding: 24px 16px calc(16px + env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
 }
-@media (min-width: 835px) and (orientation: landscape) {
+@media (min-width: 768px) {
   .margo-profile-signature-sheet-backdrop {
     align-items: center;
   }
@@ -3230,6 +3265,18 @@ html[data-margo-hub-sheet-flush-top] .margo-hub-sheet {
   max-width: 100%;
   box-sizing: border-box;
   justify-content: center;
+}
+.margo-hub-build-stamp {
+  margin: 10px 0 0;
+  padding: 6px 0 2px;
+  text-align: center;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  opacity: 0.85;
+  border-top: 1px solid var(--border);
 }
 .margo-hub-identity {
   grid-column: 1 / -1;
@@ -7130,7 +7177,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   background: var(--bg);
   padding-bottom: 2px;
 }
-@media (min-width: 835px) and (orientation: landscape) {
+@media (min-width: 768px) {
   .margo-profile-tabs-sticky {
     top: calc(var(--nav-height, 72px) + 6px);
   }
@@ -7138,7 +7185,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 .margo-profile-memories--desktop {
   display: none;
 }
-@media (min-width: 835px) and (orientation: landscape) {
+@media (min-width: 768px) {
   .margo-profile-memories--mobile {
     display: none;
   }
@@ -7147,7 +7194,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
     margin-bottom: 16px;
   }
 }
-@media (max-width: 834px) {
+@media (max-width: 767px) {
   .margo-profile-shell {
     gap: 14px;
   }
@@ -7168,7 +7215,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   max-width: 34px;
   padding: 0;
 }
-@media (max-width: 834px) {
+@media (max-width: 767px) {
   .margo-profile-action-overflow {
     display: none;
   }

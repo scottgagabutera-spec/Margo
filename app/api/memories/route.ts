@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const photos = (body.photos || []).slice(0, 8)
+  const photos = (body.photos || []).slice(0, 10)
   if (photos.length) {
     await admin.from('memory_photos').insert(
       photos.map((p, i) => ({

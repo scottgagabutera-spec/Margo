@@ -22,7 +22,7 @@ import { ProfileImageLightbox } from '@/components/profile-image-lightbox'
 import { fetchProfilePeek, peekProfileCache, warmProfile, type WarmProfileRow } from '@/lib/profile-warm'
 import { resolveMessageEligibility, type FollowStatus } from '@/lib/message-eligibility'
 import { readViewerFollowCache, writeViewerFollowCache } from '@/lib/viewer-follow-cache'
-import { ProfilePageSkeleton, ProfileSocialActionsSkeleton } from '@/components/margo-skeletons'
+import { FeedPostSkeletonList, ProfilePageSkeleton, ProfileSocialActionsSkeleton } from '@/components/margo-skeletons'
 import { resolvePublicArtistCredit } from '@/lib/artist-identity'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { MargoActionSheet } from '@/components/margo-action-sheet'
@@ -122,15 +122,15 @@ function ProfileStat({
       }}>
         {display}
       </span>
-      <span style={{
-        fontFamily: font,
-        fontSize: TYPE.label,
-        fontWeight: 600,
-        letterSpacing: '0.14em',
-        textTransform: 'uppercase',
-        color: 'var(--text-muted)',
-        marginTop: '3px',
-      }}>
+      <span
+        className="margo-profile-ui-label"
+        style={{
+          marginTop: 2,
+          marginBottom: 0,
+          fontSize: '0.8125rem',
+          textAlign: 'center',
+        }}
+      >
         {label}
       </span>
     </>
@@ -874,14 +874,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
 
             <div style={{ marginBottom: '28px' }}>
               {profileContentAccess === 'loading' ? (
-                <div style={{
-                  border: '1px solid var(--border)', borderRadius: '16px', padding: '24px',
-                  textAlign: 'center',
-                }}>
-                  <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-muted)', margin: 0 }}>
-                    Loading profile…
-                  </p>
-                </div>
+                <FeedPostSkeletonList count={2} />
               ) : profileContentAccess === 'blocked' ? (
                 <div style={{
                   border: '1px solid var(--border)', borderRadius: '16px', padding: '24px',
@@ -1012,9 +1005,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 )
               ) : contentTab === 'reposts' ? (
                 repostsLoading ? (
-                  <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-muted)' }}>
-                    Loading reposts…
-                  </p>
+                  <FeedPostSkeletonList count={2} />
                 ) : profileReposts.length === 0 ? (
                   null
                 ) : (
@@ -1063,9 +1054,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                   </div>
                 )
               ) : backsLoading ? (
-                <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-muted)' }}>
-                  Loading lyric backs…
-                </p>
+                <FeedPostSkeletonList count={2} />
               ) : lyricBacks.length === 0 ? (
                 null
               ) : (

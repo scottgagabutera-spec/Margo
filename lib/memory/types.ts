@@ -54,6 +54,9 @@ export type MemoryPublic = {
     url: string
     width: number | null
     height: number | null
+    mediaType: 'image' | 'video'
+    posterUrl: string | null
+    durationSec: number | null
   }>
   viewerResonated: boolean
   isOwner: boolean

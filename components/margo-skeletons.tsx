@@ -377,6 +377,18 @@ export function HubDeepNavSkeleton({ href }: { href: string }) {
   )
 }
 
+export function MemoryDetailPageSkeleton() {
+  return (
+    <main style={{ minHeight: '100vh', background: 'var(--bg)', padding: 'calc(var(--nav-height, 72px) + 12px) 20px var(--margo-page-padding-bottom)', maxWidth: 1120, margin: '0 auto' }}>
+      <PulseStyle />
+      <div style={bone({ width: '100%', maxWidth: 420, aspectRatio: '4/5', borderRadius: 16, border: 'none', marginBottom: 16 }, 0)} />
+      <div style={bone({ height: 14, width: '62%', borderRadius: 6, border: 'none', marginBottom: 10 }, 40)} />
+      <div style={bone({ height: 12, width: '88%', borderRadius: 6, border: 'none', marginBottom: 8 }, 80)} />
+      <div style={bone({ height: 12, width: '72%', borderRadius: 6, border: 'none' }, 120)} />
+    </main>
+  )
+}
+
 export function PrimaryTabPaneSkeleton({
   tab,
 }: {
