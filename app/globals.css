@@ -427,15 +427,62 @@ html[data-margo-landing-song-flow] .margo-landing-page-shell {
 
 .margo-compose-overlay {
   overflow: hidden;
-  padding-bottom: calc(var(--margo-keyboard-inset, 0px) + env(safe-area-inset-bottom, 0px));
+  /* Height uses --margo-vv-height; do not pad by keyboard-inset again (double-count). */
 }
 
 .margo-compose-overlay__stack {
   flex: 1;
   min-height: 0;
+  max-height: 100%;
   width: 100%;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+}
+
+.margo-compose-overlay--your-line .margo-compose-overlay__stack {
+  padding-bottom: calc(var(--margo-cta-bar-h, 0px) + 24px + env(safe-area-inset-bottom, 0px));
+}
+
+html:not([data-margo-keyboard="1"]) .margo-compose-overlay--your-line .margo-compose-overlay__stack {
+  padding-bottom: calc(
+    var(--margo-cta-bar-h, 0px)
+    + var(--margo-tabbar-h, 80px)
+    + 24px
+    + env(safe-area-inset-bottom, 0px)
+  );
+}
+
+.margo-compose-your-line-card {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.margo-compose-your-line-card .margo-catalog-pick-lyric__input,
+.margo-compose-your-line-card textarea {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.margo-compose-overlay--picker .margo-compose-overlay__stack {
+  padding-bottom: calc(var(--margo-cta-bar-h, 0px) + 16px + env(safe-area-inset-bottom, 0px));
+}
+
+html:not([data-margo-keyboard="1"]) .margo-compose-overlay--picker .margo-compose-overlay__stack {
+  padding-bottom: calc(
+    var(--margo-cta-bar-h, 0px)
+    + var(--margo-tabbar-h, 80px)
+    + 16px
+    + env(safe-area-inset-bottom, 0px)
+  );
 }
 
 .margo-compose-overlay__scroll {

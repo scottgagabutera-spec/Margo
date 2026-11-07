@@ -191,10 +191,11 @@ function ComposeDismissButton({
 
 const composeOverlayStyle: React.CSSProperties = {
   position: 'fixed',
-  top: 'var(--margo-header-h, var(--nav-height, 72px))',
+  top: 'calc(var(--margo-header-h, var(--nav-height, 72px)) + var(--margo-vv-offset-top, 0px))',
   left: 0,
   right: 0,
   height: 'calc(var(--margo-vv-height, 100dvh) - var(--margo-header-h, var(--nav-height, 72px)))',
+  maxHeight: 'calc(var(--margo-vv-height, 100dvh) - var(--margo-header-h, var(--nav-height, 72px)))',
   zIndex: 80,
   display: 'flex',
   flexDirection: 'column',
@@ -1592,11 +1593,8 @@ function ComposeInner() {
 
       {portalMounted && showLinePicker && createPortal(
         <div
-          className="margo-compose-overlay"
-          style={{
-            ...composeOverlayStyle,
-            paddingBottom: 'calc(var(--margo-cta-bar-h, 0px) + var(--margo-tabbar-h, 80px) + 16px)',
-          }}
+          className="margo-compose-overlay margo-compose-overlay--picker"
+          style={composeOverlayStyle}
         >
           <div className="margo-compose-overlay__stack" style={{ maxWidth: '640px', width: '100%', margin: '0 auto' }}>
             <div style={{ flexShrink: 0 }}>
@@ -1799,11 +1797,8 @@ function ComposeInner() {
 
       {portalMounted && showYourLinePanel && createPortal(
         <div
-          className="margo-compose-overlay"
-          style={{
-            ...composeOverlayStyle,
-            overflowY: 'hidden',
-          }}
+          className="margo-compose-overlay margo-compose-overlay--your-line"
+          style={composeOverlayStyle}
         >
           <div className="margo-compose-overlay__stack" style={{ maxWidth: '640px', width: '100%', margin: '0 auto' }}>
             <div style={{ flexShrink: 0 }}>
@@ -1826,12 +1821,12 @@ function ComposeInner() {
               )}
             </div>
 
-            <ComposeLyricCard style={{
-              flex: 1, minHeight: 0, overflow: 'hidden',
-              display: 'flex', flexDirection: 'column',
-              padding: chromeHidden ? '18px 20px' : '20px',
-              transition: `padding ${composeChromeEase}`,
-            }}>
+            <ComposeLyricCard
+              className="margo-compose-your-line-card"
+              style={{
+                padding: chromeHidden ? '18px 20px' : '20px',
+              }}
+            >
               <div style={{
                 flexShrink: 0,
                 display: 'flex',
@@ -1916,17 +1911,6 @@ function ComposeInner() {
                 <span style={{ fontFamily: UI_FONT, fontSize: '0.65rem', color: 'var(--text-on-gold-muted)' }}>{lyric.length}/140</span>
               </div>
             </ComposeLyricCard>
-
-            <div
-              aria-hidden
-              style={{
-                flexShrink: 0,
-                height: chromeHidden
-                  ? 'var(--margo-cta-bar-h, 0px)'
-                  : 'calc(var(--margo-cta-bar-h, 0px) + var(--margo-tabbar-h, 80px) + 24px)',
-                transition: `height ${composeChromeEase}`,
-              }}
-            />
           </div>
         </div>,
         document.body,
