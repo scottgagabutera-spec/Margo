@@ -62,7 +62,7 @@ export function MemoryCard({
           </span>
         ) : null}
         {variant === 'feed' ? (
-          <span className="margo-memory-card__see-more" style={{ fontFamily: font, fontSize: TYPE.label }}>See more</span>
+          <span className="margo-memory-card__see-more" style={{ fontFamily: font, fontSize: '0.8125rem', fontWeight: 500 }}>See more</span>
         ) : null}
       </span>
     </Link>

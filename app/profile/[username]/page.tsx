@@ -35,6 +35,8 @@ import {
   ProfilePortraitActions,
 } from '@/components/profile-portrait-identity'
 import { ProfileShellHeader } from '@/components/profile-shell-header'
+import { MoreIcon } from '@/components/icons'
+import { ProfileAccountMenu } from '@/components/profile-account-menu'
 import { ProfileBioClamp } from '@/components/profile-bio-clamp'
 import { shareProfile } from '@/lib/profile-share'
 import {
@@ -62,8 +64,12 @@ const lyricFont = LYRIC_FONT
 const DISCOGRAPHY_PREVIEW_COUNT = 8
 
 const sectionLabelStyle: React.CSSProperties = {
-  fontFamily: font, fontSize: TYPE.label, fontWeight: 700, color: 'var(--text-muted)',
-  textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: '8px',
+  fontFamily: font,
+  fontSize: '0.8125rem',
+  fontWeight: 500,
+  color: 'var(--text-muted)',
+  letterSpacing: '-0.01em',
+  marginBottom: '8px',
 }
 
 const emptyLyricStyle: React.CSSProperties = {
@@ -582,6 +588,23 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
           >
             Share profile
           </button>
+          <button
+            ref={accountMenuTriggerRef}
+            type="button"
+            aria-label="Account menu"
+            aria-expanded={accountMenuOpen}
+            className="margo-profile-action-btn margo-profile-action-btn--secondary margo-profile-action-overflow"
+            onClick={() => setAccountMenuOpen(!accountMenuOpen)}
+          >
+            <MoreIcon size={18} color="var(--text-secondary)" />
+          </button>
+          <ProfileAccountMenu
+            open={accountMenuOpen}
+            onOpenChange={setAccountMenuOpen}
+            triggerRef={accountMenuTriggerRef}
+            showStudio={!!identity?.isArtist}
+            onSignOut={() => { void handleSignOut() }}
+          />
         </div>
       )}
 
@@ -753,8 +776,12 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
             </div>
 
             {(isOwnProfile || profileMemories.length > 0) ? (
-              <div className="margo-profile-block--memories">
+              <div className="margo-profile-block--memories margo-profile-memories--mobile">
                 <ProfileMemoriesStrip memories={profileMemories} isOwnProfile={isOwnProfile} />
+              </div>
+            ) : isOwnProfile ? (
+              <div className="margo-profile-block--memories margo-profile-memories--mobile">
+                <ProfileMemoriesStrip memories={[]} isOwnProfile />
               </div>
             ) : null}
 
@@ -768,6 +795,15 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
             </div>
 
             <div className="margo-profile-shell__right">
+            {(isOwnProfile || profileMemories.length > 0) ? (
+              <div className="margo-profile-block--memories margo-profile-memories--desktop">
+                <ProfileMemoriesStrip memories={profileMemories} isOwnProfile={isOwnProfile} />
+              </div>
+            ) : isOwnProfile ? (
+              <div className="margo-profile-block--memories margo-profile-memories--desktop">
+                <ProfileMemoriesStrip memories={[]} isOwnProfile />
+              </div>
+            ) : null}
             {/* ── Discography preview — a taste, not the whole catalog.
                 Capped at DISCOGRAPHY_PREVIEW_COUNT and horizontally
                 scrollable (same row pattern Discover already uses for
@@ -776,7 +812,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 "View all" and the Songs stat above both go to the same
                 full discography page. ── */}
             {profile.isArtist && (
-              <div style={{ marginBottom: '28px' }}>
+              <div className="margo-profile-discography-preview" style={{ marginBottom: '28px' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '14px' }}>
                   <div>
                     <p style={{ ...sectionLabelStyle, marginBottom: '2px' }}>Discography</p>
@@ -860,44 +896,34 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 </div>
               ) : (
               <>
-              <div
-                role="tablist"
-                aria-label="Profile content"
-                style={{
-                  display: 'flex', gap: '4px', marginBottom: '16px',
-                  borderBottom: '1px solid var(--border)',
-                }}
-              >
-                {([
-                  { id: 'lyrics' as const, label: 'Lyrics' },
-                  { id: 'memories' as const, label: 'Memories' },
-                  { id: 'reposts' as const, label: 'Reposts' },
-                  { id: 'backs' as const, label: 'Lyric Backs' },
-                  ...(isOwnProfile ? [{ id: 'private' as const, label: 'Private' }] : []),
-                ]).map(tab => {
-                  const active = contentTab === tab.id
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      role="tab"
-                      aria-selected={active}
-                      onClick={() => setContentTab(tab.id)}
-                      style={{
-                        flex: 1, minHeight: 'var(--margo-touch-min)',
-                        fontFamily: font, fontSize: TYPE.label, fontWeight: 700,
-                        letterSpacing: '0.16em', textTransform: 'uppercase',
-                        color: active ? 'var(--gold)' : 'var(--text-muted)',
-                        background: 'transparent', border: 'none',
-                        borderBottom: active ? '2px solid var(--gold)' : '2px solid transparent',
-                        marginBottom: '-1px', cursor: 'pointer',
-                        WebkitTapHighlightColor: 'transparent', padding: '8px 4px',
-                      }}
-                    >
-                      {tab.label}
-                    </button>
-                  )
-                })}
+              <div className="margo-profile-tabs-sticky">
+                <div
+                  role="tablist"
+                  aria-label="Profile content"
+                  className="margo-profile-content-tabs"
+                >
+                  {([
+                    { id: 'lyrics' as const, label: 'Lyrics' },
+                    { id: 'memories' as const, label: 'Memories' },
+                    { id: 'reposts' as const, label: 'Reposts' },
+                    { id: 'backs' as const, label: 'Backs' },
+                    ...(isOwnProfile ? [{ id: 'private' as const, label: 'Private' }] : []),
+                  ]).map(tab => {
+                    const active = contentTab === tab.id
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        onClick={() => setContentTab(tab.id)}
+                        className={`margo-profile-content-tab${active ? ' margo-profile-content-tab--active' : ''}`}
+                      >
+                        {tab.label}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
 
               {contentTab === 'memories' ? (

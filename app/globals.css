@@ -1844,10 +1844,10 @@ html[data-margo-stage] .margo-footer {
   }
 }
 .margo-profile-shell .margo-profile-hero__portrait .margo-portrait-avatar {
-  width: 68px;
-  max-width: 68px;
-  height: 86px;
-  max-height: 86px;
+  width: 64px;
+  max-width: 64px;
+  height: 80px;
+  max-height: 80px;
 }
 .margo-profile-shell .margo-profile-hero__portrait .margo-portrait-avatar__frame {
   border-radius: 14px;
@@ -2031,12 +2031,12 @@ html[data-margo-stage] .margo-footer {
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  border-radius: 12px;
+  border-radius: 10px;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-transform: none;
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
@@ -7087,3 +7087,245 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   margin-bottom: 18px;
 }
 
+/* Profile UI labels — Geist Sans, 13px medium, sentence case */
+.margo-profile-ui-label {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+}
+.margo-profile-content-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+.margo-profile-content-tab {
+  flex: 1;
+  min-height: 36px;
+  padding: 6px 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  -webkit-tap-highlight-color: transparent;
+}
+.margo-profile-content-tab--active {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+.margo-profile-tabs-sticky {
+  position: sticky;
+  top: calc(env(safe-area-inset-top, 0px) + 2px);
+  z-index: 6;
+  background: var(--bg);
+  padding-bottom: 2px;
+}
+@media (min-width: 835px) and (orientation: landscape) {
+  .margo-profile-tabs-sticky {
+    top: calc(var(--nav-height, 72px) + 6px);
+  }
+}
+.margo-profile-memories--desktop {
+  display: none;
+}
+@media (min-width: 835px) and (orientation: landscape) {
+  .margo-profile-memories--mobile {
+    display: none;
+  }
+  .margo-profile-memories--desktop {
+    display: block;
+    margin-bottom: 16px;
+  }
+}
+@media (max-width: 834px) {
+  .margo-profile-shell {
+    gap: 14px;
+  }
+  .margo-profile-page {
+    padding-bottom: calc(var(--margo-tabbar-h, 80px) + env(safe-area-inset-bottom, 0px) + 12px);
+  }
+  .margo-profile-discography-preview {
+    display: none;
+  }
+  .margo-profile-memories--desktop {
+    display: none;
+  }
+}
+.margo-profile-action-overflow {
+  flex: 0 0 34px;
+  width: 34px;
+  min-width: 34px;
+  max-width: 34px;
+  padding: 0;
+}
+@media (max-width: 834px) {
+  .margo-profile-action-overflow {
+    display: none;
+  }
+}
+.margo-profile-memory-tile {
+  flex: 0 0 68px;
+  width: 68px;
+  height: 68px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--border);
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  scroll-snap-align: start;
+}
+.margo-profile-memory-tile--add {
+  border: 1px dashed var(--gold-border);
+  background: var(--gold-faint);
+}
+.margo-profile-memory-tile__plus {
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--gold);
+  font-weight: 500;
+}
+.margo-profile-memories-strip__row {
+  gap: 8px;
+}
+.margo-profile-favorite-artists__art-wrap,
+.margo-profile-favorite-artists__art {
+  width: 40px;
+  height: 40px;
+}
+.margo-profile-favorite-artists__label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+.margo-profile-memories-strip__label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+.margo-memory-card--feed {
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  min-height: 0;
+}
+.margo-memory-card--feed .margo-memory-card__cover {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  aspect-ratio: 1;
+  border-radius: 10px;
+}
+.margo-memory-card--feed .margo-memory-card__date-chip {
+  display: none;
+}
+.margo-memory-card--feed .margo-memory-card__body {
+  padding: 0;
+  flex: 1;
+  justify-content: center;
+}
+.margo-memory-card--feed .margo-memory-card__story--clamp {
+  -webkit-line-clamp: 2;
+}
+.margo-feed-memories-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.margo-feed-people-strip {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+.margo-feed-people-strip__label {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+}
+.margo-feed-people-strip__row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+}
+.margo-feed-people-strip__cell {
+  flex: 0 0 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  color: inherit;
+}
+.margo-feed-people-strip__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--surface-2);
+}
+.margo-feed-people-strip__avatar--empty {
+  display: block;
+  border: 1px solid var(--border);
+}
+.margo-feed-people-strip__name {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.2;
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.margo-feed-memory-nudge {
+  border: 1px solid var(--gold-border);
+  border-radius: 14px;
+  background: var(--gold-faint);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.margo-feed-memory-nudge__copy {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin: 0 0 10px;
+  line-height: 1.4;
+}
+.margo-feed-memory-nudge__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
