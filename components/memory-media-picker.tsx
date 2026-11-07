@@ -59,15 +59,12 @@ export function MemoryMediaPicker({
     <div className="margo-memory-media-picker">
       <div className="margo-memory-media-picker__head">
         <p className="margo-memory-media-picker__title" style={{ fontFamily: font }}>
-          Add photos and videos
+          Add photos or videos
         </p>
         <span style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)' }}>
           {photos.length}/{MAX_MEMORY_MEDIA}
         </span>
       </div>
-      <p className="margo-memory-media-picker__hint" style={{ fontFamily: font }}>
-        First item is the cover. Photos and short videos (up to 60s).
-      </p>
       {status ? (
         <p style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--gold)', margin: '0 0 8px' }}>{status}</p>
       ) : null}

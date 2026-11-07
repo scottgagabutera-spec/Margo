@@ -8,6 +8,7 @@ import { memoryGridCoverSource, memoryProfileTileThumbnailUrl } from '@/lib/memo
 import type { MemoryPublic } from '@/lib/memory/types'
 import { MemoryTileTitle } from '@/components/memory-tile-title'
 import { memoryWordsOnlyBackground, memoryWordsOnlySampleColor } from '@/lib/memory/words-only-palette'
+import { formatMemoryDatePublic } from '@/lib/memory/date-label'
 
 export function ProfileMemoryMoreTile({ href, label }: { href: string; label?: string }) {
   return (
@@ -45,6 +46,12 @@ export function ProfileMemoryTile({
   const { src, isVideo, wordsOnly } = memoryGridCoverSource(memory)
   const thumb = wordsOnly ? '' : memoryProfileTileThumbnailUrl(src || memory.coverUrl)
   const wordsTitle = memoryCaptionTitle(memory)
+  const dateChip = formatMemoryDatePublic({
+    granularity: memory.dateGranularity,
+    dateStart: memory.dateStart,
+    dateEnd: memory.dateEnd,
+    showDatePublicly: memory.showDatePublicly,
+  })
 
   return (
     <Link
@@ -61,6 +68,9 @@ export function ProfileMemoryTile({
             sampleBg={memoryWordsOnlySampleColor(memory.id)}
             useLora
           />
+          {dateChip ? (
+            <span className="margo-memory-cover-caption__date margo-memory-cover-caption__date--words">{dateChip}</span>
+          ) : null}
         </span>
       ) : null}
       {thumb ? (

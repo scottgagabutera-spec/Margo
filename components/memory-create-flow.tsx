@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ComposeSearchDropdown, type ComposeSearchHit } from '@/components/compose-search-dropdown'
 import { MargoSearchInput } from '@/components/margo-search-input'
 import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
-import { CloseIcon } from '@/components/icons'
+import { CloseIcon, ImagePlusIcon, MusicNoteIcon, PenLineIcon } from '@/components/icons'
 import { compactArtworkUrl } from '@/lib/compact-artwork-url'
 import { createClient } from '@/lib/supabase/client'
 import { fetchUnifiedSongSearchHits } from '@/lib/song-search/unified-song-search'
@@ -437,7 +437,13 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
 
       <div
         style={{
-          padding: `0 20px ${step === 4 ? '200px' : '120px'}`,
+          padding: `0 20px ${
+            step === 4
+              ? '200px'
+              : keyboardOpen
+                ? 'calc(160px + var(--margo-keyboard-inset, 0px) + var(--margo-cta-bar-h, 72px))'
+                : 'calc(120px + var(--margo-cta-bar-h, 72px))'
+          }`,
           maxWidth: 560,
           margin: '0 auto',
           width: '100%',
@@ -449,10 +455,10 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
             <p style={{ ...labelStyle, marginBottom: 12 }}>What is this memory about?</p>
             <div className="margo-memory-entry-choices">
               {([
-                ['song', 'A song'],
-                ['media', 'A photo or video'],
-                ['words', 'Just my words'],
-              ] as const).map(([id, label]) => (
+                { id: 'song' as const, label: 'A song', Icon: MusicNoteIcon },
+                { id: 'media' as const, label: 'A photo or video', Icon: ImagePlusIcon },
+                { id: 'words' as const, label: 'Just my words', Icon: PenLineIcon },
+              ]).map(({ id, label, Icon }) => (
                 <button
                   key={id}
                   type="button"
@@ -460,7 +466,10 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
                   onClick={() => setEntryKind(id)}
                   style={{ fontFamily: font }}
                 >
-                  {label}
+                  <span className="margo-memory-entry-choices__icon" aria-hidden>
+                    <Icon size={22} color="var(--gold)" />
+                  </span>
+                  <span>{label}</span>
                 </button>
               ))}
             </div>
@@ -594,10 +603,9 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
               onBlur={() => setTitleTouched(true)}
               style={inputStyle}
             />
-            <MemoryImproveWithAi field="title" text={title} onUseSuggestion={(s) => setTitle(s.slice(0, 80))} />
             <MemorySuggestTitles
               story={story}
-              songs={songs.map((s) => `${s.songTitle} — ${s.artistName}`)}
+              songs={songs.map((s) => `${s.songTitle} · ${s.artistName}`)}
               onPick={(t) => { setTitle(t); setTitleTouched(true) }}
             />
             <p style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)', margin: '6px 0 0', textAlign: 'right' }}>
@@ -613,7 +621,13 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
           <>
             <label style={labelStyle}>When</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-              {(['day', 'month', 'year', 'period', 'none'] as MemoryDateGranularity[]).map((g) => (
+              {([
+                ['day', 'A day'],
+                ['month', 'A month'],
+                ['year', 'A year'],
+                ['period', 'A period'],
+                ['none', 'No date'],
+              ] as const).map(([g, label]) => (
                 <button
                   key={g}
                   type="button"
@@ -626,13 +640,12 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
                     background: dateGranularity === g ? 'var(--gold-faint)' : 'var(--surface)',
                     color: dateGranularity === g ? 'var(--gold)' : 'var(--text-secondary)',
                     fontFamily: font,
-                    fontSize: TYPE.label,
-                    letterSpacing: '0.06em',
-                    textTransform: 'uppercase',
+                    fontSize: TYPE.secondary,
+                    fontWeight: 600,
                     cursor: 'pointer',
                   }}
                 >
-                  {g}
+                  {label}
                 </button>
               ))}
             </div>
@@ -740,7 +753,12 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
         ) : null}
       </div>
 
-      <KeyboardSafeCtaBar keyboardOpen={keyboardOpen} contentMaxWidth={560}>
+      <KeyboardSafeCtaBar
+        keyboardOpen={keyboardOpen}
+        contentMaxWidth={560}
+        pinToLayoutBottom
+        solidBackground
+      >
         <div style={{ display: 'flex', gap: 10, padding: '0 4px' }}>
           {step < 4 ? (
             <>
