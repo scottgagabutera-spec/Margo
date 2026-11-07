@@ -20,7 +20,8 @@ import { usePathname, useRouter } from 'next/navigation'
 import { usePrimaryTabSwipeGesture } from '@/hooks/usePrimaryTabSwipeGesture'
 import { HubDeepNavSkeleton, PrimaryTabPaneSkeleton } from '@/components/margo-skeletons'
 import { MARGO_HUB_DEEP_NAV_EVENT, type HubDeepNavDetail } from '@/lib/hub-deep-nav'
-import { peekFeedPostsCache, warmPrimaryTab } from '@/lib/primary-tab-prefetch'
+import { warmPrimaryTab } from '@/lib/primary-tab-prefetch'
+import { MARGO_NAV_START } from '@/lib/margo-nav-intent'
 import { clearHubOverlayRestore, peekHubOverlayRestore } from '@/lib/search-scope'
 
 /**
@@ -826,6 +827,9 @@ export function PrimaryTabShell({
     } catch {
       paint()
     }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(MARGO_NAV_START))
+    }
     if (pushHref) {
       const leavingSignin = normalizeTabPath(pathname) === '/signin'
       if (leavingSignin) router.replace(pushHref, { scroll: false })
@@ -1021,11 +1025,7 @@ export function PrimaryTabShell({
   })
 
   const cached = [...cacheRef.current.entries()]
-  const feedPrefetched = !!peekFeedPostsCache()
-  const showSkeleton =
-    !!activeTab
-    && !cacheRef.current.has(activeTab)
-    && !(activeTab === 'feed' && feedPrefetched)
+  const showSkeleton = !!activeTab && !cacheRef.current.has(activeTab)
   const showDeepNavSkeleton = deepNavInFlight && !!deepNavHref
   const onSigninRoute = normalizeTabPath(pathname) === '/signin'
   const showAppChildren =
@@ -1035,7 +1035,9 @@ export function PrimaryTabShell({
 
   return (
     <PrimaryTabContext.Provider value={ctx}>
-      {chrome}
+      <div className="margo-primary-chrome" data-margo-primary-chrome>
+        {chrome}
+      </div>
       {cached.map(([id, node]) => {
         const isCommittedActive = activeTab === id
         const isPeek = peekTab === id && !navPending

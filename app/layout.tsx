@@ -203,7 +203,6 @@ export default function RootLayout({
                   </Suspense>
                   <Suspense fallback={null}>
                     <ConsentFirstShell>
-                      <PostAuthMountGate>
                       <TabSwipeProvider
                         chrome={
                           <>
@@ -213,9 +212,8 @@ export default function RootLayout({
                           </>
                         }
                       >
-                        {children}
+                        <PostAuthMountGate>{children}</PostAuthMountGate>
                       </TabSwipeProvider>
-                      </PostAuthMountGate>
                     </ConsentFirstShell>
                   </Suspense>
                   <AuthGateHost />

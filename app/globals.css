@@ -270,6 +270,24 @@
   100% { transform: translateX(100%); opacity: 0.4; }
 }
 
+/* Primary-tab chrome (nav + tab bar) stays above fixed tab panes (z-index 2). */
+.margo-primary-chrome {
+  position: relative;
+  z-index: 300;
+  pointer-events: none;
+}
+.margo-primary-chrome > * {
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .margo-skeleton-pulse-scope [style*='margoSkeletonPulse'],
+  .margo-skeleton-pulse-scope .margo-skeleton-bone {
+    animation: none !important;
+    opacity: 0.45 !important;
+  }
+}
+
 /* Hide scrollbar globally — modern, clean */
 ::-webkit-scrollbar { display: none; }
 * { scrollbar-width: none; -ms-overflow-style: none; }
