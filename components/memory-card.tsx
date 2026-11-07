@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { MemoryCoverCaption } from '@/components/memory-cover-caption'
 import { UI_FONT, TYPE } from '@/lib/fonts'
-import { memoryDisplayCaption } from '@/lib/memory/display-caption'
+import { memoryCaptionTitle, memoryDisplayCaption } from '@/lib/memory/display-caption'
 import { formatMemoryDatePublic } from '@/lib/memory/date-label'
 import type { MemoryPublic } from '@/lib/memory/types'
 
@@ -34,7 +34,7 @@ export function MemoryCard({
       <Link href={to} className="margo-memory-card margo-memory-card--timeline">
         <span className="margo-memory-card__timeline-art" style={{ backgroundImage: memory.coverUrl ? `url(${memory.coverUrl})` : undefined }} />
         <span className="margo-memory-card__timeline-copy">
-          <span className="margo-memory-card__title" style={{ fontFamily: font, fontSize: TYPE.secondary }}>{memory.title}</span>
+          <span className="margo-memory-card__title" style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--gold)', fontWeight: 500 }}>{memoryCaptionTitle(memory)}</span>
           {story ? (
             <span className="margo-memory-card__story" style={{ fontFamily: font, fontSize: TYPE.meta }}>{story}</span>
           ) : null}

@@ -641,6 +641,9 @@ async function renderStageMomentCardToCanvas(
   if (!measureCtx) return
   const geist = resolveGeistFontFamily()
   const isShorts = shape.id === 'vertical'
+  const isWide = shape.id === 'wide'
+  const layoutVariant =
+    isShorts ? 'shorts' : isWide ? 'wide' : 'square'
 
   const layout = resolveStageCardLayout({
     lyric: line.lyric,
@@ -650,9 +653,11 @@ async function renderStageMomentCardToCanvas(
     vibeLabel: options.vibeLabel,
     themeId: options.themeId,
     exportAtmosphereId: options.exportAtmosphereId,
-    outputWidthPx: STAGE_CARD_EXPORT_WIDTH,
+    outputWidthPx: shape.w,
+    outputHeightPx: shape.h,
     includeVibePill: !!options.vibeLabel,
     format: isShorts ? 'shorts' : 'feed',
+    layoutVariant,
   }, buildCanvasTextMeasure(measureCtx), geist)
 
   const artworkImg = await loadMomentArtwork(line.artworkUrl)
@@ -660,15 +665,6 @@ async function renderStageMomentCardToCanvas(
     artworkImage: artworkImg,
     exportAtmosphereId: options.exportAtmosphereId ?? null,
     atmosphereTimeSec: 0,
-  }
-
-  if (isShorts) {
-    const canvasW = layout.outputWidth
-    const canvasH = layout.outputHeight
-    const { bindStageExportCanvas } = await import('@/lib/moment-export/export-canvas-quality')
-    const ctx = bindStageExportCanvas(canvas, canvasW, canvasH, SCALE)
-    renderStageCardFrame(ctx, layout, frameAssets)
-    return
   }
 
   const W = layout.outputWidth

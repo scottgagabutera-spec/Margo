@@ -20,10 +20,10 @@ const SIZE_PX: Record<MargoPortraitAvatarSize, { w: number; h: number; r: number
   sm: { w: 40, h: 50, r: 8 },
   tab: { w: 32, h: 40, r: 7 },
   profile: { w: 96, h: 120, r: 18 },
-  row: { w: 44, h: 44, r: 12, square: true },
-  hub: { w: 48, h: 48, r: 13, square: true },
-  chatHeader: { w: 34, h: 34, r: 10, square: true },
-  nav: { w: 22, h: 22, r: 6, square: true },
+  row: { w: 32, h: 40, r: 7 },
+  hub: { w: 36, h: 45, r: 8 },
+  chatHeader: { w: 27, h: 34, r: 6 },
+  nav: { w: 18, h: 22, r: 5 },
 }
 
 export interface MargoPortraitAvatarProps {

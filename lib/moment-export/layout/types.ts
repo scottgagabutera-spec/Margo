@@ -121,8 +121,10 @@ export interface StageCardLayoutInput {
   outputWidthPx: number
   /** feed = content-height card; shorts = native 9:16 full-bleed */
   format?: StageCardFormat
-  /** Wide 16:9 export — feed layout with larger lyric cap */
-  layoutVariant?: 'feed' | 'shorts' | 'wide'
+  /** square = fixed 1:1 export; wide = fixed 16:9 horizontal */
+  layoutVariant?: 'feed' | 'shorts' | 'wide' | 'square'
+  /** Fixed frame height (square / wide / shorts); feed omits for content-driven height */
+  outputHeightPx?: number
   /** When false, vibe pill is omitted from layout height (preview-only footers) */
   includeVibePill?: boolean
 }

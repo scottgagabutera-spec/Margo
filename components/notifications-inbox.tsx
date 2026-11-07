@@ -11,7 +11,7 @@ import {
   type NotificationFilter,
 } from '@/lib/notifications/display'
 import { notificationHref } from '@/lib/navigation/notification-routes'
-import { MargoPortraitAvatar } from '@/components/margo-portrait-avatar'
+import { MargoAvatar } from '@/components/margo-avatar'
 import { LIST_ROW_TYPE, UI_FONT } from '@/lib/fonts'
 import { signedOutGateBenefitStyle, signedOutGateSignInStyle } from '@/lib/signed-out-gate-styles'
 import { isMargoBrandUsername } from '@/lib/margo-brand-account'
@@ -41,7 +41,6 @@ function NotificationRow({
   const { markNotificationRead } = useNotifications()
   const unread = !n.readAt
   const actor = n.actor
-  const initial = (actor?.displayName || actor?.username || '?').slice(0, 1).toUpperCase()
   const brandMark = actor?.username ? isMargoBrandUsername(actor.username) : false
   const href = notificationHref(n)
   const postSelected = n.postId && selectedPostId === n.postId
@@ -76,16 +75,15 @@ function NotificationRow({
       }}
     >
       {actor ? (
-        <MargoPortraitAvatar
-          size="row"
+        <MargoAvatar
+          size="sm"
           imageUrl={actor.avatarUrl}
-          fallbackInitial={initial}
-          fallbackSeed={!actor.avatarUrl && !brandMark ? actor.username : null}
+          username={actor.username}
+          displayName={actor.displayName}
           brandMark={brandMark}
-          separationRingColor="var(--bg)"
         />
       ) : (
-        <span style={{ width: 44, height: 44, flexShrink: 0 }} />
+        <span style={{ width: 32, height: 40, flexShrink: 0 }} />
       )}
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{

@@ -20,6 +20,9 @@ export function notificationHref(n: NotificationRouteInput): string {
       return n.postId ? `/post/${n.postId}` : '/feed'
     case 'lyric_back':
       return n.postId ? `/post/${n.postId}` : '/feed'
+    case 'memory_reply':
+    case 'memory_lyric_reply':
+      return n.postId ? `/memory/${n.postId}` : '/feed'
     case 'follow':
     case 'follow_request':
       return n.actor ? `/profile/${n.actor.username}` : '/feed'

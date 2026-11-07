@@ -81,7 +81,7 @@ docs/                Plans — many are shipped; see status banners
 public/              Static assets
 ```
 
-**Read CLAUDE.md and MARGO_BRAND.md before writing any code.**
+**Read CLAUDE.md, [MARGO_BRAND.md](./MARGO_BRAND.md), and [docs/DESIGN-RULES.md](./docs/DESIGN-RULES.md) before writing any code.**
 
 ---
 

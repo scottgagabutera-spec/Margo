@@ -62,7 +62,7 @@ export function MemoryMediaPicker({
         </span>
       </div>
       <p className="margo-memory-media-picker__hint" style={{ fontFamily: font }}>
-        First item is the cover. Photos and short videos (up to 60s). Stored in your private R2 folder.
+        First item is the cover. Photos and short videos (up to 60s).
       </p>
       {status ? (
         <p style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--gold)', margin: '0 0 8px' }}>{status}</p>

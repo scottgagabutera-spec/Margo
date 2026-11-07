@@ -222,6 +222,70 @@ export function presentLyricText(
   return { fontSize: minSize, lines: tryLyricSize(paragraphs, maxWidth, measure, font, true)! }
 }
 
+function lyricBlockHeightPx(
+  lines: LyricVisualLine[],
+  fontSize: number,
+  lineHeight: number,
+  stanzaGapEm: number,
+): number {
+  if (lines.length === 0) return fontSize * lineHeight
+  const linePx = fontSize * lineHeight
+  const stanzaGap = fontSize * stanzaGapEm
+  let height = 0
+  for (let i = 0; i < lines.length; i++) {
+    height += linePx
+    const next = lines[i + 1]
+    if (next && !next.continuation && lines[i].text !== '' && next.text !== '') {
+      height += stanzaGap
+    }
+  }
+  return height
+}
+
+export interface PresentLyricTextWithMaxHeightOptions extends PresentLyricTextOptions {
+  maxHeightPx: number
+  lineHeight: number
+  stanzaGapEm: number
+}
+
+/**
+ * Fit lyric type within a max width and max block height (fixed-aspect exports).
+ */
+export function presentLyricTextWithMaxHeight(
+  text: string,
+  maxWidth: number,
+  measure: TextMeasureFn,
+  opts: PresentLyricTextWithMaxHeightOptions,
+): LyricPresentation {
+  const fits = (pres: LyricPresentation) =>
+    lyricBlockHeightPx(pres.lines, pres.fontSize, opts.lineHeight, opts.stanzaGapEm) <= opts.maxHeightPx
+
+  let presentation = presentLyricText(text, maxWidth, measure, opts)
+  if (fits(presentation)) return presentation
+
+  const minSize = Math.max(1, Math.round(opts.minFontSize))
+  let lo = minSize
+  let hi = Math.max(minSize, Math.round(opts.maxFontSize) - 1)
+  let best = presentation
+
+  while (lo <= hi) {
+    const mid = Math.floor((lo + hi) / 2)
+    const candidate = presentLyricText(text, maxWidth, measure, {
+      ...opts,
+      maxFontSize: mid,
+      minFontSize: Math.min(mid, minSize),
+    })
+    if (fits(candidate)) {
+      best = candidate
+      lo = mid + 1
+    } else {
+      hi = mid - 1
+    }
+  }
+
+  return best
+}
+
 export function truncateToWidth(
   text: string,
   maxWidth: number,

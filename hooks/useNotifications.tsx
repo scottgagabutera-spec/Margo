@@ -10,7 +10,7 @@ const supabase = createClient()
 
 export type NotificationType =
   | 'message' | 'resonate' | 'follow' | 'follow_request'
-  | 'lyric_back'
+  | 'lyric_back' | 'memory_reply' | 'memory_lyric_reply'
   | 'warned' | 'frozen' | 'removed' | 'restored'
   | 'artist_approved' | 'artist_rejected'
 

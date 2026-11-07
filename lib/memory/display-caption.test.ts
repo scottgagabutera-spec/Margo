@@ -36,11 +36,8 @@ test('memoryDisplayCaption prefers real title', () => {
   assert.equal(memoryDisplayCaption(base({ title: 'Summer road trip' })), 'Summer road trip')
 })
 
-test('memoryDisplayCaption uses story when title is placeholder', () => {
-  assert.equal(
-    memoryDisplayCaption(base({ title: '1 song', story: 'We danced until the lights came on downtown' })),
-    'We danced until the lights came on downtown',
-  )
+test('memoryCaptionTitle uses first song when title is placeholder', () => {
+  assert.equal(memoryDisplayCaption(base({ title: '1 song', story: 'We danced' })), 'Blue Lines · Margo')
 })
 
 test('memoryDisplayCaption falls back to song title', () => {
