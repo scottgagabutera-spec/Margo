@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
+import { validateArtistApplicationLinks } from '@/lib/artist-application-links'
 
 const supabase = createClient()
 
@@ -194,8 +195,12 @@ export function useArtistApplication() {
       const name = data.displayArtistName.trim()
       if (!name) return { success: false, error: 'Artist name is required.' }
 
-      const hasLink = Object.values(data.links).some(v => v && v.trim().length > 0)
-      if (!hasLink) return { success: false, error: 'Add at least one link so we can verify you.' }
+      const sunoVerified = Boolean(data.sunoVerification?.code?.trim())
+      const linkCheck = validateArtistApplicationLinks({
+        links: data.links as Record<string, string | undefined>,
+        sunoVerified,
+      })
+      if (!linkCheck.ok) return { success: false, error: linkCheck.error }
 
       if (!data.rightsAgreed) {
         return { success: false, error: 'You must agree to the rights warranty to continue.' }

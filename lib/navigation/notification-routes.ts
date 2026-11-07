@@ -26,10 +26,11 @@ export function notificationHref(n: NotificationRouteInput): string {
     case 'follow':
     case 'follow_request':
       return n.actor ? `/profile/${n.actor.username}` : '/feed'
-    case 'artist_approved':
-      return '/studio'
+    case 'artist_submitted':
     case 'artist_rejected':
       return '/apply-artist'
+    case 'artist_approved':
+      return '/studio'
     case 'warned':
     case 'frozen':
     case 'removed':

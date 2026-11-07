@@ -9,6 +9,7 @@ const UPDATES: NotificationType[] = [
   'frozen',
   'removed',
   'restored',
+  'artist_submitted',
   'artist_approved',
   'artist_rejected',
 ]

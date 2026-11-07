@@ -8,13 +8,21 @@ interface ArtistApplicationRow {
   status: 'pending' | 'approved' | 'rejected'
   display_artist_name: string
   links: Record<string, string>
+  link_items: { url: string; label: string }[]
+  valid_link_count: number
   note: string | null
   rights_agreed: boolean
   submitted_at: string
   reviewed_at: string | null
-  // joined
-  username?: string
+  applicant_type: string | null
+  verification_method: string | null
+  verification_code: string | null
+  verified_at: string | null
+  username?: string | null
   avatar_url?: string | null
+  profile_display_name?: string | null
+  profile_created_at?: string | null
+  follower_count: number
 }
 
 interface ArtistProfileRow {
@@ -104,6 +112,13 @@ function ApplicationsSection() {
   const [actioningId, setActioningId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [confirm, setConfirm] = useState<{
+    app: ArtistApplicationRow
+    decision: 'approved' | 'rejected'
+  } | null>(null)
+
+  const priorFor = (app: ArtistApplicationRow) =>
+    applications.filter((a) => a.profile_id === app.profile_id && a.id !== app.id)
 
   const load = async () => {
     setLoading(true)
@@ -134,6 +149,7 @@ function ApplicationsSection() {
       })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(body.error || ('HTTP ' + res.status))
+      setConfirm(null)
       await load()
     } catch (e: any) {
       console.error('Failed to review application:', e)
@@ -175,6 +191,10 @@ function ApplicationsSection() {
       ) : filtered.map(app => {
         const isExpanded = expandedId === app.id
         const noteSnippet = app.note && app.note.length > 80 ? app.note.slice(0, 80) + '…' : app.note
+        const sunoOk = app.verification_method === 'suno'
+        const linkBadgeColor =
+          sunoOk || app.valid_link_count >= 3 ? 'var(--gold)' : '#ff6060'
+        const prior = priorFor(app)
         return (
           <div
             key={app.id}
@@ -190,47 +210,94 @@ function ApplicationsSection() {
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', color: 'var(--text)', marginBottom: '4px' }}>
-                  {app.display_artist_name}
-                </p>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '6px' }}>
-                  @{app.username || 'unknown'} · submitted {new Date(app.submitted_at).toLocaleDateString()}
-                </p>
-                <p style={{
-                  fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
-                  color: app.status === 'pending' ? '#ffc847' : app.status === 'approved' ? '#4ade80' : '#ff6060',
-                  textTransform: 'uppercase', letterSpacing: '1px',
-                }}>
-                  {app.status}
-                </p>
-                {!isExpanded && noteSnippet && (
-                  <p style={{
-                    fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)',
-                    fontStyle: 'italic', marginTop: '8px',
-                  }}>
-                    &ldquo;{noteSnippet}&rdquo;
-                  </p>
+              <div style={{ display: 'flex', gap: '12px', flex: 1, minWidth: 0 }}>
+                {app.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={app.avatar_url}
+                    alt=""
+                    width={48}
+                    height={48}
+                    style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                  />
+                ) : (
+                  <div style={{
+                    width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.08)',
+                    flexShrink: 0,
+                  }} />
                 )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', color: 'var(--text)', marginBottom: '4px' }}>
+                    {app.display_artist_name}
+                  </p>
+                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '6px' }}>
+                    @{app.username || 'unknown'} · submitted {new Date(app.submitted_at).toLocaleDateString()}
+                  </p>
+                  <p style={{
+                    fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
+                    color: app.status === 'pending' ? '#ffc847' : app.status === 'approved' ? '#4ade80' : '#ff6060',
+                    textTransform: 'uppercase', letterSpacing: '1px',
+                  }}>
+                    {app.status}
+                  </p>
+                  {!isExpanded && noteSnippet && (
+                    <p style={{
+                      fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)',
+                      fontStyle: 'italic', marginTop: '8px',
+                    }}>
+                      &ldquo;{noteSnippet}&rdquo;
+                    </p>
+                  )}
+                </div>
               </div>
               <Chevron open={isExpanded} />
             </div>
 
             {isExpanded && (
               <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                {app.username ? (
+                  <a
+                    href={`/profile/${app.username}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'var(--gold)', textDecoration: 'none' }}
+                  >
+                    Open Margo profile
+                  </a>
+                ) : null}
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.65rem', color: 'rgba(255,255,255,0.45)', margin: '10px 0' }}>
+                  Account created {app.profile_created_at ? new Date(app.profile_created_at).toLocaleDateString() : '—'}
+                  {' · '}{app.follower_count} followers
+                  {' · '}{app.applicant_type || 'independent'}
+                </p>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.65rem', color: 'rgba(255,255,255,0.45)', marginBottom: '10px' }}>
+                  Verification: {app.verification_method || 'manual'}
+                  {app.verification_code ? ` · code ${app.verification_code}` : ''}
+                  {app.verified_at ? ` · verified ${new Date(app.verified_at).toLocaleString()}` : ''}
+                </p>
+                <span style={{
+                  display: 'inline-block', padding: '4px 10px', borderRadius: '999px', marginBottom: '12px',
+                  fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', letterSpacing: '0.5px',
+                  border: `1px solid ${linkBadgeColor}`, color: linkBadgeColor,
+                }}>
+                  {sunoOk ? 'Suno verified' : `${app.valid_link_count} valid https links`}
+                </span>
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
-                  {Object.entries(app.links || {}).map(([key, url]) => url ? (
-                    <a key={key} href={url.startsWith('http') ? url : `https://${url}`} target="_blank" rel="noreferrer"
+                  {(app.link_items?.length ? app.link_items : []).map((item) => (
+                    <a key={item.url} href={item.url} target="_blank" rel="noreferrer"
                       style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--gold)', textDecoration: 'none' }}>
-                      {key}
+                      {item.label}
                     </a>
-                  ) : null)}
-                  {Object.keys(app.links || {}).length === 0 && (
+                  ))}
+                  {!app.link_items?.length && (
                     <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>
-                      No links provided
+                      No https links
                     </span>
                   )}
                 </div>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', marginBottom: '8px' }}>
+                  Rights warranty: {app.rights_agreed ? 'yes' : 'no'}
+                </p>
                 {app.note && (
                   <p style={{
                     fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)',
@@ -239,11 +306,23 @@ function ApplicationsSection() {
                     &ldquo;{app.note}&rdquo;
                   </p>
                 )}
+                {prior.length > 0 && (
+                  <div style={{ marginBottom: '12px' }}>
+                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>
+                      Earlier applications
+                    </p>
+                    {prior.map((p) => (
+                      <p key={p.id} style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.65rem', color: 'rgba(255,255,255,0.45)', margin: '2px 0' }}>
+                        {p.status} · {new Date(p.submitted_at).toLocaleDateString()}
+                      </p>
+                    ))}
+                  </div>
+                )}
                 {app.status === 'pending' && (
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <button
                       type="button"
-                      onClick={() => review(app, 'approved')}
+                      onClick={() => setConfirm({ app, decision: 'approved' })}
                       disabled={actioningId === app.id}
                       style={{ ...S.btn, opacity: actioningId === app.id ? 0.5 : 1 }}
                     >
@@ -251,7 +330,7 @@ function ApplicationsSection() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => review(app, 'rejected')}
+                      onClick={() => setConfirm({ app, decision: 'rejected' })}
                       disabled={actioningId === app.id}
                       style={{ ...S.dangerBtn, opacity: actioningId === app.id ? 0.5 : 1 }}
                     >
@@ -264,6 +343,44 @@ function ApplicationsSection() {
           </div>
         )
       })}
+
+      {confirm && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.65)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
+          }}
+          onClick={() => setConfirm(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              ...S.card, maxWidth: '400px', width: '100%', margin: 0, cursor: 'default',
+            }}
+          >
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.9rem', color: 'var(--text)', marginBottom: '12px' }}>
+              {confirm.decision === 'approved'
+                ? `Approve ${confirm.app.display_artist_name}?`
+                : `Reject ${confirm.app.display_artist_name}?`}
+            </p>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                style={confirm.decision === 'approved' ? S.btn : S.dangerBtn}
+                disabled={actioningId === confirm.app.id}
+                onClick={() => review(confirm.app, confirm.decision)}
+              >
+                Confirm
+              </button>
+              <button type="button" style={S.ghostBtn} onClick={() => setConfirm(null)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
