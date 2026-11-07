@@ -5,6 +5,7 @@ import { LYRIC_FONT } from '@/lib/fonts'
 
 interface ComposeLyricCardProps {
   children: ReactNode
+  className?: string
   style?: CSSProperties
 }
 
@@ -21,9 +22,10 @@ interface ComposeLyricCardProps {
  * exported card's Margo Gold theme, so Compose's Moment and the shared
  * artifact are the same object, not visually related cousins.
  */
-export function ComposeLyricCard({ children, style }: ComposeLyricCardProps) {
+export function ComposeLyricCard({ children, className, style }: ComposeLyricCardProps) {
   return (
     <div
+      className={className}
       style={{
         background: 'var(--gold)',
         border: '1px solid rgba(7,6,10,0.16)',

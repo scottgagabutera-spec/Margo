@@ -1,5 +1,6 @@
 'use client'
 import { Suspense, useState, useEffect, useCallback, type CSSProperties } from 'react'
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { setBrowserAccessToken, signOutBrowser } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
@@ -279,6 +280,20 @@ function LoginForm({
           <button onClick={handleLogin} disabled={loading} style={{ ...S.btn, width: '100%', padding: '14px', opacity: loading ? 0.6 : 1 }}>
             {loading ? 'Signing in…' : 'Sign In'}
           </button>
+          <div style={{ marginTop: '16px', textAlign: 'center' }}>
+            <Link
+              href="/forgot-password"
+              style={{
+                fontFamily: 'var(--font-lora), serif',
+                fontSize: '0.72rem',
+                color: 'var(--gold)',
+                textDecoration: 'none',
+                fontWeight: 600,
+              }}
+            >
+              Forgot password?
+            </Link>
+          </div>
         </div>
       </div>
     </div>
@@ -1390,6 +1405,7 @@ function AdminShell() {
   const [isAdmin, setIsAdmin] = useState(false)
   /** KPIs from session?overview=1; consumed once by OverviewPanel, then cleared */
   const [overviewInitial, setOverviewInitial] = useState<OverviewData | null>(null)
+  const [adminRecoveryHint, setAdminRecoveryHint] = useState<string | null>(null)
 
   useEffect(() => {
     if (authLoading) return
@@ -1427,6 +1443,26 @@ function AdminShell() {
     // Gate once after auth boot — not on every section change (panels fetch their own data).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading])
+
+  useEffect(() => {
+    if (!isAdmin || !sessionChecked) {
+      setAdminRecoveryHint(null)
+      return
+    }
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await adminFetch('/api/admin/recovery-hint')
+        const body = await res.json().catch(() => ({}))
+        if (!cancelled && body?.ok && typeof body.maskedEmail === 'string') {
+          setAdminRecoveryHint(body.maskedEmail)
+        }
+      } catch {
+        /* ignore */
+      }
+    })()
+    return () => { cancelled = true }
+  }, [isAdmin, sessionChecked])
 
   const setSection = useCallback((next: AdminSection) => {
     if (next !== 'overview') setOverviewInitial(null)
@@ -1526,6 +1562,18 @@ function AdminShell() {
           <button type="button" onClick={handleSignOut} style={{ ...S.ghostBtn, width: '100%' }}>
             Sign Out
           </button>
+          {adminRecoveryHint ? (
+            <p style={{
+              fontFamily: 'var(--font-lora), serif',
+              fontSize: '0.55rem',
+              color: 'rgba(255,255,255,0.28)',
+              margin: '20px 0 0',
+              lineHeight: 1.5,
+            }}>
+              Reset: use <Link href="/forgot-password" style={{ color: 'var(--gold)', textDecoration: 'none' }}>Forgot password?</Link>
+              {' '}with <strong style={{ color: 'rgba(255,255,255,0.42)' }}>{adminRecoveryHint}</strong> if needed.
+            </p>
+          ) : null}
         </aside>
 
         <main style={{ minWidth: 0 }}>

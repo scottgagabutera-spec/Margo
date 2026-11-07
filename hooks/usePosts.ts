@@ -133,14 +133,16 @@ export function usePosts(options: UsePostsOptions = {}) {
 
   const visiblePosts = useMemo(() => {
     if (!visibilityReady) {
-      return lastVisibleRef.current.length > 0 ? lastVisibleRef.current : []
+      if (lastVisibleRef.current.length > 0) return lastVisibleRef.current
+      if (posts.length > 0) return posts
+      return []
     }
     const next = posts.filter(p => !p.authorUid || visibleAuthorIds.has(p.authorUid))
     lastVisibleRef.current = next
     return next
   }, [posts, visibleAuthorIds, visibilityReady])
 
-  const waitingOnPrivacy = posts.length > 0 && !visibilityReady && lastVisibleRef.current.length === 0
+  const waitingOnPrivacy = false
 
   const [loadingOlder, setLoadingOlder] = useState(false)
   const [hasMoreOlder, setHasMoreOlder] = useState(true)
@@ -179,9 +181,11 @@ export function usePosts(options: UsePostsOptions = {}) {
     }
   }, [posts, visiblePosts, loadingOlder, hasMoreOlder])
 
+  const effectiveLoading = (loading || waitingOnPrivacy) && visiblePosts.length === 0
+
   return {
     posts: visiblePosts,
-    loading: loading || waitingOnPrivacy,
+    loading: effectiveLoading,
     reload: () => load(true),
     loadOlder,
     loadingOlder,
