@@ -667,7 +667,15 @@ export function HubIconButton() {
   )
 }
 
-export function HubTabButton({ style, labelStyle }: { style: CSSProperties; labelStyle: CSSProperties }) {
+export function HubTabButton({
+  style,
+  labelStyle,
+  hubIndicator,
+}: {
+  style: CSSProperties
+  labelStyle: CSSProperties
+  hubIndicator?: boolean
+}) {
   const { open, toggle, hubHasUnread, hubTabAnchorRef } = useHub()
   return (
     <button
@@ -693,6 +701,22 @@ export function HubTabButton({ style, labelStyle }: { style: CSSProperties; labe
         <HubPresenceDot visible={hubHasUnread} top="-2px" right="-2px" />
       </span>
       <span style={labelStyle}>Hub</span>
+      {hubIndicator ? (
+        <span
+          aria-hidden
+          className="margo-mobile-tab-indicator"
+          style={{
+            position: 'absolute',
+            bottom: '2px',
+            left: '50%',
+            width: 20,
+            height: 2,
+            borderRadius: 2,
+            background: 'var(--gold)',
+            transform: 'translateX(-50%)',
+          }}
+        />
+      ) : null}
     </button>
   )
 }
