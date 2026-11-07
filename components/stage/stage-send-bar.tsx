@@ -8,6 +8,7 @@ import { SignInLink } from '@/components/signin-link'
 interface StageSendBarProps {
   saveItems: MomentActionMenuItem[]
   shareItems: MomentActionMenuItem[]
+  onSave?: () => void
   saving?: boolean
   shareBusy?: boolean
   videoProgress?: string | null
@@ -16,23 +17,40 @@ interface StageSendBarProps {
   sentPostId?: string | null
   onOpenSendTo?: () => void
   signedIn?: boolean
+  postLabel?: string
+  menuPlacement?: 'down' | 'up'
+  compact?: boolean
+  studio?: boolean
 }
 
-const rowStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'row',
-  flexWrap: 'nowrap',
-  gap: '8px',
-  width: '100%',
-  alignItems: 'flex-start',
+const publishButtonStyle: React.CSSProperties = {
+  minHeight: '44px',
+  height: '32px',
+  padding: '0 18px',
+  borderRadius: '10px',
+  border: 'none',
+  background: 'var(--gold)',
+  color: 'var(--text-on-gold, var(--bg))',
+  fontFamily: UI_FONT,
+  fontSize: '12px',
+  fontWeight: 600,
+  letterSpacing: 0,
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+  flexShrink: 0,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  boxSizing: 'border-box',
 }
 
 /**
- * Export ▾ + Share ▾ (same as card modal). Post to Margo is a separate row below.
+ * Save + Export ▾ + Share ▾ on the left; Post / Sign in to post on the right (one row).
  */
 export function StageSendBar({
   saveItems,
   shareItems,
+  onSave,
   saving = false,
   shareBusy = false,
   videoProgress = null,
@@ -41,34 +59,45 @@ export function StageSendBar({
   sentPostId = null,
   onOpenSendTo,
   signedIn = false,
+  postLabel = 'Post',
+  menuPlacement = 'down',
+  compact = false,
+  studio = false,
 }: StageSendBarProps) {
   const sent = !!sentPostId
   const [openMenu, setOpenMenu] = useState<'save' | 'share' | null>(null)
   const busy = saving || shareBusy
 
-  const publishButtonStyle: React.CSSProperties = {
-    width: '100%',
-    minHeight: 'var(--margo-touch-min)',
-    padding: '0 20px',
-    borderRadius: '50px',
-    border: 'none',
-    background: 'var(--gold)',
-    color: 'var(--text-on-gold, var(--bg))',
-    fontFamily: UI_FONT,
-    fontSize: '0.56rem',
-    fontWeight: 700,
-    letterSpacing: '0.9px',
-    textTransform: 'uppercase',
-    cursor: sending ? 'wait' : 'pointer',
-    opacity: sending ? 0.7 : 1,
-  }
+  const secondaryBtnStyle: React.CSSProperties = studio
+    ? {
+        minHeight: '44px',
+        height: '32px',
+        padding: '0 12px',
+        borderRadius: '10px',
+        border: '1px solid var(--border-hi)',
+        background: 'var(--surface-2)',
+        color: 'var(--text)',
+        fontFamily: UI_FONT,
+        fontSize: '12px',
+        fontWeight: 500,
+        letterSpacing: 0,
+        cursor: busy ? 'wait' : 'pointer',
+        opacity: busy ? 0.65 : 1,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        boxSizing: 'border-box',
+        flexShrink: 0,
+        WebkitTapHighlightColor: 'transparent',
+      }
+    : {}
 
   return (
     <div
       className="stage-send-bar"
       style={{
         width: '100%',
-        marginTop: 'var(--stage-moment-to-actions, 22px)',
+        marginTop: compact && !studio ? '12px' : '0',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'stretch',
@@ -83,9 +112,8 @@ export function StageSendBar({
           aria-live="polite"
           style={{
             margin: 0,
-            fontFamily: 'var(--font-lora), serif',
-            fontSize: '0.68rem',
-            fontStyle: 'italic',
+            fontFamily: UI_FONT,
+            fontSize: '11px',
             color: 'var(--text-secondary)',
             textAlign: 'center',
             lineHeight: 1.4,
@@ -94,15 +122,39 @@ export function StageSendBar({
           {videoProgress}
         </p>
       ) : null}
-      <div style={rowStyle}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'row',
+          flexWrap: 'nowrap',
+          gap: '6px',
+          width: '100%',
+          alignItems: 'center',
+        }}
+      >
+        {onSave ? (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onSave}
+            aria-label="Save"
+            style={secondaryBtnStyle}
+          >
+            Save
+          </button>
+        ) : null}
         <MomentActionMenu
           label="Export"
           items={saveItems}
-          variant="primary"
+          variant="secondary"
           busy={saving}
           busyLabel={videoProgress}
           open={openMenu === 'save'}
           onOpenChange={(next) => setOpenMenu(next ? 'save' : null)}
+          menuPlacement={menuPlacement}
+          compact={compact}
+          studio={studio}
+          hideItemHints
         />
         <MomentActionMenu
           label="Share"
@@ -113,46 +165,54 @@ export function StageSendBar({
           disabled={shareItems.length === 0}
           open={openMenu === 'share'}
           onOpenChange={(next) => setOpenMenu(next ? 'share' : null)}
+          menuPlacement={menuPlacement}
+          compact={compact}
+          studio={studio}
+          hideItemHints
         />
-      </div>
-
-      {!sent ? (
-        signedIn ? (
+        <div style={{ flex: 1, minWidth: '4px' }} aria-hidden />
+        {!sent ? (
+          signedIn ? (
+            <button
+              type="button"
+              onClick={onSendToMargo}
+              disabled={sending || busy}
+              style={{
+                ...publishButtonStyle,
+                opacity: sending || busy ? 0.7 : 1,
+                cursor: sending ? 'wait' : 'pointer',
+              }}
+            >
+              {sending ? 'Posting…' : postLabel}
+            </button>
+          ) : (
+            <SignInLink
+              style={{
+                ...publishButtonStyle,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textDecoration: 'none',
+              }}
+            >
+              Sign in to post
+            </SignInLink>
+          )
+        ) : (
           <button
             type="button"
-            onClick={onSendToMargo}
-            disabled={sending || busy}
-            style={publishButtonStyle}
-          >
-            {sending ? 'Posting…' : 'Post to Margo'}
-          </button>
-        ) : (
-          <SignInLink
+            onClick={onOpenSendTo}
             style={{
               ...publishButtonStyle,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textDecoration: 'none',
+              background: 'transparent',
+              color: 'var(--text)',
+              border: '1px solid var(--border-hi)',
             }}
           >
-            Sign in to post
-          </SignInLink>
-        )
-      ) : (
-        <button
-          type="button"
-          onClick={onOpenSendTo}
-          style={{
-            ...publishButtonStyle,
-            background: 'transparent',
-            color: 'var(--text)',
-            border: '1px solid var(--border-hi)',
-          }}
-        >
-          Send to someone
-        </button>
-      )}
+            Send to someone
+          </button>
+        )}
+      </div>
     </div>
   )
 }

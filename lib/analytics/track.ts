@@ -8,6 +8,7 @@ export type MargoAnalyticsEvent =
   | 'moment_created'
   | 'moment_posted_public'
   | 'moment_saved_private'
+  | 'moment_story_added_compose'
   | 'send_opened'
   | 'moment_sent_dm'
   | 'share_opened'

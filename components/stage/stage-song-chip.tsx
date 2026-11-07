@@ -38,9 +38,10 @@ export function StageSongChip({ title, artist, artwork, onClear }: StageSongChip
         <div style={{ width: '32px', height: '32px', borderRadius: '6px', flexShrink: 0, background: 'var(--surface-2)' }} />
       )}
       <span
+        className="margo-stage-song-chip__title"
         style={{
           fontFamily: UI_FONT,
-          fontSize: '0.82rem',
+          fontSize: '13px',
           color: 'var(--text)',
           fontWeight: 600,
           overflow: 'hidden',

@@ -11,15 +11,26 @@ import { createClient } from '@/lib/supabase/client'
 import { matchLiveCatalogSong, searchMargoSongs, songMatchKey } from '@/lib/search-margo-songs'
 import { useIdentity } from '@/hooks/useIdentity'
 import { usePrimaryTab, clearPrimaryTabScroll } from '@/components/primary-tab-shell'
-import { toastMomentPosted, toastMomentPrivate, toastMomentSent } from '@/lib/moment-export/moment-export-toasts'
+import {
+  toastMomentExportFailed,
+  toastMomentImageSaved,
+  toastMomentPosted,
+  toastMomentPrivate,
+  toastMomentSent,
+} from '@/lib/moment-export/moment-export-toasts'
+import { saveMargoMomentImage } from '@/lib/moment-export/save-moment-image'
 import { ComposeSendTo } from '@/components/compose-send-to'
-import { ComposeReadyPreview } from '@/components/compose-ready-preview'
+import { MomentStudioScreen } from '@/components/moment/moment-studio-screen'
+import { useMomentStudioExport } from '@/hooks/useMomentStudioExport'
+import { playOrToggleSnippet } from '@/lib/audio-engine'
+import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
+import { useSongAtmosphere } from '@/hooks/useSongAtmosphere'
+import { livingAtmosphereOrNull } from '@/lib/atmosphere'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { ComposeSearchDropdown } from '@/components/compose-search-dropdown'
 import { ComposeStickySongRow } from '@/components/compose-sticky-song-row'
 import { MargoSearchInput } from '@/components/margo-search-input'
 import { MARGO_SEARCH_HINT_CATALOG } from '@/lib/margo-search-hints'
-import { MomentShareStudio } from '@/components/moment-share-studio'
 import { MargoSheet } from '@/components/margo-sheet'
 import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle, keyboardSafeSecondaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
 import { useKeyboardSafeChrome } from '@/hooks/useVisualViewport'
@@ -27,9 +38,17 @@ import { useComposeSearchLayout } from '@/hooks/useComposeSearchLayout'
 import { useInlineSearchDropdownMaxHeight } from '@/hooks/useInlineSearchDropdownMaxHeight'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { POST_LINES_MAX } from '@/lib/post-lines'
-import { resolveMargoMomentFromComposeDrafts, emotionToVibeLabel, vibeLabelToEmotion } from '@/lib/moment'
+import {
+  resolveMargoMomentFromComposeDrafts,
+  emotionToVibeLabel,
+  vibeLabelToEmotion,
+  MOMENT_VIBE_PICKER_OPTIONS,
+  resolveMomentListen,
+} from '@/lib/moment'
 import { persistMomentPost } from '@/lib/moment/persist'
+import { createStoryFromPost } from '@/lib/stories/create-story-client'
 import { trackEvent } from '@/lib/analytics/track'
+import { toast } from 'sonner'
 import { ComposeLyricCard, composeLyricTextStyle } from '@/components/compose-lyric-card'
 import { CatalogPickLyricField } from '@/components/catalog-pick-lyric-field'
 import { UI_FONT } from '@/lib/fonts'
@@ -141,23 +160,6 @@ const composeToolLabelStyle: React.CSSProperties = {
   maxWidth: '100%',
   lineHeight: 1.2,
 }
-/** Post / Private share one sticky row — same 44px target, no wrap. */
-const momentSplitSecondaryStyle: React.CSSProperties = {
-  ...keyboardSafeSecondaryBtnStyle,
-  flex: 1,
-  width: 'auto',
-  minWidth: 0,
-  whiteSpace: 'nowrap',
-  letterSpacing: '0.7px',
-  background: 'var(--surface-2)',
-}
-const momentSplitPrivateStyle: React.CSSProperties = {
-  ...momentSplitSecondaryStyle,
-  background: 'transparent',
-  border: '1px solid var(--border)',
-  color: 'var(--text-muted)',
-}
-
 function ComposeDismissButton({
   onClick,
   label = 'Cancel',
@@ -389,7 +391,6 @@ function ComposeInner() {
   const [exportShapeId, setExportShapeId] = useState<MomentShapeId>('square')
   const [vibeUserPicked, setVibeUserPicked] = useState(false)
   const [parentPostId] = useState<string | null>(searchParams.get('parentPostId'))
-  const [showExportStudio, setShowExportStudio] = useState(false)
   const [startOverConfirm, setStartOverConfirm] = useState(false)
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -430,6 +431,8 @@ function ComposeInner() {
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const [bannerDismissed, setBannerDismissed] = useState(false)
+  const [saveBusy, setSaveBusy] = useState(false)
+  const [storyBusy, setStoryBusy] = useState(false)
 
   // One-time "Write your line…" reveal — governs animation progress only.
   // Visibility (show/hide) is a separate, render-time check against
@@ -1017,7 +1020,6 @@ function ComposeInner() {
     setPostedId(null)
     setCompletionMode(null)
     setShowSendTo(false)
-    setShowExportStudio(false)
     setSentToName(null)
     setLinkedSongId(null)
     setLinkedAudioUrl(null)
@@ -1197,10 +1199,6 @@ function ComposeInner() {
     gateAction('post', () => runPendingAction('post'))
   }, [gateAction, runPendingAction])
 
-  const handleKeepPrivate = useCallback(() => {
-    gateAction('private', () => runPendingAction('private'))
-  }, [gateAction, runPendingAction])
-
   const handleAddLineFromMoment = useCallback(() => {
     handleAddAnotherLine()
   }, [handleAddAnotherLine])
@@ -1282,6 +1280,109 @@ function ComposeInner() {
     return { lyric: '', song: '', artist: '' }
   }, [buildCurrentDraft, committedLines])
 
+  const signedIn = !!user && !user.isAnonymous
+  const canPlaySnippet = !!(linkedAudioUrl && linkedSongId && snippetStart != null && snippetEnd != null)
+  const songAtmosphere = useSongAtmosphere(linkedSongId)
+  const listen = useMemo(() => {
+    if (!exportMoment) return null
+    return resolveMomentListen(exportMoment, {
+      itunesTrackUrl: selectedSong?.externalListenUrl ?? null,
+      youtubeUrl: selectedSong?.externalListenUrl ?? null,
+    })
+  }, [exportMoment, selectedSong?.externalListenUrl])
+  const playbackKey = linkedSongId || linkedAudioUrl || ''
+  const { playing: studioPlaying, buffering: studioBuffering } = useSnippetPlaybackUi(
+    canPlaySnippet ? playbackKey : null,
+    canPlaySnippet ? lyric : null,
+  )
+  const handleStudioPlay = useCallback(() => {
+    if (!canPlaySnippet || !linkedAudioUrl) return
+    void playOrToggleSnippet({
+      songId: linkedSongId || linkedAudioUrl,
+      audioUrl: linkedAudioUrl,
+      title: songName,
+      artist: artistName,
+      artwork: selectedSong?.artwork || null,
+      lineIndex: 0,
+      lineText: lyric,
+      startSec: snippetStart ?? 0,
+      endSec: snippetEnd ?? (snippetStart ?? 0) + 8,
+      atmosphere: livingAtmosphereOrNull(songAtmosphere),
+      source: 'feed',
+    })
+  }, [canPlaySnippet, linkedAudioUrl, linkedSongId, songName, artistName, selectedSong?.artwork, lyric, snippetStart, snippetEnd, songAtmosphere])
+  const isMargoCatalog = !!(linkedSongId && (selectedSong?.source === 'margo' || selectedSong?.margoSongId))
+  const studioExport = useMomentStudioExport(exportMoment, canPlaySnippet, isMargoCatalog)
+
+  const handleSaveMoment = useCallback(async () => {
+    if (!exportMoment) return
+    setSaveBusy(true)
+    try {
+      await saveMargoMomentImage(exportMoment)
+      toastMomentImageSaved()
+      if (signedIn) {
+        const postId = await persistMoment('private')
+        if (postId) toastMomentPrivate()
+      }
+    } catch {
+      toastMomentExportFailed('image')
+    } finally {
+      setSaveBusy(false)
+    }
+  }, [exportMoment, signedIn, persistMoment])
+
+  const handleAddMomentToStory = useCallback(async () => {
+    if (!signedIn) {
+      requireAuth({ returnTo: '/compose' })
+      return
+    }
+    setStoryBusy(true)
+    try {
+      let postId = postedId
+      if (!postId) {
+        postId = await persistMoment('active')
+        if (!postId) {
+          toast.error('Finish your Moment and try again.')
+          return
+        }
+      }
+      const result = await createStoryFromPost(postId)
+      if (!result.ok) throw new Error(result.error || 'Could not add to Story')
+      toast.success(result.alreadyActive ? 'Already on your Story' : 'Added to your Story — 24 hours')
+      trackEvent('moment_story_added_compose')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not add to Story')
+    } finally {
+      setStoryBusy(false)
+    }
+  }, [signedIn, requireAuth, postedId, persistMoment])
+
+  const momentShareItems = useMemo(
+    () => [
+      ...studioExport.shareItems,
+      {
+        id: 'send',
+        label: 'Send',
+        onClick: () => { handleSendToSomeone() },
+      },
+      {
+        id: 'story',
+        label: storyBusy ? 'Story…' : 'Story',
+        hint: '24h',
+        disabled: storyBusy || studioExport.shareBusy || studioExport.saving,
+        onClick: () => { void handleAddMomentToStory() },
+      },
+    ],
+    [
+      studioExport.shareItems,
+      studioExport.shareBusy,
+      studioExport.saving,
+      handleSendToSomeone,
+      storyBusy,
+      handleAddMomentToStory,
+    ],
+  )
+
   const showNameBanner = phase === 'moment' && !!identity && identity.displayName === identity.username && !bannerDismissed
   const buttonsBlocked = showNameBanner && editingName
   const showStep1Resume = phase === 'find' && !!selectedSong && (lyric.trim().length > 0 || linePickComplete || committedLines.length > 0)
@@ -1303,7 +1404,7 @@ function ComposeInner() {
       <div style={{
         paddingTop: 'calc(var(--margo-header-h, var(--nav-height, 72px)) + 8px)',
         paddingBottom: phase === 'moment' || phase === 'action'
-          ? 'calc(var(--margo-cta-bar-h, 120px) + 16px)'
+          ? 'calc(var(--margo-tabbar-h, 80px) + 12px)'
           : 'calc(var(--margo-page-padding-bottom) + 88px)',
         paddingLeft: '24px',
         paddingRight: '24px',
@@ -1446,130 +1547,227 @@ function ComposeInner() {
 
           {/* Step 2 UI is portaled (line picker + Your line) — see below main */}
 
-          {/* ── MOMENT hub ── */}
+          {/* ── MOMENT studio ── */}
           <div style={{ display: phase === 'moment' || phase === 'action' ? 'block' : 'none' }}>
-            <ComposeTopBar
-              onBack={() => { if (!posting) setPhase('select') }}
-              backDisabled={posting}
-              title="Your Moment"
-              trailing={
-                <button
-                  type="button"
-                  onClick={handleStartOver}
-                  style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    fontFamily: font, fontSize: '0.72rem', color: 'var(--text-muted)',
-                    minHeight: 'var(--margo-touch-min)', padding: '0 8px',
-                  }}
-                >Start over</button>
+            <MomentStudioScreen
+              songRow={
+                songName ? (
+                  <ComposeStickySongRow
+                    title={songName}
+                    artist={artistName}
+                    artwork={selectedSong?.artwork}
+                    onClear={handleClearSongPick}
+                    onChangeSong={handleChangeSong}
+                  />
+                ) : null
               }
-            />
-
-            <ComposeReadyPreview
-              drafts={allLineDrafts}
+              beforeLyric={
+                <>
+                  {committedLines.length > 0 ? (
+                    <div
+                      style={{
+                        marginTop: '12px',
+                        padding: '12px 14px',
+                        border: '1px solid var(--border-hi)',
+                        borderRadius: '12px',
+                        background: 'var(--surface)',
+                      }}
+                    >
+                      <p style={{
+                        fontFamily: UI_FONT,
+                        fontSize: '10px',
+                        fontWeight: 600,
+                        letterSpacing: '1px',
+                        textTransform: 'uppercase',
+                        color: 'var(--gold)',
+                        margin: '0 0 8px',
+                      }}>
+                        Lines so far · {committedLines.length}/{POST_LINES_MAX}
+                      </p>
+                      {committedLines.map((line, i) => (
+                        <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '6px' }}>
+                          <p style={{
+                            flex: 1,
+                            minWidth: 0,
+                            fontFamily: 'var(--font-lora), serif',
+                            fontStyle: 'italic',
+                            fontSize: '14px',
+                            margin: 0,
+                            lineHeight: 1.45,
+                            color: 'var(--text)',
+                          }}>
+                            {i + 1}. &ldquo;{line.lyric}&rdquo;
+                          </p>
+                          <ComposeDismissButton onClick={() => handleRemoveCommittedLine(i)} label={`Remove line ${i + 1}`} />
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  {showNameBanner && identity ? (
+                    <div style={{
+                      marginTop: '12px',
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border-hi)',
+                      borderRadius: '12px',
+                      padding: '16px',
+                    }}>
+                      {!editingName ? (
+                        <>
+                          <p style={{ fontFamily: UI_FONT, fontSize: '13px', color: 'var(--text)', margin: '0 0 4px' }}>
+                            You&apos;ll share as <strong style={{ color: 'var(--gold)' }}>{identity.displayName}</strong>
+                          </p>
+                          <p style={{ fontFamily: UI_FONT, fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 12px', lineHeight: 1.45 }}>
+                            You can change this anytime in settings.
+                          </p>
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              onClick={() => setBannerDismissed(true)}
+                              style={{
+                                padding: '0 16px',
+                                height: '32px',
+                                minHeight: '44px',
+                                background: 'var(--gold)',
+                                color: 'var(--text-on-gold, var(--bg))',
+                                borderRadius: '10px',
+                                fontFamily: UI_FONT,
+                                fontWeight: 600,
+                                fontSize: '12px',
+                                border: 'none',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Keep It
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setEditingName(true); setNameInput(identity.displayName) }}
+                              style={{
+                                padding: '0 16px',
+                                height: '32px',
+                                minHeight: '44px',
+                                background: 'transparent',
+                                color: 'var(--gold)',
+                                border: '1px solid var(--gold-border)',
+                                borderRadius: '10px',
+                                fontFamily: UI_FONT,
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Edit
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p style={{ fontFamily: UI_FONT, fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 8px' }}>Display name</p>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <input
+                              type="text"
+                              value={nameInput}
+                              onChange={(e) => setNameInput(e.target.value.slice(0, 30))}
+                              maxLength={30}
+                              autoFocus
+                              style={{
+                                flex: '1 1 140px',
+                                height: '44px',
+                                padding: '0 14px',
+                                background: 'var(--surface-2)',
+                                border: '1px solid var(--border-hi)',
+                                borderRadius: '10px',
+                                color: 'var(--text)',
+                                fontFamily: UI_FONT,
+                                fontSize: '14px',
+                                outline: 'none',
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (nameInput.trim()) {
+                                  await updateDisplayName(nameInput)
+                                  setEditingName(false)
+                                  setBannerDismissed(true)
+                                }
+                              }}
+                              disabled={!nameInput.trim()}
+                              style={{
+                                padding: '0 16px',
+                                height: '44px',
+                                background: 'var(--gold)',
+                                color: 'var(--text-on-gold, var(--bg))',
+                                borderRadius: '10px',
+                                fontFamily: UI_FONT,
+                                fontWeight: 600,
+                                fontSize: '12px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                opacity: nameInput.trim() ? 1 : 0.4,
+                              }}
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingName(false)}
+                              style={{
+                                padding: '0 14px',
+                                height: '44px',
+                                background: 'transparent',
+                                color: 'var(--text-secondary)',
+                                border: '1px solid var(--border-hi)',
+                                borderRadius: '10px',
+                                fontFamily: UI_FONT,
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ) : null}
+                </>
+              }
+              lyric={lyric}
+              onLyricChange={setLyric}
+              cardThemeId={themeId}
+              onThemeChange={setThemeId}
+              exportAtmosphereId={exportAtmosphereId}
+              onExportAtmosphereChange={setExportAtmosphereId}
+              shapeId={exportShapeId}
+              onShapeChange={setExportShapeId}
               vibeLabel={selectedVibe ? vibeKeyToLabel(selectedVibe) : null}
               suggestedVibeLabel={suggestedVibe ? vibeKeyToLabel(suggestedVibe) : null}
-              emotionLoading={emotionLoading}
+              vibeOptions={MOMENT_VIBE_PICKER_OPTIONS}
               onVibeSelect={handleVibeLabelSelect}
+              previewLyric={lyric}
+              previewSongTitle={songName}
+              previewArtistName={artistName}
+              previewArtwork={selectedSong?.artwork || null}
+              canPlay={listen?.canPlayInline ?? false}
+              playing={studioPlaying}
+              buffering={studioBuffering}
+              onPlay={handleStudioPlay}
+              listenUrl={listen && !listen.canPlayInline ? listen.externalUrl : null}
+              exportItems={studioExport.exportItems}
+              shareItems={momentShareItems}
+              onSave={() => { void handleSaveMoment() }}
+              saving={studioExport.saving || saveBusy}
+              shareBusy={studioExport.shareBusy}
+              videoProgress={studioExport.videoProgress}
+              signedIn={signedIn}
+              onPost={() => { void handlePostToFeed() }}
+              posting={posting}
+              actionsBlocked={buttonsBlocked}
             />
-
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'nowrap',
-                alignItems: 'stretch',
-                width: '100%',
-                margin: '12px 0',
-                borderTop: '1px solid var(--border)',
-                paddingTop: '2px',
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setShowExportStudio(true)}
-                aria-label="Export"
-                style={composeToolBtnStyle}
-              >
-                <CardIcon size={16} color="currentColor" />
-                <span style={composeToolLabelStyle}>Export</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleChangeSong}
-                aria-label="Change song"
-                style={composeToolBtnStyle}
-              >
-                <MusicNoteIcon size={16} color="currentColor" />
-                <span style={composeToolLabelStyle}>Change song</span>
-              </button>
-              {committedLines.length + 1 < POST_LINES_MAX && (
-                <button
-                  type="button"
-                  onClick={handleAddLineFromMoment}
-                  aria-label="Add another line"
-                  style={composeToolBtnStyle}
-                >
-                  <PenLineIcon size={16} color="currentColor" />
-                  <span style={composeToolLabelStyle}>Add line</span>
-                </button>
-              )}
-            </div>
-
-            {committedLines.length > 0 && (
-              <div style={{ margin: '0 0 20px', padding: '12px 14px', border: '1px solid var(--border)', borderRadius: '12px' }}>
-                <p style={{ fontFamily: font, fontSize: '0.58rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--gold)', margin: '0 0 8px' }}>
-                  Lines so far · {committedLines.length}/{POST_LINES_MAX}
-                </p>
-                {committedLines.map((line, i) => (
-                  <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '8px' }}>
-                    <p style={{ flex: 1, minWidth: 0, fontFamily: font, fontStyle: 'italic', fontSize: '0.82rem', margin: 0, lineHeight: 1.4 }}>
-                      {i + 1}. &ldquo;{line.lyric}&rdquo;
-                    </p>
-                    <ComposeDismissButton onClick={() => handleRemoveCommittedLine(i)} label={`Remove line ${i + 1}`} />
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Display name banner — shown until customized once, or dismissed */}
-            {showNameBanner && identity && (
-              <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px 24px', marginBottom: '24px' }}>
-                {!editingName ? (
-                  <>
-                    <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text)', marginBottom: '4px' }}>
-                      You&apos;ll share as <strong style={{ color: 'var(--gold)' }}>{identity.displayName}</strong>
-                    </p>
-                    <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: 1.5 }}>
-                      You can change this anytime in settings.
-                    </p>
-                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                      <button onClick={() => setBannerDismissed(true)}
-                        style={{ padding: '9px 20px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>Keep It</button>
-                      <button onClick={() => { setEditingName(true); setNameInput(identity.displayName) }}
-                        style={{ padding: '9px 20px', background: 'transparent', color: 'var(--gold)', border: '1px solid var(--gold-border)', borderRadius: '50px', fontFamily: font, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer' }}>Edit</button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>Display name</p>
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                      <input type="text" value={nameInput} onChange={(e) => setNameInput(e.target.value.slice(0, 30))} maxLength={30} autoFocus
-                        style={{ flex: 1, height: '44px', padding: '0 16px', background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '12px', color: 'var(--text)', fontFamily: font, fontSize: '0.9rem', outline: 'none' }} />
-                      <button onClick={async () => { if (nameInput.trim()) { await updateDisplayName(nameInput); setEditingName(false); setBannerDismissed(true) } }} disabled={!nameInput.trim()}
-                        style={{ padding: '0 20px', height: '44px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '12px', fontFamily: font, fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', border: 'none', cursor: 'pointer', opacity: nameInput.trim() ? 1 : 0.4 }}>Confirm</button>
-                      <button onClick={() => setEditingName(false)}
-                        style={{ padding: '0 16px', height: '44px', background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '12px', fontFamily: font, fontSize: '0.6rem', cursor: 'pointer' }}>Cancel</button>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
+            {studioExport.videoReadySheet}
             {postError && (
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: '#ff6b6b', textAlign: 'center', marginBottom: '16px' }}>{postError}</p>
+              <p style={{ fontFamily: font, fontSize: '0.82rem', color: '#ff6b6b', textAlign: 'center', marginTop: '16px' }}>{postError}</p>
             )}
-
-            {/* Post actions live in KeyboardSafeCtaBar */}
           </div>
 
         </div>
@@ -1705,44 +1903,6 @@ function ComposeInner() {
         document.body,
       )}
 
-
-      {phase === 'moment' && (
-        <KeyboardSafeCtaBar keyboardOpen={keyboardOpen} bottomGutter={28}>
-          <div style={{ opacity: buttonsBlocked ? 0.4 : 1, pointerEvents: buttonsBlocked ? 'none' : 'auto', display: 'flex', gap: '8px' }}>
-            <button
-              type="button"
-              aria-label="Send to someone"
-              onClick={() => { void handleSendToSomeone() }}
-              disabled={posting || identityLoading}
-              style={{
-                ...keyboardSafePrimaryBtnStyle,
-                flex: '1.2 1 0',
-                width: 'auto',
-                minWidth: 0,
-                padding: '0 10px',
-                whiteSpace: 'nowrap',
-                opacity: posting ? 0.7 : 1,
-                cursor: posting ? 'not-allowed' : 'pointer',
-              }}
-            >Send</button>
-            <button
-              type="button"
-              aria-label="Post to Feed"
-              onClick={() => { void handlePostToFeed() }}
-              disabled={posting || identityLoading}
-              style={momentSplitSecondaryStyle}
-            >Post</button>
-            <button
-              type="button"
-              aria-label="Keep Private"
-              onClick={() => { void handleKeepPrivate() }}
-              disabled={posting}
-              style={momentSplitPrivateStyle}
-            >Private</button>
-          </div>
-        </KeyboardSafeCtaBar>
-      )}
-
       <ComposeSendTo
         open={showSendTo}
         onOpenChange={(open) => {
@@ -1765,16 +1925,6 @@ function ComposeInner() {
         onAutoSendConsumed={handleAutoSendConsumed}
       />
 
-      <MargoSheet
-        open={showExportStudio}
-        onOpenChange={setShowExportStudio}
-        title="Export"
-        zIndex={200}
-        heightMode="auto"
-        bottomInset="tabbar-tight"
-      >
-        <MomentShareStudio moment={exportMoment} compact layout="modal" />
-      </MargoSheet>
 
       {startOverConfirm && (
         <div role="dialog" aria-modal="true" style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(7,6,10,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>

@@ -142,6 +142,7 @@ export function StageMomentCard({
   const cardRef = useRef<HTMLDivElement>(null)
   const [cardWidth, setCardWidth] = useState<number | null>(null)
   const isShorts = shapeId === 'vertical'
+  const isWide = shapeId === 'wide'
   const stableShortsPaint = isShorts && shortsFeedStableLook
   const paintAtmosphere =
     effectOwnsFill || stableShortsPaint ? atmosphereId : 'still'
@@ -161,6 +162,7 @@ export function StageMomentCard({
     themeId: cardThemeId,
     includeVibePill: false,
     format: isShorts ? 'shorts' : 'feed',
+    layoutVariant: isShorts ? 'shorts' : isWide ? 'wide' : 'feed',
     exportAtmosphereId: paintAtmosphere,
   }, cardWidth)
 
@@ -494,11 +496,13 @@ export function StageMomentCard({
                   href={listenUrl}
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label="Listen on external service"
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '6px',
-                    minHeight: 'var(--margo-touch-min)',
+                    justifyContent: 'center',
+                    width: 'var(--margo-touch-min)',
+                    height: 'var(--margo-touch-min)',
                     textDecoration: 'none',
                     fontFamily: UI_FONT,
                     fontSize: '0.72rem',
@@ -507,7 +511,7 @@ export function StageMomentCard({
                     color: theme.ink,
                   }}
                 >
-                  Listen <ShareIcon size={12} color="currentColor" />
+                  <ShareIcon size={14} color="currentColor" />
                 </a>
               ) : null}
             </div>

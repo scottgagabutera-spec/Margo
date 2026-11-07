@@ -29,6 +29,10 @@ interface MomentActionMenuProps {
   onOpenChange?: (open: boolean) => void
   /** z-index for the portaled menu (sheets need > sheet). */
   menuZIndex?: number
+  menuPlacement?: 'down' | 'up'
+  compact?: boolean
+  studio?: boolean
+  hideItemHints?: boolean
 }
 
 /**
@@ -46,6 +50,10 @@ export function MomentActionMenu({
   open: controlledOpen,
   onOpenChange,
   menuZIndex = 220,
+  menuPlacement = 'down',
+  compact = false,
+  studio = false,
+  hideItemHints = false,
 }: MomentActionMenuProps) {
   const [internalOpen, setInternalOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -69,12 +77,17 @@ export function MomentActionMenu({
       const vv = typeof window !== 'undefined' ? window.visualViewport : null
       const viewTop = vv?.offsetTop ?? 0
       const viewBottom = vv ? vv.offsetTop + vv.height : window.innerHeight
-      const top = r.bottom + MENU_GAP_PX
-      const maxHeight = Math.max(120, viewBottom - top - MENU_VIEW_PAD_PX)
+      const openDown = menuPlacement === 'down'
+      const spaceBelow = viewBottom - r.bottom - MENU_GAP_PX - MENU_VIEW_PAD_PX
+      const spaceAbove = r.top - viewTop - MENU_GAP_PX - MENU_VIEW_PAD_PX
+      const maxHeight = Math.max(88, openDown ? spaceBelow : spaceAbove)
+      const top = openDown
+        ? r.bottom + MENU_GAP_PX
+        : Math.max(viewTop + MENU_VIEW_PAD_PX, r.top - MENU_GAP_PX - maxHeight)
       setPos({
-        top: Math.max(viewTop + MENU_VIEW_PAD_PX, top),
+        top,
         left: r.left,
-        width: r.width,
+        width: studio ? 128 : compact ? Math.max(r.width, 140) : r.width,
         maxHeight,
       })
     }
@@ -90,7 +103,7 @@ export function MomentActionMenu({
       window.removeEventListener('resize', update)
       window.removeEventListener('scroll', update, true)
     }
-  }, [open])
+  }, [open, menuPlacement, compact, studio])
 
   useEffect(() => {
     if (!open) return
@@ -120,7 +133,7 @@ export function MomentActionMenu({
   const isPrimary = variant === 'primary'
 
   return (
-    <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+    <div style={{ position: 'relative', flex: compact ? '0 0 auto' : 1, minWidth: compact ? undefined : 0 }}>
       <button
         ref={triggerRef}
         type="button"
@@ -129,18 +142,20 @@ export function MomentActionMenu({
         aria-expanded={open}
         aria-haspopup="menu"
         style={{
-          width: '100%',
-          minHeight: 'var(--margo-touch-min)',
-          padding: '0 16px',
-          borderRadius: '50px',
+          width: compact ? 'auto' : '100%',
+          minWidth: compact && !studio ? '96px' : undefined,
+          minHeight: '44px',
+          height: studio ? '32px' : undefined,
+          padding: studio ? '0 12px' : compact ? '0 14px' : '0 16px',
+          borderRadius: studio ? '10px' : '50px',
           border: isPrimary ? 'none' : '1px solid var(--border-hi)',
           background: isPrimary ? 'var(--gold)' : 'var(--surface-2)',
           color: isPrimary ? 'var(--text-on-gold, var(--bg))' : 'var(--text)',
           fontFamily: font,
-          fontSize: '0.6rem',
-          fontWeight: 700,
-          letterSpacing: '0.9px',
-          textTransform: 'uppercase',
+          fontSize: studio ? '12px' : '0.6rem',
+          fontWeight: studio ? 500 : 700,
+          letterSpacing: studio ? 0 : '0.9px',
+          textTransform: studio ? 'none' : 'uppercase',
           cursor: disabled || busy ? 'default' : 'pointer',
           opacity: disabled || busy ? 0.55 : 1,
           display: 'flex',
@@ -162,7 +177,9 @@ export function MomentActionMenu({
           aria-hidden
           style={{
             display: 'inline-flex',
-            transform: open ? 'rotate(180deg)' : 'none',
+            transform: open
+              ? (menuPlacement === 'up' ? 'rotate(0deg)' : 'rotate(180deg)')
+              : (menuPlacement === 'up' ? 'rotate(180deg)' : 'none'),
             transition: 'transform 150ms ease',
           }}
         >
@@ -185,9 +202,9 @@ export function MomentActionMenu({
             zIndex: menuZIndex,
             display: 'flex',
             flexDirection: 'column',
-            gap: '4px',
-            padding: '6px',
-            borderRadius: '14px',
+            gap: studio ? 0 : '4px',
+            padding: studio ? '4px' : '6px',
+            borderRadius: studio ? '12px' : '14px',
             background: 'var(--surface)',
             border: '1px solid var(--border-hi)',
             boxShadow: '0 16px 40px rgba(0,0,0,0.45)',
@@ -207,17 +224,18 @@ export function MomentActionMenu({
               }}
               style={{
                 width: '100%',
-                minHeight: 'var(--margo-touch-min)',
-                padding: '8px 12px',
-                borderRadius: '10px',
+                minHeight: studio ? '36px' : 'var(--margo-touch-min)',
+                height: studio ? '36px' : undefined,
+                padding: studio ? '0 12px' : '8px 12px',
+                borderRadius: studio ? '8px' : '10px',
                 border: 'none',
-                background: item.disabled ? 'transparent' : 'rgba(255,255,255,0.04)',
+                background: item.disabled ? 'transparent' : studio ? 'transparent' : 'rgba(255,255,255,0.04)',
                 cursor: item.disabled ? 'default' : 'pointer',
                 textAlign: 'left',
                 opacity: item.disabled ? 0.4 : 1,
                 display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'flex-start',
+                flexDirection: studio && hideItemHints ? 'row' : 'column',
+                alignItems: studio && hideItemHints ? 'center' : 'flex-start',
                 justifyContent: 'center',
                 gap: '2px',
                 boxSizing: 'border-box',
@@ -225,15 +243,15 @@ export function MomentActionMenu({
             >
               <span style={{
                 fontFamily: font,
-                fontSize: '0.7rem',
-                fontWeight: 500,
+                fontSize: studio ? '12.5px' : '0.7rem',
+                fontWeight: studio ? 600 : 500,
                 letterSpacing: 0,
                 textTransform: 'none',
                 color: item.disabled ? 'var(--text-muted)' : 'var(--text)',
               }}>
                 {item.label}
               </span>
-              {item.hint ? (
+              {!hideItemHints && item.hint ? (
                 <span style={{
                   fontFamily: font,
                   fontStyle: 'italic',

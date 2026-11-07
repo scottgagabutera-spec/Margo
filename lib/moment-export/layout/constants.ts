@@ -22,7 +22,7 @@ export const STAGE_CARD_EXPORT_WIDTH = 1080
 export const STAGE_CARD_EXPORT_SCALE = 3
 
 export const STAGE_CARD_LAYOUT_REF = {
-  padding: { top: 20, right: 52, bottom: 18, left: 20 },
+  padding: { top: 16, right: 16, bottom: 16, left: 16 },
   borderRadius: 16,
   highlight: {
     /** Fraction of card height for gradient fade */
@@ -35,8 +35,8 @@ export const STAGE_CARD_LAYOUT_REF = {
     fontStyle: 'italic' as const,
     fontWeight: 400,
     /** Maximum Feed lyric size — shrinks to minFontSize to keep a thought intact */
-    fontSize: 28,
-    minFontSize: 18,
+    fontSize: 17,
+    minFontSize: 14,
     lineHeight: 1.34,
     /** Extra space between selected lines (not wrap continuations), in em */
     stanzaGapEm: 0.42,
@@ -46,7 +46,7 @@ export const STAGE_CARD_LAYOUT_REF = {
     song: {
       fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
       fontSize: 12,
-      fontWeight: 700,
+      fontWeight: 600,
       lineHeight: 1.25,
     },
     artist: {
@@ -96,8 +96,8 @@ export const STAGE_SHORTS_LAYOUT_REF = {
   borderRadius: 0,
   lyric: {
     /** Maximum Shorts lyric size — stacked poem, not a feed card scaled up */
-    fontSize: 38,
-    minFontSize: 22,
+    fontSize: 15,
+    minFontSize: 13,
     lineHeight: 1.26,
     stanzaGapEm: 0.36,
   },

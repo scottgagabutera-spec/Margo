@@ -93,6 +93,7 @@ export function resolveStageCardLayout(
   const ref = STAGE_CARD_LAYOUT_REF
   const format: StageCardFormat = input.format === 'shorts' ? 'shorts' : 'feed'
   const shorts = format === 'shorts'
+  const isWide = input.layoutVariant === 'wide'
   const shortsHeight = shorts ? Math.round(W * SHORTS_ASPECT) : 0
   const padding = shorts
     ? {
@@ -119,7 +120,11 @@ export function resolveStageCardLayout(
   const contentWidth = W - padding.left - padding.right
 
   const lyricSource = input.lyric || ''
-  const lyricSizeRef = shorts ? STAGE_SHORTS_LAYOUT_REF.lyric.fontSize : ref.lyric.fontSize
+  const lyricSizeRef = shorts
+    ? STAGE_SHORTS_LAYOUT_REF.lyric.fontSize
+    : isWide
+      ? 19
+      : ref.lyric.fontSize
   const lyricMinRef = shorts ? STAGE_SHORTS_LAYOUT_REF.lyric.minFontSize : ref.lyric.minFontSize
   const lyricLeading = shorts ? STAGE_SHORTS_LAYOUT_REF.lyric.lineHeight : ref.lyric.lineHeight
   const lyricGapEm = shorts ? STAGE_SHORTS_LAYOUT_REF.lyric.stanzaGapEm : ref.lyric.stanzaGapEm
