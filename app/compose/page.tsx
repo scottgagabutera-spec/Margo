@@ -203,7 +203,7 @@ const composeOverlayStyle: React.CSSProperties = {
   paddingRight: '24px',
   paddingTop: '8px',
   boxSizing: 'border-box',
-  overflowY: 'auto',
+  overflowY: 'hidden',
   WebkitOverflowScrolling: 'touch',
 }
 
@@ -1598,23 +1598,28 @@ function ComposeInner() {
             paddingBottom: 'calc(var(--margo-cta-bar-h, 0px) + var(--margo-tabbar-h, 80px) + 16px)',
           }}
         >
-          <div style={{ maxWidth: '640px', width: '100%', margin: '0 auto' }}>
-            <ComposeTopBar
-              onBack={handleLinePickerBack}
-              title="Pick the line"
-              trailing={<ComposeDismissButton onClick={handleCancelLine} label="Cancel line" />}
-            />
-            {songName && (
-              <ComposeStickySongRow
-                title={songName}
-                artist={artistName}
-                artwork={selectedSong?.artwork}
-                onClear={handleClearSongPick}
-                onChangeSong={handleChangeSong}
+          <div className="margo-compose-overlay__stack" style={{ maxWidth: '640px', width: '100%', margin: '0 auto' }}>
+            <div style={{ flexShrink: 0 }}>
+              <ComposeTopBar
+                onBack={handleLinePickerBack}
+                title="Pick the line"
+                trailing={<ComposeDismissButton onClick={handleCancelLine} label="Cancel line" />}
               />
-            )}
+              {songName && (
+                <ComposeStickySongRow
+                  flushHeader
+                  title={songName}
+                  artist={artistName}
+                  artwork={selectedSong?.artwork}
+                  onClear={handleClearSongPick}
+                  onChangeSong={handleChangeSong}
+                />
+              )}
+            </div>
+            <div className="margo-compose-overlay__scroll">
             <ComposeLinePicker
               hideHeader
+              fillAvailable
               lines={margoLines}
               loading={linesLoading}
               songTitle={songName}
@@ -1657,6 +1662,7 @@ function ComposeInner() {
               }
               onBack={handleLinePickerBack}
             />
+            </div>
           </div>
         </div>,
         document.body,
@@ -1799,23 +1805,26 @@ function ComposeInner() {
             overflowY: 'hidden',
           }}
         >
-          <div style={{ maxWidth: '640px', width: '100%', margin: '0 auto', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            <ComposeTopBar
-              onBack={handleYourLineBack}
-              title="Your line"
-              keyboardCompact
-              chromeHidden={chromeHidden}
-              trailing={<ComposeDismissButton onClick={handleCancelLine} label="Cancel line" />}
-            />
-            {songName && (
-              <ComposeStickySongRow
-                title={songName}
-                artist={artistName}
-                artwork={selectedSong?.artwork}
-                onClear={handleClearSongPick}
-                onChangeSong={handleChangeSong}
+          <div className="margo-compose-overlay__stack" style={{ maxWidth: '640px', width: '100%', margin: '0 auto' }}>
+            <div style={{ flexShrink: 0 }}>
+              <ComposeTopBar
+                onBack={handleYourLineBack}
+                title="Your line"
+                keyboardCompact
+                chromeHidden={chromeHidden}
+                trailing={<ComposeDismissButton onClick={handleCancelLine} label="Cancel line" />}
               />
-            )}
+              {songName && (
+                <ComposeStickySongRow
+                  flushHeader
+                  title={songName}
+                  artist={artistName}
+                  artwork={selectedSong?.artwork}
+                  onClear={handleClearSongPick}
+                  onChangeSong={handleChangeSong}
+                />
+              )}
+            </div>
 
             <ComposeLyricCard style={{
               flex: 1, minHeight: 0, overflow: 'hidden',

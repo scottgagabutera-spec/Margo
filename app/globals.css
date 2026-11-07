@@ -425,6 +425,27 @@ html[data-margo-landing-song-flow] .margo-landing-page-shell {
   scroll-margin-top: calc(var(--margo-header-h, var(--nav-height, 72px)) + 8px);
 }
 
+.margo-compose-overlay {
+  overflow: hidden;
+  padding-bottom: calc(var(--margo-keyboard-inset, 0px) + env(safe-area-inset-bottom, 0px));
+}
+
+.margo-compose-overlay__stack {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.margo-compose-overlay__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 .margo-compose-sticky-song {
   position: sticky;
   z-index: 3;
@@ -436,6 +457,12 @@ html[data-margo-landing-song-flow] .margo-landing-page-shell {
   padding: 4px 0 8px;
   background: var(--bg);
   box-sizing: border-box;
+}
+
+.margo-compose-sticky-song--flush {
+  position: relative;
+  top: auto;
+  flex-shrink: 0;
 }
 
 .margo-compose-sticky-song__chip {

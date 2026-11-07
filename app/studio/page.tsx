@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, type CSSProperties, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -9,6 +10,7 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { SongUploadForm } from '@/components/studio/song-upload-form'
 import { useRegisterNavBack } from '@/components/nav-back'
 import { MargoSheet } from '@/components/margo-sheet'
+import { LoadingRing } from '@/components/loading-ring'
 import { shareSong } from '@/lib/song-share'
 import { UI_FONT } from '@/lib/fonts'
 
@@ -73,26 +75,37 @@ function statusLabel(status: StudioSong['status']): string | null {
   }
 }
 
-const sheetActionBtn: React.CSSProperties = {
+const sheetRow: CSSProperties = {
   width: '100%',
-  minHeight: 'var(--margo-touch-min, 44px)',
-  borderRadius: '12px',
-  border: '1px solid var(--border)',
-  background: 'var(--surface-2)',
+  minHeight: '42px',
+  border: 'none',
+  borderBottom: '1px solid rgba(255,255,255,0.06)',
+  background: 'transparent',
   color: 'var(--text)',
   fontFamily: font,
-  fontSize: '0.85rem',
-  fontWeight: 600,
+  fontSize: '0.8rem',
+  fontWeight: 500,
   cursor: 'pointer',
   textAlign: 'left',
-  padding: '12px 16px',
+  padding: '10px 4px',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
 }
 
-const sheetDangerBtn: React.CSSProperties = {
-  ...sheetActionBtn,
-  borderColor: 'rgba(255,96,96,0.35)',
-  color: '#ff8a8a',
-  background: 'rgba(255,96,96,0.06)',
+const sheetRowDanger: CSSProperties = {
+  ...sheetRow,
+  borderBottom: 'none',
+  color: 'rgba(255,140,140,0.92)',
+  marginTop: '4px',
+}
+
+function SheetIcon({ children }: { children: ReactNode }) {
+  return (
+    <span style={{ width: 18, height: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: 0.72 }}>
+      {children}
+    </span>
+  )
 }
 
 const promoteLinkStyle: React.CSSProperties = {
@@ -128,7 +141,12 @@ export default function StudioPage() {
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
   const [trashOpen, setTrashOpen] = useState(false)
-  const [actionBusy, setActionBusy] = useState(false)
+  const [songActionIds, setSongActionIds] = useState<Set<string>>(() => new Set())
+  const [bulkActionLock, setBulkActionLock] = useState(false)
+  const [deleteSubmittingId, setDeleteSubmittingId] = useState<string | null>(null)
+  const [sheetMounted, setSheetMounted] = useState(false)
+
+  useEffect(() => setSheetMounted(true), [])
 
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const longPressFired = useRef(false)
@@ -207,38 +225,40 @@ export default function StudioPage() {
     setSelectedIds(new Set())
   }, [])
 
+  const lockSong = useCallback((id: string) => {
+    setSongActionIds((prev) => new Set(prev).add(id))
+  }, [])
+
+  const unlockSong = useCallback((id: string) => {
+    setSongActionIds((prev) => {
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
+  }, [])
+
   const patchSong = useCallback(async (songId: string, action: 'hide' | 'soft_delete' | 'restore') => {
-    setActionBusy(true)
-    try {
-      const res = await fetch(`/api/studio/songs/${encodeURIComponent(songId)}`, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
-      })
-      const body = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(body.error || 'Request failed')
-      return body
-    } finally {
-      setActionBusy(false)
-    }
+    const res = await fetch(`/api/studio/songs/${encodeURIComponent(songId)}`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action }),
+    })
+    const body = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(body.error || 'Request failed')
+    return body
   }, [])
 
   const bulkPost = useCallback(async (ids: string[], action: 'hide' | 'soft_delete') => {
-    setActionBusy(true)
-    try {
-      const res = await fetch('/api/studio/songs/bulk', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids, action }),
-      })
-      const body = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(body.error || 'Request failed')
-      return body as { results?: { id: string; ok: boolean; error?: string }[] }
-    } finally {
-      setActionBusy(false)
-    }
+    const res = await fetch('/api/studio/songs/bulk', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids, action }),
+    })
+    const body = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(body.error || 'Request failed')
+    return body as { results?: { id: string; ok: boolean; error?: string }[] }
   }, [])
 
   const handleUploadComplete = () => {
@@ -261,20 +281,39 @@ export default function StudioPage() {
   const totalResonates = Object.values(stats).reduce((sum, s) => sum + (s.resonate_count || 0), 0)
 
   const onOverflowHideToggle = async (song: StudioSong) => {
-    if (actionBusy) return
+    if (songActionIds.has(song.id) || bulkActionLock) return
+    const wasHidden = song.status === 'hidden'
+    const snapshot = song
+    lockSong(song.id)
+    setOverflowSong(null)
+    setSongs((prev) =>
+      prev.map((s) =>
+        s.id === song.id ? { ...s, status: wasHidden ? 'live' : 'hidden' } : s,
+      ),
+    )
     try {
       await patchSong(song.id, 'hide')
-      toast(song.status === 'hidden' ? 'Song is visible again' : 'Song hidden from feed & search')
-      setOverflowSong(null)
-      await loadSongs()
+      toast(wasHidden ? 'Song is visible again' : 'Song hidden from feed & search')
     } catch (e) {
+      setSongs((prev) => prev.map((s) => (s.id === song.id ? snapshot : s)))
       toast.error(e instanceof Error ? e.message : 'Could not update')
+    } finally {
+      unlockSong(song.id)
     }
   }
 
   const onSoftDelete = async (song: StudioSong) => {
-    if (actionBusy) return
+    if (deleteSubmittingId) return
     const id = song.id
+    const snapshot = song
+    setDeleteSubmittingId(id)
+    setDeleteConfirmSong(null)
+    setOverflowSong(null)
+    setSongs((prev) =>
+      prev.map((s) =>
+        s.id === id ? { ...s, status: 'archived', deleted_at: new Date().toISOString() } : s,
+      ),
+    )
     try {
       await patchSong(id, 'soft_delete')
       toast('Moved to Trash', {
@@ -283,7 +322,9 @@ export default function StudioPage() {
           onClick: async () => {
             try {
               await patchSong(id, 'restore')
-              await loadSongs()
+              setSongs((prev) =>
+                prev.map((s) => (s.id === id ? { ...s, status: snapshot.status, deleted_at: null } : s)),
+              )
               toast('Restored')
             } catch {
               toast.error('Could not undo')
@@ -291,40 +332,65 @@ export default function StudioPage() {
           },
         },
       })
-      setDeleteConfirmSong(null)
-      setOverflowSong(null)
-      await loadSongs()
     } catch (e) {
+      setSongs((prev) => prev.map((s) => (s.id === id ? snapshot : s)))
       toast.error(e instanceof Error ? e.message : 'Could not delete')
+    } finally {
+      setDeleteSubmittingId(null)
     }
   }
 
   const onRestore = async (song: StudioSong) => {
-    if (actionBusy) return
+    if (songActionIds.has(song.id)) return
+    lockSong(song.id)
+    const snapshot = song
+    setSongs((prev) =>
+      prev.map((s) => (s.id === song.id ? { ...s, status: 'live', deleted_at: null } : s)),
+    )
     try {
       await patchSong(song.id, 'restore')
       toast('Song restored')
-      await loadSongs()
     } catch (e) {
+      setSongs((prev) => prev.map((s) => (s.id === song.id ? snapshot : s)))
       toast.error(e instanceof Error ? e.message : 'Could not restore')
+    } finally {
+      unlockSong(song.id)
     }
   }
 
   const handleBulkHide = async () => {
-    if (selectedIds.size === 0 || actionBusy) return
+    if (selectedIds.size === 0 || bulkActionLock) return
+    const ids = [...selectedIds]
+    setBulkActionLock(true)
+    exitSelectMode()
+    const snapshot = songs
+    setSongs((prev) =>
+      prev.map((s) => (ids.includes(s.id) ? { ...s, status: 'hidden' } : s)),
+    )
     try {
-      await bulkPost([...selectedIds], 'hide')
+      await bulkPost(ids, 'hide')
       toast('Hidden from feed & search')
-      exitSelectMode()
-      await loadSongs()
     } catch (e) {
+      setSongs(snapshot)
       toast.error(e instanceof Error ? e.message : 'Bulk action failed')
+    } finally {
+      setBulkActionLock(false)
     }
   }
 
   const handleBulkSoftDelete = async () => {
-    if (selectedIds.size === 0 || actionBusy) return
+    if (selectedIds.size === 0 || bulkActionLock || deleteSubmittingId) return
     const ids = [...selectedIds]
+    setBulkActionLock(true)
+    setBulkDeleteOpen(false)
+    exitSelectMode()
+    const snapshot = songs
+    const deletedAt = new Date().toISOString()
+    setSongs((prev) =>
+      prev.map((s) =>
+        ids.includes(s.id) ? { ...s, status: 'archived', deleted_at: deletedAt } : s,
+      ),
+    )
     try {
       await bulkPost(ids, 'soft_delete')
       toast('Moved to Trash', {
@@ -332,20 +398,24 @@ export default function StudioPage() {
           label: 'Undo',
           onClick: async () => {
             for (const id of ids) {
-              try { await patchSong(id, 'restore') } catch { /* ignore */ }
+              try {
+                await patchSong(id, 'restore')
+              } catch { /* ignore */ }
             }
-            await loadSongs()
+            setSongs(snapshot)
             toast('Restored')
           },
         },
       })
-      setBulkDeleteOpen(false)
-      exitSelectMode()
-      await loadSongs()
     } catch (e) {
+      setSongs(snapshot)
       toast.error(e instanceof Error ? e.message : 'Bulk delete failed')
+    } finally {
+      setBulkActionLock(false)
     }
   }
+
+  const actionBusy = bulkActionLock || songActionIds.size > 0 || !!deleteSubmittingId
 
   const startSelectFromOverflow = (song: StudioSong) => {
     setOverflowSong(null)
@@ -726,25 +796,65 @@ export default function StudioPage() {
         )}
       </div>
 
-      <MargoSheet open={!!overflowSong} onOpenChange={(o) => { if (!o) setOverflowSong(null) }} title="Song actions" anchor="bottom" zIndex={220}>
-        {overflowSong && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 4px' }}>{overflowSong.title}</p>
-            <button type="button" style={sheetActionBtn} onClick={() => startSelectFromOverflow(overflowSong)}>
+      {sheetMounted && overflowSong && createPortal(
+        <div
+          role="dialog"
+          aria-modal
+          style={{ position: 'fixed', inset: 0, zIndex: 220, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+        >
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={() => setOverflowSong(null)}
+            style={{ position: 'absolute', inset: 0, border: 'none', background: 'rgba(7,6,10,0.55)', cursor: 'default' }}
+          />
+          <div
+            style={{
+              position: 'relative',
+              zIndex: 1,
+              width: '100%',
+              maxWidth: 460,
+              borderRadius: '18px 18px 0 0',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              padding: '8px 20px calc(16px + env(safe-area-inset-bottom, 0px))',
+              boxShadow: '0 -12px 48px rgba(0,0,0,0.45)',
+            }}
+          >
+            <div aria-hidden style={{ width: 36, height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.14)', margin: '4px auto 12px' }} />
+            <p style={{
+              fontFamily: font,
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              color: 'var(--text)',
+              margin: '0 0 12px',
+              lineHeight: 1.35,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}>
+              {overflowSong.title}
+            </p>
+            <button type="button" style={sheetRow} onClick={() => startSelectFromOverflow(overflowSong)}>
+              <SheetIcon>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><rect x="4" y="4" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.4"/><rect x="13" y="4" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.4"/><rect x="4" y="13" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.4"/><rect x="13" y="13" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.4"/></svg>
+              </SheetIcon>
               Select
             </button>
             <button
               type="button"
-              style={sheetActionBtn}
-              disabled={actionBusy || overflowSong.status === 'archived'}
+              style={sheetRow}
+              disabled={songActionIds.has(overflowSong.id) || overflowSong.status === 'archived'}
               onClick={() => { void onOverflowHideToggle(overflowSong) }}
             >
-              {overflowSong.status === 'hidden' ? 'Unhide' : 'Hide from feed'}
+              <SheetIcon>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M4 7h16M7 7v12m10-12v12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
+              </SheetIcon>
+              {songActionIds.has(overflowSong.id) ? 'Updating…' : overflowSong.status === 'hidden' ? 'Unhide' : 'Hide from feed'}
             </button>
             <button
               type="button"
-              style={sheetActionBtn}
-              disabled={actionBusy}
+              style={sheetRow}
               onClick={async () => {
                 const s = overflowSong
                 setOverflowSong(null)
@@ -754,41 +864,54 @@ export default function StudioPage() {
                 else toast('Could not share')
               }}
             >
+              <SheetIcon>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M12 16V4m0 0 4 4m-4-4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><path d="M5 20h14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
+              </SheetIcon>
               Share
             </button>
             <button
               type="button"
-              style={sheetActionBtn}
-              disabled={actionBusy}
+              style={sheetRow}
               onClick={() => {
                 router.push(`/song/${overflowSong.id}`)
                 setOverflowSong(null)
               }}
             >
+              <SheetIcon>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M4 19V5m0 14h16M8 15v-4m4 4V9m4 6V7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
+              </SheetIcon>
               Stats
             </button>
+            {identity?.artistStatus === 'active' && (
+              <button
+                type="button"
+                style={sheetRow}
+                onClick={() => {
+                  setOverflowSong(null)
+                  router.push('/studio/promote')
+                }}
+              >
+                <SheetIcon>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M12 3l2.4 5.2 5.6.6-4.2 3.6 1.2 5.4L12 15.8 7 18.8l1.2-5.4-4.2-3.6 5.6-.6L12 3z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/></svg>
+                </SheetIcon>
+                Promote
+              </button>
+            )}
             <button
               type="button"
-              style={sheetActionBtn}
-              disabled={actionBusy || identity.artistStatus !== 'active'}
-              onClick={() => {
-                setOverflowSong(null)
-                router.push('/studio/promote')
-              }}
-            >
-              Promote
-            </button>
-            <button
-              type="button"
-              style={sheetDangerBtn}
-              disabled={actionBusy || overflowSong.status === 'archived'}
+              style={sheetRowDanger}
+              disabled={overflowSong.status === 'archived'}
               onClick={() => { setDeleteConfirmSong(overflowSong); setOverflowSong(null) }}
             >
-              Delete…
+              <SheetIcon>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M6 7h12M9 7V5h6v2m-8 0v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </SheetIcon>
+              Delete
             </button>
           </div>
-        )}
-      </MargoSheet>
+        </div>,
+        document.body,
+      )}
 
       <MargoSheet open={!!deleteConfirmSong} onOpenChange={(o) => { if (!o) setDeleteConfirmSong(null) }} title="Move to Trash?" anchor="bottom" zIndex={230}>
         {deleteConfirmSong && (
@@ -805,26 +928,35 @@ export default function StudioPage() {
             </p>
             <button
               type="button"
-              style={sheetActionBtn}
-              disabled={actionBusy}
-              onClick={async () => {
-                const s = deleteConfirmSong
-                try {
-                  await patchSong(s.id, 'hide')
-                  toast(s.status === 'hidden' ? 'Song is visible again' : 'Song hidden from feed & search')
-                  setDeleteConfirmSong(null)
-                  await loadSongs()
-                } catch (e) {
-                  toast.error(e instanceof Error ? e.message : 'Could not update')
-                }
+              style={sheetRow}
+              disabled={!!deleteSubmittingId || !deleteConfirmSong}
+              onClick={() => {
+                if (!deleteConfirmSong || deleteSubmittingId) return
+                const target = deleteConfirmSong
+                setDeleteConfirmSong(null)
+                void onOverflowHideToggle(target)
               }}
             >
               Hide instead
             </button>
-            <button type="button" style={sheetDangerBtn} disabled={actionBusy} onClick={() => { void onSoftDelete(deleteConfirmSong) }}>
-              Move to Trash
+            <button
+              type="button"
+              style={sheetRowDanger}
+              disabled={!!deleteSubmittingId || !deleteConfirmSong}
+              onClick={() => {
+                if (deleteConfirmSong) void onSoftDelete(deleteConfirmSong)
+              }}
+            >
+              {deleteSubmittingId === deleteConfirmSong?.id ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <LoadingRing size={16} strokeWidth={1.5} state="spinning" />
+                  Moving…
+                </span>
+              ) : (
+                'Move to Trash'
+              )}
             </button>
-            <button type="button" style={{ ...sheetActionBtn, border: 'none', background: 'transparent', color: 'var(--text-muted)' }} onClick={() => setDeleteConfirmSong(null)}>
+            <button type="button" style={{ ...sheetRow, borderBottom: 'none', color: 'var(--text-muted)', justifyContent: 'center' }} disabled={!!deleteSubmittingId} onClick={() => setDeleteConfirmSong(null)}>
               Cancel
             </button>
           </div>
@@ -836,10 +968,22 @@ export default function StudioPage() {
           <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
             {selectedCount} song{selectedCount === 1 ? '' : 's'} will move to Trash. Undo from the toast or restore in Trash.
           </p>
-          <button type="button" style={sheetDangerBtn} disabled={actionBusy} onClick={() => { void handleBulkSoftDelete() }}>
-            Move to Trash
+          <button
+            type="button"
+            style={sheetRowDanger}
+            disabled={bulkActionLock}
+            onClick={() => { void handleBulkSoftDelete() }}
+          >
+            {bulkActionLock ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <LoadingRing size={16} strokeWidth={1.5} state="spinning" />
+                Moving…
+              </span>
+            ) : (
+              'Move to Trash'
+            )}
           </button>
-          <button type="button" style={{ ...sheetActionBtn, border: 'none', background: 'transparent', color: 'var(--text-muted)' }} onClick={() => setBulkDeleteOpen(false)}>
+          <button type="button" style={{ ...sheetRow, borderBottom: 'none', color: 'var(--text-muted)', justifyContent: 'center' }} disabled={bulkActionLock} onClick={() => setBulkDeleteOpen(false)}>
             Cancel
           </button>
         </div>

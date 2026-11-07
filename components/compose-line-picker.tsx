@@ -69,6 +69,8 @@ interface ComposeLinePickerProps {
   artwork?: string | null
   variant?: 'compose' | 'stage' | 'panel'
   hideHeader?: boolean
+  /** Fill compose overlay scroll region (keyboard-safe). */
+  fillAvailable?: boolean
 }
 
 function ComposeLineRow({
@@ -333,6 +335,7 @@ export function ComposeLinePicker({
   artwork = null,
   variant = 'compose',
   hideHeader = false,
+  fillAvailable = false,
 }: ComposeLinePickerProps) {
   const listRef = useRef<HTMLDivElement>(null)
   const curateRequested = useRef(false)
@@ -526,7 +529,7 @@ export function ComposeLinePicker({
   const canConfirmParagraph = selectionCount >= 1 && isContiguous(selectedIndexes)
 
   return (
-    <div>
+    <div style={fillAvailable ? { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, height: '100%' } : undefined}>
       {!hideHeader ? (
       <button
         type="button"
@@ -741,8 +744,10 @@ export function ComposeLinePicker({
           ref={listRef}
           className={isPanel ? 'margo-lb-line-list' : undefined}
           style={{
-            maxHeight: isPanel ? 'none' : 'min(52dvh, calc(var(--margo-vv-height, 100dvh) * 0.48), 420px)',
-            height: undefined,
+            maxHeight: fillAvailable ? 'none' : isPanel ? 'none' : 'min(52dvh, calc(var(--margo-vv-height, 100dvh) * 0.48), 420px)',
+            height: fillAvailable ? '100%' : undefined,
+            flex: fillAvailable ? '1 1 auto' : undefined,
+            minHeight: fillAvailable ? 0 : undefined,
             overflowY: isPanel ? 'visible' : 'auto',
             overscrollBehavior: 'contain',
             touchAction: 'pan-y',
