@@ -1,3 +1,5 @@
+import { welcomeSeriesCopy, welcomeSeriesKindFromData } from '@/lib/welcome-series/copy'
+
 /**
  * Minimal fields required to resolve a notification tap destination.
  * Kept in lib/ so web UI and future native shells can share routing intent.
@@ -6,6 +8,7 @@ export interface NotificationRouteInput {
   type: string
   actor?: { username: string } | null
   postId?: string | null
+  data?: { kind?: string } | null
 }
 
 /**
@@ -31,6 +34,10 @@ export function notificationHref(n: NotificationRouteInput): string {
       return '/apply-artist'
     case 'artist_approved':
       return '/studio'
+    case 'system_welcome': {
+      const kind = welcomeSeriesKindFromData(n.data)
+      return kind ? welcomeSeriesCopy(kind).href : '/feed'
+    }
     case 'warned':
     case 'frozen':
     case 'removed':

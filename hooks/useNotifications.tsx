@@ -13,6 +13,13 @@ export type NotificationType =
   | 'lyric_back' | 'memory_reply' | 'memory_lyric_reply'
   | 'warned' | 'frozen' | 'removed' | 'restored'
   | 'artist_submitted' | 'artist_approved' | 'artist_rejected'
+  | 'system_welcome'
+
+export type SystemWelcomeNotificationData = {
+  kind?: string
+  title?: string
+  buttonLabel?: string
+}
 
 export interface Notification {
   id: string
@@ -21,6 +28,7 @@ export interface Notification {
   type: NotificationType
   postId: string | null
   messageId: string | null
+  data: SystemWelcomeNotificationData | null
   createdAt: string
   readAt: string | null
   actor: {
@@ -40,12 +48,13 @@ interface NotificationRow {
   type: NotificationType
   post_id: string | null
   message_id: string | null
+  data?: SystemWelcomeNotificationData | null
   created_at: string
   read_at: string | null
 }
 
 const SELECT_COLUMNS =
-  'id, recipient_id, actor_id, type, post_id, message_id, created_at, read_at'
+  'id, recipient_id, actor_id, type, post_id, message_id, data, created_at, read_at'
 
 /**
  * Profiles RLS blocks embedding many actors on notification rows (private
@@ -84,6 +93,7 @@ function mapRow(row: NotificationRow, actors: Map<string, ActorIdentity>): Notif
     type: row.type,
     postId: row.post_id,
     messageId: row.message_id,
+    data: row.data && typeof row.data === 'object' ? row.data : null,
     createdAt: row.created_at,
     readAt: row.read_at,
     actor: row.actor_id ? actors.get(row.actor_id) ?? null : null,

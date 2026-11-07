@@ -16,6 +16,7 @@ import { LIST_ROW_TYPE, UI_FONT } from '@/lib/fonts'
 import { signedOutGateBenefitStyle, signedOutGateSignInStyle } from '@/lib/signed-out-gate-styles'
 import { isMargoBrandUsername } from '@/lib/margo-brand-account'
 import { messageFor } from '@/lib/notifications/copy'
+import { welcomeSeriesCopy, welcomeSeriesKindFromData } from '@/lib/welcome-series/copy'
 
 const FILTERS: { id: NotificationFilter; label: string }[] = [
   { id: 'all', label: 'All' },
@@ -23,6 +24,96 @@ const FILTERS: { id: NotificationFilter; label: string }[] = [
   { id: 'follows', label: 'Follows' },
   { id: 'updates', label: 'Updates' },
 ]
+
+function SystemWelcomeNotificationRow({
+  n,
+}: {
+  n: Notification
+}) {
+  const router = useRouter()
+  const { markNotificationRead } = useNotifications()
+  const unread = !n.readAt
+  const kind = welcomeSeriesKindFromData(n.data)
+  const copy = kind ? welcomeSeriesCopy(kind) : null
+  const title = n.data?.title || copy?.title || 'Tips from Margo'
+  const body = copy?.body || messageFor(n)
+  const buttonLabel = n.data?.buttonLabel || copy?.buttonLabel || 'Open'
+  const href = notificationHref(n)
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+        width: '100%',
+        textAlign: 'left',
+        padding: '16px',
+        borderRadius: '16px',
+        background: unread ? 'rgba(232,197,71,0.08)' : 'var(--surface-2)',
+        border: '1px solid var(--border)',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+        <MargoAvatar size="sm" displayName="Margo" brandMark />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{
+            fontFamily: UI_FONT,
+            fontSize: LIST_ROW_TYPE.preview,
+            fontWeight: 700,
+            color: 'var(--text)',
+            margin: '0 0 8px',
+            lineHeight: 1.35,
+          }}>
+            {title}
+          </p>
+          <p style={{
+            fontFamily: UI_FONT,
+            fontSize: LIST_ROW_TYPE.preview,
+            color: 'var(--text-secondary)',
+            margin: 0,
+            lineHeight: 1.55,
+            whiteSpace: 'pre-wrap',
+          }}>
+            {body}
+          </p>
+        </div>
+        {unread ? (
+          <span style={{
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            background: 'var(--gold)',
+            flexShrink: 0,
+            marginTop: '6px',
+          }} />
+        ) : null}
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          void markNotificationRead(n.id)
+          router.push(href)
+        }}
+        style={{
+          alignSelf: 'flex-start',
+          marginLeft: '44px',
+          padding: '10px 16px',
+          borderRadius: '999px',
+          border: '1px solid var(--gold)',
+          background: 'transparent',
+          color: 'var(--gold)',
+          fontFamily: UI_FONT,
+          fontSize: LIST_ROW_TYPE.chip,
+          fontWeight: 600,
+          cursor: 'pointer',
+        }}
+      >
+        {buttonLabel}
+      </button>
+    </div>
+  )
+}
 
 function NotificationRow({
   n,
@@ -244,6 +335,14 @@ export function NotificationsInbox({
                 >
                   {row.label}
                 </p>
+              )
+            }
+            if (row.notification.type === 'system_welcome') {
+              return (
+                <SystemWelcomeNotificationRow
+                  key={row.notification.id}
+                  n={row.notification}
+                />
               )
             }
             const text = row.groupedText || messageFor(row.notification)

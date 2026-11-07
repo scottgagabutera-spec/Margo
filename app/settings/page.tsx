@@ -29,6 +29,7 @@ interface NotificationPrefs {
   lyricBack: boolean
   resonate: boolean
   emailDigest: boolean
+  tipsFromMargo: boolean
 }
 
 const DEFAULT_NOTIFICATIONS: NotificationPrefs = {
@@ -37,6 +38,7 @@ const DEFAULT_NOTIFICATIONS: NotificationPrefs = {
   lyricBack: true,
   resonate: true,
   emailDigest: false,
+  tipsFromMargo: true,
 }
 
 interface ProfileRow {
@@ -610,6 +612,7 @@ export default function AccountSettingsPage() {
       <Card>
         <SectionLabel>Notifications</SectionLabel>
         {[
+          { key: 'tipsFromMargo', label: 'Tips from Margo' },
           { key: 'newFollower', label: 'New followers' },
           { key: 'newMessage', label: 'New messages' },
           { key: 'lyricBack', label: 'Lyric Backs on your posts' },
