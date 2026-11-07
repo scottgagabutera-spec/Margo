@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { CheckIcon, EditIcon, MessagesIcon, ShareIcon, UserPlusIcon } from '@/components/icons'
+import { CheckIcon, EditIcon, MessagesIcon, UserPlusIcon } from '@/components/icons'
 import { MargoPortraitAvatar } from '@/components/margo-portrait-avatar'
 
 type PortraitProps = {
@@ -60,6 +60,11 @@ export function ProfileHeroCluster({
   )
 }
 
+function unreadBadgeLabel(count: number): string {
+  if (count <= 0) return ''
+  return count > 9 ? '9+' : String(count)
+}
+
 function RoundFlankAction({
   label,
   ariaLabel,
@@ -68,6 +73,7 @@ function RoundFlankAction({
   disabled,
   title,
   tone,
+  badgeCount,
   children,
 }: {
   label: string
@@ -77,15 +83,24 @@ function RoundFlankAction({
   disabled?: boolean
   title?: string
   tone: 'gold' | 'outline' | 'following'
+  badgeCount?: number
   children: ReactNode
 }) {
   const className = `margo-profile-round-action margo-profile-round-action--${tone}${
     disabled ? ' margo-profile-round-action--disabled' : ''
   }`
 
+  const badge = unreadBadgeLabel(badgeCount ?? 0)
   const inner = (
     <>
-      <span className="margo-profile-round-action__icon">{children}</span>
+      <span className="margo-profile-round-action__icon-wrap">
+        <span className="margo-profile-round-action__icon">{children}</span>
+        {badge ? (
+          <span className="margo-profile-round-action__badge" aria-hidden>
+            {badge}
+          </span>
+        ) : null}
+      </span>
       <span className="margo-profile-round-action__label">{label}</span>
     </>
   )
@@ -121,6 +136,7 @@ export function ProfileHeroVisitorActions({
   onFollow,
   followBusy,
   socialReady,
+  messageUnreadCount,
 }: {
   messageHref?: string
   messageDisabled?: boolean
@@ -130,8 +146,11 @@ export function ProfileHeroVisitorActions({
   onFollow: () => void
   followBusy: boolean
   socialReady: boolean
+  messageUnreadCount?: number
 }) {
   const following = followAccepted || followLabel === 'Following'
+  const rightLabel =
+    followLabel === 'Follow back' ? 'Follow back' : following ? 'Following' : 'Follow'
   return {
     left: (
       <RoundFlankAction
@@ -141,14 +160,15 @@ export function ProfileHeroVisitorActions({
         disabled={!socialReady || messageDisabled || !messageHref}
         title={messageTitle}
         tone="outline"
+        badgeCount={messageUnreadCount}
       >
         <MessagesIcon size={18} color="var(--gold)" />
       </RoundFlankAction>
     ),
     right: (
       <RoundFlankAction
-        label={following ? 'Following' : 'Follow'}
-        ariaLabel={following ? 'Following' : 'Follow'}
+        label={rightLabel}
+        ariaLabel={rightLabel}
         onClick={onFollow}
         disabled={!socialReady || followBusy}
         tone={following ? 'following' : 'gold'}
@@ -164,27 +184,25 @@ export function ProfileHeroVisitorActions({
 }
 
 export function ProfileHeroOwnerActions({
-  onShare,
-  shareBusy,
+  messagesUnreadCount,
 }: {
-  onShare: () => void
-  shareBusy: boolean
+  messagesUnreadCount?: number
 }) {
   return {
     left: (
-      <RoundFlankAction label="Edit profile" ariaLabel="Edit profile" href="/profile/edit" tone="outline">
-        <EditIcon size={18} color="var(--gold)" />
+      <RoundFlankAction
+        label="Messages"
+        ariaLabel="Messages"
+        href="/messages"
+        tone="outline"
+        badgeCount={messagesUnreadCount}
+      >
+        <MessagesIcon size={18} color="var(--gold)" />
       </RoundFlankAction>
     ),
     right: (
-      <RoundFlankAction
-        label="Share"
-        ariaLabel="Share profile"
-        onClick={onShare}
-        disabled={shareBusy}
-        tone="outline"
-      >
-        <ShareIcon size={18} color="var(--gold)" />
+      <RoundFlankAction label="Edit profile" ariaLabel="Edit profile" href="/profile/edit" tone="outline">
+        <EditIcon size={18} color="var(--gold)" />
       </RoundFlankAction>
     ),
   }

@@ -1807,7 +1807,7 @@ html[data-margo-stage] .margo-footer {
 /* Profile shell (PR1 — memories direction; cover data kept, not shown on profile) */
 .margo-profile-page {
   margin-top: var(--nav-height, 72px);
-  padding: 16px 20px var(--margo-page-padding-bottom);
+  padding: 12px 16px var(--margo-page-padding-bottom);
   box-sizing: border-box;
 }
 .margo-profile-shell {
@@ -1828,9 +1828,9 @@ html[data-margo-stage] .margo-footer {
     gap: 48px;
   }
   .margo-profile-shell__left {
-    flex: 0 0 330px;
-    width: 330px;
-    max-width: 330px;
+    flex: 0 0 340px;
+    width: 340px;
+    max-width: 340px;
     position: sticky;
     top: calc(var(--nav-height, 72px) + 12px);
     align-self: flex-start;
@@ -1899,6 +1899,15 @@ html[data-margo-stage] .margo-footer {
 }
 @media (min-width: 768px) {
   .margo-profile-block--header {
+    display: block;
+    margin-bottom: 4px;
+  }
+  .margo-profile-songs-preview--mobile {
+    display: none;
+  }
+}
+@media (max-width: 767px) {
+  .margo-profile-shell__right .margo-profile-block--songs-preview {
     display: none;
   }
 }
@@ -2024,7 +2033,7 @@ html[data-margo-stage] .margo-footer {
 }
 .margo-profile-block--artist-links {
   order: 5;
-  margin-top: 4px;
+  margin: 10px 0 12px;
 }
 .margo-profile-block--signature {
   order: 6;
@@ -2079,6 +2088,27 @@ html[data-margo-stage] .margo-footer {
   cursor: pointer;
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
+}
+.margo-profile-round-action__icon-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.margo-profile-round-action__badge {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #e24d4d;
+  color: #fff;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  box-sizing: border-box;
 }
 .margo-profile-round-action__icon {
   width: 42px;
@@ -2153,12 +2183,8 @@ html[data-margo-stage] .margo-footer {
 .margo-profile-songs-preview__row {
   gap: 10px;
 }
-.margo-profile-songs-preview__tile {
-  flex: 0 0 84px;
-  width: 84px;
-}
 .margo-profile-songs-preview__tile .margo-song-catalog-card {
-  width: 84px;
+  width: 100%;
 }
 .margo-profile-favorite-artists__art--initials {
   display: inline-flex;
@@ -7639,6 +7665,88 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 .margo-profile-memory-tile--add {
   border: 1px dashed var(--gold-border);
   background: var(--gold-faint);
+  min-height: var(--margo-touch-min);
+}
+.margo-profile-memory-tile--add-cta {
+  flex-direction: column;
+  gap: 6px;
+  justify-content: center;
+  min-width: 100px;
+  padding: 8px;
+}
+.margo-profile-memory-tile__add-label {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--gold);
+  text-align: center;
+  line-height: 1.2;
+}
+.margo-profile-cta-dash {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--margo-touch-min);
+  padding: 12px 16px;
+  border: 1px dashed var(--gold-border);
+  border-radius: 14px;
+  background: var(--gold-faint);
+  color: var(--gold);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+  text-align: center;
+  box-sizing: border-box;
+}
+.margo-profile-cta-dash--wide {
+  width: 100%;
+  margin-bottom: 8px;
+}
+.margo-profile-favorite-artists__empty-cta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--margo-touch-min);
+  text-decoration: none;
+  padding: 4px 0;
+}
+.margo-profile-favorite-artists__empty-plus {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 1px dashed var(--gold-border);
+  background: var(--gold-faint);
+  color: var(--gold);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.125rem;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.margo-profile-favorite-artists__empty-text {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--gold);
+}
+.margo-profile-songs-preview__tile {
+  flex: 0 0 72px;
+  width: 72px;
+}
+.margo-profile-songs-preview__tile--desktop {
+  flex: 0 0 130px;
+  width: 130px;
+}
+.margo-profile-songs-preview--desktop {
+  display: none;
+}
+@media (min-width: 768px) {
+  .margo-profile-songs-preview--desktop {
+    display: block;
+    margin-bottom: 16px;
+  }
 }
 .margo-profile-memory-tile__plus {
   font-size: 1.25rem;

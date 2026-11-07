@@ -29,8 +29,10 @@ export function ProfileFavoriteArtistsRow({
     if (isOwnProfile && showEmptyOwnerLink) {
       return (
         <div className="margo-profile-favorite-artists margo-profile-favorite-artists--empty">
-          <Link href="/profile/edit#favorite-artists" className="margo-profile-favorite-artists__empty-link">
-            Add favorite artists
+          <p className="margo-profile-ui-label margo-profile-favorite-artists__label">Favorite artists</p>
+          <Link href="/profile/edit#favorite-artists" className="margo-profile-favorite-artists__empty-cta">
+            <span className="margo-profile-favorite-artists__empty-plus" aria-hidden>+</span>
+            <span className="margo-profile-favorite-artists__empty-text">Add your favorite artists</span>
           </Link>
         </div>
       )

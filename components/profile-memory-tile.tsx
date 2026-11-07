@@ -9,10 +9,15 @@ import type { MemoryPublic } from '@/lib/memory/types'
 import { MemoryTileTitle } from '@/components/memory-tile-title'
 import { memoryWordsOnlyBackground, memoryWordsOnlySampleColor } from '@/lib/memory/words-only-palette'
 
-export function ProfileMemoryAddTile() {
+export function ProfileMemoryAddTile({ labeled }: { labeled?: boolean }) {
   return (
-    <Link href="/memories/new" className="margo-profile-memory-tile margo-profile-memory-tile--add" aria-label="New memory">
+    <Link
+      href="/memories/new"
+      className={`margo-profile-memory-tile margo-profile-memory-tile--add${labeled ? ' margo-profile-memory-tile--add-cta' : ''}`}
+      aria-label="Add a memory"
+    >
       <span className="margo-profile-memory-tile__plus" aria-hidden>+</span>
+      {labeled ? <span className="margo-profile-memory-tile__add-label">Add a memory</span> : null}
     </Link>
   )
 }

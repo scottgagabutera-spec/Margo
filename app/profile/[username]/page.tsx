@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { createClient, signOutBrowser } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useIdentity } from '@/hooks/useIdentity'
+import { useUnreadMessagesCount } from '@/hooks/useUnreadMessagesCount'
+import { useMessaging } from '@/hooks/useMessaging'
 import { usePosts } from '@/hooks/usePosts'
 import { useOwnPrivatePosts } from '@/hooks/useOwnPrivatePosts'
 import { useProfileReplays } from '@/hooks/useProfileReplays'
@@ -415,6 +417,25 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
     return () => { active = false }
   }, [user?.id, profile?.id, isOwnProfile])
 
+  useEffect(() => {
+    if (!user?.id || !profile?.id || isOwnProfile) {
+      setFollowsViewer(false)
+      return
+    }
+    let active = true
+    void supabase
+      .from('follows')
+      .select('status')
+      .eq('follower_id', profile.id)
+      .eq('followee_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!active) return
+        setFollowsViewer(data?.status === 'accepted')
+      })
+    return () => { active = false }
+  }, [user?.id, profile?.id, isOwnProfile])
+
   const ownPosts = useMemo(
     () => profile ? posts.filter(p => p.authorUid === profile.id) : [],
     [posts, profile]
@@ -434,6 +455,13 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
   const [visitorMenuOpen, setVisitorMenuOpen] = useState(false)
   const accountMenuTriggerRef = useRef<HTMLButtonElement>(null)
   const [shareBusy, setShareBusy] = useState(false)
+  const [followsViewer, setFollowsViewer] = useState(false)
+  const inboxUnread = useUnreadMessagesCount()
+  const { conversations } = useMessaging()
+  const partnerUnread = useMemo(() => {
+    if (!profile?.username) return 0
+    return conversations.find((c) => c.otherUser.username === profile.username)?.unreadCount ?? 0
+  }, [conversations, profile?.username])
 
   const { requireAuth, rehydrate } = useAuthGate()
   const [resonated, setResonated] = useState<Set<string>>(() => {
@@ -573,6 +601,7 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
   const followLabel =
     followStatus === 'accepted' ? 'Following' :
     followStatus === 'pending' ? 'Requested' :
+    followsViewer ? 'Follow back' :
     'Follow'
 
   const handleShareProfile = async () => {
@@ -634,7 +663,7 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
 
   const ownerHeroActions =
     profile && isOwnProfile
-      ? ProfileHeroOwnerActions({ onShare: () => { void handleShareProfile() }, shareBusy })
+      ? ProfileHeroOwnerActions({ messagesUnreadCount: inboxUnread })
       : null
 
   const visitorHeroActions =
@@ -648,6 +677,7 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
           onFollow: () => { void handleFollowClick() },
           followBusy,
           socialReady: socialActionsReady,
+          messageUnreadCount: partnerUnread,
         })
       : null
 
@@ -677,6 +707,9 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
                 accountMenuTriggerRef={accountMenuTriggerRef}
                 onSignOut={() => { void handleSignOut() }}
                 onVisitorMenuOpen={() => setVisitorMenuOpen(true)}
+                showShare
+                shareBusy={shareBusy}
+                onShare={() => { void handleShareProfile() }}
               />
             </div>
 
@@ -767,10 +800,6 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
               <div className="margo-profile-block--memories margo-profile-memories--mobile">
                 <ProfileMemoriesStrip memories={profileMemories} isOwnProfile={isOwnProfile} />
               </div>
-            ) : isOwnProfile ? (
-              <div className="margo-profile-block--memories margo-profile-memories--mobile">
-                <ProfileMemoriesStrip memories={[]} isOwnProfile />
-              </div>
             ) : null}
 
             <div className="margo-profile-block--favorites">
@@ -781,9 +810,14 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
               />
             </div>
 
-            {profile.isArtist && artistSongs.length > 0 ? (
-              <div className="margo-profile-block--songs-preview">
+            {profile.isArtist ? (
+              <div className="margo-profile-block--songs-preview margo-profile-songs-preview--mobile">
                 <p className="margo-profile-ui-label margo-profile-songs-preview__label">Songs</p>
+                {artistSongs.length === 0 && isOwnProfile ? (
+                  <Link href="/studio" className="margo-profile-cta-dash margo-profile-cta-dash--wide">
+                    Add your first song
+                  </Link>
+                ) : null}
                 <div className="margo-profile-songs-preview__row discog-row">
                   {artistSongs.slice(0, 12).map((song) => {
                     const cardData: SongCardData = {
@@ -820,13 +854,52 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
             </div>
 
             <div className="margo-profile-shell__right">
+            {profile.isArtist ? (
+              <div className="margo-profile-block--songs-preview margo-profile-songs-preview--desktop">
+                <p className="margo-profile-ui-label margo-profile-songs-preview__label">Songs</p>
+                {artistSongs.length === 0 && isOwnProfile ? (
+                  <Link href="/studio" className="margo-profile-cta-dash margo-profile-cta-dash--wide">
+                    Add your first song
+                  </Link>
+                ) : null}
+                {artistSongs.length > 0 ? (
+                  <div className="margo-profile-songs-preview__row discog-row margo-profile-songs-preview__row--desktop">
+                    {artistSongs.slice(0, 12).map((song) => {
+                      const cardData: SongCardData = {
+                        id: song.id,
+                        title: song.title,
+                        artist: resolvePublicArtistCredit({
+                          artistDisplayName: song.artist_display_name,
+                          ownerDisplayName: profile.displayName,
+                          ownerUsername: profile.username,
+                        }),
+                        artwork: song.artwork_url,
+                        status: song.status,
+                        isAiGenerated: song.is_ai_generated,
+                      }
+                      return (
+                        <div key={song.id} className="margo-profile-songs-preview__tile margo-profile-songs-preview__tile--desktop">
+                          <SongCatalogCard
+                            song={cardData}
+                            onSelect={() =>
+                              setPreviewSong({
+                                id: song.id,
+                                title: song.title,
+                                artist: song.artist_display_name,
+                                artwork: song.artwork_url,
+                              })
+                            }
+                          />
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
             {(isOwnProfile || profileMemories.length > 0) ? (
               <div className="margo-profile-block--memories margo-profile-memories--desktop">
                 <ProfileMemoriesStrip memories={profileMemories} isOwnProfile={isOwnProfile} />
-              </div>
-            ) : isOwnProfile ? (
-              <div className="margo-profile-block--memories margo-profile-memories--desktop">
-                <ProfileMemoriesStrip memories={[]} isOwnProfile />
               </div>
             ) : null}
             {/* ── Discography preview — a taste, not the whole catalog.
