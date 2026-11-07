@@ -2009,7 +2009,7 @@ html[data-margo-stage] .margo-footer {
 .margo-profile-block--header {
   order: 0;
 }
-.margo-profile-block--portrait {
+.margo-profile-block--hero {
   order: 1;
 }
 .margo-profile-block--identity {
@@ -2018,27 +2018,219 @@ html[data-margo-stage] .margo-footer {
 .margo-profile-block--bio {
   order: 3;
 }
-.margo-profile-block--artist-links {
-  order: 4;
-  margin-top: 8px;
-}
 .margo-profile-block--stats {
-  order: 5;
+  order: 4;
+  margin-top: 4px;
 }
-.margo-profile-block--actions {
-  order: 6;
-  margin-bottom: 4px;
+.margo-profile-block--artist-links {
+  order: 5;
+  margin-top: 4px;
 }
 .margo-profile-block--signature {
-  order: 7;
+  order: 6;
 }
 .margo-profile-block--memories {
-  order: 8;
-  margin-bottom: 12px;
+  order: 7;
+  margin-bottom: 10px;
 }
 .margo-profile-block--favorites {
+  order: 8;
+  margin-bottom: 10px;
+}
+.margo-profile-block--songs-preview {
   order: 9;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+}
+.margo-profile-block--actions {
+  display: none;
+}
+.margo-profile-hero-cluster {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0 auto 6px;
+}
+.margo-profile-hero-cluster__flank {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.margo-profile-hero-cluster__flank--start {
+  justify-content: flex-end;
+  padding-right: 6px;
+}
+.margo-profile-hero-cluster__flank--end {
+  justify-content: flex-start;
+  padding-left: 6px;
+}
+.margo-profile-round-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: var(--margo-touch-min);
+  min-height: var(--margo-touch-min);
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.margo-profile-round-action__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.margo-profile-round-action--gold .margo-profile-round-action__icon {
+  background: var(--gold);
+  border: 1px solid var(--gold);
+}
+.margo-profile-round-action--outline .margo-profile-round-action__icon {
+  background: var(--surface-2);
+  border: 1px solid var(--gold-border);
+}
+.margo-profile-round-action--following .margo-profile-round-action__icon {
+  background: var(--surface-2);
+  border: 2px solid var(--gold);
+}
+.margo-profile-round-action--disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.margo-profile-round-action__label {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  line-height: 1.1;
+  text-transform: none;
+}
+.margo-profile-identity__handle-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.margo-profile-artist-icon-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 4px 0 0;
+}
+.margo-profile-artist-icon-row__btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--gold-border);
+  background: var(--gold-faint);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.margo-profile-artist-icon-row__divider {
+  width: 1px;
+  height: 22px;
+  background: var(--border);
+  margin: 0 2px;
+}
+.margo-profile-songs-preview__label {
+  margin-bottom: 8px;
+  text-align: center;
+}
+.margo-profile-songs-preview__row {
+  gap: 10px;
+}
+.margo-profile-songs-preview__tile {
+  flex: 0 0 84px;
+  width: 84px;
+}
+.margo-profile-songs-preview__tile .margo-song-catalog-card {
+  width: 84px;
+}
+.margo-profile-favorite-artists__art--initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.margo-profile-favorite-artists__initial {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.margo-options-menu__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 199;
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.45);
+  cursor: default;
+}
+.margo-options-menu {
+  position: fixed;
+  z-index: 200;
+  background: #17171c;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  padding: 6px;
+  box-sizing: border-box;
+  animation: margo-options-menu-in 160ms var(--ease-out);
+}
+@keyframes margo-options-menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.margo-options-menu__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  width: 100%;
+  padding: 0 11px;
+  border: none;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.margo-options-menu__row:hover,
+.margo-options-menu__row:focus-visible {
+  background: rgba(255, 255, 255, 0.04);
+  outline: none;
+}
+.margo-options-menu__row--destructive {
+  color: #e38b7a;
+}
+.margo-options-menu__divider {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--border);
 }
 .margo-profile-action-row {
   display: flex;
@@ -7185,13 +7377,14 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 }
 .margo-profile-content-tab {
   flex: 1;
+  min-width: 0;
   min-height: 36px;
-  padding: 6px 4px;
+  padding: 6px 2px;
   border: none;
   background: transparent;
   cursor: pointer;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.875rem;
+  font-size: 0.72rem;
   font-weight: 500;
   letter-spacing: -0.01em;
   color: var(--text-muted);

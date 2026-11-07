@@ -1,9 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
+import { FavoriteArtistAvatar } from '@/components/favorite-artist-avatar'
 import { UI_FONT, TYPE } from '@/lib/fonts'
-import { favoriteArtistThumbnailUrl } from '@/lib/memory/feed-thumbnail-url'
 
 const font = UI_FONT
 
@@ -11,6 +10,7 @@ export type ProfileFavoriteArtist = {
   id: string
   name: string
   artworkUrl: string | null
+  fallbackArtworkUrl?: string | null
   onMargo: boolean
   margoUsername: string | null
   position: number
@@ -46,23 +46,15 @@ export function ProfileFavoriteArtistsRow({
       <p className="margo-profile-ui-label margo-profile-favorite-artists__label">Favorite artists</p>
       <div className="margo-profile-favorite-artists__row">
         {shown.map((a, index) => {
-          const thumb = favoriteArtistThumbnailUrl(a.artworkUrl)
           const inner = (
             <>
               <span className="margo-profile-favorite-artists__art-wrap">
-                {thumb ? (
-                  <Image
-                    src={thumb}
-                    alt=""
-                    width={56}
-                    height={56}
-                    className="margo-profile-favorite-artists__art"
-                    priority={index < 5}
-                    loading={index < 5 ? 'eager' : 'lazy'}
-                  />
-                ) : (
-                  <span className="margo-profile-favorite-artists__art margo-profile-favorite-artists__art--empty" />
-                )}
+                <FavoriteArtistAvatar
+                  name={a.name}
+                  artworkUrl={a.artworkUrl}
+                  fallbackArtworkUrl={a.fallbackArtworkUrl}
+                  priority={index < 5}
+                />
               </span>
               <span className="margo-profile-favorite-artists__name" style={{ fontFamily: font, fontSize: '0.6875rem' }}>
                 {a.name}

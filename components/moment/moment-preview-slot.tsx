@@ -30,7 +30,7 @@ export function MomentPreviewSlot({
   const ratioLabel =
     shapeId === 'vertical' ? '9:16' : shapeId === 'wide' ? '16:9' : '1:1'
   const feedLabel =
-    shapeId === 'vertical' ? 'SHORTS' : shapeId === 'wide' ? 'WIDE' : 'FEED'
+    shapeId === 'vertical' ? 'STORY' : shapeId === 'wide' ? 'WIDE' : 'SQUARE'
 
   return (
     <div className="margo-moment-preview-slot-wrap" style={style}>

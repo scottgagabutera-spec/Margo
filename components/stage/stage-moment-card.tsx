@@ -144,9 +144,9 @@ export function StageMomentCard({
   const cardRef = useRef<HTMLDivElement>(null)
   const [cardWidth, setCardWidth] = useState<number | null>(null)
   const isShorts = shapeId === 'vertical'
-  const isWide = shapeId === 'wide'
-  const isSquare = shapeId === 'square'
-  const socialExport = isShorts || isWide || isSquare
+  const effectiveShape = shapeId === 'wide' ? 'square' : shapeId
+  const isSquare = effectiveShape === 'square'
+  const socialExport = isShorts || isSquare
   const displaySong = sentenceCaseLabel(songTitle)
   const displayArtist = shouldShowExportArtist(artistName) ? sentenceCaseLabel(artistName) : ''
   const stableShortsPaint = isShorts && shortsFeedStableLook
@@ -168,9 +168,9 @@ export function StageMomentCard({
     themeId: cardThemeId,
     includeVibePill: false,
     format: isShorts ? 'shorts' : 'feed',
-    layoutVariant: isShorts ? 'shorts' : isWide ? 'wide' : 'square',
+    layoutVariant: isShorts ? 'shorts' : 'square',
     exportAtmosphereId: paintAtmosphere,
-    shapeId,
+    shapeId: effectiveShape,
   }, cardWidth)
 
   useLayoutEffect(() => {

@@ -29,14 +29,13 @@ import { MargoActionSheet } from '@/components/margo-action-sheet'
 import { MargoLongPressHint } from '@/components/margo-long-press-hint'
 import { resolveSignatureMomentSnippet } from '@/lib/signature-snippet'
 import { useLongPress } from '@/hooks/useLongPress'
+import { ProfileIdentityBlock } from '@/components/profile-portrait-identity'
 import {
-  ProfilePortraitPhoto,
-  ProfileIdentityBlock,
-  ProfilePortraitActions,
-} from '@/components/profile-portrait-identity'
+  ProfileHeroCluster,
+  ProfileHeroOwnerActions,
+  ProfileHeroVisitorActions,
+} from '@/components/profile-hero-cluster'
 import { ProfileShellHeader } from '@/components/profile-shell-header'
-import { MoreIcon } from '@/components/icons'
-import { ProfileAccountMenu } from '@/components/profile-account-menu'
 import { ProfileBioClamp } from '@/components/profile-bio-clamp'
 import { shareProfile } from '@/lib/profile-share'
 import {
@@ -562,86 +561,36 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
     }
   }
 
-  const renderProfileActions = () => (
-    <ProfilePortraitActions>
-      {isOwnProfile && (
-        <div className="margo-profile-action-row">
-          <Link href="/profile/edit" className="margo-profile-action-btn margo-profile-action-btn--secondary">
-            Edit profile
-          </Link>
-          <button
-            type="button"
-            className="margo-profile-action-btn margo-profile-action-btn--secondary"
-            disabled={shareBusy}
-            onClick={() => { void handleShareProfile() }}
-          >
-            Share profile
-          </button>
-          <button
-            ref={accountMenuTriggerRef}
-            type="button"
-            aria-label="Account menu"
-            aria-expanded={accountMenuOpen}
-            className="margo-profile-action-btn margo-profile-action-btn--secondary margo-profile-action-overflow"
-            onClick={() => setAccountMenuOpen(!accountMenuOpen)}
-          >
-            <MoreIcon size={18} color="var(--text-secondary)" />
-          </button>
-          <ProfileAccountMenu
-            open={accountMenuOpen}
-            onOpenChange={setAccountMenuOpen}
-            triggerRef={accountMenuTriggerRef}
-            showStudio={!!identity?.isArtist}
-            onSignOut={() => { void handleSignOut() }}
-          />
-        </div>
-      )}
-
-      {!isOwnProfile && user && (
-        !socialActionsReady ? (
-          <ProfileSocialActionsSkeleton />
-        ) : (
-          <div className="margo-profile-action-row">
-            <button
-              type="button"
-              className={`margo-profile-action-btn${
-                followStatus ? ' margo-profile-action-btn--secondary' : ' margo-profile-action-btn--primary'
-              }`}
-              onClick={handleFollowClick}
-              disabled={followBusy || !socialActionsReady}
-            >
-              {followLabel}
-            </button>
-            {messageEligibility.canOpenThread ? (
-              <Link
-                href={`/messages/${profile!.username}`}
-                className="margo-profile-action-btn margo-profile-action-btn--secondary"
-              >
-                Message
-              </Link>
-            ) : (
-              <span
-                role="button"
-                aria-disabled="true"
-                title={messageEligibility.blockedReason || undefined}
-                className="margo-profile-action-btn margo-profile-action-btn--secondary margo-profile-action-btn--disabled"
-              >
-                Message
-              </span>
-            )}
-          </div>
-        )
-      )}
-    </ProfilePortraitActions>
-  )
+  const memoriesVisibleCount = profileMemories.length
 
   const renderStats = () => (
     <div className="margo-profile-stats">
-      <ProfileStat
-        count={postsCount ?? (isOwnProfile ? ownPosts.length : null)}
-        label="lyrics"
-        showDivider
-      />
+      {profile.isArtist ? (
+        <ProfileStat
+          count={artistSongs.length}
+          label="songs"
+          showDivider
+        />
+      ) : (
+        <ProfileStat
+          count={postsCount ?? (isOwnProfile ? ownPosts.length : null)}
+          label="lyrics"
+          showDivider
+        />
+      )}
+      {profile.isArtist ? (
+        <ProfileStat
+          count={postsCount ?? (isOwnProfile ? ownPosts.length : null)}
+          label="lyrics"
+          showDivider
+        />
+      ) : (
+        <ProfileStat
+          count={memoriesVisibleCount}
+          label="memories"
+          showDivider
+        />
+      )}
       <ProfileStat
         href={(isOwnProfile || !profile!.followListsPrivate) ? `/profile/${profile!.username}/followers` : undefined}
         count={followerCount}
@@ -655,6 +604,24 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
       />
     </div>
   )
+
+  const ownerHeroActions = isOwnProfile
+    ? ProfileHeroOwnerActions({ onShare: () => { void handleShareProfile() }, shareBusy })
+    : null
+
+  const visitorHeroActions =
+    !isOwnProfile && user
+      ? ProfileHeroVisitorActions({
+          messageHref: messageEligibility.canOpenThread ? `/messages/${profile!.username}` : undefined,
+          messageDisabled: !messageEligibility.canOpenThread,
+          messageTitle: messageEligibility.blockedReason || undefined,
+          followLabel,
+          followAccepted: followStatus === 'accepted',
+          onFollow: () => { void handleFollowClick() },
+          followBusy,
+          socialReady: socialActionsReady,
+        })
+      : null
 
   return (
     <main style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
@@ -685,13 +652,21 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
               />
             </div>
 
-            <div className="margo-profile-block--portrait">
-              <ProfilePortraitPhoto
-                displayName={profile.displayName || profile.username}
-                username={profile.username}
-                avatarUrl={profile.avatarUrl}
-                onAvatarClick={() => setAvatarLightboxOpen(true)}
-              />
+            <div className="margo-profile-block--hero">
+              {!isOwnProfile && user && !socialActionsReady ? (
+                <ProfileSocialActionsSkeleton />
+              ) : (
+                <ProfileHeroCluster
+                  portrait={{
+                    displayName: profile.displayName || profile.username,
+                    username: profile.username,
+                    avatarUrl: profile.avatarUrl,
+                    onAvatarClick: () => setAvatarLightboxOpen(true),
+                  }}
+                  leftFlank={ownerHeroActions?.left ?? visitorHeroActions?.left}
+                  rightFlank={ownerHeroActions?.right ?? visitorHeroActions?.right}
+                />
+              )}
             </div>
 
             <div className="margo-profile-block--identity">
@@ -713,19 +688,15 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
               </div>
             ) : null}
 
-            {profile.isArtist ? (
-              <div className="margo-profile-block--artist-links">
-                <ProfileArtistLinks links={profile.artistLinks} />
-              </div>
-            ) : null}
-
             <div className="margo-profile-block--stats">
               {renderStats()}
             </div>
 
-            <div className="margo-profile-block--actions">
-              {renderProfileActions()}
-            </div>
+            {profile.isArtist ? (
+              <div className="margo-profile-block--artist-links">
+                <ProfileArtistLinks links={profile.artistLinks} variant="profile" />
+              </div>
+            ) : null}
 
             <div className="margo-profile-block--signature">
             {profile.signatureLyric ? (
@@ -781,6 +752,43 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                 showEmptyOwnerLink
               />
             </div>
+
+            {profile.isArtist && artistSongs.length > 0 ? (
+              <div className="margo-profile-block--songs-preview">
+                <p className="margo-profile-ui-label margo-profile-songs-preview__label">Songs</p>
+                <div className="margo-profile-songs-preview__row discog-row">
+                  {artistSongs.slice(0, 12).map((song) => {
+                    const cardData: SongCardData = {
+                      id: song.id,
+                      title: song.title,
+                      artist: resolvePublicArtistCredit({
+                        artistDisplayName: song.artist_display_name,
+                        ownerDisplayName: profile.displayName,
+                        ownerUsername: profile.username,
+                      }),
+                      artwork: song.artwork_url,
+                      status: song.status,
+                      isAiGenerated: song.is_ai_generated,
+                    }
+                    return (
+                      <div key={song.id} className="margo-profile-songs-preview__tile">
+                        <SongCatalogCard
+                          song={cardData}
+                          onSelect={() =>
+                            setPreviewSong({
+                              id: song.id,
+                              title: song.title,
+                              artist: song.artist_display_name,
+                              artworkUrl: song.artwork_url,
+                            })
+                          }
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : null}
             </div>
 
             <div className="margo-profile-shell__right">
@@ -888,7 +896,7 @@ export default function ProfilePage({ username: usernameProp }: { username?: str
                     { id: 'lyrics' as const, label: 'Lyrics' },
                     { id: 'memories' as const, label: 'Memories' },
                     { id: 'reposts' as const, label: 'Reposts' },
-                    { id: 'backs' as const, label: 'Backs' },
+                    { id: 'backs' as const, label: 'Lyric Backs' },
                     ...(isOwnProfile ? [{ id: 'private' as const, label: 'Private' }] : []),
                   ]).map(tab => {
                     const active = contentTab === tab.id

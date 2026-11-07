@@ -37,6 +37,7 @@ const ICONS: Record<ArtistLinkKey, ComponentType<MargoIconProps>> = {
 }
 
 const SOCIAL_KEYS: ArtistLinkKey[] = ['instagram', 'tiktok', 'youtube', 'x']
+const PROFILE_STREAMING_KEYS: ArtistLinkKey[] = ['spotify', 'appleMusic']
 const LISTEN_KEYS: ArtistLinkKey[] = ['spotify', 'appleMusic', 'soundcloud', 'audiomack', 'boomplay', 'linktree']
 
 export function ProfileArtistLinks({
@@ -49,7 +50,7 @@ export function ProfileArtistLinks({
   links: ArtistApplicationLinks | null | undefined
   /** @deprecated Use variant="compact" */
   compact?: boolean
-  variant?: 'default' | 'compact' | 'preview'
+  variant?: 'default' | 'compact' | 'preview' | 'profile'
   /** When set, appends Margo symbol linking to the artist profile (compact/default only). */
   margoProfileUsername?: string | null
   onMargoProfileClick?: () => void
@@ -145,6 +146,59 @@ export function ProfileArtistLinks({
             </span>
           </Link>
         ) : null}
+      </div>
+    )
+  }
+
+  if (resolvedVariant === 'profile') {
+    const social = SOCIAL_KEYS.flatMap((key) => {
+      const href = links?.[key]
+      if (!href) return []
+      const field = ARTIST_LINK_FIELDS.find((f) => f.key === key)
+      return field ? [{ ...field, href }] : []
+    })
+    const streaming = PROFILE_STREAMING_KEYS.flatMap((key) => {
+      const href = links?.[key]
+      if (!href) return []
+      const field = ARTIST_LINK_FIELDS.find((f) => f.key === key)
+      return field ? [{ ...field, href }] : []
+    })
+    if (social.length === 0 && streaming.length === 0) return null
+    return (
+      <div className="margo-profile-artist-icon-row">
+        {social.map((item) => {
+          const Icon = ICONS[item.key]
+          return (
+            <a
+              key={item.key}
+              href={item.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={item.label}
+              className="margo-profile-artist-icon-row__btn"
+            >
+              <Icon size={16} color="var(--gold)" />
+            </a>
+          )
+        })}
+        {social.length > 0 && streaming.length > 0 ? (
+          <span className="margo-profile-artist-icon-row__divider" aria-hidden />
+        ) : null}
+        {streaming.map((item) => {
+          const Icon = ICONS[item.key]
+          return (
+            <a
+              key={item.key}
+              href={item.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={item.label}
+              className="margo-profile-artist-icon-row__btn"
+            >
+              <Icon size={16} color="var(--gold)" />
+            </a>
+          )
+        })}
       </div>
     )
   }
