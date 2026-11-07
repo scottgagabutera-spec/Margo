@@ -4,6 +4,7 @@ export { DEFAULT_ICON_COLOR, DEFAULT_ICON_SIZE } from './icon-props'
 export { ArrowLeftIcon } from './arrow-left-icon'
 export { BellIcon } from './bell-icon'
 export { CardIcon } from './card-icon'
+export { CheckIcon } from './check-icon'
 export { ChevronDownIcon } from './chevron-down-icon'
 export { ChevronRightIcon } from './chevron-right-icon'
 export { ChevronUpIcon } from './chevron-up-icon'
@@ -27,6 +28,7 @@ export { PlayIcon } from './play-icon'
 export { ReplayIcon } from './replay-icon'
 export { SearchIcon } from './search-icon'
 export { ShareIcon } from './share-icon'
+export { UserPlusIcon } from './user-plus-icon'
 export {
   FacebookIcon,
   InstagramIcon,

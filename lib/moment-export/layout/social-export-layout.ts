@@ -137,20 +137,24 @@ export function resolveSocialExportLayout(
     metaHeight += artistFS * ref.meta.artist.lineHeight
   }
 
-  const creditH = Math.max(artSize, metaHeight)
-  const creditBottom = frameHeight - padding.bottom
-  const artY = creditBottom - artSize
-  const artX = padding.left
   const hasArt = !!input.artworkUrl
+  const artX = padding.left
 
   const markX = W - padding.right - markContainer
   const markY = padding.top
 
+  const creditH = Math.max(artSize, metaHeight)
+  const creditBottom = frameHeight - padding.bottom
+  const bottomPinnedArtY = creditBottom - artSize
+
   const lyricTop = padding.top
-  const lyricBottom = artY - lyricCreditGap
+  const lyricBottom = isShorts
+    ? creditBottom
+    : bottomPinnedArtY - lyricCreditGap
   const markReserve = markContainer + markGap
   const lyricColWidth = Math.max(48, contentWidth - markReserve)
   const lyricX = padding.left
+  const creditBlockH = Math.max(artSize, metaHeight)
 
   const lyricSizeRef = isShorts
     ? STAGE_SHORTS_LAYOUT_REF.lyric.fontSize
@@ -161,9 +165,10 @@ export function resolveSocialExportLayout(
   const lyricLeading = isShorts ? STAGE_SHORTS_LAYOUT_REF.lyric.lineHeight : ref.lyric.lineHeight
   const lyricGapEm = isShorts ? STAGE_SHORTS_LAYOUT_REF.lyric.stanzaGapEm : ref.lyric.stanzaGapEm
 
+  const safeLyricSpan = lyricBottom - lyricTop
   const maxLyricHeight = Math.max(
     roundStageToken(lyricMinRef, W) * lyricLeading,
-    lyricBottom - lyricTop,
+    isShorts ? safeLyricSpan - lyricCreditGap - creditBlockH : safeLyricSpan,
   )
 
   const presented = presentLyricTextFillRegion(input.lyric || '', lyricColWidth, measure, {
@@ -181,7 +186,22 @@ export function resolveSocialExportLayout(
   const stanzaGap = lyricFontSize * lyricGapEm
   const lyricHeight = lyricBlockHeight(presented.lines, lyricLineHeight, stanzaGap)
   const available = Math.max(lyricLineHeight, lyricBottom - lyricTop)
-  const cursorY = lyricTop + Math.max(0, (available - lyricHeight) / 2)
+
+  let cursorY: number
+  let artY: number
+  let metaY: number
+
+  if (isShorts) {
+    const groupHeight = lyricHeight + lyricCreditGap + creditH
+    const groupTop = lyricTop + Math.max(0, (available - groupHeight) / 2)
+    cursorY = groupTop
+    artY = groupTop + lyricHeight + lyricCreditGap
+    metaY = artY + Math.max(0, (creditH - metaHeight) / 2)
+  } else {
+    cursorY = lyricTop + Math.max(0, (available - lyricHeight) / 2)
+    artY = bottomPinnedArtY
+    metaY = artY + Math.max(0, (creditH - metaHeight) / 2)
+  }
 
   const lyricLines = placeLyricLines(presented.lines, cursorY, lyricLineHeight, stanzaGap)
   const lyric: LayoutLyricBlock = {
@@ -208,7 +228,6 @@ export function resolveSocialExportLayout(
   if (songTitle || artistName) {
     const metaMaxW = Math.max(24, contentWidth - artSize - artGap - markReserve)
     const metaX = hasArt ? artX + artSize + artGap : padding.left
-    const metaY = artY + Math.max(0, (creditH - metaHeight) / 2)
 
     const songFont = metaSongFont(songFS, geistFamily)
     const artistFont = metaArtistFont(artistFS, geistFamily)

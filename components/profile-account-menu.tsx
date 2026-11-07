@@ -7,13 +7,14 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type ReactNode,
   type RefObject,
 } from 'react'
 import { createPortal } from 'react-dom'
-import { TYPE, UI_FONT } from '@/lib/fonts'
+import { EditIcon, PenLineIcon } from '@/components/icons'
 import { PROFILE_ACCOUNT_MENU_MAX_WIDTH_PX } from '@/lib/profile-account-menu-layout'
 
-const font = UI_FONT
+const MENU_RIGHT_INSET_PX = 12
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
@@ -35,6 +36,56 @@ function trapFocus(container: HTMLElement, e: KeyboardEvent) {
   }
 }
 
+function SignOutIcon() {
+  return (
+    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function MenuRow({
+  icon,
+  children,
+  destructive,
+  onClick,
+  href,
+}: {
+  icon: ReactNode
+  children: ReactNode
+  destructive?: boolean
+  onClick?: () => void
+  href?: string
+}) {
+  const className = `margo-options-menu__row${destructive ? ' margo-options-menu__row--destructive' : ''}`
+  const body = (
+    <>
+      <span className="margo-options-menu__row-icon" aria-hidden>
+        {icon}
+      </span>
+      <span className="margo-options-menu__row-label">{children}</span>
+    </>
+  )
+  if (href) {
+    return (
+      <Link href={href} className={className} role="menuitem" onClick={onClick}>
+        {body}
+      </Link>
+    )
+  }
+  return (
+    <button type="button" role="menuitem" className={className} onClick={onClick}>
+      {body}
+    </button>
+  )
+}
+
 export type ProfileAccountMenuProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -43,6 +94,7 @@ export type ProfileAccountMenuProps = {
   onSignOut: () => void
 }
 
+/** Shared ⋯ account menu — opens under the trigger, aligned to the screen's right edge. */
 export function ProfileAccountMenu({
   open,
   onOpenChange,
@@ -95,14 +147,13 @@ export function ProfileAccountMenu({
     if (!trigger || !panel) return
     const tr = trigger.getBoundingClientRect()
     const mw = panel.offsetWidth
-    let left = tr.right - mw
-    left = Math.max(8, Math.min(left, window.innerWidth - mw - 8))
-    const top = tr.bottom + 6
+    const right = Math.max(MENU_RIGHT_INSET_PX, window.innerWidth - tr.right)
     panel.style.position = 'fixed'
-    panel.style.top = `${top}px`
-    panel.style.left = `${left}px`
-    panel.style.right = 'auto'
+    panel.style.top = `${tr.bottom + 6}px`
+    panel.style.right = `${right}px`
+    panel.style.left = 'auto'
     panel.style.zIndex = '200'
+    panel.style.transformOrigin = `${mw - (tr.right - tr.left) / 2}px 0`
   }, [open, triggerRef, showStudio])
 
   useEffect(() => {
@@ -113,67 +164,49 @@ export function ProfileAccountMenu({
 
   if (!open || !mounted) return null
 
-  const rowStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    minHeight: 'var(--margo-touch-min)',
-    fontFamily: font,
-    fontSize: TYPE.meta,
-    textDecoration: 'none',
-    color: 'var(--text-secondary)',
-    padding: '0 12px',
-    borderRadius: '6px',
-    boxSizing: 'border-box',
-    width: '100%',
-  }
-
   return createPortal(
-    <div
-      ref={panelRef}
-      role="menu"
-      aria-label="Account menu"
-      data-margo-profile-account-menu="popover"
-      data-margo-profile-menu-width={PROFILE_ACCOUNT_MENU_MAX_WIDTH_PX}
-      style={{
-        width: `${PROFILE_ACCOUNT_MENU_MAX_WIDTH_PX}px`,
-        maxWidth: 'calc(100vw - 16px)',
-        background: 'var(--bg)',
-        border: '1px solid var(--border)',
-        borderRadius: '10px',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
-        padding: '4px',
-      }}
-    >
-      <Link href="/settings" onClick={close} style={rowStyle} role="menuitem" data-margo-profile-menu-item="settings">
-        Account settings
-      </Link>
-      {showStudio ? (
-        <Link href="/studio" onClick={close} style={rowStyle} role="menuitem" data-margo-profile-menu-item="studio">
-          Studio
-        </Link>
-      ) : null}
-      <div style={{ height: '1px', background: 'var(--border)', margin: '4px 8px' }} role="separator" />
+    <>
       <button
         type="button"
-        role="menuitem"
+        aria-label="Close menu"
+        className="margo-options-menu__backdrop"
+        tabIndex={-1}
         onClick={() => {
           close()
-          onSignOut()
           triggerRef.current?.focus()
         }}
-        style={{
-          ...rowStyle,
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          textAlign: 'left',
-          color: 'var(--destructive)',
-        }}
-        data-margo-profile-menu-item="sign-out"
+      />
+      <div
+        ref={panelRef}
+        role="menu"
+        aria-label="Account menu"
+        data-margo-profile-account-menu="popover"
+        data-margo-profile-menu-width={PROFILE_ACCOUNT_MENU_MAX_WIDTH_PX}
+        className="margo-options-menu"
+        style={{ width: `${PROFILE_ACCOUNT_MENU_MAX_WIDTH_PX}px` }}
       >
-        Sign out
-      </button>
-    </div>,
+        <MenuRow href="/settings" onClick={close} icon={<EditIcon size={18} color="currentColor" />}>
+          Account settings
+        </MenuRow>
+        {showStudio ? (
+          <MenuRow href="/studio" onClick={close} icon={<PenLineIcon size={18} color="currentColor" />}>
+            Studio
+          </MenuRow>
+        ) : null}
+        <div className="margo-options-menu__divider" role="separator" />
+        <MenuRow
+          destructive
+          icon={<SignOutIcon />}
+          onClick={() => {
+            close()
+            onSignOut()
+            triggerRef.current?.focus()
+          }}
+        >
+          Sign out
+        </MenuRow>
+      </div>
+    </>,
     document.body,
   )
 }

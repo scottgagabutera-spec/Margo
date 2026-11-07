@@ -95,16 +95,18 @@ export function ProfileIdentityBlock({
           <span className="margo-profile-identity__private-pill">Private</span>
         ) : null}
       </div>
-      <p className="margo-profile-identity__handle">@{username}</p>
-      <span className="margo-profile-role-third-slot" data-testid="profile-role-third-slot">
-        {brandMark ? (
-          <span className="margo-role-line margo-role-line--brand" data-testid="margo-role-line">
-            Music label
-          </span>
-        ) : (
-          <ArtistBadge isArtist={!!isArtist} artistStatus={artistStatus} presentation="line" />
-        )}
-      </span>
+      <div className="margo-profile-identity__handle-row">
+        <p className="margo-profile-identity__handle">@{username}</p>
+        <span className="margo-profile-role-third-slot" data-testid="profile-role-third-slot">
+          {brandMark ? (
+            <span className="margo-role-line margo-role-line--brand" data-testid="margo-role-line">
+              Music label
+            </span>
+          ) : isArtist ? (
+            <ArtistBadge isArtist artistStatus={artistStatus} presentation="line" />
+          ) : null}
+        </span>
+      </div>
     </div>
   )
 }

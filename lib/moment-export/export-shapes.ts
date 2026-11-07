@@ -1,12 +1,12 @@
 import type { MomentShapeId } from '@/lib/moment/types'
 
 /** User-facing export sizes cycled in share/export UI. */
-export const EXPORT_SHAPE_CYCLE: MomentShapeId[] = ['square', 'vertical', 'wide']
+/** Wide removed from export UI — legacy DB values may still read as `wide`. */
+export const EXPORT_SHAPE_CYCLE: MomentShapeId[] = ['square', 'vertical']
 
 export const EXPORT_SHAPE_LABELS: Record<MomentShapeId, string> = {
-  square: 'Feed',
-  /** 9:16 vertical for Shorts / Reels / Stories / TikTok — not Story-only. */
-  vertical: 'Shorts',
+  square: 'Square',
+  vertical: 'Story',
   wide: 'Wide',
 }
 

@@ -5,8 +5,8 @@ import {
   profileAccountMenuRowCount,
 } from './profile-account-menu-layout.ts'
 
-test('profile menu width cap is at most 220px', () => {
-  assert.ok(PROFILE_ACCOUNT_MENU_MAX_WIDTH_PX <= 220)
+test('profile menu width matches compact spec', () => {
+  assert.equal(PROFILE_ACCOUNT_MENU_MAX_WIDTH_PX, 208)
 })
 
 test('regular members get two menu rows', () => {
