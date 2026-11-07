@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/promote-cleanup",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/song-trash-purge",
+      "schedule": "15 6 * * *"
     }
   ]
 }

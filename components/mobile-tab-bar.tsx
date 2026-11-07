@@ -118,7 +118,7 @@ export function MobileTabBar() {
     primaryTabBarLive(hubOpen, tabPending(id) || tabAcked(id))
   const hubGold = hubTabBarGold(hubOpen)
 
-  const tabStyle = (active: boolean, live: boolean): CSSProperties => ({
+  const tabStyle = (active: boolean, live: boolean, showIndicator: boolean): CSSProperties => ({
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
     gap: '2px', textDecoration: 'none',
     minHeight: 'var(--margo-touch-min)',
@@ -127,7 +127,27 @@ export function MobileTabBar() {
     color: live || active ? 'var(--gold)' : 'var(--text-muted)',
     WebkitTapHighlightColor: 'transparent',
     transition: 'color 80ms var(--ease-out), opacity 80ms var(--ease-out)',
+    ...(showIndicator ? { '--margo-tab-indicator': 1 } as CSSProperties : {}),
   })
+
+  const tabIndicator = (visible: boolean) => visible ? (
+    <span
+      aria-hidden
+      className="margo-mobile-tab-indicator"
+      style={{
+        position: 'absolute',
+        bottom: '2px',
+        left: '50%',
+        width: 20,
+        height: 2,
+        borderRadius: 2,
+        background: 'var(--gold)',
+        transform: 'translateX(-50%) scaleX(1)',
+        opacity: 1,
+        transition: 'opacity 120ms var(--ease-out), transform 160ms var(--ease-out)',
+      }}
+    />
+  ) : null
 
   const labelStyle: CSSProperties = {
     fontFamily: font,
@@ -153,22 +173,24 @@ export function MobileTabBar() {
       boxShadow: isLanding ? 'none' : '0 -1px 24px rgba(0,0,0,0.35)',
       borderTop: isLanding ? '1px solid var(--border)' : 'none',
     }}>
-      <Link href="/feed" style={tabStyle(isOnFeed, tabLive('feed'))} {...feedLink}>
+      <Link href="/feed" style={tabStyle(isOnFeed, tabLive('feed'), isOnFeed || tabAcked('feed'))} {...feedLink}>
         {tabPending('feed') ? (
           <LoadingRing size={20} strokeWidth={1.5} state="spinning" />
         ) : (
           <FeedIcon size={20} color="currentColor" />
         )}
         <span style={labelStyle}>Feed</span>
+        {tabIndicator((isOnFeed || tabAcked('feed')) && !tabPending('feed'))}
       </Link>
 
-      <Link href="/discover" style={tabStyle(isOnDiscover, tabLive('discover'))} {...discoverLink}>
+      <Link href="/discover" style={tabStyle(isOnDiscover, tabLive('discover'), isOnDiscover || tabAcked('discover'))} {...discoverLink}>
         {tabPending('discover') ? (
           <LoadingRing size={20} strokeWidth={1.5} state="spinning" />
         ) : (
           <CompassIcon size={20} color="currentColor" />
         )}
         <span style={labelStyle}>Discover</span>
+        {tabIndicator((isOnDiscover || tabAcked('discover')) && !tabPending('discover'))}
         {isMusicActive && !hubOpen && !discoverRouteActive && (
           <span style={{
             position: 'absolute', top: '-2px', right: 'calc(50% - 14px)',
@@ -200,13 +222,13 @@ export function MobileTabBar() {
         )}
       </Link>
 
-      <HubTabButton style={tabStyle(hubGold, hubGold)} labelStyle={labelStyle} />
+      <HubTabButton style={tabStyle(hubGold, hubGold, hubGold)} labelStyle={labelStyle} hubIndicator={hubGold} />
 
       {isSignedIn ? (
         <Link
           href={youHref}
           aria-label="You"
-          style={tabStyle(isOnProfile, tabLive('you') || youAwaitingIdentity)}
+          style={tabStyle(isOnProfile, tabLive('you') || youAwaitingIdentity, isOnProfile || tabAcked('you'))}
           {...youLink}
         >
           {tabPending('you') || youAwaitingIdentity ? (
@@ -219,10 +241,11 @@ export function MobileTabBar() {
               active={isOnProfile}
             />
           ) : null}
+          {tabIndicator((isOnProfile || tabAcked('you')) && !tabPending('you'))}
         </Link>
       ) : (
         <SignInLink
-          style={tabStyle(signInTabActive, tabLive('you') || youAwaitingIdentity)}
+          style={tabStyle(signInTabActive, tabLive('you') || youAwaitingIdentity, signInTabActive)}
           aria-current={signInTabActive ? 'page' : undefined}
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
@@ -230,6 +253,7 @@ export function MobileTabBar() {
             <path d="M4 17c0-3 2.7-5 6-5s6 2 6 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
           <span style={labelStyle}>Sign In</span>
+          {tabIndicator(signInTabActive && !tabPending('you'))}
         </SignInLink>
       )}
 

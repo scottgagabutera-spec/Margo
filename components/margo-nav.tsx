@@ -239,13 +239,16 @@ export function MargoNav() {
               }}>
                 {pending ? <LoadingRing size={14} strokeWidth={1.5} state="spinning" /> : null}
                 {label}
-                {active && !pending && (
-                  <span style={{
-                    position: 'absolute', bottom: '2px', left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: '18px', height: '2px',
-                    background: 'var(--gold)', borderRadius: '2px',
-                  }} />
+                {(active || acked) && !pending && (
+                  <span
+                    className="margo-nav-tab-indicator"
+                    style={{
+                      position: 'absolute', bottom: '2px', left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: '18px', height: '2px',
+                      background: 'var(--gold)', borderRadius: '2px',
+                    }}
+                  />
                 )}
               </Link>
             ))}

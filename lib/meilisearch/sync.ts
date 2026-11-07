@@ -5,6 +5,7 @@ import {
   postToLyricDoc,
   profileToArtistDoc,
   profileToUserDoc,
+  songToSearchDoc,
 } from './documents'
 import type { MargoSearchDocument } from './types'
 
@@ -29,6 +30,17 @@ export async function syncMargoSearchFromWebhook(payload: WebhookPayload): Promi
       ids.push(`post:${row.id}`)
     } else if (table === 'lyric_lines') {
       ids.push(`line:${row.song_id}:${row.line_index}`)
+    } else if (table === 'songs') {
+      const sid = String(row.id)
+      ids.push(`song:${sid}`)
+      const admin = getSupabaseAdmin()
+      const { data: lines } = await admin
+        .from('lyric_lines')
+        .select('line_index')
+        .eq('song_id', sid)
+      for (const ln of lines || []) {
+        ids.push(`line:${sid}:${ln.line_index}`)
+      }
     }
     await deleteMargoDocuments(ids)
     return
@@ -71,13 +83,55 @@ export async function syncMargoSearchFromWebhook(payload: WebhookPayload): Promi
       .from('lyric_lines')
       .select(`
         song_id, line_index, text,
-        songs!inner ( title, artist_display_name, artwork_url, status, song_stats ( plays ) )
+        songs!inner ( title, artist_display_name, artwork_url, status, deleted_at, song_stats ( plays ) )
       `)
       .eq('song_id', row.song_id)
       .eq('line_index', row.line_index)
       .maybeSingle()
+    const song = (data as any)?.songs
+    const songRow = Array.isArray(song) ? song[0] : song
+    if (songRow?.status !== 'live' || songRow?.deleted_at) {
+      await deleteMargoDocuments([`line:${row.song_id}:${row.line_index}`])
+      return
+    }
     const doc = data ? lyricLineToCatalogDoc(data as any) : null
     if (doc) docs.push(doc)
+  } else if (table === 'songs') {
+    const admin = getSupabaseAdmin()
+    const r = row as any
+    const songId = String(r.id)
+    if (r.status !== 'live' || r.deleted_at) {
+      const lineIds: string[] = []
+      const { data: lines } = await admin
+        .from('lyric_lines')
+        .select('line_index')
+        .eq('song_id', songId)
+      for (const ln of lines || []) {
+        lineIds.push(`line:${songId}:${ln.line_index}`)
+      }
+      await deleteMargoDocuments([`song:${songId}`, ...lineIds])
+      return
+    }
+    docs.push(
+      songToSearchDoc({
+        id: songId,
+        title: r.title,
+        artist_display_name: r.artist_display_name,
+        artwork_url: r.artwork_url,
+        owner_profile_id: r.owner_profile_id,
+      }),
+    )
+    const { data: lineRows } = await admin
+      .from('lyric_lines')
+      .select(`
+        song_id, line_index, text,
+        songs!inner ( title, artist_display_name, artwork_url, status, deleted_at, song_stats ( plays ) )
+      `)
+      .eq('song_id', songId)
+    for (const lr of lineRows || []) {
+      const doc = lyricLineToCatalogDoc(lr as any)
+      if (doc) docs.push(doc)
+    }
   }
 
   await upsertMargoDocuments(docs)

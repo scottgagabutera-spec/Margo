@@ -348,6 +348,21 @@ html[data-margo-landing-search-active]:not([data-margo-landing-song-flow]) .marg
   transform: translateY(calc(-50% - var(--margo-landing-hero-shift, 0px)));
 }
 
+/* Compose find-step — same keyboard lift contract as landing, scoped to the search block */
+html[data-margo-compose-search-active] .margo-compose-search-shift {
+  transform: translateY(calc(-1 * var(--margo-compose-search-shift, 0px)));
+}
+
+html[data-margo-compose-shift-animate] .margo-compose-search-shift {
+  transition: transform 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-margo-compose-shift-animate] .margo-compose-search-shift {
+    transition: none;
+  }
+}
+
 html[data-margo-landing-shift-animate]:not([data-margo-landing-song-flow]) .margo-landing-hero-anchor {
   transition: transform 200ms ease-out;
 }
@@ -410,6 +425,74 @@ html[data-margo-landing-song-flow] .margo-landing-page-shell {
   scroll-margin-top: calc(var(--margo-header-h, var(--nav-height, 72px)) + 8px);
 }
 
+.margo-compose-overlay {
+  overflow: hidden;
+  /* Height uses --margo-vv-height; do not pad by keyboard-inset again (double-count). */
+}
+
+.margo-compose-overlay__stack {
+  flex: 1;
+  min-height: 0;
+  max-height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.margo-compose-overlay--your-line .margo-compose-overlay__stack {
+  padding-bottom: calc(var(--margo-cta-bar-h, 0px) + 24px + env(safe-area-inset-bottom, 0px));
+}
+
+html:not([data-margo-keyboard="1"]) .margo-compose-overlay--your-line .margo-compose-overlay__stack {
+  padding-bottom: calc(
+    var(--margo-cta-bar-h, 0px)
+    + var(--margo-tabbar-h, 80px)
+    + 24px
+    + env(safe-area-inset-bottom, 0px)
+  );
+}
+
+.margo-compose-your-line-card {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.margo-compose-your-line-card .margo-catalog-pick-lyric__input,
+.margo-compose-your-line-card textarea {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.margo-compose-overlay--picker .margo-compose-overlay__stack {
+  padding-bottom: calc(var(--margo-cta-bar-h, 0px) + 16px + env(safe-area-inset-bottom, 0px));
+}
+
+html:not([data-margo-keyboard="1"]) .margo-compose-overlay--picker .margo-compose-overlay__stack {
+  padding-bottom: calc(
+    var(--margo-cta-bar-h, 0px)
+    + var(--margo-tabbar-h, 80px)
+    + 16px
+    + env(safe-area-inset-bottom, 0px)
+  );
+}
+
+.margo-compose-overlay__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 .margo-compose-sticky-song {
   position: sticky;
   z-index: 3;
@@ -421,6 +504,12 @@ html[data-margo-landing-song-flow] .margo-landing-page-shell {
   padding: 4px 0 8px;
   background: var(--bg);
   box-sizing: border-box;
+}
+
+.margo-compose-sticky-song--flush {
+  position: relative;
+  top: auto;
+  flex-shrink: 0;
 }
 
 .margo-compose-sticky-song__chip {
@@ -3588,6 +3677,25 @@ html[data-margo-hub-sheet-flush-top] .margo-hub-sheet {
     opacity: 0.5;
   }
 }
+.margo-nav-tab-indicator {
+  animation: margo-tab-indicator-in 160ms var(--ease-out);
+}
+
+.margo-mobile-tab-indicator {
+  animation: margo-tab-indicator-in 160ms var(--ease-out);
+}
+
+@keyframes margo-tab-indicator-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scaleX(0.35);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scaleX(1);
+  }
+}
+
 html.margo-keyboard-open .margo-mobile-tabbar {
   visibility: hidden;
   pointer-events: none;
