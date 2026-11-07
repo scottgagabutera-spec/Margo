@@ -408,13 +408,25 @@ export default function MemoryDetailPage() {
       {memory.photos.length > 0 ? (
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 24, paddingBottom: 4 }}>
           {memory.photos.map((p) => (
-            <img
-              key={p.id}
-              src={p.url}
-              alt=""
-              loading="lazy"
-              style={{ height: 120, width: 'auto', borderRadius: 12, border: '1px solid var(--border)', flexShrink: 0 }}
-            />
+            p.mediaType === 'video' ? (
+              <video
+                key={p.id}
+                src={p.url}
+                poster={p.posterUrl ?? undefined}
+                controls
+                playsInline
+                preload="metadata"
+                style={{ height: 120, width: 'auto', borderRadius: 12, border: '1px solid var(--border)', flexShrink: 0, background: '#000' }}
+              />
+            ) : (
+              <img
+                key={p.id}
+                src={p.url}
+                alt=""
+                loading="lazy"
+                style={{ height: 120, width: 'auto', borderRadius: 12, border: '1px solid var(--border)', flexShrink: 0 }}
+              />
+            )
           ))}
         </div>
       ) : null}
