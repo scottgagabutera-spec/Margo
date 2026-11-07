@@ -67,7 +67,14 @@ export async function POST(req: NextRequest) {
     cleanedLinks.suno = normalizeSunoUrl(cleanedLinks.suno)
   }
 
-  const type = applicantType === 'label' ? 'label' : 'independent'
+  if (applicantType === 'label') {
+    return NextResponse.json(
+      { success: false, error: 'Label applications are not open yet. Apply as an independent artist.' },
+      { status: 400 },
+    )
+  }
+
+  const type = 'independent' as const
 
   const sunoCode =
     typeof sunoVerification === 'object' && sunoVerification && 'code' in sunoVerification
@@ -137,12 +144,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'Could not submit application.' }, { status: 500 })
   }
 
-  await insertAppNotification(admin, {
-    recipientId: profileId,
-    type: 'artist_submitted',
-    actorId: null,
-  })
-
   let status: 'pending' | 'approved' = 'pending'
   let verifiedAt: string | null = null
 
@@ -162,6 +163,12 @@ export async function POST(req: NextRequest) {
         actorId: null,
       })
     }
+  } else {
+    await insertAppNotification(admin, {
+      recipientId: profileId,
+      type: 'artist_submitted',
+      actorId: null,
+    })
   }
 
   return NextResponse.json({ success: true, status, verifiedAt })
