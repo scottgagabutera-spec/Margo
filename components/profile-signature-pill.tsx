@@ -122,9 +122,6 @@ export function ProfileSignaturePill({
         </span>
         {track ? <SignaturePillPlayRing track={track} /> : null}
       </button>
-      {isOwner ? (
-        <p className="margo-profile-signature-pill__hold-hint">Hold for options</p>
-      ) : null}
     </div>
   )
 }
