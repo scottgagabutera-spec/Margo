@@ -3,8 +3,10 @@
  * must not block first paint of the You tab / profile body.
  */
 import { Suspense } from 'react'
+import { notFound } from 'next/navigation'
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
+import { isConsumerVisibleUsername } from '@/lib/profile-public-server'
 import {
   buildArtistMusicGroupJsonLd,
   type ArtistApplicationLinks,
@@ -21,6 +23,10 @@ export default async function ProfileUsernameLayout({
 }) {
   const { username: rawUsername } = await params
   const username = (rawUsername || '').trim()
+
+  if (username && !(await isConsumerVisibleUsername(username))) {
+    notFound()
+  }
 
   return (
     <>

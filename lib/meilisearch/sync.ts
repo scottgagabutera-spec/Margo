@@ -49,6 +49,10 @@ export async function syncMargoSearchFromWebhook(payload: WebhookPayload): Promi
   const docs: MargoSearchDocument[] = []
 
   if (table === 'profiles') {
+    if ((row as { is_admin?: boolean }).is_admin === true) {
+      await deleteMargoDocuments([`user:${row.id}`, `artist:${row.id}`])
+      return
+    }
     const user = profileToUserDoc(row as any)
     if (user) docs.push(user)
     if ((row as any).is_artist) {
