@@ -4,36 +4,34 @@ export type FeedBlockKind =
   | 'memories-row'
   | 'people'
   | 'memory'
-  | 'echoes'
+  | 'echoes-ask'
+  | 'echoes-results'
   | 'pictures'
   | 'shorts'
   | 'story'
 
 export const FEED_BLOCK_CYCLE_SIGNED_IN: FeedBlockKind[] = [
-  'memories-row',
   'people',
+  'shorts',
+  'echoes-ask',
   'memory',
-  'echoes',
+  'echoes-results',
   'story',
   'pictures',
-  'shorts',
 ]
 
 export const FEED_BLOCK_CYCLE_SIGNED_OUT: FeedBlockKind[] = [
-  'memories-row',
   'people',
-  'echoes',
+  'shorts',
+  'echoes-ask',
+  'echoes-results',
   'story',
   'pictures',
-  'shorts',
 ]
 
-const EARLY_BLOCK_ORDINALS = [3, 6, 9, 12, 15] as const
-const LATE_BLOCK_STEP = 4
-const LATE_BLOCK_START = 19
-const SHORT_FEED_MAX = 5
-/** Lyric posts between consecutive block slots (first at 3, then every 4 ordinals). */
-export const MIN_LYRICS_BETWEEN_BLOCKS = 3
+const FIRST_PASS_ORDINALS = [1, 2, 3, 4, 5, 6, 7] as const
+const LATE_REPEAT_START = 11
+const LATE_REPEAT_STEP = 4
 
 export type FeedPlannedBlock =
   | { placement: 'start'; kind: FeedBlockKind; sequenceStep: number; key: string }
@@ -45,10 +43,10 @@ function feedCycle(signedIn: boolean): FeedBlockKind[] {
 
 export function feedBlockSlots(nonReplayTotal: number): number[] {
   const slots: number[] = []
-  for (const o of EARLY_BLOCK_ORDINALS) {
+  for (const o of FIRST_PASS_ORDINALS) {
     if (o <= nonReplayTotal) slots.push(o)
   }
-  for (let o = LATE_BLOCK_START; o <= nonReplayTotal; o += LATE_BLOCK_STEP) {
+  for (let o = LATE_REPEAT_START; o <= nonReplayTotal; o += LATE_REPEAT_STEP) {
     slots.push(o)
   }
   return slots
@@ -81,9 +79,11 @@ export function planFeedBlocks(input: {
   }
 
   if (nonReplayTotal === 0) {
-    pushStart('echoes')
+    pushStart('echoes-ask')
     return planned
   }
+
+  pushStart('memories-row')
 
   const slots = feedBlockSlots(nonReplayTotal)
   let cycleStep = 0
@@ -113,4 +113,18 @@ export function promoInsertsByPlacement(planned: FeedPlannedBlock[]): {
     if (p.placement === 'after') after.set(p.lyricOrdinal, p)
   }
   return { start, after }
+}
+
+export function materializeSlotListForPosts(
+  postCount: number,
+  signedIn: boolean,
+  anchor = 0,
+): { afterLyric: number; kind: FeedBlockKind }[] {
+  const plan = planFeedBlocks({ nonReplayTotal: postCount, signedIn, promoAnchor: anchor })
+  const rows: { afterLyric: number; kind: FeedBlockKind }[] = []
+  for (const p of plan) {
+    if (p.placement === 'start') rows.push({ afterLyric: 0, kind: p.kind })
+    else rows.push({ afterLyric: p.lyricOrdinal, kind: p.kind })
+  }
+  return rows
 }

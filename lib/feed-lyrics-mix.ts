@@ -33,7 +33,8 @@ export type FeedLyricsPostRow = {
 export type FeedLyricsRow =
   | FeedLyricsPostRow
   | { kind: 'memories-row'; key: string; memories: MemoryPublic[]; hasMore: boolean; planKey: string }
-  | { kind: 'echoes-set'; key: string; block: EchoFeedBlockSnapshot; planKey: string }
+  | { kind: 'echoes-ask'; key: string; block: EchoFeedBlockSnapshot; planKey: string }
+  | { kind: 'echoes-results'; key: string; block: EchoFeedBlockSnapshot; planKey: string }
   | { kind: 'people'; key: string; people: FeedLyricsPeopleSlot[]; planKey: string }
   | { kind: 'memory-promo'; key: string; promoKind: MemoryPromoKind; planKey: string }
   | { kind: 'shorts-strip'; key: string; planKey: string }
@@ -87,8 +88,10 @@ function canMaterialize(kind: FeedBlockKind, ctx: BlockCtx): boolean {
       return peekPeople(ctx.peoplePool, ctx.peopleUsed).length > 0
     case 'shorts':
       return ctx.shortsStripAvailable
-    case 'echoes':
+    case 'echoes-ask':
       return ctx.echoesBlock != null
+    case 'echoes-results':
+      return ctx.echoesBlock != null && ctx.echoesBlock.answerCount > 0
     default:
       return false
   }
@@ -118,9 +121,15 @@ function materializeBlock(
     if (kind === 'shorts') {
       return { row: { kind: 'shorts-strip', key, planKey: key }, consumedMemories: 0 }
     }
-    if (kind === 'echoes' && ctx.echoesBlock) {
+    if (kind === 'echoes-ask' && ctx.echoesBlock) {
       return {
-        row: { kind: 'echoes-set', key, block: ctx.echoesBlock, planKey: key },
+        row: { kind: 'echoes-ask', key, block: ctx.echoesBlock, planKey: key },
+        consumedMemories: 0,
+      }
+    }
+    if (kind === 'echoes-results' && ctx.echoesBlock && ctx.echoesBlock.answerCount > 0) {
+      return {
+        row: { kind: 'echoes-results', key, block: ctx.echoesBlock, planKey: key },
         consumedMemories: 0,
       }
     }
@@ -220,9 +229,11 @@ export function simulateFeedBlockPositions(input: {
           ? 'shorts'
           : r.kind === 'memories-row'
             ? 'memories-row'
-            : r.kind === 'echoes-set'
-              ? 'echoes'
-              : r.kind
+            : r.kind === 'echoes-ask'
+              ? 'echoes-ask'
+              : r.kind === 'echoes-results'
+                ? 'echoes-results'
+                : r.kind
     table.push({ afterLyric: ord, blockKind: kind })
   }
   return table

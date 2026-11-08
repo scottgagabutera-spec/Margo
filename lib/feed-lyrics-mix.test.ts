@@ -20,7 +20,7 @@ const mockEchoes = {
   preview: [],
 }
 
-test('short feed has no block promos before third lyric', () => {
+test('two lyric posts insert people after first not before', () => {
   const rows = buildFeedLyricsRows({
     lyricPosts: [lyricPost('a'), lyricPost('b')],
     memories: [],
@@ -28,11 +28,15 @@ test('short feed has no block promos before third lyric', () => {
     signedIn: true,
     promoAnchor: 0,
     echoesBlock: mockEchoes,
+    shortsStripAvailable: false,
   })
-  assert.equal(rows.every((r) => r.kind === 'post'), true)
+  const firstPostIdx = rows.findIndex((r) => r.kind === 'post')
+  const peopleIdx = rows.findIndex((r) => r.kind === 'people')
+  assert.ok(firstPostIdx >= 0)
+  assert.ok(peopleIdx > firstPostIdx)
 })
 
-test('zero lyric posts shows echoes lead only when snapshot exists', () => {
+test('zero lyric posts shows echoes ask when snapshot exists', () => {
   const rows = buildFeedLyricsRows({
     lyricPosts: [],
     memories: [{ id: 'm1' } as never],
@@ -42,7 +46,7 @@ test('zero lyric posts shows echoes lead only when snapshot exists', () => {
     echoesBlock: mockEchoes,
   })
   assert.equal(rows.some((r) => r.kind === 'memories-row'), false)
-  assert.equal(rows.some((r) => r.kind === 'echoes-set'), true)
+  assert.equal(rows.some((r) => r.kind === 'echoes-ask'), true)
 })
 
 test('signed out short feed has no memory promos', () => {
@@ -53,6 +57,7 @@ test('signed out short feed has no memory promos', () => {
     signedIn: false,
     promoAnchor: 0,
     echoesBlock: mockEchoes,
+    shortsStripAvailable: false,
   })
   assert.equal(rows.some((r) => r.kind === 'memory-promo'), false)
 })

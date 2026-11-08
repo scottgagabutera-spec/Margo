@@ -3,15 +3,11 @@ import assert from 'node:assert/strict'
 import {
   FEED_BLOCK_CYCLE_SIGNED_IN,
   FEED_BLOCK_CYCLE_SIGNED_OUT,
-  MIN_LYRICS_BETWEEN_BLOCKS,
   feedBlockSlots,
-  feedPromoAnchorIndex,
+  materializeSlotListForPosts,
   planFeedBlocks,
 } from './feed-promo-planner.ts'
 import { buildFeedLyricsRows, simulateFeedBlockPositions, type FeedLyricsPostRow } from './feed-lyrics-mix.ts'
-
-const COUNTS = [0, 3, 8, 20, 40] as const
-const ROLES = ['listener', 'artist'] as const
 
 function lyricRows(n: number): FeedLyricsPostRow[] {
   return Array.from({ length: n }, (_, i) => ({
@@ -25,61 +21,60 @@ function lyricRows(n: number): FeedLyricsPostRow[] {
 
 const peoplePool = [{ id: 'u1', username: 'a', displayName: 'A', avatarUrl: null }]
 const memories = Array.from({ length: 30 }, (_, i) => ({ id: `m${i}` }))
-
-for (const n of COUNTS) {
-  for (const signedIn of [true, false] as const) {
-    for (const role of ROLES) {
-      test(`plan stable ${role} ${signedIn ? 'signed-in' : 'signed-out'} at ${n} posts`, () => {
-        void role
-        const a = planFeedBlocks({ nonReplayTotal: n, signedIn, promoAnchor: 0 })
-        const b = planFeedBlocks({ nonReplayTotal: n, signedIn, promoAnchor: 0 })
-        assert.deepEqual(a, b)
-      })
-    }
-  }
+const echoesBlock = {
+  setId: 'set',
+  questionId: 'q',
+  title: 'What are you listening to?',
+  answerCount: 2,
+  preview: [],
 }
 
-test('slots at 3 6 9 12 15 then every four', () => {
-  assert.deepEqual(feedBlockSlots(20), [3, 6, 9, 12, 15, 19])
+test('slots after lyrics 1 through 7 then every four from 11', () => {
+  assert.deepEqual(feedBlockSlots(20), [1, 2, 3, 4, 5, 6, 7, 11, 15, 19])
 })
 
-test('signed in twenty posts cycle order anchor zero', () => {
+test('signed in twenty posts slot list anchor zero', () => {
+  const list = materializeSlotListForPosts(20, true, 0)
+  const kinds = list.map((x) => x.kind)
+  assert.equal(kinds[0], 'memories-row')
+  const after = list.filter((x) => x.afterLyric > 0).map((x) => `${x.afterLyric}:${x.kind}`)
+  assert.deepEqual(after, [
+    '1:people',
+    '2:shorts',
+    '3:echoes-ask',
+    '4:memory',
+    '5:echoes-results',
+    '6:story',
+    '7:pictures',
+    '11:people',
+    '15:shorts',
+    '19:echoes-ask',
+  ])
+})
+
+test('signed out twenty posts omits memory create', () => {
+  const list = materializeSlotListForPosts(20, false, 0)
+  const kinds = list.map((x) => x.kind)
+  assert.ok(!kinds.includes('memory'))
+  assert.deepEqual(kinds.filter((k) => k === 'echoes-ask').length, 2)
+})
+
+test('memories row at start only', () => {
   const plan = planFeedBlocks({ nonReplayTotal: 20, signedIn: true, promoAnchor: 0 })
-  const kinds = plan.filter((p) => p.placement === 'after').map((p) => p.kind)
-  const expected = feedBlockSlots(20).map((_, i) => FEED_BLOCK_CYCLE_SIGNED_IN[i % FEED_BLOCK_CYCLE_SIGNED_IN.length]!)
-  assert.deepEqual(kinds, expected)
+  const starts = plan.filter((p) => p.placement === 'start')
+  assert.equal(starts.length, 1)
+  assert.equal(starts[0]!.kind, 'memories-row')
 })
 
-test('signed out twenty posts cycle order anchor zero', () => {
-  const plan = planFeedBlocks({ nonReplayTotal: 20, signedIn: false, promoAnchor: 0 })
-  const kinds = plan.filter((p) => p.placement === 'after').map((p) => p.kind)
-  const expected = feedBlockSlots(20).map((_, i) => FEED_BLOCK_CYCLE_SIGNED_OUT[i % FEED_BLOCK_CYCLE_SIGNED_OUT.length]!)
-  assert.deepEqual(kinds, expected)
-})
-
-test('late slots after fifteen step by four', () => {
-  const slots = feedBlockSlots(25)
-  const late = slots.filter((s) => s >= 19)
-  for (let i = 1; i < late.length; i++) {
-    assert.equal(late[i]! - late[i - 1]!, 4)
-  }
-  assert.deepEqual(slots.slice(0, 5), [3, 6, 9, 12, 15])
-})
-
-test('no adjacent blocks', () => {
+test('no adjacent blocks in mix', () => {
   const rows = buildFeedLyricsRows({
     lyricPosts: lyricRows(20),
     memories,
     peoplePool,
     signedIn: true,
     promoAnchor: 0,
-    echoesBlock: {
-      setId: 'set',
-      questionId: 'q',
-      title: 'What are you listening to?',
-      answerCount: 1,
-      preview: [],
-    },
+    shortsStripAvailable: true,
+    echoesBlock,
   })
   let prevBlock = false
   for (const row of rows) {
@@ -89,9 +84,21 @@ test('no adjacent blocks', () => {
   }
 })
 
-test('daily anchor stable', () => {
-  assert.equal(
-    feedPromoAnchorIndex('user-a', '2026-11-08', true),
-    feedPromoAnchorIndex('user-a', '2026-11-08', true),
-  )
+test('cycle length seven signed in', () => {
+  assert.equal(FEED_BLOCK_CYCLE_SIGNED_IN.length, 7)
+  assert.equal(FEED_BLOCK_CYCLE_SIGNED_OUT.length, 6)
+})
+
+test('simulate positions echoes split', () => {
+  const table = simulateFeedBlockPositions({
+    lyricPosts: lyricRows(8),
+    memories,
+    peoplePool,
+    signedIn: true,
+    promoAnchor: 0,
+    shortsStripAvailable: true,
+    echoesBlock,
+  })
+  assert.ok(table.some((t) => t.blockKind === 'echoes-ask'))
+  assert.ok(table.some((t) => t.blockKind === 'echoes-results'))
 })

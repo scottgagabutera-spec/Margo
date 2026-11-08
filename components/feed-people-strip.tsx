@@ -100,7 +100,7 @@ export function FeedPeopleStrip({
   if (!people.length) return null
 
   return (
-    <div className="margo-feed-people-strip margo-pressable-surface">
+    <div className="margo-feed-people-strip margo-pressable-surface" data-feed-exit="people">
       <MargoSectionHeader
         title="Who to follow"
         actionHref="/search?scope=people"

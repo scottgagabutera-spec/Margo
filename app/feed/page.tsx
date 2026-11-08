@@ -33,7 +33,8 @@ import { FeedMemoriesGridSkeleton } from '@/components/margo-skeletons'
 import { buildFeedLyricsRows, type FeedLyricsPeopleSlot, type FeedLyricsPostRow, type FeedLyricsRow } from '@/lib/feed-lyrics-mix'
 import { buildFeedPeoplePool } from '@/lib/feed-people-pool'
 import { FeedMemoriesRow } from '@/components/feed-memories-row'
-import { FeedEchoesSetBlock } from '@/components/feed-echoes-set-block'
+import { FeedEchoesAskCard } from '@/components/feed-echoes-ask-card'
+import { FeedEchoesResultsBlock } from '@/components/feed-echoes-results-block'
 import { FeedEchoesTab } from '@/components/feed-echoes-tab'
 import { FeedBlockShell } from '@/components/feed-block-shell'
 import type { EchoFeedBlockSnapshot } from '@/lib/echoes/types'
@@ -49,6 +50,7 @@ import { FeedMemoryPromoCard } from '@/components/feed-memory-promo-card'
 import { FeedShortsStrip } from '@/components/feed-shorts-strip'
 import { localDayKey } from '@/lib/feed-memory-card'
 import { feedPromoAnchorIndex } from '@/lib/feed-promo-planner'
+import { armFeedStackLinkCapture } from '@/lib/feed-stack-capture'
 import { feedShortsStripTilesFromClips } from '@/lib/feed-shorts-strip-tiles'
 import type { LyricMoment } from '@/lib/lyric-moments-board'
 import { FeedOceanFooter } from '@/components/feed-ocean-footer'
@@ -654,6 +656,12 @@ function FeedPageInner() {
   ])
 
   const feedTabRestoredRef = useRef(false)
+
+  useEffect(() => {
+    if (!feedLive) return
+    const root = document.querySelector('[data-margo-primary-tab="feed"]')
+    return armFeedStackLinkCapture(root instanceof HTMLElement ? root : null)
+  }, [feedLive, mixedLyricRows.length])
   useLayoutEffect(() => {
     if (!feedLive) {
       feedTabRestoredRef.current = false
@@ -667,6 +675,14 @@ function FeedPageInner() {
     if (feedTabRestoredRef.current && !pending) return
     const snap = readFeedReturnSnapshot()
     if (!snap) return
+    const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
+  const liveY = scroller instanceof HTMLElement ? scroller.scrollTop : 0
+    if (pending && scroller instanceof HTMLElement && Math.abs(liveY - snap.y) <= 8) {
+      clearFeedReturnPending()
+      applyFeedReturnHorizontals(snap)
+      feedTabRestoredRef.current = true
+      return
+    }
     feedTabRestoredRef.current = true
     clearFeedReturnPending()
     if (snap.tab !== feedContentTab) {
@@ -687,6 +703,10 @@ function FeedPageInner() {
     if (!feedLive || !listReady || highlightParam) return
     const snap = readFeedReturnSnapshot()
     if (!snap) return
+    const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
+    if (scroller instanceof HTMLElement && snap.y > 0 && Math.abs(scroller.scrollTop - snap.y) > 5) {
+      scroller.scrollTop = snap.y
+    }
     applyFeedReturnHorizontals(snap)
   }, [feedLive, listReady, mixedLyricRows.length, highlightParam, feedContentTab])
   const hasActiveFilter = selectedVibe !== 'ALL' || selectedSort !== 'NEW'
@@ -958,10 +978,17 @@ function FeedPageInner() {
                 </FeedBlockShell>
               )
             }
-            if (item.kind === 'echoes-set') {
+            if (item.kind === 'echoes-ask') {
               return (
-                <FeedBlockShell key={item.key} blockName="echoes" planKey={item.planKey} className="margo-feed-block-shell">
-                  <FeedEchoesSetBlock block={item.block} signedIn={!!user?.id} />
+                <FeedBlockShell key={item.key} blockName="echoes-ask" planKey={item.planKey} className="margo-feed-block-shell">
+                  <FeedEchoesAskCard block={item.block} signedIn={!!user?.id} />
+                </FeedBlockShell>
+              )
+            }
+            if (item.kind === 'echoes-results') {
+              return (
+                <FeedBlockShell key={item.key} blockName="echoes-results" planKey={item.planKey} className="margo-feed-block-shell">
+                  <FeedEchoesResultsBlock block={item.block} />
                 </FeedBlockShell>
               )
             }
