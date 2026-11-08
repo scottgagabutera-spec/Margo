@@ -134,6 +134,15 @@ export function applyFeedReturnHorizontals(snap: FeedReturnSnapshot) {
   if (strip instanceof HTMLElement) strip.scrollLeft = snap.shortsStripX
 }
 
+/**
+ * The saved-tab restore may only run on first mount or on a real Back
+ * (popstate). Forward tab taps (Lyrics → Memories/Shorts) must never be
+ * bounced back to the saved tab.
+ */
+export function shouldRestoreFeedTabOnNav(input: { restored: boolean; viaPop: boolean }): boolean {
+  return !input.restored || input.viaPop
+}
+
 export function shouldReapplyFeedReturn(): boolean {
   if (typeof sessionStorage === 'undefined') return false
   try {

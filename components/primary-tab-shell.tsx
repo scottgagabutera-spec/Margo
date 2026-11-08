@@ -229,9 +229,10 @@ function persistScroll(
   if (id === 'feed') {
     const prev = readFeedResume()
     const nextAnchor = anchorId === undefined ? (prev?.anchorId ?? null) : anchorId
-    // Skeleton / hidden pane often reports y=0 with no post nodes.
+    // Skeleton / hidden pane often reports y=0 with no post nodes, and a
+    // programmatic scroll-to-top (opening Memories/Shorts) reports y=0 too.
     // Do not clobber a real resume. Explicit clear passes anchorId null.
-    const keepResume = y < 1 && anchorId === undefined && !!prev && (prev.y >= 1 || !!prev.anchorId)
+    const keepResume = y < 1 && anchorId !== null && !!prev && (prev.y >= 1 || !!prev.anchorId)
     if (keepResume) {
       frozen[id] = prev.y
       frozenScrollLive = frozen
@@ -300,6 +301,14 @@ export function clearPrimaryTabScroll(id: PrimaryTabId) {
   persistScroll(frozenScrollLive, id, 0, null)
 }
 
+/** Align session frozen scroll with the feed resume written at exit/overlay open. */
+export function alignFeedPrimaryFrozenScroll(y: number) {
+  frozenScrollLive.feed = y
+  const map = readStoredScrollMap()
+  map.feed = y
+  writeStoredScrollMap(map)
+}
+
 export type PrimaryScrollRestore = {
   applied: boolean
   anchored: boolean
@@ -320,18 +329,21 @@ export function restoreActivePrimaryScroll(): PrimaryScrollRestore {
   if (!id) return SCROLL_RESTORE_NONE
   if (id === 'feed') {
     const resume = readFeedResume()
-    if (resume?.anchorId) {
-      const node = document.getElementById('feed-post-' + resume.anchorId)
-      if (node && el.contains(node)) {
-        const delta = node.getBoundingClientRect().top - el.getBoundingClientRect().top
-        el.scrollTop += delta
-        return { applied: true, anchored: true, waitingForAnchor: false }
+    if (resume) {
+      if (resume.anchorId) {
+        const node = document.getElementById('feed-post-' + resume.anchorId)
+        if (node && el.contains(node)) {
+          const delta = node.getBoundingClientRect().top - el.getBoundingClientRect().top
+          el.scrollTop += delta
+          alignFeedPrimaryFrozenScroll(el.scrollTop)
+          return { applied: true, anchored: true, waitingForAnchor: false }
+        }
+        if (Math.abs(el.scrollTop - resume.y) > 1) el.scrollTop = resume.y
+        alignFeedPrimaryFrozenScroll(resume.y)
+        return { applied: true, anchored: false, waitingForAnchor: true }
       }
-      if (resume.y >= 1) el.scrollTop = resume.y
-      return { applied: resume.y >= 1, anchored: false, waitingForAnchor: true }
-    }
-    if (resume && resume.y >= 1) {
-      el.scrollTop = resume.y
+      if (Math.abs(el.scrollTop - resume.y) > 1) el.scrollTop = resume.y
+      alignFeedPrimaryFrozenScroll(resume.y)
       if (resume.memoriesRowX > 0) {
         const row = el.querySelector('.margo-feed-memories-row__scroller')
         if (row instanceof HTMLElement) row.scrollLeft = resume.memoriesRowX
@@ -620,14 +632,16 @@ export function PrimaryTabShell({
       const pinnedY = readFeedStackScrollY()
       const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
       if (scroller instanceof HTMLElement) {
-        const y = pinnedY ?? snap?.y ?? 0
-        if (y > 0) {
+        const y = snap?.y ?? pinnedY ?? 0
+        if (Math.abs(scroller.scrollTop - y) > 1) {
           scroller.scrollTop = y
           requestAnimationFrame(() => {
-            scroller.scrollTop = y
+            if (Math.abs(scroller.scrollTop - y) > 1) scroller.scrollTop = y
+            alignFeedPrimaryFrozenScroll(y)
             clearFeedStackScrollY()
           })
         } else {
+          alignFeedPrimaryFrozenScroll(y)
           clearFeedStackScrollY()
         }
       } else {

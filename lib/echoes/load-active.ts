@@ -127,6 +127,7 @@ export async function loadEchoSetAnswers(
   viewerId: string | null,
   filter: 'following' | 'everyone',
   followingIds: string[],
+  limit = 120,
 ): Promise<{
   title: string
   questionId: string
@@ -158,7 +159,7 @@ export async function loadEchoSetAnswers(
     .select('id, profile_id, time_choice, payload, created_at')
     .eq('question_id', question.id)
     .order('created_at', { ascending: false })
-    .limit(120)
+    .limit(Math.min(Math.max(limit, 24), 480))
 
   const { data: answers } = await query
 

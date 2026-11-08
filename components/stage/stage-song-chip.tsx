@@ -71,13 +71,28 @@ export function StageSongChip({ title, artist, artwork, onClear }: StageSongChip
           border: 'none',
           cursor: 'pointer',
           flexShrink: 0,
-          color: 'var(--text-muted)',
+          color: 'var(--gold)',
           position: 'relative',
           zIndex: 3,
           touchAction: 'manipulation',
         }}
       >
-        <CloseIcon size={16} color="currentColor" />
+        <span
+          aria-hidden
+          style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            border: '1px solid var(--gold-border)',
+            background: 'var(--gold-faint)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <CloseIcon size={14} color="var(--gold)" />
+        </span>
       </button>
     </div>
   )

@@ -9,6 +9,9 @@ import { MemoryCoverCaption } from '@/components/memory-cover-caption'
 import { MusicNoteIcon } from '@/components/icons'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { memoryCoverIsSongArt, memoryCaptionTitle, memoryDisplayCaption } from '@/lib/memory/display-caption'
+import { memoryTileKind } from '@/lib/memory/memory-tile-kind'
+
+const KIND_LABEL = { photo: 'Photo', story: 'Story', listening: 'Listening' } as const
 import { memoryGridCoverSource } from '@/lib/memory/feed-thumbnail-url'
 import type { MemoryPublic } from '@/lib/memory/types'
 import { MemoryResonateButton } from '@/components/memory-resonate-button'
@@ -37,6 +40,7 @@ export function MemoryFeedGridTile({ memory: initial }: { memory: MemoryPublic }
       }}
     >
       <span className="margo-feed-memory-grid-tile__art">
+        <span className="margo-memory-kind-chip">{KIND_LABEL[memoryTileKind(memory)]}</span>
         {wordsOnly ? (
           <span className="margo-feed-memory-grid-tile__img margo-feed-memory-grid-tile__img--words-only">
             {memoryCaptionTitle(memory)}

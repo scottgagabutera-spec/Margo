@@ -1,6 +1,7 @@
 import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime'
+import { alignFeedPrimaryFrozenScroll } from '@/components/primary-tab-shell'
 import { applyFeedContentTab, parseFeedContentTab, type FeedContentTab } from './feed-content-tab.ts'
-import { persistFeedReturnBeforeLeave } from './margo-feed-return.ts'
+import { persistFeedReturnBeforeLeave, readFeedReturnSnapshot } from './margo-feed-return.ts'
 import type { MemoryPromoKind } from './feed-memory-card.ts'
 
 /** Query keys that open an in-feed mix overlay. Clearing them is Back. */
@@ -80,6 +81,9 @@ function currentFeedSearch(): URLSearchParams {
 
 function pushFeedSearch(router: AppRouterInstance, params: URLSearchParams) {
   persistFeedReturnBeforeLeave(parseFeedContentTab(currentFeedSearch().get('tab')))
+  const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
+  const y = scroller instanceof HTMLElement ? scroller.scrollTop : 0
+  alignFeedPrimaryFrozenScroll(y)
   try {
     sessionStorage.setItem('margo-feed-return-pending', '1')
   } catch {
@@ -111,7 +115,15 @@ export function openFeedTab(
       else params.set(key, String(value))
     }
   }
+  // pushFeedSearch saves the current pose first; only then move the pane.
   pushFeedSearch(router, params)
+  if (typeof document !== 'undefined') {
+    const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
+    if (scroller instanceof HTMLElement) {
+      // New sector starts at its top; Lyrics (a return) restores its pose.
+      scroller.scrollTop = tab === 'lyrics' ? (readFeedReturnSnapshot()?.y ?? 0) : 0
+    }
+  }
 }
 
 export function openFeedCreate(router: AppRouterInstance, kind: MemoryPromoKind) {

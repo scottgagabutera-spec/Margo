@@ -39,11 +39,13 @@ import { FeedEchoesTab } from '@/components/feed-echoes-tab'
 import { FeedBlockShell } from '@/components/feed-block-shell'
 import type { EchoFeedBlockSnapshot } from '@/lib/echoes/types'
 import { inferListeningPeriodType } from '@/lib/memory/listening-infer'
+import { memoryTileKind, type MemoryTileKind } from '@/lib/memory/memory-tile-kind'
 import {
   applyFeedReturnHorizontals,
   readFeedReturnSnapshot,
   clearFeedReturnPending,
   shouldReapplyFeedReturn,
+  shouldRestoreFeedTabOnNav,
   persistFeedReturnBeforeLeave,
 } from '@/lib/margo-feed-return'
 import { FeedPeopleStrip } from '@/components/feed-people-strip'
@@ -544,6 +546,15 @@ function FeedPageInner() {
     )
   }, [feedGridMemories, searchParams])
 
+  const [memoryKindFilter, setMemoryKindFilter] = useState<'all' | MemoryTileKind>('all')
+  const feedGridMemoriesByKind = useMemo(
+    () =>
+      memoryKindFilter === 'all'
+        ? feedGridMemoriesFiltered
+        : feedGridMemoriesFiltered.filter((m) => memoryTileKind(m) === memoryKindFilter),
+    [feedGridMemoriesFiltered, memoryKindFilter],
+  )
+
   const openMemoryId = searchParams.get('openMemory')?.trim() || ''
   useEffect(() => {
     if (feedContentTab !== 'memories' || !openMemoryId) return
@@ -625,6 +636,8 @@ function FeedPageInner() {
   const handleFeedContentTab = (tab: 'lyrics' | 'memories' | 'shorts' | 'echoes') => {
     if (feedContentTab === 'lyrics' && tab !== 'lyrics') persistFeedReturnBeforeLeave('lyrics')
     paintFeedMix(null)
+    const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
+    if (scroller instanceof HTMLElement && tab !== 'lyrics') scroller.scrollTop = 0
     const params = stripFeedMixParams(applyFeedContentTab(new URLSearchParams(searchParams.toString()), tab))
     const qs = params.toString()
     if (qs === searchParams.toString()) return
@@ -720,6 +733,7 @@ function FeedPageInner() {
   ])
 
   const feedTabRestoredRef = useRef(false)
+  const feedNavViaPopRef = useRef(false)
 
   useEffect(() => {
     if (!feedLive) return
@@ -730,11 +744,14 @@ function FeedPageInner() {
   useEffect(() => {
     if (!feedLive) return
     const onPop = () => {
+      feedNavViaPopRef.current = true
       const snap = readFeedReturnSnapshot()
       if (!snap) return
       window.requestAnimationFrame(() => {
         const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
-        if (scroller instanceof HTMLElement && snap.y > 0) scroller.scrollTop = snap.y
+        if (scroller instanceof HTMLElement && Math.abs(scroller.scrollTop - snap.y) > 1) {
+          scroller.scrollTop = snap.y
+        }
         applyFeedReturnHorizontals(snap)
         clearFeedReturnPending()
       })
@@ -751,8 +768,16 @@ function FeedPageInner() {
 
   useLayoutEffect(() => {
     if (!feedLive) return
+    const viaPop = feedNavViaPopRef.current
+    feedNavViaPopRef.current = false
     const pending = shouldReapplyFeedReturn()
-    if (feedTabRestoredRef.current && !pending) return
+    // Forward tab taps must land where they were tapped. The saved-tab
+    // restore only runs on first mount or a real Back (popstate).
+    if (!shouldRestoreFeedTabOnNav({ restored: feedTabRestoredRef.current, viaPop })) {
+      if (pending) clearFeedReturnPending()
+      return
+    }
+    if (feedTabRestoredRef.current && !pending && !viaPop) return
     const snap = readFeedReturnSnapshot()
     if (!snap) return
     const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
@@ -789,7 +814,7 @@ function FeedPageInner() {
     const snap = readFeedReturnSnapshot()
     if (!snap) return
     const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
-    if (scroller instanceof HTMLElement && snap.y > 0 && Math.abs(scroller.scrollTop - snap.y) > 5) {
+    if (scroller instanceof HTMLElement && Math.abs(scroller.scrollTop - snap.y) > 5) {
       scroller.scrollTop = snap.y
     }
     applyFeedReturnHorizontals(snap)
@@ -971,16 +996,36 @@ function FeedPageInner() {
               <span className="margo-feed-memories-filter__chip">Listening</span>
             </div>
           ) : null}
+          <div className="margo-feed-memories-kinds" role="group" aria-label="Memory type">
+            {(
+              [
+                ['all', 'All'],
+                ['photo', 'Photos'],
+                ['story', 'Stories'],
+                ['listening', 'Listening'],
+              ] as const
+            ).map(([kind, label]) => (
+              <button
+                key={kind}
+                type="button"
+                className={`margo-feed-memories-kinds__chip${memoryKindFilter === kind ? ' margo-feed-memories-kinds__chip--active' : ''}`}
+                aria-pressed={memoryKindFilter === kind}
+                onClick={() => setMemoryKindFilter(kind)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           {feedGridLoading && feedGridMemories.length === 0 ? (
             <FeedMemoriesGridSkeleton count={6} />
-          ) : feedGridMemoriesFiltered.length === 0 ? (
+          ) : feedGridMemoriesByKind.length === 0 ? (
             <p style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.8125rem', color: 'var(--text-muted)', textAlign: 'center', padding: '48px 0' }}>
               No memories in your feed yet.
             </p>
           ) : (
             <>
               <div className="margo-feed-memories-grid">
-                {feedGridMemoriesFiltered.map((m) => (
+                {feedGridMemoriesByKind.map((m) => (
                   <MemoryFeedGridTile key={m.id} memory={m} />
                 ))}
               </div>

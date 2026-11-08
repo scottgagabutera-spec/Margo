@@ -3,7 +3,14 @@ import assert from 'node:assert/strict'
 import {
   buildFeedResumeHref,
   mergeFeedReturnSnapshot,
+  shouldRestoreFeedTabOnNav,
 } from './margo-feed-return.ts'
+
+test('forward tab taps are never bounced to the saved tab', () => {
+  assert.equal(shouldRestoreFeedTabOnNav({ restored: true, viaPop: false }), false)
+  assert.equal(shouldRestoreFeedTabOnNav({ restored: true, viaPop: true }), true)
+  assert.equal(shouldRestoreFeedTabOnNav({ restored: false, viaPop: false }), true)
+})
 
 test('buildFeedResumeHref lyrics tab', () => {
   assert.equal(buildFeedResumeHref({ tab: 'lyrics' }), '/feed')
