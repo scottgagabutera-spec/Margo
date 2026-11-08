@@ -31,8 +31,9 @@ async function fetchAudioArrayBuffer(
   const rangeEnd = Math.ceil((endSec + padSec) * RANGE_BYTES_PER_SEC)
   const rangeHeader = `bytes=${rangeStart}-${rangeEnd}`
   let res = await fetch(fetchUrl, { signal, headers: { Range: rangeHeader } })
-  if (res.status === 416 || res.status === 404) {
-    res = await fetch(fetchUrl, { signal })
+  if (res.status === 416) {
+    const widerEnd = Math.ceil((endSec + 4) * RANGE_BYTES_PER_SEC)
+    res = await fetch(fetchUrl, { signal, headers: { Range: `bytes=0-${widerEnd}` } })
   }
   if (!res.ok && res.status !== 206) {
     throw new Error(`Could not load audio for video export (${res.status})`)
