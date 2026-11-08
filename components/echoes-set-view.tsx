@@ -9,6 +9,7 @@ import { EchoesSongStrip } from '@/components/echoes-song-strip'
 import { feedReturnFallbackHref } from '@/lib/feed-exit-nav'
 import { openFeedEchoesAnswer, openFeedEchoesPerson } from '@/lib/feed-mix-nav'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+import { useTapAck } from '@/hooks/use-tap-ack'
 import { useRegisterNavBack } from '@/components/nav-back'
 import { FEED_TYPE_SCALE, TYPE, UI_FONT } from '@/lib/fonts'
 
@@ -17,6 +18,7 @@ const font = UI_FONT
 export function EchoesSetView({ setId }: { setId: string }) {
   const router = useRouter()
   const { requireAuth } = useAuthGate()
+  const { ack, isAcked } = useTapAck()
   const [filter, setFilter] = useState<'following' | 'everyone'>('following')
   const [title, setTitle] = useState('')
   const [questionId, setQuestionId] = useState('')
@@ -102,6 +104,8 @@ export function EchoesSetView({ setId }: { setId: string }) {
               <button
                 type="button"
                 className="margo-echoes-set-page__card"
+                data-margo-acked={isAcked(row.profileId) ? 1 : undefined}
+                onPointerDown={() => ack(row.profileId)}
                 onClick={() => openFeedEchoesPerson(router, setId, row.profileId)}
               >
                 <div className="margo-echoes-set-page__identity">

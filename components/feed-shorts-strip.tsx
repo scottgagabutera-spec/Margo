@@ -10,6 +10,7 @@ import { pickShortsLook } from '@/lib/shorts-looks'
 import { utcDayKey } from '@/lib/shorts-shelf-rotation'
 import { LYRIC_FONT, UI_FONT } from '@/lib/fonts'
 import { openFeedTab } from '@/lib/feed-mix-nav'
+import { useTapAck } from '@/hooks/use-tap-ack'
 
 const lyricFont = LYRIC_FONT
 const uiFont = UI_FONT
@@ -17,6 +18,7 @@ const uiFont = UI_FONT
 
 export function FeedShortsStrip({ tiles }: { tiles: FeedShortsStripTile[] }) {
   const router = useRouter()
+  const { ack, isAcked } = useTapAck()
   const day = utcDayKey(new Date())
 
   return (
@@ -29,6 +31,8 @@ export function FeedShortsStrip({ tiles }: { tiles: FeedShortsStripTile[] }) {
             type="button"
             className="margo-feed-shorts-strip__see-all"
             aria-label="See all Shorts"
+            data-margo-acked={isAcked('all') ? 1 : undefined}
+            onPointerDown={() => ack('all')}
             onClick={() => openFeedTab(router, 'shorts')}
           >
             <ChevronRightIcon size={16} color="var(--gold)" />
@@ -45,6 +49,8 @@ export function FeedShortsStrip({ tiles }: { tiles: FeedShortsStripTile[] }) {
             <button
               type="button"
               key={`${tile.songId}-${tile.lineId}`}
+              data-margo-acked={isAcked(`${tile.songId}-${tile.lineId}`) ? 1 : undefined}
+              onPointerDown={() => ack(`${tile.songId}-${tile.lineId}`)}
               onClick={() => openFeedTab(router, 'shorts', { shortsAt: tile.stripIndex })}
               className="margo-feed-shorts-strip__tile margo-mix-press"
               style={{

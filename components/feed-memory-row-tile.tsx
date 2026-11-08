@@ -8,6 +8,7 @@ import { formatMemoryDisplayDate } from '@/lib/memory/date-label'
 import { memoryTileKind } from '@/lib/memory/memory-tile-kind'
 import type { MemoryPublic } from '@/lib/memory/types'
 import { openFeedMemory } from '@/lib/feed-mix-nav'
+import { useTapAck } from '@/hooks/use-tap-ack'
 import { memoryWordsOnlyBackground } from '@/lib/memory/words-only-palette'
 import { LYRIC_FONT, UI_FONT } from '@/lib/fonts'
 
@@ -16,6 +17,7 @@ const uiFont = UI_FONT
 
 export function FeedMemoryRowTile({ memory, priority = false }: { memory: MemoryPublic; priority?: boolean }) {
   const router = useRouter()
+  const { ack, isAcked } = useTapAck()
   const kind = memoryTileKind(memory)
   const title = memoryCaptionTitle(memory)
   const { src, isVideo, wordsOnly } = memoryGridCoverSource(memory)
@@ -36,6 +38,8 @@ export function FeedMemoryRowTile({ memory, priority = false }: { memory: Memory
       type="button"
       className="margo-feed-memory-row-tile margo-mix-press"
       aria-label={title}
+      data-margo-acked={isAcked() ? 1 : undefined}
+      onPointerDown={() => ack()}
       onClick={() => openFeedMemory(router, memory.id)}
     >
       <MediaSquare

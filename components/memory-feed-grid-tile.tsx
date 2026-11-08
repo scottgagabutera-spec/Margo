@@ -13,9 +13,11 @@ import { memoryGridCoverSource } from '@/lib/memory/feed-thumbnail-url'
 import type { MemoryPublic } from '@/lib/memory/types'
 import { MemoryResonateButton } from '@/components/memory-resonate-button'
 import { leaveFeedTo } from '@/lib/feed-exit-nav'
+import { useTapAck } from '@/hooks/use-tap-ack'
 
 export function MemoryFeedGridTile({ memory: initial }: { memory: MemoryPublic }) {
   const router = useRouter()
+  const { ack, isAcked } = useTapAck()
   const [memory, setMemory] = useState(initial)
   useEffect(() => setMemory(initial), [initial])
   const { src, isVideo, wordsOnly } = memoryGridCoverSource(memory)
@@ -27,6 +29,8 @@ export function MemoryFeedGridTile({ memory: initial }: { memory: MemoryPublic }
       className="margo-feed-memory-grid-tile margo-mix-press"
       data-margo-memory-tile={memory.id}
       aria-label={caption}
+      data-margo-acked={isAcked() ? 1 : undefined}
+      onPointerDown={() => ack()}
       onClick={(event) => {
         event.preventDefault()
         leaveFeedTo(router, `/memory/${memory.id}`, 'memories')

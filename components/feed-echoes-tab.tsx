@@ -7,6 +7,7 @@ import { EchoesSongStrip } from '@/components/echoes-song-strip'
 import { MargoAvatar } from '@/components/margo-avatar'
 import type { EchoSongPayload } from '@/lib/echoes/types'
 import { openFeedEchoesSet } from '@/lib/feed-mix-nav'
+import { useTapAck } from '@/hooks/use-tap-ack'
 import { UI_FONT } from '@/lib/fonts'
 
 const font = UI_FONT
@@ -27,6 +28,7 @@ type EchoSetCard = {
 
 export function FeedEchoesTab() {
   const router = useRouter()
+  const { ack, isAcked } = useTapAck()
   const [sets, setSets] = useState<EchoSetCard[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -72,7 +74,13 @@ export function FeedEchoesTab() {
     <main className="margo-feed-column margo-feed-echoes-tab" style={{ padding: '12px 14px var(--margo-page-padding-bottom)' }}>
       {activeSet ? (
         <article className="margo-feed-echoes-tab__card margo-mix-press">
-          <button type="button" className="margo-feed-echoes-tab__card-main" onClick={() => openSet(activeSet.id)}>
+          <button
+            type="button"
+            className="margo-feed-echoes-tab__card-main"
+            data-margo-acked={isAcked(activeSet.id) ? 1 : undefined}
+            onPointerDown={() => ack(activeSet.id)}
+            onClick={() => openSet(activeSet.id)}
+          >
             <p className="margo-feed-echoes-tab__kicker" style={{ fontFamily: font }}>
               Echoes
             </p>
@@ -120,6 +128,8 @@ export function FeedEchoesTab() {
           key={set.id}
           type="button"
           className="margo-feed-echoes-tab__link margo-mix-press"
+          data-margo-acked={isAcked(set.id) ? 1 : undefined}
+          onPointerDown={() => ack(set.id)}
           onClick={() => openSet(set.id)}
         >
           {set.title}

@@ -83,7 +83,14 @@
   --feed-type-suggestion-lyric: 0.9375rem;
   --feed-type-lyric-hero: 1.5rem;
   --margo-feed-vibe-bar-h: 40px;
-  --margo-feed-tab-bar-h: 40px;
+  /* 44px = minimum touch target; every fixed offset below reads this var. */
+  --margo-feed-tab-bar-h: 44px;
+  /* Layer scale inside the feed pane (single source, no ad-hoc stacking).
+     Nav chrome outside the pane (z 300) always stays on top. */
+  --margo-z-feed-vibe: 40;
+  --margo-z-feed-tabs: 41;
+  --margo-z-feed-mix: 90;
+  --margo-z-feed-mix-search: 60;
 }
 @media (min-width: 640px) {
   :root {
@@ -1417,7 +1424,7 @@ html[data-margo-stage] .margo-footer {
   top: var(--nav-height, 72px);
   left: 0;
   right: 0;
-  z-index: 41;
+  z-index: var(--margo-z-feed-tabs);
   height: var(--margo-feed-tab-bar-h);
   display: flex;
   align-items: stretch;
@@ -1446,6 +1453,7 @@ html[data-margo-stage] .margo-footer {
 }
 .margo-feed-content-tab:active {
   opacity: 0.85;
+  color: var(--gold);
 }
 .margo-feed-content-tab:focus-visible {
   outline: 2px solid var(--gold);
@@ -8372,6 +8380,11 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   cursor: pointer;
   text-decoration: none;
   box-sizing: border-box;
+  transition: transform 0.12s ease, filter 0.12s ease, box-shadow 0.12s ease;
+}
+button.margo-feed-memory-card__action:active:not(:disabled) {
+  transform: scale(0.9);
+  filter: brightness(1.12);
 }
 @media (min-width: 768px) {
   .margo-feed-memory-card {
@@ -9531,8 +9544,12 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: min(52dvh, 420px);
+  /* Always fits between the sticky search field and the bottom chrome
+     (tab bar + mini-player live in --margo-page-bottom). */
+  max-height: clamp(168px, 44dvh, 420px);
   overflow-y: auto;
+  overscroll-behavior: contain;
+  box-sizing: border-box;
 }
 .margo-echoes-search-panel__pick {
   width: 100%;
@@ -9590,9 +9607,24 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 }
 .margo-mix-press {
   transition: transform 0.12s ease, opacity 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 .margo-mix-press:active {
   transform: scale(0.985);
+}
+/* Pointerdown acknowledgement: visible before click/route, held briefly so
+   a second tap reads as already-handled instead of dead. */
+.margo-mix-press[data-margo-acked='1'] {
+  border-color: var(--gold-border);
+  box-shadow: 0 0 0 1px var(--gold-border), 0 0 0 5px color-mix(in srgb, var(--gold) 14%, transparent);
+}
+.margo-mix-press[data-margo-acked='1'] .margo-feed-memory-card__action {
+  transform: scale(0.9);
+  filter: brightness(1.12);
+}
+[data-margo-acked='1'] {
+  background-color: color-mix(in srgb, var(--gold) 10%, transparent);
 }
 .margo-live-new-shine {
   outline: 2px solid var(--gold);
@@ -9928,6 +9960,17 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 .margo-echoes-answer {
   max-width: 520px;
   margin: 0 auto;
+}
+/* Search stays pinned below the app nav while picked songs scroll, so
+   results never slide under the nav or the feed tab row. */
+.margo-echoes-answer__search-wrap {
+  position: sticky;
+  top: calc(var(--nav-height, 72px) + 8px);
+  z-index: var(--margo-z-feed-mix-search);
+  background: var(--bg);
+  padding: 8px 0 10px;
+  margin-bottom: 4px;
+  box-shadow: 0 14px 14px -14px rgba(0, 0, 0, 0.55);
 }
 .margo-echoes-answer__head {
   display: flex;
@@ -10287,10 +10330,16 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 .margo-feed-mix-overlay {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  /* Above the Lyrics/Memories/Shorts/Echoes row (41) and vibe bar (40) so
+     nothing in a create / Echoes surface can slide under that row. */
+  z-index: var(--margo-z-feed-mix);
+  isolation: isolate;
   overflow: auto;
+  overscroll-behavior: contain;
   background: var(--bg);
-  padding: calc(var(--nav-height, 72px) + 8px) 16px var(--margo-page-padding-bottom, 96px);
+  padding: calc(var(--nav-height, 72px) + 12px) 16px var(--margo-page-padding-bottom, 96px);
+  scroll-padding-top: calc(var(--nav-height, 72px) + 12px);
+  scroll-padding-bottom: var(--margo-page-padding-bottom, 96px);
   -webkit-overflow-scrolling: touch;
   animation: margo-mix-in 0.16s ease;
 }

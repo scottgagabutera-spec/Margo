@@ -5,6 +5,7 @@ import { useCallback } from 'react'
 import { PlusIcon } from '@/components/icons'
 import { memoryCardCopy, type MemoryPromoKind } from '@/lib/feed-memory-card'
 import { openFeedCreate } from '@/lib/feed-mix-nav'
+import { useTapAck } from '@/hooks/use-tap-ack'
 import { UI_FONT } from '@/lib/fonts'
 
 const font = UI_FONT
@@ -43,6 +44,7 @@ function PromoArt({ kind }: { kind: MemoryPromoKind }) {
 
 export function FeedMemoryPromoCard({ promoKind }: { promoKind: MemoryPromoKind }) {
   const router = useRouter()
+  const { ack, isAcked } = useTapAck()
   const copy = memoryCardCopy(promoKind, { videosSupported: true })
 
   const open = useCallback(() => {
@@ -55,6 +57,9 @@ export function FeedMemoryPromoCard({ promoKind }: { promoKind: MemoryPromoKind 
       data-feed-exit={`create-${promoKind}`}
       role="button"
       tabIndex={0}
+      data-margo-acked={isAcked() ? 1 : undefined}
+      aria-busy={isAcked() || undefined}
+      onPointerDown={() => ack()}
       onClick={open}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {

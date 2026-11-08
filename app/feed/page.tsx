@@ -627,6 +627,7 @@ function FeedPageInner() {
     paintFeedMix(null)
     const params = stripFeedMixParams(applyFeedContentTab(new URLSearchParams(searchParams.toString()), tab))
     const qs = params.toString()
+    if (qs === searchParams.toString()) return
     router.push(qs ? `/feed?${qs}` : '/feed', { scroll: false })
   }
 

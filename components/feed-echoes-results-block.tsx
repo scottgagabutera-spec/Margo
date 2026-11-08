@@ -6,12 +6,14 @@ import { EchoesSongStrip } from '@/components/echoes-song-strip'
 import { MargoAvatar } from '@/components/margo-avatar'
 import type { EchoFeedBlockSnapshot } from '@/lib/echoes/types'
 import { openFeedEchoesPerson, openFeedEchoesSet } from '@/lib/feed-mix-nav'
+import { useTapAck } from '@/hooks/use-tap-ack'
 import { UI_FONT } from '@/lib/fonts'
 
 const font = UI_FONT
 
 export function FeedEchoesResultsBlock({ block }: { block: EchoFeedBlockSnapshot }) {
   const router = useRouter()
+  const { ack, isAcked } = useTapAck()
   const rows = block.preview.slice(0, 2)
 
   const openSet = () => {
@@ -25,7 +27,13 @@ export function FeedEchoesResultsBlock({ block }: { block: EchoFeedBlockSnapshot
   return (
     <article className="margo-feed-echoes-results margo-mix-press" data-feed-exit="echoes-results">
       <header className="margo-feed-echoes-results__head">
-        <button type="button" className="margo-feed-echoes-results__head-main" onClick={openSet}>
+        <button
+          type="button"
+          className="margo-feed-echoes-results__head-main"
+          data-margo-acked={isAcked('set') ? 1 : undefined}
+          onPointerDown={() => ack('set')}
+          onClick={openSet}
+        >
           <p className="margo-feed-echoes-results__label" style={{ fontFamily: font }}>
             Echoes
           </p>
@@ -33,7 +41,14 @@ export function FeedEchoesResultsBlock({ block }: { block: EchoFeedBlockSnapshot
             {block.title}
           </p>
         </button>
-        <button type="button" className="margo-icon-hit-44" aria-label="Open set" onClick={openSet}>
+        <button
+          type="button"
+          className="margo-icon-hit-44"
+          aria-label="Open set"
+          data-margo-acked={isAcked('set') ? 1 : undefined}
+          onPointerDown={() => ack('set')}
+          onClick={openSet}
+        >
           <span className="margo-gold-square-30">
             <ChevronRightIcon size={18} color="var(--bg)" />
           </span>
@@ -45,6 +60,8 @@ export function FeedEchoesResultsBlock({ block }: { block: EchoFeedBlockSnapshot
             <button
               type="button"
               className="margo-feed-echoes-results__person-link"
+              data-margo-acked={isAcked(row.profileId) ? 1 : undefined}
+              onPointerDown={() => ack(row.profileId)}
               onClick={() => openPerson(row.profileId)}
             >
               <div className="margo-feed-echoes-results__identity">

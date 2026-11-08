@@ -86,6 +86,9 @@ function pushFeedSearch(router: AppRouterInstance, params: URLSearchParams) {
     /* */
   }
   const qs = params.toString()
+  // A repeat tap on the same target must not stack a duplicate history
+  // entry (which would make Back need two presses).
+  if (qs === currentFeedSearch().toString()) return
   router.push(qs ? `/feed?${qs}` : '/feed', { scroll: false })
 }
 
