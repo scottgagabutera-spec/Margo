@@ -5,13 +5,18 @@ import { downscaleStageExportCanvas } from '@/lib/moment-export/export-canvas-qu
 import {
   normalizeLine,
   renderMomentToCanvas,
-  SHAPES,
   type NormalizedLine,
 } from '@/lib/moment-export/render-moment'
+import {
+  momentPngOutputPixelSize,
+  momentPngOutputWidthHeight,
+} from '@/lib/moment-export/export-png-output-size'
 
-function exportPixelSize(shapeId: MomentShapeId): { w: number; h: number } {
-  const shape = SHAPES.find((s) => s.id === shapeId) ?? SHAPES[0]
-  return { w: shape.w, h: shape.h }
+export { momentPngOutputPixelSize } from '@/lib/moment-export/export-png-output-size'
+
+function finalizePngExportCanvas(canvas: HTMLCanvasElement, shapeId: MomentShapeId): void {
+  const { w, h } = momentPngOutputWidthHeight(shapeId)
+  downscaleStageExportCanvas(canvas, w, h)
 }
 
 export function downloadCanvas(canvas: HTMLCanvasElement, filename: string): Promise<void> {
@@ -77,7 +82,7 @@ function renderOptionsFromMoment(moment: MargoMoment): {
 
 export async function saveMargoMomentImage(
   moment: MargoMoment,
-  options?: { filename?: string; downscaleToShape?: boolean },
+  options?: { filename?: string },
 ): Promise<void> {
   const normalized = normalizedFromMoment(moment)
   if (normalized.length === 0) return
@@ -88,10 +93,7 @@ export async function saveMargoMomentImage(
     lines: normalized,
     ...renderOpts,
   })
-  if (options?.downscaleToShape) {
-    const { w, h } = exportPixelSize(moment.shapeId)
-    downscaleStageExportCanvas(canvas, w, h)
-  }
+  finalizePngExportCanvas(canvas, moment.shapeId)
 
   const primary = normalized[0]
   const base = normalized.length > 1 ? 'Moment' : slugify(primary.songTitle || '', 'Lyric')
@@ -102,10 +104,7 @@ export async function saveMargoMomentImage(
   await downloadCanvas(canvas, filename)
 }
 
-export async function renderMargoMomentPngFile(
-  moment: MargoMoment,
-  options?: { downscaleToShape?: boolean },
-): Promise<File | null> {
+export async function renderMargoMomentPngFile(moment: MargoMoment): Promise<File | null> {
   if (typeof document === 'undefined') return null
   const normalized = normalizedFromMoment(moment)
   if (normalized.length === 0) return null
@@ -116,10 +115,7 @@ export async function renderMargoMomentPngFile(
     lines: normalized,
     ...renderOpts,
   })
-  if (options?.downscaleToShape) {
-    const { w, h } = exportPixelSize(moment.shapeId)
-    downscaleStageExportCanvas(canvas, w, h)
-  }
+  finalizePngExportCanvas(canvas, moment.shapeId)
 
   const blob = await new Promise<Blob | null>((resolve) => {
     canvas.toBlob((b) => resolve(b), 'image/png')
@@ -137,13 +133,10 @@ export async function renderMargoMomentPngFile(
 export type ShareMomentImageResult = 'shared' | 'failed'
 
 /** Share PNG only — separate from URL share (do not combine url + files). */
-export async function shareMargoMomentImage(
-  moment: MargoMoment,
-  options?: { downscaleToShape?: boolean },
-): Promise<ShareMomentImageResult> {
+export async function shareMargoMomentImage(moment: MargoMoment): Promise<ShareMomentImageResult> {
   if (typeof navigator === 'undefined' || !navigator.share) return 'failed'
 
-  const file = await renderMargoMomentPngFile(moment, options)
+  const file = await renderMargoMomentPngFile(moment)
   if (!file) return 'failed'
 
   if (typeof navigator.canShare === 'function') {
