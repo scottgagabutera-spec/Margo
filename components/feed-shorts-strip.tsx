@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronRightIcon } from '@/components/icons'
 import { MargoSectionHeader } from '@/components/margo-section-header'
@@ -10,19 +9,11 @@ import { getShortsChromeTokens } from '@/lib/shorts-chrome-tokens'
 import { pickShortsLook } from '@/lib/shorts-looks'
 import { utcDayKey } from '@/lib/shorts-shelf-rotation'
 import { LYRIC_FONT, UI_FONT } from '@/lib/fonts'
-import { writeFeedReturnSnapshot } from '@/lib/margo-feed-return'
-import { armFeedStackLeave } from '@/lib/feed-link-leave'
+import { openFeedTab } from '@/lib/feed-mix-nav'
 
 const lyricFont = LYRIC_FONT
 const uiFont = UI_FONT
 
-function shortsHref(index: number) {
-  return `/feed?tab=shorts&shortsAt=${index}`
-}
-
-function shortsTabHref() {
-  return '/feed?tab=shorts'
-}
 
 export function FeedShortsStrip({ tiles }: { tiles: FeedShortsStripTile[] }) {
   const router = useRouter()
@@ -38,10 +29,7 @@ export function FeedShortsStrip({ tiles }: { tiles: FeedShortsStripTile[] }) {
             type="button"
             className="margo-feed-shorts-strip__see-all"
             aria-label="See all Shorts"
-            onClick={() => {
-              armFeedStackLeave('lyrics')
-              router.push(shortsTabHref(), { scroll: false })
-            }}
+            onClick={() => openFeedTab(router, 'shorts')}
           >
             <ChevronRightIcon size={16} color="var(--gold)" />
           </button>
@@ -54,13 +42,10 @@ export function FeedShortsStrip({ tiles }: { tiles: FeedShortsStripTile[] }) {
           const bg = darkenFeedStripTileBg(tokens.progressFill)
           const ink = feedStripTileInk(bg)
           return (
-            <Link
+            <button
+              type="button"
               key={`${tile.songId}-${tile.lineId}`}
-              href={shortsHref(tile.stripIndex)}
-              onClick={() => {
-                armFeedStackLeave('lyrics')
-                writeFeedReturnSnapshot({ shortsAt: tile.stripIndex, tab: 'shorts' })
-              }}
+              onClick={() => openFeedTab(router, 'shorts', { shortsAt: tile.stripIndex })}
               className="margo-feed-shorts-strip__tile"
               style={{
                 background: bg,
@@ -87,17 +72,17 @@ export function FeedShortsStrip({ tiles }: { tiles: FeedShortsStripTile[] }) {
               <p className="margo-feed-shorts-strip__song" style={{ fontFamily: uiFont }}>
                 {tile.songTitle}
               </p>
-            </Link>
+            </button>
           )
         })}
         {Array.from({ length: Math.max(0, 3 - tiles.length) }).map((_, i) => (
           <div key={`pad-${i}`} className="margo-feed-shorts-strip__tile margo-feed-shorts-strip__tile--empty" aria-hidden />
         ))}
-        <Link href={shortsTabHref()} className="margo-feed-shorts-strip__more" aria-label="See all Shorts">
+        <button type="button" className="margo-feed-shorts-strip__more" aria-label="See all Shorts" onClick={() => openFeedTab(router, 'shorts')}>
           <span className="margo-feed-shorts-strip__more-btn">
             <ChevronRightIcon size={18} color="var(--gold)" />
           </span>
-        </Link>
+        </button>
       </div>
     </section>
   )

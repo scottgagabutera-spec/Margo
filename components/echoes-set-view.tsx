@@ -1,14 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { EditIcon } from '@/components/icons'
 import { MargoAvatar } from '@/components/margo-avatar'
 import type { EchoAnswerRow } from '@/lib/echoes/types'
 import { EchoesSongPreview } from '@/components/echoes-song-preview'
-import { leaveFeedTo } from '@/lib/feed-exit-nav'
-import { armFeedStackLeave } from '@/lib/feed-link-leave'
+import { feedReturnFallbackHref } from '@/lib/feed-exit-nav'
+import { openFeedEchoesAnswer, openFeedEchoesPerson } from '@/lib/feed-mix-nav'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useRegisterNavBack } from '@/components/nav-back'
 import { UI_FONT } from '@/lib/fonts'
@@ -46,15 +45,11 @@ export function EchoesSetView({ setId }: { setId: string }) {
     void load()
   }, [load])
 
-  useRegisterNavBack({ preferHistory: true, fallbackHref: '/feed?tab=echoes' })
+  useRegisterNavBack({ preferHistory: true, fallbackHref: feedReturnFallbackHref() })
 
   const startAnswer = () => {
     if (!requireAuth()) return
-    leaveFeedTo(
-      router,
-      `/echoes/answer?questionId=${encodeURIComponent(questionId)}&setId=${encodeURIComponent(setId)}`,
-      'echoes',
-    )
+    openFeedEchoesAnswer(router, questionId, setId)
   }
 
   const countLabel = answerCount === 1 ? '1 answer' : `${answerCount} answers`
@@ -100,10 +95,10 @@ export function EchoesSetView({ setId }: { setId: string }) {
         <ul className="margo-echoes-set-page__list">
           {rows.map((row) => (
             <li key={row.answerId} className="margo-echoes-set-page__row">
-              <Link
-                href={`/echoes/${setId}/${row.profileId}`}
+              <button
+                type="button"
                 className="margo-echoes-set-page__row-link"
-                onClick={() => armFeedStackLeave('echoes')}
+                onClick={() => openFeedEchoesPerson(router, setId, row.profileId)}
               >
                 <MargoAvatar size="md" imageUrl={row.avatarUrl} username={row.username} displayName={row.displayName} />
                 <div className="margo-echoes-set-page__body">
@@ -115,7 +110,7 @@ export function EchoesSetView({ setId }: { setId: string }) {
                   </span>
                   <EchoesSongPreview payload={row.payload} />
                 </div>
-              </Link>
+              </button>
             </li>
           ))}
         </ul>

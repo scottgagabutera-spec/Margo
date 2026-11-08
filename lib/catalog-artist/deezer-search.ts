@@ -23,11 +23,7 @@ export async function searchDeezerArtists(query: string, limit = 8): Promise<Dee
       const id = row.id
       const name = String(row.name || '').trim()
       if (!id || !name) return null
-      const picture =
-        (row.picture_xl as string) ||
-        (row.picture_big as string) ||
-        (row.picture_medium as string) ||
-        null
+      const picture = pickDeezerPicture(row)
       return {
         source: 'deezer' as const,
         sourceId: String(id),
@@ -36,4 +32,22 @@ export async function searchDeezerArtists(query: string, limit = 8): Promise<Dee
       }
     })
     .filter((x): x is DeezerArtistHit => !!x)
+}
+
+function pickDeezerPicture(row: Record<string, unknown>): string | null {
+  const medium = typeof row.picture_medium === 'string' ? row.picture_medium.trim() : ''
+  const big = typeof row.picture_big === 'string' ? row.picture_big.trim() : ''
+  const xl = typeof row.picture_xl === 'string' ? row.picture_xl.trim() : ''
+  return medium || big || xl || null
+}
+
+export async function fetchDeezerArtistPicture(sourceId: string): Promise<string | null> {
+  const id = sourceId.trim()
+  if (!id) return null
+  const r = await fetchWithTimeout(`https://api.deezer.com/artist/${encodeURIComponent(id)}`, {
+    timeoutMs: DEEZER_TIMEOUT_MS,
+  })
+  if (!r.ok) return null
+  const row = (await r.json()) as Record<string, unknown>
+  return pickDeezerPicture(row)
 }

@@ -95,12 +95,7 @@ const EXITS: ExitCase[] = [
   { name: 'echoes chevron', locator: '[data-feed-exit="echoes-results"] button[aria-label="Open set"]' },
   { name: 'echoes person', locator: '[data-feed-exit="echoes-results"] .margo-feed-echoes-results__person-link' },
   { name: 'echoes song', locator: '[data-feed-exit="echoes-results"] .margo-echoes-song-strip__tile' },
-  {
-    name: 'shorts tile',
-    locator: '.margo-feed-shorts-strip__tile',
-    note: 'in-tab sheet',
-    skipY: true,
-  },
+  { name: 'shorts tile', locator: '.margo-feed-shorts-strip__tile' },
 ]
 
 test.describe('feed return position signed out @390', () => {
@@ -115,15 +110,7 @@ test.describe('feed return position signed out @390', () => {
       const hit = page.locator(exit.locator).first()
       await expect(hit).toBeVisible({ timeout: 15_000 })
       await hit.click()
-      await page.waitForURL((url) => !url.includes('/feed?') || url.pathname !== '/feed', { timeout: 12_000 }).catch(() => {})
-      await page.waitForTimeout(400)
-      if (exit.note === 'in-tab sheet' && page.url().includes('/feed')) {
-        const close = page.getByRole('button', { name: /Close/i }).first()
-        if (await close.isVisible().catch(() => false)) await close.click()
-        await page.waitForTimeout(350)
-        assertPoseClose(before, await captureFeedPose(page), { skipTab: true, skipY: exit.skipY })
-        return
-      }
+      await page.waitForTimeout(500)
       await restoreAndAssert(page, before, 'chrome', { skipY: exit.skipY })
     })
 
@@ -132,15 +119,7 @@ test.describe('feed return position signed out @390', () => {
       const hit = page.locator(exit.locator).first()
       await expect(hit).toBeVisible({ timeout: 15_000 })
       await hit.click()
-      await page.waitForURL((url) => !url.includes('/feed?') || url.pathname !== '/feed', { timeout: 12_000 }).catch(() => {})
-      await page.waitForTimeout(400)
-      if (exit.note === 'in-tab sheet' && page.url().includes('/feed')) {
-        const close = page.getByRole('button', { name: /Close/i }).first()
-        if (await close.isVisible().catch(() => false)) await close.click()
-        await page.waitForTimeout(350)
-        assertPoseClose(before, await captureFeedPose(page), { skipTab: true, skipY: exit.skipY })
-        return
-      }
+      await page.waitForTimeout(500)
       await restoreAndAssert(page, before, 'history', { skipY: exit.skipY })
     })
   }

@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useCallback } from 'react'
 import { PlusIcon } from '@/components/icons'
 import { memoryCardCopy, type MemoryPromoKind } from '@/lib/feed-memory-card'
-import { memoryPromoHref, navigateFromFeed } from '@/lib/feed-stack-nav'
+import { openFeedCreate } from '@/lib/feed-mix-nav'
 import { UI_FONT } from '@/lib/fonts'
 
 const font = UI_FONT
@@ -25,15 +25,13 @@ function PromoArt({ kind }: { kind: MemoryPromoKind }) {
     return (
       <svg className="margo-feed-memory-card__art-svg" viewBox="0 0 48 48" aria-hidden>
         <rect x="10" y="8" width="28" height="32" rx="6" fill="none" stroke="var(--gold)" strokeWidth="1.5" />
-        <text x="16" y="22" fill="var(--gold)" fontSize="18" fontFamily="Georgia, serif">"</text>
+        <text x="16" y="22" fill="var(--gold)" fontSize="18" fontFamily="Georgia, serif">
+          "
+        </text>
         <path d="M16 28 H34 M16 33 H30" stroke="var(--gold)" strokeWidth="1.2" strokeLinecap="round" opacity="0.85" />
       </svg>
     )
   }
-  return <CompositeArt />
-}
-
-function CompositeArt() {
   return (
     <div className="margo-feed-memory-card__art-composite" aria-hidden>
       <span className="margo-feed-memory-card__composite-photo" />
@@ -43,24 +41,13 @@ function CompositeArt() {
   )
 }
 
-export function FeedMemoryPromoCard({
-  promoKind,
-  hrefOverride,
-}: {
-  promoKind: MemoryPromoKind
-  /** Playwright fixture only — keeps stack depth shallow without auth. */
-  hrefOverride?: string
-}) {
+export function FeedMemoryPromoCard({ promoKind }: { promoKind: MemoryPromoKind }) {
   const router = useRouter()
   const copy = memoryCardCopy(promoKind, { videosSupported: true })
-  const href = hrefOverride ?? memoryPromoHref(promoKind)
 
-  const open = useCallback(
-    (event?: React.MouseEvent) => {
-      navigateFromFeed(router, href, 'lyrics', event)
-    },
-    [href, router],
-  )
+  const open = useCallback(() => {
+    openFeedCreate(router, promoKind)
+  }, [promoKind, router])
 
   return (
     <article

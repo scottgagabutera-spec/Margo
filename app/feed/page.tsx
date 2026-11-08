@@ -44,6 +44,7 @@ import {
   readFeedReturnSnapshot,
   clearFeedReturnPending,
   shouldReapplyFeedReturn,
+  persistFeedReturnBeforeLeave,
 } from '@/lib/margo-feed-return'
 import { FeedPeopleStrip } from '@/components/feed-people-strip'
 import { FeedMemoryPromoCard } from '@/components/feed-memory-promo-card'
@@ -72,6 +73,8 @@ import {
 } from '@/lib/e2e-shorts-fixture'
 import { shouldUseE2eFeedReturnFixture } from '@/lib/e2e-feed-return-fixture'
 import { E2eFeedReturnFixture } from '@/components/e2e-feed-return-fixture'
+import { parseFeedMixSurface, stripFeedMixParams } from '@/lib/feed-mix-nav'
+import { FeedMixOverlay } from '@/components/feed-mix-overlay'
 
 const supabase = createClient()
 
@@ -600,10 +603,13 @@ function FeedPageInner() {
   }
 
   const handleFeedContentTab = (tab: 'lyrics' | 'memories' | 'shorts' | 'echoes') => {
-    const params = applyFeedContentTab(new URLSearchParams(searchParams.toString()), tab)
+    if (feedContentTab === 'lyrics' && tab !== 'lyrics') persistFeedReturnBeforeLeave('lyrics')
+    const params = stripFeedMixParams(applyFeedContentTab(new URLSearchParams(searchParams.toString()), tab))
     const qs = params.toString()
     router.push(qs ? `/feed?${qs}` : '/feed', { scroll: false })
   }
+
+  const mixSurface = useMemo(() => parseFeedMixSurface(searchParams), [searchParams])
 
   const handleSelectVibe = (vibe: string) => {
     const next = selectedVibe === vibe ? 'ALL' : vibe
@@ -831,6 +837,7 @@ function FeedPageInner() {
           shortsAvailable={resolvedShortsMeetsMinimum}
         />
         <E2eFeedReturnFixture />
+        {mixSurface ? <FeedMixOverlay surface={mixSurface} /> : null}
       </div>
     )
   }
@@ -1147,6 +1154,7 @@ function FeedPageInner() {
           }}
         />
       )}
+      {mixSurface ? <FeedMixOverlay surface={mixSurface} /> : null}
     </StoryRingProvider>
   )
 }

@@ -55,6 +55,7 @@ export function FavoriteArtistAvatar({
       className="margo-profile-favorite-artists__art"
       decoding="async"
       loading={priority ? 'eager' : 'lazy'}
+      referrerPolicy="no-referrer"
       onError={onError}
     />
   )

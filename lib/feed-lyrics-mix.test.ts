@@ -20,7 +20,7 @@ const mockEchoes = {
   preview: [],
 }
 
-test('two lyric posts insert people after first not before', () => {
+test('two lyric posts have no mix blocks yet', () => {
   const rows = buildFeedLyricsRows({
     lyricPosts: [lyricPost('a'), lyricPost('b')],
     memories: [],
@@ -30,10 +30,7 @@ test('two lyric posts insert people after first not before', () => {
     echoesBlock: mockEchoes,
     shortsStripAvailable: false,
   })
-  const firstPostIdx = rows.findIndex((r) => r.kind === 'post')
-  const peopleIdx = rows.findIndex((r) => r.kind === 'people')
-  assert.ok(firstPostIdx >= 0)
-  assert.ok(peopleIdx > firstPostIdx)
+  assert.equal(rows.filter((r) => r.kind !== 'post').length, 0)
 })
 
 test('zero lyric posts shows echoes ask when snapshot exists', () => {
@@ -49,15 +46,18 @@ test('zero lyric posts shows echoes ask when snapshot exists', () => {
   assert.equal(rows.some((r) => r.kind === 'echoes-ask'), true)
 })
 
-test('signed out short feed has no memory promos', () => {
+test('four lyric posts insert memories after third then people', () => {
   const rows = buildFeedLyricsRows({
-    lyricPosts: Array.from({ length: 5 }, (_, i) => lyricPost(`p${i}`)),
-    memories: [],
+    lyricPosts: Array.from({ length: 4 }, (_, i) => lyricPost(`p${i}`)),
+    memories: [{ id: 'm1' } as never],
     peoplePool: [{ id: 'u1', username: 'u', displayName: 'U', avatarUrl: null }],
     signedIn: false,
     promoAnchor: 0,
     echoesBlock: mockEchoes,
     shortsStripAvailable: false,
   })
-  assert.equal(rows.some((r) => r.kind === 'memory-promo'), false)
+  const table = rows
+    .map((r) => r.kind)
+    .filter((k) => k !== 'post')
+  assert.deepEqual(table, ['memories-row', 'people'])
 })

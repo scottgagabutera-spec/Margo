@@ -10,26 +10,35 @@ export type FeedBlockKind =
   | 'shorts'
   | 'story'
 
+/**
+ * Lyric-feed mix after the memories row (which is fixed after lyric 3).
+ * Order is engagement strategy: graph → easiest create → story → question →
+ * full create → shorts → answers, then loop.
+ */
 export const FEED_BLOCK_CYCLE_SIGNED_IN: FeedBlockKind[] = [
   'people',
-  'shorts',
+  'pictures',
+  'story',
   'echoes-ask',
   'memory',
+  'shorts',
   'echoes-results',
-  'story',
-  'pictures',
 ]
 
 export const FEED_BLOCK_CYCLE_SIGNED_OUT: FeedBlockKind[] = [
   'people',
-  'shorts',
-  'echoes-ask',
-  'echoes-results',
-  'story',
   'pictures',
+  'story',
+  'echoes-ask',
+  'memory',
+  'shorts',
+  'echoes-results',
 ]
 
-const FIRST_PASS_ORDINALS = [1, 2, 3, 4, 5, 6, 7] as const
+/** Shared memories sit after the third lyric, never as the opening block. */
+export const FEED_MEMORIES_AFTER_LYRIC = 3
+
+const FIRST_PASS_CYCLE_ORDINALS = [4, 5, 6, 7, 8] as const
 const LATE_REPEAT_START = 11
 const LATE_REPEAT_STEP = 4
 
@@ -43,7 +52,7 @@ function feedCycle(signedIn: boolean): FeedBlockKind[] {
 
 export function feedBlockSlots(nonReplayTotal: number): number[] {
   const slots: number[] = []
-  for (const o of FIRST_PASS_ORDINALS) {
+  for (const o of FIRST_PASS_CYCLE_ORDINALS) {
     if (o <= nonReplayTotal) slots.push(o)
   }
   for (let o = LATE_REPEAT_START; o <= nonReplayTotal; o += LATE_REPEAT_STEP) {
@@ -83,7 +92,16 @@ export function planFeedBlocks(input: {
     return planned
   }
 
-  pushStart('memories-row')
+  if (nonReplayTotal >= FEED_MEMORIES_AFTER_LYRIC) {
+    planned.push({
+      placement: 'after',
+      lyricOrdinal: FEED_MEMORIES_AFTER_LYRIC,
+      kind: 'memories-row',
+      sequenceStep,
+      key: `feed-block-memories-row-${sequenceStep}`,
+    })
+    sequenceStep += 1
+  }
 
   const slots = feedBlockSlots(nonReplayTotal)
   let cycleStep = 0

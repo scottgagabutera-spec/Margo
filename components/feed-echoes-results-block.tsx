@@ -5,7 +5,7 @@ import { ChevronRightIcon } from '@/components/icons'
 import { EchoesSongStrip } from '@/components/echoes-song-strip'
 import { MargoAvatar } from '@/components/margo-avatar'
 import type { EchoFeedBlockSnapshot } from '@/lib/echoes/types'
-import { leaveFeedTo } from '@/lib/feed-exit-nav'
+import { openFeedEchoesPerson, openFeedEchoesSet } from '@/lib/feed-mix-nav'
 import { UI_FONT } from '@/lib/fonts'
 
 const font = UI_FONT
@@ -15,16 +15,11 @@ export function FeedEchoesResultsBlock({ block }: { block: EchoFeedBlockSnapshot
   const rows = block.preview.slice(0, 2)
 
   const openSet = () => {
-    leaveFeedTo(router, `/echoes/${block.setId}`, 'lyrics')
+    openFeedEchoesSet(router, block.setId)
   }
 
   const openPerson = (profileId: string) => {
-    leaveFeedTo(router, `/echoes/${block.setId}/${profileId}`, 'lyrics')
-  }
-
-  const openSong = (songId: string | null) => {
-    if (!songId) return
-    leaveFeedTo(router, `/song/${encodeURIComponent(songId)}`, 'lyrics')
+    openFeedEchoesPerson(router, block.setId, profileId)
   }
 
   return (
@@ -61,7 +56,7 @@ export function FeedEchoesResultsBlock({ block }: { block: EchoFeedBlockSnapshot
                   {row.timeLabel}
                 </span>
               </div>
-              <EchoesSongStrip payload={row.payload} onSongTap={openSong} />
+              <EchoesSongStrip payload={row.payload} onSongTap={() => openPerson(row.profileId)} />
             </button>
           </li>
         ))}

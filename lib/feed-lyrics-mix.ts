@@ -81,7 +81,7 @@ function canMaterialize(kind: FeedBlockKind, ctx: BlockCtx): boolean {
     case 'pictures':
     case 'story':
     case 'memory':
-      return ctx.signedIn
+      return true
     case 'memories-row':
       return ctx.memories.length > ctx.memIdx
     case 'people':
@@ -184,13 +184,11 @@ export function buildFeedLyricsRows(input: {
   })
 
   const emitPlanned = (planned: FeedPlannedBlock) => {
-    if (planned.placement === 'start') {
-      const result = materializeBlock(planned.kind, [planned.kind], planned.key, ctxBase())
-      memIdx += result.consumedMemories
-      if (result.row) out.push(result.row)
-      return
-    }
-    const result = materializeBlock(planned.kind, cycleFor(signedIn), planned.key, ctxBase())
+    const cycle =
+      planned.placement === 'start' || planned.kind === 'memories-row'
+        ? [planned.kind]
+        : cycleFor(signedIn)
+    const result = materializeBlock(planned.kind, cycle, planned.key, ctxBase())
     memIdx += result.consumedMemories
     if (result.row) out.push(result.row)
   }

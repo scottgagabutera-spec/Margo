@@ -103,8 +103,15 @@ export function FeedPeopleStrip({
     <div className="margo-feed-people-strip margo-pressable-surface" data-feed-exit="people">
       <MargoSectionHeader
         title="Who to follow"
-        actionHref="/search?scope=people"
-        actionLabel="See all"
+        action={
+          <button
+            type="button"
+            className="margo-section-header__action"
+            onClick={() => leaveFeedTo(router, '/search?scope=people', 'lyrics')}
+          >
+            See all
+          </button>
+        }
       />
       <div className="margo-feed-people-strip__row">
         {people.map((p) => (

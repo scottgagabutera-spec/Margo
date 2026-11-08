@@ -28,12 +28,12 @@ function resolveCatalogArtistArtwork(opts: {
   if (opts.artworkKey) {
     return {
       artworkUrl: publicCatalogMediaUrl(opts.artworkKey),
-      previewArtworkUrl: null,
+      previewArtworkUrl: opts.deezerPreview,
     }
   }
-  if (catalogArtistDeezerR2IngestEnabled()) {
+  if (opts.deezerPreview) {
     return {
-      artworkUrl: null,
+      artworkUrl: opts.deezerPreview,
       previewArtworkUrl: opts.deezerPreview,
     }
   }

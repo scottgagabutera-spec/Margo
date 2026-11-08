@@ -94,6 +94,10 @@ export function EchoesAnswerFlow() {
 
   const pickedKeys = useMemo(() => new Set(picked.map((p) => songKey(p))), [picked])
   const cancel = useCallback(() => {
+    if (typeof window !== 'undefined' && window.location.pathname.split('?')[0] === '/feed') {
+      window.history.back()
+      return
+    }
     const resume = readMargoReturn()
     clearMargoReturn()
     if (resume?.href) {

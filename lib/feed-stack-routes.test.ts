@@ -9,4 +9,5 @@ test('feed stack paths include echoes and profile', () => {
   assert.equal(isFeedStackPath('/feed'), false)
   assert.equal(isFeedStackPath('/discover'), false)
   assert.equal(isFeedStackPath('/e2e/feed-stack-depth'), true)
+  assert.equal(isFeedStackPath('/search'), true)
 })

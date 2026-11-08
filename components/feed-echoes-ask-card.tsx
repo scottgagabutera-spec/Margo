@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { EditIcon } from '@/components/icons'
 import type { EchoFeedBlockSnapshot } from '@/lib/echoes/types'
-import { leaveFeedTo } from '@/lib/feed-exit-nav'
+import { openFeedEchoesAnswer } from '@/lib/feed-mix-nav'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { UI_FONT } from '@/lib/fonts'
 
@@ -15,11 +15,7 @@ export function FeedEchoesAskCard({ block, signedIn }: { block: EchoFeedBlockSna
 
   const startAnswer = () => {
     if (!requireAuth()) return
-    leaveFeedTo(
-      router,
-      `/echoes/answer?questionId=${encodeURIComponent(block.questionId)}&setId=${encodeURIComponent(block.setId)}`,
-      'lyrics',
-    )
+    openFeedEchoesAnswer(router, block.questionId, block.setId)
   }
 
   return (

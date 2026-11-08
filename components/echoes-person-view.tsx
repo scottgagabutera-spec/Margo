@@ -7,6 +7,7 @@ import { MargoAvatar } from '@/components/margo-avatar'
 import type { EchoAnswerRow, EchoSongPayloadItem } from '@/lib/echoes/types'
 import { echoTimeChoiceLabel } from '@/lib/echoes/time-choice'
 import { useRegisterNavBack } from '@/components/nav-back'
+import { feedReturnFallbackHref } from '@/lib/feed-exit-nav'
 import { playFull, togglePlayPause } from '@/lib/audio-engine'
 import { useIsPlaying } from '@/hooks/useAudioEngine'
 import { UI_FONT } from '@/lib/fonts'
@@ -44,7 +45,7 @@ export function EchoesPersonView({ setId, profileId }: { setId: string; profileI
     void load()
   }, [load])
 
-  useRegisterNavBack({ preferHistory: true, fallbackHref: `/echoes/${setId}` })
+  useRegisterNavBack({ preferHistory: true, fallbackHref: feedReturnFallbackHref() })
 
   const playAll = () => {
     const songs = row?.payload.songs ?? []
