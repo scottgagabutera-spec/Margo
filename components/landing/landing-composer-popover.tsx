@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react'
 import { useEffect } from 'react'
 
-type Align = 'left' | 'format' | 'right'
+type Align = 'left' | 'format' | 'right' | 'full'
 
 export function LandingComposerPopoverBackdrop({ onClose }: { onClose: () => void }) {
   return (

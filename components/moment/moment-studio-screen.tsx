@@ -28,6 +28,7 @@ export interface MomentStudioScreenProps {
   onShapeChange: (id: MomentShapeId) => void
   vibeLabel: string | null
   suggestedVibeLabel?: string | null
+  vibeUserPicked?: boolean
   vibeOptions: string[]
   onVibeSelect: (label: string) => void
   previewLyric: string
@@ -61,6 +62,11 @@ export interface MomentStudioScreenProps {
     | 'shapeId'
     | 'onShapeChange'
     | 'hasLyric'
+    | 'vibeLabel'
+    | 'suggestedVibeLabel'
+    | 'vibeOptions'
+    | 'onVibeSelect'
+    | 'vibeUserPicked'
   >
   sourceCaption?: string | null
   onBack?: () => void
@@ -81,6 +87,7 @@ export function MomentStudioScreen({
   onShapeChange,
   vibeLabel,
   suggestedVibeLabel,
+  vibeUserPicked = false,
   vibeOptions,
   onVibeSelect,
   previewLyric,
@@ -199,6 +206,11 @@ export function MomentStudioScreen({
                 signedIn={signedIn}
                 onPost={onPost}
                 posting={posting}
+                vibeLabel={vibeLabel}
+                suggestedVibeLabel={suggestedVibeLabel}
+                vibeOptions={vibeOptions}
+                onVibeSelect={onVibeSelect}
+                vibeUserPicked={vibeUserPicked}
                 {...calmToolbar}
               />
             </div>

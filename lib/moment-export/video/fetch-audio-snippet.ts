@@ -18,6 +18,28 @@ export function trimAudioBuffer(
   return out
 }
 
+const RANGE_BYTES_PER_SEC = 20_000
+
+async function fetchAudioArrayBuffer(
+  fetchUrl: string,
+  startSec: number,
+  endSec: number,
+  signal?: AbortSignal,
+): Promise<ArrayBuffer> {
+  const padSec = 1.5
+  const rangeStart = Math.max(0, Math.floor((startSec - padSec) * RANGE_BYTES_PER_SEC))
+  const rangeEnd = Math.ceil((endSec + padSec) * RANGE_BYTES_PER_SEC)
+  const rangeHeader = `bytes=${rangeStart}-${rangeEnd}`
+  let res = await fetch(fetchUrl, { signal, headers: { Range: rangeHeader } })
+  if (res.status === 416 || res.status === 404) {
+    res = await fetch(fetchUrl, { signal })
+  }
+  if (!res.ok && res.status !== 206) {
+    throw new Error(`Could not load audio for video export (${res.status})`)
+  }
+  return res.arrayBuffer()
+}
+
 export async function fetchAndDecodeAudioSnippet(
   audioUrl: string,
   startSec: number,
@@ -26,15 +48,13 @@ export async function fetchAndDecodeAudioSnippet(
 ): Promise<AudioBuffer> {
   const { resolveExportMediaFetchUrl } = await import('@/lib/moment-export/video/resolve-export-media-url')
   const fetchUrl = resolveExportMediaFetchUrl(audioUrl)
-  let res: Response
+  let raw: ArrayBuffer
   try {
-    res = await fetch(fetchUrl, { signal })
+    raw = await fetchAudioArrayBuffer(fetchUrl, startSec, endSec, signal)
   } catch (err) {
     const msg = (err as Error)?.message || 'Network error'
     throw new Error(`Could not load audio for video export (${msg})`)
   }
-  if (!res.ok) throw new Error(`Could not load audio for video export (${res.status})`)
-  const raw = await res.arrayBuffer()
   const ctx = new AudioContext()
   try {
     const decoded = await ctx.decodeAudioData(raw.slice(0))

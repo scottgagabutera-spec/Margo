@@ -1227,6 +1227,7 @@ html[data-margo-stage] .margo-footer {
 }
 
 .margo-landing-tool {
+  position: relative;
   width: 40px;
   height: 40px;
   padding: 0;
@@ -1352,9 +1353,157 @@ html[data-margo-stage] .margo-footer {
   right: 0;
 }
 
+.margo-landing-popover--full {
+  left: 0;
+  right: 0;
+  width: 100%;
+}
+
+.margo-landing-tool--detected::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+}
+
+.margo-landing-vibe-popover {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.margo-landing-vibe-popover__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px 0;
+}
+
+.margo-landing-vibe-popover__title {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.margo-landing-vibe-popover__badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--gold-border);
+  color: var(--gold);
+}
+
+.margo-landing-vibe-popover__chips {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.margo-landing-vibe-popover__chip {
+  height: 28px;
+  padding: 0 6px;
+  border-radius: 10px;
+  border: 1px solid var(--border-hi);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.margo-landing-vibe-popover__chip--on {
+  border-color: var(--gold-border);
+  color: var(--gold);
+}
+
+.margo-landing-popover-colors--labeled {
+  width: auto;
+  gap: 10px;
+}
+
+.margo-landing-popover-colors__pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.margo-landing-popover-colors__name {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.margo-landing-popover-list__row--icon {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.margo-landing-download-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 196px;
+}
+
+.margo-landing-download-pick__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+  padding: 8px 6px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.margo-landing-download-pick__row--on {
+  border-color: var(--gold-border);
+}
+
+.margo-landing-download-pick__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.margo-landing-download-pick__title {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.margo-landing-download-pick__sub {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.margo-landing-download-pick__progress {
+  font-size: 10px;
+  color: var(--gold);
+  max-width: 72px;
+  text-align: right;
+}
+
 @media (min-width: 1024px) {
   .margo-landing-popover--format,
-  .margo-landing-popover--right {
+  .margo-landing-popover--right,
+  .margo-landing-popover--full {
     bottom: auto;
     top: calc(100% + 8px);
   }
