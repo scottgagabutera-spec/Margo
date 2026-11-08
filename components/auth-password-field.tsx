@@ -1,5 +1,6 @@
 'use client'
 
+import '@/components/auth-sheet.css'
 import { useId, useState } from 'react'
 import {
   AUTH_PASSWORD_REQUIREMENTS_SHORT,
@@ -99,7 +100,7 @@ export function AuthPasswordField({
   error,
   showRequirements = true,
   showMeter = true,
-  label = 'Password',
+  label = 'PASSWORD',
   forgotPasswordSlot,
   errorAddon,
   matchOk = false,
@@ -115,16 +116,7 @@ export function AuthPasswordField({
 
   return (
     <div style={{ width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-      <label htmlFor={id} style={{
-        display: 'block',
-        fontFamily: ui,
-        fontSize: TYPE.label,
-        color: 'var(--text-muted)',
-        textTransform: 'uppercase',
-        letterSpacing: '1.5px',
-        marginBottom: '8px',
-        fontWeight: 700,
-      }}>
+      <label htmlFor={id} className="margo-auth-field-label" style={{ display: 'block' }}>
         {label}
       </label>
       <div style={{ position: 'relative', width: '100%' }}>
@@ -141,19 +133,14 @@ export function AuthPasswordField({
             scrollAuthFieldIntoView(e.currentTarget)
           }}
           onKeyDown={(e) => e.key === 'Enter' && onEnter?.()}
-          className="margo-auth-input"
+          className="margo-auth-input margo-auth-input--compact"
           style={{
-            width: '100%',
-            height: '44px',
-            padding: '0 44px 0 14px',
-            background: 'var(--surface-2)',
-            border: `1px solid ${error ? 'var(--destructive)' : 'var(--border)'}`,
-            borderRadius: '12px',
+            paddingRight: '40px',
+            border: `1px solid ${error ? 'var(--destructive)' : 'var(--gold-border)'}`,
             color: 'var(--text)',
             fontFamily: ui,
             fontSize: TYPE.body,
             outline: 'none',
-            boxSizing: 'border-box',
           }}
         />
         <button
@@ -165,8 +152,8 @@ export function AuthPasswordField({
             right: '2px',
             top: '50%',
             transform: 'translateY(-50%)',
-            width: '44px',
-            height: '44px',
+            width: '36px',
+            height: '36px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

@@ -1,20 +1,16 @@
 'use client'
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { AuthForm, TermsCompletionForm, type AuthMode } from '@/components/auth-form'
 import { CONSENT_REQUIRED_MESSAGE } from '@/lib/legal/consent-copy'
-import { BackButton } from '@/components/back-button'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useIdentity } from '@/hooks/useIdentity'
 import { completeAuthAfterProfileReady } from '@/lib/auth-welcome-redirect'
 import { AUTH_RETURN_QUERY, sanitizeAuthReturnPath } from '@/lib/auth-return'
 import { completeAuthNavigation } from '@/lib/auth-complete-navigation'
 import { AuthViewportKeyboardInset } from '@/components/auth-viewport'
-import './auth-layout.css'
-
-const lora = 'var(--font-lora), serif'
-const ui = 'var(--font-geist-sans), system-ui, sans-serif'
+import { AuthSheetCard } from '@/components/auth-sheet-frame'
 
 function parseMode(value: string | null): AuthMode {
   return value === 'signup' ? 'signup' : 'signin'
@@ -32,13 +28,14 @@ function parseAuthError(code: string | null): string | null {
 
 export default function SigninPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: '100dvh', background: 'var(--bg)' }} />}>
+    <Suspense fallback={<div className="margo-auth-sheet-page" style={{ background: 'var(--bg)' }} />}>
       <SigninPageInner />
     </Suspense>
   )
 }
 
 function SigninPageInner() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const { user, loading, needsTermsAcceptance } = useAuthGate()
   const { waitUntilReady, loading: identityLoading } = useIdentity()
@@ -46,7 +43,6 @@ function SigninPageInner() {
   const isTermsStep = searchParams.get('step') === 'terms'
   const showTermsCompletion = isTermsStep || (!loading && !!user && needsTermsAcceptance)
   const [mode, setMode] = useState<AuthMode>(initialMode)
-  const [signupCheckEmail, setSignupCheckEmail] = useState(false)
   const returnTo = useMemo(
     () => sanitizeAuthReturnPath(searchParams.get(AUTH_RETURN_QUERY)),
     [searchParams],
@@ -72,68 +68,36 @@ function SigninPageInner() {
     }
   }, [loading, identityLoading, user, needsTermsAcceptance, showTermsCompletion, finishAuth])
 
+  const handleClose = useCallback(() => {
+    const dest = returnTo || '/'
+    router.push(dest)
+  }, [returnTo, router])
+
   return (
-    <div style={{
-      minHeight: '100dvh',
-      background: 'var(--bg)',
-      display: 'flex',
-      flexDirection: 'column',
-    }}>
+    <div className="margo-auth-sheet-page">
       <AuthViewportKeyboardInset />
-      <div className="margo-auth-layout">
-        {!signupCheckEmail || showTermsCompletion ? (
-          <div className="margo-auth-layout__back">
-            <BackButton variant="chrome" preferHistory={false} fallbackHref={returnTo || '/'} />
-          </div>
-        ) : (
-          <div className="margo-auth-layout__back">
-            <BackButton variant="chrome" preferHistory={false} fallbackHref="/signin" />
-          </div>
-        )}
-
-        <aside className="margo-auth-layout__brand">
-          <p style={{
-            fontFamily: lora,
-            fontStyle: 'italic',
-            fontSize: 'clamp(1.6rem, 3vw, 2.1rem)',
-            lineHeight: 1.35,
-            color: 'var(--text)',
-            margin: '0 0 24px',
-          }}>
-            &ldquo;I have got a thousand lives and I live them all for free&rdquo;
-          </p>
-          <p style={{
-            fontFamily: ui,
-            fontSize: '0.68rem',
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            color: 'var(--text-muted)',
-          }}>
-            A Thousand Lives · TryMargo
-          </p>
-        </aside>
-
-        <div className="margo-auth-layout__panel">
-          <main className="margo-auth-layout__main">
-            {showTermsCompletion ? (
-              <TermsCompletionForm
-                externalError={externalError}
-                onSuccess={finishAuth}
-              />
-            ) : (
-              <AuthForm
-                mode={mode}
-                onSwitchMode={setMode}
-                externalError={externalError}
-                oauthReturnTo={returnTo}
-                onSuccess={finishAuth}
-                initialShowEmail={emailConfirmed}
-                confirmedBanner={emailConfirmed ? 'Email confirmed. Sign in.' : null}
-                onSignupCheckEmailView={setSignupCheckEmail}
-              />
-            )}
-          </main>
-        </div>
+      <div className="margo-auth-sheet-page__scrim">
+        <AuthSheetCard
+          onClose={handleClose}
+          aria-label={showTermsCompletion ? 'Finish account' : mode === 'signup' ? 'Create account' : 'Sign in'}
+        >
+          {showTermsCompletion ? (
+            <TermsCompletionForm
+              externalError={externalError}
+              onSuccess={finishAuth}
+            />
+          ) : (
+            <AuthForm
+              mode={mode}
+              onSwitchMode={setMode}
+              externalError={externalError}
+              oauthReturnTo={returnTo}
+              onSuccess={finishAuth}
+              initialShowEmail={emailConfirmed}
+              confirmedBanner={emailConfirmed ? 'Email confirmed. Sign in.' : null}
+            />
+          )}
+        </AuthSheetCard>
       </div>
     </div>
   )
