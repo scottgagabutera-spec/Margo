@@ -229,5 +229,11 @@ export function useMomentStudioExport(
     exportItems,
     shareItems,
     videoReadySheet,
+    videoEnabled,
+    canExportVideo,
+    hasVisualLoopExport,
+    hasPlayableSnippet,
+    onSaveImage: handleSaveImage,
+    onSaveVideo: handleSaveVideo,
   }
 }

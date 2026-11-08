@@ -217,7 +217,11 @@ export async function encodeMargoMomentMp4(
   let artworkImage: Awaited<ReturnType<typeof loadMomentArtwork>>
 
   if (visualLoop) {
-    const loopDurationSec = resolveVisualLoopDurationSec(parseAtmosphere(moment.exportAtmosphereId ?? null))
+    const maxClipSec = moment.exportMaxVideoDurationSec ?? MOMENT_VIDEO_MAX_DURATION_SEC
+    const loopDurationSec = Math.min(
+      resolveVisualLoopDurationSec(parseAtmosphere(moment.exportAtmosphereId ?? null)),
+      maxClipSec,
+    )
     exportTimeline = buildMomentTimeline(moment, loopDurationSec)
     posterRenderSec = completedCardRenderTimeSec(exportTimeline)
     totalDurationSec = loopDurationSec
@@ -236,7 +240,8 @@ export async function encodeMargoMomentMp4(
       ),
     ])
     artworkImage = art
-    const audioDurationSec = Math.min(audioBuffer.duration, MOMENT_VIDEO_MAX_DURATION_SEC)
+    const maxAudioSec = moment.exportMaxVideoDurationSec ?? MOMENT_VIDEO_MAX_DURATION_SEC
+    const audioDurationSec = Math.min(audioBuffer.duration, maxAudioSec)
     exportTimeline = buildMomentTimeline(moment, audioDurationSec)
     posterRenderSec = completedCardRenderTimeSec(exportTimeline)
     totalDurationSec = exportTotalDurationSec(audioDurationSec)

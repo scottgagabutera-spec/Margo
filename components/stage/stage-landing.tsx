@@ -14,7 +14,8 @@ import { useSongAtmosphere } from '@/hooks/useSongAtmosphere'
 import { livingAtmosphereOrNull } from '@/lib/atmosphere'
 import { MomentStudioScreen } from '@/components/moment/moment-studio-screen'
 import { useMomentStudioExport } from '@/hooks/useMomentStudioExport'
-import { parseAtmosphere } from '@/lib/atmosphere'
+import { isLivingAtmosphere, parseAtmosphere } from '@/lib/atmosphere'
+import { MOMENT_LANDING_VIDEO_CLIP_SEC } from '@/lib/moment-export/video/constants'
 import {
   externalSourceLabel,
   LANDING_DRAFT_STORAGE_KEY,
@@ -123,6 +124,7 @@ export function StageLanding() {
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const searchGenRef = useRef(0)
   const emotionAbortRef = useRef<AbortController | null>(null)
+  const lyricVibeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const showLinePicker = !!selectedSong && selectedSong.source === 'margo' && !linePickComplete
   const showWriteLine = !!selectedSong && selectedSong.source !== 'margo' && !showLinePicker
@@ -147,6 +149,7 @@ export function StageLanding() {
         shapeId,
         exportAtmosphereId,
         vibeLabel,
+        exportMaxVideoDurationSec: MOMENT_LANDING_VIDEO_CLIP_SEC,
       })
     : null
   const listen = stageMoment?.listen ?? null
@@ -458,27 +461,13 @@ export function StageLanding() {
   const handleLinePick = useCallback((line: ComposeLyricLine) => {
     applyCatalogPlayback([line])
     const text = (line.text || '').slice(0, 140)
-    if (signedIn) {
-      router.push(buildComposePrefillUrl({
-        lyric: text,
-        song: songName,
-        artist: artistName,
-        artwork: selectedSong?.artwork || null,
-        songId: linkedSongId,
-        audioUrl: linkedAudioUrl,
-        start: line.startSec,
-        end: line.endSec,
-      }))
-      return
-    }
     setSnippetStart(line.startSec)
     setSnippetEnd(line.endSec)
     setLyric(text)
     setLinePickComplete(true)
     revealMoment(text, { animate: true, fetchVibe: true })
   }, [
-    signedIn, router, songName, artistName, selectedSong?.artwork,
-    linkedSongId, linkedAudioUrl, revealMoment, applyCatalogPlayback,
+    songName, artistName, revealMoment, applyCatalogPlayback,
   ])
 
   const handleLineParagraph = useCallback((picked: ComposeLyricLine[]) => {
@@ -487,27 +476,13 @@ export function StageLanding() {
     const capped = joined.slice(0, 280)
     const start = picked[0]?.startSec ?? null
     const end = picked[picked.length - 1]?.endSec ?? null
-    if (signedIn) {
-      router.push(buildComposePrefillUrl({
-        lyric: capped,
-        song: songName,
-        artist: artistName,
-        artwork: selectedSong?.artwork || null,
-        songId: linkedSongId,
-        audioUrl: linkedAudioUrl,
-        start,
-        end,
-      }))
-      return
-    }
     setSnippetStart(start)
     setSnippetEnd(end)
     setLyric(capped)
     setLinePickComplete(true)
     revealMoment(capped, { animate: true, fetchVibe: true })
   }, [
-    signedIn, router, songName, artistName, selectedSong?.artwork,
-    linkedSongId, linkedAudioUrl, revealMoment, applyCatalogPlayback,
+    songName, artistName, revealMoment, applyCatalogPlayback,
   ])
 
   const persistLandingDraft = useCallback(() => {
@@ -553,16 +528,16 @@ export function StageLanding() {
   const runLandingDownload = useCallback(async () => {
     const m = momentForExport(shapeId)
     if (!m) throw new Error('missing moment')
-    await saveMargoMomentImage(m, { downscaleToShape: true })
+    await saveMargoMomentImage(m)
   }, [momentForExport, shapeId])
 
   const runLandingShareNative = useCallback(async (): Promise<'shared' | 'download' | 'failed'> => {
     const m = momentForExport(shapeId)
     if (!m) return 'failed'
-    const shared = await shareMargoMomentImage(m, { downscaleToShape: true })
+    const shared = await shareMargoMomentImage(m)
     if (shared === 'shared') return 'shared'
     try {
-      await saveMargoMomentImage(m, { downscaleToShape: true })
+      await saveMargoMomentImage(m)
       return 'download'
     } catch {
       return 'failed'
@@ -589,16 +564,27 @@ export function StageLanding() {
 
   const handleWriteLineChange = useCallback((value: string) => {
     const next = value.slice(0, 140)
+    const prev = lyric
     setLyric(next)
+    if (lyricVibeTimerRef.current) {
+      clearTimeout(lyricVibeTimerRef.current)
+      lyricVibeTimerRef.current = null
+    }
     if (next.trim().length > 0) {
-      revealMoment(next.trim(), { animate: !momentVisible, fetchVibe: !momentVisible })
+      if (prev !== next) {
+        setVibeUserPicked(false)
+        lyricVibeTimerRef.current = setTimeout(() => {
+          void fetchEmotion(next.trim())
+        }, 650)
+      }
+      revealMoment(next.trim(), { animate: !momentVisible, fetchVibe: false })
     } else {
       setMomentVisible(false)
       setVibeLabel(null)
       setSuggestedVibeLabel(null)
       setVibeUserPicked(false)
     }
-  }, [revealMoment, momentVisible])
+  }, [revealMoment, momentVisible, lyric, fetchEmotion])
 
   const handlePlay = useCallback(() => {
     if (!canPlay || !linkedAudioUrl) return
@@ -637,6 +623,9 @@ export function StageLanding() {
   const showStudioPanel = !!selectedSong && !showLinePicker && (hasMoment || showWriteLine)
   const isMargoCatalog = selectedSong?.source === 'margo' || !!selectedSong?.margoSongId
   const studioExport = useMomentStudioExport(stageMoment, canPlay, isMargoCatalog)
+  const thirdPartyStill = !isMargoCatalog && exportAtmosphereId === 'still'
+  const landingDownloadPopover = !thirdPartyStill
+  const landingVideoSilent = !canPlay && isLivingAtmosphere(exportAtmosphereId)
 
   const handleComposerBack = useCallback(() => {
     if (isMargoCatalog && linePickComplete) {
@@ -779,6 +768,7 @@ export function StageLanding() {
                   onShapeChange={setShapeId}
                   vibeLabel={vibeLabel}
                   suggestedVibeLabel={suggestedVibeLabel}
+                  vibeUserPicked={vibeUserPicked}
                   vibeOptions={STAGE_VIBE_OPTIONS}
                   onVibeSelect={(label) => {
                     setVibeLabel(label)
@@ -802,8 +792,19 @@ export function StageLanding() {
                   onPost={signedIn ? navigateToCompose : undefined}
                   posting={posting}
                   calmToolbar={{
-                    onDownload: runLandingDownload,
-                    onSaveImage: runLandingDownload,
+                    onDownloadImage: async () => {
+                      await runLandingDownload()
+                    },
+                    onDownloadVideo: studioExport.videoEnabled
+                      ? async () => {
+                          await studioExport.onSaveVideo()
+                        }
+                      : undefined,
+                    downloadUsePopover: landingDownloadPopover,
+                    videoExportEnabled: studioExport.videoEnabled,
+                    exportBusy: studioExport.saving || studioExport.shareBusy,
+                    videoProgress: studioExport.videoProgress,
+                    videoSilentLabel: landingVideoSilent,
                     onShareNative: runLandingShareNative,
                     onCopyLink: () => {
                       const url = typeof window !== 'undefined' ? window.location.origin : 'https://trymargo.com'

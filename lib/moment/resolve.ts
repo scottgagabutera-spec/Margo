@@ -84,6 +84,7 @@ export interface ResolveMargoMomentOptions {
   status?: MomentStatus | null
   author?: MargoMomentAuthor | null
   postId?: string | null
+  exportMaxVideoDurationSec?: number | null
 }
 
 function postLineToMomentLine(
@@ -298,6 +299,7 @@ export function resolveMargoMomentFromStage(
     exportAtmosphereId: options.exportAtmosphereId,
     seedKey,
     status: options.status ?? (options.postId ? 'active' : 'ephemeral'),
+    exportMaxVideoDurationSec: options.exportMaxVideoDurationSec ?? null,
   }
 
   moment.listen = resolveMomentListen(moment, {

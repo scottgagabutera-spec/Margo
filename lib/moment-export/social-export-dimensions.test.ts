@@ -11,10 +11,8 @@ test('export hints lock 1:1 and 9:16 preview ratios', () => {
   assert.equal(EXPORT_SHAPE_HINTS.vertical, '9:16')
 })
 
-test('canonical PNG export pixels (single source in render-moment SHAPES)', () => {
-  const squarePx = { w: 1080, h: 1080 }
-  const storyPx = { w: 1080, h: 1920 }
-  assert.equal(squarePx.w, squarePx.h)
-  assert.equal(storyPx.w, 1080)
-  assert.equal(storyPx.h, 1920)
+test('canonical PNG export pixels (single source in export-png-output-size)', async () => {
+  const { momentPngOutputPixelSize } = await import('./export-png-output-size.ts')
+  assert.deepEqual(momentPngOutputPixelSize('square'), { width: 1080, height: 1080 })
+  assert.deepEqual(momentPngOutputPixelSize('vertical'), { width: 1080, height: 1920 })
 })

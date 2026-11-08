@@ -67,6 +67,8 @@ export interface MargoMoment {
   composition?: MomentComposition | null
   /** Resolved listen destination — set when loading/sharing, not stored in DB */
   listen?: MomentListenResolution | null
+  /** Landing / campaign clip cap for MP4 export (seconds). Omit for studio default. */
+  exportMaxVideoDurationSec?: number | null
 }
 
 /** Normalized line shape used by the canvas renderer */

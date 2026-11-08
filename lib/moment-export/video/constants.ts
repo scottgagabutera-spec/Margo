@@ -1,6 +1,8 @@
 export const MOMENT_VIDEO_FPS = 30
 /** Align with audio-engine SNIPPET_MAX_DURATION_SEC — full snippet, not a short clip cap. */
 export const MOMENT_VIDEO_MAX_DURATION_SEC = 30
+/** Landing composer MP4 clip length (with sound or silent loop). */
+export const MOMENT_LANDING_VIDEO_CLIP_SEC = 12
 /** Silent hold of the final lyric frame so social apps pick a readable thumbnail. */
 export const MOMENT_VIDEO_POSTER_HOLD_SEC = 1
 /** Export-only opening hold — complete card before animation (thumbnail-safe). */
