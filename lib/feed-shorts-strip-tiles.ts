@@ -14,6 +14,7 @@ export function feedShortsStripTilesFromClips(clips: LyricMoment[], max = 3): Fe
       songId: clip.songId,
       lineId: clip.lineId,
       line: clip.line,
+      songTitle: clip.songTitle,
       vibe,
       lookId: look.id,
       artworkThumb: thumb,

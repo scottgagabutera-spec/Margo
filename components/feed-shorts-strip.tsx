@@ -3,13 +3,16 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronRightIcon } from '@/components/icons'
+import { MargoSectionHeader } from '@/components/margo-section-header'
 import type { FeedShortsStripTile } from '@/lib/feed-shorts-strip-types'
+import { darkenFeedStripTileBg, feedStripTileInk } from '@/lib/feed-strip-tile-colors'
 import { getShortsChromeTokens } from '@/lib/shorts-chrome-tokens'
 import { pickShortsLook } from '@/lib/shorts-looks'
 import { utcDayKey } from '@/lib/shorts-shelf-rotation'
-import { UI_FONT } from '@/lib/fonts'
+import { LYRIC_FONT, UI_FONT } from '@/lib/fonts'
 
-const font = UI_FONT
+const lyricFont = LYRIC_FONT
+const uiFont = UI_FONT
 
 function shortsHref(index: number) {
   return `/feed?tab=shorts&shortsAt=${index}`
@@ -25,18 +28,35 @@ export function FeedShortsStrip({ tiles }: { tiles: FeedShortsStripTile[] }) {
 
   return (
     <section className="margo-feed-shorts-strip" aria-label="Shorts">
-      <StripHeader font={font} onSeeAll={() => router.push(shortsTabHref())} />
+      <MargoSectionHeader
+        title="Shorts"
+        className="margo-feed-shorts-strip__head"
+        action={
+          <button
+            type="button"
+            className="margo-feed-shorts-strip__see-all"
+            aria-label="See all Shorts"
+            onClick={() => router.push(shortsTabHref())}
+          >
+            <ChevronRightIcon size={16} color="var(--gold)" />
+          </button>
+        }
+      />
       <div className="margo-feed-shorts-strip__row">
         {tiles.map((tile) => {
           const look = pickShortsLook(tile.songId, tile.vibe, day)
           const tokens = getShortsChromeTokens(look.stageThemeId, look.atmosphereId)
+          const bg = darkenFeedStripTileBg(tokens.progressFill)
+          const ink = feedStripTileInk(bg)
           return (
             <Link
               key={`${tile.songId}-${tile.lineId}`}
               href={shortsHref(tile.stripIndex)}
               className="margo-feed-shorts-strip__tile"
               style={{
-                background: tokens.progressFill,
+                background: bg,
+                color: ink,
+                ['--margo-feed-shorts-tile-ink' as string]: ink,
               }}
             >
               {tile.artworkThumb ? (
@@ -44,14 +64,19 @@ export function FeedShortsStrip({ tiles }: { tiles: FeedShortsStripTile[] }) {
                   src={tile.artworkThumb}
                   alt=""
                   className="margo-feed-shorts-strip__thumb"
-                  width={56}
-                  height={56}
+                  width={34}
+                  height={34}
                   loading="lazy"
                   decoding="async"
                 />
-              ) : null}
-              <p className="margo-feed-shorts-strip__line" style={{ fontFamily: font }}>
+              ) : (
+                <span className="margo-feed-shorts-strip__thumb margo-feed-shorts-strip__thumb--empty" aria-hidden />
+              )}
+              <p className="margo-feed-shorts-strip__line" style={{ fontFamily: lyricFont }}>
                 {tile.line}
+              </p>
+              <p className="margo-feed-shorts-strip__song" style={{ fontFamily: uiFont }}>
+                {tile.songTitle}
               </p>
             </Link>
           )
@@ -66,18 +91,5 @@ export function FeedShortsStrip({ tiles }: { tiles: FeedShortsStripTile[] }) {
         </Link>
       </div>
     </section>
-  )
-}
-
-function StripHeader({ font, onSeeAll }: { font: string; onSeeAll: () => void }) {
-  return (
-    <div className="margo-feed-shorts-strip__head">
-      <h2 className="margo-feed-shorts-strip__title" style={{ fontFamily: font }}>
-        Shorts
-      </h2>
-      <button type="button" className="margo-feed-shorts-strip__see-all" aria-label="See all Shorts" onClick={onSeeAll}>
-        <ChevronRightIcon size={16} color="var(--gold)" />
-      </button>
-    </div>
   )
 }

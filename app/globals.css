@@ -8191,18 +8191,11 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   margin: 0 0 14px;
 }
 .margo-feed-shorts-strip__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   margin-bottom: 10px;
 }
-.margo-feed-shorts-strip__title {
-  margin: 0;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--gold);
+.margo-feed-shorts-strip__head .margo-section-header__title {
+  text-transform: none;
+  letter-spacing: 0.02em;
 }
 .margo-feed-shorts-strip__see-all {
   width: var(--margo-touch-min, 44px);
@@ -8226,34 +8219,51 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   border-radius: 12px;
   padding: 8px;
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  align-content: stretch;
   text-decoration: none;
   min-height: 120px;
   max-height: 168px;
   overflow: hidden;
+  gap: 4px;
 }
 .margo-feed-shorts-strip__tile--empty {
   border: 1px dashed var(--border);
   background: transparent;
 }
 .margo-feed-shorts-strip__thumb {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   border-radius: 8px;
   object-fit: cover;
-  margin-bottom: 6px;
+  justify-self: start;
+}
+.margo-feed-shorts-strip__thumb--empty {
+  display: block;
+  background: rgba(255, 255, 255, 0.12);
 }
 .margo-feed-shorts-strip__line {
   margin: 0;
+  align-self: end;
   font-size: 0.62rem;
-  line-height: 1.3;
-  color: rgba(255, 255, 255, 0.92);
+  line-height: 1.32;
+  color: var(--margo-feed-shorts-tile-ink, #f4f1ed);
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+.margo-feed-shorts-strip__song {
+  margin: 0;
+  font-size: 0.52rem;
+  line-height: 1.25;
+  font-weight: 600;
+  color: var(--margo-feed-shorts-tile-ink, #f4f1ed);
+  opacity: 0.88;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .margo-feed-shorts-strip__more {
   aspect-ratio: 9 / 16;
