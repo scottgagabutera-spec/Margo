@@ -1,12 +1,27 @@
 export type MemoryCardKind = 'media' | 'story' | 'listening' | 'create'
 
-export const MEMORY_CARD_ROTATION: MemoryCardKind[] = ['media', 'story', 'listening', 'create']
+/** Fixed order A → B → C → D */
+export const MEMORY_CARD_SEQUENCE: MemoryCardKind[] = ['media', 'story', 'listening', 'create']
 
-export function pickNextMemoryCard(last: MemoryCardKind | null | undefined): MemoryCardKind {
-  if (!last) return MEMORY_CARD_ROTATION[0]!
-  const idx = MEMORY_CARD_ROTATION.indexOf(last)
-  const nextIdx = idx < 0 ? 0 : (idx + 1) % MEMORY_CARD_ROTATION.length
-  return MEMORY_CARD_ROTATION[nextIdx]!
+export function dailyMemoryCardAnchorIndex(userId: string, dayKey: string): number {
+  let h = 2166136261
+  const s = `${userId}\0${dayKey}`
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return (h >>> 0) % MEMORY_CARD_SEQUENCE.length
+}
+
+export function memoryCardKindForSlotIndex(anchorIndex: number, slotIndex: number): MemoryCardKind {
+  return MEMORY_CARD_SEQUENCE[(anchorIndex + slotIndex) % MEMORY_CARD_SEQUENCE.length]!
+}
+
+export function localDayKey(date = new Date()): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 export function memoryCardCopy(

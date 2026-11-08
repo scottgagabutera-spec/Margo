@@ -1,13 +1,10 @@
 import type { ProfileSettingsJson } from '@/lib/welcome-profile-settings'
-import type { MemoryCardKind } from '@/lib/feed-memory-card'
-
 const LOCAL_DISMISS_KEY = 'margo-feed-memory-nudge-dismissed'
 const DISMISS_DAYS = 7
 
 type FeedSettings = {
   memoryNudgeDismissed?: boolean
   memoryCardsHiddenUntil?: string
-  lastMemoryCardKind?: MemoryCardKind
 }
 
 function feedSettings(settings: ProfileSettingsJson | null | undefined): FeedSettings {
@@ -28,12 +25,6 @@ function legacyPermanentDismiss(settings: ProfileSettingsJson | null | undefined
   return feedSettings(settings).memoryNudgeDismissed === true
 }
 
-export function feedLastMemoryCardKind(settings: ProfileSettingsJson | null | undefined): MemoryCardKind | null {
-  const kind = feedSettings(settings).lastMemoryCardKind
-  if (kind === 'media' || kind === 'story' || kind === 'listening' || kind === 'create') return kind
-  return null
-}
-
 export function mergeFeedMemoryCardsDismiss(
   settings: ProfileSettingsJson | null | undefined,
   now = Date.now(),
@@ -46,20 +37,6 @@ export function mergeFeedMemoryCardsDismiss(
       : {}
   feed.memoryCardsHiddenUntil = until
   delete feed.memoryNudgeDismissed
-  base.feed = feed
-  return base
-}
-
-export function mergeFeedLastMemoryCardKind(
-  settings: ProfileSettingsJson | null | undefined,
-  kind: MemoryCardKind,
-): ProfileSettingsJson {
-  const base = settings && typeof settings === 'object' ? { ...settings } : {}
-  const feed =
-    base.feed && typeof base.feed === 'object'
-      ? { ...(base.feed as Record<string, unknown>) }
-      : {}
-  feed.lastMemoryCardKind = kind
   base.feed = feed
   return base
 }

@@ -56,13 +56,11 @@ export function FeedMemoryPromoCard({
   ownMemoryCount,
   onDismiss,
   onOpenListening,
-  onAction,
 }: {
   cardKind: MemoryCardKind
   ownMemoryCount: number
   onDismiss?: () => void
   onOpenListening?: () => void
-  onAction?: (kind: MemoryCardKind) => void
 }) {
   const router = useRouter()
   const copy = memoryCardCopy(cardKind, { ownMemoryCount, videosSupported: true })
@@ -74,7 +72,6 @@ export function FeedMemoryPromoCard({
       : null
 
   const primary = useCallback(() => {
-    onAction?.(cardKind)
     if (cardKind === 'listening') {
       onOpenListening?.()
       return
@@ -88,21 +85,24 @@ export function FeedMemoryPromoCard({
       return
     }
     router.push('/memories/new')
-  }, [cardKind, onAction, onOpenListening, router])
+  }, [cardKind, onOpenListening, router])
 
   const today = new Date()
-  const todayLabel = `Today, ${today.getDate()} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][today.getMonth()]} ${today.getFullYear()}`
+  const todayLabel = `Today, ${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`
+
+  const action =
+    cardKind === 'create' ? (
+      <Link href="/memories/new" className="margo-feed-memory-card__action" aria-label={copy.title}>
+        <PlusIcon size={18} color="var(--bg)" />
+      </Link>
+    ) : (
+      <button type="button" className="margo-feed-memory-card__action" aria-label={copy.title} onClick={primary}>
+        <PlusIcon size={18} color="var(--bg)" />
+      </button>
+    )
 
   return (
     <article className="margo-feed-memory-card">
-      <button
-        type="button"
-        className="margo-feed-memory-card__dismiss"
-        aria-label="Dismiss"
-        onClick={() => onDismiss?.()}
-      >
-        <CloseIcon size={14} color="var(--text-muted)" />
-      </button>
       <div className="margo-feed-memory-card__art" aria-hidden>
         <FeedMemoryCardArt kind={cardKind} />
       </div>
@@ -124,25 +124,17 @@ export function FeedMemoryPromoCard({
           </span>
         ) : null}
       </div>
-      {cardKind === 'create' ? (
-        <Link
-          href="/memories/new"
-          className="margo-feed-memory-card__action"
-          aria-label={copy.title}
-          onClick={() => onAction?.(cardKind)}
-        >
-          <PlusIcon size={18} color="var(--bg)" />
-        </Link>
-      ) : (
+      <div className="margo-feed-memory-card__actions">
         <button
           type="button"
-          className="margo-feed-memory-card__action"
-          aria-label={copy.title}
-          onClick={primary}
+          className="margo-feed-memory-card__dismiss"
+          aria-label="Dismiss"
+          onClick={() => onDismiss?.()}
         >
-          <PlusIcon size={18} color="var(--bg)" />
+          <CloseIcon size={14} color="var(--text-muted)" />
         </button>
-      )}
+        {action}
+      </div>
     </article>
   )
 }

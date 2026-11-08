@@ -36,13 +36,11 @@ import { FeedMemoriesCarousel } from '@/components/feed-memories-carousel'
 import { FeedPeopleStrip } from '@/components/feed-people-strip'
 import { FeedMemoryPromoCard } from '@/components/feed-memory-promo-card'
 import { ListeningMemorySheet } from '@/components/listening-memory-sheet'
-import type { MemoryCardKind } from '@/lib/feed-memory-card'
+import { dailyMemoryCardAnchorIndex, localDayKey } from '@/lib/feed-memory-card'
 import {
   clearLocalFeedMemoryNudgeDismissed,
-  feedLastMemoryCardKind,
   feedMemoryNudgeDismissedFromSettings,
   localFeedMemoryNudgeDismissed,
-  mergeFeedLastMemoryCardKind,
   mergeFeedMemoryCardsDismiss,
   shouldShowMemoryCards,
 } from '@/lib/feed-memory-nudge-prefs'
@@ -467,7 +465,6 @@ function FeedPageInner() {
   const [memoryCardsDismissed, setMemoryCardsDismissed] = useState(false)
   const [memoryCardPrefsReady, setMemoryCardPrefsReady] = useState(false)
   const [ownMemoryCount, setOwnMemoryCount] = useState<number | null>(null)
-  const [lastMemoryCardKind, setLastMemoryCardKind] = useState<MemoryCardKind | null>(null)
   const [listeningSheetOpen, setListeningSheetOpen] = useState(false)
 
   useEffect(() => {
@@ -475,7 +472,6 @@ function FeedPageInner() {
       setOwnMemoryCount(null)
       setMemoryCardsDismissed(false)
       setMemoryCardPrefsReady(false)
-      setLastMemoryCardKind(null)
       return
     }
     let active = true
@@ -499,7 +495,6 @@ function FeedPageInner() {
         clearLocalFeedMemoryNudgeDismissed()
       }
       setMemoryCardsDismissed(dismissed)
-      setLastMemoryCardKind(feedLastMemoryCardKind(snap.settings))
       setMemoryCardPrefsReady(true)
       if (countRes.error) {
         setOwnMemoryCount(0)
@@ -525,47 +520,32 @@ function FeedPageInner() {
     clearLocalFeedMemoryNudgeDismissed()
   }, [user?.id])
 
-  const noteMemoryCardKind = useCallback(
-    (kind: MemoryCardKind) => {
-      setLastMemoryCardKind(kind)
-      if (user?.id) {
-        void persistProfileSettings(user.id, (cur) => mergeFeedLastMemoryCardKind(cur, kind))
-      }
-    },
-    [user?.id],
-  )
+  const memoryCardAnchorIndex = useMemo(() => {
+    if (!user?.id) return 0
+    return dailyMemoryCardAnchorIndex(user.id, localDayKey())
+  }, [user?.id])
+
+  const memoryCardsGateReady = !user?.id || (memoryCardPrefsReady && ownMemoryCount !== null)
 
   const mixedLyricRows = useMemo((): FeedLyricsRow[] => {
     if (feedContentTab !== 'lyrics') return []
+    if (!memoryCardsGateReady) return []
     return buildFeedLyricsRows({
       lyricPosts: lyricPostRows,
       memories: feedMemories,
       peoplePool,
       showMemoryCards,
-      lastMemoryCardKind,
-    }).rows
-  }, [feedContentTab, lyricPostRows, feedMemories, peoplePool, showMemoryCards, lastMemoryCardKind])
-
-  const mixedLastCardKind = useMemo(() => {
-    if (feedContentTab !== 'lyrics') return null
-    return buildFeedLyricsRows({
-      lyricPosts: lyricPostRows,
-      memories: feedMemories,
-      peoplePool,
-      showMemoryCards,
-      lastMemoryCardKind,
-    }).lastMemoryCardKind
-  }, [feedContentTab, lyricPostRows, feedMemories, peoplePool, showMemoryCards, lastMemoryCardKind])
-
-  useEffect(() => {
-    if (!showMemoryCards || !mixedLastCardKind) return
-    if (mixedLastCardKind !== lastMemoryCardKind) {
-      setLastMemoryCardKind(mixedLastCardKind)
-      if (user?.id) {
-        void persistProfileSettings(user.id, (cur) => mergeFeedLastMemoryCardKind(cur, mixedLastCardKind))
-      }
-    }
-  }, [showMemoryCards, mixedLastCardKind, lastMemoryCardKind, user?.id])
+      memoryCardAnchorIndex,
+    })
+  }, [
+    feedContentTab,
+    lyricPostRows,
+    feedMemories,
+    peoplePool,
+    showMemoryCards,
+    memoryCardAnchorIndex,
+    memoryCardsGateReady,
+  ])
 
   const notifyResonate = async (post: Post) => {
     if (!user?.id) return
@@ -658,9 +638,9 @@ function FeedPageInner() {
   }
 
   const listReady = feedListReady(seeded, posts.length, loading)
-  const lyricsMixReady =
-    listReady || (memoryCardPrefsReady && showMemoryCards)
-  const showFeedSkeleton = loading && posts.length === 0 && !seeded
+  const lyricsMixReady = listReady && memoryCardsGateReady
+  const showFeedSkeleton =
+    (loading && posts.length === 0 && !seeded) || (listReady && !!user?.id && !memoryCardsGateReady)
   const hasActiveFilter = selectedVibe !== 'ALL' || selectedSort !== 'NEW'
 
   useEffect(() => {
@@ -941,11 +921,7 @@ function FeedPageInner() {
                   cardKind={item.cardKind}
                   ownMemoryCount={ownMemoryCount ?? 0}
                   onDismiss={() => { void dismissMemoryCards() }}
-                  onOpenListening={() => {
-                    noteMemoryCardKind(item.cardKind)
-                    setListeningSheetOpen(true)
-                  }}
-                  onAction={noteMemoryCardKind}
+                  onOpenListening={() => setListeningSheetOpen(true)}
                 />
               )
             }

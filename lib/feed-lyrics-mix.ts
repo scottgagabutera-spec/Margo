@@ -1,6 +1,7 @@
 import type { MemoryPublic } from '@/lib/memory/types'
 import type { Post } from '@/hooks/usePosts'
-import { pickNextMemoryCard, type MemoryCardKind } from '@/lib/feed-memory-card'
+import { memoryCardKindForSlotIndex, type MemoryCardKind } from '@/lib/feed-memory-card'
+import { planMemoryCardPlacements, type MemoryCardPlacement } from '@/lib/feed-memory-card-slots'
 
 export type FeedLyricsPeopleSlot = {
   id: string
@@ -25,7 +26,7 @@ export type FeedLyricsRow =
   | FeedLyricsPostRow
   | { kind: 'memory-carousel'; key: string; memories: MemoryPublic[]; hasMore: boolean }
   | { kind: 'people'; key: string; people: FeedLyricsPeopleSlot[] }
-  | { kind: 'memory-card'; key: string; cardKind: MemoryCardKind }
+  | { kind: 'memory-card'; key: string; cardKind: MemoryCardKind; slotIndex: number }
 
 export const FEED_LYRICS_MEMORY_CAROUSEL_SIZE = 5
 
@@ -33,8 +34,6 @@ const MEMORY_EVERY = 6
 const PEOPLE_EVERY = 15
 const PEOPLE_EARLY = 5
 const PEOPLE_FIRST_REGULAR = 14
-const CARD_AFTER_FIRST = 8
-const CARD_AFTER_SECOND = 30
 
 function pickPeople(authors: FeedLyricsPeopleSlot[], used: Set<string>, count = 4): FeedLyricsPeopleSlot[] {
   const out: FeedLyricsPeopleSlot[] = []
@@ -62,26 +61,36 @@ export function buildFeedLyricsRows(input: {
   memories: MemoryPublic[]
   peoplePool: FeedLyricsPeopleSlot[]
   showMemoryCards: boolean
-  lastMemoryCardKind?: MemoryCardKind | null
+  memoryCardAnchorIndex?: number
   memoryCursorStart?: number
-}): { rows: FeedLyricsRow[]; lastMemoryCardKind: MemoryCardKind | null } {
+}): FeedLyricsRow[] {
   const { lyricPosts, memories, peoplePool, showMemoryCards } = input
+  const anchor = input.memoryCardAnchorIndex ?? 0
   let memIdx = input.memoryCursorStart ?? 0
   const peopleUsed = new Set<string>()
   const out: FeedLyricsRow[] = []
   let lyricOrdinal = 0
   let earlyPeopleDone = false
-  let lastCard = input.lastMemoryCardKind ?? null
   const nonReplayTotal = lyricPosts.filter((row) => row.kind === 'post' && !row.isReplay).length
-  const cardAtStart = showMemoryCards && nonReplayTotal < CARD_AFTER_FIRST
+  const placements = planMemoryCardPlacements(nonReplayTotal, showMemoryCards)
+  const startPlacement = placements.find((p) => p.placement === 'start')
+  const afterPlacements = new Map(
+    placements
+      .filter((p): p is Extract<MemoryCardPlacement, { placement: 'after' }> => p.placement === 'after')
+      .map((p) => [p.lyricOrdinal, p.slotIndex] as const),
+  )
 
-  const pushCard = (slot: string) => {
-    const kind = pickNextMemoryCard(lastCard)
-    lastCard = kind
-    out.push({ kind: 'memory-card', key: `memory-card-${slot}-${kind}`, cardKind: kind })
+  const pushCard = (slotIndex: number) => {
+    const cardKind = memoryCardKindForSlotIndex(anchor, slotIndex)
+    out.push({
+      kind: 'memory-card',
+      key: `memory-card-slot-${slotIndex}`,
+      cardKind,
+      slotIndex,
+    })
   }
 
-  if (cardAtStart) pushCard('start')
+  if (startPlacement) pushCard(startPlacement.slotIndex)
 
   for (const item of lyricPosts) {
     if (item.kind !== 'post') continue
@@ -89,12 +98,8 @@ export function buildFeedLyricsRows(input: {
     if (item.isReplay) continue
     lyricOrdinal += 1
 
-    if (showMemoryCards && !cardAtStart && lyricOrdinal === CARD_AFTER_FIRST) {
-      pushCard('after-8')
-    }
-    if (showMemoryCards && lyricOrdinal === CARD_AFTER_SECOND) {
-      pushCard('after-30')
-    }
+    const slotAt = afterPlacements.get(lyricOrdinal)
+    if (slotAt !== undefined) pushCard(slotAt)
 
     if (lyricOrdinal > 0 && lyricOrdinal % MEMORY_EVERY === 0 && memories[memIdx]) {
       const chunk = memories.slice(memIdx, memIdx + FEED_LYRICS_MEMORY_CAROUSEL_SIZE)
@@ -120,5 +125,5 @@ export function buildFeedLyricsRows(input: {
     }
   }
 
-  return { rows: out, lastMemoryCardKind: lastCard }
+  return out
 }

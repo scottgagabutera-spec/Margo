@@ -8096,10 +8096,9 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 }
 
 .margo-feed-memory-card {
-  position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
+  align-items: stretch;
   gap: 12px 14px;
   border: 1px solid var(--gold-border);
   border-radius: 16px;
@@ -8108,20 +8107,29 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   margin: 0 0 14px;
   box-sizing: border-box;
   max-width: none;
+  min-height: 112px;
+}
+.margo-feed-memory-card__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-shrink: 0;
+  min-width: var(--margo-touch-min, 44px);
+  padding: 2px 0;
 }
 .margo-feed-memory-card__dismiss {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 30px;
-  height: 30px;
+  width: var(--margo-touch-min, 44px);
+  height: var(--margo-touch-min, 44px);
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.06);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  flex-shrink: 0;
 }
 .margo-feed-memory-card__art {
   width: 52px;
