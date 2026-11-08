@@ -5,10 +5,13 @@ import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { MomentExportCustomizeBar } from '@/components/moment-export-customize-bar'
 import { MomentPreviewSlot } from '@/components/moment/moment-preview-slot'
 import { StageSendBar } from '@/components/stage/stage-send-bar'
+import { MomentCalmToolbar, type MomentCalmToolbarProps } from '@/components/moment/moment-calm-toolbar'
 import type { MomentActionMenuItem } from '@/components/moment-action-menu'
 import type { AtmosphereId } from '@/lib/atmosphere'
 import type { MomentShapeId } from '@/lib/moment/types'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
+import type { CalmEffectId } from '@/lib/landing-calm-composer'
+import { calmUsesArtworkBackdrop } from '@/lib/landing-calm-composer'
 
 export interface MomentStudioScreenProps {
   songRow: ReactNode
@@ -50,6 +53,14 @@ export interface MomentStudioScreenProps {
   actionsBlocked?: boolean
   /** Extra bottom padding on mobile (tab bar clearance). */
   mobileBottomPad?: string
+  layout?: 'studio' | 'calm'
+  calmEffectId?: CalmEffectId
+  onCalmEffectChange?: (id: CalmEffectId) => void
+  calmToolbar?: Omit<
+    MomentCalmToolbarProps,
+    'cardThemeId' | 'onThemeChange' | 'calmEffectId' | 'onCalmEffectChange' | 'shapeId'
+  >
+  sourceCaption?: string | null
 }
 
 export function MomentStudioScreen({
@@ -90,22 +101,35 @@ export function MomentStudioScreen({
   postLabel = 'Post',
   actionsBlocked = false,
   mobileBottomPad = 'calc(var(--margo-tabbar-h, 80px) + 20px)',
+  layout = 'studio',
+  calmEffectId = 'none',
+  onCalmEffectChange,
+  calmToolbar,
+  sourceCaption = null,
 }: MomentStudioScreenProps) {
   const showCard = previewLyric.trim().length > 0 && previewSongTitle.trim().length > 0
+  const calm = layout === 'calm'
+  const artworkBackdrop = calm && calmUsesArtworkBackdrop(calmEffectId)
+  const effectOwnsFill = calm
+    ? calmEffectId === 'glow' || calmEffectId === 'grain'
+    : true
+  const bottomPad = calm
+    ? 'calc(var(--margo-page-bottom, var(--margo-tabbar-h, 80px)) + var(--margo-safe-bottom, 0px) + 20px)'
+    : mobileBottomPad
 
   return (
     <div
-      className="margo-moment-studio"
+      className={calm ? 'margo-moment-studio margo-moment-studio--calm' : 'margo-moment-studio'}
       style={{
         width: '100%',
-        paddingBottom: mobileBottomPad,
+        paddingBottom: bottomPad,
         boxSizing: 'border-box',
       }}
     >
       <div className="margo-moment-studio__inputs">
         {songRow}
         {beforeLyric}
-        <div className="margo-moment-studio__lyric-box">
+        <div className={calm ? 'margo-moment-studio__lyric-box margo-moment-studio__lyric-box--calm' : 'margo-moment-studio__lyric-box'}>
           <textarea
             value={lyric}
             onChange={(e) => onLyricChange(e.target.value.slice(0, lyricMaxLength))}
@@ -125,10 +149,17 @@ export function MomentStudioScreen({
               boxSizing: 'border-box',
             }}
           />
-          <span className="margo-moment-studio__lyric-count">
-            {lyric.length}/{lyricMaxLength}
-          </span>
+          {!calm ? (
+            <span className="margo-moment-studio__lyric-count">
+              {lyric.length}/{lyricMaxLength}
+            </span>
+          ) : null}
         </div>
+        {calm ? (
+          <p className="margo-moment-studio__lyric-count margo-moment-studio__lyric-count--calm" aria-live="polite">
+            {lyric.length} / {lyricMaxLength}
+          </p>
+        ) : null}
       </div>
 
       <div className="margo-moment-studio__preview-col">
@@ -144,8 +175,10 @@ export function MomentStudioScreen({
               atmosphereId={exportAtmosphereId}
               shapeId={shapeId}
               hideVibeChrome
-              effectOwnsFill
-              canPlay={canPlay}
+              effectOwnsFill={effectOwnsFill}
+              artworkBackdrop={artworkBackdrop}
+              sourceCaption={sourceCaption}
+              canPlay={canPlay && !calm}
               playing={playing}
               buffering={buffering}
               onPlay={onPlay}
@@ -164,6 +197,7 @@ export function MomentStudioScreen({
         </MomentPreviewSlot>
       </div>
 
+      {calm ? null : (
       <div className="margo-moment-studio__customize-wrap">
         <MomentExportCustomizeBar
           layout="studio"
@@ -179,7 +213,22 @@ export function MomentStudioScreen({
           onVibeSelect={onVibeSelect}
         />
       </div>
+      )}
 
+      {calm && calmToolbar && onCalmEffectChange ? (
+        <div className="margo-moment-studio__calm-toolbar">
+          <MomentCalmToolbar
+            cardThemeId={cardThemeId}
+            onThemeChange={onThemeChange}
+            calmEffectId={calmEffectId}
+            onCalmEffectChange={onCalmEffectChange}
+            shapeId={shapeId}
+            {...calmToolbar}
+          />
+        </div>
+      ) : null}
+
+      {!calm ? (
       <div
         className="margo-moment-studio__actions"
         style={{
@@ -203,6 +252,7 @@ export function MomentStudioScreen({
           studio
         />
       </div>
+      ) : null}
     </div>
   )
 }

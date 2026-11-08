@@ -1,7 +1,7 @@
 import { isLivingAtmosphere, type AtmosphereId } from './atmosphere.ts'
 import { SHORTS_LOOKS, pickShortsLook } from './shorts-looks.ts'
 
-export type StageCardThemeId = 'gold' | 'blush' | 'sage' | 'dusk'
+export type StageCardThemeId = 'gold' | 'blush' | 'sage' | 'dusk' | 'snow' | 'ocean'
 
 const THEME_PAINT: Record<
   StageCardThemeId,
@@ -11,6 +11,8 @@ const THEME_PAINT: Record<
   blush: { bg: '#E8A8B0', ink: '#2A1218', inkMuted: 'rgba(42,18,24,0.62)' },
   sage: { bg: '#A8C4AE', ink: '#142218', inkMuted: 'rgba(20,34,24,0.62)' },
   dusk: { bg: '#2A2438', ink: '#F4F1ED', inkMuted: 'rgba(244,241,237,0.62)' },
+  snow: { bg: '#F4F1ED', ink: '#07060A', inkMuted: 'rgba(7,6,10,0.62)' },
+  ocean: { bg: '#4A6FA5', ink: '#F4F1ED', inkMuted: 'rgba(244,241,237,0.62)' },
 }
 
 const ATMOSPHERE_ROOM = {

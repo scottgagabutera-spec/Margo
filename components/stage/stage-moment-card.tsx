@@ -60,6 +60,10 @@ interface StageMomentCardProps {
    * Off for compose/platform preview, where Color is not a user control.
    */
   effectOwnsFill?: boolean
+  /** Calm composer: blurred cover wash (Artwork effect). */
+  artworkBackdrop?: boolean
+  /** Optional source caption on social strip (e.g. From Apple Music). */
+  sourceCaption?: string | null
   style?: CSSProperties
   /** Story viewer: quiet Margo brand watermark in the mark corner (no poster attribution on-card). */
   brandWatermark?: boolean
@@ -139,6 +143,8 @@ export function StageMomentCard({
   hideShortsCreditRow = false,
   shortsFeedStableLook = false,
   effectOwnsFill = false,
+  artworkBackdrop = false,
+  sourceCaption = null,
   style,
   brandWatermark = false,
 }: StageMomentCardProps) {
@@ -297,7 +303,17 @@ export function StageMomentCard({
     <div ref={cardRef} style={socialExport ? { width: '100%', height: '100%' } : undefined}>
       <ComposeLyricCard style={shellStyle}>
         <div aria-hidden style={fillLayerStyle} />
-        {!showAtmosphere ? <div aria-hidden style={highlightLayerStyle} /> : null}
+        {artworkBackdrop && artwork ? (
+          <>
+            <div
+              aria-hidden
+              className="margo-stage-card-artwork-bg"
+              style={{ backgroundImage: `url(${artwork})` }}
+            />
+            <div aria-hidden className="margo-stage-card-artwork-scrim" />
+          </>
+        ) : null}
+        {!showAtmosphere && !artworkBackdrop ? <div aria-hidden style={highlightLayerStyle} /> : null}
         {showAtmosphere ? (
           <AtmospherePreviewRoom
             key={atmosphereId}

@@ -10,42 +10,34 @@ import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-l
 import { MargoSearchInput } from '@/components/margo-search-input'
 import { MARGO_SEARCH_HINT_CATALOG } from '@/lib/margo-search-hints'
 import { StageSongChip } from '@/components/stage/stage-song-chip'
-import { StageMomentCard } from '@/components/stage/stage-moment-card'
-import { MomentExportCustomizeBar } from '@/components/moment-export-customize-bar'
-import { MomentVibeRow } from '@/components/moment-vibe-row'
-import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
 import { useSongAtmosphere } from '@/hooks/useSongAtmosphere'
 import { livingAtmosphereOrNull } from '@/lib/atmosphere'
 import { MomentStudioScreen } from '@/components/moment/moment-studio-screen'
 import { useMomentStudioExport } from '@/hooks/useMomentStudioExport'
+import {
+  calmEffectToAtmosphere,
+  defaultCalmEffectForSong,
+  externalSourceLabel,
+  LANDING_DRAFT_STORAGE_KEY,
+  margoChipSubtitle,
+  type CalmEffectId,
+} from '@/lib/landing-calm-composer'
 import MargoLogo from '@/components/MargoLogo'
 import { useStageChromePublisher, useStageSearchPublisher, useStageIdlePublisher, useStageMomentPublisher } from '@/lib/stage-chrome'
 import { useLandingHeroSearchLayout } from '@/hooks/useLandingHeroSearchLayout'
 import { resetLandingSearchLayoutState } from '@/lib/landing-search-layout-reset'
-import { resolveMargoMomentFromStage, MOMENT_VIBE_PICKER_OPTIONS } from '@/lib/moment'
-import { saveMargoMomentImage, shareMargoMomentImage } from '@/lib/moment-export/save-moment-image'
+import { resolveMargoMomentFromStage } from '@/lib/moment'
 import {
-  prepareMargoMomentVideoShare,
-  sharePreparedMomentVideo,
-  canShareVideoFiles,
-} from '@/lib/moment-export/save-moment-video'
-import { momentUsesVisualLoopExport } from '@/lib/moment-export/visual-loop-export'
-import { probeMomentVideoCapability } from '@/lib/moment-export/video/capabilities'
-import {
-  MomentVideoReadySheet,
-  type MomentVideoReadyMode,
-} from '@/components/moment-video-ready-sheet'
-import { triggerFileDownload } from '@/lib/moment-export/trigger-file-download'
+  saveMargoMomentImage,
+  renderMargoMomentPngFile,
+  shareMargoMomentImage,
+} from '@/lib/moment-export/save-moment-image'
 import {
   toastMomentExportFailed,
   toastMomentImageSaved,
   toastMomentShared,
   toastMomentShareFailed,
-  toastMomentVideoSaved,
 } from '@/lib/moment-export/moment-export-toasts'
-import type { MomentActionMenuItem } from '@/components/moment-action-menu'
-import { MomentActionMenu } from '@/components/moment-action-menu'
-import { buildMomentExportActionItems, buildMomentShareActionItems } from '@/lib/moment/share-action-items'
 import { playOrTogglePostMoment, playOrToggleSnippet } from '@/lib/audio-engine'
 import { catalogLinesToPlaybackSegments } from '@/lib/stage-catalog-playback'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
@@ -136,6 +128,8 @@ export function StageLanding() {
   const [cardThemeId, setCardThemeId] = useState<StageCardThemeId>('gold')
   const [exportAtmosphereId, setExportAtmosphereId] = useState<AtmosphereId>('still')
   const [shapeId, setShapeId] = useState<MomentShapeId>('square')
+  const [calmEffectId, setCalmEffectId] = useState<CalmEffectId>('none')
+  const [posting, setPosting] = useState(false)
   const songAtmosphere = useSongAtmosphere(linkedSongId)
   const [momentVisible, setMomentVisible] = useState(false)
 
@@ -161,6 +155,11 @@ export function StageLanding() {
         vibeLabel,
         source: linkedSongId ? 'catalog' : 'external',
         externalListenUrl: selectedSong?.externalListenUrl ?? null,
+      }, {
+        themeId: cardThemeId,
+        shapeId,
+        exportAtmosphereId,
+        vibeLabel,
       })
     : null
   const listen = stageMoment?.listen ?? null
@@ -336,6 +335,8 @@ export function StageLanding() {
     setSuggestedVibeLabel(null)
     setVibeUserPicked(false)
     setCardThemeId('gold')
+    setCalmEffectId('none')
+    setExportAtmosphereId('still')
     setMomentVisible(false)
     setSearchQuery('')
     setShowResults(false)
@@ -391,6 +392,18 @@ export function StageLanding() {
     }
   }, [])
 
+  const applyCalmEffect = useCallback((id: CalmEffectId) => {
+    setCalmEffectId(id)
+    setExportAtmosphereId(calmEffectToAtmosphere(id))
+  }, [])
+
+  const applyCalmDefaultsForSong = useCallback((isMargoCatalog: boolean) => {
+    const effect = defaultCalmEffectForSong(isMargoCatalog)
+    applyCalmEffect(effect)
+    setCardThemeId('gold')
+    setShapeId('square')
+  }, [applyCalmEffect])
+
   const handleSelectSong = useCallback(async (result: SearchResult) => {
     setSelectedSong(result)
     setArtistName(result.artist)
@@ -404,6 +417,7 @@ export function StageLanding() {
     setVibeLabel(null)
     setSuggestedVibeLabel(null)
     setVibeUserPicked(false)
+    applyCalmDefaultsForSong(result.source === 'margo' || !!result.margoSongId)
 
     if (result.source === 'margo') {
       await enterCatalog(result.margoSongId!, result.audioUrl || null, result.title, result.artist, result.artwork)
@@ -414,6 +428,7 @@ export function StageLanding() {
     setLinkedAudioUrl(null)
     setLinePickComplete(true)
     setMargoLines([])
+    applyCalmDefaultsForSong(false)
 
     try {
       const hit = await matchLiveCatalogSong(supabase, result.title, result.artist)
@@ -428,12 +443,13 @@ export function StageLanding() {
           audioUrl: hit.audioUrl,
         })
         await enterCatalog(hit.id, hit.audioUrl, hit.title, hit.artist, hit.artwork || result.artwork)
+        applyCalmDefaultsForSong(true)
         return
       }
     } catch (e) {
       console.error('Song rematch failed:', e)
     }
-  }, [enterCatalog])
+  }, [enterCatalog, applyCalmDefaultsForSong])
 
   const applyCatalogPlayback = useCallback((picked: ComposeLyricLine[]) => {
     if (!linkedSongId) {
@@ -498,8 +514,49 @@ export function StageLanding() {
     linkedSongId, linkedAudioUrl, revealMoment, applyCatalogPlayback,
   ])
 
+  const persistLandingDraft = useCallback(() => {
+    if (typeof sessionStorage === 'undefined') return
+    try {
+      sessionStorage.setItem(
+        LANDING_DRAFT_STORAGE_KEY,
+        JSON.stringify({
+          lyric,
+          songName,
+          artistName,
+          artwork: selectedSong?.artwork ?? null,
+          songId: linkedSongId,
+          audioUrl: linkedAudioUrl,
+          start: snippetStart,
+          end: snippetEnd,
+          cardThemeId,
+          calmEffectId,
+          shapeId,
+        }),
+      )
+    } catch {
+      /* */
+    }
+  }, [
+    lyric, songName, artistName, selectedSong?.artwork, linkedSongId, linkedAudioUrl,
+    snippetStart, snippetEnd, cardThemeId, calmEffectId, shapeId,
+  ])
+
+  const momentForExport = useCallback(
+    (shape: MomentShapeId) => {
+      if (!stageMoment) return null
+      return {
+        ...stageMoment,
+        shapeId: shape,
+        themeId: cardThemeId,
+        exportAtmosphereId,
+      }
+    },
+    [stageMoment, cardThemeId, exportAtmosphereId],
+  )
+
   const navigateToCompose = useCallback(() => {
     if (!lyric.trim() || !songName.trim() || !artistName.trim()) return
+    setPosting(true)
     router.push(buildComposePrefillUrl({
       lyric: lyric.trim(),
       song: songName.trim(),
@@ -514,6 +571,15 @@ export function StageLanding() {
     router, lyric, songName, artistName, selectedSong?.artwork,
     linkedSongId, linkedAudioUrl, snippetStart, snippetEnd,
   ])
+
+  const signInReturnTo = useMemo(() => {
+    if (!lyric.trim()) return '/'
+    const q = new URLSearchParams()
+    q.set('lyric', lyric.trim())
+    q.set('song', songName)
+    q.set('artist', artistName)
+    return `/?${q.toString()}`
+  }, [lyric, songName, artistName])
 
   const handleWriteLineChange = useCallback((value: string) => {
     const next = value.slice(0, 140)
@@ -665,15 +731,29 @@ export function StageLanding() {
             {showStudioPanel && (
               <>
                 <MomentStudioScreen
+                  layout="calm"
+                  calmEffectId={calmEffectId}
+                  onCalmEffectChange={applyCalmEffect}
+                  sourceCaption={
+                    isMargoCatalog ? null : externalSourceLabel(selectedSong.source)
+                  }
                   songRow={
                     <div
-                      className="margo-stage-song-chip-wrap"
-                      style={{ width: '100%', display: 'flex', justifyContent: 'center' }}
+                      className="margo-stage-song-chip-wrap margo-stage-song-chip-wrap--calm"
                     >
                       <StageSongChip
+                        variant="calm"
                         title={songName}
                         artist={artistName}
                         artwork={selectedSong.artwork}
+                        subtitle={
+                          isMargoCatalog
+                            ? margoChipSubtitle(snippetStart)
+                            : (externalSourceLabel(selectedSong.source) ?? undefined)
+                        }
+                        onPlay={canPlay ? handlePlay : undefined}
+                        playing={playing}
+                        buffering={buffering}
                         onClear={clearSong}
                       />
                     </div>
@@ -709,8 +789,58 @@ export function StageLanding() {
                   videoProgress={studioExport.videoProgress}
                   signedIn={signedIn}
                   onPost={signedIn ? navigateToCompose : undefined}
-                  postLabel={signedIn ? 'Send this line' : 'Post'}
-                  mobileBottomPad="calc(var(--margo-tabbar-h, 80px) + 24px)"
+                  posting={posting}
+                  calmToolbar={{
+                    onShapeToggle: () => setShapeId((s) => (s === 'vertical' ? 'square' : 'vertical')),
+                    onSaveSquare: () => {
+                      const m = momentForExport('square')
+                      if (m) void saveMargoMomentImage(m).then(toastMomentImageSaved).catch(() => toastMomentExportFailed('image'))
+                    },
+                    onSaveStory: () => {
+                      const m = momentForExport('vertical')
+                      if (m) void saveMargoMomentImage(m).then(toastMomentImageSaved).catch(() => toastMomentExportFailed('image'))
+                    },
+                    onCopyImage: () => {
+                      const m = momentForExport(shapeId)
+                      if (!m) return
+                      void (async () => {
+                        const file = await renderMargoMomentPngFile(m)
+                        if (!file || !navigator.clipboard?.write) {
+                          toastMomentExportFailed('image')
+                          return
+                        }
+                        try {
+                          await navigator.clipboard.write([new ClipboardItem({ 'image/png': file })])
+                          toastMomentImageSaved()
+                        } catch {
+                          toastMomentExportFailed('image')
+                        }
+                      })()
+                    },
+                    onShareStory: () => {
+                      const m = momentForExport('vertical')
+                      if (m) void shareMargoMomentImage(m).then((r) => (r === 'shared' ? toastMomentShared() : toastMomentShareFailed()))
+                    },
+                    onShareWhatsApp: () => {
+                      const text = encodeURIComponent(`A line on Margo: "${lyric.trim()}"`)
+                      window.open(`https://wa.me/?text=${text}`, '_blank', 'noopener,noreferrer')
+                    },
+                    onShareMore: () => {
+                      const m = momentForExport(shapeId)
+                      if (m) void shareMargoMomentImage(m).then((r) => (r === 'shared' ? toastMomentShared() : toastMomentShareFailed()))
+                    },
+                    onCopyLink: () => {
+                      const url = typeof window !== 'undefined' ? window.location.origin : 'https://trymargo.com'
+                      void navigator.clipboard?.writeText(url)
+                    },
+                    saving: studioExport.saving,
+                    shareBusy: studioExport.shareBusy,
+                    signedIn,
+                    onPost: signedIn ? navigateToCompose : undefined,
+                    posting,
+                    signInReturnTo,
+                    onBeforeSignIn: persistLandingDraft,
+                  }}
                 />
                 {studioExport.videoReadySheet}
               </>
