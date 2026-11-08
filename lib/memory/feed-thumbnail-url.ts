@@ -12,10 +12,13 @@ function resizedMargoOrArtwork(url: string, widthPx: number): string {
   try {
     const u = new URL(url)
     const host = u.hostname.toLowerCase()
-    if (host.includes('trymargo.com') || host.includes('mzstatic.com') || host.includes('itunes')) {
-      if (host.includes('mzstatic.com') || host.includes('itunes')) {
-        return compactArtworkUrl(url, widthPx)
-      }
+    if (host.includes('mzstatic.com') || host.includes('itunes')) {
+      return compactArtworkUrl(url, widthPx)
+    }
+    if (host === 'audio.trymargo.com' || host.includes('dzcdn.net') || host.includes('deezer')) {
+      return url
+    }
+    if (host.includes('trymargo.com')) {
       const path = u.pathname.replace(/^\//, '')
       return `https://${u.hostname}/cdn-cgi/image/width=${widthPx},format=webp,quality=84,fit=cover/${path}`
     }

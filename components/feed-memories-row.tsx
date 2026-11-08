@@ -1,11 +1,11 @@
 'use client'
 
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ChevronRightIcon } from '@/components/icons'
 import { MargoSectionHeader } from '@/components/margo-section-header'
 import { FeedMemoryRowTile } from '@/components/feed-memory-row-tile'
 import type { MemoryPublic } from '@/lib/memory/types'
-import { persistFeedReturnBeforeLeave } from '@/lib/margo-feed-return'
+import { openFeedTab } from '@/lib/feed-mix-nav'
 
 export function FeedMemoriesRow({
   memories,
@@ -14,6 +14,7 @@ export function FeedMemoriesRow({
   memories: MemoryPublic[]
   hasMore: boolean
 }) {
+  const router = useRouter()
   if (memories.length === 0) return null
 
   return (
@@ -22,14 +23,14 @@ export function FeedMemoriesRow({
         title="Memories"
         className="margo-feed-memories-row__head"
         action={
-          <Link
-            href="/feed?tab=memories"
+          <button
+            type="button"
             className="margo-feed-memories-row__see-all"
             aria-label="See all memories"
-            onClick={() => persistFeedReturnBeforeLeave('lyrics')}
+            onClick={() => openFeedTab(router, 'memories')}
           >
             <ChevronRightIcon size={16} color="var(--gold)" />
-          </Link>
+          </button>
         }
       />
       <div className="margo-feed-memories-row__scroller">
@@ -37,14 +38,14 @@ export function FeedMemoriesRow({
           <FeedMemoryRowTile key={m.id} memory={m} priority={i < 2} />
         ))}
         {hasMore ? (
-          <Link
-            href="/feed?tab=memories"
+          <button
+            type="button"
             className="margo-feed-memories-row__peek"
             aria-label="More memories"
-            onClick={() => persistFeedReturnBeforeLeave('lyrics')}
+            onClick={() => openFeedTab(router, 'memories')}
           >
             <ChevronRightIcon size={18} color="var(--gold)" />
-          </Link>
+          </button>
         ) : null}
       </div>
     </div>

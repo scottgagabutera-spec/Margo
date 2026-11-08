@@ -83,7 +83,14 @@
   --feed-type-suggestion-lyric: 0.9375rem;
   --feed-type-lyric-hero: 1.5rem;
   --margo-feed-vibe-bar-h: 40px;
-  --margo-feed-tab-bar-h: 40px;
+  /* 44px = minimum touch target; every fixed offset below reads this var. */
+  --margo-feed-tab-bar-h: 44px;
+  /* Layer scale inside the feed pane (single source, no ad-hoc stacking).
+     Nav chrome outside the pane (z 300) always stays on top. */
+  --margo-z-feed-vibe: 40;
+  --margo-z-feed-tabs: 41;
+  --margo-z-feed-mix: 90;
+  --margo-z-feed-mix-search: 60;
 }
 @media (min-width: 640px) {
   :root {
@@ -285,6 +292,19 @@
   .margo-skeleton-pulse-scope .margo-skeleton-bone {
     animation: none !important;
     opacity: 0.45 !important;
+  }
+  .margo-mix-press,
+  .margo-echoes-search-panel__pick,
+  .margo-echoes-set-page__card,
+  .margo-feed-mix-overlay {
+    transition: none;
+    animation: none;
+  }
+  .margo-mix-press:active,
+  .margo-echoes-search-panel__pick:active,
+  .margo-echoes-set-page__card:active {
+    transform: none;
+    opacity: 0.92;
   }
 }
 
@@ -1404,7 +1424,7 @@ html[data-margo-stage] .margo-footer {
   top: var(--nav-height, 72px);
   left: 0;
   right: 0;
-  z-index: 41;
+  z-index: var(--margo-z-feed-tabs);
   height: var(--margo-feed-tab-bar-h);
   display: flex;
   align-items: stretch;
@@ -1433,6 +1453,7 @@ html[data-margo-stage] .margo-footer {
 }
 .margo-feed-content-tab:active {
   opacity: 0.85;
+  color: var(--gold);
 }
 .margo-feed-content-tab:focus-visible {
   outline: 2px solid var(--gold);
@@ -8359,6 +8380,11 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   cursor: pointer;
   text-decoration: none;
   box-sizing: border-box;
+  transition: transform 0.12s ease, filter 0.12s ease, box-shadow 0.12s ease;
+}
+button.margo-feed-memory-card__action:active:not(:disabled) {
+  transform: scale(0.9);
+  filter: brightness(1.12);
 }
 @media (min-width: 768px) {
   .margo-feed-memory-card {
@@ -9112,6 +9138,12 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   text-decoration: none;
   color: inherit;
   min-width: 0;
+  border: none;
+  padding: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
 }
 .margo-feed-memory-row-tile__media {
   position: relative;
@@ -9152,15 +9184,16 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 }
 .margo-feed-memory-row-tile__title {
   margin: 0;
-  font-size: 0.68rem;
-  font-weight: 600;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--gold);
   white-space: normal;
   overflow: visible;
   line-height: 1.25;
 }
 .margo-feed-memory-row-tile__date {
   margin: 2px 0 0;
-  font-size: 0.56rem;
+  font-size: 0.75rem;
   color: var(--text-muted);
 }
 .margo-feed-memories-row__peek {
@@ -9314,6 +9347,10 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   font-weight: 600;
   color: var(--text-secondary);
   text-decoration: none;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
 }
 
 .margo-cta-button {
@@ -9481,6 +9518,114 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   cursor: default;
 }
 
+.margo-pressable-surface button,
+.margo-pressable-surface a,
+.margo-pressable-surface .margo-feed-memory-card__action {
+  transition: transform 0.08s ease, opacity 0.1s ease;
+}
+.margo-pressable-surface button:active,
+.margo-pressable-surface a:active,
+.margo-pressable-surface .margo-feed-memory-card__action:active {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+.margo-echoes-search-panel__state {
+  margin: 12px 0 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.margo-echoes-search-panel__state--error {
+  color: var(--danger, #e57373);
+}
+.margo-echoes-search-panel__list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* Always fits between the sticky search field and the bottom chrome
+     (tab bar + mini-player live in --margo-page-bottom). */
+  max-height: clamp(168px, 44dvh, 420px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  box-sizing: border-box;
+}
+.margo-echoes-search-panel__pick {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-1);
+  padding: 10px;
+  min-height: var(--margo-touch-min, 44px);
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+.margo-echoes-search-panel__pick:active {
+  transform: scale(0.985);
+}
+.margo-echoes-search-panel__pick--selected {
+  border-color: var(--gold-border);
+  background: color-mix(in srgb, var(--gold) 14%, var(--surface-1));
+  box-shadow: inset 0 0 0 1px var(--gold-border);
+}
+.margo-echoes-search-panel__art {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.margo-echoes-search-panel__art--empty {
+  display: block;
+  background: var(--surface-2);
+}
+.margo-echoes-search-panel__title {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.25;
+}
+.margo-echoes-search-panel__artist {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+.margo-echoes-search-panel__source {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--gold);
+  margin-top: 2px;
+}
+.margo-mix-press {
+  transition: transform 0.12s ease, opacity 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.margo-mix-press:active {
+  transform: scale(0.985);
+}
+/* Pointerdown acknowledgement: visible before click/route, held briefly so
+   a second tap reads as already-handled instead of dead. */
+.margo-mix-press[data-margo-acked='1'] {
+  border-color: var(--gold-border);
+  box-shadow: 0 0 0 1px var(--gold-border), 0 0 0 5px color-mix(in srgb, var(--gold) 14%, transparent);
+}
+.margo-mix-press[data-margo-acked='1'] .margo-feed-memory-card__action {
+  transform: scale(0.9);
+  filter: brightness(1.12);
+}
+[data-margo-acked='1'] {
+  background-color: color-mix(in srgb, var(--gold) 10%, transparent);
+}
 .margo-live-new-shine {
   outline: 2px solid var(--gold);
   box-shadow: 0 0 0 4px rgba(232, 197, 71, 0.28);
@@ -9520,11 +9665,46 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   flex-direction: column;
   gap: 8px;
 }
+.margo-gold-icon-btn {
+  width: 44px;
+  height: 44px;
+  padding: 6px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.margo-gold-icon-btn .margo-gold-icon-btn__surface {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--gold);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.margo-feed-stack-overlay {
+  background: var(--bg);
+}
 .margo-feed-echoes-set__row {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto;
   gap: 8px;
   align-items: center;
+}
+.margo-feed-echoes-set__row--own {
+  grid-template-columns: 1fr auto;
+}
+.margo-feed-echoes-set__name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .margo-feed-echoes-set__user-link {
   display: flex;
@@ -9586,12 +9766,54 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   color: inherit;
   cursor: pointer;
   flex: 1;
+  min-width: 0;
+}
+.margo-feed-echoes-tab__kicker {
+  margin: 0 0 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--gold);
 }
 .margo-feed-echoes-tab__title {
   margin: 0;
   font-size: 0.95rem;
   font-weight: 600;
-  color: var(--gold);
+  color: var(--text);
+}
+.margo-feed-echoes-tab__count {
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.margo-feed-echoes-tab__preview {
+  margin-top: 10px;
+}
+.margo-feed-echoes-tab__preview-name {
+  margin: 0 0 6px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+.margo-feed-echoes-tab__card--skeleton .margo-feed-echoes-tab__sk-title,
+.margo-feed-echoes-tab__card--skeleton .margo-feed-echoes-tab__sk-meta,
+.margo-feed-echoes-tab__card--skeleton .margo-feed-echoes-tab__sk-preview {
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-3) 50%, var(--surface-2) 100%);
+  background-size: 200% 100%;
+  animation: margo-shimmer 1.2s ease-in-out infinite;
+}
+.margo-feed-echoes-tab__sk-title {
+  height: 18px;
+  width: 72%;
+  margin-bottom: 10px;
+}
+.margo-feed-echoes-tab__sk-meta {
+  height: 12px;
+  width: 40%;
+  margin-bottom: 12px;
+}
+.margo-feed-echoes-tab__sk-preview {
+  height: 52px;
+  width: 100%;
 }
 .margo-feed-echoes-tab__avatars {
   display: flex;
@@ -9627,15 +9849,22 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   gap: 12px;
   margin-bottom: 14px;
 }
+.margo-echoes-set-page__kicker {
+  margin: 0 0 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--gold);
+}
 .margo-echoes-set-page__title {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   font-weight: 600;
-  color: var(--gold);
+  color: var(--text);
+  line-height: 1.35;
 }
 .margo-echoes-set-page__count {
   margin: 4px 0 0;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   color: var(--text-muted);
 }
 .margo-echoes-set-page__filters {
@@ -9648,8 +9877,9 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-muted);
-  padding: 6px 14px;
-  font-size: 0.65rem;
+  min-height: var(--margo-touch-min, 44px);
+  padding: 8px 16px;
+  font-size: 0.75rem;
   cursor: pointer;
 }
 .margo-echoes-set-page__filter--active {
@@ -9663,7 +9893,54 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+}
+.margo-echoes-set-page__card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-1);
+  padding: 12px;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+.margo-echoes-set-page__card:active {
+  transform: scale(0.985);
+}
+.margo-echoes-set-page__card--skeleton {
+  min-height: 128px;
+  background: var(--surface-2);
+  border-style: dashed;
+  cursor: default;
+}
+.margo-echoes-set-page__identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.margo-echoes-set-page__who {
+  min-width: 0;
+}
+.margo-echoes-set-page__name {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.25;
+}
+.margo-echoes-set-page__handle {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+}
+.margo-echoes-set-page__time {
+  margin-left: 8px;
+  color: var(--text-muted);
 }
 .margo-echoes-set-page__row {
   display: flex;
@@ -9673,8 +9950,9 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 }
 .margo-echoes-set-page__row-link {
   display: flex;
-  gap: 10px;
-  align-items: center;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
   text-decoration: none;
   color: inherit;
   min-width: 0;
@@ -9682,6 +9960,17 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 .margo-echoes-answer {
   max-width: 520px;
   margin: 0 auto;
+}
+/* Search stays pinned below the app nav while picked songs scroll, so
+   results never slide under the nav or the feed tab row. */
+.margo-echoes-answer__search-wrap {
+  position: sticky;
+  top: calc(var(--nav-height, 72px) + 8px);
+  z-index: var(--margo-z-feed-mix-search);
+  background: var(--bg);
+  padding: 8px 0 10px;
+  margin-bottom: 4px;
+  box-shadow: 0 14px 14px -14px rgba(0, 0, 0, 0.55);
 }
 .margo-echoes-answer__head {
   display: flex;
@@ -9750,15 +10039,61 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   justify-content: center;
   cursor: pointer;
 }
-.margo-echoes-person__head {
+.margo-echoes-person__identity {
   display: flex;
   gap: 12px;
   align-items: center;
   margin-bottom: 16px;
+  min-width: 0;
+}
+.margo-echoes-person__identity--skeleton,
+.margo-echoes-person__song-row--skeleton {
+  min-height: 64px;
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+.margo-echoes-person__who {
+  min-width: 0;
+}
+.margo-echoes-person__name {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.25;
+}
+.margo-echoes-person__handle {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+}
+.margo-echoes-person__question {
+  margin: 0;
+  font-weight: 500;
+  color: var(--gold);
+  line-height: 1.4;
+}
+.margo-echoes-person__period {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+}
+.margo-echoes-person__play-all {
+  margin: 16px 0 0;
+  min-height: var(--margo-touch-min, 44px);
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid var(--gold-border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--gold) 10%, var(--surface-1));
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
 }
 .margo-echoes-person__songs {
   list-style: none;
-  margin: 0;
+  margin: 16px 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -9766,7 +10101,268 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 }
 .margo-echoes-person__song-row {
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 10px;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  gap: 12px;
   align-items: center;
+  min-height: var(--margo-touch-min, 44px);
+}
+.margo-echoes-person__art {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-2);
+  flex-shrink: 0;
+}
+.margo-echoes-person__art-img {
+  object-fit: cover;
+}
+.margo-echoes-person__art-empty {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--surface-3);
+}
+.margo-echoes-person__song-meta {
+  min-width: 0;
+}
+.margo-echoes-person__song-title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text);
+}
+.margo-echoes-person__song-artist {
+  margin: 2px 0 0;
+  color: var(--text-secondary);
+}
+
+.margo-icon-hit-44 {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.margo-gold-square-30 {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--gold);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.margo-feed-echoes-ask {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--gold-border);
+  border-radius: 16px;
+  padding: 16px 14px;
+  margin: 0 0 14px;
+  background: color-mix(in srgb, var(--gold) 6%, var(--surface-1));
+}
+.margo-feed-echoes-ask__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--gold);
+}
+.margo-feed-echoes-ask__line {
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.margo-feed-echoes-results {
+  border: 1px solid var(--gold-border);
+  border-radius: 16px;
+  padding: 14px 14px 16px;
+  margin: 0 0 14px;
+  background: var(--surface-1);
+}
+.margo-feed-echoes-results__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.margo-feed-echoes-results__head-main {
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+}
+.margo-feed-echoes-results__label {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--gold);
+}
+.margo-feed-echoes-results__title {
+  margin: 2px 0 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.margo-feed-echoes-results__people {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.margo-feed-echoes-results__identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  min-width: 0;
+}
+.margo-feed-echoes-results__who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.margo-feed-echoes-results__name-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.margo-feed-echoes-results__name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.margo-feed-echoes-results__handle {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+.margo-feed-echoes-results__time {
+  margin-left: 8px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.margo-feed-echoes-results__person-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+}
+.margo-echoes-song-strip {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.margo-echoes-song-strip__tile {
+  flex: 0 0 72px;
+  margin: 0;
+}
+.margo-echoes-song-strip__cover {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.margo-echoes-song-strip__img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+}
+.margo-echoes-song-strip__cover-empty {
+  display: block;
+  width: 56px;
+  height: 56px;
+  background: var(--surface-3);
+}
+.margo-echoes-song-strip__title {
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.margo-echoes-song-strip__artist {
+  margin: 2px 0 0;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.margo-echoes-song-strip__more {
+  flex: 0 0 56px;
+  height: 56px;
+  border: 1px dashed var(--gold-border);
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  color: var(--gold);
+  align-self: flex-start;
+}
+
+.margo-feed-mix-overlay {
+  position: fixed;
+  inset: 0;
+  /* Above the Lyrics/Memories/Shorts/Echoes row (41) and vibe bar (40) so
+     nothing in a create / Echoes surface can slide under that row. */
+  z-index: var(--margo-z-feed-mix);
+  isolation: isolate;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--bg);
+  padding: calc(var(--nav-height, 72px) + 12px) 16px var(--margo-page-padding-bottom, 96px);
+  scroll-padding-top: calc(var(--nav-height, 72px) + 12px);
+  scroll-padding-bottom: var(--margo-page-padding-bottom, 96px);
+  -webkit-overflow-scrolling: touch;
+  animation: margo-mix-in 0.16s ease;
+}
+@keyframes margo-mix-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+button.margo-feed-shorts-strip__tile {
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+button.margo-feed-shorts-strip__more {
+  cursor: pointer;
+  font: inherit;
+}
+.margo-feed-memories-row__see-all,
+.margo-feed-memories-row__peek {
+  cursor: pointer;
 }

@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { loadProfileFavoriteArtists } from '@/lib/profile/load-favorite-artists'
+import {
+  favoriteArtworkFromSettings,
+  mergeFavoriteArtworkSettings,
+} from '@/lib/profile/favorite-artist-artwork-settings'
 
 type FavoriteRow = {
   catalogArtistId: string
   position: number
+  artworkUrl?: string | null
 }
 
 async function requireUserId(): Promise<string | null> {
@@ -74,6 +79,20 @@ export async function PUT(request: NextRequest) {
       console.error('[favorite-artists] put', insErr)
       return NextResponse.json({ error: 'Could not save' }, { status: 500 })
     }
+  }
+
+  const artworkPatch: Record<string, string> = {}
+  for (const item of items) {
+    const url = item.artworkUrl?.trim()
+    if (url) artworkPatch[item.catalogArtistId] = url
+  }
+  if (Object.keys(artworkPatch).length > 0) {
+    const { data: prof } = await admin.from('profiles').select('settings').eq('id', userId).maybeSingle()
+    const nextSettings = mergeFavoriteArtworkSettings(
+      (prof?.settings as Record<string, unknown> | null) ?? null,
+      artworkPatch,
+    )
+    await admin.from('profiles').update({ settings: nextSettings }).eq('id', userId)
   }
 
   return NextResponse.json({ ok: true })

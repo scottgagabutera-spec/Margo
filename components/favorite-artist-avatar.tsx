@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import Image from 'next/image'
 import { favoriteArtistThumbnailUrl } from '@/lib/memory/feed-thumbnail-url'
 import { portraitFallbackFromSeed } from '@/lib/portrait-fallback'
 
@@ -47,14 +46,16 @@ export function FavoriteArtistAvatar({
   }
 
   return (
-    <Image
+    // Native img avoids Next image loader edge cases on Deezer and Apple CDN URLs.
+    <img
       src={src}
       alt=""
       width={56}
       height={56}
       className="margo-profile-favorite-artists__art"
-      priority={priority}
+      decoding="async"
       loading={priority ? 'eager' : 'lazy'}
+      referrerPolicy="no-referrer"
       onError={onError}
     />
   )

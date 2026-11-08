@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
+import { enrichEchoSongPayload } from '@/lib/echoes/enrich-song-payload'
 import type { EchoSongPayload, EchoTimeChoice } from '@/lib/echoes/types'
 
 const MAX_SONGS = 50
@@ -43,12 +44,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Question not found' }, { status: 404 })
   }
 
+  const enriched = await enrichEchoSongPayload(payload)
+
   const { error } = await admin.from('echo_answers').upsert(
     {
       question_id: questionId,
       profile_id: user.id,
       time_choice: timeChoice,
-      payload,
+      payload: enriched,
     },
     { onConflict: 'question_id,profile_id' },
   )

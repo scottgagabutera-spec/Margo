@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronRightIcon } from '@/components/icons'
 import { MargoSectionHeader } from '@/components/margo-section-header'
@@ -10,21 +9,16 @@ import { getShortsChromeTokens } from '@/lib/shorts-chrome-tokens'
 import { pickShortsLook } from '@/lib/shorts-looks'
 import { utcDayKey } from '@/lib/shorts-shelf-rotation'
 import { LYRIC_FONT, UI_FONT } from '@/lib/fonts'
-import { persistFeedReturnBeforeLeave, writeFeedReturnSnapshot } from '@/lib/margo-feed-return'
+import { openFeedTab } from '@/lib/feed-mix-nav'
+import { useTapAck } from '@/hooks/use-tap-ack'
 
 const lyricFont = LYRIC_FONT
 const uiFont = UI_FONT
 
-function shortsHref(index: number) {
-  return `/feed?tab=shorts&shortsAt=${index}`
-}
-
-function shortsTabHref() {
-  return '/feed?tab=shorts'
-}
 
 export function FeedShortsStrip({ tiles }: { tiles: FeedShortsStripTile[] }) {
   const router = useRouter()
+  const { ack, isAcked } = useTapAck()
   const day = utcDayKey(new Date())
 
   return (
@@ -37,10 +31,9 @@ export function FeedShortsStrip({ tiles }: { tiles: FeedShortsStripTile[] }) {
             type="button"
             className="margo-feed-shorts-strip__see-all"
             aria-label="See all Shorts"
-            onClick={() => {
-              persistFeedReturnBeforeLeave('lyrics')
-              router.push(shortsTabHref())
-            }}
+            data-margo-acked={isAcked('all') ? 1 : undefined}
+            onPointerDown={() => ack('all')}
+            onClick={() => openFeedTab(router, 'shorts')}
           >
             <ChevronRightIcon size={16} color="var(--gold)" />
           </button>
@@ -53,14 +46,13 @@ export function FeedShortsStrip({ tiles }: { tiles: FeedShortsStripTile[] }) {
           const bg = darkenFeedStripTileBg(tokens.progressFill)
           const ink = feedStripTileInk(bg)
           return (
-            <Link
+            <button
+              type="button"
               key={`${tile.songId}-${tile.lineId}`}
-              href={shortsHref(tile.stripIndex)}
-              onClick={() => {
-                persistFeedReturnBeforeLeave('lyrics')
-                writeFeedReturnSnapshot({ shortsAt: tile.stripIndex, tab: 'shorts' })
-              }}
-              className="margo-feed-shorts-strip__tile"
+              data-margo-acked={isAcked(`${tile.songId}-${tile.lineId}`) ? 1 : undefined}
+              onPointerDown={() => ack(`${tile.songId}-${tile.lineId}`)}
+              onClick={() => openFeedTab(router, 'shorts', { shortsAt: tile.stripIndex })}
+              className="margo-feed-shorts-strip__tile margo-mix-press"
               style={{
                 background: bg,
                 color: ink,
@@ -86,17 +78,17 @@ export function FeedShortsStrip({ tiles }: { tiles: FeedShortsStripTile[] }) {
               <p className="margo-feed-shorts-strip__song" style={{ fontFamily: uiFont }}>
                 {tile.songTitle}
               </p>
-            </Link>
+            </button>
           )
         })}
         {Array.from({ length: Math.max(0, 3 - tiles.length) }).map((_, i) => (
           <div key={`pad-${i}`} className="margo-feed-shorts-strip__tile margo-feed-shorts-strip__tile--empty" aria-hidden />
         ))}
-        <Link href={shortsTabHref()} className="margo-feed-shorts-strip__more" aria-label="See all Shorts">
+        <button type="button" className="margo-feed-shorts-strip__more" aria-label="See all Shorts" onClick={() => openFeedTab(router, 'shorts')}>
           <span className="margo-feed-shorts-strip__more-btn">
             <ChevronRightIcon size={18} color="var(--gold)" />
           </span>
-        </Link>
+        </button>
       </div>
     </section>
   )

@@ -1,11 +1,24 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
+import { enrichEchoSongPayload, persistEnrichedEchoAnswer } from './enrich-song-payload.ts'
 import { echoSongLineFromPayload } from './song-line.ts'
 import { echoTimeChoiceLabel } from './time-choice.ts'
 import type { EchoAnswerRow, EchoFeedBlockSnapshot, EchoSongPayload } from './types.ts'
 
 type ProfileLite = { id: string; username: string; display_name: string; avatar_url: string | null }
 
-function mapAnswerRow(
+async function normalizeAnswerPayload(
+  answerId: string,
+  payload: EchoSongPayload,
+): Promise<EchoSongPayload> {
+  const base = payload?.songs?.length ? payload : { songs: [] }
+  const needsEnrich = base.songs.some((s) => !s.artistName?.trim() || !s.artworkUrl?.trim())
+  if (!needsEnrich) return base
+  const enriched = await enrichEchoSongPayload(base)
+  void persistEnrichedEchoAnswer(answerId, enriched)
+  return enriched
+}
+
+async function mapAnswerRow(
   row: {
     id: string
     profile_id: string
@@ -14,8 +27,8 @@ function mapAnswerRow(
   },
   profile: ProfileLite,
   viewerId: string | null,
-): EchoAnswerRow {
-  const payload = row.payload?.songs?.length ? row.payload : { songs: [] }
+): Promise<EchoAnswerRow> {
+  const payload = await normalizeAnswerPayload(row.id, row.payload)
   return {
     answerId: row.id,
     profileId: row.profile_id,
@@ -86,7 +99,7 @@ export async function loadEchoFeedBlock(viewerId: string | null): Promise<EchoFe
     const p = profileMap.get(a.profile_id)
     if (!p) continue
     rows.push(
-      mapAnswerRow(
+      await mapAnswerRow(
         {
           id: a.id,
           profile_id: a.profile_id,
@@ -166,7 +179,7 @@ export async function loadEchoSetAnswers(
     const p = profileMap.get(a.profile_id)
     if (!p) continue
     rows.push(
-      mapAnswerRow(
+      await mapAnswerRow(
         {
           id: a.id,
           profile_id: a.profile_id,
@@ -238,7 +251,7 @@ async function loadEchoPersonAnswerForQuestion(
   if (!profile) return { title, row: null }
 
   const row = answer
-    ? mapAnswerRow(
+    ? await mapAnswerRow(
         {
           id: answer.id,
           profile_id: answer.profile_id,

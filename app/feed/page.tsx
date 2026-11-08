@@ -33,7 +33,8 @@ import { FeedMemoriesGridSkeleton } from '@/components/margo-skeletons'
 import { buildFeedLyricsRows, type FeedLyricsPeopleSlot, type FeedLyricsPostRow, type FeedLyricsRow } from '@/lib/feed-lyrics-mix'
 import { buildFeedPeoplePool } from '@/lib/feed-people-pool'
 import { FeedMemoriesRow } from '@/components/feed-memories-row'
-import { FeedEchoesSetBlock } from '@/components/feed-echoes-set-block'
+import { FeedEchoesAskCard } from '@/components/feed-echoes-ask-card'
+import { FeedEchoesResultsBlock } from '@/components/feed-echoes-results-block'
 import { FeedEchoesTab } from '@/components/feed-echoes-tab'
 import { FeedBlockShell } from '@/components/feed-block-shell'
 import type { EchoFeedBlockSnapshot } from '@/lib/echoes/types'
@@ -41,12 +42,16 @@ import { inferListeningPeriodType } from '@/lib/memory/listening-infer'
 import {
   applyFeedReturnHorizontals,
   readFeedReturnSnapshot,
+  clearFeedReturnPending,
+  shouldReapplyFeedReturn,
+  persistFeedReturnBeforeLeave,
 } from '@/lib/margo-feed-return'
 import { FeedPeopleStrip } from '@/components/feed-people-strip'
 import { FeedMemoryPromoCard } from '@/components/feed-memory-promo-card'
 import { FeedShortsStrip } from '@/components/feed-shorts-strip'
 import { localDayKey } from '@/lib/feed-memory-card'
 import { feedPromoAnchorIndex } from '@/lib/feed-promo-planner'
+import { armFeedStackLinkCapture } from '@/lib/feed-stack-capture'
 import { feedShortsStripTilesFromClips } from '@/lib/feed-shorts-strip-tiles'
 import type { LyricMoment } from '@/lib/lyric-moments-board'
 import { FeedOceanFooter } from '@/components/feed-ocean-footer'
@@ -66,6 +71,18 @@ import {
   E2E_SHORTS_FIXTURE_CLIPS,
   shouldUseE2eShortsFixture,
 } from '@/lib/e2e-shorts-fixture'
+import { shouldUseE2eFeedReturnFixture } from '@/lib/e2e-feed-return-fixture'
+import { E2eFeedReturnFixture } from '@/components/e2e-feed-return-fixture'
+import {
+  parseFeedMixSurface,
+  paintFeedMix,
+  resolveFeedMixSurface,
+  stripFeedMixParams,
+  subscribeFeedMixPaint,
+  type FeedMixPaint,
+} from '@/lib/feed-mix-nav'
+import { FeedMixOverlay } from '@/components/feed-mix-overlay'
+import { useRegisterNavBack } from '@/components/nav-back'
 
 const supabase = createClient()
 
@@ -301,10 +318,12 @@ function FeedPageInner() {
     meetsMinimum: shortsMeetsMinimum,
   } = useFeedShortsClips({ enabled: feedLive })
 
-  const e2eShortsFixture = useMemo(() => {
-    if (typeof window === 'undefined') return false
-    return shouldUseE2eShortsFixture(searchParams, window.location.hostname)
-  }, [searchParams])
+  const e2eShortsFixture =
+    searchParams.get('e2eShorts') === '1' ||
+    (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('e2eShorts') === '1')
+  const e2eFeedReturnFixture =
+    searchParams.get('e2eFeedReturn') === '1' ||
+    (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('e2eFeedReturn') === '1')
 
   const resolvedShortsClips = e2eShortsFixture ? E2E_SHORTS_FIXTURE_CLIPS : shortsClips
   const resolvedShortsLoading = e2eShortsFixture ? false : shortsLoading
@@ -525,6 +544,18 @@ function FeedPageInner() {
     )
   }, [feedGridMemories, searchParams])
 
+  const openMemoryId = searchParams.get('openMemory')?.trim() || ''
+  useEffect(() => {
+    if (feedContentTab !== 'memories' || !openMemoryId) return
+    const frame = window.requestAnimationFrame(() => {
+      const el = document.querySelector(`[data-margo-memory-tile="${CSS.escape(openMemoryId)}"]`)
+      if (!(el instanceof HTMLElement)) return
+      el.scrollIntoView({ block: 'center', inline: 'nearest' })
+      el.classList.add('margo-live-new-shine')
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [feedContentTab, openMemoryId, feedGridMemoriesFiltered.length])
+
   const shortsAtParam = searchParams.get('shortsAt')
   const shortsInitialIndex = (() => {
     const n = Number(shortsAtParam)
@@ -592,10 +623,47 @@ function FeedPageInner() {
   }
 
   const handleFeedContentTab = (tab: 'lyrics' | 'memories' | 'shorts' | 'echoes') => {
-    const params = applyFeedContentTab(new URLSearchParams(searchParams.toString()), tab)
+    if (feedContentTab === 'lyrics' && tab !== 'lyrics') persistFeedReturnBeforeLeave('lyrics')
+    paintFeedMix(null)
+    const params = stripFeedMixParams(applyFeedContentTab(new URLSearchParams(searchParams.toString()), tab))
     const qs = params.toString()
+    if (qs === searchParams.toString()) return
     router.push(qs ? `/feed?${qs}` : '/feed', { scroll: false })
   }
+
+  const mixFromUrl = useMemo(() => parseFeedMixSurface(searchParams), [searchParams])
+  const [paintedMix, setPaintedMix] = useState<FeedMixPaint>(undefined)
+  useEffect(() => subscribeFeedMixPaint(setPaintedMix), [])
+  useEffect(() => {
+    const onPop = () => {
+      paintFeedMix(parseFeedMixSurface(new URLSearchParams(window.location.search)))
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+  const mixSurface = resolveFeedMixSurface(mixFromUrl, paintedMix)
+  useEffect(() => {
+    if (paintedMix === null && !mixFromUrl) paintFeedMix(undefined)
+  }, [paintedMix, mixFromUrl])
+
+  useRegisterNavBack(
+    mixSurface
+      ? null
+      : feedContentTab !== 'lyrics'
+        ? {
+            preferHistory: true,
+            fallbackHref: '/feed',
+            onBack: () => {
+              if (typeof window !== 'undefined' && window.history.length > 1) {
+                window.history.back()
+                return true
+              }
+              handleFeedContentTab('lyrics')
+              return true
+            },
+          }
+        : null,
+  )
 
   const handleSelectVibe = (vibe: string) => {
     const next = selectedVibe === vibe ? 'ALL' : vibe
@@ -652,11 +720,55 @@ function FeedPageInner() {
   ])
 
   const feedTabRestoredRef = useRef(false)
+
+  useEffect(() => {
+    if (!feedLive) return
+    const root = document.querySelector('[data-margo-primary-tab="feed"]')
+    return armFeedStackLinkCapture(root instanceof HTMLElement ? root : null)
+  }, [feedLive, mixedLyricRows.length])
+
+  useEffect(() => {
+    if (!feedLive) return
+    const onPop = () => {
+      const snap = readFeedReturnSnapshot()
+      if (!snap) return
+      window.requestAnimationFrame(() => {
+        const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
+        if (scroller instanceof HTMLElement && snap.y > 0) scroller.scrollTop = snap.y
+        applyFeedReturnHorizontals(snap)
+        clearFeedReturnPending()
+      })
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [feedLive])
   useLayoutEffect(() => {
-    if (!feedLive || feedTabRestoredRef.current) return
+    if (!feedLive) {
+      feedTabRestoredRef.current = false
+      return
+    }
+  }, [feedLive])
+
+  useLayoutEffect(() => {
+    if (!feedLive) return
+    const pending = shouldReapplyFeedReturn()
+    if (feedTabRestoredRef.current && !pending) return
     const snap = readFeedReturnSnapshot()
     if (!snap) return
+    const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
+  const liveY = scroller instanceof HTMLElement ? scroller.scrollTop : 0
+    if (pending && scroller instanceof HTMLElement && Math.abs(liveY - snap.y) <= 8) {
+      clearFeedReturnPending()
+      applyFeedReturnHorizontals(snap)
+      feedTabRestoredRef.current = true
+      return
+    }
     feedTabRestoredRef.current = true
+    if (pending && scroller instanceof HTMLElement && snap.y > 0) {
+      scroller.scrollTop = snap.y
+      applyFeedReturnHorizontals(snap)
+    }
+    clearFeedReturnPending()
     if (snap.tab !== feedContentTab) {
       const params = applyFeedContentTab(new URLSearchParams(searchParams.toString()), snap.tab)
       if (snap.shortsAt != null && snap.tab === 'shorts') {
@@ -672,11 +784,16 @@ function FeedPageInner() {
   }, [feedLive, feedContentTab, router, searchParams, shortsAtParam])
 
   useLayoutEffect(() => {
-    if (!feedLive || !listReady || highlightParam) return
+    if (!feedLive || highlightParam) return
+    if (!listReady && !e2eFeedReturnFixture) return
     const snap = readFeedReturnSnapshot()
     if (!snap) return
+    const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
+    if (scroller instanceof HTMLElement && snap.y > 0 && Math.abs(scroller.scrollTop - snap.y) > 5) {
+      scroller.scrollTop = snap.y
+    }
     applyFeedReturnHorizontals(snap)
-  }, [feedLive, listReady, mixedLyricRows.length, highlightParam, feedContentTab])
+  }, [feedLive, listReady, e2eFeedReturnFixture, mixedLyricRows.length, highlightParam, feedContentTab])
   const hasActiveFilter = selectedVibe !== 'ALL' || selectedSort !== 'NEW'
 
   useEffect(() => {
@@ -756,6 +873,28 @@ function FeedPageInner() {
   const feedTopChrome = vibeFilterActive
     ? 'calc(var(--nav-height, 72px) + var(--margo-feed-tab-bar-h) + var(--margo-feed-vibe-bar-h))'
     : 'calc(var(--nav-height, 72px) + var(--margo-feed-tab-bar-h))'
+
+  if (e2eFeedReturnFixture) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          background: 'var(--bg)',
+          position: 'relative',
+          overflowX: 'hidden',
+          paddingTop: feedTopChrome,
+        }}
+      >
+        <FeedContentTabBar
+          active="lyrics"
+          onChange={handleFeedContentTab}
+          shortsAvailable={resolvedShortsMeetsMinimum}
+        />
+        <E2eFeedReturnFixture />
+        {mixSurface ? <FeedMixOverlay surface={mixSurface} /> : null}
+      </div>
+    )
+  }
 
   return (
     <StoryRingProvider enabled={feedLive}>
@@ -946,10 +1085,17 @@ function FeedPageInner() {
                 </FeedBlockShell>
               )
             }
-            if (item.kind === 'echoes-set') {
+            if (item.kind === 'echoes-ask') {
               return (
-                <FeedBlockShell key={item.key} blockName="echoes" planKey={item.planKey} className="margo-feed-block-shell">
-                  <FeedEchoesSetBlock block={item.block} signedIn={!!user?.id} />
+                <FeedBlockShell key={item.key} blockName="echoes-ask" planKey={item.planKey} className="margo-feed-block-shell">
+                  <FeedEchoesAskCard block={item.block} signedIn={!!user?.id} />
+                </FeedBlockShell>
+              )
+            }
+            if (item.kind === 'echoes-results') {
+              return (
+                <FeedBlockShell key={item.key} blockName="echoes-results" planKey={item.planKey} className="margo-feed-block-shell">
+                  <FeedEchoesResultsBlock block={item.block} />
                 </FeedBlockShell>
               )
             }
@@ -1062,6 +1208,7 @@ function FeedPageInner() {
           }}
         />
       )}
+      {mixSurface ? <FeedMixOverlay surface={mixSurface} /> : null}
     </StoryRingProvider>
   )
 }

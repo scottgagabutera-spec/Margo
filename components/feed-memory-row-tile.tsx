@@ -1,13 +1,14 @@
 'use client'
 
-import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { memoryCaptionTitle } from '@/lib/memory/display-caption'
 import { memoryGridCoverSource, memoryFeedRowThumbnailUrl } from '@/lib/memory/feed-thumbnail-url'
 import { formatMemoryDisplayDate } from '@/lib/memory/date-label'
 import { memoryTileKind } from '@/lib/memory/memory-tile-kind'
 import type { MemoryPublic } from '@/lib/memory/types'
-import { persistFeedReturnBeforeLeave } from '@/lib/margo-feed-return'
+import { openFeedMemory } from '@/lib/feed-mix-nav'
+import { useTapAck } from '@/hooks/use-tap-ack'
 import { memoryWordsOnlyBackground } from '@/lib/memory/words-only-palette'
 import { LYRIC_FONT, UI_FONT } from '@/lib/fonts'
 
@@ -15,6 +16,8 @@ const lyricFont = LYRIC_FONT
 const uiFont = UI_FONT
 
 export function FeedMemoryRowTile({ memory, priority = false }: { memory: MemoryPublic; priority?: boolean }) {
+  const router = useRouter()
+  const { ack, isAcked } = useTapAck()
   const kind = memoryTileKind(memory)
   const title = memoryCaptionTitle(memory)
   const { src, isVideo, wordsOnly } = memoryGridCoverSource(memory)
@@ -31,11 +34,13 @@ export function FeedMemoryRowTile({ memory, priority = false }: { memory: Memory
   const storyPreview = (memory.story || title).trim().split(/\s+/).slice(0, 12).join(' ')
 
   return (
-    <Link
-      href={`/memory/${memory.id}`}
-      className="margo-feed-memory-row-tile"
+    <button
+      type="button"
+      className="margo-feed-memory-row-tile margo-mix-press"
       aria-label={title}
-      onClick={() => persistFeedReturnBeforeLeave('lyrics')}
+      data-margo-acked={isAcked() ? 1 : undefined}
+      onPointerDown={() => ack()}
+      onClick={() => openFeedMemory(router, memory.id)}
     >
       <MediaSquare
         kind={kind}
@@ -54,7 +59,7 @@ export function FeedMemoryRowTile({ memory, priority = false }: { memory: Memory
           {dateChip}
         </p>
       ) : null}
-    </Link>
+    </button>
   )
 }
 

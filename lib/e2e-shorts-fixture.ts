@@ -47,3 +47,4 @@ export function isE2eShortsFixtureHostname(hostname: string): boolean {
 export function shouldUseE2eShortsFixture(search: URLSearchParams, hostname: string): boolean {
   return search.get('e2eShorts') === '1' && isE2eShortsFixtureHostname(hostname)
 }
+

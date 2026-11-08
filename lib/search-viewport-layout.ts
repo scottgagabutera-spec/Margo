@@ -4,9 +4,12 @@ export function searchDropdownMaxHeightBelowPx(input: {
   offsetTop: number
   viewportHeight: number
   gap?: number
+  /** Bottom chrome (tab bar + mini-player) the list must not slide under. */
+  bottomInset?: number
 }): number {
   const gap = input.gap ?? 8
-  const visibleBottom = input.offsetTop + input.viewportHeight
+  const bottomInset = input.bottomInset ?? 0
+  const visibleBottom = input.offsetTop + input.viewportHeight - bottomInset
   return Math.max(0, Math.round(visibleBottom - input.anchorBottom - gap))
 }
 

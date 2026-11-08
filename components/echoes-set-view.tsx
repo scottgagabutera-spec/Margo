@@ -1,21 +1,24 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { EditIcon } from '@/components/icons'
 import { MargoAvatar } from '@/components/margo-avatar'
 import type { EchoAnswerRow } from '@/lib/echoes/types'
-import { persistFeedReturnBeforeLeave } from '@/lib/margo-feed-return'
+import { EchoesSongStrip } from '@/components/echoes-song-strip'
+import { feedReturnFallbackHref } from '@/lib/feed-exit-nav'
+import { openFeedEchoesAnswer, openFeedEchoesPerson } from '@/lib/feed-mix-nav'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+import { useTapAck } from '@/hooks/use-tap-ack'
 import { useRegisterNavBack } from '@/components/nav-back'
-import { UI_FONT } from '@/lib/fonts'
+import { FEED_TYPE_SCALE, TYPE, UI_FONT } from '@/lib/fonts'
 
 const font = UI_FONT
 
 export function EchoesSetView({ setId }: { setId: string }) {
   const router = useRouter()
   const { requireAuth } = useAuthGate()
+  const { ack, isAcked } = useTapAck()
   const [filter, setFilter] = useState<'following' | 'everyone'>('following')
   const [title, setTitle] = useState('')
   const [questionId, setQuestionId] = useState('')
@@ -44,12 +47,11 @@ export function EchoesSetView({ setId }: { setId: string }) {
     void load()
   }, [load])
 
-  useRegisterNavBack({ preferHistory: true, fallbackHref: '/feed?tab=echoes' })
+  useRegisterNavBack({ preferHistory: true, fallbackHref: feedReturnFallbackHref() })
 
   const startAnswer = () => {
     if (!requireAuth()) return
-    persistFeedReturnBeforeLeave('echoes')
-    router.push(`/echoes/answer?questionId=${encodeURIComponent(questionId)}&setId=${encodeURIComponent(setId)}`)
+    openFeedEchoesAnswer(router, questionId, setId)
   }
 
   const countLabel = answerCount === 1 ? '1 answer' : `${answerCount} answers`
@@ -58,14 +60,17 @@ export function EchoesSetView({ setId }: { setId: string }) {
     <div className="margo-echoes-set-page">
       <header className="margo-echoes-set-page__head">
         <div>
-          <h1 className="margo-echoes-set-page__title" style={{ fontFamily: font }}>
-            {title || 'Echoes'}
+          <p className="margo-echoes-set-page__kicker" style={{ fontFamily: font }}>
+            Echoes
+          </p>
+          <h1 className="margo-echoes-set-page__title" style={{ fontFamily: font, fontSize: TYPE.body }}>
+            {title || 'What are you listening to?'}
           </h1>
-          <p className="margo-echoes-set-page__count" style={{ fontFamily: font }}>
+          <p className="margo-echoes-set-page__count" style={{ fontFamily: font, fontSize: FEED_TYPE_SCALE.sectionLabel }}>
             {countLabel}
           </p>
         </div>
-        <button type="button" className="margo-feed-memory-card__action" aria-label="Edit answer" onClick={startAnswer}>
+        <button type="button" className="margo-feed-memory-card__action" aria-label="Answer" onClick={startAnswer}>
           <EditIcon size={16} color="var(--bg)" />
         </button>
       </header>
@@ -88,31 +93,35 @@ export function EchoesSetView({ setId }: { setId: string }) {
         </button>
       </div>
       {loading ? (
-        <p className="margo-echoes-set-page__loading" style={{ fontFamily: font }}>
-          Loading
-        </p>
+        <ul className="margo-echoes-set-page__list" aria-busy="true" aria-label="Loading answers">
+          <li className="margo-echoes-set-page__card margo-echoes-set-page__card--skeleton" />
+          <li className="margo-echoes-set-page__card margo-echoes-set-page__card--skeleton" />
+        </ul>
       ) : (
         <ul className="margo-echoes-set-page__list">
           {rows.map((row) => (
-            <li key={row.answerId} className="margo-echoes-set-page__row">
-              <Link
-                href={`/echoes/${setId}/${row.profileId}`}
-                className="margo-echoes-set-page__row-link"
-                onClick={() => persistFeedReturnBeforeLeave('echoes')}
+            <li key={row.answerId}>
+              <button
+                type="button"
+                className="margo-echoes-set-page__card"
+                data-margo-acked={isAcked(row.profileId) ? 1 : undefined}
+                onPointerDown={() => ack(row.profileId)}
+                onClick={() => openFeedEchoesPerson(router, setId, row.profileId)}
               >
-                <MargoAvatar size="md" imageUrl={row.avatarUrl} username={row.username} displayName={row.displayName} />
-                <div>
-                  <p className="margo-echoes-set-page__name" style={{ fontFamily: font }}>
-                    {row.isOwn ? 'You' : row.displayName}
-                  </p>
-                  <p className="margo-echoes-set-page__songs" style={{ fontFamily: font }}>
-                    {row.songLine}
-                  </p>
+                <div className="margo-echoes-set-page__identity">
+                  <MargoAvatar size="md" imageUrl={row.avatarUrl} username={row.username} displayName={row.displayName} />
+                  <div className="margo-echoes-set-page__who">
+                    <p className="margo-echoes-set-page__name" style={{ fontFamily: font, fontSize: FEED_TYPE_SCALE.displayName }}>
+                      {row.isOwn ? 'You' : row.displayName}
+                    </p>
+                    <p className="margo-echoes-set-page__handle" style={{ fontFamily: font, fontSize: FEED_TYPE_SCALE.handle }}>
+                      @{row.username}
+                      <span className="margo-echoes-set-page__time">{row.timeLabel}</span>
+                    </p>
+                  </div>
                 </div>
-              </Link>
-              <span className="margo-echoes-set-page__time" style={{ fontFamily: font }}>
-                {row.timeLabel}
-              </span>
+                <EchoesSongStrip payload={row.payload} />
+              </button>
             </li>
           ))}
         </ul>

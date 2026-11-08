@@ -4,42 +4,46 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { CheckIcon, CloseIcon } from '@/components/icons'
-import { ComposeSearchDropdown, type ComposeSearchHit } from '@/components/compose-search-dropdown'
+import type { ComposeSearchHit } from '@/components/compose-search-dropdown'
+import { EchoesSongSearchPanel } from '@/components/echoes-song-search-panel'
 import { MargoSearchInput } from '@/components/margo-search-input'
-import { createClient } from '@/lib/supabase/client'
-import { fetchUnifiedSongSearchHits } from '@/lib/song-search/unified-song-search'
 import { MARGO_SEARCH_HINT_SONGS } from '@/lib/margo-search-hints'
 import { compactArtworkUrl } from '@/lib/compact-artwork-url'
 import { ECHO_TIME_CHOICES, echoTimeChoiceLabel } from '@/lib/echoes/time-choice'
 import type { EchoSongPayloadItem, EchoTimeChoice } from '@/lib/echoes/types'
-import { useInlineSearchDropdownMaxHeight } from '@/hooks/useInlineSearchDropdownMaxHeight'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { clearMargoReturn, readMargoReturn } from '@/lib/margo-feed-return'
+import { closeFeedMix } from '@/lib/feed-mix-nav'
+import { echoHitPickKey, echoSongPickKey } from '@/lib/echoes/pick-key'
 import { useRegisterNavBack } from '@/components/nav-back'
 import { UI_FONT } from '@/lib/fonts'
 import { toast } from 'sonner'
 
 const font = UI_FONT
-const supabase = createClient()
 const MAX_SONGS = 50
 
 type Pick = EchoSongPayloadItem
 
-export function EchoesAnswerFlow() {
+export function EchoesAnswerFlow({
+  questionId: questionIdProp,
+  setId: setIdProp,
+}: {
+  questionId?: string
+  setId?: string
+}) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { requireAuth } = useAuthGate()
-  const questionId = searchParams.get('questionId') || ''
-  const setId = searchParams.get('setId') || ''
+  const questionId = questionIdProp || searchParams.get('questionId') || ''
+  const setId = setIdProp || searchParams.get('setId') || ''
 
   const [query, setQuery] = useState('')
   const [hits, setHits] = useState<ComposeSearchHit[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
-  const [showResults, setShowResults] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
   const searchGen = useRef(0)
   const searchWrapRef = useRef<HTMLDivElement | null>(null)
-  const songSearchOpen = showResults && query.trim().length >= 2
-  const songListMaxH = useInlineSearchDropdownMaxHeight(searchWrapRef, songSearchOpen)
+  const songSearchOpen = query.trim().length >= 2
 
   const [picked, setPicked] = useState<Pick[]>([])
   const [timeChoice, setTimeChoice] = useState<EchoTimeChoice>('this_week')
@@ -56,31 +60,59 @@ export function EchoesAnswerFlow() {
     if (q.length < 2) {
       setHits([])
       setSearchLoading(false)
-      setShowResults(false)
+      setSearchError(null)
       return
     }
     const gen = ++searchGen.current
     setSearchLoading(true)
-    setShowResults(true)
+    setSearchError(null)
     const t = window.setTimeout(() => {
-      void fetchUnifiedSongSearchHits(supabase, q, 12)
-        .then((rows) => {
+      void (async () => {
+        try {
+          const res = await fetch(`/api/songs/search?q=${encodeURIComponent(q)}&limit=12`)
           if (gen !== searchGen.current) return
-          setHits(rows)
-          setSearchLoading(false)
-        })
-        .catch(() => {
+          if (res.status === 429) {
+            setSearchError('Too many searches. Try again soon.')
+            setHits([])
+            return
+          }
+          if (!res.ok) {
+            setSearchError('Search failed.')
+            setHits([])
+            return
+          }
+          const data = (await res.json()) as { hits?: ComposeSearchHit[]; error?: string }
+          if (data.error && !data.hits?.length) {
+            setSearchError(data.error)
+            setHits([])
+            return
+          }
+          setHits(data.hits || [])
+        } catch {
           if (gen !== searchGen.current) return
+          setSearchError('Search failed.')
           setHits([])
-          setSearchLoading(false)
-        })
+        } finally {
+          if (gen === searchGen.current) setSearchLoading(false)
+        }
+      })()
     }, 220)
     return () => window.clearTimeout(t)
   }, [query])
 
-  const pickedKeys = useMemo(() => new Set(picked.map((p) => songKey(p))), [picked])
-
+  const pickedKeys = useMemo(() => {
+    const keys = new Set<string>()
+    for (const song of picked) {
+      keys.add(echoSongPickKey(song))
+      keys.add(`${song.songTitle}\0${song.artistName}`)
+    }
+    return keys
+  }, [picked])
   const cancel = useCallback(() => {
+    if (typeof window !== 'undefined' && window.location.pathname.split('?')[0] === '/feed') {
+      closeFeedMix()
+      return
+    }
     const resume = readMargoReturn()
     clearMargoReturn()
     if (resume?.href) {
@@ -109,9 +141,9 @@ export function EchoesAnswerFlow() {
       isLyricOnly: !onMargo,
       externalListenUrl: hit.externalListenUrl ?? null,
     }
-    const key = songKey(item)
-    if (pickedKeys.has(key)) {
-      setPicked((prev) => prev.filter((p) => songKey(p) !== key))
+    const key = echoSongPickKey(item)
+    if (pickedKeys.has(key) || pickedKeys.has(echoHitPickKey(hit))) {
+      setPicked((prev) => prev.filter((p) => echoSongPickKey(p) !== key && echoSongPickKey(p) !== echoHitPickKey(hit)))
       return
     }
     if (picked.length >= MAX_SONGS) {
@@ -119,8 +151,6 @@ export function EchoesAnswerFlow() {
       return
     }
     setPicked((prev) => [...prev, item])
-    setQuery('')
-    setShowResults(false)
   }
 
   const save = async () => {
@@ -138,6 +168,10 @@ export function EchoesAnswerFlow() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error((data as { error?: string }).error || 'Could not save')
+      if (typeof window !== 'undefined' && window.location.pathname.split('?')[0] === '/feed') {
+        closeFeedMix()
+        return
+      }
       const resume = readMargoReturn()
       clearMargoReturn()
       if (setId) router.replace(resume?.href || `/echoes/${setId}`)
@@ -177,20 +211,19 @@ export function EchoesAnswerFlow() {
           loading={searchLoading}
           stackAboveOverlay={songSearchOpen}
         />
-        <ComposeSearchDropdown
+        <EchoesSongSearchPanel
           open={songSearchOpen}
           loading={searchLoading}
-          results={hits}
-          highlightQuery={query}
-          onSelect={togglePick}
-          onClose={() => setShowResults(false)}
-          variant="compose"
-          listMaxHeightPx={songListMaxH ?? undefined}
+          error={searchError}
+          hits={hits}
+          query={query.trim()}
+          selectedKeys={pickedKeys}
+          onPick={togglePick}
         />
       </div>
       <ul className="margo-echoes-answer__list">
         {picked.map((song) => (
-          <li key={songKey(song)} className="margo-echoes-answer__row">
+          <li key={echoSongPickKey(song)} className="margo-echoes-answer__row">
             <SongArt song={song} />
             <div className="margo-echoes-answer__meta">
               <p className="margo-echoes-answer__song" style={{ fontFamily: font }}>
@@ -204,7 +237,7 @@ export function EchoesAnswerFlow() {
               type="button"
               className="margo-feed-memory-card__action"
               aria-label="Remove"
-              onClick={() => setPicked((prev) => prev.filter((p) => songKey(p) !== songKey(song)))}
+              onClick={() => setPicked((prev) => prev.filter((p) => echoSongPickKey(p) !== echoSongPickKey(song)))}
             >
               <CheckIcon size={16} color="var(--bg)" />
             </button>
@@ -240,6 +273,3 @@ function SongArt({ song }: { song: Pick }) {
   )
 }
 
-function songKey(song: Pick): string {
-  return song.songId || `${song.songTitle}\0${song.artistName}`
-}

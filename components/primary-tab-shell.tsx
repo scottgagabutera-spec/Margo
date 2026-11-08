@@ -25,9 +25,19 @@ import { MARGO_NAV_START } from '@/lib/margo-nav-intent'
 import { clearHubOverlayRestore, peekHubOverlayRestore } from '@/lib/search-scope'
 import {
   FEED_RETURN_STORAGE_KEY,
+  applyFeedReturnHorizontals,
   captureFeedReturnFromDom,
+  readFeedReturnSnapshot,
   type FeedReturnSnapshot,
 } from '@/lib/margo-feed-return'
+import { isFeedStackPath } from '@/lib/feed-stack-routes'
+import {
+  MARGO_FEED_STACK_PIN_EVENT,
+  clearFeedStackPin,
+  clearFeedStackScrollY,
+  readFeedStackPinned,
+  readFeedStackScrollY,
+} from '@/lib/feed-stack-pin'
 
 /**
  * Primary-tab keepalive + Activity + swipe strip.
@@ -534,18 +544,29 @@ export function PrimaryTabShell({
   const stripOffsetRef = useRef(0)
   const [, setCacheVersion] = useState(0)
   const [peekTab, setPeekTabState] = useState<PrimaryTabId | null>(null)
+  const [feedStackPinned, setFeedStackPinned] = useState(false)
 
   const intentDeepPath = deepNavHref ? normalizeTabPath(deepNavHref) : ''
   const currentPath = normalizeTabPath(pathname)
   const deepNavInFlight =
     !!intentDeepPath && currentPath.toLowerCase() !== intentDeepPath.toLowerCase()
+  const feedStackOverlay = feedStackPinned && isFeedStackPath(currentPath)
   const suppressKeepalive =
-    deepNavInFlight || (deepNavHref !== null && routeTab !== null)
+    (deepNavInFlight || (deepNavHref !== null && routeTab !== null)) && !feedStackOverlay
 
-  const activeTab = suppressKeepalive ? null : paintedTab ?? ackedTab ?? routeTab
-  const barTab = suppressKeepalive ? null : paintedTab ?? ackedTab ?? routeTab
+  const activeTab = feedStackOverlay
+    ? 'feed'
+    : suppressKeepalive
+      ? null
+      : paintedTab ?? ackedTab ?? routeTab
+  const barTab = feedStackOverlay
+    ? 'feed'
+    : suppressKeepalive
+      ? null
+      : paintedTab ?? ackedTab ?? routeTab
   const onPrimarySurface =
-    !suppressKeepalive && (routeTab !== null || paintedTab !== null || ackedTab !== null)
+    !suppressKeepalive &&
+    (routeTab !== null || paintedTab !== null || ackedTab !== null || feedStackOverlay)
 
   const activeTabRef = useRef<PrimaryTabId | null>(activeTab)
   activeTabRef.current = activeTab
@@ -577,6 +598,51 @@ export function PrimaryTabShell({
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [])
+
+  useEffect(() => {
+    const syncPin = () => {
+      setFeedStackPinned(readFeedStackPinned())
+    }
+    syncPin()
+    const onPin = () => {
+      setFeedStackPinned(true)
+      paintedTabRef.current = 'feed'
+      setPaintedTab('feed')
+    }
+    window.addEventListener(MARGO_FEED_STACK_PIN_EVENT, onPin)
+    return () => window.removeEventListener(MARGO_FEED_STACK_PIN_EVENT, onPin)
+  }, [])
+
+  useLayoutEffect(() => {
+    const path = normalizeTabPath(pathname)
+    if (path === '/feed') {
+      const snap = readFeedReturnSnapshot()
+      const pinnedY = readFeedStackScrollY()
+      const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
+      if (scroller instanceof HTMLElement) {
+        const y = pinnedY ?? snap?.y ?? 0
+        if (y > 0) {
+          scroller.scrollTop = y
+          requestAnimationFrame(() => {
+            scroller.scrollTop = y
+            clearFeedStackScrollY()
+          })
+        } else {
+          clearFeedStackScrollY()
+        }
+      } else {
+        clearFeedStackScrollY()
+      }
+      if (snap) applyFeedReturnHorizontals(snap)
+      clearFeedStackPin()
+      setFeedStackPinned(false)
+      return
+    }
+    if (!isFeedStackPath(path)) {
+      clearFeedStackPin()
+      setFeedStackPinned(false)
+    }
+  }, [pathname])
 
   const clearKeepalivePaintSync = useCallback(() => {
     const clear = () => {
@@ -691,6 +757,7 @@ export function PrimaryTabShell({
       return
     }
 
+    if (feedStackOverlay) return
     if (routeTab !== null) return
     if (!paintedTabRef.current) return
     const intentPath = normalizeTabPath(intentHrefRef.current)
@@ -711,7 +778,7 @@ export function PrimaryTabShell({
     intentHrefRef.current = null
     setPaintedTab(null)
     setNavPending(false)
-  }, [routeTab, paintedTab, pathname, router, ownProfileHref])
+  }, [routeTab, paintedTab, pathname, router, ownProfileHref, feedStackOverlay])
 
   const applyStripTransforms = useCallback(() => {
     const w = typeof window !== 'undefined' ? window.innerWidth : 0
@@ -1076,8 +1143,8 @@ export function PrimaryTabShell({
   const onSigninRoute = normalizeTabPath(pathname) === '/signin'
   const showAppChildren =
     !showDeepNavSkeleton
-    && activeTab === null
-    && !(onSigninRoute && barTab !== null && barTab !== 'you')
+    && (activeTab === null || feedStackOverlay)
+    && !(onSigninRoute && barTab !== null && barTab !== 'you' && !feedStackOverlay)
 
   return (
     <PrimaryTabContext.Provider value={ctx}>
@@ -1089,6 +1156,8 @@ export function PrimaryTabShell({
         const isPeek = peekTab === id && !navPending
         const painted = isCommittedActive || isPeek
         const show = painted && onPrimarySurface
+        const feedUnderStack = feedStackOverlay && id === 'feed'
+        const committed = isCommittedActive && !feedUnderStack
         return (
           <Activity key={id} mode={painted ? 'visible' : 'hidden'}>
             <div
@@ -1099,9 +1168,14 @@ export function PrimaryTabShell({
               data-margo-primary-tab-active={isCommittedActive ? '1' : '0'}
               data-margo-primary-tab-peek={isPeek ? '1' : '0'}
               data-margo-primary-tab-shown={show ? '1' : '0'}
+              data-margo-feed-stack-underlay={feedUnderStack ? '1' : '0'}
               hidden={!show}
-              aria-hidden={!isCommittedActive}
-              style={paneStyle(painted, isCommittedActive, show)}
+              aria-hidden={feedUnderStack || !isCommittedActive}
+              style={{
+                ...paneStyle(painted, committed, show),
+                pointerEvents: feedUnderStack ? 'none' : committed ? 'auto' : 'none',
+                zIndex: feedUnderStack ? 2 : committed ? 2 : painted ? 1 : 0,
+              }}
             >
               {node}
             </div>
@@ -1127,7 +1201,22 @@ export function PrimaryTabShell({
         </div>
       ) : null}
 
-      {showAppChildren ? children : null}
+      {showAppChildren ? (
+        feedStackOverlay ? (
+          <div
+            className="margo-feed-stack-overlay"
+            data-margo-feed-stack-overlay={normalizeTabPath(pathname)}
+            style={{
+              ...paneStyle(true, true, true),
+              zIndex: 4,
+            }}
+          >
+            {children}
+          </div>
+        ) : (
+          children
+        )
+      ) : null}
     </PrimaryTabContext.Provider>
   )
 }

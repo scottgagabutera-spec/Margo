@@ -1,6 +1,7 @@
 'use client'
 
 import type { FeedContentTab } from '@/lib/feed-content-tab'
+import { useTapAck } from '@/hooks/use-tap-ack'
 
 type Props = {
   active: FeedContentTab
@@ -10,6 +11,12 @@ type Props = {
 }
 
 export function FeedContentTabBar({ active, onChange, shortsAvailable = true }: Props) {
+  const { ack, isAcked } = useTapAck()
+  const tabProps = (tab: FeedContentTab) => ({
+    'data-margo-acked': isAcked(tab) && active !== tab ? 1 : undefined,
+    onPointerDown: () => ack(tab),
+    onClick: () => onChange(tab),
+  })
   return (
     <div className="margo-feed-content-tab-bar" role="tablist" aria-label="Feed content">
       <button
@@ -17,7 +24,7 @@ export function FeedContentTabBar({ active, onChange, shortsAvailable = true }: 
         role="tab"
         aria-selected={active === 'lyrics'}
         className={`margo-feed-content-tab${active === 'lyrics' ? ' margo-feed-content-tab--active' : ''}`}
-        onClick={() => onChange('lyrics')}
+        {...tabProps('lyrics')}
       >
         Lyrics
       </button>
@@ -26,7 +33,7 @@ export function FeedContentTabBar({ active, onChange, shortsAvailable = true }: 
         role="tab"
         aria-selected={active === 'memories'}
         className={`margo-feed-content-tab${active === 'memories' ? ' margo-feed-content-tab--active' : ''}`}
-        onClick={() => onChange('memories')}
+        {...tabProps('memories')}
       >
         Memories
       </button>
@@ -35,7 +42,7 @@ export function FeedContentTabBar({ active, onChange, shortsAvailable = true }: 
         role="tab"
         aria-selected={active === 'shorts'}
         className={`margo-feed-content-tab${active === 'shorts' ? ' margo-feed-content-tab--active' : ''}`}
-        onClick={() => onChange('shorts')}
+        {...tabProps('shorts')}
       >
         Shorts
       </button>
@@ -44,7 +51,7 @@ export function FeedContentTabBar({ active, onChange, shortsAvailable = true }: 
         role="tab"
         aria-selected={active === 'echoes'}
         className={`margo-feed-content-tab${active === 'echoes' ? ' margo-feed-content-tab--active' : ''}`}
-        onClick={() => onChange('echoes')}
+        {...tabProps('echoes')}
       >
         Echoes
       </button>

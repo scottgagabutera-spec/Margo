@@ -1,4 +1,4 @@
-import { parseFeedContentTab, type FeedContentTab } from '@/lib/feed-content-tab'
+import { applyFeedContentTab, parseFeedContentTab, type FeedContentTab } from './feed-content-tab.ts'
 
 export const FEED_RETURN_STORAGE_KEY = 'margo-feed-resume'
 
@@ -40,6 +40,45 @@ export function readFeedReturnSnapshot(): FeedReturnSnapshot | null {
   return readRaw()
 }
 
+export function buildFeedResumeHref(input?: {
+  tab?: FeedContentTab
+  shortsAt?: number | null
+  vibe?: string | null
+}): string {
+  const tab = input?.tab ?? 'lyrics'
+  let params = applyFeedContentTab(new URLSearchParams(), tab)
+  if (input?.shortsAt != null && tab === 'shorts') {
+    params.set('shortsAt', String(input.shortsAt))
+  }
+  if (input?.vibe) params.set('vibe', input.vibe)
+  const qs = params.toString()
+  return qs ? `/feed?${qs}` : '/feed'
+}
+
+export function mergeFeedReturnSnapshot(
+  prev: Partial<FeedReturnSnapshot> | null,
+  dom: Omit<FeedReturnSnapshot, 'y' | 'at' | 'anchorId'>,
+  y: number,
+  anchorId?: string | null,
+): FeedReturnSnapshot {
+  const tab = prev?.tab ?? dom.tab
+  const shortsAt = prev?.shortsAt !== undefined ? prev.shortsAt : dom.shortsAt
+  const href =
+    typeof dom.href === 'string' && dom.href.startsWith('/feed')
+      ? dom.href
+      : buildFeedResumeHref({ tab, shortsAt })
+  return {
+    y,
+    at: Date.now(),
+    anchorId: anchorId === undefined ? (prev?.anchorId ?? null) : anchorId,
+    tab,
+    memoriesRowX: dom.memoriesRowX,
+    shortsStripX: dom.shortsStripX,
+    shortsAt,
+    href,
+  }
+}
+
 export function captureFeedReturnFromDom(tab?: FeedContentTab): Omit<FeedReturnSnapshot, 'y' | 'at' | 'anchorId'> {
   const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
   const memories = document.querySelector('.margo-feed-memories-row__scroller')
@@ -60,18 +99,21 @@ export function writeFeedReturnSnapshot(patch: Partial<FeedReturnSnapshot> & { y
   if (typeof window === 'undefined') return
   const prev = readRaw()
   const dom = captureFeedReturnFromDom(patch.tab ?? prev?.tab)
-  const next: FeedReturnSnapshot = {
-    y: typeof patch.y === 'number' ? patch.y : (prev?.y ?? 0),
-    at: Date.now(),
-    anchorId: patch.anchorId !== undefined ? patch.anchorId : (prev?.anchorId ?? null),
-    tab: patch.tab ?? prev?.tab ?? dom.tab,
-    memoriesRowX: patch.memoriesRowX ?? prev?.memoriesRowX ?? dom.memoriesRowX,
-    shortsStripX: patch.shortsStripX ?? prev?.shortsStripX ?? dom.shortsStripX,
-    shortsAt: patch.shortsAt !== undefined ? patch.shortsAt : (prev?.shortsAt ?? dom.shortsAt),
-    href: patch.href ?? prev?.href ?? dom.href,
-  }
+  const y = typeof patch.y === 'number' ? patch.y : (prev?.y ?? 0)
+  const merged = mergeFeedReturnSnapshot(
+    { ...prev, ...patch },
+    {
+      ...dom,
+      tab: patch.tab ?? prev?.tab ?? dom.tab,
+      memoriesRowX: patch.memoriesRowX ?? dom.memoriesRowX,
+      shortsStripX: patch.shortsStripX ?? dom.shortsStripX,
+      shortsAt: patch.shortsAt !== undefined ? patch.shortsAt : dom.shortsAt,
+    },
+    y,
+    patch.anchorId !== undefined ? patch.anchorId : prev?.anchorId,
+  )
   try {
-    localStorage.setItem(FEED_RETURN_STORAGE_KEY, JSON.stringify(next))
+    localStorage.setItem(FEED_RETURN_STORAGE_KEY, JSON.stringify(merged))
   } catch {
     /* private mode */
   }
@@ -81,21 +123,32 @@ export function persistFeedReturnBeforeLeave(tab?: FeedContentTab) {
   const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
   const y = scroller instanceof HTMLElement ? scroller.scrollTop : 0
   const dom = captureFeedReturnFromDom(tab)
-  writeFeedReturnSnapshot({ y, ...dom, tab: tab ?? dom.tab })
+  writeFeedReturnSnapshot({ y, tab: tab ?? dom.tab })
 }
 
 export function applyFeedReturnHorizontals(snap: FeedReturnSnapshot) {
   if (typeof document === 'undefined') return
-  window.requestAnimationFrame(() => {
-    if (snap.memoriesRowX > 0) {
-      const row = document.querySelector('.margo-feed-memories-row__scroller')
-      if (row instanceof HTMLElement) row.scrollLeft = snap.memoriesRowX
-    }
-    if (snap.shortsStripX > 0) {
-      const strip = document.querySelector('.margo-feed-shorts-strip__row')
-      if (strip instanceof HTMLElement) strip.scrollLeft = snap.shortsStripX
-    }
-  })
+  const row = document.querySelector('.margo-feed-memories-row__scroller')
+  if (row instanceof HTMLElement) row.scrollLeft = snap.memoriesRowX
+  const strip = document.querySelector('.margo-feed-shorts-strip__row')
+  if (strip instanceof HTMLElement) strip.scrollLeft = snap.shortsStripX
+}
+
+export function shouldReapplyFeedReturn(): boolean {
+  if (typeof sessionStorage === 'undefined') return false
+  try {
+    return sessionStorage.getItem('margo-feed-return-pending') === '1'
+  } catch {
+    return false
+  }
+}
+
+export function clearFeedReturnPending() {
+  try {
+    sessionStorage.removeItem('margo-feed-return-pending')
+  } catch {
+    /* */
+  }
 }
 
 /** @deprecated use persistFeedReturnBeforeLeave */

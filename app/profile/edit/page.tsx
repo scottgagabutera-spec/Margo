@@ -259,6 +259,7 @@ function EditProfilePageInner() {
           favorites: favoriteArtists.map((f, position) => ({
             catalogArtistId: f.id,
             position,
+            artworkUrl: f.artworkUrl,
           })),
         }),
       })

@@ -19,6 +19,19 @@ test('dropdown max height fills visual viewport below anchor', () => {
   )
 })
 
+test('dropdown max height stops above bottom chrome', () => {
+  assert.equal(
+    searchDropdownMaxHeightBelowPx({
+      anchorBottom: 120,
+      offsetTop: 0,
+      viewportHeight: 844,
+      gap: 8,
+      bottomInset: 128,
+    }),
+    588,
+  )
+})
+
 test('landing hero anchor top shifts search to goal', () => {
   const top = landingHeroAnchorTopPx({
     shellTop: 0,

@@ -6,6 +6,8 @@ import {
 } from '@/lib/in-app-nav-stack'
 import { stashPostThreadSeed } from '@/lib/post-thread-seed'
 import { signalNavStart } from '@/lib/margo-nav-intent'
+import { feedReturnFallbackHref } from '@/lib/feed-exit-nav'
+import { popFeedStackIfPinned } from '@/lib/feed-stack-back'
 
 export function postThreadHref(postId: string): string {
   return `/post/${encodeURIComponent(postId)}`
@@ -46,9 +48,12 @@ export function navigatePostThreadBack(
     router.replace(fallbackHref)
     return
   }
+  const feedDest = fallbackHref === '/feed' || fallbackHref.startsWith('/feed?')
+  if (feedDest && popFeedStackIfPinned()) return
   if (canPopNavStack() && window.history.length > 1) {
     window.history.back()
     return
   }
-  router.replace(fallbackHref)
+  const dest = fallbackHref === '/feed' ? feedReturnFallbackHref() : fallbackHref
+  router.replace(dest)
 }
