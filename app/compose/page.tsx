@@ -35,6 +35,8 @@ import { MargoSheet } from '@/components/margo-sheet'
 import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle, keyboardSafeSecondaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
 import { useKeyboardSafeChrome } from '@/hooks/useVisualViewport'
 import { useComposeSearchLayout } from '@/hooks/useComposeSearchLayout'
+import { resetComposeSearchLayoutState } from '@/lib/compose-search-layout-reset'
+import { useMomentSongExportDefaults } from '@/lib/moment-export-defaults'
 import { useInlineSearchDropdownMaxHeight } from '@/hooks/useInlineSearchDropdownMaxHeight'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { POST_LINES_MAX } from '@/lib/post-lines'
@@ -437,6 +439,24 @@ function ComposeInner() {
   const [saveBusy, setSaveBusy] = useState(false)
   const [storyBusy, setStoryBusy] = useState(false)
 
+  const songAtmosphere = useSongAtmosphere(linkedSongId)
+  const composeMargoCatalog = !!(linkedSongId && (selectedSong?.source === 'margo' || selectedSong?.margoSongId))
+  const { applyCatalogSelectionExportDefaults, resetExportDefaultTracking } = useMomentSongExportDefaults({
+    linkedSongId,
+    songAtmosphere,
+    isMargoCatalog: composeMargoCatalog,
+    setExportAtmosphereId,
+    setCardThemeId: setThemeId,
+    setShapeId: setExportShapeId,
+  })
+
+  useEffect(() => {
+    return () => {
+      resetComposeSearchLayoutState()
+      document.documentElement.removeAttribute('data-margo-compose-compact')
+    }
+  }, [])
+
   // One-time "Write your line…" reveal — governs animation progress only.
   // Visibility (show/hide) is a separate, render-time check against
   // lyric.length so typing hides it instantly regardless of where the
@@ -708,6 +728,7 @@ function ComposeInner() {
     setShowResults(false)
     setSnippetStart(null)
     setSnippetEnd(null)
+    applyCatalogSelectionExportDefaults(result.source === 'margo' || !!result.margoSongId)
 
     const enterCatalog = async (songId: string, audioUrl: string | null, catalogTitle?: string, catalogArtist?: string) => {
       if (catalogTitle) setSongName(catalogTitle)
@@ -756,6 +777,7 @@ function ComposeInner() {
     setLinePickComplete(true)
     setSelectMode('write')
     setMargoLines([])
+    applyCatalogSelectionExportDefaults(false)
 
     try {
       const hit = await matchLiveCatalogSong(supabase, result.title, result.artist)
@@ -770,6 +792,7 @@ function ComposeInner() {
           audioUrl: hit.audioUrl,
         })
         await enterCatalog(hit.id, hit.audioUrl, hit.title, hit.artist)
+        applyCatalogSelectionExportDefaults(true)
         return
       }
     } catch (e) {
@@ -777,7 +800,7 @@ function ComposeInner() {
     }
 
     setPhase('select')
-  }, [])
+  }, [applyCatalogSelectionExportDefaults])
 
   const handleLyricSelected = useCallback(() => {
     trackEvent('lyric_selected')
@@ -1019,6 +1042,8 @@ function ComposeInner() {
     setSuggestedVibe(null)
     setVibeUserPicked(false)
     setThemeId('gold')
+    setExportAtmosphereId('still')
+    resetExportDefaultTracking()
     setPendingActionState(null)
     setPendingSendRecipientState(null)
     setAutoSendPerson(null)
@@ -1287,7 +1312,6 @@ function ComposeInner() {
 
   const signedIn = !!user && !user.isAnonymous
   const canPlaySnippet = !!(linkedAudioUrl && linkedSongId && snippetStart != null && snippetEnd != null)
-  const songAtmosphere = useSongAtmosphere(linkedSongId)
   const listen = useMemo(() => {
     if (!exportMoment) return null
     return resolveMomentListen(exportMoment, {
@@ -1791,6 +1815,9 @@ function ComposeInner() {
                   return 'download' as const
                 },
                 onCopyLink: () => {},
+                onDownloadSavePrivate: signedIn
+                  ? () => { void handleSaveMoment() }
+                  : () => { gateAction('private', () => runPendingAction('private')) },
               }}
             />
             {studioExport.videoReadySheet}

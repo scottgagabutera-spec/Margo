@@ -101,6 +101,7 @@ export type MomentCalmToolbarProps = {
   vibeUserPicked?: boolean
   onDownloadImage: () => Promise<void>
   onDownloadVideo?: () => Promise<void>
+  onDownloadSavePrivate?: () => void | Promise<void>
   downloadUsePopover?: boolean
   videoExportEnabled?: boolean
   exportBusy?: boolean
@@ -135,6 +136,7 @@ export function MomentCalmToolbar({
   vibeUserPicked = false,
   onDownloadImage,
   onDownloadVideo,
+  onDownloadSavePrivate,
   downloadUsePopover = true,
   videoExportEnabled = false,
   exportBusy = false,
@@ -481,6 +483,23 @@ export function MomentCalmToolbar({
               <span className="margo-landing-download-pick__sub">PNG</span>
             </span>
           </button>
+          {onDownloadSavePrivate ? (
+            <button
+              type="button"
+              className="margo-landing-download-pick__row"
+              style={{ fontFamily: UI_FONT }}
+              disabled={exportBusy}
+              onClick={() => {
+                closePopover()
+                void onDownloadSavePrivate()
+              }}
+            >
+              <span className="margo-landing-download-pick__copy">
+                <span className="margo-landing-download-pick__title">Save private</span>
+                <span className="margo-landing-download-pick__sub">Profile only</span>
+              </span>
+            </button>
+          ) : null}
         </div>
       </LandingComposerPopover>
 

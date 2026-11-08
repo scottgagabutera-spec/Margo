@@ -14,7 +14,8 @@ import { useSongAtmosphere } from '@/hooks/useSongAtmosphere'
 import { livingAtmosphereOrNull } from '@/lib/atmosphere'
 import { MomentStudioScreen } from '@/components/moment/moment-studio-screen'
 import { useMomentStudioExport } from '@/hooks/useMomentStudioExport'
-import { isLivingAtmosphere, parseAtmosphere } from '@/lib/atmosphere'
+import { isLivingAtmosphere } from '@/lib/atmosphere'
+import { useMomentSongExportDefaults } from '@/lib/moment-export-defaults'
 import { MOMENT_LANDING_VIDEO_CLIP_SEC } from '@/lib/moment-export/video/constants'
 import {
   externalSourceLabel,
@@ -118,7 +119,15 @@ export function StageLanding() {
   const [shapeId, setShapeId] = useState<MomentShapeId>('square')
   const [posting, setPosting] = useState(false)
   const songAtmosphere = useSongAtmosphere(linkedSongId)
-  const exportDefaultSongRef = useRef<string | null>(null)
+  const isMargoCatalogSelected = selectedSong?.source === 'margo' || !!selectedSong?.margoSongId
+  const { applyCatalogSelectionExportDefaults, resetExportDefaultTracking } = useMomentSongExportDefaults({
+    linkedSongId,
+    songAtmosphere,
+    isMargoCatalog: !!linkedSongId && isMargoCatalogSelected,
+    setExportAtmosphereId,
+    setCardThemeId,
+    setShapeId,
+  })
   const [momentVisible, setMomentVisible] = useState(false)
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -326,14 +335,14 @@ export function StageLanding() {
     setVibeUserPicked(false)
     setCardThemeId('gold')
     setExportAtmosphereId('still')
-    exportDefaultSongRef.current = null
+    resetExportDefaultTracking()
     setMomentVisible(false)
     setSearchQuery('')
     setShowResults(false)
     setSearchResults([])
     setSearchFocused(false)
     resetLandingSearchLayoutState()
-  }, [])
+  }, [resetExportDefaultTracking])
 
   const enterCatalog = useCallback(async (
     songId: string,
@@ -382,27 +391,6 @@ export function StageLanding() {
     }
   }, [])
 
-  const applyLandingExportDefaults = useCallback((isMargoCatalog: boolean) => {
-    setCardThemeId('gold')
-    setShapeId('square')
-    setExportAtmosphereId('still')
-    exportDefaultSongRef.current = null
-    if (!isMargoCatalog) return
-  }, [])
-
-  useEffect(() => {
-    if (!linkedSongId) return
-    const isMargo = selectedSong?.source === 'margo' || !!selectedSong?.margoSongId
-    if (!isMargo) return
-    if (exportDefaultSongRef.current === linkedSongId) return
-    exportDefaultSongRef.current = linkedSongId
-    if (songAtmosphere) {
-      setExportAtmosphereId(parseAtmosphere(songAtmosphere))
-    } else {
-      setExportAtmosphereId('still')
-    }
-  }, [linkedSongId, songAtmosphere, selectedSong?.source, selectedSong?.margoSongId])
-
   const handleSelectSong = useCallback(async (result: SearchResult) => {
     setSelectedSong(result)
     setArtistName(result.artist)
@@ -416,7 +404,7 @@ export function StageLanding() {
     setVibeLabel(null)
     setSuggestedVibeLabel(null)
     setVibeUserPicked(false)
-    applyLandingExportDefaults(result.source === 'margo' || !!result.margoSongId)
+    applyCatalogSelectionExportDefaults(result.source === 'margo' || !!result.margoSongId)
 
     if (result.source === 'margo') {
       await enterCatalog(result.margoSongId!, result.audioUrl || null, result.title, result.artist, result.artwork)
@@ -427,7 +415,7 @@ export function StageLanding() {
     setLinkedAudioUrl(null)
     setLinePickComplete(true)
     setMargoLines([])
-    applyLandingExportDefaults(false)
+    applyCatalogSelectionExportDefaults(false)
 
     try {
       const hit = await matchLiveCatalogSong(supabase, result.title, result.artist)
@@ -442,13 +430,13 @@ export function StageLanding() {
           audioUrl: hit.audioUrl,
         })
         await enterCatalog(hit.id, hit.audioUrl, hit.title, hit.artist, hit.artwork || result.artwork)
-        applyLandingExportDefaults(true)
+        applyCatalogSelectionExportDefaults(true)
         return
       }
     } catch (e) {
       console.error('Song rematch failed:', e)
     }
-  }, [enterCatalog, applyLandingExportDefaults])
+  }, [enterCatalog, applyCatalogSelectionExportDefaults])
 
   const applyCatalogPlayback = useCallback((picked: ComposeLyricLine[]) => {
     if (!linkedSongId) {
