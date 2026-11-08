@@ -25,7 +25,9 @@ import { MARGO_NAV_START } from '@/lib/margo-nav-intent'
 import { clearHubOverlayRestore, peekHubOverlayRestore } from '@/lib/search-scope'
 import {
   FEED_RETURN_STORAGE_KEY,
+  applyFeedReturnHorizontals,
   captureFeedReturnFromDom,
+  readFeedReturnSnapshot,
   type FeedReturnSnapshot,
 } from '@/lib/margo-feed-return'
 import { isFeedStackPath } from '@/lib/feed-stack-routes'
@@ -612,6 +614,12 @@ export function PrimaryTabShell({
   useLayoutEffect(() => {
     const path = normalizeTabPath(pathname)
     if (path === '/feed') {
+      const snap = readFeedReturnSnapshot()
+      if (snap) {
+        const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
+        if (scroller instanceof HTMLElement && snap.y > 0) scroller.scrollTop = snap.y
+        applyFeedReturnHorizontals(snap)
+      }
       clearFeedStackPin()
       setFeedStackPinned(false)
       return
