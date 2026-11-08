@@ -9,11 +9,10 @@ import {
   Image,
   Loader2,
   Palette,
-  RectangleVertical,
   Share2,
   Sparkles,
-  Square,
 } from 'lucide-react'
+import { MomentFormatMenu } from '@/components/moment/moment-format-menu'
 import type { AtmosphereId } from '@/lib/atmosphere'
 import { ATMOSPHERE_OPTIONS } from '@/lib/atmosphere'
 import type { MomentShapeId } from '@/lib/moment/types'
@@ -141,13 +140,6 @@ export function MomentCalmToolbar({
     }
   }, [downloadPhase, hasLyric, onDownload, showToast])
 
-  const formatIcon =
-    shapeId === 'vertical' ? (
-      <RectangleVertical size={18} strokeWidth={1.75} aria-hidden />
-    ) : (
-      <Square size={18} strokeWidth={1.75} aria-hidden />
-    )
-
   const downloadIcon =
     downloadPhase === 'loading' ? (
       <Loader2 size={18} strokeWidth={2} className="margo-landing-spin" aria-hidden />
@@ -174,13 +166,13 @@ export function MomentCalmToolbar({
         >
           <Sparkles size={18} strokeWidth={1.75} aria-hidden />
         </ToolButton>
-        <ToolButton
-          label="Format"
-          pressed={popover === 'format'}
-          onClick={() => togglePopover('format')}
-        >
-          {formatIcon}
-        </ToolButton>
+        <MomentFormatMenu
+          variant="landing-tool"
+          shapeId={shapeId}
+          onShapeChange={onShapeChange}
+          open={popover === 'format'}
+          onOpenChange={(next) => setPopover(next ? 'format' : null)}
+        />
         <ToolButton label="Download" onClick={() => void runDownload()}>
           {downloadIcon}
         </ToolButton>
@@ -258,43 +250,6 @@ export function MomentCalmToolbar({
               </button>
             )
           })}
-        </div>
-      </LandingComposerPopover>
-
-      <LandingComposerPopover open={popover === 'format'} align="format" onClose={closePopover}>
-        <div className="margo-landing-format-pick">
-          <button
-            type="button"
-            className={`margo-landing-format-pick__opt${shapeId === 'square' ? ' margo-landing-format-pick__opt--on' : ''}`}
-            onClick={() => {
-              onShapeChange('square')
-              closePopover()
-            }}
-          >
-            <span className="margo-landing-format-pick__glyph margo-landing-format-pick__glyph--square" aria-hidden />
-            <span className="margo-landing-format-pick__title" style={{ fontFamily: UI_FONT }}>
-              Square
-            </span>
-            <span className="margo-landing-format-pick__ratio" style={{ fontFamily: UI_FONT }}>
-              1:1
-            </span>
-          </button>
-          <button
-            type="button"
-            className={`margo-landing-format-pick__opt${shapeId === 'vertical' ? ' margo-landing-format-pick__opt--on' : ''}`}
-            onClick={() => {
-              onShapeChange('vertical')
-              closePopover()
-            }}
-          >
-            <span className="margo-landing-format-pick__glyph margo-landing-format-pick__glyph--story" aria-hidden />
-            <span className="margo-landing-format-pick__title" style={{ fontFamily: UI_FONT }}>
-              Story
-            </span>
-            <span className="margo-landing-format-pick__ratio" style={{ fontFamily: UI_FONT }}>
-              9:16
-            </span>
-          </button>
         </div>
       </LandingComposerPopover>
 

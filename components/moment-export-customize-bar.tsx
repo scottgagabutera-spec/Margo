@@ -8,11 +8,8 @@ import {
   LIVING_ATMOSPHERE_IDS,
   type AtmosphereId,
 } from '@/lib/atmosphere'
-import {
-  EXPORT_SHAPE_CYCLE,
-  EXPORT_SHAPE_HINTS,
-  EXPORT_SHAPE_LABELS,
-} from '@/lib/moment-export/export-shapes'
+import { EXPORT_SHAPE_HINTS, EXPORT_SHAPE_LABELS } from '@/lib/moment-export/export-shapes'
+import { MomentFormatMenu } from '@/components/moment/moment-format-menu'
 import type { MomentShapeId } from '@/lib/moment/types'
 import { exportShapePromoteHint } from '@/lib/moment-export/shape-promote-hint'
 import {
@@ -87,35 +84,6 @@ function modeColumnStyle(active: boolean): CSSProperties {
     transition: 'border-color 200ms var(--ease-out), background 200ms var(--ease-out), opacity 200ms var(--ease-out)',
     opacity: active ? 1 : 0.72,
   }
-}
-
-function AspectGlyph({
-  ratio,
-  selected,
-}: {
-  ratio: '1:1' | '9:16' | '16:9'
-  selected: boolean
-}) {
-  const w = ratio === '16:9' ? 18 : ratio === '1:1' ? 14 : 10
-  const h = ratio === '16:9' ? 10 : ratio === '1:1' ? 14 : 18
-  return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden>
-      <rect
-        x="0.75"
-        y="0.75"
-        width={w - 1.5}
-        height={h - 1.5}
-        rx="2.25"
-        fill={selected ? 'var(--gold-faint)' : 'transparent'}
-        stroke={selected ? 'var(--gold)' : 'var(--text-muted)'}
-        strokeWidth="1.5"
-      />
-    </svg>
-  )
-}
-
-function shapeButtonLabel(id: MomentShapeId): string {
-  return `${EXPORT_SHAPE_LABELS[id]} ${EXPORT_SHAPE_HINTS[id]}`
 }
 
 /** Color control — same behavior as MomentExportCustomizeBar (studio + default). */
@@ -227,22 +195,8 @@ function MomentExportCustomizeBarStudio({
           })}
         </div>
       ) : null}
-      <div className="margo-moment-studio__customize-row" role="group" aria-label="Export size">
-        {EXPORT_SHAPE_CYCLE.map((id) => {
-          const selected = shapeId === id
-          return (
-            <button
-              key={id}
-              type="button"
-              aria-pressed={selected}
-              aria-label={shapeButtonLabel(id)}
-              onClick={() => onShapeChange(id)}
-              className="margo-moment-studio__studio-btn"
-            >
-              {shapeButtonLabel(id)}
-            </button>
-          )
-        })}
+      <div className="margo-moment-studio__customize-row">
+        <MomentFormatMenu variant="studio" shapeId={shapeId} onShapeChange={onShapeChange} />
       </div>
     </div>
   )
@@ -374,51 +328,8 @@ export function MomentExportCustomizeBar(props: MomentExportCustomizeBarProps) {
         ) : null}
       </div>
 
-      <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <span style={columnLabelStyle()}>Size</span>
-        <div
-          role="group"
-          aria-label="Export size"
-          style={{
-            display: 'flex',
-            width: '100%',
-            gap: '6px',
-          }}
-        >
-          {EXPORT_SHAPE_CYCLE.map((id) => {
-            const selected = shapeId === id
-            const ratio: '1:1' | '9:16' | '16:9' =
-              id === 'vertical' ? '9:16' : id === 'wide' ? '16:9' : '1:1'
-            return (
-              <button
-                key={id}
-                type="button"
-                aria-label={`${EXPORT_SHAPE_LABELS[id]}, ${EXPORT_SHAPE_HINTS[id]}`}
-                aria-pressed={selected}
-                onClick={() => onShapeChange(id)}
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  minHeight: 'var(--margo-touch-min)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: 0,
-                  borderRadius: '12px',
-                  border: selected
-                    ? '1px solid var(--gold-border)'
-                    : '1px solid var(--border-hi)',
-                  background: selected ? 'var(--gold-faint)' : 'var(--surface-3)',
-                  cursor: 'pointer',
-                  WebkitTapHighlightColor: 'transparent',
-                  boxSizing: 'border-box',
-                }}
-              >
-                <AspectGlyph ratio={ratio} selected={selected} />
-              </button>
-            )
-          })}
-        </div>
+      <div style={{ minWidth: 0 }}>
+        <MomentFormatMenu variant="customize" shapeId={shapeId} onShapeChange={onShapeChange} />
         <span style={captionStyle(true)}>
           {EXPORT_SHAPE_LABELS[shapeId]} · {EXPORT_SHAPE_HINTS[shapeId]}
         </span>

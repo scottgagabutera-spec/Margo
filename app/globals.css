@@ -1354,7 +1354,8 @@ html[data-margo-stage] .margo-footer {
 
 @media (min-width: 1024px) {
   .margo-landing-popover--format,
-  .margo-landing-popover--right {
+  .margo-landing-popover--right,
+  .margo-moment-format-menu-host .margo-landing-popover--left {
     bottom: auto;
     top: calc(100% + 8px);
   }
@@ -1423,7 +1424,17 @@ html[data-margo-stage] .margo-footer {
 }
 
 .margo-landing-format-pick__opt--on {
-  border-color: var(--gold);
+  border: 1px solid var(--gold);
+}
+
+.margo-moment-format-menu-host {
+  position: relative;
+}
+
+.margo-moment-format-menu-host--studio .margo-landing-popover--format,
+.margo-moment-format-menu-host--studio .margo-landing-popover--left,
+.margo-moment-format-menu-host--customize .margo-landing-popover--left {
+  left: 0;
 }
 
 .margo-landing-format-pick__glyph {
