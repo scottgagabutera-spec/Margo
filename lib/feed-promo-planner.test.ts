@@ -39,8 +39,8 @@ for (const n of COUNTS) {
   }
 }
 
-test('slots start at three then step four', () => {
-  assert.deepEqual(feedBlockSlots(20), [3, 7, 11, 15, 19])
+test('slots at 3 6 9 12 15 then every four', () => {
+  assert.deepEqual(feedBlockSlots(20), [3, 6, 9, 12, 15, 19])
 })
 
 test('signed in twenty posts cycle order anchor zero', () => {
@@ -57,24 +57,13 @@ test('signed out twenty posts cycle order anchor zero', () => {
   assert.deepEqual(kinds, expected)
 })
 
-test('minimum four lyrics between blocks for twenty posts', () => {
-  const positions = simulateFeedBlockPositions({
-    lyricPosts: lyricRows(20),
-    memories,
-    peoplePool,
-    signedIn: true,
-    promoAnchor: 0,
-    echoesBlock: {
-      setId: 'set',
-      questionId: 'q',
-      title: 'What are you listening to?',
-      answerCount: 1,
-      preview: [],
-    },
-  }).filter((p) => p.afterLyric > 0)
-  for (let i = 1; i < positions.length; i++) {
-    assert.ok(positions[i]!.afterLyric - positions[i - 1]!.afterLyric >= MIN_LYRICS_BETWEEN_BLOCKS + 1)
+test('late slots after fifteen step by four', () => {
+  const slots = feedBlockSlots(25)
+  const late = slots.filter((s) => s >= 19)
+  for (let i = 1; i < late.length; i++) {
+    assert.equal(late[i]! - late[i - 1]!, 4)
   }
+  assert.deepEqual(slots.slice(0, 5), [3, 6, 9, 12, 15])
 })
 
 test('no adjacent blocks', () => {

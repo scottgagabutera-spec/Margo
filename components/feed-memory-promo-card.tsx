@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { leaveFeedTo } from '@/lib/feed-exit-nav'
 import { useCallback } from 'react'
 import { PlusIcon } from '@/components/icons'
 import { memoryCardCopy, type MemoryPromoKind } from '@/lib/feed-memory-card'
@@ -49,19 +50,24 @@ export function FeedMemoryPromoCard({ promoKind }: { promoKind: MemoryPromoKind 
 
   const primary = useCallback(() => {
     if (promoKind === 'pictures') {
-      router.push('/memories/new?entry=media')
+      leaveFeedTo(router, '/memories/new?entry=media', 'lyrics')
       return
     }
     if (promoKind === 'story') {
-      router.push('/memories/new?entry=words&focus=story')
+      leaveFeedTo(router, '/memories/new?entry=words&focus=story', 'lyrics')
       return
     }
-    router.push('/memories/new')
+    leaveFeedTo(router, '/memories/new', 'lyrics')
   }, [promoKind, router])
 
   const action =
     promoKind === 'memory' ? (
-      <Link href="/memories/new" className="margo-feed-memory-card__action" aria-label={copy.title}>
+      <Link
+        href="/memories/new"
+        className="margo-feed-memory-card__action"
+        aria-label={copy.title}
+        onClick={() => leaveFeedTo(router, '/memories/new', 'lyrics')}
+      >
         <PlusIcon size={18} color="var(--bg)" />
       </Link>
     ) : (
@@ -71,7 +77,7 @@ export function FeedMemoryPromoCard({ promoKind }: { promoKind: MemoryPromoKind 
     )
 
   return (
-    <article className="margo-feed-memory-card">
+    <article className="margo-feed-memory-card margo-pressable-surface">
       <div className="margo-feed-memory-card__art" aria-hidden>
         <PromoArt kind={promoKind} />
       </div>

@@ -10,6 +10,7 @@ import type { FeedLyricsPeopleSlot } from '@/lib/feed-lyrics-mix'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { createClient } from '@/lib/supabase/client'
 import { SignInLink } from '@/components/signin-link'
+import { leaveFeedTo } from '@/lib/feed-exit-nav'
 
 const font = UI_FONT
 const supabase = createClient()
@@ -99,7 +100,7 @@ export function FeedPeopleStrip({
   if (!people.length) return null
 
   return (
-    <div className="margo-feed-people-strip">
+    <div className="margo-feed-people-strip margo-pressable-surface">
       <MargoSectionHeader
         title="Who to follow"
         actionHref="/search?scope=people"
@@ -111,7 +112,7 @@ export function FeedPeopleStrip({
             <button
               type="button"
               className="margo-feed-people-strip__identity"
-              onClick={() => router.push(`/profile/${p.username}`)}
+              onClick={() => leaveFeedTo(router, `/profile/${p.username}`, 'lyrics')}
               aria-label={`Open @${p.username}`}
             >
               <MargoPortraitAvatar

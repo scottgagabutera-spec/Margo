@@ -6,6 +6,7 @@ import { ChevronRightIcon, EditIcon } from '@/components/icons'
 import { MargoAvatar } from '@/components/margo-avatar'
 import type { EchoFeedBlockSnapshot } from '@/lib/echoes/types'
 import { persistFeedReturnBeforeLeave } from '@/lib/margo-feed-return'
+import { leaveFeedTo } from '@/lib/feed-exit-nav'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { UI_FONT } from '@/lib/fonts'
 
@@ -16,20 +17,18 @@ export function FeedEchoesSetBlock({ block, signedIn }: { block: EchoFeedBlockSn
   const { requireAuth } = useAuthGate()
 
   const openSet = () => {
-    persistFeedReturnBeforeLeave('lyrics')
-    router.push(`/echoes/${block.setId}`)
+    leaveFeedTo(router, `/echoes/${block.setId}`, 'lyrics')
   }
 
   const startAnswer = () => {
     if (!requireAuth()) return
-    persistFeedReturnBeforeLeave('lyrics')
-    router.push(`/echoes/answer?questionId=${encodeURIComponent(block.questionId)}&setId=${encodeURIComponent(block.setId)}`)
+    leaveFeedTo(router, `/echoes/answer?questionId=${encodeURIComponent(block.questionId)}&setId=${encodeURIComponent(block.setId)}`, 'lyrics')
   }
 
   const countLabel = block.answerCount === 1 ? '1 answer' : `${block.answerCount} answers`
 
   return (
-    <article className="margo-feed-echoes-set">
+    <article className="margo-feed-echoes-set margo-pressable-surface">
       <div className="margo-feed-echoes-set__head">
         <div className="margo-feed-echoes-set__titles">
           <p className="margo-feed-echoes-set__title" style={{ fontFamily: font }}>

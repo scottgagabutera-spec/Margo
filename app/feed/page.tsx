@@ -41,6 +41,8 @@ import { inferListeningPeriodType } from '@/lib/memory/listening-infer'
 import {
   applyFeedReturnHorizontals,
   readFeedReturnSnapshot,
+  clearFeedReturnPending,
+  shouldReapplyFeedReturn,
 } from '@/lib/margo-feed-return'
 import { FeedPeopleStrip } from '@/components/feed-people-strip'
 import { FeedMemoryPromoCard } from '@/components/feed-memory-promo-card'
@@ -653,10 +655,20 @@ function FeedPageInner() {
 
   const feedTabRestoredRef = useRef(false)
   useLayoutEffect(() => {
-    if (!feedLive || feedTabRestoredRef.current) return
+    if (!feedLive) {
+      feedTabRestoredRef.current = false
+      return
+    }
+  }, [feedLive])
+
+  useLayoutEffect(() => {
+    if (!feedLive) return
+    const pending = shouldReapplyFeedReturn()
+    if (feedTabRestoredRef.current && !pending) return
     const snap = readFeedReturnSnapshot()
     if (!snap) return
     feedTabRestoredRef.current = true
+    clearFeedReturnPending()
     if (snap.tab !== feedContentTab) {
       const params = applyFeedContentTab(new URLSearchParams(searchParams.toString()), snap.tab)
       if (snap.shortsAt != null && snap.tab === 'shorts') {

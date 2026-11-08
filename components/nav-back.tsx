@@ -16,6 +16,7 @@ import {
   markHubOverlayRestore,
   openedFromHubTile,
 } from '@/lib/search-scope'
+import { feedReturnFallbackHref } from '@/lib/feed-exit-nav'
 
 /** @deprecated Use canPopNavStack — kept for callers that imported canPopInAppHistory */
 export function canPopInAppHistory() {
@@ -125,7 +126,7 @@ export function navBackForPath(pathname: string | null | undefined): NavBackConf
     return { ...hubTileBack('/feed'), label: 'Notifications' }
   }
 
-  if (p === '/search') return { fallbackHref: '/feed', replace: true }
+  if (p === '/search') return { fallbackHref: feedReturnFallbackHref(), replace: true }
   if (p === '/studio') return { fallbackHref: '/you', preferHistory: false }
   if (p.startsWith('/studio/')) return { fallbackHref: '/studio' }
   if (p === '/settings' || p === '/profile/edit' || p === '/apply-artist') {
@@ -136,8 +137,10 @@ export function navBackForPath(pathname: string | null | undefined): NavBackConf
   }
   if (p.startsWith('/library/')) return { fallbackHref: '/library' }
   if (p.startsWith('/discover/') || p === '/artists') return { fallbackHref: '/discover' }
-  if (p.startsWith('/post/')) return { fallbackHref: '/feed', preferHistory: true, replace: true }
-  if (p === '/lyric-back') return { fallbackHref: '/feed', replace: true }
+  if (p.startsWith('/post/')) return { fallbackHref: feedReturnFallbackHref(), preferHistory: true, replace: true }
+  if (p === '/lyric-back') return { fallbackHref: feedReturnFallbackHref(), replace: true }
+  if (p.startsWith('/memory/')) return { fallbackHref: feedReturnFallbackHref(), preferHistory: true }
+  if (p.startsWith('/echoes/')) return { fallbackHref: feedReturnFallbackHref(), preferHistory: true }
   if (p === '/about' || p === '/contact' || p === '/privacy' || p === '/terms' || p === '/dmca' || p === '/data-deletion' || p === '/help' || p.startsWith('/help/') || p === '/faq') {
     return { fallbackHref: '/' }
   }
@@ -147,7 +150,7 @@ export function navBackForPath(pathname: string | null | undefined): NavBackConf
     return { fallbackHref: `/profile/${parts[1]}` }
   }
   if (parts[0] === 'profile' && parts[1] && !parts[2]) {
-    return { fallbackHref: '/feed' }
+    return { fallbackHref: feedReturnFallbackHref(), preferHistory: true }
   }
 
   return null

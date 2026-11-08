@@ -6,6 +6,7 @@ import {
 } from '@/lib/in-app-nav-stack'
 import { stashPostThreadSeed } from '@/lib/post-thread-seed'
 import { signalNavStart } from '@/lib/margo-nav-intent'
+import { feedReturnFallbackHref } from '@/lib/feed-exit-nav'
 
 export function postThreadHref(postId: string): string {
   return `/post/${encodeURIComponent(postId)}`
@@ -50,5 +51,6 @@ export function navigatePostThreadBack(
     window.history.back()
     return
   }
-  router.replace(fallbackHref)
+  const dest = fallbackHref === '/feed' ? feedReturnFallbackHref() : fallbackHref
+  router.replace(dest)
 }

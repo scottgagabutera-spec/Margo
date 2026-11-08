@@ -355,7 +355,7 @@ export function FeedShortsPager({
   }, [clips.length])
 
   useEffect(() => {
-    if (!tabActive || clips.length === 0 || initialIndex <= 0) return
+    if (!tabActive || clips.length === 0) return
     scrollToShortIndex(initialIndex, 'auto')
   }, [tabActive, clips.length, initialIndex, scrollToShortIndex])
 

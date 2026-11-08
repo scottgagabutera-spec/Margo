@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeftIcon } from '@/components/icons'
 import { canPopInAppHistory } from '@/components/nav-back'
 import { navigatePostThreadBack } from '@/lib/post-thread-nav'
+import { feedReturnFallbackHref } from '@/lib/feed-exit-nav'
 import { PendingNavLink } from '@/components/pending-nav-link'
 
 /**
@@ -28,7 +29,9 @@ export function BackButton({
   variant?: 'page' | 'chrome'
 }) {
   const router = useRouter()
-  const dest = fallbackHref || '/feed'
+  const dest = fallbackHref
+    ? (fallbackHref === '/feed' ? feedReturnFallbackHref() : fallbackHref)
+    : feedReturnFallbackHref()
   const isChrome = variant === 'chrome'
 
   const iconStyle: React.CSSProperties = {
