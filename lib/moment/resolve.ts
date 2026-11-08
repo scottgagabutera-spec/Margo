@@ -265,6 +265,7 @@ export function resolveMargoMomentFromComposeDrafts(
     exportAtmosphereId: options.exportAtmosphereId,
     seedKey,
     status: options.status ?? (options.postId ? null : 'ephemeral'),
+    exportMaxVideoDurationSec: options.exportMaxVideoDurationSec ?? null,
   }
 }
 
