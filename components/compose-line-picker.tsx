@@ -763,13 +763,17 @@ export function ComposeLinePicker({
         ) : null}
         <div
           ref={listRef}
-          className={isPanel ? 'margo-lb-line-list' : undefined}
+          className={
+            [isPanel ? 'margo-lb-line-list' : null, isLanding ? 'margo-landing-line-picker__list' : null]
+              .filter(Boolean)
+              .join(' ') || undefined
+          }
           style={{
             maxHeight: fillAvailable || isLanding ? 'none' : isPanel ? 'none' : 'min(52dvh, calc(var(--margo-vv-height, 100dvh) * 0.48), 420px)',
             height: fillAvailable ? '100%' : undefined,
             flex: fillAvailable ? '1 1 auto' : undefined,
             minHeight: fillAvailable ? 0 : undefined,
-            overflowY: isPanel || isLanding ? 'visible' : 'auto',
+            overflowY: isPanel ? 'visible' : 'auto',
             overscrollBehavior: 'contain',
             touchAction: 'pan-y',
             WebkitOverflowScrolling: 'touch',
