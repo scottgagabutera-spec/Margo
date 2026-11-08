@@ -27,7 +27,7 @@ test('compose your-line sticky song row stays below header with keyboard', async
   await page.waitForResponse((r) => r.url().includes('/api/genius') && r.status() === 200)
   await page.getByRole('option', { name: /Seduce Me/i }).first().tap()
   await page.getByRole('button', { name: /continue/i }).tap({ timeout: 15000 }).catch(() => {})
-  await expect(page.locator('.margo-compose-sticky-song')).toBeVisible({ timeout: 20000 })
+  await expect(page.locator('.margo-compose-sticky-song--flush')).toBeVisible({ timeout: 20000 })
   await page.setViewportSize({ width: 360, height: 406 })
   const field = page.locator('.margo-compose-overlay textarea, .margo-compose-overlay [contenteditable="true"]').first()
   await field.tap()
@@ -35,9 +35,9 @@ test('compose your-line sticky song row stays below header with keyboard', async
   const box = await page.evaluate(() => {
     const nav = document.querySelector('.margo-nav-bar')
     const headerBottom = nav?.getBoundingClientRect().bottom ?? 72
-    const chip = document.querySelector('.margo-compose-sticky-song')
-    const clearBtn = document.querySelector('.margo-compose-sticky-song [aria-label="Clear song"]')
-    const changeBtn = document.querySelector('.margo-compose-sticky-song [aria-label="Change song"]')
+    const chip = document.querySelector('.margo-compose-sticky-song--flush')
+    const clearBtn = document.querySelector('.margo-compose-sticky-song--flush [aria-label="Clear song"]')
+    const changeBtn = document.querySelector('.margo-compose-sticky-song--flush [aria-label="Change song"]')
     const vv = window.visualViewport
     const visibleBottom = (vv?.offsetTop ?? 0) + (vv?.height ?? window.innerHeight)
     const chipRect = chip?.getBoundingClientRect()

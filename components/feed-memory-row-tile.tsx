@@ -102,6 +102,9 @@ function MediaSquare({
       ) : (
         <span className="margo-feed-memory-row-tile__placeholder" aria-hidden />
       )}
+      <span className="margo-memory-kind-chip">
+        {kind === 'photo' ? 'Photo' : kind === 'story' ? 'Story' : 'Listening'}
+      </span>
       {isVideo ? <span className="margo-feed-memory-row-tile__video" aria-hidden /> : null}
     </div>
   )

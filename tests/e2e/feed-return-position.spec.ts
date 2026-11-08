@@ -102,23 +102,41 @@ test.describe('feed return position signed out @390', () => {
   test.beforeEach(async ({ page }) => {
     test.setTimeout(180_000)
     await page.setViewportSize({ width: 390, height: 844 })
+    await page.addInitScript(() => {
+      try {
+        localStorage.removeItem('margo-feed-resume')
+        sessionStorage.removeItem('margo-primary-tab-scroll')
+        sessionStorage.removeItem('margo-feed-stack-scroll-y')
+        sessionStorage.removeItem('margo-feed-stack-pin')
+        sessionStorage.removeItem('margo-feed-return-pending')
+      } catch {
+        /* */
+      }
+    })
   })
 
   for (const exit of EXITS) {
     test(`${exit.name} chrome back`, async ({ page }) => {
-      const before = await prepFeed(page)
+      await prepFeed(page)
       const hit = page.locator(exit.locator).first()
       await expect(hit).toBeVisible({ timeout: 15_000 })
-      await hit.click()
+      // Pose is captured once the target is on screen — a real tap never
+      // auto-scrolls first, and Playwright's click would.
+      await hit.scrollIntoViewIfNeeded()
+      const before = await captureFeedPose(page)
+      // Native click — Playwright's click() would auto-scroll again and skew the saved pose.
+      await hit.evaluate((el) => (el as HTMLElement).click())
       await page.waitForTimeout(500)
       await restoreAndAssert(page, before, 'chrome', { skipY: exit.skipY })
     })
 
     test(`${exit.name} history back`, async ({ page }) => {
-      const before = await prepFeed(page)
+      await prepFeed(page)
       const hit = page.locator(exit.locator).first()
       await expect(hit).toBeVisible({ timeout: 15_000 })
-      await hit.click()
+      await hit.scrollIntoViewIfNeeded()
+      const before = await captureFeedPose(page)
+      await hit.evaluate((el) => (el as HTMLElement).click())
       await page.waitForTimeout(500)
       await restoreAndAssert(page, before, 'history', { skipY: exit.skipY })
     })

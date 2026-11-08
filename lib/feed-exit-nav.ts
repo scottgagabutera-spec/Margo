@@ -1,5 +1,6 @@
 import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime'
 import type { FeedContentTab } from '@/lib/feed-content-tab'
+import { alignFeedPrimaryFrozenScroll } from '@/components/primary-tab-shell'
 import { pinFeedStackFromFeed } from '@/lib/feed-stack-pin'
 import {
   buildFeedResumeHref,
@@ -15,6 +16,9 @@ export function leaveFeedTo(
 ) {
   if (typeof window !== 'undefined') {
     persistFeedReturnBeforeLeave(tab)
+  const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
+  const y = scroller instanceof HTMLElement ? scroller.scrollTop : 0
+  alignFeedPrimaryFrozenScroll(y)
     pinFeedStackFromFeed()
     const snap = readFeedReturnSnapshot()
     if (snap) {
