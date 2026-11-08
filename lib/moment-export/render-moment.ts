@@ -678,13 +678,18 @@ export async function renderMomentToCanvas(
   canvas: HTMLCanvasElement,
   options: RenderMomentOptions,
 ): Promise<void> {
-  if (options.variant === 'stage-card') {
-    await renderStageMomentCardToCanvas(canvas, options)
+  const shape = SHAPES.find((s) => s.id === (options.shapeId || 'square')) || SHAPES[0]
+  const useStageCard = options.variant === 'stage-card' || shape.id === 'vertical'
+  if (useStageCard) {
+    const lines =
+      shape.id === 'vertical' && options.lines.length > 1
+        ? [{ ...options.lines[0], lyric: options.lines.map((l) => l.lyric).join('\n') }]
+        : options.lines
+    await renderStageMomentCardToCanvas(canvas, { ...options, lines })
     return
   }
 
   const theme = THEMES.find((t) => t.id === (options.themeId || 'gold')) || THEMES[0]
-  const shape = SHAPES.find((s) => s.id === (options.shapeId || 'square')) || SHAPES[0]
   const { w, h } = shape
   const SCALE = options.scale ?? STAGE_CARD_EXPORT_SCALE
   const { bindStageExportCanvas } = await import('@/lib/moment-export/export-canvas-quality')
