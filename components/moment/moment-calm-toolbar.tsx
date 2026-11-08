@@ -2,25 +2,28 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import {
-  ArrowUp,
   AudioLines,
   Check,
   CircleSlash,
   Copy,
-  Download,
   Droplets,
   Image as ImageIcon,
   Loader2,
-  Palette,
-  RectangleVertical,
-  Share2,
-  Sparkles,
-  Square,
   Sunrise,
   Video,
-  WandSparkles,
   Waves,
 } from 'lucide-react'
+import {
+  ComposerColorIcon,
+  ComposerDownloadIcon,
+  ComposerEffectIcon,
+  ComposerFormatSquareIcon,
+  ComposerFormatStoryIcon,
+  ComposerPostArrowIcon,
+  ComposerShareIcon,
+  ComposerStoryIcon,
+  ComposerVibeIcon,
+} from '@/components/moment/composer-toolbar-icons'
 import type { AtmosphereId } from '@/lib/atmosphere'
 import { ATMOSPHERE_OPTIONS } from '@/lib/atmosphere'
 import type { MomentShapeId } from '@/lib/moment/types'
@@ -33,7 +36,7 @@ import { UI_FONT } from '@/lib/fonts'
 type PopoverId = 'vibe' | 'color' | 'effect' | 'format' | 'download' | 'share' | null
 type DownloadPhase = 'idle' | 'loading' | 'done'
 
-const EFFECT_ICONS: Record<AtmosphereId, typeof CircleSlash> = {
+const EFFECT_ROW_ICONS: Record<AtmosphereId, typeof CircleSlash> = {
   still: CircleSlash,
   breath: Sunrise,
   drift: Waves,
@@ -110,6 +113,12 @@ export type MomentCalmToolbarProps = {
   posting?: boolean
   onSignInPrompt?: () => void
   videoSilentLabel?: boolean
+  endAction?: 'post' | 'story' | 'none'
+  onStory?: () => void
+  shareContext?: 'landing' | 'card'
+  onCardShareImage?: () => void
+  onCardShareSend?: () => void
+  onCardShareStory?: () => void
 }
 
 export function MomentCalmToolbar({
@@ -138,6 +147,12 @@ export function MomentCalmToolbar({
   posting = false,
   onSignInPrompt,
   videoSilentLabel = false,
+  endAction = 'post',
+  onStory,
+  shareContext = 'landing',
+  onCardShareImage,
+  onCardShareSend,
+  onCardShareStory,
 }: MomentCalmToolbarProps) {
   const tier = useLandingTier()
   const [popover, setPopover] = useState<PopoverId>(null)
@@ -147,7 +162,6 @@ export function MomentCalmToolbar({
   const toolbarRef = useRef<HTMLDivElement>(null)
   const colorMode = exportAtmosphereId === 'still'
   const effectMode = !colorMode
-  const EffectIcon = effectMode ? (EFFECT_ICONS[exportAtmosphereId] ?? WandSparkles) : WandSparkles
 
   const closePopover = useCallback(() => setPopover(null), [])
   const togglePopover = useCallback((id: PopoverId) => {
@@ -206,11 +220,7 @@ export function MomentCalmToolbar({
   }, [downloadUsePopover, hasLyric, runDownloadImage, showToast, togglePopover])
 
   const formatIcon =
-    shapeId === 'vertical' ? (
-      <RectangleVertical size={18} strokeWidth={1.75} aria-hidden />
-    ) : (
-      <Square size={18} strokeWidth={1.75} aria-hidden />
-    )
+    shapeId === 'vertical' ? <ComposerFormatStoryIcon /> : <ComposerFormatSquareIcon />
 
   const downloadLoading = downloadPhase === 'loading' || exportBusy
   const downloadIcon =
@@ -219,7 +229,7 @@ export function MomentCalmToolbar({
     ) : downloadPhase === 'done' ? (
       <Check size={18} strokeWidth={2} color="var(--gold)" aria-hidden />
     ) : (
-      <Download size={18} strokeWidth={1.75} aria-hidden />
+      <ComposerDownloadIcon />
     )
 
   const vibeBadge = vibeUserPicked ? 'Chosen' : suggestedVibeLabel ? 'Detected' : null
@@ -234,21 +244,21 @@ export function MomentCalmToolbar({
           showDetectedDot={showVibeDot}
           onClick={() => togglePopover('vibe')}
         >
-          <Sparkles size={18} strokeWidth={1.75} aria-hidden />
+          <ComposerVibeIcon />
         </ToolButton>
         <ToolButton
           label="Color"
           pressed={popover === 'color' || colorMode}
           onClick={() => togglePopover('color')}
         >
-          <Palette size={18} strokeWidth={1.75} aria-hidden />
+          <ComposerColorIcon />
         </ToolButton>
         <ToolButton
           label="Effect"
           pressed={popover === 'effect' || effectMode}
           onClick={() => togglePopover('effect')}
         >
-          <EffectIcon size={18} strokeWidth={effectMode ? 1.5 : 1.75} color={effectMode ? 'var(--gold)' : undefined} aria-hidden />
+          <ComposerEffectIcon active={effectMode} />
         </ToolButton>
         <ToolButton label="Format" pressed={popover === 'format'} onClick={() => togglePopover('format')}>
           {formatIcon}
@@ -261,29 +271,41 @@ export function MomentCalmToolbar({
           {downloadIcon}
         </ToolButton>
         <ToolButton label="Share" pressed={popover === 'share'} onClick={() => togglePopover('share')}>
-          <Share2 size={18} strokeWidth={1.75} aria-hidden />
+          <ComposerShareIcon />
         </ToolButton>
         <div className="margo-landing-toolbar__spacer" aria-hidden />
-        <button
-          type="button"
-          className="margo-landing-post"
-          aria-label="Post this line"
-          disabled={posting || (!hasLyric && signedIn)}
-          aria-busy={posting || undefined}
-          style={{ opacity: hasLyric ? 1 : 0.4 }}
-          onPointerDown={(e) => e.currentTarget.setAttribute('data-margo-acked', '1')}
-          onClick={() => {
-            if (!hasLyric) return
-            if (signedIn && onPost) {
-              onPost()
-              return
-            }
-            onSignInPrompt?.()
-            showToast('Sign in to post')
-          }}
-        >
-          <ArrowUp size={18} strokeWidth={2} color="var(--bg)" aria-hidden />
-        </button>
+        {endAction === 'story' ? (
+          <button
+            type="button"
+            className="margo-landing-post"
+            aria-label="Share as story"
+            onPointerDown={(e) => e.currentTarget.setAttribute('data-margo-acked', '1')}
+            onClick={() => onStory?.()}
+          >
+            <ComposerStoryIcon />
+          </button>
+        ) : endAction === 'post' ? (
+          <button
+            type="button"
+            className="margo-landing-post"
+            aria-label="Post this line"
+            disabled={posting || (!hasLyric && signedIn)}
+            aria-busy={posting || undefined}
+            style={{ opacity: hasLyric ? 1 : 0.4 }}
+            onPointerDown={(e) => e.currentTarget.setAttribute('data-margo-acked', '1')}
+            onClick={() => {
+              if (!hasLyric) return
+              if (signedIn && onPost) {
+                onPost()
+                return
+              }
+              onSignInPrompt?.()
+              showToast('Sign in to post')
+            }}
+          >
+            <ComposerPostArrowIcon />
+          </button>
+        ) : null}
       </div>
 
       <LandingComposerPopover open={popover === 'vibe'} align="full" onClose={closePopover} className="margo-landing-popover--vibe">
@@ -355,7 +377,7 @@ export function MomentCalmToolbar({
         <div className="margo-landing-popover-list">
           {ATMOSPHERE_OPTIONS.map((opt) => {
             const on = exportAtmosphereId === opt.id
-            const Icon = EFFECT_ICONS[opt.id]
+            const Icon = EFFECT_ROW_ICONS[opt.id]
             return (
               <button
                 key={opt.id}
@@ -464,57 +486,109 @@ export function MomentCalmToolbar({
 
       <LandingComposerPopover open={popover === 'share'} align="right" onClose={closePopover}>
         <div className="margo-landing-share-pick">
-          <button
-            type="button"
-            className="margo-landing-share-pick__row"
-            style={{ fontFamily: UI_FONT }}
-            onClick={() => {
-              onCopyLink()
-              showToast('Link copied')
-              closePopover()
-            }}
-          >
-            <span className="margo-landing-share-pick__icon" aria-hidden>
-              <Copy size={16} strokeWidth={1.75} />
-            </span>
-            Copy link
-          </button>
-          <button
-            type="button"
-            className="margo-landing-share-pick__row"
-            style={{ fontFamily: UI_FONT }}
-            onClick={() => {
-              closePopover()
-              void runDownloadImage()
-            }}
-          >
-            <span className="margo-landing-share-pick__icon" aria-hidden>
-              <ImageIcon size={16} strokeWidth={1.75} />
-            </span>
-            Save image
-          </button>
-          <button
-            type="button"
-            className="margo-landing-share-pick__row"
-            style={{ fontFamily: UI_FONT }}
-            onClick={() => {
-              closePopover()
-              if (!hasLyric) {
-                showToast('Add a line first')
-                return
-              }
-              void (async () => {
-                const r = await onShareNative()
-                if (r === 'shared') showToast('Saved')
-                else if (r === 'download') showToast('Opening share')
-              })()
-            }}
-          >
-            <span className="margo-landing-share-pick__icon" aria-hidden>
-              <Share2 size={16} strokeWidth={1.75} />
-            </span>
-            Share to apps
-          </button>
+          {shareContext === 'card' ? (
+            <>
+              <button
+                type="button"
+                className="margo-landing-share-pick__row"
+                style={{ fontFamily: UI_FONT }}
+                onClick={() => {
+                  closePopover()
+                  onCardShareImage?.()
+                }}
+              >
+                <span className="margo-landing-share-pick__icon" aria-hidden>
+                  <ImageIcon size={16} strokeWidth={1.5} />
+                </span>
+                Share image
+              </button>
+              <button
+                type="button"
+                className="margo-landing-share-pick__row"
+                style={{ fontFamily: UI_FONT }}
+                onClick={() => {
+                  closePopover()
+                  onCardShareSend?.()
+                }}
+              >
+                <span className="margo-landing-share-pick__icon" aria-hidden>
+                  <ComposerShareIcon size={16} />
+                </span>
+                Send
+              </button>
+              <button
+                type="button"
+                className="margo-landing-share-pick__row"
+                style={{ fontFamily: UI_FONT }}
+                onClick={() => {
+                  closePopover()
+                  onCardShareStory?.()
+                }}
+              >
+                <span className="margo-landing-share-pick__icon" aria-hidden>
+                  <ComposerStoryIcon size={16} />
+                </span>
+                <span>
+                  Story
+                  <span className="margo-landing-download-pick__sub" style={{ display: 'block' }}>24h</span>
+                </span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="margo-landing-share-pick__row"
+                style={{ fontFamily: UI_FONT }}
+                onClick={() => {
+                  onCopyLink()
+                  showToast('Link copied')
+                  closePopover()
+                }}
+              >
+                <span className="margo-landing-share-pick__icon" aria-hidden>
+                  <Copy size={16} strokeWidth={1.75} />
+                </span>
+                Copy link
+              </button>
+              <button
+                type="button"
+                className="margo-landing-share-pick__row"
+                style={{ fontFamily: UI_FONT }}
+                onClick={() => {
+                  closePopover()
+                  void runDownloadImage()
+                }}
+              >
+                <span className="margo-landing-share-pick__icon" aria-hidden>
+                  <ImageIcon size={16} strokeWidth={1.75} />
+                </span>
+                Save image
+              </button>
+              <button
+                type="button"
+                className="margo-landing-share-pick__row"
+                style={{ fontFamily: UI_FONT }}
+                onClick={() => {
+                  closePopover()
+                  if (!hasLyric) {
+                    showToast('Add a line first')
+                    return
+                  }
+                  void (async () => {
+                    const r = await onShareNative()
+                    if (r === 'shared') showToast('Saved')
+                    else if (r === 'download') showToast('Opening share')
+                  })()
+                }}
+              >
+                <span className="margo-landing-share-pick__icon" aria-hidden>
+                  <ComposerShareIcon size={16} />
+                </span>
+                Share to apps
+              </button>
+            </>
+          )}
         </div>
       </LandingComposerPopover>
 

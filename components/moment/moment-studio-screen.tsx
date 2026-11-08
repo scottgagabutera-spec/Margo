@@ -7,7 +7,8 @@ import { StageSendBar } from '@/components/stage/stage-send-bar'
 import { MomentPreviewSlot } from '@/components/moment/moment-preview-slot'
 import { MomentCalmToolbar, type MomentCalmToolbarProps } from '@/components/moment/moment-calm-toolbar'
 import { LandingComposerBack } from '@/components/landing/landing-composer-back'
-import { LandingComposerPreviewFrame } from '@/components/landing/landing-composer-preview-frame'
+import { LandingComposerClose } from '@/components/landing/landing-composer-close'
+import { MomentComposerShell, type MomentComposerShellMode } from '@/components/moment/moment-composer-shell'
 import type { MomentActionMenuItem } from '@/components/moment-action-menu'
 import type { AtmosphereId } from '@/lib/atmosphere'
 import type { MomentShapeId } from '@/lib/moment/types'
@@ -53,6 +54,7 @@ export interface MomentStudioScreenProps {
   actionsBlocked?: boolean
   mobileBottomPad?: string
   layout?: 'studio' | 'calm'
+  composerMode?: MomentComposerShellMode
   calmToolbar?: Omit<
     MomentCalmToolbarProps,
     | 'cardThemeId'
@@ -112,6 +114,7 @@ export function MomentStudioScreen({
   actionsBlocked = false,
   mobileBottomPad = 'calc(var(--margo-tabbar-h, 80px) + 20px)',
   layout = 'studio',
+  composerMode = 'landing',
   calmToolbar,
   sourceCaption = null,
   onBack,
@@ -158,65 +161,84 @@ export function MomentStudioScreen({
     />
   ) : null
 
+  const calmInputs = (
+    <>
+      {songRow}
+      {beforeLyric}
+      <div
+        className={`margo-moment-studio__lyric-box margo-moment-studio__lyric-box--calm${lyricFocused ? ' margo-moment-studio__lyric-box--focus' : ''}${!lyric.trim() ? ' margo-moment-studio__lyric-box--empty' : ''}`}
+      >
+        <textarea
+          ref={lyricRef}
+          value={lyric}
+          onChange={(e) => onLyricChange(e.target.value.slice(0, lyricMaxLength))}
+          readOnly={lyricReadOnly}
+          maxLength={lyricMaxLength}
+          rows={1}
+          placeholder="Your line"
+          aria-label="Your line"
+          onFocus={() => setLyricFocused(true)}
+          onBlur={() => setLyricFocused(false)}
+        />
+      </div>
+      <p className="margo-moment-studio__lyric-count margo-moment-studio__lyric-count--calm" aria-live="polite">
+        {lyric.length} / {lyricMaxLength}
+      </p>
+    </>
+  )
+
+  const calmToolbarNode = calmToolbar ? (
+    <MomentCalmToolbar
+      cardThemeId={cardThemeId}
+      onThemeChange={onThemeChange}
+      exportAtmosphereId={exportAtmosphereId}
+      onExportAtmosphereChange={onExportAtmosphereChange}
+      shapeId={shapeId}
+      onShapeChange={onShapeChange}
+      hasLyric={hasLyric}
+      signedIn={signedIn}
+      onPost={onPost}
+      posting={posting}
+      vibeLabel={vibeLabel}
+      suggestedVibeLabel={suggestedVibeLabel}
+      vibeOptions={vibeOptions}
+      onVibeSelect={onVibeSelect}
+      vibeUserPicked={vibeUserPicked}
+      {...calmToolbar}
+    />
+  ) : null
+
+  if (calm) {
+    return (
+      <div style={{ width: '100%', paddingBottom: bottomPad, boxSizing: 'border-box' }}>
+        <MomentComposerShell
+          mode={composerMode}
+          shapeId={shapeId}
+          previewEmpty={!showCard}
+          lead={
+            onBack
+              ? composerMode === 'card'
+                ? <LandingComposerClose onClose={onBack} />
+                : <LandingComposerBack onBack={onBack} />
+              : null
+          }
+          inputs={composerMode === 'card' ? null : calmInputs}
+          preview={previewCard}
+          toolbar={calmToolbarNode}
+        />
+      </div>
+    )
+  }
+
   return (
     <div
-      className={calm ? 'margo-moment-studio margo-moment-studio--calm' : 'margo-moment-studio'}
+      className="margo-moment-studio"
       style={{
         width: '100%',
         paddingBottom: bottomPad,
         boxSizing: 'border-box',
       }}
     >
-      {calm ? (
-        <div className="margo-landing-composer__left">
-          {onBack ? <LandingComposerBack onBack={onBack} /> : null}
-          <div className="margo-moment-studio__inputs">
-            {songRow}
-            {beforeLyric}
-            <div
-              className={`margo-moment-studio__lyric-box margo-moment-studio__lyric-box--calm${lyricFocused ? ' margo-moment-studio__lyric-box--focus' : ''}${!lyric.trim() ? ' margo-moment-studio__lyric-box--empty' : ''}`}
-            >
-              <textarea
-                ref={lyricRef}
-                value={lyric}
-                onChange={(e) => onLyricChange(e.target.value.slice(0, lyricMaxLength))}
-                readOnly={lyricReadOnly}
-                maxLength={lyricMaxLength}
-                rows={1}
-                placeholder="Your line"
-                aria-label="Your line"
-                onFocus={() => setLyricFocused(true)}
-                onBlur={() => setLyricFocused(false)}
-              />
-            </div>
-            <p className="margo-moment-studio__lyric-count margo-moment-studio__lyric-count--calm" aria-live="polite">
-              {lyric.length} / {lyricMaxLength}
-            </p>
-          </div>
-          {calmToolbar ? (
-            <div className="margo-moment-studio__calm-toolbar">
-              <MomentCalmToolbar
-                cardThemeId={cardThemeId}
-                onThemeChange={onThemeChange}
-                exportAtmosphereId={exportAtmosphereId}
-                onExportAtmosphereChange={onExportAtmosphereChange}
-                shapeId={shapeId}
-                onShapeChange={onShapeChange}
-                hasLyric={hasLyric}
-                signedIn={signedIn}
-                onPost={onPost}
-                posting={posting}
-                vibeLabel={vibeLabel}
-                suggestedVibeLabel={suggestedVibeLabel}
-                vibeOptions={vibeOptions}
-                onVibeSelect={onVibeSelect}
-                vibeUserPicked={vibeUserPicked}
-                {...calmToolbar}
-              />
-            </div>
-          ) : null}
-        </div>
-      ) : (
         <div className="margo-moment-studio__inputs">
           {songRow}
           {beforeLyric}
@@ -246,14 +268,8 @@ export function MomentStudioScreen({
             </span>
           </div>
         </div>
-      )}
 
       <div className="margo-moment-studio__preview-col">
-        {calm ? (
-          <LandingComposerPreviewFrame shapeId={shapeId} empty={!showCard}>
-            {previewCard}
-          </LandingComposerPreviewFrame>
-        ) : (
           <MomentPreviewSlot shapeId={shapeId} showDesktopLabel>
             {showCard ? (
               previewCard
@@ -268,10 +284,8 @@ export function MomentStudioScreen({
               />
             )}
           </MomentPreviewSlot>
-        )}
       </div>
 
-      {calm ? null : (
         <div className="margo-moment-studio__customize-wrap">
           <MomentExportCustomizeBar
             layout="studio"
@@ -287,9 +301,7 @@ export function MomentStudioScreen({
             onVibeSelect={onVibeSelect}
           />
         </div>
-      )}
 
-      {!calm ? (
         <div
           className="margo-moment-studio__actions"
           style={{
@@ -313,7 +325,6 @@ export function MomentStudioScreen({
             studio
           />
         </div>
-      ) : null}
     </div>
   )
 }

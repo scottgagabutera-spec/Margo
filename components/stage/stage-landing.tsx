@@ -461,27 +461,13 @@ export function StageLanding() {
   const handleLinePick = useCallback((line: ComposeLyricLine) => {
     applyCatalogPlayback([line])
     const text = (line.text || '').slice(0, 140)
-    if (signedIn) {
-      router.push(buildComposePrefillUrl({
-        lyric: text,
-        song: songName,
-        artist: artistName,
-        artwork: selectedSong?.artwork || null,
-        songId: linkedSongId,
-        audioUrl: linkedAudioUrl,
-        start: line.startSec,
-        end: line.endSec,
-      }))
-      return
-    }
     setSnippetStart(line.startSec)
     setSnippetEnd(line.endSec)
     setLyric(text)
     setLinePickComplete(true)
     revealMoment(text, { animate: true, fetchVibe: true })
   }, [
-    signedIn, router, songName, artistName, selectedSong?.artwork,
-    linkedSongId, linkedAudioUrl, revealMoment, applyCatalogPlayback,
+    songName, artistName, revealMoment, applyCatalogPlayback,
   ])
 
   const handleLineParagraph = useCallback((picked: ComposeLyricLine[]) => {
@@ -490,27 +476,13 @@ export function StageLanding() {
     const capped = joined.slice(0, 280)
     const start = picked[0]?.startSec ?? null
     const end = picked[picked.length - 1]?.endSec ?? null
-    if (signedIn) {
-      router.push(buildComposePrefillUrl({
-        lyric: capped,
-        song: songName,
-        artist: artistName,
-        artwork: selectedSong?.artwork || null,
-        songId: linkedSongId,
-        audioUrl: linkedAudioUrl,
-        start,
-        end,
-      }))
-      return
-    }
     setSnippetStart(start)
     setSnippetEnd(end)
     setLyric(capped)
     setLinePickComplete(true)
     revealMoment(capped, { animate: true, fetchVibe: true })
   }, [
-    signedIn, router, songName, artistName, selectedSong?.artwork,
-    linkedSongId, linkedAudioUrl, revealMoment, applyCatalogPlayback,
+    songName, artistName, revealMoment, applyCatalogPlayback,
   ])
 
   const persistLandingDraft = useCallback(() => {

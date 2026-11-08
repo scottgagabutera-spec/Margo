@@ -940,6 +940,15 @@ html[data-margo-stage] .margo-footer {
   gap: 14px;
 }
 
+.margo-composer-shell__stage {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
 .margo-moment-studio--calm .margo-moment-studio__preview-col {
   width: 100%;
   min-width: 0;
@@ -947,9 +956,19 @@ html[data-margo-stage] .margo-footer {
   justify-content: center;
 }
 
+.margo-composer-shell__toolbar,
 .margo-moment-studio--calm .margo-moment-studio__calm-toolbar {
   width: 100%;
   min-width: 0;
+}
+
+.margo-composer-shell--card {
+  max-width: 360px;
+}
+
+.margo-composer-shell__card-lead {
+  width: 100%;
+  margin-bottom: 8px;
 }
 
 .margo-moment-studio--calm .margo-stage-song-chip-wrap {
@@ -989,6 +1008,11 @@ html[data-margo-stage] .margo-footer {
     align-self: flex-start;
     justify-content: center;
   }
+}
+
+.margo-moment-studio__lyric-box--calm.margo-moment-studio__lyric-box--empty {
+  border-color: color-mix(in srgb, var(--gold) 45%, var(--border-hi));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--gold) 12%, transparent);
 }
 
 .margo-moment-studio__lyric-box--calm {
@@ -1313,9 +1337,15 @@ html[data-margo-stage] .margo-footer {
   width: 100%;
   height: 100%;
   border-radius: 20px;
-  border: 1px dashed var(--border-hi);
+  border: 1px dashed color-mix(in srgb, var(--gold) 55%, var(--border-hi));
   box-sizing: border-box;
   background: transparent;
+}
+
+.margo-landing-preview-frame__inner--filled {
+  border: 1px solid color-mix(in srgb, var(--gold) 70%, var(--border-hi));
+  border-radius: 20px;
+  box-sizing: border-box;
 }
 
 .margo-landing-popover-catcher {

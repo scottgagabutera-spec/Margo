@@ -12,10 +12,12 @@ export function LandingComposerPreviewFrame({
   shapeId,
   children,
   empty,
+  filled = false,
 }: {
   shapeId: MomentShapeId
   children: ReactNode
   empty: boolean
+  filled?: boolean
 }) {
   const [tier, setTier] = useState<LandingComposerTier>('phone')
   useEffect(() => {
@@ -36,7 +38,9 @@ export function LandingComposerPreviewFrame({
         height: `${height}px`,
       }}
     >
-      <div className="margo-landing-preview-frame__inner">
+      <div
+        className={`margo-landing-preview-frame__inner${filled ? ' margo-landing-preview-frame__inner--filled' : ''}`}
+      >
         {empty ? <div className="margo-landing-preview-ghost" aria-hidden /> : children}
       </div>
     </div>
