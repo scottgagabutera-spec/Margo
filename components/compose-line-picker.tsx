@@ -1,6 +1,7 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowLeftIcon } from '@/components/icons'
+import { LandingComposerBack } from '@/components/landing/landing-composer-back'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { playPostMoment, playSnippet, warmUrl } from '@/lib/audio-engine'
 import { catalogLinesToPlaybackSegments } from '@/lib/stage-catalog-playback'
@@ -67,7 +68,7 @@ interface ComposeLinePickerProps {
   audioUrl?: string | null
   songId?: string | null
   artwork?: string | null
-  variant?: 'compose' | 'stage' | 'panel'
+  variant?: 'compose' | 'stage' | 'panel' | 'landing'
   hideHeader?: boolean
   /** Fill compose overlay scroll region (keyboard-safe). */
   fillAvailable?: boolean
@@ -342,6 +343,7 @@ export function ComposeLinePicker({
   const [curatedMoments, setCuratedMoments] = useState<CuratedMomentStored[]>([])
   const canHear = !!audioUrl
   const isStage = variant === 'stage'
+  const isLanding = variant === 'landing'
   const isPanel = variant === 'panel'
   const paragraphEnabled = enableParagraphPick && !!onPickParagraph
   const [selectionMode, setSelectionMode] = useState(false)
@@ -528,9 +530,28 @@ export function ComposeLinePicker({
   const selectionCount = selectedIndexes.length
   const canConfirmParagraph = selectionCount >= 1 && isContiguous(selectedIndexes)
 
+  const stageLike = isStage || isLanding
+
   return (
-    <div style={fillAvailable ? { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, height: '100%' } : undefined}>
-      {!hideHeader ? (
+    <div
+      className={isLanding ? 'margo-landing-line-picker' : undefined}
+      style={fillAvailable ? { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, height: '100%' } : undefined}
+    >
+      {!hideHeader && isLanding ? (
+        <>
+          <LandingComposerBack onBack={onBack} />
+          <h1 className="margo-landing-line-picker__title">
+            {selectionMode ? 'Combine lines' : 'Choose a line'}
+          </h1>
+          <p className="margo-landing-line-picker__hint" style={{ fontFamily: UI_FONT }}>
+            {selectionMode
+              ? `Tap adjacent lines · ${selectionCount} of ${maxParagraphLines} selected`
+              : 'Tap a line, long press to combine'}
+          </p>
+        </>
+      ) : null}
+
+      {!hideHeader && !isLanding ? (
       <button
         type="button"
         onClick={onBack}
@@ -546,7 +567,7 @@ export function ComposeLinePicker({
       ><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
       ) : null}
 
-      {!hideHeader ? (
+      {!hideHeader && !isLanding ? (
       <div style={{ textAlign: isStage ? 'left' : 'center', marginBottom: isStage ? '20px' : '28px' }}>
         <h1 style={{
           fontFamily: lyricFont,
@@ -744,17 +765,17 @@ export function ComposeLinePicker({
           ref={listRef}
           className={isPanel ? 'margo-lb-line-list' : undefined}
           style={{
-            maxHeight: fillAvailable ? 'none' : isPanel ? 'none' : 'min(52dvh, calc(var(--margo-vv-height, 100dvh) * 0.48), 420px)',
+            maxHeight: fillAvailable || isLanding ? 'none' : isPanel ? 'none' : 'min(52dvh, calc(var(--margo-vv-height, 100dvh) * 0.48), 420px)',
             height: fillAvailable ? '100%' : undefined,
             flex: fillAvailable ? '1 1 auto' : undefined,
             minHeight: fillAvailable ? 0 : undefined,
-            overflowY: isPanel ? 'visible' : 'auto',
+            overflowY: isPanel || isLanding ? 'visible' : 'auto',
             overscrollBehavior: 'contain',
             touchAction: 'pan-y',
             WebkitOverflowScrolling: 'touch',
             border: isPanel ? 'none' : '1px solid var(--border)',
-            borderRadius: isPanel ? 0 : isStage ? '14px' : '16px',
-            background: isStage ? 'var(--surface-elevated)' : 'var(--surface)',
+            borderRadius: isPanel ? 0 : stageLike ? '14px' : '16px',
+            background: stageLike ? 'var(--surface-elevated)' : 'var(--surface)',
             scrollPaddingTop: isPanel ? 8 : undefined,
           }}
         >
@@ -773,7 +794,7 @@ export function ComposeLinePicker({
                 selectionMode={selectionMode}
                 selected={selectedIndexes.includes(line.lineIndex)}
                 selectionDisabled={!canToggleLine(selectedIndexes, line.lineIndex)}
-                stage={isStage}
+                stage={stageLike}
                 compact={isPanel}
                 isLast={index === lines.length - 1}
               />

@@ -27,17 +27,7 @@ import { useStageChromePublisher, useStageSearchPublisher, useStageIdlePublisher
 import { useLandingHeroSearchLayout } from '@/hooks/useLandingHeroSearchLayout'
 import { resetLandingSearchLayoutState } from '@/lib/landing-search-layout-reset'
 import { resolveMargoMomentFromStage } from '@/lib/moment'
-import {
-  saveMargoMomentImage,
-  renderMargoMomentPngFile,
-  shareMargoMomentImage,
-} from '@/lib/moment-export/save-moment-image'
-import {
-  toastMomentExportFailed,
-  toastMomentImageSaved,
-  toastMomentShared,
-  toastMomentShareFailed,
-} from '@/lib/moment-export/moment-export-toasts'
+import { saveMargoMomentImage, shareMargoMomentImage } from '@/lib/moment-export/save-moment-image'
 import { playOrTogglePostMoment, playOrToggleSnippet } from '@/lib/audio-engine'
 import { catalogLinesToPlaybackSegments } from '@/lib/stage-catalog-playback'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
@@ -554,6 +544,25 @@ export function StageLanding() {
     [stageMoment, cardThemeId, exportAtmosphereId],
   )
 
+  const runLandingDownload = useCallback(async () => {
+    const m = momentForExport(shapeId)
+    if (!m) throw new Error('missing moment')
+    await saveMargoMomentImage(m)
+  }, [momentForExport, shapeId])
+
+  const runLandingShareNative = useCallback(async (): Promise<'shared' | 'download' | 'failed'> => {
+    const m = momentForExport(shapeId)
+    if (!m) return 'failed'
+    const shared = await shareMargoMomentImage(m)
+    if (shared === 'shared') return 'shared'
+    try {
+      await saveMargoMomentImage(m)
+      return 'download'
+    } catch {
+      return 'failed'
+    }
+  }, [momentForExport, shapeId])
+
   const navigateToCompose = useCallback(() => {
     if (!lyric.trim() || !songName.trim() || !artistName.trim()) return
     setPosting(true)
@@ -571,15 +580,6 @@ export function StageLanding() {
     router, lyric, songName, artistName, selectedSong?.artwork,
     linkedSongId, linkedAudioUrl, snippetStart, snippetEnd,
   ])
-
-  const signInReturnTo = useMemo(() => {
-    if (!lyric.trim()) return '/'
-    const q = new URLSearchParams()
-    q.set('lyric', lyric.trim())
-    q.set('song', songName)
-    q.set('artist', artistName)
-    return `/?${q.toString()}`
-  }, [lyric, songName, artistName])
 
   const handleWriteLineChange = useCallback((value: string) => {
     const next = value.slice(0, 140)
@@ -631,6 +631,16 @@ export function StageLanding() {
   const showStudioPanel = !!selectedSong && !showLinePicker && (hasMoment || showWriteLine)
   const isMargoCatalog = selectedSong?.source === 'margo' || !!selectedSong?.margoSongId
   const studioExport = useMomentStudioExport(stageMoment, canPlay, isMargoCatalog)
+
+  const handleComposerBack = useCallback(() => {
+    if (isMargoCatalog && linePickComplete) {
+      setLinePickComplete(false)
+      setLyric('')
+      setMomentVisible(false)
+      return
+    }
+    clearSong()
+  }, [isMargoCatalog, linePickComplete, clearSong])
 
   return (
     <>
@@ -688,7 +698,7 @@ export function StageLanding() {
           {showLinePicker && (
             <div style={{ width: '100%' }}>
               <ComposeLinePicker
-                variant="stage"
+                variant="landing"
                 lines={margoLines}
                 loading={linesLoading}
                 songTitle={songName}
@@ -732,6 +742,7 @@ export function StageLanding() {
               <>
                 <MomentStudioScreen
                   layout="calm"
+                  onBack={handleComposerBack}
                   calmEffectId={calmEffectId}
                   onCalmEffectChange={applyCalmEffect}
                   sourceCaption={
@@ -791,55 +802,17 @@ export function StageLanding() {
                   onPost={signedIn ? navigateToCompose : undefined}
                   posting={posting}
                   calmToolbar={{
-                    onShapeToggle: () => setShapeId((s) => (s === 'vertical' ? 'square' : 'vertical')),
-                    onSaveSquare: () => {
-                      const m = momentForExport('square')
-                      if (m) void saveMargoMomentImage(m).then(toastMomentImageSaved).catch(() => toastMomentExportFailed('image'))
-                    },
-                    onSaveStory: () => {
-                      const m = momentForExport('vertical')
-                      if (m) void saveMargoMomentImage(m).then(toastMomentImageSaved).catch(() => toastMomentExportFailed('image'))
-                    },
-                    onCopyImage: () => {
-                      const m = momentForExport(shapeId)
-                      if (!m) return
-                      void (async () => {
-                        const file = await renderMargoMomentPngFile(m)
-                        if (!file || !navigator.clipboard?.write) {
-                          toastMomentExportFailed('image')
-                          return
-                        }
-                        try {
-                          await navigator.clipboard.write([new ClipboardItem({ 'image/png': file })])
-                          toastMomentImageSaved()
-                        } catch {
-                          toastMomentExportFailed('image')
-                        }
-                      })()
-                    },
-                    onShareStory: () => {
-                      const m = momentForExport('vertical')
-                      if (m) void shareMargoMomentImage(m).then((r) => (r === 'shared' ? toastMomentShared() : toastMomentShareFailed()))
-                    },
-                    onShareWhatsApp: () => {
-                      const text = encodeURIComponent(`A line on Margo: "${lyric.trim()}"`)
-                      window.open(`https://wa.me/?text=${text}`, '_blank', 'noopener,noreferrer')
-                    },
-                    onShareMore: () => {
-                      const m = momentForExport(shapeId)
-                      if (m) void shareMargoMomentImage(m).then((r) => (r === 'shared' ? toastMomentShared() : toastMomentShareFailed()))
-                    },
+                    onDownload: runLandingDownload,
+                    onSaveImage: runLandingDownload,
+                    onShareNative: runLandingShareNative,
                     onCopyLink: () => {
                       const url = typeof window !== 'undefined' ? window.location.origin : 'https://trymargo.com'
                       void navigator.clipboard?.writeText(url)
                     },
-                    saving: studioExport.saving,
-                    shareBusy: studioExport.shareBusy,
+                    onSignInPrompt: persistLandingDraft,
                     signedIn,
-                    onPost: signedIn ? navigateToCompose : undefined,
+                    onPost: navigateToCompose,
                     posting,
-                    signInReturnTo,
-                    onBeforeSignIn: persistLandingDraft,
                   }}
                 />
                 {studioExport.videoReadySheet}

@@ -49,10 +49,21 @@ export function StageSongChip({
         <img
           src={artwork}
           alt=""
-          style={{ width: '32px', height: '32px', borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }}
+          style={
+            calm
+              ? { width: '44px', height: '44px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }
+              : { width: '32px', height: '32px', borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }
+          }
         />
       ) : (
-        <div style={{ width: '32px', height: '32px', borderRadius: '6px', flexShrink: 0, background: 'var(--surface-2)' }} />
+        <div
+          className={calm ? 'margo-stage-song-chip__art-placeholder' : undefined}
+          style={
+            calm
+              ? { width: '44px', height: '44px', borderRadius: '8px', flexShrink: 0, background: 'var(--surface-2)' }
+              : { width: '32px', height: '32px', borderRadius: '6px', flexShrink: 0, background: 'var(--surface-2)' }
+          }
+        />
       )}
       <div className="margo-stage-song-chip__copy" style={{ minWidth: 0, flex: 1 }}>
         <span
@@ -87,7 +98,7 @@ export function StageSongChip({
             onPlay()
           }}
         >
-          <PlayPauseIcon playing={playing} buffering={buffering} size={14} color="var(--gold)" />
+          <PlayPauseIcon playing={playing} buffering={buffering} size={14} color="var(--bg)" />
         </button>
       ) : null}
       <button

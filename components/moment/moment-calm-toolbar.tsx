@@ -1,7 +1,19 @@
 'use client'
 
-import { useCallback, useState } from 'react'
-import type { ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  ArrowUp,
+  Check,
+  Copy,
+  Download,
+  Image,
+  Loader2,
+  Palette,
+  RectangleVertical,
+  Share2,
+  Sparkles,
+  Square,
+} from 'lucide-react'
 import type { MomentShapeId } from '@/lib/moment/types'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 import {
@@ -9,84 +21,52 @@ import {
   CALM_EFFECT_OPTIONS,
   type CalmEffectId,
 } from '@/lib/landing-calm-composer'
-import { MomentCalmSheet } from '@/components/moment/moment-calm-sheet'
-import { ChevronUpIcon } from '@/components/icons'
+import { LandingComposerPopover } from '@/components/landing/landing-composer-popover'
+import { LandingComposerToast } from '@/components/landing/landing-composer-toast'
+import { landingComposerTier, type LandingComposerTier } from '@/lib/landing-composer-layout'
 import { UI_FONT } from '@/lib/fonts'
-import { SignInLink } from '@/components/signin-link'
 
-type SheetId = 'color' | 'effect' | 'download' | 'share' | null
+type PopoverId = 'color' | 'effect' | 'format' | 'share' | null
+type DownloadPhase = 'idle' | 'loading' | 'done'
 
-type ToolbarIconProps = {
+function useLandingTier(): LandingComposerTier {
+  const [tier, setTier] = useState<LandingComposerTier>('phone')
+  useEffect(() => {
+    const read = () => setTier(landingComposerTier(window.innerWidth))
+    read()
+    window.addEventListener('resize', read)
+    return () => window.removeEventListener('resize', read)
+  }, [])
+  return tier
+}
+
+function ToolButton({
+  label,
+  pressed,
+  onClick,
+  children,
+}: {
   label: string
   pressed?: boolean
   onClick: () => void
-  children: ReactNode
-}
-
-function CalmToolIcon({ label, pressed, onClick, children }: ToolbarIconProps) {
+  children: React.ReactNode
+}) {
   return (
-    <button
-      type="button"
-      className="margo-calm-tool"
-      aria-label={label}
-      aria-pressed={pressed || undefined}
-      onPointerDown={(e) => e.currentTarget.setAttribute('data-margo-acked', '1')}
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  )
-}
-
-function IconPalette() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
-      <path
-        fill="currentColor"
-        d="M12 3a9 9 0 0 0-7.4 14.5 2.5 2.5 0 0 0 4.3 1.2l.6-.8a1 1 0 0 1 1.6 1.2l-.7.9a4.5 4.5 0 0 1-7.1-2.4A11 11 0 1 1 12 3Zm-4.5 7a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm7 4.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM8.5 15.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"
-      />
-    </svg>
-  )
-}
-
-function IconSparkles() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
-      <path
-        fill="currentColor"
-        d="m9.5 2.5 1.2 3.6L14 7l-3.3 1.2L9.5 12 8.3 8.4 5 7.2l3.3-1.2L9.5 2.5ZM17 9l.9 2.7 2.6.9-2.6.9L17 16.2l-.9-2.7-2.6-.9 2.6-.9L17 9Zm-6 7.5.8 2.4 2.3.8-2.3.8-.8 2.4-.8-2.4-2.3-.8 2.3-.8.8-2.4Z"
-      />
-    </svg>
-  )
-}
-
-function IconFormat() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
-      <rect x="4" y="4" width="16" height="16" rx="2" fill="none" stroke="currentColor" strokeWidth="1.75" />
-    </svg>
-  )
-}
-
-function IconDownload() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
-      <path
-        fill="currentColor"
-        d="M12 3a1 1 0 0 1 1 1v9.6l2.9-3a1 1 0 1 1 1.4 1.4l-4.6 4.6a1 1 0 0 1-1.4 0l-4.6-4.6a1 1 0 1 1 1.4-1.4l2.9 3V4a1 1 0 0 1 1-1Zm-7 14a1 1 0 0 1 1 1v2h12v-2a1 1 0 1 1 2 0v3H4v-3a1 1 0 0 1 1-1Z"
-      />
-    </svg>
-  )
-}
-
-function IconShare() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
-      <path
-        fill="currentColor"
-        d="M8.5 14.5a3.5 3.5 0 0 1 .3-1.4L15 8.1a3.5 3.5 0 1 0 .9-3.1l-6.7 5.2A3.5 3.5 0 1 1 8.5 14.5ZM16 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm-9 9.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm9 5.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z"
-      />
-    </svg>
+    <div className="margo-landing-tool-wrap">
+      <button
+        type="button"
+        className="margo-landing-tool"
+        aria-label={label}
+        aria-pressed={pressed || undefined}
+        onPointerDown={(e) => e.currentTarget.setAttribute('data-margo-acked', '1')}
+        onClick={onClick}
+      >
+        {children}
+      </button>
+      <span className="margo-landing-tool__label" style={{ fontFamily: UI_FONT }}>
+        {label}
+      </span>
+    </div>
   )
 }
 
@@ -96,21 +76,16 @@ export type MomentCalmToolbarProps = {
   calmEffectId: CalmEffectId
   onCalmEffectChange: (id: CalmEffectId) => void
   shapeId: MomentShapeId
-  onShapeToggle: () => void
-  onSaveSquare: () => void
-  onSaveStory: () => void
-  onCopyImage: () => void
-  onShareStory: () => void
-  onShareWhatsApp: () => void
-  onShareMore: () => void
+  onShapeChange: (id: MomentShapeId) => void
+  onDownload: () => Promise<void>
+  onSaveImage: () => Promise<void>
+  onShareNative: () => Promise<'shared' | 'download' | 'failed'>
   onCopyLink: () => void
-  saving?: boolean
-  shareBusy?: boolean
+  hasLyric: boolean
   signedIn?: boolean
   onPost?: () => void
   posting?: boolean
-  signInReturnTo?: string
-  onBeforeSignIn?: () => void
+  onSignInPrompt?: () => void
 }
 
 export function MomentCalmToolbar({
@@ -119,92 +94,129 @@ export function MomentCalmToolbar({
   calmEffectId,
   onCalmEffectChange,
   shapeId,
-  onShapeToggle,
-  onSaveSquare,
-  onSaveStory,
-  onCopyImage,
-  onShareStory,
-  onShareWhatsApp,
-  onShareMore,
+  onShapeChange,
+  onDownload,
+  onSaveImage,
+  onShareNative,
   onCopyLink,
-  saving = false,
-  shareBusy = false,
+  hasLyric,
   signedIn = false,
   onPost,
   posting = false,
-  signInReturnTo = '/',
-  onBeforeSignIn,
+  onSignInPrompt,
 }: MomentCalmToolbarProps) {
-  const [sheet, setSheet] = useState<SheetId>(null)
-  const closeSheet = useCallback(() => setSheet(null), [])
-  const openSheet = useCallback((id: SheetId) => setSheet(id), [])
-  const busy = saving || shareBusy
+  const tier = useLandingTier()
+  const [popover, setPopover] = useState<PopoverId>(null)
+  const [downloadPhase, setDownloadPhase] = useState<DownloadPhase>('idle')
+  const [toast, setToast] = useState<string | null>(null)
+  const downloadLock = useRef(false)
+  const toolbarRef = useRef<HTMLDivElement>(null)
 
-  const sheetBtn = (label: string, onClick: () => void, disabled?: boolean) => (
-    <button
-      type="button"
-      className="margo-calm-sheet__option"
-      style={{ fontFamily: UI_FONT }}
-      disabled={disabled || busy}
-      onClick={() => {
-        onClick()
-        closeSheet()
-      }}
-    >
-      {label}
-    </button>
-  )
+  const closePopover = useCallback(() => setPopover(null), [])
+  const togglePopover = useCallback((id: PopoverId) => {
+    setPopover((p) => (p === id ? null : id))
+  }, [])
+
+  const showToast = useCallback((message: string, ms = 2000) => {
+    setToast(message)
+    window.setTimeout(() => setToast(null), ms)
+  }, [])
+
+  const runDownload = useCallback(async () => {
+    if (downloadLock.current || downloadPhase === 'loading') return
+    if (!hasLyric) {
+      showToast('Add a line first')
+      return
+    }
+    downloadLock.current = true
+    setDownloadPhase('loading')
+    try {
+      await onDownload()
+      setDownloadPhase('done')
+      showToast('Saved')
+      window.setTimeout(() => setDownloadPhase('idle'), 1300)
+    } catch {
+      setDownloadPhase('idle')
+    } finally {
+      downloadLock.current = false
+    }
+  }, [downloadPhase, hasLyric, onDownload, showToast])
+
+  const formatIcon =
+    shapeId === 'vertical' ? (
+      <RectangleVertical size={18} strokeWidth={1.75} aria-hidden />
+    ) : (
+      <Square size={18} strokeWidth={1.75} aria-hidden />
+    )
+
+  const downloadIcon =
+    downloadPhase === 'loading' ? (
+      <Loader2 size={18} strokeWidth={2} className="margo-landing-spin" aria-hidden />
+    ) : downloadPhase === 'done' ? (
+      <Check size={18} strokeWidth={2} color="var(--gold)" aria-hidden />
+    ) : (
+      <Download size={18} strokeWidth={1.75} aria-hidden />
+    )
 
   return (
-    <>
-      <div className="margo-calm-toolbar-wrap">
-        <div className="margo-calm-toolbar">
-          <CalmToolIcon label="Color" pressed={sheet === 'color'} onClick={() => openSheet(sheet === 'color' ? null : 'color')}>
-            <IconPalette />
-          </CalmToolIcon>
-          <CalmToolIcon label="Effect" pressed={sheet === 'effect'} onClick={() => openSheet(sheet === 'effect' ? null : 'effect')}>
-            <IconSparkles />
-          </CalmToolIcon>
-          <CalmToolIcon
-            label={shapeId === 'vertical' ? 'Story shape' : 'Square shape'}
-            onClick={onShapeToggle}
-          >
-            <IconFormat />
-          </CalmToolIcon>
-          <CalmToolIcon label="Download" pressed={sheet === 'download'} onClick={() => openSheet(sheet === 'download' ? null : 'download')}>
-            <IconDownload />
-          </CalmToolIcon>
-          <CalmToolIcon label="Share" pressed={sheet === 'share'} onClick={() => openSheet(sheet === 'share' ? null : 'share')}>
-            <IconShare />
-          </CalmToolIcon>
-          <div className="margo-calm-toolbar__spacer" aria-hidden />
-          {signedIn ? (
-            <button
-              type="button"
-              className="margo-calm-post"
-              aria-label="Post this line"
-              disabled={busy || posting}
-              aria-busy={posting || undefined}
-              onPointerDown={(e) => e.currentTarget.setAttribute('data-margo-acked', '1')}
-              onClick={onPost}
-            >
-              <ChevronUpIcon size={18} color="var(--bg)" />
-            </button>
-          ) : (
-            <SignInLink
-              returnTo={signInReturnTo}
-              onClick={onBeforeSignIn}
-              className="margo-calm-post"
-              aria-label="Sign in to post"
-            >
-              <ChevronUpIcon size={18} color="var(--bg)" />
-            </SignInLink>
-          )}
-        </div>
+    <div className="margo-landing-toolbar-host" ref={toolbarRef}>
+      <div className="margo-landing-toolbar">
+        <ToolButton
+          label="Color"
+          pressed={popover === 'color'}
+          onClick={() => togglePopover('color')}
+        >
+          <Palette size={18} strokeWidth={1.75} aria-hidden />
+        </ToolButton>
+        <ToolButton
+          label="Effect"
+          pressed={popover === 'effect'}
+          onClick={() => togglePopover('effect')}
+        >
+          <Sparkles size={18} strokeWidth={1.75} aria-hidden />
+        </ToolButton>
+        <ToolButton
+          label="Format"
+          pressed={popover === 'format'}
+          onClick={() => togglePopover('format')}
+        >
+          {formatIcon}
+        </ToolButton>
+        <ToolButton label="Download" onClick={() => void runDownload()}>
+          {downloadIcon}
+        </ToolButton>
+        <ToolButton
+          label="Share"
+          pressed={popover === 'share'}
+          onClick={() => togglePopover('share')}
+        >
+          <Share2 size={18} strokeWidth={1.75} aria-hidden />
+        </ToolButton>
+        <div className="margo-landing-toolbar__spacer" aria-hidden />
+        <button
+          type="button"
+          className="margo-landing-post"
+          aria-label="Post this line"
+          disabled={posting || (!hasLyric && signedIn)}
+          aria-busy={posting || undefined}
+          style={{ opacity: hasLyric ? 1 : 0.4 }}
+          onPointerDown={(e) => e.currentTarget.setAttribute('data-margo-acked', '1')}
+          onClick={() => {
+            if (!hasLyric) return
+            if (signedIn && onPost) {
+              onPost()
+              return
+            }
+            onSignInPrompt?.()
+            showToast('Sign in to post')
+          }}
+        >
+          <ArrowUp size={18} strokeWidth={2} color="var(--bg)" aria-hidden />
+        </button>
       </div>
 
-      <MomentCalmSheet open={sheet === 'color'} title="Color" onClose={closeSheet}>
-        <div className="margo-calm-color-dots" role="listbox" aria-label="Card color">
+      <LandingComposerPopover open={popover === 'color'} align="left" onClose={closePopover}>
+        <div className="margo-landing-popover-colors" role="listbox" aria-label="Card color">
           {CALM_COLOR_OPTIONS.map((opt) => {
             const on = cardThemeId === opt.themeId
             return (
@@ -214,32 +226,32 @@ export function MomentCalmToolbar({
                 role="option"
                 aria-selected={on}
                 aria-label={opt.label}
-                className="margo-calm-color-dot"
+                className="margo-landing-popover-colors__dot"
                 style={{ background: opt.swatch }}
                 onClick={() => {
                   onThemeChange(opt.themeId)
-                  closeSheet()
+                  closePopover()
                 }}
               />
             )
           })}
         </div>
-      </MomentCalmSheet>
+      </LandingComposerPopover>
 
-      <MomentCalmSheet open={sheet === 'effect'} title="Effect" onClose={closeSheet}>
-        <div>
+      <LandingComposerPopover open={popover === 'effect'} align="left" onClose={closePopover}>
+        <div className="margo-landing-popover-list">
           {CALM_EFFECT_OPTIONS.map((opt) => {
             const on = calmEffectId === opt.id
             return (
               <button
                 key={opt.id}
                 type="button"
-                className="margo-calm-sheet__option"
+                className="margo-landing-popover-list__row"
                 style={{ fontFamily: UI_FONT }}
                 aria-pressed={on}
                 onClick={() => {
                   onCalmEffectChange(opt.id)
-                  closeSheet()
+                  closePopover()
                 }}
               >
                 {opt.label}
@@ -247,20 +259,102 @@ export function MomentCalmToolbar({
             )
           })}
         </div>
-      </MomentCalmSheet>
+      </LandingComposerPopover>
 
-      <MomentCalmSheet open={sheet === 'download'} title="Download" onClose={closeSheet}>
-        {sheetBtn('Save image', onSaveSquare)}
-        {sheetBtn('Save for story', onSaveStory)}
-        {sheetBtn('Copy image', onCopyImage)}
-      </MomentCalmSheet>
+      <LandingComposerPopover open={popover === 'format'} align="format" onClose={closePopover}>
+        <div className="margo-landing-format-pick">
+          <button
+            type="button"
+            className={`margo-landing-format-pick__opt${shapeId === 'square' ? ' margo-landing-format-pick__opt--on' : ''}`}
+            onClick={() => {
+              onShapeChange('square')
+              closePopover()
+            }}
+          >
+            <span className="margo-landing-format-pick__glyph margo-landing-format-pick__glyph--square" aria-hidden />
+            <span className="margo-landing-format-pick__title" style={{ fontFamily: UI_FONT }}>
+              Square
+            </span>
+            <span className="margo-landing-format-pick__ratio" style={{ fontFamily: UI_FONT }}>
+              1:1
+            </span>
+          </button>
+          <button
+            type="button"
+            className={`margo-landing-format-pick__opt${shapeId === 'vertical' ? ' margo-landing-format-pick__opt--on' : ''}`}
+            onClick={() => {
+              onShapeChange('vertical')
+              closePopover()
+            }}
+          >
+            <span className="margo-landing-format-pick__glyph margo-landing-format-pick__glyph--story" aria-hidden />
+            <span className="margo-landing-format-pick__title" style={{ fontFamily: UI_FONT }}>
+              Story
+            </span>
+            <span className="margo-landing-format-pick__ratio" style={{ fontFamily: UI_FONT }}>
+              9:16
+            </span>
+          </button>
+        </div>
+      </LandingComposerPopover>
 
-      <MomentCalmSheet open={sheet === 'share'} title="Share" onClose={closeSheet}>
-        {sheetBtn('Share to story', onShareStory)}
-        {sheetBtn('Copy link', onCopyLink)}
-        {sheetBtn('WhatsApp', onShareWhatsApp)}
-        {sheetBtn('More apps', onShareMore)}
-      </MomentCalmSheet>
-    </>
+      <LandingComposerPopover open={popover === 'share'} align="right" onClose={closePopover}>
+        <div className="margo-landing-share-pick">
+          <button
+            type="button"
+            className="margo-landing-share-pick__row"
+            style={{ fontFamily: UI_FONT }}
+            onClick={() => {
+              onCopyLink()
+              showToast('Link copied')
+              closePopover()
+            }}
+          >
+            <span className="margo-landing-share-pick__icon" aria-hidden>
+              <Copy size={16} strokeWidth={1.75} />
+            </span>
+            Copy link
+          </button>
+          <button
+            type="button"
+            className="margo-landing-share-pick__row"
+            style={{ fontFamily: UI_FONT }}
+            onClick={() => {
+              closePopover()
+              void runDownload()
+            }}
+          >
+            <span className="margo-landing-share-pick__icon" aria-hidden>
+              <Image size={16} strokeWidth={1.75} />
+            </span>
+            Save image
+          </button>
+          <button
+            type="button"
+            className="margo-landing-share-pick__row"
+            style={{ fontFamily: UI_FONT }}
+            onClick={() => {
+              closePopover()
+              if (!hasLyric) {
+                showToast('Add a line first')
+                return
+              }
+              void (async () => {
+                const r = await onShareNative()
+                if (r === 'shared') showToast('Saved')
+                else if (r === 'download') showToast('Opening share')
+              })()
+            }}
+          >
+            <span className="margo-landing-share-pick__icon" aria-hidden>
+              <Share2 size={16} strokeWidth={1.75} />
+            </span>
+            Share to apps
+          </button>
+        </div>
+      </LandingComposerPopover>
+
+      {toast ? <LandingComposerToast message={toast} tier={tier} /> : null}
+    </div>
   )
 }

@@ -8,7 +8,7 @@ import { isLivingAtmosphere, parseAtmosphere } from '@/lib/atmosphere'
  * dark room as Feed / karaoke Atmosphere — Color returns only on Still.
  */
 
-export type StageCardThemeId = 'gold' | 'blush' | 'sage' | 'dusk' | 'snow' | 'ocean'
+export type StageCardThemeId = 'gold' | 'blush' | 'sage' | 'dusk'
 
 export interface StageCardTheme {
   id: StageCardThemeId
@@ -72,30 +72,6 @@ export const STAGE_CARD_THEMES: StageCardTheme[] = [
     badgeStroke: 'rgba(255,255,255,0.16)',
     markVariant: 'on-dark',
     swatch: '#2A2438',
-  },
-  {
-    id: 'snow',
-    label: 'White',
-    bg: '#F4F1ED',
-    ink: '#07060A',
-    inkMuted: 'rgba(7,6,10,0.62)',
-    border: 'rgba(7,6,10,0.12)',
-    badgeFill: 'rgba(7,6,10,0.08)',
-    badgeStroke: 'rgba(7,6,10,0.14)',
-    markVariant: 'on-light',
-    swatch: '#F4F1ED',
-  },
-  {
-    id: 'ocean',
-    label: 'Blue',
-    bg: '#4A6FA5',
-    ink: '#F4F1ED',
-    inkMuted: 'rgba(244,241,237,0.62)',
-    border: 'rgba(244,241,237,0.14)',
-    badgeFill: 'rgba(255,255,255,0.1)',
-    badgeStroke: 'rgba(255,255,255,0.16)',
-    markVariant: 'on-dark',
-    swatch: '#6B8FD4',
   },
 ]
 

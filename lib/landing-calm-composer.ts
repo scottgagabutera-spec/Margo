@@ -1,21 +1,14 @@
 import type { AtmosphereId } from '@/lib/atmosphere'
-import type { StageCardThemeId } from '@/lib/moment/stage-theme'
+import { STAGE_CARD_THEMES } from '@/lib/moment/stage-theme'
 
 export type CalmEffectId = 'none' | 'artwork' | 'glow' | 'grain'
 
-export const CALM_COLOR_OPTIONS: {
-  id: string
-  label: string
-  themeId: StageCardThemeId
-  swatch: string
-}[] = [
-  { id: 'white', label: 'White', themeId: 'snow', swatch: '#F4F1ED' },
-  { id: 'gold', label: 'Gold', themeId: 'gold', swatch: '#E8C547' },
-  { id: 'black', label: 'Black', themeId: 'dusk', swatch: '#2A2438' },
-  { id: 'green', label: 'Green', themeId: 'sage', swatch: '#A8C4AE' },
-  { id: 'rose', label: 'Rose', themeId: 'blush', swatch: '#E8A8B0' },
-  { id: 'blue', label: 'Blue', themeId: 'ocean', swatch: '#6B8FD4' },
-]
+export const CALM_COLOR_OPTIONS = STAGE_CARD_THEMES.map((t) => ({
+  id: t.id,
+  label: t.label,
+  themeId: t.id,
+  swatch: t.swatch,
+}))
 
 export const CALM_EFFECT_OPTIONS: { id: CalmEffectId; label: string }[] = [
   { id: 'none', label: 'None' },

@@ -4,7 +4,7 @@ import type { MomentComposition } from '@/lib/moment/compose'
 import type { MomentListenResolution } from '@/lib/moment/listen'
 
 /** Visual theme ids — poster: gold|dark; Stage card: gold|blush|sage|dusk */
-export type MomentThemeId = 'gold' | 'dark' | 'blush' | 'sage' | 'dusk' | 'snow' | 'ocean'
+export type MomentThemeId = 'gold' | 'dark' | 'blush' | 'sage' | 'dusk'
 
 /** Export aspect ratio ids — matches SHAPES in render-moment.ts */
 export type MomentShapeId = 'square' | 'vertical' | 'wide'
