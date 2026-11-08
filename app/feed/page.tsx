@@ -33,11 +33,12 @@ import { FeedMemoriesGridSkeleton } from '@/components/margo-skeletons'
 import { buildFeedLyricsRows, type FeedLyricsPeopleSlot, type FeedLyricsPostRow, type FeedLyricsRow } from '@/lib/feed-lyrics-mix'
 import { buildFeedPeoplePool } from '@/lib/feed-people-pool'
 import { FeedMemoriesRow } from '@/components/feed-memories-row'
-import { FeedListeningPromptCard } from '@/components/feed-listening-prompt-card'
-import { FeedListeningWeekStrip } from '@/components/feed-listening-week-strip'
+import { FeedEchoesSetBlock } from '@/components/feed-echoes-set-block'
+import { FeedEchoesTab } from '@/components/feed-echoes-tab'
 import { FeedBlockShell } from '@/components/feed-block-shell'
-import type { ListeningWeekRow } from '@/lib/feed-listening-week'
+import type { EchoFeedBlockSnapshot } from '@/lib/echoes/types'
 import { inferListeningPeriodType } from '@/lib/memory/listening-infer'
+import { readMargoReturn } from '@/lib/margo-scroll-return'
 import { FeedPeopleStrip } from '@/components/feed-people-strip'
 import { FeedMemoryPromoCard } from '@/components/feed-memory-promo-card'
 import { FeedShortsStrip } from '@/components/feed-shorts-strip'
@@ -463,21 +464,21 @@ function FeedPageInner() {
   }, [feedContentTab, feedLive, loadMoreFeedMemories, feedGridMemories.length])
 
   const [ownMemoryCount, setOwnMemoryCount] = useState<number | null>(null)
-  const [listeningWeekRows, setListeningWeekRows] = useState<ListeningWeekRow[]>([])
+  const [echoesBlock, setEchoesBlock] = useState<EchoFeedBlockSnapshot | null>(null)
 
   useEffect(() => {
     if (!feedLive) return
     let active = true
-    void fetch('/api/memories/listening-week')
+    void fetch('/api/echoes/feed-block')
       .then((r) => r.json())
-      .then((data: { rows?: ListeningWeekRow[] }) => {
-        if (active) setListeningWeekRows(data.rows || [])
+      .then((data: { block?: EchoFeedBlockSnapshot | null }) => {
+        if (active) setEchoesBlock(data.block ?? null)
       })
       .catch(() => {
-        if (active) setListeningWeekRows([])
+        if (active) setEchoesBlock(null)
       })
     return () => { active = false }
-  }, [feedLive, feedMemories.length])
+  }, [feedLive])
 
   useEffect(() => {
     if (!user?.id) {
@@ -587,7 +588,7 @@ function FeedPageInner() {
     setExportPost(post)
   }
 
-  const handleFeedContentTab = (tab: 'lyrics' | 'memories' | 'shorts') => {
+  const handleFeedContentTab = (tab: 'lyrics' | 'memories' | 'shorts' | 'echoes') => {
     const params = applyFeedContentTab(new URLSearchParams(searchParams.toString()), tab)
     const qs = params.toString()
     router.push(qs ? `/feed?${qs}` : '/feed', { scroll: false })
@@ -632,7 +633,7 @@ function FeedPageInner() {
       signedIn: !!user?.id,
       promoAnchor,
       shortsStripAvailable: resolvedShortsMeetsMinimum && shortsStripTiles.length > 0,
-      listeningWeekRows,
+      echoesBlock,
     })
   }, [
     feedContentTab,
@@ -644,8 +645,28 @@ function FeedPageInner() {
     user?.id,
     resolvedShortsMeetsMinimum,
     shortsStripTiles.length,
-    listeningWeekRows,
+    echoesBlock,
   ])
+
+  useEffect(() => {
+    if (!feedLive || !listReady) return
+    const resume = readMargoReturn()
+    if (!resume) return
+    window.requestAnimationFrame(() => {
+      if (typeof resume.scrollY === 'number') {
+        const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
+        if (scroller instanceof HTMLElement) scroller.scrollTop = resume.scrollY
+      }
+      if (typeof resume.memoriesRowX === 'number') {
+        const row = document.querySelector('.margo-feed-memories-row__scroller')
+        if (row instanceof HTMLElement) row.scrollLeft = resume.memoriesRowX
+      }
+      if (typeof resume.shortsStripX === 'number') {
+        const strip = document.querySelector('.margo-feed-shorts-strip__row')
+        if (strip instanceof HTMLElement) strip.scrollLeft = resume.shortsStripX
+      }
+    })
+  }, [feedLive, listReady, mixedLyricRows.length])
   const hasActiveFilter = selectedVibe !== 'ALL' || selectedSort !== 'NEW'
 
   useEffect(() => {
@@ -827,6 +848,8 @@ function FeedPageInner() {
         </main>
       )}
 
+      {feedContentTab === 'echoes' && <FeedEchoesTab />}
+
       {feedContentTab === 'shorts' && (
         <FeedShortsPager
           clips={resolvedShortsClips}
@@ -913,17 +936,10 @@ function FeedPageInner() {
                 </FeedBlockShell>
               )
             }
-            if (item.kind === 'listening-prompt') {
+            if (item.kind === 'echoes-set') {
               return (
-                <FeedBlockShell key={item.key} blockName="listening-prompt" planKey={item.planKey} className="margo-feed-block-shell">
-                  <FeedListeningPromptCard />
-                </FeedBlockShell>
-              )
-            }
-            if (item.kind === 'listening-week') {
-              return (
-                <FeedBlockShell key={item.key} blockName="listening-week" planKey={item.planKey} className="margo-feed-block-shell">
-                  <FeedListeningWeekStrip rows={item.rows} />
+                <FeedBlockShell key={item.key} blockName="echoes" planKey={item.planKey} className="margo-feed-block-shell">
+                  <FeedEchoesSetBlock block={item.block} signedIn={!!user?.id} />
                 </FeedBlockShell>
               )
             }

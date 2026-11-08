@@ -2,37 +2,37 @@ import { dailyMemoryCardAnchorIndex } from './feed-memory-card.ts'
 
 export type FeedBlockKind =
   | 'memories-row'
-  | 'listening-prompt'
   | 'people'
+  | 'memory'
+  | 'echoes'
   | 'pictures'
-  | 'listening-week'
   | 'shorts'
   | 'story'
-  | 'memory'
 
 export const FEED_BLOCK_CYCLE_SIGNED_IN: FeedBlockKind[] = [
   'memories-row',
-  'listening-prompt',
   'people',
+  'memory',
+  'echoes',
   'pictures',
-  'listening-week',
   'shorts',
   'story',
-  'memory',
 ]
 
 export const FEED_BLOCK_CYCLE_SIGNED_OUT: FeedBlockKind[] = [
   'memories-row',
   'people',
-  'listening-week',
+  'echoes',
+  'pictures',
   'shorts',
+  'story',
 ]
 
 const SLOT_FIRST_ORDINAL = 4
-const SLOT_STEP = 5
+const SLOT_STEP = 4
 const SHORT_FEED_MAX = 5
-/** Lyric posts between consecutive block slots (after 4, then every 5 ordinals). */
-export const MIN_LYRICS_BETWEEN_BLOCKS = 4
+/** Lyric posts between consecutive block slots (after 4, then every 4 ordinals). */
+export const MIN_LYRICS_BETWEEN_BLOCKS = 3
 
 export type FeedPlannedBlock =
   | { placement: 'start'; kind: FeedBlockKind; sequenceStep: number; key: string }
@@ -76,7 +76,7 @@ export function planFeedBlocks(input: {
 
   if (nonReplayTotal === 0) {
     pushStart('memories-row')
-    if (signedIn) pushStart('listening-prompt')
+    pushStart('echoes')
     return planned
   }
 

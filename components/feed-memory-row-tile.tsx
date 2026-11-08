@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ImagePlusIcon, LyricBackIcon, MusicNoteIcon } from '@/components/icons'
 import { memoryCaptionTitle } from '@/lib/memory/display-caption'
 import { memoryGridCoverSource, memoryFeedRowThumbnailUrl } from '@/lib/memory/feed-thumbnail-url'
 import { formatMemoryDisplayDate } from '@/lib/memory/date-label'
@@ -13,12 +12,6 @@ import { LYRIC_FONT, UI_FONT } from '@/lib/fonts'
 
 const lyricFont = LYRIC_FONT
 const uiFont = UI_FONT
-
-function TypeIcon({ kind }: { kind: 'photo' | 'story' | 'listening' }) {
-  if (kind === 'listening') return <MusicNoteIcon size={12} color="var(--gold)" />
-  if (kind === 'story') return <LyricBackIcon size={12} color="var(--gold)" />
-  return <ImagePlusIcon size={12} color="var(--gold)" />
-}
 
 export function FeedMemoryRowTile({ memory, priority = false }: { memory: MemoryPublic; priority?: boolean }) {
   const kind = memoryTileKind(memory)
@@ -81,9 +74,6 @@ function MediaSquare({
       className={`margo-feed-memory-row-tile__media margo-feed-memory-row-tile__media--${kind}`}
       style={wordsOnly ? { background: memoryWordsOnlyBackground(memoryId) } : undefined}
     >
-      <span className="margo-feed-memory-row-tile__type" aria-hidden>
-        <TypeIcon kind={kind} />
-      </span>
       {wordsOnly ? (
         <p className="margo-feed-memory-row-tile__story" style={{ fontFamily: lyricFont }}>
           {storyPreview}

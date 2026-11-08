@@ -1,7 +1,7 @@
 import type { MemoryPublic } from '@/lib/memory/types'
 import type { Post } from '@/hooks/usePosts'
 import type { MemoryPromoKind } from './feed-memory-card.ts'
-import type { ListeningWeekRow } from './feed-listening-week.ts'
+import type { EchoFeedBlockSnapshot } from './echoes/types.ts'
 import {
   FEED_BLOCK_CYCLE_SIGNED_IN,
   FEED_BLOCK_CYCLE_SIGNED_OUT,
@@ -33,8 +33,7 @@ export type FeedLyricsPostRow = {
 export type FeedLyricsRow =
   | FeedLyricsPostRow
   | { kind: 'memories-row'; key: string; memories: MemoryPublic[]; hasMore: boolean; planKey: string }
-  | { kind: 'listening-prompt'; key: string; planKey: string }
-  | { kind: 'listening-week'; key: string; rows: ListeningWeekRow[]; planKey: string }
+  | { kind: 'echoes-set'; key: string; block: EchoFeedBlockSnapshot; planKey: string }
   | { kind: 'people'; key: string; people: FeedLyricsPeopleSlot[]; planKey: string }
   | { kind: 'memory-promo'; key: string; promoKind: MemoryPromoKind; planKey: string }
   | { kind: 'shorts-strip'; key: string; planKey: string }
@@ -69,7 +68,7 @@ type BlockCtx = {
   peoplePool: FeedLyricsPeopleSlot[]
   peopleUsed: Set<string>
   shortsStripAvailable: boolean
-  listeningWeekRows: ListeningWeekRow[]
+  echoesBlock: EchoFeedBlockSnapshot | null
 }
 
 function cycleFor(signedIn: boolean): FeedBlockKind[] {
@@ -81,7 +80,6 @@ function canMaterialize(kind: FeedBlockKind, ctx: BlockCtx): boolean {
     case 'pictures':
     case 'story':
     case 'memory':
-    case 'listening-prompt':
       return ctx.signedIn
     case 'memories-row':
       return ctx.memories.length > ctx.memIdx
@@ -89,8 +87,8 @@ function canMaterialize(kind: FeedBlockKind, ctx: BlockCtx): boolean {
       return peekPeople(ctx.peoplePool, ctx.peopleUsed).length > 0
     case 'shorts':
       return ctx.shortsStripAvailable
-    case 'listening-week':
-      return ctx.listeningWeekRows.length > 0
+    case 'echoes':
+      return ctx.echoesBlock != null
     default:
       return false
   }
@@ -120,11 +118,11 @@ function materializeBlock(
     if (kind === 'shorts') {
       return { row: { kind: 'shorts-strip', key, planKey: key }, consumedMemories: 0 }
     }
-    if (kind === 'listening-prompt') {
-      return { row: { kind: 'listening-prompt', key, planKey: key }, consumedMemories: 0 }
-    }
-    if (kind === 'listening-week') {
-      return { row: { kind: 'listening-week', key, rows: ctx.listeningWeekRows, planKey: key }, consumedMemories: 0 }
+    if (kind === 'echoes' && ctx.echoesBlock) {
+      return {
+        row: { kind: 'echoes-set', key, block: ctx.echoesBlock, planKey: key },
+        consumedMemories: 0,
+      }
     }
     if (kind === 'memories-row') {
       const chunk = ctx.memories.slice(ctx.memIdx, ctx.memIdx + FEED_LYRICS_MEMORY_ROW_SIZE)
@@ -151,12 +149,12 @@ export function buildFeedLyricsRows(input: {
   signedIn: boolean
   promoAnchor: number
   shortsStripAvailable?: boolean
-  listeningWeekRows?: ListeningWeekRow[]
+  echoesBlock?: EchoFeedBlockSnapshot | null
   memoryCursorStart?: number
 }): FeedLyricsRow[] {
   const { lyricPosts, memories, peoplePool, signedIn, promoAnchor } = input
   const shortsStripAvailable = input.shortsStripAvailable !== false
-  const listeningWeekRows = input.listeningWeekRows ?? []
+  const echoesBlock = input.echoesBlock ?? null
   let memIdx = input.memoryCursorStart ?? 0
   const peopleUsed = new Set<string>()
   const out: FeedLyricsRow[] = []
@@ -173,7 +171,7 @@ export function buildFeedLyricsRows(input: {
     peoplePool,
     peopleUsed,
     shortsStripAvailable,
-    listeningWeekRows,
+    echoesBlock,
   })
 
   const emitPlanned = (planned: FeedPlannedBlock) => {
@@ -204,7 +202,7 @@ export function simulateFeedBlockPositions(input: {
   signedIn: boolean
   promoAnchor: number
   shortsStripAvailable?: boolean
-  listeningWeekRows?: ListeningWeekRow[]
+  echoesBlock?: EchoFeedBlockSnapshot | null
 }): { afterLyric: number; blockKind: string }[] {
   const rows = buildFeedLyricsRows(input)
   let ord = 0
@@ -222,7 +220,9 @@ export function simulateFeedBlockPositions(input: {
           ? 'shorts'
           : r.kind === 'memories-row'
             ? 'memories-row'
-            : r.kind
+            : r.kind === 'echoes-set'
+              ? 'echoes'
+              : r.kind
     table.push({ afterLyric: ord, blockKind: kind })
   }
   return table

@@ -12,7 +12,8 @@ import { compactArtworkUrl } from '@/lib/compact-artwork-url'
 import { formatMemoryDisplayDate } from '@/lib/memory/date-label'
 import type { MemoryPublic, MemoryVisibility } from '@/lib/memory/types'
 import { TYPE, UI_FONT } from '@/lib/fonts'
-import { playFull } from '@/lib/audio-engine'
+import { playFull, togglePlayPause } from '@/lib/audio-engine'
+import { useIsBuffering, useIsPlaying } from '@/hooks/useAudioEngine'
 import { useRegisterNavBack } from '@/components/nav-back'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { MARGO_SITE_ORIGIN } from '@/lib/moment/site-origin'
@@ -365,9 +366,10 @@ export default function MemoryDetailPage() {
             <p style={{ margin: 0, fontFamily: font, fontSize: TYPE.secondary, fontWeight: 600 }}>{firstSong.songTitle}</p>
             <p style={{ margin: 0, fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)' }}>{firstSong.artistName}</p>
           </div>
-          <button type="button" className="margo-memory-detail__song-play" onClick={() => (memory.songs.length >= 2 ? playAll() : playSong(firstSong))} aria-label="Play song">
-            <PlayPauseIcon playing={false} buffering={false} size={16} color="var(--bg)" />
-          </button>
+          <MemoryDetailSongPlay
+            songId={firstSong.songId}
+            onPlay={() => (memory.songs.length >= 2 ? playAll() : playSong(firstSong))}
+          />
         </div>
       ) : null}
 
@@ -422,5 +424,23 @@ export default function MemoryDetailPage() {
         artwork={firstSong?.artworkUrl ?? memory.coverUrl}
       />
     </article>
+  )
+}
+
+function MemoryDetailSongPlay({ songId, onPlay }: { songId: string | null; onPlay: () => void }) {
+  const playing = useIsPlaying(songId)
+  const buffering = useIsBuffering(songId)
+  return (
+    <button
+      type="button"
+      className="margo-memory-detail__song-play"
+      onClick={() => {
+        if (playing) togglePlayPause()
+        else onPlay()
+      }}
+      aria-label={playing ? 'Pause song' : 'Play song'}
+    >
+      <PlayPauseIcon playing={playing} buffering={buffering} size={16} color="var(--bg)" />
+    </button>
   )
 }

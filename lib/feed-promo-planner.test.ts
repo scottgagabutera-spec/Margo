@@ -39,8 +39,8 @@ for (const n of COUNTS) {
   }
 }
 
-test('slots start at four then step five', () => {
-  assert.deepEqual(feedBlockSlots(20), [4, 9, 14, 19])
+test('slots start at four then step four', () => {
+  assert.deepEqual(feedBlockSlots(20), [4, 8, 12, 16, 20])
 })
 
 test('signed in twenty posts cycle order anchor zero', () => {
@@ -64,7 +64,13 @@ test('minimum four lyrics between blocks for twenty posts', () => {
     peoplePool,
     signedIn: true,
     promoAnchor: 0,
-    listeningWeekRows: [{ memoryId: 'x', ownerProfileId: 'o', ownerUsername: 'o', ownerAvatarUrl: null, songTitle: 'S', artistName: 'A', artworkUrl: null, songId: '1', audioUrl: 'u', isLyricOnly: false }],
+    echoesBlock: {
+      setId: 'set',
+      questionId: 'q',
+      title: 'What are you listening to?',
+      answerCount: 1,
+      preview: [],
+    },
   }).filter((p) => p.afterLyric > 0)
   for (let i = 1; i < positions.length; i++) {
     assert.ok(positions[i]!.afterLyric - positions[i - 1]!.afterLyric >= MIN_LYRICS_BETWEEN_BLOCKS + 1)
@@ -78,7 +84,13 @@ test('no adjacent blocks', () => {
     peoplePool,
     signedIn: true,
     promoAnchor: 0,
-    listeningWeekRows: [{ memoryId: 'x', ownerProfileId: 'o', ownerUsername: 'o', ownerAvatarUrl: null, songTitle: 'S', artistName: 'A', artworkUrl: null, songId: '1', audioUrl: 'u', isLyricOnly: false }],
+    echoesBlock: {
+      setId: 'set',
+      questionId: 'q',
+      title: 'What are you listening to?',
+      answerCount: 1,
+      preview: [],
+    },
   })
   let prevBlock = false
   for (const row of rows) {
