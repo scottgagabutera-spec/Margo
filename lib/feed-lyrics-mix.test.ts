@@ -24,6 +24,18 @@ test('short feed starts with pictures for signed in user', () => {
   if (rows[0]?.kind === 'memory-promo') assert.equal(rows[0].promoKind, 'pictures')
 })
 
+test('zero lyric posts still shows signed in lead blocks', () => {
+  const rows = buildFeedLyricsRows({
+    lyricPosts: [],
+    memories: [],
+    peoplePool: [{ id: 'u1', username: 'u', displayName: 'U', avatarUrl: null }],
+    signedIn: true,
+    promoAnchor: 0,
+  })
+  assert.equal(rows.some((r) => r.kind === 'memory-promo'), true)
+  assert.equal(rows.some((r) => r.kind === 'shorts-strip'), true)
+})
+
 test('signed out short feed has no memory promos', () => {
   const rows = buildFeedLyricsRows({
     lyricPosts: Array.from({ length: 5 }, (_, i) => lyricPost(`p${i}`)),

@@ -479,7 +479,7 @@ function FeedPageInner() {
   }, [user?.id, supabase])
 
   const promoAnchor = useMemo(
-    () => feedPromoAnchorIndex(user?.id ?? null, localDayKey()),
+    () => feedPromoAnchorIndex(user?.id ?? null, localDayKey(), !!user?.id),
     [user?.id],
   )
 
@@ -598,6 +598,7 @@ function FeedPageInner() {
       peoplePool,
       signedIn: !!user?.id,
       promoAnchor,
+      shortsStripAvailable: resolvedShortsMeetsMinimum && shortsStripTiles.length > 0,
     })
   }, [
     feedContentTab,
@@ -607,6 +608,8 @@ function FeedPageInner() {
     promoAnchor,
     lyricsMixGateReady,
     user?.id,
+    resolvedShortsMeetsMinimum,
+    shortsStripTiles.length,
   ])
   const hasActiveFilter = selectedVibe !== 'ALL' || selectedSort !== 'NEW'
 
@@ -845,7 +848,7 @@ function FeedPageInner() {
         )}
         {showFeedSkeleton && <FeedPostSkeletonList count={4} />}
 
-        {lyricsMixReady && lyricPostRows.length === 0 && !mixedLyricRows.some((r) => r.kind === 'memory-promo') && (
+        {lyricsMixReady && lyricPostRows.length === 0 && !mixedLyricRows.some((r) => r.kind !== 'post') && (
           <div style={{ textAlign: 'center', padding: '64px 0' }}>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '1rem', marginBottom: '16px' }}>
               {selectedVibe === 'ALL'
