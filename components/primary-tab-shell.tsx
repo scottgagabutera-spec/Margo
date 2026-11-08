@@ -23,6 +23,11 @@ import { MARGO_HUB_DEEP_NAV_EVENT, type HubDeepNavDetail } from '@/lib/hub-deep-
 import { warmPrimaryTab } from '@/lib/primary-tab-prefetch'
 import { MARGO_NAV_START } from '@/lib/margo-nav-intent'
 import { clearHubOverlayRestore, peekHubOverlayRestore } from '@/lib/search-scope'
+import {
+  FEED_RETURN_STORAGE_KEY,
+  captureFeedReturnFromDom,
+  type FeedReturnSnapshot,
+} from '@/lib/margo-feed-return'
 
 /**
  * Primary-tab keepalive + Activity + swipe strip.
@@ -45,7 +50,7 @@ export type PrimaryTabId = 'feed' | 'discover' | 'compose' | 'you'
 export type PrimaryTabPeekDir = 'prev' | 'next'
 
 const SCROLL_STORAGE_KEY = 'margo-primary-tab-scroll'
-const FEED_RESUME_KEY = 'margo-feed-resume'
+const FEED_RESUME_KEY = FEED_RETURN_STORAGE_KEY
 const FEED_RESUME_MAX_MS = 12 * 60 * 60 * 1000
 
 function normalizeTabPath(pathname: string | null | undefined): string {
@@ -102,14 +107,14 @@ export function scrollActiveTo(top: number, behavior: ScrollBehavior = 'auto') {
   }
 }
 
-function readFeedResume(): { y: number; anchorId?: string | null } | undefined {
+function readFeedResume(): FeedReturnSnapshot | undefined {
   try {
     const raw = localStorage.getItem(FEED_RESUME_KEY)
     if (!raw) return undefined
-    const parsed = JSON.parse(raw) as { y?: number; at?: number; anchorId?: string | null }
+    const parsed = JSON.parse(raw) as FeedReturnSnapshot
     if (typeof parsed.y !== 'number' || typeof parsed.at !== 'number') return undefined
     if (Date.now() - parsed.at > FEED_RESUME_MAX_MS) return undefined
-    return { y: parsed.y, anchorId: parsed.anchorId ?? null }
+    return parsed
   } catch {
     return undefined
   }
@@ -117,7 +122,19 @@ function readFeedResume(): { y: number; anchorId?: string | null } | undefined {
 
 function writeFeedResume(y: number, anchorId?: string | null) {
   try {
-    localStorage.setItem(FEED_RESUME_KEY, JSON.stringify({ y, anchorId: anchorId || null, at: Date.now() }))
+    const prev = readFeedResume()
+    const dom = captureFeedReturnFromDom(prev?.tab)
+    const payload: FeedReturnSnapshot = {
+      y,
+      anchorId: anchorId === undefined ? (prev?.anchorId ?? null) : anchorId,
+      at: Date.now(),
+      tab: prev?.tab ?? dom.tab,
+      memoriesRowX: prev?.memoriesRowX ?? dom.memoriesRowX,
+      shortsStripX: prev?.shortsStripX ?? dom.shortsStripX,
+      shortsAt: prev?.shortsAt ?? dom.shortsAt,
+      href: prev?.href ?? dom.href,
+    }
+    localStorage.setItem(FEED_RESUME_KEY, JSON.stringify(payload))
   } catch {
     /* private mode */
   }
@@ -239,6 +256,27 @@ export function persistActivePrimaryScroll() {
   if (!el) return
   const id = el.getAttribute('data-margo-primary-tab') as PrimaryTabId | null
   if (!id) return
+  if (id === 'feed') {
+    const dom = captureFeedReturnFromDom()
+    writeFeedResume(el.scrollTop, feedAnchorFromPane(el) ?? null)
+    try {
+      const prev = readFeedResume()
+      if (prev) {
+        localStorage.setItem(
+          FEED_RESUME_KEY,
+          JSON.stringify({
+            ...prev,
+            ...dom,
+            y: el.scrollTop,
+            anchorId: feedAnchorFromPane(el) ?? prev.anchorId ?? null,
+            at: Date.now(),
+          } satisfies FeedReturnSnapshot),
+        )
+      }
+    } catch {
+      /* */
+    }
+  }
   persistScroll(
     frozenScrollLive,
     id,
@@ -284,6 +322,14 @@ export function restoreActivePrimaryScroll(): PrimaryScrollRestore {
     }
     if (resume && resume.y >= 1) {
       el.scrollTop = resume.y
+      if (resume.memoriesRowX > 0) {
+        const row = el.querySelector('.margo-feed-memories-row__scroller')
+        if (row instanceof HTMLElement) row.scrollLeft = resume.memoriesRowX
+      }
+      if (resume.shortsStripX > 0) {
+        const strip = el.querySelector('.margo-feed-shorts-strip__row')
+        if (strip instanceof HTMLElement) strip.scrollLeft = resume.shortsStripX
+      }
       return { applied: true, anchored: false, waitingForAnchor: false }
     }
   }

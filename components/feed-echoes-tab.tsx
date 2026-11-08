@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronRightIcon } from '@/components/icons'
 import { MargoAvatar } from '@/components/margo-avatar'
-import { captureFeedReturnFromDom, saveMargoReturn } from '@/lib/margo-scroll-return'
+import { persistFeedReturnBeforeLeave } from '@/lib/margo-feed-return'
 import { UI_FONT } from '@/lib/fonts'
 
 const font = UI_FONT
@@ -39,7 +39,7 @@ export function FeedEchoesTab() {
   }, [])
 
   const openSet = (id: string) => {
-    saveMargoReturn({ href: '/feed?tab=echoes', ...captureFeedReturnFromDom(), feedTab: 'echoes' })
+    persistFeedReturnBeforeLeave('echoes')
     router.push(`/echoes/${id}`)
   }
 
@@ -95,7 +95,7 @@ export function FeedEchoesTab() {
           key={set.id}
           href={`/echoes/${set.id}`}
           className="margo-feed-echoes-tab__link"
-          onClick={() => saveMargoReturn({ href: '/feed?tab=echoes', ...captureFeedReturnFromDom(), feedTab: 'echoes' })}
+          onClick={() => persistFeedReturnBeforeLeave('echoes')}
         >
           {set.title}
         </Link>

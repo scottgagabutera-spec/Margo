@@ -14,8 +14,8 @@ export const FEED_BLOCK_CYCLE_SIGNED_IN: FeedBlockKind[] = [
   'people',
   'memory',
   'echoes',
-  'pictures',
   'shorts',
+  'pictures',
   'story',
 ]
 
@@ -23,15 +23,15 @@ export const FEED_BLOCK_CYCLE_SIGNED_OUT: FeedBlockKind[] = [
   'memories-row',
   'people',
   'echoes',
-  'pictures',
   'shorts',
+  'pictures',
   'story',
 ]
 
-const SLOT_FIRST_ORDINAL = 4
+const SLOT_FIRST_ORDINAL = 3
 const SLOT_STEP = 4
 const SHORT_FEED_MAX = 5
-/** Lyric posts between consecutive block slots (after 4, then every 4 ordinals). */
+/** Lyric posts between consecutive block slots (first at 3, then every 4 ordinals). */
 export const MIN_LYRICS_BETWEEN_BLOCKS = 3
 
 export type FeedPlannedBlock =
@@ -75,13 +75,8 @@ export function planFeedBlocks(input: {
   }
 
   if (nonReplayTotal === 0) {
-    pushStart('memories-row')
     pushStart('echoes')
     return planned
-  }
-
-  if (signedIn && nonReplayTotal < SHORT_FEED_MAX) {
-    pushStart('pictures')
   }
 
   const slots = feedBlockSlots(nonReplayTotal)

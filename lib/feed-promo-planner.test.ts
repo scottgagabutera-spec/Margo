@@ -39,8 +39,8 @@ for (const n of COUNTS) {
   }
 }
 
-test('slots start at four then step four', () => {
-  assert.deepEqual(feedBlockSlots(20), [4, 8, 12, 16, 20])
+test('slots start at three then step four', () => {
+  assert.deepEqual(feedBlockSlots(20), [3, 7, 11, 15, 19])
 })
 
 test('signed in twenty posts cycle order anchor zero', () => {

@@ -7,6 +7,7 @@ import { memoryGridCoverSource, memoryFeedRowThumbnailUrl } from '@/lib/memory/f
 import { formatMemoryDisplayDate } from '@/lib/memory/date-label'
 import { memoryTileKind } from '@/lib/memory/memory-tile-kind'
 import type { MemoryPublic } from '@/lib/memory/types'
+import { persistFeedReturnBeforeLeave } from '@/lib/margo-feed-return'
 import { memoryWordsOnlyBackground } from '@/lib/memory/words-only-palette'
 import { LYRIC_FONT, UI_FONT } from '@/lib/fonts'
 
@@ -30,7 +31,12 @@ export function FeedMemoryRowTile({ memory, priority = false }: { memory: Memory
   const storyPreview = (memory.story || title).trim().split(/\s+/).slice(0, 12).join(' ')
 
   return (
-    <Link href={`/memory/${memory.id}`} className="margo-feed-memory-row-tile" aria-label={title}>
+    <Link
+      href={`/memory/${memory.id}`}
+      className="margo-feed-memory-row-tile"
+      aria-label={title}
+      onClick={() => persistFeedReturnBeforeLeave('lyrics')}
+    >
       <MediaSquare
         kind={kind}
         thumb={thumb}

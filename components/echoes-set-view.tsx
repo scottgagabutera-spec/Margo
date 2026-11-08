@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { EditIcon } from '@/components/icons'
 import { MargoAvatar } from '@/components/margo-avatar'
 import type { EchoAnswerRow } from '@/lib/echoes/types'
-import { saveMargoReturn } from '@/lib/margo-scroll-return'
+import { persistFeedReturnBeforeLeave } from '@/lib/margo-feed-return'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useRegisterNavBack } from '@/components/nav-back'
 import { UI_FONT } from '@/lib/fonts'
@@ -48,7 +48,7 @@ export function EchoesSetView({ setId }: { setId: string }) {
 
   const startAnswer = () => {
     if (!requireAuth()) return
-    saveMargoReturn({ href: `/echoes/${setId}`, feedTab: 'echoes' })
+    persistFeedReturnBeforeLeave('echoes')
     router.push(`/echoes/answer?questionId=${encodeURIComponent(questionId)}&setId=${encodeURIComponent(setId)}`)
   }
 
@@ -98,7 +98,7 @@ export function EchoesSetView({ setId }: { setId: string }) {
               <Link
                 href={`/echoes/${setId}/${row.profileId}`}
                 className="margo-echoes-set-page__row-link"
-                onClick={() => saveMargoReturn({ href: `/echoes/${setId}`, feedTab: 'echoes' })}
+                onClick={() => persistFeedReturnBeforeLeave('echoes')}
               >
                 <MargoAvatar size="md" imageUrl={row.avatarUrl} username={row.username} displayName={row.displayName} />
                 <div>

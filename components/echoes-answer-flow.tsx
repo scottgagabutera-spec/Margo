@@ -14,7 +14,7 @@ import { ECHO_TIME_CHOICES, echoTimeChoiceLabel } from '@/lib/echoes/time-choice
 import type { EchoSongPayloadItem, EchoTimeChoice } from '@/lib/echoes/types'
 import { useInlineSearchDropdownMaxHeight } from '@/hooks/useInlineSearchDropdownMaxHeight'
 import { useAuthGate } from '@/components/supabase-auth-provider'
-import { clearMargoReturn, readMargoReturn } from '@/lib/margo-scroll-return'
+import { clearMargoReturn, readMargoReturn } from '@/lib/margo-feed-return'
 import { useRegisterNavBack } from '@/components/nav-back'
 import { UI_FONT } from '@/lib/fonts'
 import { toast } from 'sonner'

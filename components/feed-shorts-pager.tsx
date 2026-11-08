@@ -32,6 +32,7 @@ import {
 } from '@/lib/shorts-frame-layout'
 import { utcDayKey } from '@/lib/shorts-shelf-rotation'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
+import { writeFeedReturnSnapshot } from '@/lib/margo-feed-return'
 
 const ANON_PLAYS_BEFORE_SIGNUP = 5
 const SHORTS_UNMUTE_STORAGE_KEY = 'margo-shorts-unmuted'
@@ -370,6 +371,7 @@ export function FeedShortsPager({
     const idx = findSettledSlideIndex(root)
     settledIndexRef.current = idx
     setSettledIndex(idx)
+    writeFeedReturnSnapshot({ tab: 'shorts', shortsAt: idx })
   }, [])
 
   useEffect(() => {
