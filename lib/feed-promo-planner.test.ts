@@ -88,6 +88,14 @@ test('cycle length seven', () => {
   assert.equal(FEED_BLOCK_CYCLE_SIGNED_OUT.length, 7)
 })
 
+test('first pass stays pictures then story even when promoAnchor rotates', () => {
+  const list = materializeSlotListForPosts(8, true, 3)
+  assert.deepEqual(
+    list.map((x) => `${x.afterLyric}:${x.kind}`),
+    ['3:memories-row', '4:people', '5:pictures', '6:story', '7:echoes-ask', '8:memory'],
+  )
+})
+
 test('simulate positions include memories at 3 then people', () => {
   const table = simulateFeedBlockPositions({
     lyricPosts: lyricRows(8),

@@ -106,7 +106,12 @@ export function planFeedBlocks(input: {
   const slots = feedBlockSlots(nonReplayTotal)
   let cycleStep = 0
   for (const lyricOrdinal of slots) {
-    const kind = cycle[(promoAnchor + cycleStep) % cycle.length]!
+    // First pass is always people → pictures → story → question → create.
+    // promoAnchor only rotates later repeats so the opening mix stays logical.
+    const kind =
+      cycleStep < FIRST_PASS_CYCLE_ORDINALS.length
+        ? cycle[cycleStep % cycle.length]!
+        : cycle[(promoAnchor + cycleStep) % cycle.length]!
     cycleStep += 1
     planned.push({
       placement: 'after',

@@ -23,7 +23,7 @@ export function FeedEchoesResultsBlock({ block }: { block: EchoFeedBlockSnapshot
   }
 
   return (
-    <article className="margo-feed-echoes-results margo-pressable-surface" data-feed-exit="echoes-results">
+    <article className="margo-feed-echoes-results margo-mix-press" data-feed-exit="echoes-results">
       <header className="margo-feed-echoes-results__head">
         <button type="button" className="margo-feed-echoes-results__head-main" onClick={openSet}>
           <p className="margo-feed-echoes-results__label" style={{ fontFamily: font }}>
@@ -47,14 +47,17 @@ export function FeedEchoesResultsBlock({ block }: { block: EchoFeedBlockSnapshot
               className="margo-feed-echoes-results__person-link"
               onClick={() => openPerson(row.profileId)}
             >
-              <div className="margo-feed-echoes-results__name-line">
-                <MargoAvatar size="sm" imageUrl={row.avatarUrl} username={row.username} displayName={row.displayName} />
-                <span className="margo-feed-echoes-results__name" style={{ fontFamily: font }}>
-                  {row.isOwn ? 'You' : row.displayName}
-                </span>
-                <span className="margo-feed-echoes-results__time" style={{ fontFamily: font }}>
-                  {row.timeLabel}
-                </span>
+              <div className="margo-feed-echoes-results__identity">
+                <MargoAvatar size="md" imageUrl={row.avatarUrl} username={row.username} displayName={row.displayName} />
+                <div className="margo-feed-echoes-results__who">
+                  <span className="margo-feed-echoes-results__name" style={{ fontFamily: font }}>
+                    {row.isOwn ? 'You' : row.displayName}
+                  </span>
+                  <span className="margo-feed-echoes-results__handle" style={{ fontFamily: font }}>
+                    @{row.username}
+                    <span className="margo-feed-echoes-results__time">{row.timeLabel}</span>
+                  </span>
+                </div>
               </div>
               <EchoesSongStrip payload={row.payload} onSongTap={() => openPerson(row.profileId)} />
             </button>

@@ -73,8 +73,16 @@ import {
 } from '@/lib/e2e-shorts-fixture'
 import { shouldUseE2eFeedReturnFixture } from '@/lib/e2e-feed-return-fixture'
 import { E2eFeedReturnFixture } from '@/components/e2e-feed-return-fixture'
-import { parseFeedMixSurface, stripFeedMixParams } from '@/lib/feed-mix-nav'
+import {
+  parseFeedMixSurface,
+  paintFeedMix,
+  resolveFeedMixSurface,
+  stripFeedMixParams,
+  subscribeFeedMixPaint,
+  type FeedMixPaint,
+} from '@/lib/feed-mix-nav'
 import { FeedMixOverlay } from '@/components/feed-mix-overlay'
+import { useRegisterNavBack } from '@/components/nav-back'
 
 const supabase = createClient()
 
@@ -536,6 +544,18 @@ function FeedPageInner() {
     )
   }, [feedGridMemories, searchParams])
 
+  const openMemoryId = searchParams.get('openMemory')?.trim() || ''
+  useEffect(() => {
+    if (feedContentTab !== 'memories' || !openMemoryId) return
+    const frame = window.requestAnimationFrame(() => {
+      const el = document.querySelector(`[data-margo-memory-tile="${CSS.escape(openMemoryId)}"]`)
+      if (!(el instanceof HTMLElement)) return
+      el.scrollIntoView({ block: 'center', inline: 'nearest' })
+      el.classList.add('margo-live-new-shine')
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [feedContentTab, openMemoryId, feedGridMemoriesFiltered.length])
+
   const shortsAtParam = searchParams.get('shortsAt')
   const shortsInitialIndex = (() => {
     const n = Number(shortsAtParam)
@@ -604,12 +624,45 @@ function FeedPageInner() {
 
   const handleFeedContentTab = (tab: 'lyrics' | 'memories' | 'shorts' | 'echoes') => {
     if (feedContentTab === 'lyrics' && tab !== 'lyrics') persistFeedReturnBeforeLeave('lyrics')
+    paintFeedMix(null)
     const params = stripFeedMixParams(applyFeedContentTab(new URLSearchParams(searchParams.toString()), tab))
     const qs = params.toString()
     router.push(qs ? `/feed?${qs}` : '/feed', { scroll: false })
   }
 
-  const mixSurface = useMemo(() => parseFeedMixSurface(searchParams), [searchParams])
+  const mixFromUrl = useMemo(() => parseFeedMixSurface(searchParams), [searchParams])
+  const [paintedMix, setPaintedMix] = useState<FeedMixPaint>(undefined)
+  useEffect(() => subscribeFeedMixPaint(setPaintedMix), [])
+  useEffect(() => {
+    const onPop = () => {
+      paintFeedMix(parseFeedMixSurface(new URLSearchParams(window.location.search)))
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+  const mixSurface = resolveFeedMixSurface(mixFromUrl, paintedMix)
+  useEffect(() => {
+    if (paintedMix === null && !mixFromUrl) paintFeedMix(undefined)
+  }, [paintedMix, mixFromUrl])
+
+  useRegisterNavBack(
+    mixSurface
+      ? null
+      : feedContentTab !== 'lyrics'
+        ? {
+            preferHistory: true,
+            fallbackHref: '/feed',
+            onBack: () => {
+              if (typeof window !== 'undefined' && window.history.length > 1) {
+                window.history.back()
+                return true
+              }
+              handleFeedContentTab('lyrics')
+              return true
+            },
+          }
+        : null,
+  )
 
   const handleSelectVibe = (vibe: string) => {
     const next = selectedVibe === vibe ? 'ALL' : vibe

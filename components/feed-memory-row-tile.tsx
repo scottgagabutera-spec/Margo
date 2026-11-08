@@ -34,7 +34,7 @@ export function FeedMemoryRowTile({ memory, priority = false }: { memory: Memory
   return (
     <button
       type="button"
-      className="margo-feed-memory-row-tile"
+      className="margo-feed-memory-row-tile margo-mix-press"
       aria-label={title}
       onClick={() => openFeedMemory(router, memory.id)}
     >

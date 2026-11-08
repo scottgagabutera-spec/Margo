@@ -5,12 +5,12 @@ import { useRouter } from 'next/navigation'
 import { EditIcon } from '@/components/icons'
 import { MargoAvatar } from '@/components/margo-avatar'
 import type { EchoAnswerRow } from '@/lib/echoes/types'
-import { EchoesSongPreview } from '@/components/echoes-song-preview'
+import { EchoesSongStrip } from '@/components/echoes-song-strip'
 import { feedReturnFallbackHref } from '@/lib/feed-exit-nav'
 import { openFeedEchoesAnswer, openFeedEchoesPerson } from '@/lib/feed-mix-nav'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useRegisterNavBack } from '@/components/nav-back'
-import { UI_FONT } from '@/lib/fonts'
+import { FEED_TYPE_SCALE, TYPE, UI_FONT } from '@/lib/fonts'
 
 const font = UI_FONT
 
@@ -58,14 +58,17 @@ export function EchoesSetView({ setId }: { setId: string }) {
     <div className="margo-echoes-set-page">
       <header className="margo-echoes-set-page__head">
         <div>
-          <h1 className="margo-echoes-set-page__title" style={{ fontFamily: font }}>
-            {title || 'Echoes'}
+          <p className="margo-echoes-set-page__kicker" style={{ fontFamily: font }}>
+            Echoes
+          </p>
+          <h1 className="margo-echoes-set-page__title" style={{ fontFamily: font, fontSize: TYPE.body }}>
+            {title || 'What are you listening to?'}
           </h1>
-          <p className="margo-echoes-set-page__count" style={{ fontFamily: font }}>
+          <p className="margo-echoes-set-page__count" style={{ fontFamily: font, fontSize: FEED_TYPE_SCALE.sectionLabel }}>
             {countLabel}
           </p>
         </div>
-        <button type="button" className="margo-feed-memory-card__action" aria-label="Edit answer" onClick={startAnswer}>
+        <button type="button" className="margo-feed-memory-card__action" aria-label="Answer" onClick={startAnswer}>
           <EditIcon size={16} color="var(--bg)" />
         </button>
       </header>
@@ -88,28 +91,32 @@ export function EchoesSetView({ setId }: { setId: string }) {
         </button>
       </div>
       {loading ? (
-        <p className="margo-echoes-set-page__loading" style={{ fontFamily: font }}>
-          Loading
-        </p>
+        <ul className="margo-echoes-set-page__list" aria-busy="true" aria-label="Loading answers">
+          <li className="margo-echoes-set-page__card margo-echoes-set-page__card--skeleton" />
+          <li className="margo-echoes-set-page__card margo-echoes-set-page__card--skeleton" />
+        </ul>
       ) : (
         <ul className="margo-echoes-set-page__list">
           {rows.map((row) => (
-            <li key={row.answerId} className="margo-echoes-set-page__row">
+            <li key={row.answerId}>
               <button
                 type="button"
-                className="margo-echoes-set-page__row-link"
+                className="margo-echoes-set-page__card"
                 onClick={() => openFeedEchoesPerson(router, setId, row.profileId)}
               >
-                <MargoAvatar size="md" imageUrl={row.avatarUrl} username={row.username} displayName={row.displayName} />
-                <div className="margo-echoes-set-page__body">
-                  <p className="margo-echoes-set-page__name" style={{ fontFamily: font }}>
-                    {row.isOwn ? 'You' : row.displayName}
-                  </p>
-                  <span className="margo-echoes-set-page__time" style={{ fontFamily: font }}>
-                    {row.timeLabel}
-                  </span>
-                  <EchoesSongPreview payload={row.payload} />
+                <div className="margo-echoes-set-page__identity">
+                  <MargoAvatar size="md" imageUrl={row.avatarUrl} username={row.username} displayName={row.displayName} />
+                  <div className="margo-echoes-set-page__who">
+                    <p className="margo-echoes-set-page__name" style={{ fontFamily: font, fontSize: FEED_TYPE_SCALE.displayName }}>
+                      {row.isOwn ? 'You' : row.displayName}
+                    </p>
+                    <p className="margo-echoes-set-page__handle" style={{ fontFamily: font, fontSize: FEED_TYPE_SCALE.handle }}>
+                      @{row.username}
+                      <span className="margo-echoes-set-page__time">{row.timeLabel}</span>
+                    </p>
+                  </div>
                 </div>
+                <EchoesSongStrip payload={row.payload} />
               </button>
             </li>
           ))}

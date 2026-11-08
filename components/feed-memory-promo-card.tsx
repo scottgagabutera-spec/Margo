@@ -51,7 +51,7 @@ export function FeedMemoryPromoCard({ promoKind }: { promoKind: MemoryPromoKind 
 
   return (
     <article
-      className="margo-feed-memory-card margo-pressable-surface"
+      className="margo-feed-memory-card margo-mix-press"
       data-feed-exit={`create-${promoKind}`}
       role="button"
       tabIndex={0}

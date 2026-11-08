@@ -46,7 +46,7 @@ export function FeedShortsStrip({ tiles }: { tiles: FeedShortsStripTile[] }) {
               type="button"
               key={`${tile.songId}-${tile.lineId}`}
               onClick={() => openFeedTab(router, 'shorts', { shortsAt: tile.stripIndex })}
-              className="margo-feed-shorts-strip__tile"
+              className="margo-feed-shorts-strip__tile margo-mix-press"
               style={{
                 background: bg,
                 color: ink,

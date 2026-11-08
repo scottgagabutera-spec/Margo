@@ -1,5 +1,5 @@
 import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime'
-import { applyFeedContentTab, type FeedContentTab } from './feed-content-tab.ts'
+import { applyFeedContentTab, parseFeedContentTab, type FeedContentTab } from './feed-content-tab.ts'
 import { persistFeedReturnBeforeLeave } from './margo-feed-return.ts'
 import type { MemoryPromoKind } from './feed-memory-card.ts'
 
@@ -17,10 +17,38 @@ export const FEED_MIX_PARAM_KEYS = [
 
 export type FeedMixSurface =
   | { kind: 'create'; entry: 'media' | 'words' | 'memory'; focusStory: boolean }
-  | { kind: 'memory'; id: string }
   | { kind: 'echoes-answer'; questionId: string; setId: string }
   | { kind: 'echoes-set'; setId: string }
   | { kind: 'echoes-person'; setId: string; profileId: string }
+
+export type FeedMixPaint = FeedMixSurface | null | undefined
+
+let paintedMix: FeedMixPaint = undefined
+const mixPaintListeners = new Set<(next: FeedMixPaint) => void>()
+
+export function paintFeedMix(surface: FeedMixPaint) {
+  paintedMix = surface
+  mixPaintListeners.forEach((listener) => listener(surface))
+}
+
+export function readPaintedFeedMix(): FeedMixPaint {
+  return paintedMix
+}
+
+export function subscribeFeedMixPaint(listener: (next: FeedMixPaint) => void) {
+  mixPaintListeners.add(listener)
+  return () => {
+    mixPaintListeners.delete(listener)
+  }
+}
+
+export function resolveFeedMixSurface(
+  fromUrl: FeedMixSurface | null,
+  painted: FeedMixPaint,
+): FeedMixSurface | null {
+  if (painted === undefined) return fromUrl
+  return painted
+}
 
 export function stripFeedMixParams(params: URLSearchParams): URLSearchParams {
   const next = new URLSearchParams(params.toString())
@@ -33,8 +61,6 @@ export function parseFeedMixSurface(search: URLSearchParams): FeedMixSurface | n
   if (create === 'media' || create === 'words' || create === 'memory') {
     return { kind: 'create', entry: create, focusStory: search.get('focus') === 'story' }
   }
-  const memoryId = search.get('memory')?.trim()
-  if (memoryId) return { kind: 'memory', id: memoryId }
   if (search.get('echoesAnswer') === '1') {
     const questionId = search.get('questionId')?.trim() || ''
     const setId = search.get('setId')?.trim() || ''
@@ -53,7 +79,7 @@ function currentFeedSearch(): URLSearchParams {
 }
 
 function pushFeedSearch(router: AppRouterInstance, params: URLSearchParams) {
-  persistFeedReturnBeforeLeave('lyrics')
+  persistFeedReturnBeforeLeave(parseFeedContentTab(currentFeedSearch().get('tab')))
   try {
     sessionStorage.setItem('margo-feed-return-pending', '1')
   } catch {
@@ -63,12 +89,18 @@ function pushFeedSearch(router: AppRouterInstance, params: URLSearchParams) {
   router.push(qs ? `/feed?${qs}` : '/feed', { scroll: false })
 }
 
+function pushMix(router: AppRouterInstance, params: URLSearchParams) {
+  paintFeedMix(parseFeedMixSurface(params))
+  pushFeedSearch(router, params)
+}
+
 /** Same mechanism as Shorts: stay on /feed, push query, lyrics pane stays mounted. */
 export function openFeedTab(
   router: AppRouterInstance,
   tab: FeedContentTab,
   extra?: Record<string, string | number | null | undefined>,
 ) {
+  paintFeedMix(null)
   const params = stripFeedMixParams(applyFeedContentTab(currentFeedSearch(), tab))
   if (extra) {
     for (const [key, value] of Object.entries(extra)) {
@@ -80,43 +112,43 @@ export function openFeedTab(
 }
 
 export function openFeedCreate(router: AppRouterInstance, kind: MemoryPromoKind) {
-  const params = stripFeedMixParams(applyFeedContentTab(currentFeedSearch(), 'lyrics'))
+  const params = stripFeedMixParams(currentFeedSearch())
   if (kind === 'pictures') params.set('create', 'media')
   else if (kind === 'story') {
     params.set('create', 'words')
     params.set('focus', 'story')
   } else params.set('create', 'memory')
-  pushFeedSearch(router, params)
+  pushMix(router, params)
 }
 
+/** Memories row tiles open the memories tab (grid + see more), not a single overlay. */
 export function openFeedMemory(router: AppRouterInstance, memoryId: string) {
-  const params = stripFeedMixParams(applyFeedContentTab(currentFeedSearch(), 'lyrics'))
-  params.set('memory', memoryId)
-  pushFeedSearch(router, params)
+  openFeedTab(router, 'memories', { openMemory: memoryId })
 }
 
 export function openFeedEchoesAnswer(router: AppRouterInstance, questionId: string, setId: string) {
-  const params = stripFeedMixParams(applyFeedContentTab(currentFeedSearch(), 'lyrics'))
+  const params = stripFeedMixParams(currentFeedSearch())
   params.set('echoesAnswer', '1')
   params.set('questionId', questionId)
   params.set('setId', setId)
-  pushFeedSearch(router, params)
+  pushMix(router, params)
 }
 
 export function openFeedEchoesSet(router: AppRouterInstance, setId: string) {
-  const params = stripFeedMixParams(applyFeedContentTab(currentFeedSearch(), 'lyrics'))
+  const params = stripFeedMixParams(currentFeedSearch())
   params.set('echoesSet', setId)
-  pushFeedSearch(router, params)
+  pushMix(router, params)
 }
 
 export function openFeedEchoesPerson(router: AppRouterInstance, setId: string, profileId: string) {
-  const params = stripFeedMixParams(applyFeedContentTab(currentFeedSearch(), 'lyrics'))
+  const params = stripFeedMixParams(currentFeedSearch())
   params.set('echoesSet', setId)
   params.set('echoesPerson', profileId)
-  pushFeedSearch(router, params)
+  pushMix(router, params)
 }
 
 export function closeFeedMix() {
+  paintFeedMix(null)
   if (typeof window === 'undefined') return
   if (window.history.length > 1) {
     window.history.back()

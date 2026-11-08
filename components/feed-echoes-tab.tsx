@@ -1,14 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronRightIcon } from '@/components/icons'
-import { EchoesSongPreview } from '@/components/echoes-song-preview'
+import { EchoesSongStrip } from '@/components/echoes-song-strip'
 import { MargoAvatar } from '@/components/margo-avatar'
 import type { EchoSongPayload } from '@/lib/echoes/types'
-import { leaveFeedTo } from '@/lib/feed-exit-nav'
-import { armFeedStackLeave } from '@/lib/feed-link-leave'
+import { openFeedEchoesSet } from '@/lib/feed-mix-nav'
 import { UI_FONT } from '@/lib/fonts'
 
 const font = UI_FONT
@@ -21,6 +19,7 @@ type EchoSetCard = {
   avatarUrls: string[]
   latestAnswer?: {
     displayName: string
+    username?: string
     timeLabel: string
     payload: EchoSongPayload
   } | null
@@ -47,7 +46,7 @@ export function FeedEchoesTab() {
   }, [])
 
   const openSet = (id: string) => {
-    leaveFeedTo(router, `/echoes/${id}`, 'echoes')
+    openFeedEchoesSet(router, id)
   }
 
   if (loading) {
@@ -72,8 +71,11 @@ export function FeedEchoesTab() {
   return (
     <main className="margo-feed-column margo-feed-echoes-tab" style={{ padding: '12px 14px var(--margo-page-padding-bottom)' }}>
       {activeSet ? (
-        <article className="margo-feed-echoes-tab__card">
+        <article className="margo-feed-echoes-tab__card margo-mix-press">
           <button type="button" className="margo-feed-echoes-tab__card-main" onClick={() => openSet(activeSet.id)}>
+            <p className="margo-feed-echoes-tab__kicker" style={{ fontFamily: font }}>
+              Echoes
+            </p>
             <p className="margo-feed-echoes-tab__title" style={{ fontFamily: font }}>
               {activeSet.title}
             </p>
@@ -93,9 +95,10 @@ export function FeedEchoesTab() {
             {activeSet.latestAnswer ? (
               <div className="margo-feed-echoes-tab__preview">
                 <p className="margo-feed-echoes-tab__preview-name" style={{ fontFamily: font }}>
-                  {activeSet.latestAnswer.displayName} · {activeSet.latestAnswer.timeLabel}
+                  {activeSet.latestAnswer.displayName}
+                  <span className="margo-feed-echoes-results__time">{activeSet.latestAnswer.timeLabel}</span>
                 </p>
-                <EchoesSongPreview payload={activeSet.latestAnswer.payload} compact />
+                <EchoesSongStrip payload={activeSet.latestAnswer.payload} />
               </div>
             ) : null}
           </button>
@@ -113,14 +116,14 @@ export function FeedEchoesTab() {
         </p>
       </article>
       {sets.filter((s) => !s.isActive).map((set) => (
-        <Link
+        <button
           key={set.id}
-          href={`/echoes/${set.id}`}
-          className="margo-feed-echoes-tab__link"
-          onClick={() => armFeedStackLeave('echoes')}
+          type="button"
+          className="margo-feed-echoes-tab__link margo-mix-press"
+          onClick={() => openSet(set.id)}
         >
           {set.title}
-        </Link>
+        </button>
       ))}
     </main>
   )

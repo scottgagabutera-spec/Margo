@@ -19,7 +19,19 @@ export function FeedEchoesAskCard({ block, signedIn }: { block: EchoFeedBlockSna
   }
 
   return (
-    <article className="margo-feed-echoes-ask margo-pressable-surface" data-feed-exit="echoes-ask">
+    <article
+      className="margo-feed-echoes-ask margo-mix-press"
+      data-feed-exit="echoes-ask"
+      role="button"
+      tabIndex={0}
+      onClick={startAnswer}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          startAnswer()
+        }
+      }}
+    >
       <div className="margo-feed-echoes-ask__body">
         <p className="margo-feed-echoes-ask__title" style={{ fontFamily: font }}>
           {block.title || 'What are you listening to?'}
@@ -29,11 +41,11 @@ export function FeedEchoesAskCard({ block, signedIn }: { block: EchoFeedBlockSna
         </p>
       </div>
       {signedIn ? (
-        <button type="button" className="margo-icon-hit-44" aria-label="Answer" onClick={startAnswer}>
+        <span className="margo-icon-hit-44" aria-hidden>
           <span className="margo-gold-square-30">
             <EditIcon size={16} color="var(--bg)" />
           </span>
-        </button>
+        </span>
       ) : (
         <p className="margo-feed-echoes-ask__signin" style={{ fontFamily: font }}>
           Sign in to answer

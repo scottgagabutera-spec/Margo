@@ -2,18 +2,20 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { MargoAvatar } from '@/components/margo-avatar'
 import { MemoryCoverCaption } from '@/components/memory-cover-caption'
 import { MusicNoteIcon } from '@/components/icons'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
-import { compactArtworkUrl } from '@/lib/compact-artwork-url'
 import { memoryCoverIsSongArt, memoryCaptionTitle, memoryDisplayCaption } from '@/lib/memory/display-caption'
 import { memoryGridCoverSource } from '@/lib/memory/feed-thumbnail-url'
 import type { MemoryPublic } from '@/lib/memory/types'
 import { MemoryResonateButton } from '@/components/memory-resonate-button'
+import { leaveFeedTo } from '@/lib/feed-exit-nav'
 
 export function MemoryFeedGridTile({ memory: initial }: { memory: MemoryPublic }) {
+  const router = useRouter()
   const [memory, setMemory] = useState(initial)
   useEffect(() => setMemory(initial), [initial])
   const { src, isVideo, wordsOnly } = memoryGridCoverSource(memory)
@@ -22,9 +24,13 @@ export function MemoryFeedGridTile({ memory: initial }: { memory: MemoryPublic }
   return (
     <Link
       href={`/memory/${memory.id}`}
-      className="margo-feed-memory-grid-tile"
+      className="margo-feed-memory-grid-tile margo-mix-press"
       data-margo-memory-tile={memory.id}
       aria-label={caption}
+      onClick={(event) => {
+        event.preventDefault()
+        leaveFeedTo(router, `/memory/${memory.id}`, 'memories')
+      }}
     >
       <span className="margo-feed-memory-grid-tile__art">
         {wordsOnly ? (

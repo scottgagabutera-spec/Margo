@@ -13,6 +13,8 @@ import { ECHO_TIME_CHOICES, echoTimeChoiceLabel } from '@/lib/echoes/time-choice
 import type { EchoSongPayloadItem, EchoTimeChoice } from '@/lib/echoes/types'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { clearMargoReturn, readMargoReturn } from '@/lib/margo-feed-return'
+import { closeFeedMix } from '@/lib/feed-mix-nav'
+import { echoHitPickKey, echoSongPickKey } from '@/lib/echoes/pick-key'
 import { useRegisterNavBack } from '@/components/nav-back'
 import { UI_FONT } from '@/lib/fonts'
 import { toast } from 'sonner'
@@ -22,12 +24,18 @@ const MAX_SONGS = 50
 
 type Pick = EchoSongPayloadItem
 
-export function EchoesAnswerFlow() {
+export function EchoesAnswerFlow({
+  questionId: questionIdProp,
+  setId: setIdProp,
+}: {
+  questionId?: string
+  setId?: string
+}) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { requireAuth } = useAuthGate()
-  const questionId = searchParams.get('questionId') || ''
-  const setId = searchParams.get('setId') || ''
+  const questionId = questionIdProp || searchParams.get('questionId') || ''
+  const setId = setIdProp || searchParams.get('setId') || ''
 
   const [query, setQuery] = useState('')
   const [hits, setHits] = useState<ComposeSearchHit[]>([])
@@ -92,10 +100,17 @@ export function EchoesAnswerFlow() {
     return () => window.clearTimeout(t)
   }, [query])
 
-  const pickedKeys = useMemo(() => new Set(picked.map((p) => songKey(p))), [picked])
+  const pickedKeys = useMemo(() => {
+    const keys = new Set<string>()
+    for (const song of picked) {
+      keys.add(echoSongPickKey(song))
+      keys.add(`${song.songTitle}\0${song.artistName}`)
+    }
+    return keys
+  }, [picked])
   const cancel = useCallback(() => {
     if (typeof window !== 'undefined' && window.location.pathname.split('?')[0] === '/feed') {
-      window.history.back()
+      closeFeedMix()
       return
     }
     const resume = readMargoReturn()
@@ -126,9 +141,9 @@ export function EchoesAnswerFlow() {
       isLyricOnly: !onMargo,
       externalListenUrl: hit.externalListenUrl ?? null,
     }
-    const key = songKey(item)
-    if (pickedKeys.has(key)) {
-      setPicked((prev) => prev.filter((p) => songKey(p) !== key))
+    const key = echoSongPickKey(item)
+    if (pickedKeys.has(key) || pickedKeys.has(echoHitPickKey(hit))) {
+      setPicked((prev) => prev.filter((p) => echoSongPickKey(p) !== key && echoSongPickKey(p) !== echoHitPickKey(hit)))
       return
     }
     if (picked.length >= MAX_SONGS) {
@@ -136,7 +151,6 @@ export function EchoesAnswerFlow() {
       return
     }
     setPicked((prev) => [...prev, item])
-    setQuery('')
   }
 
   const save = async () => {
@@ -154,6 +168,10 @@ export function EchoesAnswerFlow() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error((data as { error?: string }).error || 'Could not save')
+      if (typeof window !== 'undefined' && window.location.pathname.split('?')[0] === '/feed') {
+        closeFeedMix()
+        return
+      }
       const resume = readMargoReturn()
       clearMargoReturn()
       if (setId) router.replace(resume?.href || `/echoes/${setId}`)
@@ -205,7 +223,7 @@ export function EchoesAnswerFlow() {
       </div>
       <ul className="margo-echoes-answer__list">
         {picked.map((song) => (
-          <li key={songKey(song)} className="margo-echoes-answer__row">
+          <li key={echoSongPickKey(song)} className="margo-echoes-answer__row">
             <SongArt song={song} />
             <div className="margo-echoes-answer__meta">
               <p className="margo-echoes-answer__song" style={{ fontFamily: font }}>
@@ -219,7 +237,7 @@ export function EchoesAnswerFlow() {
               type="button"
               className="margo-feed-memory-card__action"
               aria-label="Remove"
-              onClick={() => setPicked((prev) => prev.filter((p) => songKey(p) !== songKey(song)))}
+              onClick={() => setPicked((prev) => prev.filter((p) => echoSongPickKey(p) !== echoSongPickKey(song)))}
             >
               <CheckIcon size={16} color="var(--bg)" />
             </button>
@@ -255,6 +273,3 @@ function SongArt({ song }: { song: Pick }) {
   )
 }
 
-function songKey(song: Pick): string {
-  return song.songId || `${song.songTitle}\0${song.artistName}`
-}
