@@ -1,11 +1,10 @@
 'use client'
 
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { leaveFeedTo } from '@/lib/feed-exit-nav'
 import { useCallback } from 'react'
 import { PlusIcon } from '@/components/icons'
 import { memoryCardCopy, type MemoryPromoKind } from '@/lib/feed-memory-card'
+import { memoryPromoHref, navigateFromFeed } from '@/lib/feed-stack-nav'
 import { UI_FONT } from '@/lib/fonts'
 
 const font = UI_FONT
@@ -44,40 +43,39 @@ function CompositeArt() {
   )
 }
 
-export function FeedMemoryPromoCard({ promoKind }: { promoKind: MemoryPromoKind }) {
+export function FeedMemoryPromoCard({
+  promoKind,
+  hrefOverride,
+}: {
+  promoKind: MemoryPromoKind
+  /** Playwright fixture only — keeps stack depth shallow without auth. */
+  hrefOverride?: string
+}) {
   const router = useRouter()
   const copy = memoryCardCopy(promoKind, { videosSupported: true })
+  const href = hrefOverride ?? memoryPromoHref(promoKind)
 
-  const primary = useCallback(() => {
-    if (promoKind === 'pictures') {
-      leaveFeedTo(router, '/memories/new?entry=media', 'lyrics')
-      return
-    }
-    if (promoKind === 'story') {
-      leaveFeedTo(router, '/memories/new?entry=words&focus=story', 'lyrics')
-      return
-    }
-    leaveFeedTo(router, '/memories/new', 'lyrics')
-  }, [promoKind, router])
-
-  const action =
-    promoKind === 'memory' ? (
-      <Link
-        href="/memories/new"
-        className="margo-feed-memory-card__action"
-        aria-label={copy.title}
-        onClick={() => leaveFeedTo(router, '/memories/new', 'lyrics')}
-      >
-        <PlusIcon size={18} color="var(--bg)" />
-      </Link>
-    ) : (
-      <button type="button" className="margo-feed-memory-card__action" aria-label={copy.title} onClick={primary}>
-        <PlusIcon size={18} color="var(--bg)" />
-      </button>
-    )
+  const open = useCallback(
+    (event?: React.MouseEvent) => {
+      navigateFromFeed(router, href, 'lyrics', event)
+    },
+    [href, router],
+  )
 
   return (
-    <article className="margo-feed-memory-card margo-pressable-surface">
+    <article
+      className="margo-feed-memory-card margo-pressable-surface"
+      data-feed-exit={`create-${promoKind}`}
+      role="button"
+      tabIndex={0}
+      onClick={open}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          open()
+        }
+      }}
+    >
       <div className="margo-feed-memory-card__art" aria-hidden>
         <PromoArt kind={promoKind} />
       </div>
@@ -89,7 +87,11 @@ export function FeedMemoryPromoCard({ promoKind }: { promoKind: MemoryPromoKind 
           {copy.subtitle}
         </p>
       </div>
-      <div className="margo-feed-memory-card__action-wrap">{action}</div>
+      <div className="margo-feed-memory-card__action-wrap">
+        <span className="margo-feed-memory-card__action" aria-hidden>
+          <PlusIcon size={18} color="var(--bg)" />
+        </span>
+      </div>
     </article>
   )
 }

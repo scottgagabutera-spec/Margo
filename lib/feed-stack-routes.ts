@@ -20,5 +20,6 @@ export function isFeedStackPath(pathname: string | null | undefined): boolean {
   if (p.startsWith('/echoes/')) return true
   if (p.startsWith('/post/')) return true
   if (p.startsWith('/song/')) return true
+  if (p.startsWith('/e2e/feed-stack-depth')) return true
   return false
 }

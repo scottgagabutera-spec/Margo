@@ -63,7 +63,10 @@ export function mergeFeedReturnSnapshot(
 ): FeedReturnSnapshot {
   const tab = prev?.tab ?? dom.tab
   const shortsAt = prev?.shortsAt !== undefined ? prev.shortsAt : dom.shortsAt
-  const href = buildFeedResumeHref({ tab, shortsAt })
+  const href =
+    typeof dom.href === 'string' && dom.href.startsWith('/feed')
+      ? dom.href
+      : buildFeedResumeHref({ tab, shortsAt })
   return {
     y,
     at: Date.now(),

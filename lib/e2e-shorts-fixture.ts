@@ -47,3 +47,12 @@ export function isE2eShortsFixtureHostname(hostname: string): boolean {
 export function shouldUseE2eShortsFixture(search: URLSearchParams, hostname: string): boolean {
   return search.get('e2eShorts') === '1' && isE2eShortsFixtureHostname(hostname)
 }
+
+/** Client-safe hostname gate (SSR assumes non-production so Playwright fixtures hydrate). */
+export function useE2eNonProductionHost(): boolean {
+  return useSyncExternalStore(
+    () => () => {},
+    () => isE2eShortsFixtureHostname(window.location.hostname),
+    () => true,
+  )
+}

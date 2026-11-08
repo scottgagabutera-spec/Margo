@@ -34,7 +34,9 @@ import { isFeedStackPath } from '@/lib/feed-stack-routes'
 import {
   MARGO_FEED_STACK_PIN_EVENT,
   clearFeedStackPin,
+  clearFeedStackScrollY,
   readFeedStackPinned,
+  readFeedStackScrollY,
 } from '@/lib/feed-stack-pin'
 
 /**
@@ -615,11 +617,23 @@ export function PrimaryTabShell({
     const path = normalizeTabPath(pathname)
     if (path === '/feed') {
       const snap = readFeedReturnSnapshot()
-      if (snap) {
-        const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
-        if (scroller instanceof HTMLElement && snap.y > 0) scroller.scrollTop = snap.y
-        applyFeedReturnHorizontals(snap)
+      const pinnedY = readFeedStackScrollY()
+      const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
+      if (scroller instanceof HTMLElement) {
+        const y = pinnedY ?? snap?.y ?? 0
+        if (y > 0) {
+          scroller.scrollTop = y
+          requestAnimationFrame(() => {
+            scroller.scrollTop = y
+            clearFeedStackScrollY()
+          })
+        } else {
+          clearFeedStackScrollY()
+        }
+      } else {
+        clearFeedStackScrollY()
       }
+      if (snap) applyFeedReturnHorizontals(snap)
       clearFeedStackPin()
       setFeedStackPinned(false)
       return

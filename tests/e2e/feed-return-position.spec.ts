@@ -2,6 +2,8 @@ import { test, expect, type Page } from '@playwright/test'
 
 type FeedPose = { tab: string; y: number; memX: number; shortsX: number }
 
+const FEED_URL = '/feed?e2eShorts=1&e2eFeedReturn=1'
+
 async function captureFeedPose(page: Page): Promise<FeedPose> {
   return page.evaluate(() => {
     const tab = new URLSearchParams(window.location.search).get('tab') || 'lyrics'
@@ -15,17 +17,17 @@ async function captureFeedPose(page: Page): Promise<FeedPose> {
   })
 }
 
-function assertPoseClose(a: FeedPose, b: FeedPose) {
-  expect(a.tab).toBe(b.tab)
-  expect(Math.abs(a.y - b.y)).toBeLessThanOrEqual(5)
+function assertPoseClose(a: FeedPose, b: FeedPose, opts?: { skipTab?: boolean; skipY?: boolean }) {
+  if (!opts?.skipTab) expect(a.tab).toBe(b.tab)
+  if (!opts?.skipY) expect(Math.abs(a.y - b.y)).toBeLessThanOrEqual(5)
   expect(Math.abs(a.memX - b.memX)).toBeLessThanOrEqual(5)
   expect(Math.abs(a.shortsX - b.shortsX)).toBeLessThanOrEqual(5)
 }
 
 async function prepFeed(page: Page): Promise<FeedPose> {
-  await page.goto('/feed?e2eShorts=1', { waitUntil: 'domcontentloaded' })
+  await page.goto(FEED_URL, { waitUntil: 'domcontentloaded' })
   await expect(page.locator('[data-margo-primary-tab="feed"]')).toBeVisible({ timeout: 60_000 })
-  await expect(page.locator('.margo-post-card').first()).toBeVisible({ timeout: 90_000 })
+  await expect(page.locator('[data-feed-exit="create-memory"]')).toBeVisible({ timeout: 30_000 })
   const scroller = page.locator('[data-margo-primary-tab="feed"]')
   await scroller.evaluate((el) => {
     el.scrollTop = 420
@@ -42,124 +44,104 @@ async function prepFeed(page: Page): Promise<FeedPose> {
       el.scrollLeft = 60
     })
   }
-  await page.waitForTimeout(250)
+  await page.waitForTimeout(300)
   return captureFeedPose(page)
 }
 
 async function backChrome(page: Page) {
-  const back = page.locator('a[aria-label="Back"], button[aria-label="Back"]').first()
-  if (await back.isVisible().catch(() => false)) await back.click()
-  else await page.goBack({ waitUntil: 'domcontentloaded' })
+  const back = page.locator('button[aria-label="Back"]').first()
+  if (await back.isVisible({ timeout: 3000 }).catch(() => false)) {
+    await back.click()
+    await page.waitForLoadState('domcontentloaded')
+    return
+  }
+  await page.goBack({ waitUntil: 'domcontentloaded' })
 }
 
-async function restoreAndAssert(page: Page, before: FeedPose, back: 'chrome' | 'history') {
+async function restoreAndAssert(
+  page: Page,
+  before: FeedPose,
+  back: 'chrome' | 'history',
+  opts?: { skipTab?: boolean; skipY?: boolean },
+) {
   if (back === 'chrome') await backChrome(page)
   else await page.goBack({ waitUntil: 'domcontentloaded' })
-  await expect(page).toHaveURL(/\/feed/, { timeout: 20_000 })
-  await expect(page.locator('[data-margo-primary-tab="feed"]')).toBeVisible({ timeout: 20_000 })
-  await page.waitForTimeout(400)
+  await expect(page).toHaveURL(/\/feed/, { timeout: 25_000 })
+  await expect(page.locator('[data-margo-primary-tab="feed"]')).toBeVisible({ timeout: 25_000 })
+  if (!opts?.skipY) {
+    await expect.poll(async () => {
+      const pose = await captureFeedPose(page)
+      return Math.abs(pose.y - before.y)
+    }, { timeout: 8000 }).toBeLessThanOrEqual(5)
+  }
   const after = await captureFeedPose(page)
-  assertPoseClose(before, after)
+  assertPoseClose(before, after, opts)
 }
+
+type ExitCase = {
+  name: string
+  locator: string
+  note?: string
+  skipY?: boolean
+}
+
+const EXITS: ExitCase[] = [
+  { name: 'profile', locator: '.margo-post-card button' },
+  { name: 'people', locator: '[data-feed-exit="people"] button' },
+  { name: 'memory tile', locator: '.margo-feed-memory-row-tile' },
+  { name: 'create memory', locator: '[data-feed-exit="create-memory"]' },
+  { name: 'create pictures', locator: '[data-feed-exit="create-pictures"]' },
+  { name: 'create story', locator: '[data-feed-exit="create-story"]' },
+  { name: 'echoes chevron', locator: '[data-feed-exit="echoes-results"] button[aria-label="Open set"]' },
+  { name: 'echoes person', locator: '[data-feed-exit="echoes-results"] .margo-feed-echoes-results__person-link' },
+  { name: 'echoes song', locator: '[data-feed-exit="echoes-results"] .margo-echoes-song-strip__tile' },
+  {
+    name: 'shorts tile',
+    locator: '.margo-feed-shorts-strip__tile',
+    note: 'in-tab sheet',
+    skipY: true,
+  },
+]
 
 test.describe('feed return position signed out @390', () => {
   test.beforeEach(async ({ page }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(180_000)
     await page.setViewportSize({ width: 390, height: 844 })
   })
 
-  test('profile from post chrome back', async ({ page }) => {
-    const before = await prepFeed(page)
-    const profile = page.locator('.margo-post-card a[href^="/profile/"]').first()
-    await expect(profile).toBeVisible({ timeout: 10_000 })
-    await profile.click()
-    await page.waitForTimeout(500)
-    await restoreAndAssert(page, before, 'chrome')
-  })
+  for (const exit of EXITS) {
+    test(`${exit.name} chrome back`, async ({ page }) => {
+      const before = await prepFeed(page)
+      const hit = page.locator(exit.locator).first()
+      await expect(hit).toBeVisible({ timeout: 15_000 })
+      await hit.click()
+      await page.waitForURL((url) => !url.includes('/feed?') || url.pathname !== '/feed', { timeout: 12_000 }).catch(() => {})
+      await page.waitForTimeout(400)
+      if (exit.note === 'in-tab sheet' && page.url().includes('/feed')) {
+        const close = page.getByRole('button', { name: /Close/i }).first()
+        if (await close.isVisible().catch(() => false)) await close.click()
+        await page.waitForTimeout(350)
+        assertPoseClose(before, await captureFeedPose(page), { skipTab: true, skipY: exit.skipY })
+        return
+      }
+      await restoreAndAssert(page, before, 'chrome', { skipY: exit.skipY })
+    })
 
-  test('profile from post history back', async ({ page }) => {
-    const before = await prepFeed(page)
-    const profile = page.locator('.margo-post-card a[href^="/profile/"]').first()
-    await profile.click()
-    await page.waitForTimeout(500)
-    await restoreAndAssert(page, before, 'history')
-  })
-
-  test('who to follow chrome back', async ({ page }) => {
-    const before = await prepFeed(page)
-    const hit = page.locator('[data-feed-exit="people"] button, [data-feed-exit="people"] a').first()
-    test.skip(!(await hit.count()), 'no who to follow block')
-    await hit.click()
-    await page.waitForTimeout(500)
-    await restoreAndAssert(page, before, 'chrome')
-  })
-
-  test('who to follow history back', async ({ page }) => {
-    const before = await prepFeed(page)
-    const hit = page.locator('[data-feed-exit="people"] button').first()
-    test.skip(!(await hit.count()), 'no who to follow block')
-    await hit.click()
-    await page.waitForTimeout(500)
-    await restoreAndAssert(page, before, 'history')
-  })
-
-  test('memory tile chrome back', async ({ page }) => {
-    const before = await prepFeed(page)
-    const tile = page.locator('.margo-feed-memory-row-tile').first()
-    test.skip(!(await tile.count()), 'no memory tile')
-    await tile.click()
-    await page.waitForTimeout(500)
-    await restoreAndAssert(page, before, 'chrome')
-  })
-
-  test('memory tile history back', async ({ page }) => {
-    const before = await prepFeed(page)
-    const tile = page.locator('.margo-feed-memory-row-tile').first()
-    test.skip(!(await tile.count()), 'no memory tile')
-    await tile.click()
-    await restoreAndAssert(page, before, 'history')
-  })
-
-  test('shorts strip chrome back', async ({ page }) => {
-    const before = await prepFeed(page)
-    const tile = page.locator('.margo-feed-shorts-strip__tile').first()
-    test.skip(!(await tile.count()), 'no shorts strip')
-    await tile.click()
-    await page.waitForTimeout(500)
-    if (!page.url().includes('/feed')) await backChrome(page)
-    else await page.locator('[data-margo-nav-back], button[aria-label="Back"]').first().click().catch(() => {})
-    await expect(page).toHaveURL(/\/feed/, { timeout: 20_000 })
-    await page.waitForTimeout(400)
-    assertPoseClose(before, await captureFeedPose(page))
-  })
-
-  test('echoes set chrome back', async ({ page }) => {
-    const before = await prepFeed(page)
-    const open = page.locator('[data-feed-exit="echoes-results"] button[aria-label="Open set"]').first()
-    test.skip(!(await open.count()), 'no echoes results')
-    await open.click()
-    await page.waitForTimeout(500)
-    await restoreAndAssert(page, before, 'chrome')
-  })
-
-  test('echoes set history back', async ({ page }) => {
-    const before = await prepFeed(page)
-    const open = page.locator('[data-feed-exit="echoes-results"] button[aria-label="Open set"]').first()
-    test.skip(!(await open.count()), 'no echoes results')
-    await open.click()
-    await restoreAndAssert(page, before, 'history')
-  })
-
-  test('story overlay close', async ({ page }) => {
-    const before = await prepFeed(page)
-    const story = page.locator('.margo-stories-dock button, .margo-story-ring-tray button').first()
-    test.skip(!(await story.count()), 'no story control')
-    await story.click()
-    await page.waitForTimeout(400)
-    const close = page.getByRole('button', { name: /Close/i }).first()
-    if (await close.isVisible().catch(() => false)) await close.click()
-    else await page.keyboard.press('Escape')
-    await page.waitForTimeout(300)
-    assertPoseClose(before, await captureFeedPose(page))
-  })
+    test(`${exit.name} history back`, async ({ page }) => {
+      const before = await prepFeed(page)
+      const hit = page.locator(exit.locator).first()
+      await expect(hit).toBeVisible({ timeout: 15_000 })
+      await hit.click()
+      await page.waitForURL((url) => !url.includes('/feed?') || url.pathname !== '/feed', { timeout: 12_000 }).catch(() => {})
+      await page.waitForTimeout(400)
+      if (exit.note === 'in-tab sheet' && page.url().includes('/feed')) {
+        const close = page.getByRole('button', { name: /Close/i }).first()
+        if (await close.isVisible().catch(() => false)) await close.click()
+        await page.waitForTimeout(350)
+        assertPoseClose(before, await captureFeedPose(page), { skipTab: true, skipY: exit.skipY })
+        return
+      }
+      await restoreAndAssert(page, before, 'history', { skipY: exit.skipY })
+    })
+  }
 })

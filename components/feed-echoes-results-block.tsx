@@ -1,13 +1,11 @@
 'use client'
 
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronRightIcon } from '@/components/icons'
 import { EchoesSongStrip } from '@/components/echoes-song-strip'
 import { MargoAvatar } from '@/components/margo-avatar'
 import type { EchoFeedBlockSnapshot } from '@/lib/echoes/types'
 import { leaveFeedTo } from '@/lib/feed-exit-nav'
-import { armFeedStackLeave } from '@/lib/feed-link-leave'
 import { UI_FONT } from '@/lib/fonts'
 
 const font = UI_FONT
@@ -18,6 +16,15 @@ export function FeedEchoesResultsBlock({ block }: { block: EchoFeedBlockSnapshot
 
   const openSet = () => {
     leaveFeedTo(router, `/echoes/${block.setId}`, 'lyrics')
+  }
+
+  const openPerson = (profileId: string) => {
+    leaveFeedTo(router, `/echoes/${block.setId}/${profileId}`, 'lyrics')
+  }
+
+  const openSong = (songId: string | null) => {
+    if (!songId) return
+    leaveFeedTo(router, `/song/${encodeURIComponent(songId)}`, 'lyrics')
   }
 
   return (
@@ -40,10 +47,10 @@ export function FeedEchoesResultsBlock({ block }: { block: EchoFeedBlockSnapshot
       <ul className="margo-feed-echoes-results__people">
         {rows.map((row) => (
           <li key={row.answerId} className="margo-feed-echoes-results__person">
-            <Link
-              href={`/echoes/${block.setId}/${row.profileId}`}
+            <button
+              type="button"
               className="margo-feed-echoes-results__person-link"
-              onClick={() => armFeedStackLeave('lyrics')}
+              onClick={() => openPerson(row.profileId)}
             >
               <div className="margo-feed-echoes-results__name-line">
                 <MargoAvatar size="sm" imageUrl={row.avatarUrl} username={row.username} displayName={row.displayName} />
@@ -54,8 +61,8 @@ export function FeedEchoesResultsBlock({ block }: { block: EchoFeedBlockSnapshot
                   {row.timeLabel}
                 </span>
               </div>
-              <EchoesSongStrip payload={row.payload} />
-            </Link>
+              <EchoesSongStrip payload={row.payload} onSongTap={openSong} />
+            </button>
           </li>
         ))}
       </ul>

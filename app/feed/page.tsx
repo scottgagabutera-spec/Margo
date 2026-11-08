@@ -70,6 +70,8 @@ import {
   E2E_SHORTS_FIXTURE_CLIPS,
   shouldUseE2eShortsFixture,
 } from '@/lib/e2e-shorts-fixture'
+import { shouldUseE2eFeedReturnFixture } from '@/lib/e2e-feed-return-fixture'
+import { E2eFeedReturnFixture } from '@/components/e2e-feed-return-fixture'
 
 const supabase = createClient()
 
@@ -305,10 +307,12 @@ function FeedPageInner() {
     meetsMinimum: shortsMeetsMinimum,
   } = useFeedShortsClips({ enabled: feedLive })
 
-  const e2eShortsFixture = useMemo(() => {
-    if (typeof window === 'undefined') return false
-    return shouldUseE2eShortsFixture(searchParams, window.location.hostname)
-  }, [searchParams])
+  const e2eShortsFixture =
+    searchParams.get('e2eShorts') === '1' ||
+    (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('e2eShorts') === '1')
+  const e2eFeedReturnFixture =
+    searchParams.get('e2eFeedReturn') === '1' ||
+    (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('e2eFeedReturn') === '1')
 
   const resolvedShortsClips = e2eShortsFixture ? E2E_SHORTS_FIXTURE_CLIPS : shortsClips
   const resolvedShortsLoading = e2eShortsFixture ? false : shortsLoading
@@ -700,6 +704,10 @@ function FeedPageInner() {
       return
     }
     feedTabRestoredRef.current = true
+    if (pending && scroller instanceof HTMLElement && snap.y > 0) {
+      scroller.scrollTop = snap.y
+      applyFeedReturnHorizontals(snap)
+    }
     clearFeedReturnPending()
     if (snap.tab !== feedContentTab) {
       const params = applyFeedContentTab(new URLSearchParams(searchParams.toString()), snap.tab)
@@ -716,7 +724,8 @@ function FeedPageInner() {
   }, [feedLive, feedContentTab, router, searchParams, shortsAtParam])
 
   useLayoutEffect(() => {
-    if (!feedLive || !listReady || highlightParam) return
+    if (!feedLive || highlightParam) return
+    if (!listReady && !e2eFeedReturnFixture) return
     const snap = readFeedReturnSnapshot()
     if (!snap) return
     const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
@@ -724,7 +733,7 @@ function FeedPageInner() {
       scroller.scrollTop = snap.y
     }
     applyFeedReturnHorizontals(snap)
-  }, [feedLive, listReady, mixedLyricRows.length, highlightParam, feedContentTab])
+  }, [feedLive, listReady, e2eFeedReturnFixture, mixedLyricRows.length, highlightParam, feedContentTab])
   const hasActiveFilter = selectedVibe !== 'ALL' || selectedSort !== 'NEW'
 
   useEffect(() => {
@@ -804,6 +813,27 @@ function FeedPageInner() {
   const feedTopChrome = vibeFilterActive
     ? 'calc(var(--nav-height, 72px) + var(--margo-feed-tab-bar-h) + var(--margo-feed-vibe-bar-h))'
     : 'calc(var(--nav-height, 72px) + var(--margo-feed-tab-bar-h))'
+
+  if (e2eFeedReturnFixture) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          background: 'var(--bg)',
+          position: 'relative',
+          overflowX: 'hidden',
+          paddingTop: feedTopChrome,
+        }}
+      >
+        <FeedContentTabBar
+          active="lyrics"
+          onChange={handleFeedContentTab}
+          shortsAvailable={resolvedShortsMeetsMinimum}
+        />
+        <E2eFeedReturnFixture />
+      </div>
+    )
+  }
 
   return (
     <StoryRingProvider enabled={feedLive}>

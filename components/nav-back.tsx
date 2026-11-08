@@ -140,6 +140,7 @@ export function navBackForPath(pathname: string | null | undefined): NavBackConf
   if (p.startsWith('/post/')) return { fallbackHref: feedReturnFallbackHref(), preferHistory: true, replace: true }
   if (p === '/lyric-back') return { fallbackHref: feedReturnFallbackHref(), replace: true }
   if (p.startsWith('/memory/')) return { fallbackHref: feedReturnFallbackHref(), preferHistory: true }
+  if (p.startsWith('/memories/')) return { fallbackHref: feedReturnFallbackHref(), preferHistory: true }
   if (p.startsWith('/echoes/')) return { fallbackHref: feedReturnFallbackHref(), preferHistory: true }
   if (p === '/about' || p === '/contact' || p === '/privacy' || p === '/terms' || p === '/dmca' || p === '/data-deletion' || p === '/help' || p.startsWith('/help/') || p === '/faq') {
     return { fallbackHref: '/' }

@@ -10079,6 +10079,13 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   text-decoration: none;
   color: inherit;
   display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
 }
 .margo-echoes-song-strip {
   display: flex;
