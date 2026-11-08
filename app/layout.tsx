@@ -13,6 +13,7 @@ import { HubProvider } from '@/components/hub-menu'
 import { NavBackProvider } from '@/components/nav-back'
 import { ChromeModePublisher } from '@/components/chrome-mode'
 import { MargoChromeInsetsPublisher } from '@/components/margo-chrome-insets-publisher'
+import { MargoNavTiming } from '@/components/margo-nav-timing'
 import { AuthReturnRestorer } from '@/components/auth-return-restorer'
 import { AuthGateHost } from '@/components/auth-gate-host'
 import { WelcomeOnboardingEnforcer } from '@/components/welcome-onboarding-enforcer'
@@ -199,6 +200,7 @@ export default function RootLayout({
                   <NavBackProvider>
                   <ChromeModePublisher />
                   <MargoChromeInsetsPublisher />
+                  <MargoNavTiming />
                   <Suspense fallback={null}>
                     <AuthReturnRestorer />
                     <WelcomeOnboardingEnforcer />

@@ -896,8 +896,8 @@ function FeedPageInner() {
 
   const vibeFilterActive = selectedVibe !== 'ALL'
   const feedTopChrome = vibeFilterActive
-    ? 'calc(var(--nav-height, 72px) + var(--margo-feed-tab-bar-h) + var(--margo-feed-vibe-bar-h))'
-    : 'calc(var(--nav-height, 72px) + var(--margo-feed-tab-bar-h))'
+    ? 'calc(var(--margo-header-h, var(--nav-height, 72px)) + var(--margo-feed-tab-bar-h, 44px) + var(--margo-feed-vibe-bar-h))'
+    : 'calc(var(--margo-header-h, var(--nav-height, 72px)) + var(--margo-feed-tab-bar-h, 44px))'
 
   if (e2eFeedReturnFixture) {
     return (

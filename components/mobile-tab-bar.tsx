@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useLayoutEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { usePathname } from 'next/navigation'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useAudioEngine } from '@/hooks/useAudioEngine'
@@ -62,35 +62,6 @@ export function MobileTabBar() {
   const shellHidden = hidesTabBar(pathname, { mobilePrimaryChrome }) || libraryPlayerOpen
   const stageHidden = useStageChromeHidden()
   const isLanding = pathname === '/'
-
-  useLayoutEffect(() => {
-    if (shellHidden || stageHidden) {
-      document.documentElement.style.setProperty('--margo-tabbar-h', '0px')
-      return
-    }
-    const el = navRef.current
-    if (!el) return
-
-    const publishHeight = () => {
-      // CSS hides the bar while keyboard-safe chrome is active; ResizeObserver
-      // does not always fire on display:none toggles, so read the attribute.
-      if (document.documentElement.hasAttribute('data-margo-keyboard')) {
-        document.documentElement.style.setProperty('--margo-tabbar-h', '0px')
-        return
-      }
-      document.documentElement.style.setProperty('--margo-tabbar-h', `${el.offsetHeight}px`)
-    }
-
-    publishHeight()
-    const ro = new ResizeObserver(publishHeight)
-    ro.observe(el)
-    const mo = new MutationObserver(publishHeight)
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-margo-keyboard'] })
-    return () => {
-      ro.disconnect()
-      mo.disconnect()
-    }
-  }, [shellHidden, stageHidden])
 
   const feedRouteActive = barTab === 'feed' || (barTab === null && pathname === '/feed')
   const discoverRouteActive = barTab === 'discover' || (barTab === null && !!pathname?.startsWith('/discover'))

@@ -120,26 +120,6 @@ export function MargoNav() {
 
   useEffect(() => { setAvatarMenuOpen(false) }, [pathname])
 
-  // Measures the nav's real rendered height (which changes across
-  // breakpoints, font load, etc.) and publishes it as a CSS var on
-  // the document root so any page can reliably clear the nav without
-  // guessing a pixel value. Immersive/marketing modes publish 0.
-  useEffect(() => {
-    if (shellHidden) {
-      document.documentElement.style.setProperty('--nav-height', '0px')
-      return
-    }
-    const el = navElRef.current
-    if (!el) return
-    const setVar = () => {
-      document.documentElement.style.setProperty('--nav-height', `${el.offsetHeight}px`)
-    }
-    setVar()
-    const ro = new ResizeObserver(setVar)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [shellHidden])
-
   if (shellHidden) return null
 
   return (

@@ -20,6 +20,15 @@ export type MargoAnalyticsEvent =
   | 'song_played'
   | 'feed_block_impression'
   | 'feed_block_tap'
+  | 'tab_switch_ms'
+  | 'return_ok'
+
+export function trackNavMetric(
+  event: 'tab_switch_ms' | 'return_ok',
+  value: number,
+): void {
+  trackEvent(event, { value })
+}
 
 export function trackEvent(
   event: MargoAnalyticsEvent,
