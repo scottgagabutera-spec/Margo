@@ -265,6 +265,7 @@ type Props = {
   onRequireSignIn: () => boolean
   vibeFilterActive?: boolean
   tabActive: boolean
+  initialIndex?: number
 }
 
 export function FeedShortsPager({
@@ -275,11 +276,12 @@ export function FeedShortsPager({
   onRequireSignIn,
   vibeFilterActive = false,
   tabActive,
+  initialIndex = 0,
 }: Props) {
   const withVibeClass = vibeFilterActive ? ' margo-feed-shorts-shell--with-vibe' : ''
   const emptyWithVibe = vibeFilterActive ? ' margo-feed-shorts-empty--with-vibe' : ''
   const scrollerRef = useRef<HTMLDivElement>(null)
-  const [settledIndex, setSettledIndex] = useState(0)
+  const [settledIndex, setSettledIndex] = useState(() => Math.max(0, initialIndex))
   const [playingKey, setPlayingKey] = useState<string | null>(null)
   const isScrollingRef = useRef(false)
   const settledIndexRef = useRef(0)
@@ -350,6 +352,11 @@ export function FeedShortsPager({
       })
     }
   }, [clips.length])
+
+  useEffect(() => {
+    if (!tabActive || clips.length === 0 || initialIndex <= 0) return
+    scrollToShortIndex(initialIndex, 'auto')
+  }, [tabActive, clips.length, initialIndex, scrollToShortIndex])
 
   const commitSettledFromDom = useCallback(() => {
     const root = scrollerRef.current
