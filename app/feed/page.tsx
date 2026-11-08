@@ -38,7 +38,10 @@ import { FeedEchoesTab } from '@/components/feed-echoes-tab'
 import { FeedBlockShell } from '@/components/feed-block-shell'
 import type { EchoFeedBlockSnapshot } from '@/lib/echoes/types'
 import { inferListeningPeriodType } from '@/lib/memory/listening-infer'
-import { readMargoReturn } from '@/lib/margo-scroll-return'
+import {
+  applyFeedReturnHorizontals,
+  readFeedReturnSnapshot,
+} from '@/lib/margo-feed-return'
 import { FeedPeopleStrip } from '@/components/feed-people-strip'
 import { FeedMemoryPromoCard } from '@/components/feed-memory-promo-card'
 import { FeedShortsStrip } from '@/components/feed-shorts-strip'
@@ -648,25 +651,32 @@ function FeedPageInner() {
     echoesBlock,
   ])
 
-  useEffect(() => {
-    if (!feedLive || !listReady) return
-    const resume = readMargoReturn()
-    if (!resume) return
-    window.requestAnimationFrame(() => {
-      if (typeof resume.scrollY === 'number') {
-        const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
-        if (scroller instanceof HTMLElement) scroller.scrollTop = resume.scrollY
+  const feedTabRestoredRef = useRef(false)
+  useLayoutEffect(() => {
+    if (!feedLive || feedTabRestoredRef.current) return
+    const snap = readFeedReturnSnapshot()
+    if (!snap) return
+    feedTabRestoredRef.current = true
+    if (snap.tab !== feedContentTab) {
+      const params = applyFeedContentTab(new URLSearchParams(searchParams.toString()), snap.tab)
+      if (snap.shortsAt != null && snap.tab === 'shorts') {
+        params.set('shortsAt', String(snap.shortsAt))
       }
-      if (typeof resume.memoriesRowX === 'number') {
-        const row = document.querySelector('.margo-feed-memories-row__scroller')
-        if (row instanceof HTMLElement) row.scrollLeft = resume.memoriesRowX
-      }
-      if (typeof resume.shortsStripX === 'number') {
-        const strip = document.querySelector('.margo-feed-shorts-strip__row')
-        if (strip instanceof HTMLElement) strip.scrollLeft = resume.shortsStripX
-      }
-    })
-  }, [feedLive, listReady, mixedLyricRows.length])
+      const qs = params.toString()
+      router.replace(qs ? `/feed?${qs}` : '/feed', { scroll: false })
+    } else if (snap.shortsAt != null && feedContentTab === 'shorts' && !shortsAtParam) {
+      const params = new URLSearchParams(searchParams.toString())
+      params.set('shortsAt', String(snap.shortsAt))
+      router.replace(`/feed?${params.toString()}`, { scroll: false })
+    }
+  }, [feedLive, feedContentTab, router, searchParams, shortsAtParam])
+
+  useLayoutEffect(() => {
+    if (!feedLive || !listReady || highlightParam) return
+    const snap = readFeedReturnSnapshot()
+    if (!snap) return
+    applyFeedReturnHorizontals(snap)
+  }, [feedLive, listReady, mixedLyricRows.length, highlightParam, feedContentTab])
   const hasActiveFilter = selectedVibe !== 'ALL' || selectedSort !== 'NEW'
 
   useEffect(() => {

@@ -12,18 +12,6 @@ function lyricPost(id: string): FeedLyricsPostRow {
   }
 }
 
-test('short feed starts with pictures for signed in user', () => {
-  const rows = buildFeedLyricsRows({
-    lyricPosts: [lyricPost('a'), lyricPost('b')],
-    memories: [],
-    peoplePool: [{ id: 'u1', username: 'u', displayName: 'U', avatarUrl: null }],
-    signedIn: true,
-    promoAnchor: 0,
-  })
-  assert.equal(rows[0]?.kind, 'memory-promo')
-  if (rows[0]?.kind === 'memory-promo') assert.equal(rows[0].promoKind, 'pictures')
-})
-
 const mockEchoes = {
   setId: 'set',
   questionId: 'q',
@@ -32,7 +20,19 @@ const mockEchoes = {
   preview: [],
 }
 
-test('zero lyric posts still shows signed in lead blocks', () => {
+test('short feed has no block promos before third lyric', () => {
+  const rows = buildFeedLyricsRows({
+    lyricPosts: [lyricPost('a'), lyricPost('b')],
+    memories: [],
+    peoplePool: [{ id: 'u1', username: 'u', displayName: 'U', avatarUrl: null }],
+    signedIn: true,
+    promoAnchor: 0,
+    echoesBlock: mockEchoes,
+  })
+  assert.equal(rows.every((r) => r.kind === 'post'), true)
+})
+
+test('zero lyric posts shows echoes lead only when snapshot exists', () => {
   const rows = buildFeedLyricsRows({
     lyricPosts: [],
     memories: [{ id: 'm1' } as never],
@@ -41,7 +41,7 @@ test('zero lyric posts still shows signed in lead blocks', () => {
     promoAnchor: 0,
     echoesBlock: mockEchoes,
   })
-  assert.equal(rows.some((r) => r.kind === 'memories-row'), true)
+  assert.equal(rows.some((r) => r.kind === 'memories-row'), false)
   assert.equal(rows.some((r) => r.kind === 'echoes-set'), true)
 })
 
@@ -52,6 +52,7 @@ test('signed out short feed has no memory promos', () => {
     peoplePool: [{ id: 'u1', username: 'u', displayName: 'U', avatarUrl: null }],
     signedIn: false,
     promoAnchor: 0,
+    echoesBlock: mockEchoes,
   })
   assert.equal(rows.some((r) => r.kind === 'memory-promo'), false)
 })

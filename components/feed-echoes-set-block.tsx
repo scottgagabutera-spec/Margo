@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ChevronRightIcon, EditIcon } from '@/components/icons'
 import { MargoAvatar } from '@/components/margo-avatar'
 import type { EchoFeedBlockSnapshot } from '@/lib/echoes/types'
-import { captureFeedReturnFromDom, saveMargoReturn } from '@/lib/margo-scroll-return'
+import { persistFeedReturnBeforeLeave } from '@/lib/margo-feed-return'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { UI_FONT } from '@/lib/fonts'
 
@@ -16,13 +16,13 @@ export function FeedEchoesSetBlock({ block, signedIn }: { block: EchoFeedBlockSn
   const { requireAuth } = useAuthGate()
 
   const openSet = () => {
-    saveMargoReturn({ href: '/feed', ...captureFeedReturnFromDom(), feedTab: 'lyrics' })
+    persistFeedReturnBeforeLeave('lyrics')
     router.push(`/echoes/${block.setId}`)
   }
 
   const startAnswer = () => {
     if (!requireAuth()) return
-    saveMargoReturn({ href: '/feed', ...captureFeedReturnFromDom(), feedTab: 'lyrics' })
+    persistFeedReturnBeforeLeave('lyrics')
     router.push(`/echoes/answer?questionId=${encodeURIComponent(block.questionId)}&setId=${encodeURIComponent(block.setId)}`)
   }
 
@@ -54,7 +54,7 @@ export function FeedEchoesSetBlock({ block, signedIn }: { block: EchoFeedBlockSn
             <Link
               href={`/echoes/${block.setId}/${row.profileId}`}
               className="margo-feed-echoes-set__user-link"
-              onClick={() => saveMargoReturn({ href: '/feed', ...captureFeedReturnFromDom(), feedTab: 'lyrics' })}
+              onClick={() => persistFeedReturnBeforeLeave('lyrics')}
             >
               <MargoAvatar size="sm" imageUrl={row.avatarUrl} username={row.username} displayName={row.displayName} />
               <div className="margo-feed-echoes-set__user-meta">
