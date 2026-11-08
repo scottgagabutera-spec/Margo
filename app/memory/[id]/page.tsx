@@ -6,7 +6,8 @@ import { useParams, useRouter } from 'next/navigation'
 import { CardExportModal } from '@/components/card-export-modal'
 import { FeedIconHeart, FeedIconHeartFilled } from '@/components/feed-card-icons'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
-import { CardIcon } from '@/components/icons'
+import { CardIcon, ReplayIcon } from '@/components/icons'
+import { LYRIC_FONT } from '@/lib/fonts'
 import { compactArtworkUrl } from '@/lib/compact-artwork-url'
 import { formatMemoryDisplayDate } from '@/lib/memory/date-label'
 import type { MemoryPublic, MemoryVisibility } from '@/lib/memory/types'
@@ -227,11 +228,9 @@ export default function MemoryDetailPage() {
   const firstSong = memory.songs[0]
   const story = (memory.story || '').trim()
   const heading = memoryCaptionTitle(memory)
-  const songCountLabel = memory.songCount === 1 ? '1 song' : `${memory.songCount} songs`
-
   return (
     <article
-      className="margo-memory-detail"
+      className="margo-memory-detail margo-memory-detail--v2"
       style={{
         minHeight: '100dvh',
         background: 'var(--bg)',
@@ -241,34 +240,25 @@ export default function MemoryDetailPage() {
         boxSizing: 'border-box',
       }}
     >
+      {memory.coverUrl ? (
+        <div
+          className="margo-memory-detail__hero-wide"
+          role="img"
+          aria-label=""
+          style={{ backgroundImage: `url(${memory.coverUrl})` }}
+        />
+      ) : null}
+
       <div style={{ position: 'relative', marginBottom: 12 }}>
-        <div className="margo-memory-detail__hero-row" style={{ marginBottom: 0, paddingRight: memory.isOwner ? 44 : 0 }}>
-          {memory.coverUrl ? (
-            <div
-              className="margo-memory-detail__hero-cover"
-              role="img"
-              aria-label=""
-              style={{ backgroundImage: `url(${memory.coverUrl})` }}
-            />
+        <h1 className="margo-memory-detail__hero-title" style={{ fontFamily: LYRIC_FONT }}>{heading}</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+          <Link href={`/profile/${memory.ownerUsername}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: font, fontSize: '0.8125rem', color: 'var(--text-secondary)', textDecoration: 'none' }}>
+            <MargoAvatar size="xs" imageUrl={memory.ownerAvatarUrl} username={memory.ownerUsername} displayName={memory.ownerDisplayName} />
+            <span>@{memory.ownerUsername}</span>
+          </Link>
+          {dateChip ? (
+            <span style={{ fontFamily: font, fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{dateChip}</span>
           ) : null}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h1 className="margo-memory-detail__hero-title">{heading}</h1>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-              <Link href={`/profile/${memory.ownerUsername}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: font, fontSize: '0.8125rem', color: 'var(--text-secondary)', textDecoration: 'none' }}>
-                <MargoAvatar size="xs" imageUrl={memory.ownerAvatarUrl} username={memory.ownerUsername} displayName={memory.ownerDisplayName} />
-                <span>@{memory.ownerUsername}</span>
-              </Link>
-              {dateChip ? (
-                <span style={{ fontFamily: font, fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-                  {dateChip}
-                  <span aria-hidden> · </span>
-                  {songCountLabel}
-                </span>
-              ) : (
-                <span style={{ fontFamily: font, fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{songCountLabel}</span>
-              )}
-            </div>
-          </div>
         </div>
         {memory.isOwner ? (
           <div style={{ position: 'absolute', top: 0, right: 0 }}>
@@ -364,76 +354,22 @@ export default function MemoryDetailPage() {
         </p>
       ) : null}
 
-      <section style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <h2 className="margo-memory-detail__section-label">Songs</h2>
-          {memory.songs.length >= 2 ? (
-            <button
-              type="button"
-              onClick={playAll}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                minHeight: 32,
-                padding: '0 12px',
-                borderRadius: 999,
-                border: '1px solid var(--gold-border)',
-                background: 'var(--gold-faint)',
-                color: 'var(--gold)',
-                fontFamily: font,
-                fontSize: '0.6875rem',
-                letterSpacing: '0.06em',
-                textTransform: 'uppercase',
-                cursor: 'pointer',
-              }}
-            >
-              <PlayPauseIcon playing={false} buffering={false} size={14} color="var(--gold)" />
-              Play all
-            </button>
-          ) : null}
-        </div>
-        {memory.songs.length === 1 && firstSong ? (
-          <div className="margo-memory-detail__song-row">
-            {firstSong.artworkUrl ? (
-              <img src={compactArtworkUrl(firstSong.artworkUrl, 80)} alt="" width={40} height={40} style={{ borderRadius: 8, objectFit: 'cover' }} />
-            ) : (
-              <span style={{ width: 40, height: 40, borderRadius: 8, background: 'var(--surface-2)' }} />
-            )}
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text)' }}>{firstSong.songTitle}</span>
-              <span style={{ display: 'block', fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)' }}>{firstSong.artistName}</span>
-            </span>
-            <button type="button" onClick={() => playSong(firstSong)} aria-label="Play song" style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--gold-border)', background: 'var(--gold-faint)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-              <PlayPauseIcon playing={false} buffering={false} size={16} color="var(--gold)" />
-            </button>
+      {firstSong ? (
+        <div className="margo-memory-detail__song-compact">
+          {firstSong.artworkUrl ? (
+            <img src={compactArtworkUrl(firstSong.artworkUrl, 120)} alt="" width={40} height={40} style={{ borderRadius: 8, objectFit: 'cover' }} />
+          ) : (
+            <span style={{ width: 40, height: 40, borderRadius: 8, background: 'var(--surface-2)' }} />
+          )}
+          <div style={{ minWidth: 0 }}>
+            <p style={{ margin: 0, fontFamily: font, fontSize: TYPE.secondary, fontWeight: 600 }}>{firstSong.songTitle}</p>
+            <p style={{ margin: 0, fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)' }}>{firstSong.artistName}</p>
           </div>
-        ) : (
-          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {memory.songs.map((s) => (
-              <li
-                key={s.id}
-                className="margo-memory-detail__song-row"
-              >
-                {s.artworkUrl ? (
-                  <img src={compactArtworkUrl(s.artworkUrl, 80)} alt="" width={40} height={40} style={{ borderRadius: 8, objectFit: 'cover' }} />
-                ) : (
-                  <span style={{ width: 40, height: 40, borderRadius: 8, background: 'var(--surface-2)' }} />
-                )}
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: 'block', fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text)' }}>{s.songTitle}</span>
-                  <span style={{ display: 'block', fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)' }}>{s.artistName}</span>
-                </span>
-                {!s.isLyricOnly && s.songId ? (
-                  <button type="button" onClick={() => playSong(s)} aria-label={`Play ${s.songTitle}`} style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <PlayPauseIcon playing={false} buffering={false} size={14} color="var(--text-secondary)" />
-                  </button>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+          <button type="button" className="margo-memory-detail__song-play" onClick={() => (memory.songs.length >= 2 ? playAll() : playSong(firstSong))} aria-label="Play song">
+            <PlayPauseIcon playing={false} buffering={false} size={16} color="var(--bg)" />
+          </button>
+        </div>
+      ) : null}
 
       {memory.photos.length > 0 ? (
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 24, paddingBottom: 4 }}>
@@ -461,58 +397,21 @@ export default function MemoryDetailPage() {
         </div>
       ) : null}
 
-      <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
-        <button
-          type="button"
-          disabled={resonateBusy}
-          onClick={() => void toggleResonate()}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            minHeight: 'var(--margo-touch-min)',
-            padding: '0 16px',
-            borderRadius: 999,
-            border: '1px solid var(--border)',
-            background: 'var(--surface)',
-            color: memory.viewerResonated ? 'var(--gold)' : 'var(--text-secondary)',
-            fontFamily: font,
-            fontSize: TYPE.label,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-            cursor: 'pointer',
-          }}
-        >
+      <div className="margo-memory-detail__icon-actions">
+        <button type="button" className="margo-memory-detail__icon-btn" disabled={resonateBusy} onClick={() => void toggleResonate()} aria-label="Resonate">
           {memory.viewerResonated ? <FeedIconHeartFilled size={18} /> : <FeedIconHeart size={18} />}
-          Resonate {memory.resonateCount > 0 ? memory.resonateCount : ''}
+          {memory.resonateCount > 0 ? memory.resonateCount : null}
         </button>
-        <button
-          type="button"
-          onClick={() => setCardOpen(true)}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            minHeight: 'var(--margo-touch-min)',
-            padding: '0 16px',
-            borderRadius: 999,
-            border: '1px solid var(--border)',
-            background: 'var(--surface)',
-            color: 'var(--text-secondary)',
-            fontFamily: font,
-            fontSize: TYPE.label,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-            cursor: 'pointer',
-          }}
-        >
+        <button type="button" className="margo-memory-detail__icon-btn" onClick={() => setCardOpen(true)} aria-label="Card">
           <CardIcon size={18} color="var(--text-secondary)" />
-          Card
+        </button>
+        <button type="button" className="margo-memory-detail__icon-btn" onClick={() => void shareMemory()} aria-label="Repost">
+          <ReplayIcon size={18} color="var(--text-secondary)" />
         </button>
       </div>
 
-      <MemoryReplyComposer memoryId={memory.id} onPosted={() => void loadReplies()} />
       <MemoryRepliesList replies={replies} />
+      <MemoryReplyComposer memoryId={memory.id} onPosted={() => void loadReplies()} />
 
       <CardExportModal
         open={cardOpen}

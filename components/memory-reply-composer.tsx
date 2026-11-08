@@ -5,13 +5,13 @@ import { ComposeSearchDropdown, type ComposeSearchHit } from '@/components/compo
 import { MargoSearchInput } from '@/components/margo-search-input'
 import { createClient } from '@/lib/supabase/client'
 import { fetchUnifiedSongSearchHits } from '@/lib/song-search/unified-song-search'
-
-const supabase = createClient()
+import { LyricBackIcon } from '@/components/icons'
 import { MARGO_SEARCH_HINT_SONGS } from '@/lib/margo-search-hints'
-import { TYPE, UI_FONT } from '@/lib/fonts'
+import { UI_FONT } from '@/lib/fonts'
 import { compactArtworkUrl } from '@/lib/compact-artwork-url'
 import { toast } from 'sonner'
 
+const supabase = createClient()
 const font = UI_FONT
 
 type Mode = 'text' | 'lyric'
@@ -26,8 +26,6 @@ export function MemoryReplyComposer({
   const [mode, setMode] = useState<Mode>('text')
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
-  const [sentPulse, setSentPulse] = useState(false)
-
   const [query, setQuery] = useState('')
   const [hits, setHits] = useState<ComposeSearchHit[]>([])
   const [loading, setLoading] = useState(false)
@@ -72,8 +70,6 @@ export function MemoryReplyComposer({
       setText('')
       setPick(null)
       setQuery('')
-      setSentPulse(true)
-      setTimeout(() => setSentPulse(false), 900)
       onPosted()
       toast('Reply posted')
     } catch (e) {
@@ -84,29 +80,12 @@ export function MemoryReplyComposer({
   }
 
   return (
-    <section className={`margo-memory-reply-composer${sentPulse ? ' margo-memory-reply-composer--sent' : ''}`}>
-      <p className="margo-memory-detail__section-label">Replies</p>
-      <div className="margo-memory-reply-composer__modes">
-        <button
-          type="button"
-          className={`margo-memory-reply-composer__mode${mode === 'text' ? ' margo-memory-reply-composer__mode--on' : ''}`}
-          onClick={() => setMode('text')}
-        >
-          <span className="margo-memory-reply-composer__mode-title">Reply</span>
-          <span className="margo-memory-reply-composer__mode-hint">Your own words</span>
-        </button>
-        <button
-          type="button"
-          className={`margo-memory-reply-composer__mode${mode === 'lyric' ? ' margo-memory-reply-composer__mode--on' : ''}`}
-          onClick={() => setMode('lyric')}
-        >
-          <span className="margo-memory-reply-composer__mode-title">Lyric back</span>
-          <span className="margo-memory-reply-composer__mode-hint">Pick a song &amp; lyric</span>
-        </button>
-      </div>
-
+    <section className="margo-memory-reply-composer">
+      <p className="margo-memory-detail__replies-title" style={{ fontFamily: font }}>
+        Replies
+      </p>
       {mode === 'lyric' ? (
-        <div className="margo-memory-reply-composer__search">
+        <div className="margo-memory-reply-composer__search" style={{ marginBottom: 8 }}>
           <MargoSearchInput
             value={query}
             onChange={(v) => {
@@ -136,24 +115,37 @@ export function MemoryReplyComposer({
           ) : null}
         </div>
       ) : null}
-
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value.slice(0, 500))}
-        rows={3}
-        placeholder={mode === 'lyric' ? 'Write or paste the lyric line' : 'Write your reply'}
-        className="margo-memory-reply-composer__input"
-        style={{ fontFamily: font, fontSize: TYPE.secondary }}
-      />
-      <button
-        type="button"
-        disabled={busy || !text.trim() || (mode === 'lyric' && !pick)}
-        onClick={() => void submit()}
-        className="margo-memory-reply-composer__send"
-        style={{ fontFamily: font, fontSize: TYPE.label }}
-      >
-        {busy ? 'Posting…' : 'Post reply'}
-      </button>
+      <div className="margo-memory-reply-composer__inline">
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value.slice(0, 500))}
+          placeholder={mode === 'lyric' ? 'Write the lyric line' : 'Write a reply'}
+          className="margo-memory-reply-composer__field"
+          style={{ fontFamily: font }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void submit()
+          }}
+        />
+        <button
+          type="button"
+          className="margo-memory-reply-composer__icon-btn"
+          aria-label="Lyric back"
+          aria-pressed={mode === 'lyric'}
+          onClick={() => setMode((m) => (m === 'lyric' ? 'text' : 'lyric'))}
+        >
+          <LyricBackIcon size={18} color="var(--gold)" />
+        </button>
+        <button
+          type="button"
+          className="margo-memory-reply-composer__icon-btn"
+          style={{ background: 'var(--gold)', border: 'none' }}
+          aria-label="Send reply"
+          disabled={busy || !text.trim() || (mode === 'lyric' && !pick)}
+          onClick={() => void submit()}
+        >
+          <span aria-hidden style={{ color: 'var(--bg)', fontSize: '0.72rem', fontWeight: 700 }}>↑</span>
+        </button>
+      </div>
     </section>
   )
 }
