@@ -54,7 +54,7 @@ export function CardExportModal({
     <MargoSheet
       open={open}
       onOpenChange={onOpenChange}
-      title="Your Moment"
+      title=""
       zIndex={1400}
       heightMode="fixed"
       anchor="top"
@@ -75,6 +75,7 @@ export function CardExportModal({
         vibeLabel={vibeLabel}
         layout="modal"
         enablePromote={enablePromote}
+        onDismiss={() => onOpenChange(false)}
       />
     </MargoSheet>
   )
