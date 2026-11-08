@@ -93,7 +93,7 @@ export function SignupConsentCheckbox({
       />
       <span style={{
         fontFamily: ui,
-        fontSize: TYPE.secondary,
+        fontSize: '11px',
         lineHeight: 1.45,
         color: 'var(--text-secondary)',
         wordBreak: 'break-word',

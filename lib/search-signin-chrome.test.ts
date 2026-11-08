@@ -10,11 +10,12 @@ test('hidesTabBar keeps /signin tab bar on mobile primary chrome only', () => {
   assert.equal(hidesTabBar('/forgot-password', { mobilePrimaryChrome: true }), true)
 })
 
-test('AuthGateModal uses tab-bar band on phone (z-index 45, bottom inset)', () => {
+test('AuthGateModal uses compact sheet chrome (insets + data attribute)', () => {
   const src = fs.readFileSync('components/auth-gate-modal.tsx', 'utf8')
-  assert.match(src, /zIndex: phoneSheet \? 45 : 1000/)
-  assert.match(src, /--margo-tabbar-h/)
+  const css = fs.readFileSync('components/auth-sheet.css', 'utf8')
   assert.match(src, /data-margo-auth-gate-modal/)
+  assert.match(css, /--margo-tabbar-h/)
+  assert.match(css, /--margo-header-h/)
 })
 
 test('SignInLink leaves primary tab surface before navigation', () => {

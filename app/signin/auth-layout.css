@@ -1,94 +1,26 @@
-/* Mobile-first /signin layout. Imported by the page so it cannot be dropped
-   from the bundle, and never relies on styled-jsx media queries. */
+/* Legacy layout hook for /forgot-password and /reset-password only. */
 .margo-auth-layout {
   flex: 1;
-  display: grid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  max-width: 1080px;
+  max-width: 400px;
   margin: 0 auto;
+  padding: 24px 16px;
   box-sizing: border-box;
-  min-height: 100dvh;
-  padding:
-    max(16px, env(safe-area-inset-top))
-    max(24px, env(safe-area-inset-right))
-    max(40px, env(safe-area-inset-bottom))
-    max(24px, env(safe-area-inset-left));
-  gap: 0;
-  align-items: stretch;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1fr);
-  grid-template-areas:
-    "back"
-    "panel";
-}
-
-@media (max-width: 639px) {
-  .margo-auth-layout {
-    padding-bottom: calc(
-      var(--margo-page-padding-bottom, 88px)
-      + var(--auth-keyboard-inset, 0px)
-    );
-  }
 }
 
 .margo-auth-layout__back {
-  grid-area: back;
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  width: 100%;
-  min-height: var(--margo-touch-min);
+  display: none;
 }
 
 .margo-auth-layout__brand {
   display: none;
 }
 
-.margo-auth-layout__panel {
-  grid-area: panel;
-  width: 100%;
-  max-width: 420px;
-  margin: 0 auto;
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  scroll-padding-bottom: calc(var(--auth-keyboard-inset, 0px) + 24px);
-}
-
+.margo-auth-layout__panel,
 .margo-auth-layout__main {
   width: 100%;
   min-width: 0;
-  padding-bottom: calc(var(--auth-keyboard-inset, 0px) + 8px);
-  box-sizing: border-box;
-}
-
-@media (min-width: 901px) {
-  .margo-auth-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
-    grid-template-rows: auto 1fr;
-    grid-template-areas:
-      "back back"
-      "brand panel";
-    padding-top: max(20px, env(safe-area-inset-top));
-    column-gap: clamp(16px, 4vw, 40px);
-    min-height: 100dvh;
-    align-items: stretch;
-  }
-
-  .margo-auth-layout__brand {
-    grid-area: brand;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding-bottom: 24px;
-  }
-
-  .margo-auth-layout__panel {
-    max-width: none;
-    margin: 0;
-    justify-content: center;
-  }
-
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import '@/components/auth-sheet.css'
 import { useEffect, useId, useState } from 'react'
 import { toast } from 'sonner'
 import { completeAuthNavigation } from '@/lib/auth-complete-navigation'
@@ -84,12 +85,12 @@ function friendlyError(e: { message?: string }): string {
 const fieldLabelStyle: React.CSSProperties = {
   display: 'block',
   fontFamily: ui,
-  fontSize: TYPE.label,
+  fontSize: '11px',
   color: 'var(--text-muted)',
   textTransform: 'uppercase',
-  letterSpacing: '1.5px',
-  marginBottom: '8px',
-  fontWeight: 700,
+  letterSpacing: '0.08em',
+  marginBottom: '6px',
+  fontWeight: 500,
 }
 
 interface AuthTextFieldProps {
@@ -136,14 +137,9 @@ function AuthTextField({
         onBlur={() => setFocused(false)}
         onClick={onClick}
         onKeyDown={(e) => e.key === 'Enter' && onEnter?.()}
-        className="margo-auth-input"
+        className="margo-auth-input margo-auth-input--compact"
         style={{
-          width: '100%',
-          height: '44px',
-          padding: '0 14px',
-          background: 'var(--surface-2)',
-          border: `1px solid ${focused ? 'var(--gold-border)' : 'var(--border)'}`,
-          borderRadius: '12px',
+          border: `1px solid ${focused ? 'var(--gold)' : 'var(--gold-border)'}`,
           color: 'var(--text)',
           fontFamily: ui,
           fontSize: TYPE.body,
@@ -162,35 +158,8 @@ function AuthTextField({
   )
 }
 
-const oauthIconBtnStyle: React.CSSProperties = {
-  width: '48px',
-  height: '48px',
-  minWidth: '48px',
-  minHeight: '48px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  borderRadius: '50%',
-  fontFamily: ui,
-  cursor: 'pointer',
-  boxSizing: 'border-box',
-  padding: 0,
-  flexShrink: 0,
-  transition: 'opacity 200ms ease',
-}
-
 const primaryBtnStyle: React.CSSProperties = {
   width: '100%',
-  height: '44px',
-  padding: '0 14px',
-  background: 'var(--gold)',
-  color: 'var(--text-on-gold, var(--bg))',
-  border: 'none',
-  borderRadius: '50px',
-  fontFamily: ui,
-  fontWeight: 600,
-  fontSize: TYPE.meta,
-  letterSpacing: '0.2px',
 }
 
 export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletionFormProps) {
@@ -248,15 +217,7 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
   return (
     <div style={{ width: '100%' }}>
       <header style={{ marginBottom: '28px', textAlign: 'center' }}>
-        <h1 style={{
-          fontFamily: ui,
-          fontSize: TYPE.pageTitle,
-          color: 'var(--text)',
-          fontWeight: 600,
-          margin: '0 0 14px',
-        }}>
-          Finish account
-        </h1>
+        <h1 className="margo-auth-form-title">Finish account</h1>
         <TermsCompletionIntro />
       </header>
 
@@ -286,6 +247,7 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
         type="button"
         onClick={() => { void handleSubmit() }}
         disabled={disabled}
+        className="margo-auth-primary-btn"
         style={{
           ...primaryBtnStyle,
           cursor: disabled ? 'not-allowed' : 'pointer',
@@ -534,15 +496,7 @@ export function AuthForm({
       <div style={{ width: '100%' }} data-margo-auth-check-email="signup">
         <AuthSuccessIcon />
         <header style={{ textAlign: 'center' }}>
-          <h1 style={{
-            fontFamily: ui,
-            fontSize: TYPE.pageTitle,
-            color: 'var(--text)',
-            fontWeight: 600,
-            margin: '0 0 14px',
-          }}>
-            Check email
-          </h1>
+          <h1 className="margo-auth-form-title">Check email</h1>
           <p style={{
             fontFamily: ui,
             fontSize: TYPE.secondary,
@@ -587,14 +541,8 @@ export function AuthForm({
         </p>
       ) : null}
       {hideTitle ? null : (
-        <header style={{ marginBottom: '20px', textAlign: 'center' }}>
-          <h1 style={{
-            fontFamily: ui,
-            fontSize: TYPE.pageTitle,
-            color: 'var(--text)',
-            fontWeight: 600,
-            margin: 0,
-          }}>
+        <header style={{ marginBottom: '12px', textAlign: 'center' }}>
+          <h1 className="margo-auth-form-title" style={{ margin: 0 }}>
             {isSignup ? 'Create account' : 'Sign in'}
           </h1>
         </header>
@@ -605,7 +553,7 @@ export function AuthForm({
           <div>
             <AuthTextField
               id={emailId}
-              label="Email"
+              label="EMAIL"
               type="email"
               autoComplete="email"
               value={email}
@@ -786,6 +734,7 @@ export function AuthForm({
             disabled={primaryDisabled}
             aria-disabled={primaryDisabled}
             aria-busy={busy === 'email'}
+            className="margo-auth-primary-btn"
             style={{
               ...primaryBtnStyle,
               cursor: primaryDisabled ? 'not-allowed' : 'pointer',
@@ -835,12 +784,11 @@ export function AuthForm({
               disabled={loading}
               aria-busy={busy === 'google'}
               aria-label="Continue with Google"
+              className="margo-auth-oauth-btn margo-auth-oauth-btn--google"
               style={{
-                ...oauthIconBtnStyle,
-                background: 'var(--surface-2)',
-                border: busy === 'google' ? '1px solid var(--gold-border)' : '1px solid var(--border)',
                 opacity: loading ? 0.55 : 1,
                 cursor: loading ? 'not-allowed' : 'pointer',
+                border: busy === 'google' ? '1px solid var(--gold)' : undefined,
               }}
             >
               {busy === 'google' ? (
@@ -861,18 +809,16 @@ export function AuthForm({
               disabled={loading}
               aria-busy={busy === 'discord'}
               aria-label="Continue with Discord"
+              className="margo-auth-oauth-btn margo-auth-oauth-btn--discord"
               style={{
-                ...oauthIconBtnStyle,
-                background: 'var(--surface-2)',
-                border: busy === 'discord' ? '1px solid var(--gold-border)' : '1px solid rgba(88,101,242,0.35)',
                 opacity: loading ? 0.55 : 1,
                 cursor: loading ? 'not-allowed' : 'pointer',
               }}
             >
               {busy === 'discord' ? (
-                <LoadingRing size={18} strokeWidth={1.5} state="spinning" />
+                <LoadingRing size={18} strokeWidth={1.5} state="spinning" color="#fff" />
               ) : (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="#5865F2" aria-hidden>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffffff" aria-hidden>
                   <path d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.076.076 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.055c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.955 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
                 </svg>
               )}
@@ -882,7 +828,7 @@ export function AuthForm({
       ) : null}
 
       {onSwitchMode && !pendingEmail ? (
-        <p style={{ textAlign: 'center', marginTop: '22px', fontFamily: ui, fontSize: TYPE.secondary, color: 'var(--text-secondary)', wordBreak: 'break-word' }}>
+        <p style={{ textAlign: 'center', marginTop: '14px', fontFamily: ui, fontSize: '0.75rem', color: 'var(--text-secondary)', wordBreak: 'break-word' }}>
           {isSignup ? 'Have an account? ' : 'New here? '}
           <button
             type="button"
