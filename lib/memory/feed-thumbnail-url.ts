@@ -4,6 +4,7 @@ import { memoryCoverIsSongArt, memoryIsWordsOnly } from '@/lib/memory/display-ca
 
 const GRID_THUMB_PX = 400
 const PROFILE_TILE_PX = 160
+const FEED_MEMORY_ROW_PX = 200
 const FAVORITE_ART_PX = 112
 
 /** Request ~400px cover via Cloudflare image resizing on Margo media host. */
@@ -32,6 +33,11 @@ export function memoryFeedThumbnailUrl(url: string | null | undefined): string {
 export function memoryProfileTileThumbnailUrl(url: string | null | undefined): string {
   if (!url) return ''
   return resizedMargoOrArtwork(url, PROFILE_TILE_PX)
+}
+
+export function memoryFeedRowThumbnailUrl(url: string | null | undefined): string {
+  if (!url) return ''
+  return resizedMargoOrArtwork(url, FEED_MEMORY_ROW_PX)
 }
 
 export function favoriteArtistThumbnailUrl(url: string | null | undefined): string {

@@ -1,24 +1,38 @@
 import { dailyMemoryCardAnchorIndex } from './feed-memory-card.ts'
 
-export type FeedBlockKind = 'pictures' | 'carousel' | 'people' | 'story' | 'shorts' | 'memory'
+export type FeedBlockKind =
+  | 'memories-row'
+  | 'people'
+  | 'memory'
+  | 'echoes'
+  | 'pictures'
+  | 'shorts'
+  | 'story'
 
 export const FEED_BLOCK_CYCLE_SIGNED_IN: FeedBlockKind[] = [
-  'pictures',
-  'carousel',
+  'memories-row',
   'people',
-  'story',
-  'carousel',
-  'shorts',
   'memory',
-  'carousel',
+  'echoes',
+  'pictures',
+  'shorts',
+  'story',
 ]
 
-export const FEED_BLOCK_CYCLE_SIGNED_OUT: FeedBlockKind[] = ['carousel', 'people', 'shorts']
+export const FEED_BLOCK_CYCLE_SIGNED_OUT: FeedBlockKind[] = [
+  'memories-row',
+  'people',
+  'echoes',
+  'pictures',
+  'shorts',
+  'story',
+]
 
-const SLOT_FIRST_ORDINAL = 5
-const SLOT_STEP = 6
+const SLOT_FIRST_ORDINAL = 4
+const SLOT_STEP = 4
 const SHORT_FEED_MAX = 5
-export const MIN_LYRICS_BETWEEN_BLOCKS = 5
+/** Lyric posts between consecutive block slots (after 4, then every 4 ordinals). */
+export const MIN_LYRICS_BETWEEN_BLOCKS = 3
 
 export type FeedPlannedBlock =
   | { placement: 'start'; kind: FeedBlockKind; sequenceStep: number; key: string }
@@ -61,12 +75,8 @@ export function planFeedBlocks(input: {
   }
 
   if (nonReplayTotal === 0) {
-    if (signedIn) {
-      pushStart('pictures')
-      pushStart('shorts')
-    } else {
-      pushStart('shorts')
-    }
+    pushStart('memories-row')
+    pushStart('echoes')
     return planned
   }
 
@@ -90,20 +100,6 @@ export function planFeedBlocks(input: {
   }
 
   return planned
-}
-
-/** @deprecated use planFeedBlocks */
-export type FeedPromoKind = 'pictures' | 'people' | 'story' | 'shorts' | 'memory'
-export const FEED_PROMO_CYCLE: FeedPromoKind[] = ['pictures', 'people', 'story', 'shorts', 'memory']
-
-export type FeedPlannedInsert = FeedPlannedBlock
-
-export function planFeedPromoInserts(input: {
-  nonReplayTotal: number
-  signedIn: boolean
-  promoAnchor: number
-}): FeedPlannedBlock[] {
-  return planFeedBlocks(input)
 }
 
 export function promoInsertsByPlacement(planned: FeedPlannedBlock[]): {

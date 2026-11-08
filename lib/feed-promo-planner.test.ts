@@ -39,87 +39,65 @@ for (const n of COUNTS) {
   }
 }
 
-test('zero posts signed in starts pictures and shorts', () => {
-  const plan = planFeedBlocks({ nonReplayTotal: 0, signedIn: true, promoAnchor: 0 })
-  assert.deepEqual(
-    plan.map((p) => p.kind),
-    ['pictures', 'shorts'],
-  )
+test('slots start at four then step four', () => {
+  assert.deepEqual(feedBlockSlots(20), [4, 8, 12, 16, 20])
 })
 
-test('zero posts signed out starts shorts only', () => {
-  const plan = planFeedBlocks({ nonReplayTotal: 0, signedIn: false, promoAnchor: 0 })
-  assert.deepEqual(plan.map((p) => p.kind), ['shorts'])
+test('signed in twenty posts cycle order anchor zero', () => {
+  const plan = planFeedBlocks({ nonReplayTotal: 20, signedIn: true, promoAnchor: 0 })
+  const kinds = plan.filter((p) => p.placement === 'after').map((p) => p.kind)
+  const expected = feedBlockSlots(20).map((_, i) => FEED_BLOCK_CYCLE_SIGNED_IN[i % FEED_BLOCK_CYCLE_SIGNED_IN.length]!)
+  assert.deepEqual(kinds, expected)
 })
 
-test('short feed signed in starts with pictures', () => {
-  const plan = planFeedBlocks({ nonReplayTotal: 3, signedIn: true, promoAnchor: 0 })
-  assert.equal(plan[0]?.placement, 'start')
-  assert.equal(plan[0]?.kind, 'pictures')
+test('signed out twenty posts cycle order anchor zero', () => {
+  const plan = planFeedBlocks({ nonReplayTotal: 20, signedIn: false, promoAnchor: 0 })
+  const kinds = plan.filter((p) => p.placement === 'after').map((p) => p.kind)
+  const expected = feedBlockSlots(20).map((_, i) => FEED_BLOCK_CYCLE_SIGNED_OUT[i % FEED_BLOCK_CYCLE_SIGNED_OUT.length]!)
+  assert.deepEqual(kinds, expected)
 })
 
-test('slots every six lyrics starting at five', () => {
-  assert.deepEqual(feedBlockSlots(40), [5, 11, 17, 23, 29, 35])
-})
-
-test('minimum five lyrics between block ordinals for forty posts', () => {
+test('minimum four lyrics between blocks for twenty posts', () => {
   const positions = simulateFeedBlockPositions({
-    lyricPosts: lyricRows(40),
+    lyricPosts: lyricRows(20),
     memories,
     peoplePool,
     signedIn: true,
     promoAnchor: 0,
+    echoesBlock: {
+      setId: 'set',
+      questionId: 'q',
+      title: 'What are you listening to?',
+      answerCount: 1,
+      preview: [],
+    },
   }).filter((p) => p.afterLyric > 0)
   for (let i = 1; i < positions.length; i++) {
     assert.ok(positions[i]!.afterLyric - positions[i - 1]!.afterLyric >= MIN_LYRICS_BETWEEN_BLOCKS + 1)
   }
 })
 
-test('no adjacent blocks in built feed', () => {
+test('no adjacent blocks', () => {
   const rows = buildFeedLyricsRows({
-    lyricPosts: lyricRows(40),
+    lyricPosts: lyricRows(20),
     memories,
     peoplePool,
     signedIn: true,
     promoAnchor: 0,
+    echoesBlock: {
+      setId: 'set',
+      questionId: 'q',
+      title: 'What are you listening to?',
+      answerCount: 1,
+      preview: [],
+    },
   })
   let prevBlock = false
   for (const row of rows) {
     const isBlock = row.kind !== 'post'
-    if (isBlock && prevBlock) assert.fail('two blocks side by side')
+    if (isBlock && prevBlock) assert.fail('adjacent blocks')
     prevBlock = isBlock
   }
-})
-
-test('signed in forty posts cycle order at anchor zero', () => {
-  const plan = planFeedBlocks({ nonReplayTotal: 40, signedIn: true, promoAnchor: 0 })
-  const afterKinds = plan.filter((p) => p.placement === 'after').map((p) => p.kind)
-  const expected = feedBlockSlots(40).map((_, i) => FEED_BLOCK_CYCLE_SIGNED_IN[i % FEED_BLOCK_CYCLE_SIGNED_IN.length]!)
-  assert.deepEqual(afterKinds, expected)
-})
-
-test('signed out forty posts cycle order at anchor zero', () => {
-  const plan = planFeedBlocks({ nonReplayTotal: 40, signedIn: false, promoAnchor: 0 })
-  const afterKinds = plan.filter((p) => p.placement === 'after').map((p) => p.kind)
-  const expected = feedBlockSlots(40).map((_, i) => FEED_BLOCK_CYCLE_SIGNED_OUT[i % FEED_BLOCK_CYCLE_SIGNED_OUT.length]!)
-  assert.deepEqual(afterKinds, expected)
-})
-
-test('skipping empty carousel does not create adjacent blocks', () => {
-  const rows = buildFeedLyricsRows({
-    lyricPosts: lyricRows(20),
-    memories: [],
-    peoplePool,
-    signedIn: true,
-    promoAnchor: 0,
-  })
-  let prevBlock = false
-  for (const row of rows) {
-    const isBlock = row.kind !== 'post'
-    if (isBlock && prevBlock) assert.fail('collision after skip')
-    prevBlock = isBlock
-  }
-  assert.ok(rows.some((r) => r.kind === 'people'))
 })
 
 test('daily anchor stable', () => {

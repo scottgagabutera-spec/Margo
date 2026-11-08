@@ -39,6 +39,15 @@ export function FeedContentTabBar({ active, onChange, shortsAvailable = true }: 
       >
         Shorts
       </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={active === 'echoes'}
+        className={`margo-feed-content-tab${active === 'echoes' ? ' margo-feed-content-tab--active' : ''}`}
+        onClick={() => onChange('echoes')}
+      >
+        Echoes
+      </button>
       {!shortsAvailable ? (
         <span className="margo-sr-only">Shorts catalog below minimum — empty state when opened</span>
       ) : null}

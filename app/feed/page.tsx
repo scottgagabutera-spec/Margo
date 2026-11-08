@@ -32,7 +32,13 @@ import { MemoryFeedGridTile } from '@/components/memory-feed-grid-tile'
 import { FeedMemoriesGridSkeleton } from '@/components/margo-skeletons'
 import { buildFeedLyricsRows, type FeedLyricsPeopleSlot, type FeedLyricsPostRow, type FeedLyricsRow } from '@/lib/feed-lyrics-mix'
 import { buildFeedPeoplePool } from '@/lib/feed-people-pool'
-import { FeedMemoriesCarousel } from '@/components/feed-memories-carousel'
+import { FeedMemoriesRow } from '@/components/feed-memories-row'
+import { FeedEchoesSetBlock } from '@/components/feed-echoes-set-block'
+import { FeedEchoesTab } from '@/components/feed-echoes-tab'
+import { FeedBlockShell } from '@/components/feed-block-shell'
+import type { EchoFeedBlockSnapshot } from '@/lib/echoes/types'
+import { inferListeningPeriodType } from '@/lib/memory/listening-infer'
+import { readMargoReturn } from '@/lib/margo-scroll-return'
 import { FeedPeopleStrip } from '@/components/feed-people-strip'
 import { FeedMemoryPromoCard } from '@/components/feed-memory-promo-card'
 import { FeedShortsStrip } from '@/components/feed-shorts-strip'
@@ -458,6 +464,21 @@ function FeedPageInner() {
   }, [feedContentTab, feedLive, loadMoreFeedMemories, feedGridMemories.length])
 
   const [ownMemoryCount, setOwnMemoryCount] = useState<number | null>(null)
+  const [echoesBlock, setEchoesBlock] = useState<EchoFeedBlockSnapshot | null>(null)
+
+  useEffect(() => {
+    if (!feedLive) return
+    let active = true
+    void fetch('/api/echoes/feed-block')
+      .then((r) => r.json())
+      .then((data: { block?: EchoFeedBlockSnapshot | null }) => {
+        if (active) setEchoesBlock(data.block ?? null)
+      })
+      .catch(() => {
+        if (active) setEchoesBlock(null)
+      })
+    return () => { active = false }
+  }, [feedLive])
 
   useEffect(() => {
     if (!user?.id) {
@@ -487,6 +508,19 @@ function FeedPageInner() {
     () => feedShortsStripTilesFromClips(resolvedShortsClips as LyricMoment[]),
     [resolvedShortsClips],
   )
+
+  const feedGridMemoriesFiltered = useMemo(() => {
+    if (searchParams.get('filter') !== 'listening') return feedGridMemories
+    return feedGridMemories.filter((m) =>
+      inferListeningPeriodType({
+        dateGranularity: m.dateGranularity,
+        dateStart: m.dateStart,
+        dateEnd: m.dateEnd,
+        songCount: m.songCount,
+        photoCount: m.photos.length,
+      }) === 'week',
+    )
+  }, [feedGridMemories, searchParams])
 
   const shortsAtParam = searchParams.get('shortsAt')
   const shortsInitialIndex = (() => {
@@ -554,7 +588,7 @@ function FeedPageInner() {
     setExportPost(post)
   }
 
-  const handleFeedContentTab = (tab: 'lyrics' | 'memories' | 'shorts') => {
+  const handleFeedContentTab = (tab: 'lyrics' | 'memories' | 'shorts' | 'echoes') => {
     const params = applyFeedContentTab(new URLSearchParams(searchParams.toString()), tab)
     const qs = params.toString()
     router.push(qs ? `/feed?${qs}` : '/feed', { scroll: false })
@@ -599,6 +633,7 @@ function FeedPageInner() {
       signedIn: !!user?.id,
       promoAnchor,
       shortsStripAvailable: resolvedShortsMeetsMinimum && shortsStripTiles.length > 0,
+      echoesBlock,
     })
   }, [
     feedContentTab,
@@ -610,7 +645,28 @@ function FeedPageInner() {
     user?.id,
     resolvedShortsMeetsMinimum,
     shortsStripTiles.length,
+    echoesBlock,
   ])
+
+  useEffect(() => {
+    if (!feedLive || !listReady) return
+    const resume = readMargoReturn()
+    if (!resume) return
+    window.requestAnimationFrame(() => {
+      if (typeof resume.scrollY === 'number') {
+        const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
+        if (scroller instanceof HTMLElement) scroller.scrollTop = resume.scrollY
+      }
+      if (typeof resume.memoriesRowX === 'number') {
+        const row = document.querySelector('.margo-feed-memories-row__scroller')
+        if (row instanceof HTMLElement) row.scrollLeft = resume.memoriesRowX
+      }
+      if (typeof resume.shortsStripX === 'number') {
+        const strip = document.querySelector('.margo-feed-shorts-strip__row')
+        if (strip instanceof HTMLElement) strip.scrollLeft = resume.shortsStripX
+      }
+    })
+  }, [feedLive, listReady, mixedLyricRows.length])
   const hasActiveFilter = selectedVibe !== 'ALL' || selectedSort !== 'NEW'
 
   useEffect(() => {
@@ -761,16 +817,21 @@ function FeedPageInner() {
           className="margo-feed-column margo-feed-column--memories-grid"
           style={{ position: 'relative', zIndex: 5, padding: '12px 14px var(--margo-page-padding-bottom)' }}
         >
+          {searchParams.get('filter') === 'listening' ? (
+            <div className="margo-feed-memories-filter" style={{ marginBottom: 12 }}>
+              <span className="margo-feed-memories-filter__chip">Listening</span>
+            </div>
+          ) : null}
           {feedGridLoading && feedGridMemories.length === 0 ? (
             <FeedMemoriesGridSkeleton count={6} />
-          ) : feedGridMemories.length === 0 ? (
+          ) : feedGridMemoriesFiltered.length === 0 ? (
             <p style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.8125rem', color: 'var(--text-muted)', textAlign: 'center', padding: '48px 0' }}>
               No memories in your feed yet.
             </p>
           ) : (
             <>
               <div className="margo-feed-memories-grid">
-                {feedGridMemories.map((m) => (
+                {feedGridMemoriesFiltered.map((m) => (
                   <MemoryFeedGridTile key={m.id} memory={m} />
                 ))}
               </div>
@@ -786,6 +847,8 @@ function FeedPageInner() {
           )}
         </main>
       )}
+
+      {feedContentTab === 'echoes' && <FeedEchoesTab />}
 
       {feedContentTab === 'shorts' && (
         <FeedShortsPager
@@ -866,30 +929,44 @@ function FeedPageInner() {
 
         <div className="margo-feed-post-list">
           {lyricsMixReady && mixedLyricRows.map((item) => {
-            if (item.kind === 'memory-carousel') {
+            if (item.kind === 'memories-row') {
               return (
-                <FeedMemoriesCarousel
-                  key={item.key}
-                  memories={item.memories}
-                  hasMore={item.hasMore}
-                />
+                <FeedBlockShell key={item.key} blockName="memories-row" planKey={item.planKey} className="margo-feed-block-shell">
+                  <FeedMemoriesRow memories={item.memories} hasMore={item.hasMore} />
+                </FeedBlockShell>
+              )
+            }
+            if (item.kind === 'echoes-set') {
+              return (
+                <FeedBlockShell key={item.key} blockName="echoes" planKey={item.planKey} className="margo-feed-block-shell">
+                  <FeedEchoesSetBlock block={item.block} signedIn={!!user?.id} />
+                </FeedBlockShell>
               )
             }
             if (item.kind === 'people') {
               return (
-                <FeedPeopleStrip
-                  key={item.key}
-                  people={item.people}
-                  followingIds={followingIds}
-                  onFollowed={(id) => setFollowedFromStrip((prev) => new Set(prev).add(id))}
-                />
+                <FeedBlockShell key={item.key} blockName="people" planKey={item.planKey} className="margo-feed-block-shell">
+                  <FeedPeopleStrip
+                    people={item.people}
+                    followingIds={followingIds}
+                    onFollowed={(id) => setFollowedFromStrip((prev) => new Set(prev).add(id))}
+                  />
+                </FeedBlockShell>
               )
             }
             if (item.kind === 'memory-promo') {
-              return <FeedMemoryPromoCard key={item.key} promoKind={item.promoKind} />
+              return (
+                <FeedBlockShell key={item.key} blockName={`memory-promo-${item.promoKind}`} planKey={item.planKey} className="margo-feed-block-shell">
+                  <FeedMemoryPromoCard promoKind={item.promoKind} />
+                </FeedBlockShell>
+              )
             }
             if (item.kind === 'shorts-strip') {
-              return <FeedShortsStrip key={item.key} tiles={shortsStripTiles} />
+              return (
+                <FeedBlockShell key={item.key} blockName="shorts-strip" planKey={item.planKey} className="margo-feed-block-shell">
+                  <FeedShortsStrip tiles={shortsStripTiles} />
+                </FeedBlockShell>
+              )
             }
             const post = item.post
             const cardProps = {

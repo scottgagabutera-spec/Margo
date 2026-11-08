@@ -1,6 +1,6 @@
-import type { MemoryDateGranularity } from '@/lib/memory/types'
-import type { ListeningPeriodType } from '@/lib/memory/listening-period'
-import { daysBetweenInclusive } from '@/lib/memory/listening-period'
+import type { MemoryDateGranularity } from './types.ts'
+import type { ListeningPeriodType } from './listening-period.ts'
+import { daysBetweenInclusive } from './listening-period.ts'
 
 export function inferListeningPeriodType(input: {
   dateGranularity: MemoryDateGranularity

@@ -297,6 +297,19 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
   }, [username])
 
   useEffect(() => {
+    if (!profile?.id) return
+    let active = true
+    void fetch(`/api/profile/favorite-artists?profileId=${encodeURIComponent(profile.id)}`)
+      .then((r) => r.json())
+      .then((data: { favorites?: ProfileFavoriteArtist[] }) => {
+        if (!active || !data.favorites?.length) return
+        setFavoriteArtists(data.favorites)
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [profile?.id])
+
+  useEffect(() => {
     if (!profile?.isArtist) {
       setArtistSongs([])
       setArtistStats({ totalPlays: 0, totalResonates: 0 })
