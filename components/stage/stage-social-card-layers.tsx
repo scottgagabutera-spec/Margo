@@ -14,6 +14,8 @@ export function StageSocialCardLayers({
   songTitle,
   artistName,
   artwork,
+  vibeLabel = null,
+  onVibeChipClick,
 }: {
   layout: ResolvedStageCardLayout
   theme: StageCardTheme
@@ -21,6 +23,8 @@ export function StageSocialCardLayers({
   songTitle: string
   artistName: string
   artwork?: string | null
+  vibeLabel?: string | null
+  onVibeChipClick?: () => void
 }) {
   const markVariant = theme.markVariant === 'on-light' ? 'ink' : 'gold'
   const lyricStyle = stageCardLyricStyle(layout)
@@ -64,9 +68,26 @@ export function StageSocialCardLayers({
             background: layout.creditPlate.fill,
             border: `1px solid ${layout.creditPlate.border}`,
             zIndex: 1,
-            pointerEvents: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            paddingRight: 8,
+            boxSizing: 'border-box',
+            pointerEvents: vibeLabel && onVibeChipClick ? 'auto' : 'none',
           }}
-        />
+        >
+          {vibeLabel && onVibeChipClick ? (
+            <button
+              type="button"
+              className="margo-preview-vibe-chip"
+              style={{ fontFamily: UI_FONT }}
+              aria-label={`Vibe: ${vibeLabel}. Open vibe picker.`}
+              onClick={onVibeChipClick}
+            >
+              {vibeLabel}
+            </button>
+          ) : null}
+        </div>
       ) : null}
       {layout.meta ? (
         <div style={{ position: 'absolute', left: layout.meta.x, top: layout.meta.y, zIndex: 3, maxWidth: layout.contentWidth }}>

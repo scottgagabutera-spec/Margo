@@ -35,15 +35,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, storyId: existing.id, alreadyActive: true })
   }
 
-  const { data, error } = await supabase
-    .from('stories')
-    .insert({
-      author_profile_id: user.id,
-      post_id: postId,
-      expires_at: expiresAt,
-    })
-    .select('id, expires_at, created_at')
-    .single()
+  const { error } = await supabase.from('stories').insert({
+    author_profile_id: user.id,
+    post_id: postId,
+    expires_at: expiresAt,
+  })
 
   if (error) {
     const message = error.message.includes('can_reference_story_post')
@@ -52,10 +48,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 400 })
   }
 
-  return NextResponse.json({
-    ok: true,
-    storyId: data.id,
-    expiresAt: data.expires_at,
-    createdAt: data.created_at,
-  })
+  return NextResponse.json({ ok: true })
 }

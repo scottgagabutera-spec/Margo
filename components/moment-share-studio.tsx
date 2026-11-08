@@ -60,6 +60,7 @@ import { trackEvent } from '@/lib/analytics/track'
 import { savePostExportPrefsClient } from '@/lib/promote/client-export-prefs'
 import type { PromotePlatform } from '@/lib/promote/types'
 import { createStoryFromPost } from '@/lib/stories/create-story-client'
+import { useMomentSongExportDefaults } from '@/lib/moment-export-defaults'
 import { toast } from 'sonner'
 
 interface MomentShareStudioProps {
@@ -199,6 +200,17 @@ export function MomentShareStudio({
     canPlayInline ? previewLyric : null,
   )
   const songAtmosphere = useSongAtmosphere(canPlayInline ? listen?.songId : null)
+  const catalogSongId = exportMoment?.lines[0]?.songId ?? null
+  useMomentSongExportDefaults({
+    linkedSongId: catalogSongId,
+    songAtmosphere,
+    isMargoCatalog: !!catalogSongId,
+    setExportAtmosphereId,
+    setCardThemeId,
+    setShapeId,
+    vibeLabel: exportVibeLabel ?? vibeLabel,
+    lockedAtmosphereId: momentProp?.exportAtmosphereId ?? null,
+  })
 
   const startPreviewPlayback = useCallback(() => {
     if (!canPlayInline || !listen?.audioUrl || listen.snippetStart == null || listen.snippetEnd == null) return

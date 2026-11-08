@@ -127,6 +127,7 @@ export function StageLanding() {
     setExportAtmosphereId,
     setCardThemeId,
     setShapeId,
+    vibeLabel: vibeLabel ?? suggestedVibeLabel,
   })
   const [momentVisible, setMomentVisible] = useState(false)
 

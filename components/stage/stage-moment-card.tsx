@@ -67,6 +67,9 @@ interface StageMomentCardProps {
   style?: CSSProperties
   /** Story viewer: quiet Margo brand watermark in the mark corner (no poster attribution on-card). */
   brandWatermark?: boolean
+  /** Calm composer: vibe chip on credit strip (tap opens vibe popover). */
+  previewVibeChip?: boolean
+  onVibeChipClick?: () => void
 }
 
 const playControlStyle: CSSProperties = {
@@ -147,6 +150,8 @@ export function StageMomentCard({
   sourceCaption = null,
   style,
   brandWatermark = false,
+  previewVibeChip = false,
+  onVibeChipClick,
 }: StageMomentCardProps) {
   const cardRef = useRef<HTMLDivElement>(null)
   const [cardWidth, setCardWidth] = useState<number | null>(null)
@@ -165,6 +170,7 @@ export function StageMomentCard({
   const showAtmosphere =
     isLivingAtmosphere(atmosphereId) && (effectOwnsFill || stableShortsPaint)
   const showVibeFooter = !hideVibeChrome && !isShorts && !!vibeLabel
+  const showPreviewVibeChip = previewVibeChip && !!vibeLabel?.trim() && !!onVibeChipClick
 
   const layout = useStageCardLayout({
     lyric,
@@ -329,6 +335,8 @@ export function StageMomentCard({
             songTitle={displaySong}
             artistName={displayArtist}
             artwork={artwork}
+            vibeLabel={showPreviewVibeChip ? vibeLabel : null}
+            onVibeChipClick={showPreviewVibeChip ? onVibeChipClick : undefined}
           />
         ) : brandWatermark ? (
           <div
@@ -421,9 +429,21 @@ export function StageMomentCard({
                     top: layout.meta.y,
                     minWidth: 0,
                     maxWidth: layout.contentWidth,
+                    display: showPreviewVibeChip ? 'flex' : undefined,
+                    alignItems: showPreviewVibeChip ? 'center' : undefined,
+                    justifyContent: showPreviewVibeChip ? 'space-between' : undefined,
+                    gap: showPreviewVibeChip ? 8 : undefined,
                   }
-                : { marginTop: metaMarginTop, minWidth: 0 }}
+                : {
+                    marginTop: metaMarginTop,
+                    minWidth: 0,
+                    display: showPreviewVibeChip ? 'flex' : undefined,
+                    alignItems: showPreviewVibeChip ? 'center' : undefined,
+                    justifyContent: showPreviewVibeChip ? 'space-between' : undefined,
+                    gap: showPreviewVibeChip ? 8 : undefined,
+                  }}
             >
+              <div style={{ minWidth: 0, flex: 1 }}>
               {songTitle ? (
                 <p
                   style={{
@@ -457,6 +477,18 @@ export function StageMomentCard({
                 >
                   {layout?.meta?.artist?.text ?? artistName}
                 </p>
+              ) : null}
+              </div>
+              {showPreviewVibeChip ? (
+                <button
+                  type="button"
+                  className="margo-preview-vibe-chip"
+                  style={{ fontFamily: UI_FONT }}
+                  aria-label={`Vibe: ${vibeLabel}. Open vibe picker.`}
+                  onClick={onVibeChipClick}
+                >
+                  {vibeLabel}
+                </button>
               ) : null}
             </div>
           ) : null}

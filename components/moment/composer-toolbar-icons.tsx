@@ -15,31 +15,60 @@ export function ComposerVibeIcon({ size = 18 }: { size?: number }) {
   )
 }
 
-export function ComposerColorIcon({ size = 18 }: { size?: number }) {
+export function ComposerColorIcon({ size = 18, swatch = '#E8C547' }: { size?: number; swatch?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="9" cy="10" r="5.5" stroke={stroke} strokeWidth="1.75" />
-      <circle cx="15" cy="10" r="5.5" stroke={stroke} strokeWidth="1.75" />
-      <circle cx="12" cy="15" r="5.5" stroke={stroke} strokeWidth="1.75" />
+      <circle cx="12" cy="12" r="8" stroke={stroke} strokeWidth="1.75" />
+      <circle cx="12" cy="12" r="4" fill={swatch} stroke="rgba(255,255,255,0.35)" strokeWidth="1" />
     </svg>
   )
 }
 
-export function ComposerEffectIcon({ size = 18, active }: { size?: number; active?: boolean }) {
+export function ComposerEffectToolbarIcon({ size = 18, effectId = 'still' as const }: { size?: number; effectId?: 'still' | 'breath' | 'drift' | 'pulse' | 'weight' }) {
+  const ink = effectId === 'still' ? stroke : 'var(--gold)'
+  if (effectId === 'still') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+        <circle cx="12" cy="12" r="7" stroke={ink} strokeWidth="1.75" />
+        <path d="M8.5 12h7" stroke={ink} strokeWidth="1.75" strokeLinecap="round" />
+      </svg>
+    )
+  }
+  if (effectId === 'breath') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path d="M6 14c2-3 4-4 6-4s4 1 6 4" stroke={ink} strokeWidth="1.75" strokeLinecap="round" />
+        <path d="M8 9.5c1.2-2 2.8-3 4-3s2.8 1 4 3" stroke={ink} strokeWidth="1.5" strokeLinecap="round" opacity="0.65" />
+      </svg>
+    )
+  }
+  if (effectId === 'drift') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path d="M5 10c2 .8 3.5 1 5.5 1s3.5-.2 5.5-1" stroke={ink} strokeWidth="1.75" strokeLinecap="round" />
+        <path d="M6 14c2.2.9 3.8 1.2 6 1.2s3.8-.3 6-1.2" stroke={ink} strokeWidth="1.75" strokeLinecap="round" />
+        <path d="M7 18c2.4 1 4.2 1.3 5 1.3s2.6-.3 5-1.3" stroke={ink} strokeWidth="1.75" strokeLinecap="round" />
+      </svg>
+    )
+  }
+  if (effectId === 'pulse') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path d="M5 12h3l1.5-4 2 8 2-5 1.5 3.5H19" stroke={ink} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )
+  }
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M5 13c2.5-2 4.5-2.5 7-2.5s4.5.5 7 2.5"
-        stroke={active ? 'var(--gold)' : stroke}
-        strokeWidth="1.75"
-        strokeLinecap="round"
-      />
-      <path
-        d="M17.5 6.5l1.5-.5.5 1.5-1.2.4-.8-1.4zM18.5 5.5l.6 1-.9.3-.3-1.3z"
-        fill={active ? 'var(--gold)' : stroke}
-      />
+      <path d="M12 5v2M10 8c-1.2 1.5-1.5 3-1.5 4.5V17l1.5 2 2-2v-4.5C12 11 11.7 9.5 10 8" stroke={ink} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="12" cy="19" r="1.25" fill={ink} />
     </svg>
   )
+}
+
+/** @deprecated use ComposerEffectToolbarIcon */
+export function ComposerEffectIcon({ size = 18, active }: { size?: number; active?: boolean }) {
+  return <ComposerEffectToolbarIcon size={size} effectId={active ? 'breath' : 'still'} />
 }
 
 export function ComposerFormatSquareIcon({ size = 18 }: { size?: number }) {
