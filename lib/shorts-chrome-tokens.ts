@@ -90,6 +90,16 @@ function pickReadableInk(bg: string, ink: string): string {
   return relativeLuminance(bg) > 0.55 ? '#07060A' : '#F4F1ED'
 }
 
+const BODY_LIGHT = '#F4F1ED'
+const BODY_DARK = '#07060A'
+
+export function pickShortsBodyInk(bg: string, preferred: string): string {
+  if (contrastRatio(preferred, bg) >= 4.5) return preferred
+  if (contrastRatio(BODY_LIGHT, bg) >= 4.5) return BODY_LIGHT
+  if (contrastRatio(BODY_DARK, bg) >= 4.5) return BODY_DARK
+  return pickReadableInk(bg, preferred)
+}
+
 function pickAccentOnBackground(bg: string, ink: string): string {
   return pickReadableInk(bg, ink)
 }
@@ -148,9 +158,16 @@ export function getShortsChromeTokens(
   if (contrastRatio(icon, chipEffective) < 3) {
     icon = onDark ? '#F4F1ED' : '#07060A'
   }
+  const title = pickShortsBodyInk(paint.bg, paint.ink)
+  const artist =
+    contrastRatio(paint.inkMuted, paint.bg) >= 4.5
+      ? paint.inkMuted
+      : title === BODY_LIGHT
+        ? 'rgba(244,241,237,0.82)'
+        : 'rgba(7,6,10,0.72)'
   return {
-    title: paint.ink,
-    artist: paint.inkMuted,
+    title,
+    artist,
     icon,
     progressTrack: onDark ? 'rgba(255,255,255,0.22)' : 'rgba(7,6,10,0.22)',
     progressFill: icon,

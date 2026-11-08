@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState, useCallback, useEffect } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   togglePlayPause,
@@ -36,6 +36,7 @@ const DISMISS_VELOCITY = 0.5 // px/ms
 
 export function MiniPlayer() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { barTab } = usePrimaryTab()
   const engineState = useAudioEngine()
   const { canPrev, canNext } = useQueueNavigation()
@@ -60,6 +61,7 @@ export function MiniPlayer() {
   }, [])
 
   const isOnFeed = !!pathname?.startsWith('/feed')
+  const isOnFeedShortsTab = isOnFeed && searchParams.get('tab') === 'shorts'
   // Compose reuses Feed's compact floating pill/orb instead of the denser
   // full-width bar — same reasoning as Feed: a single-object creation
   // screen shouldn't have its layout pushed around by player chrome.
@@ -74,7 +76,8 @@ export function MiniPlayer() {
   const isHidden =
     engineState.mode === 'idle' ||
     pathname?.startsWith('/song/') ||
-    pathname === '/'
+    pathname === '/' ||
+    isOnFeedShortsTab
 
   // Fresh play → pill; leaving Feed keeps orb preference until idle/end.
   useEffect(() => { setFeedChrome('pill') }, [songId])
@@ -286,7 +289,7 @@ export function MiniPlayer() {
       `}</style>
 
       {/* ── Compact floating pill → orb (A.3 / D5) — Feed and Compose ── */}
-      {!expanded && usesFloatingChrome && (
+      {!expanded && usesFloatingChrome && !isOnFeedShortsTab && (
         <MiniPlayerFeedChrome
           mode={feedChrome}
           layout={isOnCompose ? 'compose' : 'feed'}

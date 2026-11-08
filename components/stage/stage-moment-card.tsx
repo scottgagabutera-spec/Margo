@@ -21,6 +21,7 @@ import { resolveExportPaintTheme, type StageCardTheme, type StageCardThemeId } f
 import type { MomentShapeId } from '@/lib/moment/types'
 import { shouldShowExportArtist, sentenceCaseLabel } from '@/lib/moment-export/export-copy'
 import { StageSocialCardLayers } from '@/components/stage/stage-social-card-layers'
+import { pickShortsBodyInk } from '@/lib/shorts-chrome-tokens'
 
 interface StageMomentCardProps {
   lyric: string
@@ -304,7 +305,7 @@ export function StageMomentCard({
             tone={theme.markVariant === 'on-light' ? 'light' : 'dark'}
           />
         ) : null}
-        {socialExport && layout ? (
+        {socialExport && layout && !(isShorts && hideShortsCreditRow) ? (
           <StageSocialCardLayers
             layout={layout}
             theme={theme}
@@ -339,7 +340,12 @@ export function StageMomentCard({
             position: 'relative',
             zIndex: 2,
             height: socialExport ? '100%' : undefined,
-            visibility: socialExport && !layout ? 'hidden' : socialExport ? 'hidden' : undefined,
+            visibility:
+              socialExport && layout && !(isShorts && hideShortsCreditRow)
+                ? 'hidden'
+                : socialExport && !layout
+                  ? 'hidden'
+                  : undefined,
           }}
         >
           <p
@@ -353,7 +359,7 @@ export function StageMomentCard({
                       top: layout.lyric.y,
                       width: layout.lyric.maxWidth,
                       margin: 0,
-                      color: theme.ink,
+                      color: pickShortsBodyInk(theme.bg, theme.ink),
                       maxHeight: '58%',
                       overflow: 'hidden',
                     }
