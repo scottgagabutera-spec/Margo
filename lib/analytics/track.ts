@@ -18,6 +18,8 @@ export type MargoAnalyticsEvent =
   | 'lyric_back_opened'
   | 'lyric_back_sent'
   | 'song_played'
+  | 'feed_block_impression'
+  | 'feed_block_tap'
 
 export function trackEvent(
   event: MargoAnalyticsEvent,
