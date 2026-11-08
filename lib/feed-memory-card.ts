@@ -1,8 +1,6 @@
-export type MemoryCardKind = 'media' | 'story' | 'listening' | 'create'
+export type MemoryPromoKind = 'pictures' | 'story' | 'memory'
 
-/** Fixed order A → B → C → D */
-export const MEMORY_CARD_SEQUENCE: MemoryCardKind[] = ['media', 'story', 'listening', 'create']
-
+/** Stable 0..3 index for legacy tests; promo planner uses full cycle anchor modulo 5. */
 export function dailyMemoryCardAnchorIndex(userId: string, dayKey: string): number {
   let h = 2166136261
   const s = `${userId}\0${dayKey}`
@@ -10,11 +8,7 @@ export function dailyMemoryCardAnchorIndex(userId: string, dayKey: string): numb
     h ^= s.charCodeAt(i)
     h = Math.imul(h, 16777619)
   }
-  return (h >>> 0) % MEMORY_CARD_SEQUENCE.length
-}
-
-export function memoryCardKindForSlotIndex(anchorIndex: number, slotIndex: number): MemoryCardKind {
-  return MEMORY_CARD_SEQUENCE[(anchorIndex + slotIndex) % MEMORY_CARD_SEQUENCE.length]!
+  return (h >>> 0) % 5
 }
 
 export function localDayKey(date = new Date()): string {
@@ -25,12 +19,12 @@ export function localDayKey(date = new Date()): string {
 }
 
 export function memoryCardCopy(
-  kind: MemoryCardKind,
-  opts: { ownMemoryCount: number; videosSupported?: boolean },
-): { title: string; subtitle: string; periodPill?: string } {
+  kind: MemoryPromoKind,
+  opts: { videosSupported?: boolean },
+): { title: string; subtitle: string } {
   const videos = opts.videosSupported !== false
   switch (kind) {
-    case 'media':
+    case 'pictures':
       return {
         title: videos ? 'Add photos and videos' : 'Add photos',
         subtitle: 'Turn a moment into a memory.',
@@ -40,15 +34,9 @@ export function memoryCardCopy(
         title: 'Tell your story',
         subtitle: 'Write what happened, in a few lines.',
       }
-    case 'listening':
+    case 'memory':
       return {
-        title: 'What are you listening to?',
-        subtitle: 'Save it for a week, a month or a year.',
-        periodPill: 'This week',
-      }
-    case 'create':
-      return {
-        title: opts.ownMemoryCount === 0 ? 'Create your first memory' : 'Create a memory',
+        title: 'Create a memory',
         subtitle: 'A photo, a song, a few words.',
       }
     default:

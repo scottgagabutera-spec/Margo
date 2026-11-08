@@ -74,10 +74,12 @@ export function MemoryCreateFlow({
   onClose,
   launchEntry,
   focusStory,
+  onOpenListening,
 }: {
   onClose?: () => void
   launchEntry?: 'media' | 'words'
   focusStory?: boolean
+  onOpenListening?: () => void
 }) {
   const router = useRouter()
   const { requireAuth } = useAuthGate()
@@ -474,6 +476,28 @@ export function MemoryCreateFlow({
         {step === 1 ? (
           <>
             <p style={{ ...labelStyle, marginBottom: 12 }}>What is this memory about?</p>
+            {onOpenListening ? (
+              <button
+                type="button"
+                onClick={onOpenListening}
+                style={{
+                  border: '1px solid var(--border)',
+                  borderRadius: 12,
+                  background: 'var(--surface)',
+                  color: 'var(--gold)',
+                  fontFamily: font,
+                  fontSize: TYPE.secondary,
+                  fontWeight: 600,
+                  padding: '10px 14px',
+                  marginBottom: 14,
+                  width: '100%',
+                  cursor: 'pointer',
+                  minHeight: 'var(--margo-touch-min)',
+                }}
+              >
+                What are you listening to?
+              </button>
+            ) : null}
             <div className="margo-memory-entry-choices">
               {([
                 { id: 'song' as const, label: 'A song', Icon: MusicNoteIcon },

@@ -35,16 +35,11 @@ import { buildFeedPeoplePool } from '@/lib/feed-people-pool'
 import { FeedMemoriesCarousel } from '@/components/feed-memories-carousel'
 import { FeedPeopleStrip } from '@/components/feed-people-strip'
 import { FeedMemoryPromoCard } from '@/components/feed-memory-promo-card'
-import { ListeningMemorySheet } from '@/components/listening-memory-sheet'
-import { dailyMemoryCardAnchorIndex, localDayKey } from '@/lib/feed-memory-card'
-import {
-  clearLocalFeedMemoryNudgeDismissed,
-  feedMemoryNudgeDismissedFromSettings,
-  localFeedMemoryNudgeDismissed,
-  mergeFeedMemoryCardsDismiss,
-  shouldShowMemoryCards,
-} from '@/lib/feed-memory-nudge-prefs'
-import { fetchWelcomeProfileSnapshot, persistProfileSettings } from '@/lib/welcome-save'
+import { FeedShortsStrip } from '@/components/feed-shorts-strip'
+import { localDayKey } from '@/lib/feed-memory-card'
+import { feedPromoAnchorIndex } from '@/lib/feed-promo-planner'
+import { feedShortsStripTilesFromClips } from '@/lib/feed-shorts-strip-tiles'
+import type { LyricMoment } from '@/lib/lyric-moments-board'
 import { FeedOceanFooter } from '@/components/feed-ocean-footer'
 import { feedRankIds, feedSortScore } from '@/lib/feed-rank'
 import { StoryRing } from '@/components/stories/story-ring'
@@ -462,90 +457,42 @@ function FeedPageInner() {
     return () => obs.disconnect()
   }, [feedContentTab, feedLive, loadMoreFeedMemories, feedGridMemories.length])
 
-  const [memoryCardsDismissed, setMemoryCardsDismissed] = useState(false)
-  const [memoryCardPrefsReady, setMemoryCardPrefsReady] = useState(false)
   const [ownMemoryCount, setOwnMemoryCount] = useState<number | null>(null)
-  const [listeningSheetOpen, setListeningSheetOpen] = useState(false)
 
   useEffect(() => {
     if (!user?.id) {
       setOwnMemoryCount(null)
-      setMemoryCardsDismissed(false)
-      setMemoryCardPrefsReady(false)
       return
     }
     let active = true
-    setMemoryCardPrefsReady(false)
     setOwnMemoryCount(null)
-    void (async () => {
-      const [snap, countRes] = await Promise.all([
-        fetchWelcomeProfileSnapshot(user.id),
-        supabase
-          .from('memories')
-          .select('id', { count: 'exact', head: true })
-          .eq('owner_profile_id', user.id)
-          .is('content_removed_at', null),
-      ])
-      if (!active) return
-      let dismissed = feedMemoryNudgeDismissedFromSettings(snap.settings)
-      const localDismiss = localFeedMemoryNudgeDismissed()
-      if (!dismissed && localDismiss) {
-        dismissed = true
-        void persistProfileSettings(user.id, (cur) => mergeFeedMemoryCardsDismiss(cur))
-        clearLocalFeedMemoryNudgeDismissed()
-      }
-      setMemoryCardsDismissed(dismissed)
-      setMemoryCardPrefsReady(true)
-      if (countRes.error) {
-        setOwnMemoryCount(0)
-        return
-      }
-      setOwnMemoryCount(countRes.count ?? 0)
-    })()
+    void supabase
+      .from('memories')
+      .select('id', { count: 'exact', head: true })
+      .eq('owner_profile_id', user.id)
+      .is('content_removed_at', null)
+      .then((countRes) => {
+        if (!active) return
+        setOwnMemoryCount(countRes.error ? 0 : (countRes.count ?? 0))
+      })
     return () => { active = false }
   }, [user?.id, supabase])
 
-  const memoryCardDecision = shouldShowMemoryCards({
-    signedIn: !!user?.id,
-    ownMemoryCount,
-    dismissed: memoryCardsDismissed,
-  })
-  const showMemoryCards = memoryCardDecision.show
+  const promoAnchor = useMemo(
+    () => feedPromoAnchorIndex(user?.id ?? null, localDayKey(), !!user?.id),
+    [user?.id],
+  )
 
-  const dismissMemoryCards = useCallback(async () => {
-    setMemoryCardsDismissed(true)
-    if (user?.id) {
-      await persistProfileSettings(user.id, (cur) => mergeFeedMemoryCardsDismiss(cur))
-    }
-    clearLocalFeedMemoryNudgeDismissed()
-  }, [user?.id])
+  const shortsStripTiles = useMemo(
+    () => feedShortsStripTilesFromClips(resolvedShortsClips as LyricMoment[]),
+    [resolvedShortsClips],
+  )
 
-  const memoryCardAnchorIndex = useMemo(() => {
-    if (!user?.id) return 0
-    return dailyMemoryCardAnchorIndex(user.id, localDayKey())
-  }, [user?.id])
-
-  const memoryCardsGateReady = !user?.id || (memoryCardPrefsReady && ownMemoryCount !== null)
-
-  const mixedLyricRows = useMemo((): FeedLyricsRow[] => {
-    if (feedContentTab !== 'lyrics') return []
-    if (!memoryCardsGateReady) return []
-    return buildFeedLyricsRows({
-      lyricPosts: lyricPostRows,
-      memories: feedMemories,
-      peoplePool,
-      showMemoryCards,
-      memoryCardAnchorIndex,
-    })
-  }, [
-    feedContentTab,
-    lyricPostRows,
-    feedMemories,
-    peoplePool,
-    showMemoryCards,
-    memoryCardAnchorIndex,
-    memoryCardsGateReady,
-  ])
+  const shortsAtParam = searchParams.get('shortsAt')
+  const shortsInitialIndex = (() => {
+    const n = Number(shortsAtParam)
+    return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0
+  })()
 
   const notifyResonate = async (post: Post) => {
     if (!user?.id) return
@@ -638,9 +585,32 @@ function FeedPageInner() {
   }
 
   const listReady = feedListReady(seeded, posts.length, loading)
-  const lyricsMixReady = listReady && memoryCardsGateReady
+  const lyricsMixGateReady = listReady && (!user?.id || ownMemoryCount !== null)
+  const lyricsMixReady = lyricsMixGateReady
   const showFeedSkeleton =
-    (loading && posts.length === 0 && !seeded) || (listReady && !!user?.id && !memoryCardsGateReady)
+    (loading && posts.length === 0 && !seeded) || (listReady && !!user?.id && ownMemoryCount === null)
+
+  const mixedLyricRows = useMemo((): FeedLyricsRow[] => {
+    if (feedContentTab !== 'lyrics' || !lyricsMixGateReady) return []
+    return buildFeedLyricsRows({
+      lyricPosts: lyricPostRows,
+      memories: feedMemories,
+      peoplePool,
+      signedIn: !!user?.id,
+      promoAnchor,
+      shortsStripAvailable: resolvedShortsMeetsMinimum && shortsStripTiles.length > 0,
+    })
+  }, [
+    feedContentTab,
+    lyricPostRows,
+    feedMemories,
+    peoplePool,
+    promoAnchor,
+    lyricsMixGateReady,
+    user?.id,
+    resolvedShortsMeetsMinimum,
+    shortsStripTiles.length,
+  ])
   const hasActiveFilter = selectedVibe !== 'ALL' || selectedSort !== 'NEW'
 
   useEffect(() => {
@@ -826,6 +796,7 @@ function FeedPageInner() {
           onRequireSignIn={() => requireAuth({ returnTo: '/feed?tab=shorts' })}
           vibeFilterActive={vibeFilterActive}
           tabActive={feedLive && feedContentTab === 'shorts'}
+          initialIndex={shortsInitialIndex}
         />
       )}
 
@@ -877,7 +848,7 @@ function FeedPageInner() {
         )}
         {showFeedSkeleton && <FeedPostSkeletonList count={4} />}
 
-        {lyricsMixReady && lyricPostRows.length === 0 && !mixedLyricRows.some((r) => r.kind === 'memory-card') && (
+        {lyricsMixReady && lyricPostRows.length === 0 && !mixedLyricRows.some((r) => r.kind !== 'post') && (
           <div style={{ textAlign: 'center', padding: '64px 0' }}>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '1rem', marginBottom: '16px' }}>
               {selectedVibe === 'ALL'
@@ -914,16 +885,11 @@ function FeedPageInner() {
                 />
               )
             }
-            if (item.kind === 'memory-card') {
-              return (
-                <FeedMemoryPromoCard
-                  key={item.key}
-                  cardKind={item.cardKind}
-                  ownMemoryCount={ownMemoryCount ?? 0}
-                  onDismiss={() => { void dismissMemoryCards() }}
-                  onOpenListening={() => setListeningSheetOpen(true)}
-                />
-              )
+            if (item.kind === 'memory-promo') {
+              return <FeedMemoryPromoCard key={item.key} promoKind={item.promoKind} />
+            }
+            if (item.kind === 'shorts-strip') {
+              return <FeedShortsStrip key={item.key} tiles={shortsStripTiles} />
             }
             const post = item.post
             const cardProps = {
@@ -985,8 +951,6 @@ function FeedPageInner() {
           />
         )}
       </main>
-
-      <ListeningMemorySheet open={listeningSheetOpen} onOpenChange={setListeningSheetOpen} />
 
       <CardExportModal
         open={!!exportPost}

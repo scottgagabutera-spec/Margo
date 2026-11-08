@@ -253,7 +253,9 @@ export default function RootLayout({
           }}
         />
         <AdminTrigger />
-        <MiniPlayer />
+        <Suspense fallback={null}>
+          <MiniPlayer />
+        </Suspense>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
