@@ -34,13 +34,15 @@ import { buildFeedLyricsRows, type FeedLyricsPeopleSlot, type FeedLyricsPostRow,
 import { buildFeedPeoplePool } from '@/lib/feed-people-pool'
 import { FeedMemoriesCarousel } from '@/components/feed-memories-carousel'
 import { FeedPeopleStrip } from '@/components/feed-people-strip'
-import { FeedMemoryNudge } from '@/components/feed-memory-nudge'
+import { FeedMemoryPromoCard } from '@/components/feed-memory-promo-card'
+import { ListeningMemorySheet } from '@/components/listening-memory-sheet'
+import { dailyMemoryCardAnchorIndex, localDayKey } from '@/lib/feed-memory-card'
 import {
   clearLocalFeedMemoryNudgeDismissed,
   feedMemoryNudgeDismissedFromSettings,
   localFeedMemoryNudgeDismissed,
-  mergeFeedMemoryNudgeDismissed,
-  shouldShowMemoryNudge,
+  mergeFeedMemoryCardsDismiss,
+  shouldShowMemoryCards,
 } from '@/lib/feed-memory-nudge-prefs'
 import { fetchWelcomeProfileSnapshot, persistProfileSettings } from '@/lib/welcome-save'
 import { FeedOceanFooter } from '@/components/feed-ocean-footer'
@@ -460,19 +462,20 @@ function FeedPageInner() {
     return () => obs.disconnect()
   }, [feedContentTab, feedLive, loadMoreFeedMemories, feedGridMemories.length])
 
-  const [memoryNudgeDismissed, setMemoryNudgeDismissed] = useState(false)
-  const [memoryNudgePrefsReady, setMemoryNudgePrefsReady] = useState(false)
+  const [memoryCardsDismissed, setMemoryCardsDismissed] = useState(false)
+  const [memoryCardPrefsReady, setMemoryCardPrefsReady] = useState(false)
   const [ownMemoryCount, setOwnMemoryCount] = useState<number | null>(null)
+  const [listeningSheetOpen, setListeningSheetOpen] = useState(false)
 
   useEffect(() => {
     if (!user?.id) {
       setOwnMemoryCount(null)
-      setMemoryNudgeDismissed(false)
-      setMemoryNudgePrefsReady(false)
+      setMemoryCardsDismissed(false)
+      setMemoryCardPrefsReady(false)
       return
     }
     let active = true
-    setMemoryNudgePrefsReady(false)
+    setMemoryCardPrefsReady(false)
     setOwnMemoryCount(null)
     void (async () => {
       const [snap, countRes] = await Promise.all([
@@ -488,11 +491,11 @@ function FeedPageInner() {
       const localDismiss = localFeedMemoryNudgeDismissed()
       if (!dismissed && localDismiss) {
         dismissed = true
-        void persistProfileSettings(user.id, (cur) => mergeFeedMemoryNudgeDismissed(cur, true))
+        void persistProfileSettings(user.id, (cur) => mergeFeedMemoryCardsDismiss(cur))
         clearLocalFeedMemoryNudgeDismissed()
       }
-      setMemoryNudgeDismissed(dismissed)
-      setMemoryNudgePrefsReady(true)
+      setMemoryCardsDismissed(dismissed)
+      setMemoryCardPrefsReady(true)
       if (countRes.error) {
         setOwnMemoryCount(0)
         return
@@ -502,30 +505,47 @@ function FeedPageInner() {
     return () => { active = false }
   }, [user?.id, supabase])
 
-  const memoryNudgeDecision = shouldShowMemoryNudge({
+  const memoryCardDecision = shouldShowMemoryCards({
     signedIn: !!user?.id,
     ownMemoryCount,
-    dismissed: memoryNudgeDismissed,
+    dismissed: memoryCardsDismissed,
   })
-  const showMemoryNudge = memoryNudgeDecision.show
+  const showMemoryCards = memoryCardDecision.show
 
-  const dismissMemoryNudge = useCallback(async () => {
-    setMemoryNudgeDismissed(true)
+  const dismissMemoryCards = useCallback(async () => {
+    setMemoryCardsDismissed(true)
     if (user?.id) {
-      await persistProfileSettings(user.id, (cur) => mergeFeedMemoryNudgeDismissed(cur, true))
+      await persistProfileSettings(user.id, (cur) => mergeFeedMemoryCardsDismiss(cur))
     }
     clearLocalFeedMemoryNudgeDismissed()
   }, [user?.id])
 
+  const memoryCardAnchorIndex = useMemo(() => {
+    if (!user?.id) return 0
+    return dailyMemoryCardAnchorIndex(user.id, localDayKey())
+  }, [user?.id])
+
+  const memoryCardsGateReady = !user?.id || (memoryCardPrefsReady && ownMemoryCount !== null)
+
   const mixedLyricRows = useMemo((): FeedLyricsRow[] => {
     if (feedContentTab !== 'lyrics') return []
+    if (!memoryCardsGateReady) return []
     return buildFeedLyricsRows({
       lyricPosts: lyricPostRows,
       memories: feedMemories,
       peoplePool,
-      showMemoryNudge,
+      showMemoryCards,
+      memoryCardAnchorIndex,
     })
-  }, [feedContentTab, lyricPostRows, feedMemories, peoplePool, showMemoryNudge])
+  }, [
+    feedContentTab,
+    lyricPostRows,
+    feedMemories,
+    peoplePool,
+    showMemoryCards,
+    memoryCardAnchorIndex,
+    memoryCardsGateReady,
+  ])
 
   const notifyResonate = async (post: Post) => {
     if (!user?.id) return
@@ -618,9 +638,9 @@ function FeedPageInner() {
   }
 
   const listReady = feedListReady(seeded, posts.length, loading)
-  const lyricsMixReady =
-    listReady || (memoryNudgePrefsReady && showMemoryNudge)
-  const showFeedSkeleton = loading && posts.length === 0 && !seeded
+  const lyricsMixReady = listReady && memoryCardsGateReady
+  const showFeedSkeleton =
+    (loading && posts.length === 0 && !seeded) || (listReady && !!user?.id && !memoryCardsGateReady)
   const hasActiveFilter = selectedVibe !== 'ALL' || selectedSort !== 'NEW'
 
   useEffect(() => {
@@ -857,7 +877,7 @@ function FeedPageInner() {
         )}
         {showFeedSkeleton && <FeedPostSkeletonList count={4} />}
 
-        {lyricsMixReady && lyricPostRows.length === 0 && !mixedLyricRows.some((r) => r.kind === 'memory-nudge') && (
+        {lyricsMixReady && lyricPostRows.length === 0 && !mixedLyricRows.some((r) => r.kind === 'memory-card') && (
           <div style={{ textAlign: 'center', padding: '64px 0' }}>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '1rem', marginBottom: '16px' }}>
               {selectedVibe === 'ALL'
@@ -894,11 +914,14 @@ function FeedPageInner() {
                 />
               )
             }
-            if (item.kind === 'memory-nudge') {
+            if (item.kind === 'memory-card') {
               return (
-                <FeedMemoryNudge
+                <FeedMemoryPromoCard
                   key={item.key}
-                  onDismiss={() => { void dismissMemoryNudge() }}
+                  cardKind={item.cardKind}
+                  ownMemoryCount={ownMemoryCount ?? 0}
+                  onDismiss={() => { void dismissMemoryCards() }}
+                  onOpenListening={() => setListeningSheetOpen(true)}
                 />
               )
             }
@@ -962,6 +985,8 @@ function FeedPageInner() {
           />
         )}
       </main>
+
+      <ListeningMemorySheet open={listeningSheetOpen} onOpenChange={setListeningSheetOpen} />
 
       <CardExportModal
         open={!!exportPost}

@@ -8,7 +8,7 @@ import { FeedIconHeart, FeedIconHeartFilled } from '@/components/feed-card-icons
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { CardIcon } from '@/components/icons'
 import { compactArtworkUrl } from '@/lib/compact-artwork-url'
-import { formatMemoryDatePublic } from '@/lib/memory/date-label'
+import { formatMemoryDisplayDate } from '@/lib/memory/date-label'
 import type { MemoryPublic, MemoryVisibility } from '@/lib/memory/types'
 import { TYPE, UI_FONT } from '@/lib/fonts'
 import { playFull } from '@/lib/audio-engine'
@@ -215,11 +215,14 @@ export default function MemoryDetailPage() {
     )
   }
 
-  const dateChip = formatMemoryDatePublic({
-    granularity: memory.dateGranularity,
+  const dateChip = formatMemoryDisplayDate({
+    dateGranularity: memory.dateGranularity,
     dateStart: memory.dateStart,
     dateEnd: memory.dateEnd,
     showDatePublicly: memory.showDatePublicly,
+    createdAt: memory.createdAt,
+    songCount: memory.songCount,
+    photoCount: memory.photos.length,
   })
   const firstSong = memory.songs[0]
   const story = (memory.story || '').trim()

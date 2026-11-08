@@ -1,4 +1,9 @@
 import type { MemoryDateGranularity } from '@/lib/memory/types'
+import { inferListeningPeriodType } from '@/lib/memory/listening-infer'
+import {
+  formatListeningPeriodSummary,
+  type ListeningPeriodType,
+} from '@/lib/memory/listening-period'
 
 const MONTHS_LONG = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -23,8 +28,33 @@ export function formatMemoryDatePublic(opts: {
   dateStart: string | null
   dateEnd: string | null
   showDatePublicly: boolean
+  listeningPeriod?: ListeningPeriodType | null
+  now?: Date
 }): string | null {
-  if (!opts.showDatePublicly || opts.granularity === 'none') return null
+  if (!opts.showDatePublicly) return null
+
+  const listening =
+    opts.listeningPeriod ??
+    (opts.dateStart
+      ? inferListeningPeriodType({
+          dateGranularity: opts.granularity,
+          dateStart: opts.dateStart,
+          dateEnd: opts.dateEnd,
+          songCount: 1,
+          photoCount: 0,
+        })
+      : null)
+
+  if (listening && opts.dateStart && opts.dateEnd) {
+    return formatListeningPeriodSummary({
+      type: listening,
+      startIso: opts.dateStart,
+      endIso: opts.dateEnd,
+      now: opts.now,
+    })
+  }
+
+  if (opts.granularity === 'none') return null
   const start = parseDateOnly(opts.dateStart)
   if (!start) return null
 
@@ -45,6 +75,38 @@ export function formatMemoryDatePublic(opts: {
     default:
       return null
   }
+}
+
+export function formatMemoryDisplayDate(input: {
+  dateGranularity: MemoryDateGranularity
+  dateStart: string | null
+  dateEnd: string | null
+  showDatePublicly: boolean
+  createdAt: string
+  songCount: number
+  photoCount: number
+  now?: Date
+}): string | null {
+  if (!input.showDatePublicly) return null
+  const listening = inferListeningPeriodType({
+    dateGranularity: input.dateGranularity,
+    dateStart: input.dateStart,
+    dateEnd: input.dateEnd,
+    songCount: input.songCount,
+    photoCount: input.photoCount,
+  })
+  const fromFields = formatMemoryDatePublic({
+    granularity: input.dateGranularity,
+    dateStart: input.dateStart,
+    dateEnd: input.dateEnd,
+    showDatePublicly: true,
+    listeningPeriod: listening,
+    now: input.now,
+  })
+  if (fromFields) return fromFields
+  const created = new Date(input.createdAt)
+  if (Number.isNaN(created.getTime())) return null
+  return `${created.getUTCDate()} ${monthShort(created)} ${created.getUTCFullYear()}`
 }
 
 /** Long month labels for pickers and forms only. */

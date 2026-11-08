@@ -70,7 +70,15 @@ function monthStartIso(y: number, m: number): string {
   return `${y}-${mm}-01`
 }
 
-export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
+export function MemoryCreateFlow({
+  onClose,
+  launchEntry,
+  focusStory,
+}: {
+  onClose?: () => void
+  launchEntry?: 'media' | 'words'
+  focusStory?: boolean
+}) {
   const router = useRouter()
   const { requireAuth } = useAuthGate()
   const { keyboardOpen } = useKeyboardSafeChrome()
@@ -108,6 +116,19 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
   const [submitting, setSubmitting] = useState(false)
   const [titleTouched, setTitleTouched] = useState(false)
   const [entryKind, setEntryKind] = useState<MemoryEntryKind | null>(null)
+  const storyRef = useRef<HTMLTextAreaElement | null>(null)
+
+  useEffect(() => {
+    if (!launchEntry) return
+    setEntryKind(launchEntry)
+    setStep(2)
+  }, [launchEntry])
+
+  useEffect(() => {
+    if (!focusStory || step !== 2) return
+    const t = window.setTimeout(() => storyRef.current?.focus(), 120)
+    return () => window.clearTimeout(t)
+  }, [focusStory, step])
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 835px)')
@@ -584,6 +605,7 @@ export function MemoryCreateFlow({ onClose }: { onClose?: () => void }) {
             ) : null}
             <label style={labelStyle}>What does this mean to you?</label>
             <textarea
+              ref={storyRef}
               value={story}
               onChange={(e) => setStory(e.target.value.slice(0, STORY_MAX))}
               rows={5}

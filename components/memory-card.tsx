@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { MemoryCoverCaption } from '@/components/memory-cover-caption'
 import { UI_FONT, TYPE } from '@/lib/fonts'
 import { memoryCaptionTitle, memoryDisplayCaption } from '@/lib/memory/display-caption'
-import { formatMemoryDatePublic } from '@/lib/memory/date-label'
+import { formatMemoryDisplayDate } from '@/lib/memory/date-label'
 import type { MemoryPublic } from '@/lib/memory/types'
 
 const font = UI_FONT
@@ -21,11 +21,14 @@ export function MemoryCard({
   href?: string
 }) {
   const to = href || `/memory/${memory.id}`
-  const dateChip = formatMemoryDatePublic({
-    granularity: memory.dateGranularity,
+  const dateChip = formatMemoryDisplayDate({
+    dateGranularity: memory.dateGranularity,
     dateStart: memory.dateStart,
     dateEnd: memory.dateEnd,
     showDatePublicly: memory.showDatePublicly,
+    createdAt: memory.createdAt,
+    songCount: memory.songCount,
+    photoCount: memory.photos.length,
   })
   const story = (memory.story || '').trim()
 
