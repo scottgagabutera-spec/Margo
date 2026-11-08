@@ -1,5 +1,6 @@
 import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime'
 import type { FeedContentTab } from '@/lib/feed-content-tab'
+import { pinFeedStackFromFeed } from '@/lib/feed-stack-pin'
 import {
   buildFeedResumeHref,
   persistFeedReturnBeforeLeave,
@@ -14,6 +15,7 @@ export function leaveFeedTo(
 ) {
   if (typeof window !== 'undefined') {
     persistFeedReturnBeforeLeave(tab)
+    pinFeedStackFromFeed()
     const snap = readFeedReturnSnapshot()
     if (snap) {
       try {
@@ -23,7 +25,7 @@ export function leaveFeedTo(
       }
     }
   }
-  router.push(href)
+  router.push(href, { scroll: false })
 }
 
 export function feedReturnFallbackHref(): string {

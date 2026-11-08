@@ -9589,11 +9589,46 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   flex-direction: column;
   gap: 8px;
 }
+.margo-gold-icon-btn {
+  width: 44px;
+  height: 44px;
+  padding: 6px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.margo-gold-icon-btn .margo-gold-icon-btn__surface {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--gold);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.margo-feed-stack-overlay {
+  background: var(--bg);
+}
 .margo-feed-echoes-set__row {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto;
   gap: 8px;
   align-items: center;
+}
+.margo-feed-echoes-set__row--own {
+  grid-template-columns: 1fr auto;
+}
+.margo-feed-echoes-set__name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .margo-feed-echoes-set__user-link {
   display: flex;
@@ -9661,6 +9696,102 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--gold);
+}
+.margo-feed-echoes-tab__count {
+  margin: 4px 0 0;
+  font-size: 0.62rem;
+  color: var(--text-muted);
+}
+.margo-feed-echoes-tab__preview {
+  margin-top: 10px;
+}
+.margo-feed-echoes-tab__preview-name {
+  margin: 0 0 6px;
+  font-size: 0.62rem;
+  color: var(--text-muted);
+}
+.margo-feed-echoes-tab__card--skeleton .margo-feed-echoes-tab__sk-title,
+.margo-feed-echoes-tab__card--skeleton .margo-feed-echoes-tab__sk-meta,
+.margo-feed-echoes-tab__card--skeleton .margo-feed-echoes-tab__sk-preview {
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-3) 50%, var(--surface-2) 100%);
+  background-size: 200% 100%;
+  animation: margo-shimmer 1.2s ease-in-out infinite;
+}
+.margo-feed-echoes-tab__sk-title {
+  height: 18px;
+  width: 72%;
+  margin-bottom: 10px;
+}
+.margo-feed-echoes-tab__sk-meta {
+  height: 12px;
+  width: 40%;
+  margin-bottom: 12px;
+}
+.margo-feed-echoes-tab__sk-preview {
+  height: 52px;
+  width: 100%;
+}
+.margo-echoes-song-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.margo-echoes-song-preview--compact .margo-echoes-song-preview__title {
+  font-size: 0.65rem;
+}
+.margo-echoes-song-preview__art {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-2);
+  position: relative;
+}
+.margo-echoes-song-preview--compact .margo-echoes-song-preview__art {
+  width: 36px;
+  height: 36px;
+}
+.margo-echoes-song-preview__art-empty {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--surface-3);
+}
+.margo-echoes-song-preview__img {
+  object-fit: cover;
+  border-radius: 8px;
+}
+.margo-echoes-song-preview__meta {
+  min-width: 0;
+}
+.margo-echoes-song-preview__title {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.margo-echoes-song-preview__artist {
+  margin: 2px 0 0;
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.margo-echoes-song-preview__more {
+  margin: 2px 0 0;
+  font-size: 0.58rem;
+  color: var(--text-muted);
+}
+.margo-echoes-set-page__body .margo-echoes-set-page__time {
+  display: inline-block;
+  margin-left: 6px;
 }
 .margo-feed-echoes-tab__avatars {
   display: flex;

@@ -1,5 +1,10 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
+import { searchDeezerArtists } from '@/lib/catalog-artist/deezer-search'
 import { publicCatalogMediaUrl } from '@/lib/r2/catalog-media-url'
+import {
+  favoriteArtworkFromSettings,
+  mergeFavoriteArtworkSettings,
+} from '@/lib/profile/favorite-artist-artwork-settings'
 import type { ProfileFavoriteArtist } from '@/components/profile-favorite-artists-row'
 
 export async function loadProfileFavoriteArtists(profileId: string): Promise<ProfileFavoriteArtist[]> {
@@ -14,6 +19,11 @@ export async function loadProfileFavoriteArtists(profileId: string): Promise<Pro
     if (error) console.error('[load-favorite-artists]', error)
     return []
   }
+
+  const { data: profileRow } = await admin.from('profiles').select('settings').eq('id', profileId).maybeSingle()
+  const settingsArt = favoriteArtworkFromSettings(
+    (profileRow?.settings as Record<string, unknown> | null) ?? null,
+  )
 
   const artistIds = links.map((r) => r.catalog_artist_id as string)
   const { data: artists } = await admin
@@ -39,23 +49,44 @@ export async function loadProfileFavoriteArtists(profileId: string): Promise<Pro
     }
   }
 
-  return links
-    .map((row) => {
+  const artworkBackfill: Record<string, string> = {}
+
+  const rows = await Promise.all(
+    links.map(async (row) => {
       const ca = artistMap.get(row.catalog_artist_id as string)
       if (!ca) return null
       const prof = ca.margo_profile_id ? profileUsernames.get(ca.margo_profile_id as string) : undefined
       const username = prof && !prof.is_admin ? prof.username : null
       const r2Art = ca.artwork_r2_key ? publicCatalogMediaUrl(ca.artwork_r2_key as string) : null
       const margoAvatar = username ? prof?.avatarUrl ?? null : null
+      let artworkUrl = settingsArt[ca.id as string] ?? r2Art ?? margoAvatar
+      if (!artworkUrl) {
+        const hits = await searchDeezerArtists(ca.name as string, 3)
+        const hit = hits.find((h) => h.sourceId === ca.source_id) || hits[0]
+        if (hit?.pictureUrl) {
+          artworkUrl = hit.pictureUrl
+          artworkBackfill[ca.id as string] = hit.pictureUrl
+        }
+      }
       return {
         position: row.position as number,
         id: ca.id as string,
         name: ca.name as string,
-        artworkUrl: r2Art ?? margoAvatar,
+        artworkUrl,
         fallbackArtworkUrl: null,
         onMargo: !!username,
         margoUsername: username,
       }
-    })
-    .filter(Boolean) as ProfileFavoriteArtist[]
+    }),
+  )
+
+  if (Object.keys(artworkBackfill).length > 0 && profileRow) {
+    const nextSettings = mergeFavoriteArtworkSettings(
+      (profileRow.settings as Record<string, unknown> | null) ?? null,
+      artworkBackfill,
+    )
+    void admin.from('profiles').update({ settings: nextSettings }).eq('id', profileId)
+  }
+
+  return rows.filter(Boolean) as ProfileFavoriteArtist[]
 }

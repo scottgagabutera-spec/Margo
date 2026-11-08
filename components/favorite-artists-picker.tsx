@@ -74,7 +74,7 @@ export function FavoriteArtistsPicker({
 
   const addArtist = async (hit: ArtistSearchResult) => {
     if (selected.length >= 10 || selectedIds.has(hit.id)) return
-    let artworkUrl = hit.artworkUrl
+    let artworkUrl = hit.artworkUrl || hit.previewArtworkUrl
     if (!artworkUrl) {
       try {
         const res = await fetch('/api/artists/materialize', {

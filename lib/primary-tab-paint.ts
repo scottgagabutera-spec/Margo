@@ -3,6 +3,8 @@
  * Used in production and in unit tests (signed-in Hub tile nav flash).
  */
 
+import { isFeedStackPath } from './feed-stack-routes.ts'
+
 export type PrimaryTabId = 'feed' | 'discover' | 'compose' | 'you'
 
 export function normalizeTabPath(pathname: string | null | undefined): string {
@@ -38,6 +40,8 @@ export type PrimaryTabPaintInput = {
   deepNavHref: string | null
   /** When returning to Hub overlay on /feed?hub=1 — hide keepalive until Hub paints. */
   hubRestorePending: boolean
+  /** Feed exit kept feed mounted under a full screen route overlay. */
+  feedStackPinned?: boolean
 }
 
 export type PrimaryTabPaintState = {
@@ -47,6 +51,7 @@ export type PrimaryTabPaintState = {
   showKeepalivePanes: boolean
   showDeepNavSkeleton: boolean
   showAppChildren: boolean
+  feedStackOverlay: boolean
   /** Visible surface id for tests: deep skeleton path, primary tab id, or app path. */
   visibleSurface: string
 }
@@ -56,18 +61,25 @@ export function resolvePrimaryTabPaint(input: PrimaryTabPaintInput): PrimaryTabP
   const pathOnly = normalizeTabPath(input.pathname)
   const intentPath = input.deepNavHref ? normalizeTabPath(input.deepNavHref) : ''
   const atDeepIntent = !!intentPath && pathOnly.toLowerCase() !== intentPath.toLowerCase()
+  const feedStackOverlay = !!input.feedStackPinned && isFeedStackPath(pathOnly)
   const suppressKeepalive =
-    atDeepIntent || (input.deepNavHref !== null && routeTab !== null)
+    (atDeepIntent || (input.deepNavHref !== null && routeTab !== null)) && !feedStackOverlay
 
   const onPrimarySurface =
-    !suppressKeepalive && (routeTab !== null || input.paintedTab !== null)
-  const activeTab = suppressKeepalive ? null : input.paintedTab ?? routeTab
+  !suppressKeepalive && (routeTab !== null || input.paintedTab !== null || feedStackOverlay)
+  const activeTab = feedStackOverlay
+    ? 'feed'
+    : suppressKeepalive
+      ? null
+      : input.paintedTab ?? routeTab
   const showKeepalivePanes = onPrimarySurface && activeTab !== null
   const showDeepNavSkeleton = atDeepIntent && !!input.deepNavHref
-  const showAppChildren = !showDeepNavSkeleton && activeTab === null
+  const showAppChildren = !showDeepNavSkeleton && (activeTab === null || feedStackOverlay)
 
   let visibleSurface = pathOnly || '/'
-  if (showDeepNavSkeleton && input.deepNavHref) {
+  if (feedStackOverlay) {
+    visibleSurface = `feed-stack:${pathOnly}`
+  } else if (showDeepNavSkeleton && input.deepNavHref) {
     visibleSurface = intentPath
   } else if (showKeepalivePanes && activeTab) {
     visibleSurface = `primary:${activeTab}`
@@ -80,6 +92,7 @@ export function resolvePrimaryTabPaint(input: PrimaryTabPaintInput): PrimaryTabP
     showKeepalivePanes,
     showDeepNavSkeleton,
     showAppChildren,
+    feedStackOverlay,
     visibleSurface,
   }
 }
@@ -111,5 +124,5 @@ export function simulateHubTileNavSequence(opts: {
 }
 
 export function feedPrimarySurfaceVisible(state: PrimaryTabPaintState): boolean {
-  return state.visibleSurface === 'primary:feed'
+  return state.visibleSurface === 'primary:feed' || state.feedStackOverlay
 }

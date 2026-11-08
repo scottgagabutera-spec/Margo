@@ -6,7 +6,9 @@ import { useRouter } from 'next/navigation'
 import { EditIcon } from '@/components/icons'
 import { MargoAvatar } from '@/components/margo-avatar'
 import type { EchoAnswerRow } from '@/lib/echoes/types'
-import { persistFeedReturnBeforeLeave } from '@/lib/margo-feed-return'
+import { EchoesSongPreview } from '@/components/echoes-song-preview'
+import { leaveFeedTo } from '@/lib/feed-exit-nav'
+import { armFeedStackLeave } from '@/lib/feed-link-leave'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useRegisterNavBack } from '@/components/nav-back'
 import { UI_FONT } from '@/lib/fonts'
@@ -48,8 +50,11 @@ export function EchoesSetView({ setId }: { setId: string }) {
 
   const startAnswer = () => {
     if (!requireAuth()) return
-    persistFeedReturnBeforeLeave('echoes')
-    router.push(`/echoes/answer?questionId=${encodeURIComponent(questionId)}&setId=${encodeURIComponent(setId)}`)
+    leaveFeedTo(
+      router,
+      `/echoes/answer?questionId=${encodeURIComponent(questionId)}&setId=${encodeURIComponent(setId)}`,
+      'echoes',
+    )
   }
 
   const countLabel = answerCount === 1 ? '1 answer' : `${answerCount} answers`
@@ -98,21 +103,19 @@ export function EchoesSetView({ setId }: { setId: string }) {
               <Link
                 href={`/echoes/${setId}/${row.profileId}`}
                 className="margo-echoes-set-page__row-link"
-                onClick={() => persistFeedReturnBeforeLeave('echoes')}
+                onClick={() => armFeedStackLeave('echoes')}
               >
                 <MargoAvatar size="md" imageUrl={row.avatarUrl} username={row.username} displayName={row.displayName} />
-                <div>
+                <div className="margo-echoes-set-page__body">
                   <p className="margo-echoes-set-page__name" style={{ fontFamily: font }}>
                     {row.isOwn ? 'You' : row.displayName}
                   </p>
-                  <p className="margo-echoes-set-page__songs" style={{ fontFamily: font }}>
-                    {row.songLine}
-                  </p>
+                  <span className="margo-echoes-set-page__time" style={{ fontFamily: font }}>
+                    {row.timeLabel}
+                  </span>
+                  <EchoesSongPreview payload={row.payload} />
                 </div>
               </Link>
-              <span className="margo-echoes-set-page__time" style={{ fontFamily: font }}>
-                {row.timeLabel}
-              </span>
             </li>
           ))}
         </ul>

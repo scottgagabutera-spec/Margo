@@ -10,7 +10,8 @@ import { getShortsChromeTokens } from '@/lib/shorts-chrome-tokens'
 import { pickShortsLook } from '@/lib/shorts-looks'
 import { utcDayKey } from '@/lib/shorts-shelf-rotation'
 import { LYRIC_FONT, UI_FONT } from '@/lib/fonts'
-import { persistFeedReturnBeforeLeave, writeFeedReturnSnapshot } from '@/lib/margo-feed-return'
+import { writeFeedReturnSnapshot } from '@/lib/margo-feed-return'
+import { armFeedStackLeave } from '@/lib/feed-link-leave'
 
 const lyricFont = LYRIC_FONT
 const uiFont = UI_FONT
@@ -38,8 +39,8 @@ export function FeedShortsStrip({ tiles }: { tiles: FeedShortsStripTile[] }) {
             className="margo-feed-shorts-strip__see-all"
             aria-label="See all Shorts"
             onClick={() => {
-              persistFeedReturnBeforeLeave('lyrics')
-              router.push(shortsTabHref())
+              armFeedStackLeave('lyrics')
+              router.push(shortsTabHref(), { scroll: false })
             }}
           >
             <ChevronRightIcon size={16} color="var(--gold)" />
@@ -57,7 +58,7 @@ export function FeedShortsStrip({ tiles }: { tiles: FeedShortsStripTile[] }) {
               key={`${tile.songId}-${tile.lineId}`}
               href={shortsHref(tile.stripIndex)}
               onClick={() => {
-                persistFeedReturnBeforeLeave('lyrics')
+                armFeedStackLeave('lyrics')
                 writeFeedReturnSnapshot({ shortsAt: tile.stripIndex, tab: 'shorts' })
               }}
               className="margo-feed-shorts-strip__tile"
