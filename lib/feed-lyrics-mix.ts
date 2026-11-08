@@ -1,6 +1,7 @@
 import type { MemoryPublic } from '@/lib/memory/types'
 import type { Post } from '@/hooks/usePosts'
 import type { MemoryPromoKind } from './feed-memory-card.ts'
+import type { ListeningWeekRow } from './feed-listening-week.ts'
 import {
   FEED_BLOCK_CYCLE_SIGNED_IN,
   FEED_BLOCK_CYCLE_SIGNED_OUT,
@@ -31,12 +32,14 @@ export type FeedLyricsPostRow = {
 
 export type FeedLyricsRow =
   | FeedLyricsPostRow
-  | { kind: 'memory-carousel'; key: string; memories: MemoryPublic[]; hasMore: boolean }
+  | { kind: 'memories-row'; key: string; memories: MemoryPublic[]; hasMore: boolean; planKey: string }
+  | { kind: 'listening-prompt'; key: string; planKey: string }
+  | { kind: 'listening-week'; key: string; rows: ListeningWeekRow[]; planKey: string }
   | { kind: 'people'; key: string; people: FeedLyricsPeopleSlot[]; planKey: string }
   | { kind: 'memory-promo'; key: string; promoKind: MemoryPromoKind; planKey: string }
   | { kind: 'shorts-strip'; key: string; planKey: string }
 
-export const FEED_LYRICS_MEMORY_CAROUSEL_SIZE = 5
+export const FEED_LYRICS_MEMORY_ROW_SIZE = 8
 
 function peekPeople(authors: FeedLyricsPeopleSlot[], used: Set<string>, count = 4): FeedLyricsPeopleSlot[] {
   const out: FeedLyricsPeopleSlot[] = []
@@ -66,6 +69,7 @@ type BlockCtx = {
   peoplePool: FeedLyricsPeopleSlot[]
   peopleUsed: Set<string>
   shortsStripAvailable: boolean
+  listeningWeekRows: ListeningWeekRow[]
 }
 
 function cycleFor(signedIn: boolean): FeedBlockKind[] {
@@ -77,19 +81,22 @@ function canMaterialize(kind: FeedBlockKind, ctx: BlockCtx): boolean {
     case 'pictures':
     case 'story':
     case 'memory':
+    case 'listening-prompt':
       return ctx.signedIn
-    case 'carousel':
+    case 'memories-row':
       return ctx.memories.length > ctx.memIdx
     case 'people':
       return peekPeople(ctx.peoplePool, ctx.peopleUsed).length > 0
     case 'shorts':
       return ctx.shortsStripAvailable
+    case 'listening-week':
+      return ctx.listeningWeekRows.length > 0
     default:
       return false
   }
 }
 
-type MaterializeResult = { row: FeedLyricsRow | null; nextCycleIndex: number; consumedMemories: number }
+type MaterializeResult = { row: FeedLyricsRow | null; consumedMemories: number }
 
 function materializeBlock(
   plannedKind: FeedBlockKind,
@@ -107,41 +114,34 @@ function materializeBlock(
     if (kind === 'people') {
       const people = pickPeople(ctx.peoplePool, ctx.peopleUsed)
       if (people.length > 0) {
-        return {
-          row: { kind: 'people', key, people, planKey: key },
-          nextCycleIndex: (begin + attempt + 1) % cycle.length,
-          consumedMemories: 0,
-        }
+        return { row: { kind: 'people', key, people, planKey: key }, consumedMemories: 0 }
       }
     }
     if (kind === 'shorts') {
-      return {
-        row: { kind: 'shorts-strip', key, planKey: key },
-        nextCycleIndex: (begin + attempt + 1) % cycle.length,
-        consumedMemories: 0,
-      }
+      return { row: { kind: 'shorts-strip', key, planKey: key }, consumedMemories: 0 }
     }
-    if (kind === 'carousel') {
-      const chunk = ctx.memories.slice(ctx.memIdx, ctx.memIdx + FEED_LYRICS_MEMORY_CAROUSEL_SIZE)
+    if (kind === 'listening-prompt') {
+      return { row: { kind: 'listening-prompt', key, planKey: key }, consumedMemories: 0 }
+    }
+    if (kind === 'listening-week') {
+      return { row: { kind: 'listening-week', key, rows: ctx.listeningWeekRows, planKey: key }, consumedMemories: 0 }
+    }
+    if (kind === 'memories-row') {
+      const chunk = ctx.memories.slice(ctx.memIdx, ctx.memIdx + FEED_LYRICS_MEMORY_ROW_SIZE)
       if (chunk.length > 0) {
         const hasMore = ctx.memIdx + chunk.length < ctx.memories.length
         return {
-          row: { kind: 'memory-carousel', key, memories: chunk, hasMore },
-          nextCycleIndex: (begin + attempt + 1) % cycle.length,
+          row: { kind: 'memories-row', key, memories: chunk, hasMore, planKey: key },
           consumedMemories: chunk.length,
         }
       }
     }
     const promoKind = promoToMemoryKind(kind)
     if (promoKind) {
-      return {
-        row: { kind: 'memory-promo', key, promoKind, planKey: key },
-        nextCycleIndex: (begin + attempt + 1) % cycle.length,
-        consumedMemories: 0,
-      }
+      return { row: { kind: 'memory-promo', key, promoKind, planKey: key }, consumedMemories: 0 }
     }
   }
-  return { row: null, nextCycleIndex: (begin + 1) % cycle.length, consumedMemories: 0 }
+  return { row: null, consumedMemories: 0 }
 }
 
 export function buildFeedLyricsRows(input: {
@@ -151,10 +151,12 @@ export function buildFeedLyricsRows(input: {
   signedIn: boolean
   promoAnchor: number
   shortsStripAvailable?: boolean
+  listeningWeekRows?: ListeningWeekRow[]
   memoryCursorStart?: number
 }): FeedLyricsRow[] {
   const { lyricPosts, memories, peoplePool, signedIn, promoAnchor } = input
   const shortsStripAvailable = input.shortsStripAvailable !== false
+  const listeningWeekRows = input.listeningWeekRows ?? []
   let memIdx = input.memoryCursorStart ?? 0
   const peopleUsed = new Set<string>()
   const out: FeedLyricsRow[] = []
@@ -171,6 +173,7 @@ export function buildFeedLyricsRows(input: {
     peoplePool,
     peopleUsed,
     shortsStripAvailable,
+    listeningWeekRows,
   })
 
   const emitPlanned = (planned: FeedPlannedBlock) => {
@@ -201,6 +204,7 @@ export function simulateFeedBlockPositions(input: {
   signedIn: boolean
   promoAnchor: number
   shortsStripAvailable?: boolean
+  listeningWeekRows?: ListeningWeekRow[]
 }): { afterLyric: number; blockKind: string }[] {
   const rows = buildFeedLyricsRows(input)
   let ord = 0
@@ -216,8 +220,8 @@ export function simulateFeedBlockPositions(input: {
         ? r.promoKind
         : r.kind === 'shorts-strip'
           ? 'shorts'
-          : r.kind === 'memory-carousel'
-            ? 'carousel'
+          : r.kind === 'memories-row'
+            ? 'memories-row'
             : r.kind
     table.push({ afterLyric: ord, blockKind: kind })
   }
