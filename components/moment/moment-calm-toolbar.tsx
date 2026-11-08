@@ -1,22 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import {
-  AudioLines,
-  Check,
-  CircleSlash,
-  Copy,
-  Droplets,
-  Image as ImageIcon,
-  Loader2,
-  Sunrise,
-  Video,
-  Waves,
-} from 'lucide-react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react'
+import { Check, Copy, Image as ImageIcon, Loader2, Video } from 'lucide-react'
 import {
   ComposerColorIcon,
   ComposerDownloadIcon,
-  ComposerEffectIcon,
+  ComposerEffectToolbarIcon,
   ComposerFormatSquareIcon,
   ComposerFormatStoryIcon,
   ComposerPostArrowIcon,
@@ -25,23 +14,26 @@ import {
   ComposerVibeIcon,
 } from '@/components/moment/composer-toolbar-icons'
 import type { AtmosphereId } from '@/lib/atmosphere'
-import { ATMOSPHERE_OPTIONS } from '@/lib/atmosphere'
 import type { MomentShapeId } from '@/lib/moment/types'
 import { STAGE_CARD_THEMES, type StageCardThemeId } from '@/lib/moment/stage-theme'
+import {
+  atmospherePillLabel,
+  cardThemePillLabel,
+  nextCardThemeId,
+  nextExportAtmosphereId,
+  nextMomentShapeId,
+  shapePillLabel,
+} from '@/lib/moment-composer-cycles'
 import { LandingComposerPopover } from '@/components/landing/landing-composer-popover'
 import { LandingComposerToast } from '@/components/landing/landing-composer-toast'
 import { landingComposerTier, type LandingComposerTier } from '@/lib/landing-composer-layout'
 import { UI_FONT } from '@/lib/fonts'
 
-type PopoverId = 'vibe' | 'color' | 'effect' | 'format' | 'download' | 'share' | null
+type PopoverId = 'vibe' | 'download' | 'share' | null
 type DownloadPhase = 'idle' | 'loading' | 'done'
 
-const EFFECT_ROW_ICONS: Record<AtmosphereId, typeof CircleSlash> = {
-  still: CircleSlash,
-  breath: Sunrise,
-  drift: Waves,
-  pulse: AudioLines,
-  weight: Droplets,
+export type MomentCalmToolbarHandle = {
+  openVibePopover: () => void
 }
 
 function useLandingTier(): LandingComposerTier {
@@ -122,7 +114,7 @@ export type MomentCalmToolbarProps = {
   onCardShareStory?: () => void
 }
 
-export function MomentCalmToolbar({
+export const MomentCalmToolbar = forwardRef<MomentCalmToolbarHandle, MomentCalmToolbarProps>(function MomentCalmToolbar({
   cardThemeId,
   onThemeChange,
   exportAtmosphereId,
@@ -155,15 +147,34 @@ export function MomentCalmToolbar({
   onCardShareImage,
   onCardShareSend,
   onCardShareStory,
-}: MomentCalmToolbarProps) {
+}, ref) {
   const tier = useLandingTier()
   const [popover, setPopover] = useState<PopoverId>(null)
   const [downloadPhase, setDownloadPhase] = useState<DownloadPhase>('idle')
   const [toast, setToast] = useState<string | null>(null)
+  const [valuePill, setValuePill] = useState<string | null>(null)
+  const valuePillTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const downloadLock = useRef(false)
   const toolbarRef = useRef<HTMLDivElement>(null)
-  const colorMode = exportAtmosphereId === 'still'
-  const effectMode = !colorMode
+  const effectMode = exportAtmosphereId !== 'still'
+  const themeSwatch = STAGE_CARD_THEMES.find((t) => t.id === cardThemeId)?.swatch ?? '#E8C547'
+
+  useImperativeHandle(ref, () => ({
+    openVibePopover: () => setPopover('vibe'),
+  }), [])
+
+  const flashValuePill = useCallback((label: string) => {
+    setValuePill(label)
+    if (valuePillTimer.current) clearTimeout(valuePillTimer.current)
+    valuePillTimer.current = setTimeout(() => {
+      setValuePill(null)
+      valuePillTimer.current = null
+    }, 1200)
+  }, [])
+
+  useEffect(() => () => {
+    if (valuePillTimer.current) clearTimeout(valuePillTimer.current)
+  }, [])
 
   const closePopover = useCallback(() => setPopover(null), [])
   const togglePopover = useCallback((id: PopoverId) => {
@@ -224,6 +235,24 @@ export function MomentCalmToolbar({
   const formatIcon =
     shapeId === 'vertical' ? <ComposerFormatStoryIcon /> : <ComposerFormatSquareIcon />
 
+  const cycleColor = useCallback(() => {
+    const next = nextCardThemeId(cardThemeId)
+    onThemeChange(next)
+    flashValuePill(cardThemePillLabel(next))
+  }, [cardThemeId, flashValuePill, onThemeChange])
+
+  const cycleEffect = useCallback(() => {
+    const next = nextExportAtmosphereId(exportAtmosphereId)
+    onExportAtmosphereChange(next)
+    flashValuePill(atmospherePillLabel(next))
+  }, [exportAtmosphereId, flashValuePill, onExportAtmosphereChange])
+
+  const cycleFormat = useCallback(() => {
+    const next = nextMomentShapeId(shapeId)
+    onShapeChange(next)
+    flashValuePill(shapePillLabel(next))
+  }, [flashValuePill, onShapeChange, shapeId])
+
   const downloadLoading = downloadPhase === 'loading' || exportBusy
   const downloadIcon =
     downloadLoading ? (
@@ -239,6 +268,11 @@ export function MomentCalmToolbar({
 
   return (
     <div className="margo-landing-toolbar-host" ref={toolbarRef}>
+      {valuePill ? (
+        <div className="margo-toolbar-value-pill" style={{ fontFamily: UI_FONT }} role="status" aria-live="polite">
+          {valuePill}
+        </div>
+      ) : null}
       <div className="margo-landing-toolbar">
         <ToolButton
           label="Vibe"
@@ -248,21 +282,13 @@ export function MomentCalmToolbar({
         >
           <ComposerVibeIcon />
         </ToolButton>
-        <ToolButton
-          label="Color"
-          pressed={popover === 'color' || colorMode}
-          onClick={() => togglePopover('color')}
-        >
-          <ComposerColorIcon />
+        <ToolButton label="Color" onClick={cycleColor}>
+          <ComposerColorIcon swatch={themeSwatch} />
         </ToolButton>
-        <ToolButton
-          label="Effect"
-          pressed={popover === 'effect' || effectMode}
-          onClick={() => togglePopover('effect')}
-        >
-          <ComposerEffectIcon active={effectMode} />
+        <ToolButton label="Effect" pressed={effectMode} onClick={cycleEffect}>
+          <ComposerEffectToolbarIcon effectId={exportAtmosphereId} />
         </ToolButton>
-        <ToolButton label="Format" pressed={popover === 'format'} onClick={() => togglePopover('format')}>
+        <ToolButton label="Format" onClick={cycleFormat}>
           {formatIcon}
         </ToolButton>
         <ToolButton
@@ -344,98 +370,6 @@ export function MomentCalmToolbar({
               )
             })}
           </div>
-        </div>
-      </LandingComposerPopover>
-
-      <LandingComposerPopover open={popover === 'color'} align="left" onClose={closePopover}>
-        <div className="margo-landing-popover-colors margo-landing-popover-colors--labeled" role="listbox" aria-label="Card color">
-          {STAGE_CARD_THEMES.map((opt) => {
-            const on = colorMode && cardThemeId === opt.id
-            return (
-              <button
-                key={opt.id}
-                type="button"
-                role="option"
-                aria-selected={on}
-                aria-label={opt.label}
-                className="margo-landing-popover-colors__pick"
-                onClick={() => {
-                  onThemeChange(opt.id)
-                  onExportAtmosphereChange('still')
-                  closePopover()
-                }}
-              >
-                <span className="margo-landing-popover-colors__dot" style={{ background: opt.swatch }} />
-                <span className="margo-landing-popover-colors__name" style={{ fontFamily: UI_FONT }}>
-                  {opt.label}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-      </LandingComposerPopover>
-
-      <LandingComposerPopover open={popover === 'effect'} align="left" onClose={closePopover}>
-        <div className="margo-landing-popover-list">
-          {ATMOSPHERE_OPTIONS.map((opt) => {
-            const on = exportAtmosphereId === opt.id
-            const Icon = EFFECT_ROW_ICONS[opt.id]
-            return (
-              <button
-                key={opt.id}
-                type="button"
-                className="margo-landing-popover-list__row margo-landing-popover-list__row--icon"
-                style={{ fontFamily: UI_FONT }}
-                aria-pressed={on}
-                onClick={() => {
-                  onExportAtmosphereChange(opt.id)
-                  closePopover()
-                }}
-              >
-                <span className="margo-landing-share-pick__icon" aria-hidden>
-                  <Icon size={16} strokeWidth={1.5} />
-                </span>
-                {opt.label}
-              </button>
-            )
-          })}
-        </div>
-      </LandingComposerPopover>
-
-      <LandingComposerPopover open={popover === 'format'} align="format" onClose={closePopover}>
-        <div className="margo-landing-format-pick">
-          <button
-            type="button"
-            className={`margo-landing-format-pick__opt${shapeId === 'square' ? ' margo-landing-format-pick__opt--on' : ''}`}
-            onClick={() => {
-              onShapeChange('square')
-              closePopover()
-            }}
-          >
-            <span className="margo-landing-format-pick__glyph margo-landing-format-pick__glyph--square" aria-hidden />
-            <span className="margo-landing-format-pick__title" style={{ fontFamily: UI_FONT }}>
-              Square
-            </span>
-            <span className="margo-landing-format-pick__ratio" style={{ fontFamily: UI_FONT }}>
-              1:1
-            </span>
-          </button>
-          <button
-            type="button"
-            className={`margo-landing-format-pick__opt${shapeId === 'vertical' ? ' margo-landing-format-pick__opt--on' : ''}`}
-            onClick={() => {
-              onShapeChange('vertical')
-              closePopover()
-            }}
-          >
-            <span className="margo-landing-format-pick__glyph margo-landing-format-pick__glyph--story" aria-hidden />
-            <span className="margo-landing-format-pick__title" style={{ fontFamily: UI_FONT }}>
-              Story
-            </span>
-            <span className="margo-landing-format-pick__ratio" style={{ fontFamily: UI_FONT }}>
-              9:16
-            </span>
-          </button>
         </div>
       </LandingComposerPopover>
 
@@ -614,4 +548,4 @@ export function MomentCalmToolbar({
       {toast ? <LandingComposerToast message={toast} tier={tier} /> : null}
     </div>
   )
-}
+})

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import type { MomentCalmToolbarHandle } from '@/components/moment/moment-calm-toolbar'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { MomentExportCustomizeBar } from '@/components/moment-export-customize-bar'
 import { StageSendBar } from '@/components/stage/stage-send-bar'
@@ -130,6 +131,7 @@ export function MomentStudioScreen({
     : mobileBottomPad
 
   const lyricRef = useRef<HTMLTextAreaElement>(null)
+  const calmToolbarRef = useRef<MomentCalmToolbarHandle>(null)
   const [lyricFocused, setLyricFocused] = useState(false)
 
   useEffect(() => {
@@ -150,6 +152,8 @@ export function MomentStudioScreen({
       atmosphereId={exportAtmosphereId}
       shapeId={shapeId}
       hideVibeChrome
+      previewVibeChip={calm}
+      onVibeChipClick={calm ? () => calmToolbarRef.current?.openVibePopover() : undefined}
       effectOwnsFill={effectOwnsFill}
       artworkBackdrop={false}
       sourceCaption={sourceCaption}
@@ -189,6 +193,7 @@ export function MomentStudioScreen({
 
   const calmToolbarNode = calmToolbar ? (
     <MomentCalmToolbar
+      ref={calmToolbarRef}
       cardThemeId={cardThemeId}
       onThemeChange={onThemeChange}
       exportAtmosphereId={exportAtmosphereId}

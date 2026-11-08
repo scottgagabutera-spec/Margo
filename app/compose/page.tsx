@@ -441,6 +441,9 @@ function ComposeInner() {
 
   const songAtmosphere = useSongAtmosphere(linkedSongId)
   const composeMargoCatalog = !!(linkedSongId && (selectedSong?.source === 'margo' || selectedSong?.margoSongId))
+  const composeVibeForDefaults =
+    (selectedVibe ? vibeKeyToLabel(selectedVibe) : null) ??
+    (suggestedVibe ? vibeKeyToLabel(suggestedVibe) : null)
   const { applyCatalogSelectionExportDefaults, resetExportDefaultTracking } = useMomentSongExportDefaults({
     linkedSongId,
     songAtmosphere,
@@ -448,6 +451,7 @@ function ComposeInner() {
     setExportAtmosphereId,
     setCardThemeId: setThemeId,
     setShapeId: setExportShapeId,
+    vibeLabel: composeVibeForDefaults,
   })
 
   useEffect(() => {
