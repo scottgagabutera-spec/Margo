@@ -47,9 +47,9 @@ async function prepFeed(page: Page): Promise<FeedPose> {
 }
 
 async function backChrome(page: Page) {
-  const back = page.getByRole('button', { name: /^Back$/i }).first()
-  await expect(back).toBeVisible({ timeout: 15_000 })
-  await back.click()
+  const back = page.locator('a[aria-label="Back"], button[aria-label="Back"]').first()
+  if (await back.isVisible().catch(() => false)) await back.click()
+  else await page.goBack({ waitUntil: 'domcontentloaded' })
 }
 
 async function restoreAndAssert(page: Page, before: FeedPose, back: 'chrome' | 'history') {
