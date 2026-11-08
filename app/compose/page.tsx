@@ -18,14 +18,14 @@ import {
   toastMomentPrivate,
   toastMomentSent,
 } from '@/lib/moment-export/moment-export-toasts'
-import { saveMargoMomentImage } from '@/lib/moment-export/save-moment-image'
+import { saveMargoMomentImage, shareMargoMomentImage } from '@/lib/moment-export/save-moment-image'
 import { ComposeSendTo } from '@/components/compose-send-to'
 import { MomentStudioScreen } from '@/components/moment/moment-studio-screen'
 import { useMomentStudioExport } from '@/hooks/useMomentStudioExport'
 import { playOrToggleSnippet } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
 import { useSongAtmosphere } from '@/hooks/useSongAtmosphere'
-import { livingAtmosphereOrNull } from '@/lib/atmosphere'
+import { isLivingAtmosphere, livingAtmosphereOrNull } from '@/lib/atmosphere'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { ComposeSearchDropdown } from '@/components/compose-search-dropdown'
 import { ComposeStickySongRow } from '@/components/compose-sticky-song-row'
@@ -855,7 +855,7 @@ function ComposeInner() {
     const drafts = [...committedLines]
     const draft = buildCurrentDraft()
     if (draft.lyric && draft.songName && draft.artistName) drafts.push(draft)
-    return resolveMargoMomentFromComposeDrafts(drafts, {
+    const base = resolveMargoMomentFromComposeDrafts(drafts, {
       postId: postedId,
       vibeLabel: selectedVibe ? vibeKeyToLabel(selectedVibe) : null,
       emotion: selectedVibe ? selectedVibe.toLowerCase() : null,
@@ -863,7 +863,9 @@ function ComposeInner() {
       shapeId: exportShapeId,
       exportAtmosphereId,
       status: completionMode === 'private' ? 'private' : 'active',
+      exportMaxVideoDurationSec: 12,
     })
+    return base
   }, [committedLines, buildCurrentDraft, postedId, selectedVibe, themeId, exportShapeId, exportAtmosphereId, completionMode])
 
   const clearDraftFields = useCallback(() => {
@@ -1316,6 +1318,8 @@ function ComposeInner() {
   }, [canPlaySnippet, linkedAudioUrl, linkedSongId, songName, artistName, selectedSong?.artwork, lyric, snippetStart, snippetEnd, songAtmosphere])
   const isMargoCatalog = !!(linkedSongId && (selectedSong?.source === 'margo' || selectedSong?.margoSongId))
   const studioExport = useMomentStudioExport(exportMoment, canPlaySnippet, isMargoCatalog)
+  const composeThirdPartyStill = !isMargoCatalog && exportAtmosphereId === 'still'
+  const composeVideoSilent = !canPlaySnippet && isLivingAtmosphere(exportAtmosphereId)
 
   const handleSaveMoment = useCallback(async () => {
     if (!exportMoment) return
@@ -1554,6 +1558,10 @@ function ComposeInner() {
           {/* ── MOMENT studio ── */}
           <div style={{ display: phase === 'moment' || phase === 'action' ? 'block' : 'none' }}>
             <MomentStudioScreen
+              layout="calm"
+              composerMode="compose"
+              onBack={handleChangeSong}
+              vibeUserPicked={vibeUserPicked}
               songRow={
                 songName ? (
                   <ComposeStickySongRow
@@ -1757,16 +1765,33 @@ function ComposeInner() {
               buffering={studioBuffering}
               onPlay={handleStudioPlay}
               listenUrl={listen && !listen.canPlayInline ? listen.externalUrl : null}
-              exportItems={studioExport.exportItems}
-              shareItems={momentShareItems}
-              onSave={() => { void handleSaveMoment() }}
+              exportItems={[]}
+              shareItems={[]}
               saving={studioExport.saving || saveBusy}
               shareBusy={studioExport.shareBusy}
               videoProgress={studioExport.videoProgress}
               signedIn={signedIn}
               onPost={() => { void handlePostToFeed() }}
               posting={posting}
-              actionsBlocked={buttonsBlocked}
+              calmToolbar={{
+                onDownloadImage: async () => { await studioExport.onSaveImage() },
+                onDownloadVideo: studioExport.videoEnabled
+                  ? async () => { await studioExport.onSaveVideo() }
+                  : undefined,
+                downloadUsePopover: !composeThirdPartyStill,
+                videoExportEnabled: studioExport.videoEnabled,
+                exportBusy: studioExport.saving || saveBusy || studioExport.shareBusy,
+                videoProgress: studioExport.videoProgress,
+                videoSilentLabel: composeVideoSilent,
+                onShareNative: async () => {
+                  if (!exportMoment) return 'failed' as const
+                  const shared = await shareMargoMomentImage(exportMoment)
+                  if (shared === 'shared') return 'shared' as const
+                  if (shared === 'failed') return 'failed' as const
+                  return 'download' as const
+                },
+                onCopyLink: () => {},
+              }}
             />
             {studioExport.videoReadySheet}
             {postError && (
