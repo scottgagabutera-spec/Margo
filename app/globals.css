@@ -979,8 +979,8 @@ html[data-margo-stage] .margo-footer {
 
 .margo-moment-studio__lyric-box--calm {
   margin: 0;
-  padding: 12px 14px;
-  border-radius: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
   border: 1px solid var(--border-hi);
   background: var(--surface);
   box-sizing: border-box;
@@ -1001,7 +1001,7 @@ html[data-margo-stage] .margo-footer {
   color: var(--text);
   font-family: var(--font-lora), serif;
   font-style: italic;
-  font-size: 18px;
+  font-size: 15px;
   line-height: 1.4;
   overflow: hidden;
 }
@@ -1036,7 +1036,7 @@ html[data-margo-stage] .margo-footer {
   position: static;
   margin: 6px 0 0;
   text-align: right;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
 }
 
@@ -1044,13 +1044,14 @@ html[data-margo-stage] .margo-footer {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px;
-  border-radius: 14px;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 12px;
   border: 1px solid var(--border-hi);
   background: var(--surface);
   box-sizing: border-box;
   min-height: 0;
+  overflow: hidden;
 }
 
 .margo-stage-song-chip--calm .margo-stage-song-chip__title {
@@ -1078,28 +1079,36 @@ html[data-margo-stage] .margo-footer {
   line-height: 1.3;
 }
 
-.margo-stage-song-chip--calm img,
-.margo-stage-song-chip--calm .margo-stage-song-chip__art-placeholder {
-  width: 44px !important;
-  height: 44px !important;
-  border-radius: 8px !important;
+.margo-stage-song-chip--calm .margo-stage-song-chip__song {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.margo-stage-song-chip--calm .margo-stage-song-chip__title {
-  font-size: 14px;
-}
-
-.margo-stage-song-chip--calm .margo-stage-song-chip__subtitle {
+.margo-stage-song-chip--calm .margo-stage-song-chip__artist-line {
+  display: block;
+  margin-top: 1px;
   font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .margo-stage-song-chip__play {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   margin: 0;
   padding: 0;
   border: none;
-  border-radius: 10px;
+  border-radius: 9px;
   background: var(--gold);
   color: var(--bg);
   display: inline-flex;
@@ -1111,8 +1120,8 @@ html[data-margo-stage] .margo-footer {
 }
 
 .margo-stage-song-chip__clear {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   margin: 0;
   padding: 0;
   border: none;
@@ -1126,9 +1135,9 @@ html[data-margo-stage] .margo-footer {
 }
 
 .margo-stage-song-chip--calm .margo-stage-song-chip__clear-disc {
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
   border: 1px solid var(--gold-border);
   background: transparent;
   display: inline-flex;
@@ -1481,6 +1490,10 @@ html[data-margo-stage] .margo-footer {
   margin: 0 auto;
   padding: 40px 0 48px;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: calc(100dvh - var(--nav-height, 48px) - var(--margo-page-bottom, 80px) - 48px);
 }
 
 @media (min-width: 640px) {
@@ -1490,25 +1503,49 @@ html[data-margo-stage] .margo-footer {
   }
 }
 
+.margo-landing-composer-back--sm {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+}
+
 .margo-landing-line-picker__title {
-  margin: 14px 0 6px;
+  margin: 10px 0 4px;
   font-family: var(--font-lora), serif;
   font-style: italic;
-  font-size: 26px;
+  font-size: 18px;
   font-weight: 400;
   line-height: 1.15;
   color: var(--text);
 }
 
 .margo-landing-line-picker__hint {
-  margin: 0 0 14px;
-  font-size: 12px;
+  margin: 0 0 12px;
+  font-size: 11px;
   color: var(--text-muted);
+  flex-shrink: 0;
 }
 
-.margo-landing-line-picker__list {
-  overflow-y: visible;
-  max-height: none;
+.margo-landing-line-picker__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.margo-landing-line-picker__card {
+  border: 1px solid var(--border-hi);
+  border-radius: 14px;
+  background: var(--surface-elevated);
+  overflow: hidden;
+  max-height: min(56dvh, 420px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.margo-landing-line-row {
+  touch-action: pan-y;
 }
 
 html[data-margo-landing-song-flow] .margo-landing-hero-anchor {

@@ -1,11 +1,18 @@
 import type { AtmosphereId } from '@/lib/atmosphere'
 import type { MargoMoment, MomentShapeId } from '@/lib/moment/types'
 import { margoMomentToPostLines } from '@/lib/moment/resolve'
+import { downscaleStageExportCanvas } from '@/lib/moment-export/export-canvas-quality'
 import {
   normalizeLine,
   renderMomentToCanvas,
+  SHAPES,
   type NormalizedLine,
 } from '@/lib/moment-export/render-moment'
+
+function exportPixelSize(shapeId: MomentShapeId): { w: number; h: number } {
+  const shape = SHAPES.find((s) => s.id === shapeId) ?? SHAPES[0]
+  return { w: shape.w, h: shape.h }
+}
 
 export function downloadCanvas(canvas: HTMLCanvasElement, filename: string): Promise<void> {
   return new Promise((resolve) => {
@@ -81,6 +88,8 @@ export async function saveMargoMomentImage(
     lines: normalized,
     ...renderOpts,
   })
+  const { w, h } = exportPixelSize(moment.shapeId)
+  downscaleStageExportCanvas(canvas, w, h)
 
   const primary = normalized[0]
   const base = normalized.length > 1 ? 'Moment' : slugify(primary.songTitle || '', 'Lyric')
@@ -104,6 +113,8 @@ export async function renderMargoMomentPngFile(
     lines: normalized,
     ...renderOpts,
   })
+  const { w, h } = exportPixelSize(moment.shapeId)
+  downscaleStageExportCanvas(canvas, w, h)
 
   const blob = await new Promise<Blob | null>((resolve) => {
     canvas.toBlob((b) => resolve(b), 'image/png')

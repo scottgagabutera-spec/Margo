@@ -88,6 +88,7 @@ function ComposeLineRow({
   selected,
   selectionDisabled,
   stage = false,
+  landing = false,
   compact = false,
   isLast = false,
 }: {
@@ -104,6 +105,7 @@ function ComposeLineRow({
   selected: boolean
   selectionDisabled: boolean
   stage?: boolean
+  landing?: boolean
   compact?: boolean
   isLast?: boolean
 }) {
@@ -142,9 +144,10 @@ function ComposeLineRow({
     onPick(line)
   }
 
-  const playSize = compact || stage ? 28 : 44
+  const playSize = landing ? 26 : compact || stage ? 28 : 44
   const playHit = compact ? 44 : playSize
-  const playIconSize = compact ? 12 : 14
+  const playIconSize = compact ? 12 : landing ? 11 : 14
+  const rowStage = stage || landing
 
   return (
     <button
@@ -189,13 +192,13 @@ function ComposeLineRow({
       }}
       aria-pressed={selectionMode ? selected : undefined}
       aria-disabled={selectionMode && selectionDisabled && !selected ? true : undefined}
-      className={compact ? 'margo-lb-line-row' : undefined}
+      className={compact ? 'margo-lb-line-row' : landing ? 'margo-landing-line-row' : undefined}
       style={{
         width: '100%',
         display: 'flex',
         alignItems: 'flex-start',
-        gap: compact ? '8px' : stage ? '12px' : '14px',
-        padding: compact ? '6px 4px' : stage ? '12px 14px' : '14px 16px',
+        gap: compact ? '8px' : landing ? '10px' : stage ? '12px' : '14px',
+        padding: compact ? '6px 4px' : landing ? '9px 12px' : stage ? '12px 14px' : '14px 16px',
         minHeight: compact ? '44px' : 'var(--margo-touch-min)',
         background: selected
           ? SELECTED_FILL
@@ -251,18 +254,29 @@ function ComposeLineRow({
           style={{
             width: `${playHit}px`,
             height: `${playHit}px`,
-            borderRadius: '50%',
+            borderRadius: landing ? '8px' : '50%',
             flexShrink: 0,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: compact ? 'transparent' : (playing ? 'var(--gold-glow)' : 'var(--gold-faint)'),
-            border: compact ? 'none' : '1px solid var(--gold-border)',
+            background: compact
+              ? 'transparent'
+              : landing
+                ? 'var(--gold)'
+                : playing
+                  ? 'var(--gold-glow)'
+                  : 'var(--gold-faint)',
+            border: compact ? 'none' : landing ? 'none' : '1px solid var(--gold-border)',
             boxSizing: 'border-box',
-            marginTop: stage ? '2px' : 0,
+            marginTop: rowStage ? '2px' : 0,
           }}
         >
-          <PlayPauseIcon playing={playing} buffering={buffering} size={playIconSize} color="var(--gold)" />
+          <PlayPauseIcon
+            playing={playing}
+            buffering={buffering}
+            size={playIconSize}
+            color={landing ? 'var(--bg)' : 'var(--gold)'}
+          />
         </span>
       ) : (
         <span style={{ width: `${playSize}px`, flexShrink: 0 }} />
@@ -288,24 +302,24 @@ function ComposeLineRow({
         style={{
           fontFamily: compact ? UI_FONT : lyricFont,
           fontStyle: compact ? 'normal' : 'italic',
-          fontSize: compact ? '14px' : '0.95rem',
+          fontSize: compact ? '14px' : landing ? '14px' : '0.95rem',
           color: 'var(--text)',
-          lineHeight: compact ? 1.3 : 1.45,
-          paddingTop: compact ? 0 : stage ? '4px' : '2px',
+          lineHeight: compact ? 1.3 : landing ? 1.35 : 1.45,
+          paddingTop: compact ? 0 : rowStage ? '4px' : '2px',
           flex: 1,
           minWidth: 0,
         }}
       >
         {line.text}
       </span>
-      {stage ? (
+      {rowStage ? (
         <span
           style={{
             fontFamily: UI_FONT,
-            fontSize: '0.65rem',
+            fontSize: landing ? '11px' : '0.65rem',
             color: 'var(--text-muted)',
             flexShrink: 0,
-            paddingTop: '6px',
+            paddingTop: landing ? '4px' : '6px',
           }}
         >
           {formatTime(line.startSec)}
@@ -539,7 +553,7 @@ export function ComposeLinePicker({
     >
       {!hideHeader && isLanding ? (
         <>
-          <LandingComposerBack onBack={onBack} />
+          <LandingComposerBack onBack={onBack} size="sm" />
           <h1 className="margo-landing-line-picker__title">
             {selectionMode ? 'Combine lines' : 'Choose a line'}
           </h1>
@@ -673,7 +687,45 @@ export function ComposeLinePicker({
         </div>
       )}
 
-      {!loading && lines.length > 0 && (
+      {!loading && lines.length > 0 && isLanding ? (
+        <div className="margo-landing-line-picker__body">
+          {limitHint ? (
+            <div
+              role="status"
+              aria-live="assertive"
+              className="margo-landing-line-picker__limit"
+              style={{ fontFamily: UI_FONT }}
+            >
+              {limitHint}
+            </div>
+          ) : null}
+          <div className="margo-landing-line-picker__card">
+            <div ref={listRef}>
+              {lines.map((line, index) => (
+                <ComposeLineRow
+                  key={line.lineIndex}
+                  line={line}
+                  songTitle={songTitle}
+                  artistName={artistName}
+                  audioUrl={audioUrl}
+                  songId={songId}
+                  artwork={artwork}
+                  onPick={onPick}
+                  onLongPressStart={beginSelection}
+                  onSelectionTap={toggleSelection}
+                  selectionMode={selectionMode}
+                  selected={selectedIndexes.includes(line.lineIndex)}
+                  selectionDisabled={!canToggleLine(selectedIndexes, line.lineIndex)}
+                  landing
+                  isLast={index === lines.length - 1}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {!loading && lines.length > 0 && !isLanding ? (
         <>
         {limitHint ? (
           <div
@@ -763,13 +815,9 @@ export function ComposeLinePicker({
         ) : null}
         <div
           ref={listRef}
-          className={
-            [isPanel ? 'margo-lb-line-list' : null, isLanding ? 'margo-landing-line-picker__list' : null]
-              .filter(Boolean)
-              .join(' ') || undefined
-          }
+          className={isPanel ? 'margo-lb-line-list' : undefined}
           style={{
-            maxHeight: fillAvailable || isLanding ? 'none' : isPanel ? 'none' : 'min(52dvh, calc(var(--margo-vv-height, 100dvh) * 0.48), 420px)',
+            maxHeight: fillAvailable ? 'none' : isPanel ? 'none' : 'min(52dvh, calc(var(--margo-vv-height, 100dvh) * 0.48), 420px)',
             height: fillAvailable ? '100%' : undefined,
             flex: fillAvailable ? '1 1 auto' : undefined,
             minHeight: fillAvailable ? 0 : undefined,
@@ -798,14 +846,14 @@ export function ComposeLinePicker({
                 selectionMode={selectionMode}
                 selected={selectedIndexes.includes(line.lineIndex)}
                 selectionDisabled={!canToggleLine(selectedIndexes, line.lineIndex)}
-                stage={stageLike}
+                stage={isStage}
                 compact={isPanel}
                 isLast={index === lines.length - 1}
               />
           ))}
         </div>
         </>
-      )}
+      ) : null}
     </div>
   )
 }

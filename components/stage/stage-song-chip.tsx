@@ -51,7 +51,7 @@ export function StageSongChip({
           alt=""
           style={
             calm
-              ? { width: '44px', height: '44px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }
+              ? { width: '36px', height: '36px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }
               : { width: '32px', height: '32px', borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }
           }
         />
@@ -60,29 +60,40 @@ export function StageSongChip({
           className={calm ? 'margo-stage-song-chip__art-placeholder' : undefined}
           style={
             calm
-              ? { width: '44px', height: '44px', borderRadius: '8px', flexShrink: 0, background: 'var(--surface-2)' }
+              ? { width: '36px', height: '36px', borderRadius: '8px', flexShrink: 0, background: 'var(--surface-2)' }
               : { width: '32px', height: '32px', borderRadius: '6px', flexShrink: 0, background: 'var(--surface-2)' }
           }
         />
       )}
-      <div className="margo-stage-song-chip__copy" style={{ minWidth: 0, flex: 1 }}>
-        <span
-          className="margo-stage-song-chip__title"
-          style={calm ? undefined : {
-            fontFamily: UI_FONT,
-            fontSize: '13px',
-            color: 'var(--text)',
-            fontWeight: 600,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            minWidth: 0,
-          }}
-        >
-          {title}
-          <span className="margo-stage-song-chip__artist"> · {artist}</span>
-        </span>
-        {calm && subtitle ? (
+      <div className="margo-stage-song-chip__copy" style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
+        {calm ? (
+          <>
+            <span className="margo-stage-song-chip__song" style={{ fontFamily: UI_FONT }}>
+              {title}
+            </span>
+            <span className="margo-stage-song-chip__artist-line" style={{ fontFamily: UI_FONT }}>
+              {artist}
+            </span>
+          </>
+        ) : (
+          <span
+            className="margo-stage-song-chip__title"
+            style={{
+              fontFamily: UI_FONT,
+              fontSize: '13px',
+              color: 'var(--text)',
+              fontWeight: 600,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              minWidth: 0,
+            }}
+          >
+            {title}
+            <span className="margo-stage-song-chip__artist"> · {artist}</span>
+          </span>
+        )}
+        {!calm && subtitle ? (
           <span className="margo-stage-song-chip__subtitle" style={{ fontFamily: UI_FONT }}>
             {subtitle}
           </span>
@@ -98,7 +109,7 @@ export function StageSongChip({
             onPlay()
           }}
         >
-          <PlayPauseIcon playing={playing} buffering={buffering} size={14} color="var(--bg)" />
+          <PlayPauseIcon playing={playing} buffering={buffering} size={12} color="var(--bg)" />
         </button>
       ) : null}
       <button
@@ -141,7 +152,7 @@ export function StageSongChip({
             flexShrink: 0,
           }}
         >
-          <CloseIcon size={calm ? 12 : 14} color="var(--gold)" />
+          <CloseIcon size={calm ? 11 : 14} color="var(--gold)" />
         </span>
       </button>
     </div>

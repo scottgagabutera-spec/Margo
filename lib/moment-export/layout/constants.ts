@@ -84,10 +84,11 @@ export const STAGE_CARD_LAYOUT_REF = {
  * Bottom: title, sound sticker, nav. Top: search / close. Right: likes.
  * Credits must sit inside the remaining safe rectangle, not on the frame edge.
  */
+/** 1080×1920 Shorts: ~220 top, ~380 bottom, ~120 side (YouTube / TikTok UI bands). */
 export const VERTICAL_SOCIAL_SAFE = {
-  topFraction: 0.13,
-  bottomFraction: 0.20,
-  sideFraction: 0.07,
+  topFraction: 220 / 1920,
+  bottomFraction: 380 / 1920,
+  sideFraction: 120 / 1080,
 } as const
 
 /** Native 9:16 Shorts tokens at the 400px reference width. */

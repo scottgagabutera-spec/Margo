@@ -51,6 +51,27 @@ export function bindStageVideoRenderCanvas(
   return bindStageVideoExportCanvas(canvas, layoutWidth, layoutHeight)
 }
 
+/** Downscale supersampled PNG export (e.g. 3240²) to logical output (1080² / 1080×1920). */
+export function downscaleStageExportCanvas(
+  canvas: HTMLCanvasElement,
+  targetWidth: number,
+  targetHeight: number,
+): void {
+  if (canvas.width === targetWidth && canvas.height === targetHeight) return
+  const hiRes = document.createElement('canvas')
+  hiRes.width = canvas.width
+  hiRes.height = canvas.height
+  const snap = hiRes.getContext('2d')
+  if (!snap) return
+  snap.drawImage(canvas, 0, 0)
+  canvas.width = targetWidth
+  canvas.height = targetHeight
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+  applyExportCanvasQuality(ctx)
+  ctx.drawImage(hiRes, 0, 0, targetWidth, targetHeight)
+}
+
 /** Downscale a supersampled render frame onto the encode canvas (1080×1920). */
 export function downscaleVideoFrameToEncodeCanvas(
   renderCanvas: HTMLCanvasElement,

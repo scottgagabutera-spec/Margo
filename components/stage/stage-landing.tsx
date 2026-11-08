@@ -19,7 +19,6 @@ import {
   defaultCalmEffectForSong,
   externalSourceLabel,
   LANDING_DRAFT_STORAGE_KEY,
-  margoChipSubtitle,
   type CalmEffectId,
 } from '@/lib/landing-calm-composer'
 import MargoLogo from '@/components/MargoLogo'
@@ -757,11 +756,7 @@ export function StageLanding() {
                         title={songName}
                         artist={artistName}
                         artwork={selectedSong.artwork}
-                        subtitle={
-                          isMargoCatalog
-                            ? margoChipSubtitle(snippetStart)
-                            : (externalSourceLabel(selectedSong.source) ?? undefined)
-                        }
+                        subtitle={null}
                         onPlay={canPlay ? handlePlay : undefined}
                         playing={playing}
                         buffering={buffering}
