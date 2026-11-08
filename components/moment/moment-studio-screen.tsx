@@ -158,61 +158,81 @@ export function MomentStudioScreen({
         boxSizing: 'border-box',
       }}
     >
-      {calm && onBack ? (
-        <div className="margo-moment-studio__calm-back">
-          <LandingComposerBack onBack={onBack} />
+      {calm ? (
+        <div className="margo-landing-composer__left">
+          {onBack ? <LandingComposerBack onBack={onBack} /> : null}
+          <div className="margo-moment-studio__inputs">
+            {songRow}
+            {beforeLyric}
+            <div
+              className={`margo-moment-studio__lyric-box margo-moment-studio__lyric-box--calm${lyricFocused ? ' margo-moment-studio__lyric-box--focus' : ''}${!lyric.trim() ? ' margo-moment-studio__lyric-box--empty' : ''}`}
+            >
+              <textarea
+                ref={lyricRef}
+                value={lyric}
+                onChange={(e) => onLyricChange(e.target.value.slice(0, lyricMaxLength))}
+                readOnly={lyricReadOnly}
+                maxLength={lyricMaxLength}
+                rows={1}
+                placeholder="Your line"
+                aria-label="Your line"
+                onFocus={() => setLyricFocused(true)}
+                onBlur={() => setLyricFocused(false)}
+              />
+            </div>
+            <p className="margo-moment-studio__lyric-count margo-moment-studio__lyric-count--calm" aria-live="polite">
+              {lyric.length} / {lyricMaxLength}
+            </p>
+          </div>
+          {calmToolbar ? (
+            <div className="margo-moment-studio__calm-toolbar">
+              <MomentCalmToolbar
+                cardThemeId={cardThemeId}
+                onThemeChange={onThemeChange}
+                exportAtmosphereId={exportAtmosphereId}
+                onExportAtmosphereChange={onExportAtmosphereChange}
+                shapeId={shapeId}
+                onShapeChange={onShapeChange}
+                hasLyric={hasLyric}
+                signedIn={signedIn}
+                onPost={onPost}
+                posting={posting}
+                {...calmToolbar}
+              />
+            </div>
+          ) : null}
         </div>
-      ) : null}
-
-      <div className="margo-moment-studio__inputs">
-        {songRow}
-        {beforeLyric}
-        <div
-          className={
-            calm
-              ? `margo-moment-studio__lyric-box margo-moment-studio__lyric-box--calm${lyricFocused ? ' margo-moment-studio__lyric-box--focus' : ''}${!lyric.trim() ? ' margo-moment-studio__lyric-box--empty' : ''}`
-              : 'margo-moment-studio__lyric-box'
-          }
-        >
-          <textarea
-            ref={lyricRef}
-            value={lyric}
-            onChange={(e) => onLyricChange(e.target.value.slice(0, lyricMaxLength))}
-            readOnly={lyricReadOnly}
-            maxLength={lyricMaxLength}
-            rows={calm ? 1 : 3}
-            placeholder={calm ? 'Your line' : undefined}
-            aria-label="Your line"
-            onFocus={() => setLyricFocused(true)}
-            onBlur={() => setLyricFocused(false)}
-            style={
-              calm
-                ? undefined
-                : {
-                    width: '100%',
-                    minHeight: '72px',
-                    padding: 0,
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text)',
-                    resize: 'none',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                  }
-            }
-          />
-          {!calm ? (
+      ) : (
+        <div className="margo-moment-studio__inputs">
+          {songRow}
+          {beforeLyric}
+          <div className="margo-moment-studio__lyric-box">
+            <textarea
+              ref={lyricRef}
+              value={lyric}
+              onChange={(e) => onLyricChange(e.target.value.slice(0, lyricMaxLength))}
+              readOnly={lyricReadOnly}
+              maxLength={lyricMaxLength}
+              rows={3}
+              aria-label="Your line"
+              style={{
+                width: '100%',
+                minHeight: '72px',
+                padding: 0,
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text)',
+                resize: 'none',
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
             <span className="margo-moment-studio__lyric-count">
               {lyric.length}/{lyricMaxLength}
             </span>
-          ) : null}
+          </div>
         </div>
-        {calm ? (
-          <p className="margo-moment-studio__lyric-count margo-moment-studio__lyric-count--calm" aria-live="polite">
-            {lyric.length} / {lyricMaxLength}
-          </p>
-        ) : null}
-      </div>
+      )}
 
       <div className="margo-moment-studio__preview-col">
         {calm ? (
@@ -264,24 +284,6 @@ export function MomentStudioScreen({
           />
         </div>
       )}
-
-      {calm && calmToolbar ? (
-        <div className="margo-moment-studio__calm-toolbar">
-          <MomentCalmToolbar
-            cardThemeId={cardThemeId}
-            onThemeChange={onThemeChange}
-            exportAtmosphereId={exportAtmosphereId}
-            onExportAtmosphereChange={onExportAtmosphereChange}
-            shapeId={shapeId}
-            onShapeChange={onShapeChange}
-            hasLyric={hasLyric}
-            signedIn={signedIn}
-            onPost={onPost}
-            posting={posting}
-            {...calmToolbar}
-          />
-        </div>
-      ) : null}
 
       {!calm ? (
         <div
