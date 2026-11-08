@@ -553,16 +553,16 @@ export function StageLanding() {
   const runLandingDownload = useCallback(async () => {
     const m = momentForExport(shapeId)
     if (!m) throw new Error('missing moment')
-    await saveMargoMomentImage(m)
+    await saveMargoMomentImage(m, { downscaleToShape: true })
   }, [momentForExport, shapeId])
 
   const runLandingShareNative = useCallback(async (): Promise<'shared' | 'download' | 'failed'> => {
     const m = momentForExport(shapeId)
     if (!m) return 'failed'
-    const shared = await shareMargoMomentImage(m)
+    const shared = await shareMargoMomentImage(m, { downscaleToShape: true })
     if (shared === 'shared') return 'shared'
     try {
-      await saveMargoMomentImage(m)
+      await saveMargoMomentImage(m, { downscaleToShape: true })
       return 'download'
     } catch {
       return 'failed'

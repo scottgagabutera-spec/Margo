@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { MomentExportCustomizeBar } from '@/components/moment-export-customize-bar'
 import { StageSendBar } from '@/components/stage/stage-send-bar'
+import { MomentPreviewSlot } from '@/components/moment/moment-preview-slot'
 import { MomentCalmToolbar, type MomentCalmToolbarProps } from '@/components/moment/moment-calm-toolbar'
 import { LandingComposerBack } from '@/components/landing/landing-composer-back'
 import { LandingComposerPreviewFrame } from '@/components/landing/landing-composer-preview-frame'
@@ -110,8 +111,9 @@ export function MomentStudioScreen({
 }: MomentStudioScreenProps) {
   const calm = layout === 'calm'
   const hasLyric = previewLyric.trim().length > 0
-  const showCard =
-    hasLyric && previewSongTitle.trim().length > 0 && (calm || previewArtistName.trim().length > 0)
+  const showCard = calm
+    ? hasLyric && previewSongTitle.trim().length > 0
+    : previewLyric.trim().length > 0 && previewSongTitle.trim().length > 0
   const effectOwnsFill = true
   const bottomPad = calm
     ? 'calc(48px + var(--margo-safe-bottom, 0px) + var(--margo-page-bottom, var(--margo-tabbar-h, 80px)))'
@@ -240,30 +242,20 @@ export function MomentStudioScreen({
             {previewCard}
           </LandingComposerPreviewFrame>
         ) : (
-          <div className="margo-moment-preview-slot-wrap">
-            <div className="margo-moment-preview-slot" aria-label="Moment preview">
+          <MomentPreviewSlot shapeId={shapeId} showDesktopLabel>
+            {showCard ? (
+              previewCard
+            ) : (
               <div
-                className="margo-moment-preview-slot__inner"
-                data-shape={shapeId}
                 style={{
-                  aspectRatio: shapeId === 'vertical' ? '9 / 16' : shapeId === 'wide' ? '16 / 9' : '1 / 1',
+                  width: '100%',
+                  height: '100%',
+                  background: 'var(--surface-2)',
+                  borderRadius: 'inherit',
                 }}
-              >
-                {showCard ? (
-                  previewCard
-                ) : (
-                  <div
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      background: 'var(--surface-2)',
-                      borderRadius: 'inherit',
-                    }}
-                  />
-                )}
-              </div>
-            </div>
-          </div>
+              />
+            )}
+          </MomentPreviewSlot>
         )}
       </div>
 

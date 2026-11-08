@@ -77,7 +77,7 @@ function renderOptionsFromMoment(moment: MargoMoment): {
 
 export async function saveMargoMomentImage(
   moment: MargoMoment,
-  options?: { filename?: string },
+  options?: { filename?: string; downscaleToShape?: boolean },
 ): Promise<void> {
   const normalized = normalizedFromMoment(moment)
   if (normalized.length === 0) return
@@ -88,8 +88,10 @@ export async function saveMargoMomentImage(
     lines: normalized,
     ...renderOpts,
   })
-  const { w, h } = exportPixelSize(moment.shapeId)
-  downscaleStageExportCanvas(canvas, w, h)
+  if (options?.downscaleToShape) {
+    const { w, h } = exportPixelSize(moment.shapeId)
+    downscaleStageExportCanvas(canvas, w, h)
+  }
 
   const primary = normalized[0]
   const base = normalized.length > 1 ? 'Moment' : slugify(primary.songTitle || '', 'Lyric')
@@ -102,6 +104,7 @@ export async function saveMargoMomentImage(
 
 export async function renderMargoMomentPngFile(
   moment: MargoMoment,
+  options?: { downscaleToShape?: boolean },
 ): Promise<File | null> {
   if (typeof document === 'undefined') return null
   const normalized = normalizedFromMoment(moment)
@@ -113,8 +116,10 @@ export async function renderMargoMomentPngFile(
     lines: normalized,
     ...renderOpts,
   })
-  const { w, h } = exportPixelSize(moment.shapeId)
-  downscaleStageExportCanvas(canvas, w, h)
+  if (options?.downscaleToShape) {
+    const { w, h } = exportPixelSize(moment.shapeId)
+    downscaleStageExportCanvas(canvas, w, h)
+  }
 
   const blob = await new Promise<Blob | null>((resolve) => {
     canvas.toBlob((b) => resolve(b), 'image/png')
@@ -132,10 +137,13 @@ export async function renderMargoMomentPngFile(
 export type ShareMomentImageResult = 'shared' | 'failed'
 
 /** Share PNG only — separate from URL share (do not combine url + files). */
-export async function shareMargoMomentImage(moment: MargoMoment): Promise<ShareMomentImageResult> {
+export async function shareMargoMomentImage(
+  moment: MargoMoment,
+  options?: { downscaleToShape?: boolean },
+): Promise<ShareMomentImageResult> {
   if (typeof navigator === 'undefined' || !navigator.share) return 'failed'
 
-  const file = await renderMargoMomentPngFile(moment)
+  const file = await renderMargoMomentPngFile(moment, options)
   if (!file) return 'failed'
 
   if (typeof navigator.canShare === 'function') {
