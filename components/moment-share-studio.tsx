@@ -11,6 +11,8 @@ import { livingAtmosphereOrNull } from '@/lib/atmosphere'
 import { MomentExportCustomizeBar } from '@/components/moment-export-customize-bar'
 import { MomentVibeRow } from '@/components/moment-vibe-row'
 import { MomentExportPreviewFrame } from '@/components/moment-export-preview-frame'
+import { MomentStudioScreen } from '@/components/moment/moment-studio-screen'
+import { useMomentStudioExport } from '@/hooks/useMomentStudioExport'
 import { MomentActionMenu, type MomentActionMenuItem } from '@/components/moment-action-menu'
 import { MomentOutreachActions } from '@/components/moment-outreach-actions'
 import { recordCardExport } from '@/lib/engagement/card-exports'
@@ -77,6 +79,7 @@ interface MomentShareStudioProps {
   onExported?: () => void
   /** Active verified artist viewing their own persisted Moment */
   enablePromote?: boolean
+  onDismiss?: () => void
 }
 
 export function MomentShareStudio({
@@ -94,6 +97,7 @@ export function MomentShareStudio({
   onShared,
   onExported,
   enablePromote = false,
+  onDismiss,
 }: MomentShareStudioProps) {
   const router = useRouter()
   const [cardThemeId, setCardThemeId] = useState<StageCardThemeId>('gold')
@@ -179,6 +183,9 @@ export function MomentShareStudio({
   const hasSnippet = exportMoment ? momentHasPlayableSnippet(exportMoment) : false
   const hasVisualLoopExport = exportMoment ? momentUsesVisualLoopExport(exportMoment) : false
   const canClipExport = hasSnippet || hasVisualLoopExport
+  const isMargoCatalog = !!exportMoment?.lines[0]?.songId
+  const cardStudioExport = useMomentStudioExport(exportMoment, hasSnippet, isMargoCatalog)
+  const cardThirdPartyStill = !isMargoCatalog && exportAtmosphereId === 'still'
 
   const listen = useMemo(
     () => (exportMoment ? resolveMomentListen(exportMoment) : null),
@@ -613,118 +620,98 @@ export function MomentShareStudio({
     />
   )
 
-  if (isModal) {
+  if (isModal && previewLine && exportMoment) {
+    const landingVideoSilent = !hasSnippet && exportAtmosphereId !== 'still'
     return (
       <>
         {mediaReadySheetEl}
+        {cardStudioExport.videoReadySheet}
         <div
           style={{
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column',
             height: '100%',
             minHeight: 0,
-            gap: 0,
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            padding: '8px 12px calc(24px + env(safe-area-inset-bottom, 0px))',
           }}
         >
-          {openMenu ? (
-            <button
-              type="button"
-              aria-label="Close menu"
-              onClick={() => setOpenMenu(null)}
-              style={{
-                position: 'fixed',
-                inset: 0,
-                zIndex: modalMenuScrimZIndex,
-                border: 'none',
-                background: 'rgba(7,6,10,0.42)',
-                cursor: 'default',
-              }}
-            />
+          {isMulti ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: gap }}>
+              <button
+                type="button"
+                aria-label="Previous line"
+                onClick={() => setLineIndex((i) => (i - 1 + momentLines.length) % momentLines.length)}
+                style={navBtnStyle}
+              >
+                <span style={{ display: 'flex', transform: 'rotate(180deg)' }}>
+                  <ChevronRightIcon size={14} color="var(--text-secondary)" />
+                </span>
+              </button>
+              <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.62rem', color: 'var(--text-muted)' }}>
+                Line {lineIndex + 1} of {momentLines.length}
+              </span>
+              <button
+                type="button"
+                aria-label="Next line"
+                onClick={() => setLineIndex((i) => (i + 1) % momentLines.length)}
+                style={navBtnStyle}
+              >
+                <ChevronRightIcon size={14} color="var(--text-secondary)" />
+              </button>
+            </div>
           ) : null}
-          <div style={{ flexShrink: 0, paddingBottom: gap }}>
-            {previewLine ? (
-              <>
-                {isMulti && (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: gap }}>
-                    <button
-                      type="button"
-                      aria-label="Previous line"
-                      onClick={() => setLineIndex((i) => (i - 1 + momentLines.length) % momentLines.length)}
-                      style={navBtnStyle}
-                    >
-                      <span style={{ display: 'flex', transform: 'rotate(180deg)' }}>
-                        <ChevronRightIcon size={14} color="var(--text-secondary)" />
-                      </span>
-                    </button>
-                    <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.62rem', color: 'var(--text-muted)' }}>
-                      Line {lineIndex + 1} of {momentLines.length}
-                    </span>
-                    <button
-                      type="button"
-                      aria-label="Next line"
-                      onClick={() => setLineIndex((i) => (i + 1) % momentLines.length)}
-                      style={navBtnStyle}
-                    >
-                      <ChevronRightIcon size={14} color="var(--text-secondary)" />
-                    </button>
-                  </div>
-                )}
-                <MomentExportPreviewFrame shapeId={shapeId}>
-                  <StageMomentCard
-                    lyric={previewLine.lyric}
-                    songTitle={previewLine.songTitle}
-                    artistName={previewLine.artistName}
-                    artwork={previewLine.artworkUrl}
-                    vibeLabel={exportVibeLabel}
-                    cardThemeId={cardThemeId}
-                    atmosphereId={exportAtmosphereId}
-                    shapeId={shapeId}
-                    hideVibeChrome
-                    effectOwnsFill
-                    canPlay={canPlayInline}
-                    playing={playing}
-                    buffering={buffering}
-                    onPlay={startPreviewPlayback}
-                  />
-                </MomentExportPreviewFrame>
-              </>
-            ) : null}
-          </div>
-          <div
-            style={{
-              flex: 1,
-              minHeight: 0,
-              overflowY: 'auto',
-              WebkitOverflowScrolling: 'touch',
-              display: 'flex',
-              flexDirection: 'column',
-              gap,
-              paddingBottom: 'calc(28px + env(safe-area-inset-bottom, 0px))',
+          <MomentStudioScreen
+            layout="calm"
+            composerMode="card"
+            songRow={null}
+            onBack={onDismiss}
+            lyric=""
+            onLyricChange={() => {}}
+            lyricReadOnly
+            cardThemeId={cardThemeId}
+            onThemeChange={setCardThemeId}
+            exportAtmosphereId={exportAtmosphereId}
+            onExportAtmosphereChange={setExportAtmosphereId}
+            shapeId={shapeId}
+            onShapeChange={setShapeId}
+            vibeLabel={exportVibeLabel}
+            vibeOptions={MOMENT_VIBE_PICKER_OPTIONS}
+            onVibeSelect={setExportVibeLabel}
+            previewLyric={previewLine.lyric}
+            previewSongTitle={previewLine.songTitle}
+            previewArtistName={previewLine.artistName}
+            previewArtwork={previewLine.artworkUrl ?? null}
+            canPlay={canPlayInline}
+            playing={playing}
+            buffering={buffering}
+            onPlay={startPreviewPlayback}
+            listenUrl={listen && !canPlayInline ? listen.externalUrl : null}
+            exportItems={[]}
+            shareItems={[]}
+            calmToolbar={{
+              endAction: 'story',
+              onStory: () => { void addToStory() },
+              shareContext: 'card',
+              onCardShareImage: () => { void shareImage() },
+              onCardShareSend: () => { void shareImage() },
+              onCardShareStory: () => { void addToStory() },
+              onDownloadImage: async () => { await saveImage() },
+              onDownloadVideo: cardStudioExport.videoEnabled
+                ? async () => { await cardStudioExport.onSaveVideo() }
+                : undefined,
+              downloadUsePopover: !cardThirdPartyStill,
+              videoExportEnabled: cardStudioExport.videoEnabled,
+              exportBusy: exportBusy || cardStudioExport.saving,
+              videoProgress,
+              videoSilentLabel: landingVideoSilent,
+              onShareNative: async () => {
+                await shareImage()
+                return 'shared' as const
+              },
+              onCopyLink: () => {},
             }}
-          >
-            {previewLine ? (
-              <>
-                <MomentVibeRow
-                  key={`vibe-${shapeId}`}
-                  vibeLabel={exportVibeLabel}
-                  vibeOptions={MOMENT_VIBE_PICKER_OPTIONS}
-                  onVibeSelect={setExportVibeLabel}
-                />
-                <MomentExportCustomizeBar
-                  cardThemeId={cardThemeId}
-                  onThemeChange={setCardThemeId}
-                  exportAtmosphereId={exportAtmosphereId}
-                  onExportAtmosphereChange={setExportAtmosphereId}
-                  shapeId={shapeId}
-                  onShapeChange={setShapeId}
-                  hideShapeFooterHint
-                />
-              </>
-            ) : null}
-            {progressBanner}
-            {actionRow}
-          </div>
+          />
+          {progressBanner}
         </div>
       </>
     )
