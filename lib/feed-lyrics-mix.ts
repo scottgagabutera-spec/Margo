@@ -184,6 +184,12 @@ export function buildFeedLyricsRows(input: {
   })
 
   const emitPlanned = (planned: FeedPlannedBlock) => {
+    if (planned.placement === 'start') {
+      const result = materializeBlock(planned.kind, [planned.kind], planned.key, ctxBase())
+      memIdx += result.consumedMemories
+      if (result.row) out.push(result.row)
+      return
+    }
     const result = materializeBlock(planned.kind, cycleFor(signedIn), planned.key, ctxBase())
     memIdx += result.consumedMemories
     if (result.row) out.push(result.row)

@@ -662,6 +662,22 @@ function FeedPageInner() {
     const root = document.querySelector('[data-margo-primary-tab="feed"]')
     return armFeedStackLinkCapture(root instanceof HTMLElement ? root : null)
   }, [feedLive, mixedLyricRows.length])
+
+  useEffect(() => {
+    if (!feedLive) return
+    const onPop = () => {
+      const snap = readFeedReturnSnapshot()
+      if (!snap) return
+      window.requestAnimationFrame(() => {
+        const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
+        if (scroller instanceof HTMLElement && snap.y > 0) scroller.scrollTop = snap.y
+        applyFeedReturnHorizontals(snap)
+        clearFeedReturnPending()
+      })
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [feedLive])
   useLayoutEffect(() => {
     if (!feedLive) {
       feedTabRestoredRef.current = false
