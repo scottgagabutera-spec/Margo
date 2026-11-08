@@ -118,6 +118,30 @@ function shapeButtonLabel(id: MomentShapeId): string {
   return `${EXPORT_SHAPE_LABELS[id]} ${EXPORT_SHAPE_HINTS[id]}`
 }
 
+/** Color control — same behavior as MomentExportCustomizeBar (studio + default). */
+export function applyExportColorTap(
+  exportAtmosphereId: AtmosphereId,
+  cardThemeId: StageCardThemeId,
+  onExportAtmosphereChange: Dispatch<SetStateAction<AtmosphereId>>,
+  onThemeChange: (id: StageCardThemeId) => void,
+): void {
+  if (exportAtmosphereId !== 'still') {
+    onExportAtmosphereChange('still')
+    return
+  }
+  onThemeChange(cycleStageCardTheme(cardThemeId).id)
+}
+
+/** Effect control — cycles living atmospheres; first tap leaves Color (Still). */
+export function applyExportEffectTap(
+  onExportAtmosphereChange: Dispatch<SetStateAction<AtmosphereId>>,
+): void {
+  onExportAtmosphereChange((prev) => {
+    if (prev === 'still') return LIVING_ATMOSPHERE_IDS[0]
+    return cycleLivingAtmosphere(prev)
+  })
+}
+
 function MomentExportCustomizeBarStudio({
   cardThemeId,
   onThemeChange,
@@ -154,11 +178,7 @@ function MomentExportCustomizeBarStudio({
           aria-pressed={colorMode}
           aria-label={colorMode ? `Color: ${theme.label}` : 'Gold color'}
           onClick={() => {
-            if (effectMode) {
-              onExportAtmosphereChange('still')
-              return
-            }
-            onThemeChange(cycleStageCardTheme(cardThemeId).id)
+            applyExportColorTap(exportAtmosphereId, cardThemeId, onExportAtmosphereChange, onThemeChange)
           }}
           className="margo-moment-studio__studio-btn"
         >
@@ -179,12 +199,7 @@ function MomentExportCustomizeBarStudio({
           type="button"
           aria-pressed={effectMode}
           aria-label={effectMode ? `Effect: ${effectLabel}` : 'Effect'}
-          onClick={() => {
-            onExportAtmosphereChange((prev) => {
-              if (prev === 'still') return LIVING_ATMOSPHERE_IDS[0]
-              return cycleLivingAtmosphere(prev)
-            })
-          }}
+          onClick={() => applyExportEffectTap(onExportAtmosphereChange)}
           className="margo-moment-studio__studio-btn"
         >
           Effect
@@ -302,11 +317,7 @@ export function MomentExportCustomizeBar(props: MomentExportCustomizeBarProps) {
           }
           aria-pressed={colorMode}
           onClick={() => {
-            if (effectMode) {
-              onExportAtmosphereChange('still')
-              return
-            }
-            onThemeChange(cycleStageCardTheme(cardThemeId).id)
+            applyExportColorTap(exportAtmosphereId, cardThemeId, onExportAtmosphereChange, onThemeChange)
           }}
           style={tapStyle}
         >
@@ -338,12 +349,7 @@ export function MomentExportCustomizeBar(props: MomentExportCustomizeBarProps) {
               : 'Turn Effect on and turn Color off.'
           }
           aria-pressed={effectMode}
-          onClick={() => {
-            onExportAtmosphereChange((prev) => {
-              if (prev === 'still') return LIVING_ATMOSPHERE_IDS[0]
-              return cycleLivingAtmosphere(prev)
-            })
-          }}
+          onClick={() => applyExportEffectTap(onExportAtmosphereChange)}
           style={tapStyle}
         >
           <span

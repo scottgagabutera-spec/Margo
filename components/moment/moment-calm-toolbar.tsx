@@ -14,13 +14,10 @@ import {
   Sparkles,
   Square,
 } from 'lucide-react'
+import type { AtmosphereId } from '@/lib/atmosphere'
+import { ATMOSPHERE_OPTIONS } from '@/lib/atmosphere'
 import type { MomentShapeId } from '@/lib/moment/types'
-import type { StageCardThemeId } from '@/lib/moment/stage-theme'
-import {
-  CALM_COLOR_OPTIONS,
-  CALM_EFFECT_OPTIONS,
-  type CalmEffectId,
-} from '@/lib/landing-calm-composer'
+import { STAGE_CARD_THEMES, type StageCardThemeId } from '@/lib/moment/stage-theme'
 import { LandingComposerPopover } from '@/components/landing/landing-composer-popover'
 import { LandingComposerToast } from '@/components/landing/landing-composer-toast'
 import { landingComposerTier, type LandingComposerTier } from '@/lib/landing-composer-layout'
@@ -73,8 +70,8 @@ function ToolButton({
 export type MomentCalmToolbarProps = {
   cardThemeId: StageCardThemeId
   onThemeChange: (id: StageCardThemeId) => void
-  calmEffectId: CalmEffectId
-  onCalmEffectChange: (id: CalmEffectId) => void
+  exportAtmosphereId: AtmosphereId
+  onExportAtmosphereChange: React.Dispatch<React.SetStateAction<AtmosphereId>>
   shapeId: MomentShapeId
   onShapeChange: (id: MomentShapeId) => void
   onDownload: () => Promise<void>
@@ -91,8 +88,8 @@ export type MomentCalmToolbarProps = {
 export function MomentCalmToolbar({
   cardThemeId,
   onThemeChange,
-  calmEffectId,
-  onCalmEffectChange,
+  exportAtmosphereId,
+  onExportAtmosphereChange,
   shapeId,
   onShapeChange,
   onDownload,
@@ -111,6 +108,8 @@ export function MomentCalmToolbar({
   const [toast, setToast] = useState<string | null>(null)
   const downloadLock = useRef(false)
   const toolbarRef = useRef<HTMLDivElement>(null)
+  const colorMode = exportAtmosphereId === 'still'
+  const effectMode = !colorMode
 
   const closePopover = useCallback(() => setPopover(null), [])
   const togglePopover = useCallback((id: PopoverId) => {
@@ -163,14 +162,14 @@ export function MomentCalmToolbar({
       <div className="margo-landing-toolbar">
         <ToolButton
           label="Color"
-          pressed={popover === 'color'}
+          pressed={popover === 'color' || colorMode}
           onClick={() => togglePopover('color')}
         >
           <Palette size={18} strokeWidth={1.75} aria-hidden />
         </ToolButton>
         <ToolButton
           label="Effect"
-          pressed={popover === 'effect'}
+          pressed={popover === 'effect' || effectMode}
           onClick={() => togglePopover('effect')}
         >
           <Sparkles size={18} strokeWidth={1.75} aria-hidden />
@@ -217,8 +216,8 @@ export function MomentCalmToolbar({
 
       <LandingComposerPopover open={popover === 'color'} align="left" onClose={closePopover}>
         <div className="margo-landing-popover-colors" role="listbox" aria-label="Card color">
-          {CALM_COLOR_OPTIONS.map((opt) => {
-            const on = cardThemeId === opt.themeId
+          {STAGE_CARD_THEMES.map((opt) => {
+            const on = colorMode && cardThemeId === opt.id
             return (
               <button
                 key={opt.id}
@@ -229,7 +228,8 @@ export function MomentCalmToolbar({
                 className="margo-landing-popover-colors__dot"
                 style={{ background: opt.swatch }}
                 onClick={() => {
-                  onThemeChange(opt.themeId)
+                  onThemeChange(opt.id)
+                  onExportAtmosphereChange('still')
                   closePopover()
                 }}
               />
@@ -240,8 +240,8 @@ export function MomentCalmToolbar({
 
       <LandingComposerPopover open={popover === 'effect'} align="left" onClose={closePopover}>
         <div className="margo-landing-popover-list">
-          {CALM_EFFECT_OPTIONS.map((opt) => {
-            const on = calmEffectId === opt.id
+          {ATMOSPHERE_OPTIONS.map((opt) => {
+            const on = exportAtmosphereId === opt.id
             return (
               <button
                 key={opt.id}
@@ -250,7 +250,7 @@ export function MomentCalmToolbar({
                 style={{ fontFamily: UI_FONT }}
                 aria-pressed={on}
                 onClick={() => {
-                  onCalmEffectChange(opt.id)
+                  onExportAtmosphereChange(opt.id)
                   closePopover()
                 }}
               >

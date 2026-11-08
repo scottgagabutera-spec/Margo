@@ -14,12 +14,10 @@ import { useSongAtmosphere } from '@/hooks/useSongAtmosphere'
 import { livingAtmosphereOrNull } from '@/lib/atmosphere'
 import { MomentStudioScreen } from '@/components/moment/moment-studio-screen'
 import { useMomentStudioExport } from '@/hooks/useMomentStudioExport'
+import { parseAtmosphere } from '@/lib/atmosphere'
 import {
-  calmEffectToAtmosphere,
-  defaultCalmEffectForSong,
   externalSourceLabel,
   LANDING_DRAFT_STORAGE_KEY,
-  type CalmEffectId,
 } from '@/lib/landing-calm-composer'
 import MargoLogo from '@/components/MargoLogo'
 import { useStageChromePublisher, useStageSearchPublisher, useStageIdlePublisher, useStageMomentPublisher } from '@/lib/stage-chrome'
@@ -117,9 +115,9 @@ export function StageLanding() {
   const [cardThemeId, setCardThemeId] = useState<StageCardThemeId>('gold')
   const [exportAtmosphereId, setExportAtmosphereId] = useState<AtmosphereId>('still')
   const [shapeId, setShapeId] = useState<MomentShapeId>('square')
-  const [calmEffectId, setCalmEffectId] = useState<CalmEffectId>('none')
   const [posting, setPosting] = useState(false)
   const songAtmosphere = useSongAtmosphere(linkedSongId)
+  const exportDefaultSongRef = useRef<string | null>(null)
   const [momentVisible, setMomentVisible] = useState(false)
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -324,8 +322,8 @@ export function StageLanding() {
     setSuggestedVibeLabel(null)
     setVibeUserPicked(false)
     setCardThemeId('gold')
-    setCalmEffectId('none')
     setExportAtmosphereId('still')
+    exportDefaultSongRef.current = null
     setMomentVisible(false)
     setSearchQuery('')
     setShowResults(false)
@@ -381,17 +379,26 @@ export function StageLanding() {
     }
   }, [])
 
-  const applyCalmEffect = useCallback((id: CalmEffectId) => {
-    setCalmEffectId(id)
-    setExportAtmosphereId(calmEffectToAtmosphere(id))
-  }, [])
-
-  const applyCalmDefaultsForSong = useCallback((isMargoCatalog: boolean) => {
-    const effect = defaultCalmEffectForSong(isMargoCatalog)
-    applyCalmEffect(effect)
+  const applyLandingExportDefaults = useCallback((isMargoCatalog: boolean) => {
     setCardThemeId('gold')
     setShapeId('square')
-  }, [applyCalmEffect])
+    setExportAtmosphereId('still')
+    exportDefaultSongRef.current = null
+    if (!isMargoCatalog) return
+  }, [])
+
+  useEffect(() => {
+    if (!linkedSongId) return
+    const isMargo = selectedSong?.source === 'margo' || !!selectedSong?.margoSongId
+    if (!isMargo) return
+    if (exportDefaultSongRef.current === linkedSongId) return
+    exportDefaultSongRef.current = linkedSongId
+    if (songAtmosphere) {
+      setExportAtmosphereId(parseAtmosphere(songAtmosphere))
+    } else {
+      setExportAtmosphereId('still')
+    }
+  }, [linkedSongId, songAtmosphere, selectedSong?.source, selectedSong?.margoSongId])
 
   const handleSelectSong = useCallback(async (result: SearchResult) => {
     setSelectedSong(result)
@@ -406,7 +413,7 @@ export function StageLanding() {
     setVibeLabel(null)
     setSuggestedVibeLabel(null)
     setVibeUserPicked(false)
-    applyCalmDefaultsForSong(result.source === 'margo' || !!result.margoSongId)
+    applyLandingExportDefaults(result.source === 'margo' || !!result.margoSongId)
 
     if (result.source === 'margo') {
       await enterCatalog(result.margoSongId!, result.audioUrl || null, result.title, result.artist, result.artwork)
@@ -417,7 +424,7 @@ export function StageLanding() {
     setLinkedAudioUrl(null)
     setLinePickComplete(true)
     setMargoLines([])
-    applyCalmDefaultsForSong(false)
+    applyLandingExportDefaults(false)
 
     try {
       const hit = await matchLiveCatalogSong(supabase, result.title, result.artist)
@@ -432,13 +439,13 @@ export function StageLanding() {
           audioUrl: hit.audioUrl,
         })
         await enterCatalog(hit.id, hit.audioUrl, hit.title, hit.artist, hit.artwork || result.artwork)
-        applyCalmDefaultsForSong(true)
+        applyLandingExportDefaults(true)
         return
       }
     } catch (e) {
       console.error('Song rematch failed:', e)
     }
-  }, [enterCatalog, applyCalmDefaultsForSong])
+  }, [enterCatalog, applyLandingExportDefaults])
 
   const applyCatalogPlayback = useCallback((picked: ComposeLyricLine[]) => {
     if (!linkedSongId) {
@@ -518,8 +525,8 @@ export function StageLanding() {
           start: snippetStart,
           end: snippetEnd,
           cardThemeId,
-          calmEffectId,
           shapeId,
+          exportAtmosphereId,
         }),
       )
     } catch {
@@ -527,7 +534,7 @@ export function StageLanding() {
     }
   }, [
     lyric, songName, artistName, selectedSong?.artwork, linkedSongId, linkedAudioUrl,
-    snippetStart, snippetEnd, cardThemeId, calmEffectId, shapeId,
+    snippetStart, snippetEnd, cardThemeId, exportAtmosphereId, shapeId,
   ])
 
   const momentForExport = useCallback(
@@ -742,8 +749,6 @@ export function StageLanding() {
                 <MomentStudioScreen
                   layout="calm"
                   onBack={handleComposerBack}
-                  calmEffectId={calmEffectId}
-                  onCalmEffectChange={applyCalmEffect}
                   sourceCaption={
                     isMargoCatalog ? null : externalSourceLabel(selectedSong.source)
                   }

@@ -11,8 +11,6 @@ import type { MomentActionMenuItem } from '@/components/moment-action-menu'
 import type { AtmosphereId } from '@/lib/atmosphere'
 import type { MomentShapeId } from '@/lib/moment/types'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
-import type { CalmEffectId } from '@/lib/landing-calm-composer'
-import { calmUsesArtworkBackdrop } from '@/lib/landing-calm-composer'
 
 export interface MomentStudioScreenProps {
   songRow: ReactNode
@@ -53,14 +51,12 @@ export interface MomentStudioScreenProps {
   actionsBlocked?: boolean
   mobileBottomPad?: string
   layout?: 'studio' | 'calm'
-  calmEffectId?: CalmEffectId
-  onCalmEffectChange?: (id: CalmEffectId) => void
   calmToolbar?: Omit<
     MomentCalmToolbarProps,
     | 'cardThemeId'
     | 'onThemeChange'
-    | 'calmEffectId'
-    | 'onCalmEffectChange'
+    | 'exportAtmosphereId'
+    | 'onExportAtmosphereChange'
     | 'shapeId'
     | 'onShapeChange'
     | 'hasLyric'
@@ -108,8 +104,6 @@ export function MomentStudioScreen({
   actionsBlocked = false,
   mobileBottomPad = 'calc(var(--margo-tabbar-h, 80px) + 20px)',
   layout = 'studio',
-  calmEffectId = 'none',
-  onCalmEffectChange,
   calmToolbar,
   sourceCaption = null,
   onBack,
@@ -118,10 +112,7 @@ export function MomentStudioScreen({
   const hasLyric = previewLyric.trim().length > 0
   const showCard =
     hasLyric && previewSongTitle.trim().length > 0 && (calm || previewArtistName.trim().length > 0)
-  const artworkBackdrop = calm && calmUsesArtworkBackdrop(calmEffectId)
-  const effectOwnsFill = calm
-    ? calmEffectId === 'glow' || calmEffectId === 'grain'
-    : true
+  const effectOwnsFill = true
   const bottomPad = calm
     ? 'calc(48px + var(--margo-safe-bottom, 0px) + var(--margo-page-bottom, var(--margo-tabbar-h, 80px)))'
     : mobileBottomPad
@@ -148,7 +139,7 @@ export function MomentStudioScreen({
       shapeId={shapeId}
       hideVibeChrome
       effectOwnsFill={effectOwnsFill}
-      artworkBackdrop={artworkBackdrop}
+      artworkBackdrop={false}
       sourceCaption={sourceCaption}
       canPlay={canPlay && !calm}
       playing={playing}
@@ -274,13 +265,13 @@ export function MomentStudioScreen({
         </div>
       )}
 
-      {calm && calmToolbar && onCalmEffectChange ? (
+      {calm && calmToolbar ? (
         <div className="margo-moment-studio__calm-toolbar">
           <MomentCalmToolbar
             cardThemeId={cardThemeId}
             onThemeChange={onThemeChange}
-            calmEffectId={calmEffectId}
-            onCalmEffectChange={onCalmEffectChange}
+            exportAtmosphereId={exportAtmosphereId}
+            onExportAtmosphereChange={onExportAtmosphereChange}
             shapeId={shapeId}
             onShapeChange={onShapeChange}
             hasLyric={hasLyric}
