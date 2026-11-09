@@ -980,23 +980,7 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
               </div>
             )}
 
-            <div className="margo-profile-block--feed">
-              {profileContentAccess === 'loading' ? (
-                <FeedPostSkeletonList count={2} />
-              ) : profileContentAccess === 'blocked' ? (
-                <div style={{
-                  border: '1px solid var(--border)', borderRadius: '16px', padding: '24px',
-                  textAlign: 'center',
-                }}>
-                  <p style={{ ...emptyLyricStyle, marginBottom: '4px' }}>
-                    This account is private.
-                  </p>
-                  <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', margin: 0 }}>
-                    Follow to view lyrics.
-                  </p>
-                </div>
-              ) : (
-              <>
+            {profileContentAccess !== 'blocked' ? (
               <div className="margo-profile-tabs-sticky margo-profile-block--tabs">
                 <div
                   role="tablist"
@@ -1026,7 +1010,25 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
                   })}
                 </div>
               </div>
+            ) : null}
 
+            <div className="margo-profile-block--feed">
+              {profileContentAccess === 'loading' ? (
+                <FeedPostSkeletonList count={2} />
+              ) : profileContentAccess === 'blocked' ? (
+                <div style={{
+                  border: '1px solid var(--border)', borderRadius: '16px', padding: '24px',
+                  textAlign: 'center',
+                }}>
+                  <p style={{ ...emptyLyricStyle, marginBottom: '4px' }}>
+                    This account is private.
+                  </p>
+                  <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', margin: 0 }}>
+                    Follow to view lyrics.
+                  </p>
+                </div>
+              ) : (
+              <>
               {contentTab === 'memories' ? (
                 profileMemories.length === 0 ? (
                   isOwnProfile ? (
