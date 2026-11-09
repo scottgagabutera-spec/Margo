@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test'
 
 const BASE = process.env.PLAYWRIGHT_BASE_URL ?? 'https://trymargo.com'
 
-const MAIN_NAME_PX = 1.375 * 16
-const MAIN_HANDLE_PX = 0.7 * 16
+const MAIN_NAME_PX = 15
+const MAIN_HANDLE_PX = 12
 
 async function openProfile(page: import('@playwright/test').Page) {
   await page.goto(`${BASE}/feed`, { waitUntil: 'domcontentloaded', timeout: 45000 })

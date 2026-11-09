@@ -121,28 +121,8 @@ function ProfileStat({
   }
   const inner = (
     <>
-      <span style={{
-        fontFamily: font,
-        fontSize: TYPE.secondary,
-        fontWeight: 600,
-        color: 'var(--text)',
-        lineHeight: 1,
-        letterSpacing: '-0.02em',
-        fontVariantNumeric: 'tabular-nums',
-      }}>
-        {display}
-      </span>
-      <span
-        className="margo-profile-ui-label"
-        style={{
-          marginTop: 2,
-          marginBottom: 0,
-          fontSize: '0.8125rem',
-          textAlign: 'center',
-        }}
-      >
-        {label}
-      </span>
+      <span className="margo-profile-stat__value">{display}</span>
+      <span className="margo-profile-stat__label">{label}</span>
     </>
   )
   if (href) {
