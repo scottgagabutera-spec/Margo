@@ -12,7 +12,6 @@ import {
   getAudioEngineState,
   stop,
   subscribeAudioEngine,
-  warmUrls,
   setVolume,
   toggleMute,
   togglePlayPause,
@@ -480,33 +479,6 @@ export function FeedShortsPager({
       }
       if (!state.playing || state.mode === 'idle' || state.mode === 'full') {
         setPlayingKey(null)
-        if (
-          state.mode === 'snippet'
-          && !state.playing
-          && !state.buffering
-          && tabActiveRef.current
-          && !isScrollingRef.current
-          && !userPausedRef.current
-          && !state.error
-        ) {
-          const clip = loopClipRef.current
-          const idx = settledIndexRef.current
-          const current = clips[idx]
-          if (
-            clip
-            && current
-            && clip.songId === current.songId
-            && clip.lineId === current.lineId
-            && current.audioUrl
-          ) {
-            window.setTimeout(() => {
-              if (isScrollingRef.current || !tabActiveRef.current || userPausedRef.current) return
-              const wantSound = readShortsUnmutePref()
-              applyShortsVolume(wantSound)
-              playLyricMomentShort(current)
-            }, 40)
-          }
-        }
         return
       }
       if (state.snippet) {
@@ -526,13 +498,6 @@ export function FeedShortsPager({
       }
     })
   }, [applyShortsVolume, clips])
-
-  useEffect(() => {
-    const el = scrollerRef.current
-    if (!el || clips.length === 0) return
-    const next = clips[settledIndex + 1]
-    if (next?.audioUrl) warmUrls([next.audioUrl])
-  }, [settledIndex, clips])
 
   useEffect(() => {
     const root = scrollerRef.current
@@ -564,38 +529,16 @@ export function FeedShortsPager({
     }
   }, [clips.length, commitSettledFromDom])
 
-  useEffect(() => {
-    if (!tabActive || autoplayBlocked || isScrollingRef.current) return
-    if (settledIndex === lastAutoIndexRef.current) return
-    const clip = clips[settledIndex]
-    if (!clip?.audioUrl) return
-    const clipKey = `${clip.songId}_${clip.lineId}`
-    if (
-      !signedIn
-      && anonPlaysCompleted >= ANON_PLAYS_BEFORE_SIGNUP
-      && !anonPlayedKeysRef.current.has(clipKey)
-    ) {
-      return
-    }
-    lastAutoIndexRef.current = settledIndex
-    loopClipRef.current = clip
-    userPausedRef.current = false
-    setUserPaused(false)
-    applyShortsVolume(soundOn)
-    playLyricMomentShort(clip)
-    const t = window.setTimeout(() => {
-      const err = getAudioEngineState().error
-      if (err?.includes('Play blocked')) setAutoplayBlocked(true)
-    }, 400)
-    return () => window.clearTimeout(t)
-  }, [settledIndex, anonPlaysCompleted, applyShortsVolume, autoplayBlocked, clips, signedIn, soundOn, tabActive])
-
   const toggleMutePref = useCallback(() => {
     const next = !soundOn
     setSoundOn(next)
     persistShortsUnmutePref(next)
     applyShortsVolume(next)
-  }, [applyShortsVolume, soundOn])
+    if (next && tabActiveRef.current) {
+      const clip = clips[settledIndexRef.current]
+      if (clip?.audioUrl) playClip(clip, true)
+    }
+  }, [applyShortsVolume, clips, playClip, soundOn])
 
   const handleTapVideo = useCallback(() => {
     const clip = clips[settledIndex]
