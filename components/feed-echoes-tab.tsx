@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronRightIcon } from '@/components/icons'
 import { EchoesSongStrip } from '@/components/echoes-song-strip'
@@ -26,18 +26,23 @@ type EchoSetCard = {
   } | null
 }
 
-export function FeedEchoesTab() {
+export function FeedEchoesTab({ fetchEnabled = true }: { fetchEnabled?: boolean }) {
   const router = useRouter()
   const { ack, isAcked } = useTapAck()
   const [sets, setSets] = useState<EchoSetCard[]>([])
   const [loading, setLoading] = useState(true)
+  const loadedRef = useRef(false)
 
   useEffect(() => {
+    if (!fetchEnabled || loadedRef.current) return
     let active = true
     void fetch('/api/echoes/sets')
       .then((r) => r.json())
       .then((data: { sets?: EchoSetCard[] }) => {
-        if (active) setSets(data.sets || [])
+        if (active) {
+          setSets(data.sets || [])
+          loadedRef.current = true
+        }
       })
       .finally(() => {
         if (active) setLoading(false)
@@ -45,7 +50,7 @@ export function FeedEchoesTab() {
     return () => {
       active = false
     }
-  }, [])
+  }, [fetchEnabled])
 
   const openSet = (id: string) => {
     openFeedEchoesSet(router, id)

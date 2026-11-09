@@ -25,7 +25,7 @@ import { FeedPostEvictProvider } from '@/components/feed-post-evict-context'
 import { ReplayAttribution } from '@/components/replay-attribution'
 import { useRecentReplays } from '@/hooks/useRecentReplays'
 import { usePostReplays } from '@/hooks/usePostReplays'
-import { usePrimaryTab, restoreActivePrimaryScroll, scrollActiveTo } from '@/components/primary-tab-shell'
+import { usePrimaryTab, restoreActivePrimaryScroll } from '@/components/primary-tab-shell'
 import { FeedPostSkeletonList } from '@/components/margo-skeletons'
 import { useFeedMemories, useFeedMemoriesGrid } from '@/hooks/useFeedMemories'
 import { MemoryFeedGridTile } from '@/components/memory-feed-grid-tile'
@@ -49,10 +49,11 @@ import {
   persistFeedReturnBeforeLeave,
 } from '@/lib/margo-feed-return'
 import {
-  captureFeedSubTabScroll,
   isFeedContentSubTab,
-  readFeedSubTabScrollY,
-  restoreFeedSubTabScrollAfterPaint,
+  readFeedSubTabScroller,
+  resetFeedSubTabScroll,
+  restoreFeedSubTabScroll,
+  scrollFeedSubTabTo,
 } from '@/lib/feed-subtab-scroll'
 import { FeedPeopleStrip } from '@/components/feed-people-strip'
 import { FeedMemoryPromoCard } from '@/components/feed-memory-promo-card'
@@ -320,6 +321,15 @@ function FeedPageInner() {
     if (paintedFeedContentTab === feedContentTab) setPaintedFeedContentTab(null)
   }, [feedContentTab, paintedFeedContentTab])
 
+  const mountedSectorsRef = useRef<Set<FeedContentTab>>(new Set(['lyrics']))
+  const [, setMountedSectorsEpoch] = useState(0)
+  const ensureSectorMounted = useCallback((tab: FeedContentTab) => {
+    if (mountedSectorsRef.current.has(tab)) return
+    mountedSectorsRef.current.add(tab)
+    setMountedSectorsEpoch((n) => n + 1)
+  }, [])
+  const sectorMounted = useCallback((tab: FeedContentTab) => mountedSectorsRef.current.has(tab), [])
+
   const selectedVibe = useMemo(() => {
     const raw = searchParams.get('vibe')?.trim()
     if (!raw) return 'ALL'
@@ -330,7 +340,7 @@ function FeedPageInner() {
     clips: shortsClips,
     loading: shortsLoading,
     meetsMinimum: shortsMeetsMinimum,
-  } = useFeedShortsClips({ enabled: feedLive })
+  } = useFeedShortsClips({ enabled: feedLive && sectorMounted('shorts') })
 
   const e2eShortsFixture =
     searchParams.get('e2eShorts') === '1' ||
@@ -475,18 +485,18 @@ function FeedPageInner() {
     })
   }, [posts, user?.id, followingIds, peopleSuggestions])
 
-  const { memories: feedMemories } = useFeedMemories(feedLive && feedContentTab === 'lyrics')
+  const { memories: feedMemories } = useFeedMemories(feedLive && sectorMounted('lyrics'))
   const {
     memories: feedGridMemories,
     loading: feedGridLoading,
     loadingMore: feedGridLoadingMore,
     hasMore: feedGridHasMore,
     loadMore: loadMoreFeedMemories,
-  } = useFeedMemoriesGrid(feedLive && feedContentTab === 'memories')
+  } = useFeedMemoriesGrid(feedLive && sectorMounted('memories'))
   const feedMemoriesSentinelRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    if (feedContentTab !== 'memories' || !feedLive) return
+    if (uiFeedContentTab !== 'memories' || !feedLive) return
     const el = feedMemoriesSentinelRef.current
     if (!el) return
     const obs = new IntersectionObserver(
@@ -497,7 +507,7 @@ function FeedPageInner() {
     )
     obs.observe(el)
     return () => obs.disconnect()
-  }, [feedContentTab, feedLive, loadMoreFeedMemories, feedGridMemories.length])
+  }, [uiFeedContentTab, feedLive, loadMoreFeedMemories, feedGridMemories.length])
 
   const [ownMemoryCount, setOwnMemoryCount] = useState<number | null>(null)
   const [echoesBlock, setEchoesBlock] = useState<EchoFeedBlockSnapshot | null>(null)
@@ -647,13 +657,11 @@ function FeedPageInner() {
 
   const handleFeedContentTab = (tab: 'lyrics' | 'memories' | 'shorts' | 'echoes') => {
     setPaintedFeedContentTab(tab)
+    ensureSectorMounted(tab)
     if (tab !== feedContentTab) {
-      captureFeedSubTabScroll(feedContentTab)
       persistFeedReturnBeforeLeave(feedContentTab)
-      pendingLyricsScrollRestoreRef.current = true
-      // Entry reset only: URL still lyrics; defer map restore until feedContentTab commits.
       if (feedContentTab === 'lyrics' && isFeedContentSubTab(tab)) {
-        restoreFeedSubTabScrollAfterPaint(tab)
+        resetFeedSubTabScroll(tab)
       }
     }
     paintFeedMix(null)
@@ -714,7 +722,7 @@ function FeedPageInner() {
       || (listReady && !!user?.id && ownMemoryCount === null))
 
   const mixedLyricRows = useMemo((): FeedLyricsRow[] => {
-    if (feedContentTab !== 'lyrics' || !lyricsMixGateReady) return []
+    if (!lyricsMixGateReady) return []
     return buildFeedLyricsRows({
       lyricPosts: lyricPostRows,
       memories: feedMemories,
@@ -725,7 +733,6 @@ function FeedPageInner() {
       echoesBlock,
     })
   }, [
-    feedContentTab,
     lyricPostRows,
     feedMemories,
     peoplePool,
@@ -737,38 +744,26 @@ function FeedPageInner() {
     echoesBlock,
   ])
 
-  const feedSubTabScrollReady = useMemo((): boolean => {
-    switch (feedContentTab) {
-      case 'lyrics':
-        return lyricsMixGateReady
-      case 'memories':
-        return !feedGridLoading || feedGridMemories.length > 0
-      case 'shorts':
-        return !resolvedShortsLoading || resolvedShortsClips.length > 0
-      case 'echoes':
-        return true
-      default:
-        return true
-    }
-  }, [
-    feedContentTab,
-    lyricsMixGateReady,
-    feedGridLoading,
-    feedGridMemories.length,
-    resolvedShortsLoading,
-    resolvedShortsClips.length,
-  ])
-
   const feedTabRestoredRef = useRef(false)
   const feedNavViaPopRef = useRef(false)
-  const prevFeedContentTabRef = useRef(feedContentTab)
-  const lyricsSubTabRestoreDoneRef = useRef(false)
-  const pendingLyricsScrollRestoreRef = useRef(false)
+  const feedSubTabPaneProps = (tab: FeedContentTab, extraClass = '') => {
+    const active = uiFeedContentTab === tab
+    return {
+      'data-margo-feed-subtab': tab,
+      'data-margo-feed-subtab-pane-active': active ? '1' : undefined,
+      className: `margo-feed-subtab-pane${active ? ' margo-feed-subtab-pane--active' : ''}${extraClass ? ` ${extraClass}` : ''}`,
+      'aria-hidden': !active,
+    } as const
+  }
+
+  useEffect(() => {
+    ensureSectorMounted(feedContentTab)
+  }, [feedContentTab, ensureSectorMounted])
 
   useEffect(() => {
     if (!feedLive) return
-    const root = document.querySelector('[data-margo-primary-tab="feed"]')
-    return armFeedStackLinkCapture(root instanceof HTMLElement ? root : null)
+    const root = readFeedSubTabScroller('lyrics')
+    return armFeedStackLinkCapture(root)
   }, [feedLive, mixedLyricRows.length])
 
   useEffect(() => {
@@ -779,45 +774,15 @@ function FeedPageInner() {
       if (!snap) return
       const tab = parseFeedContentTab(new URLSearchParams(window.location.search).get('tab'))
       window.requestAnimationFrame(() => {
-        const mappedY = readFeedSubTabScrollY(tab)
-        const targetY = mappedY > 0 ? mappedY : snap.tab === tab ? snap.y : mappedY
-        const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
-        if (scroller instanceof HTMLElement && Math.abs(scroller.scrollTop - targetY) > 1) {
-          scroller.scrollTop = targetY
-        }
-        restoreFeedSubTabScrollAfterPaint(tab)
+        const targetY = snap.tab === tab ? snap.y : undefined
+        restoreFeedSubTabScroll(tab, targetY)
         applyFeedReturnHorizontals(snap)
         clearFeedReturnPending()
-        if (tab === 'lyrics') lyricsSubTabRestoreDoneRef.current = true
       })
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [feedLive])
-
-  useLayoutEffect(() => {
-    if (!feedLive) return
-    const prev = prevFeedContentTabRef.current
-    const next = feedContentTab
-    if (prev !== next) {
-      if (!shouldReapplyFeedReturn()) {
-        pendingLyricsScrollRestoreRef.current = true
-        restoreFeedSubTabScrollAfterPaint(next)
-        if (next === 'lyrics') lyricsSubTabRestoreDoneRef.current = true
-      }
-      prevFeedContentTabRef.current = next
-    }
-  }, [feedLive, feedContentTab])
-
-  useEffect(() => {
-    if (!feedLive) return
-    if (!pendingLyricsScrollRestoreRef.current) return
-    if (shouldReapplyFeedReturn()) return
-    if (!feedSubTabScrollReady) return
-    pendingLyricsScrollRestoreRef.current = false
-    restoreFeedSubTabScrollAfterPaint(feedContentTab)
-    if (feedContentTab === 'lyrics') lyricsSubTabRestoreDoneRef.current = true
-  }, [feedLive, feedContentTab, feedSubTabScrollReady, mixedLyricRows.length])
 
   useLayoutEffect(() => {
     if (!feedLive) {
@@ -840,17 +805,17 @@ function FeedPageInner() {
     if (feedTabRestoredRef.current && !pending && !viaPop) return
     const snap = readFeedReturnSnapshot()
     if (!snap) return
-    const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
-  const liveY = scroller instanceof HTMLElement ? scroller.scrollTop : 0
-    if (pending && scroller instanceof HTMLElement && Math.abs(liveY - snap.y) <= 8) {
+    const sector = readFeedSubTabScroller(snap.tab)
+    const liveY = sector?.scrollTop ?? 0
+    if (pending && sector && Math.abs(liveY - snap.y) <= 8) {
       clearFeedReturnPending()
       applyFeedReturnHorizontals(snap)
       feedTabRestoredRef.current = true
       return
     }
     feedTabRestoredRef.current = true
-    if (pending && scroller instanceof HTMLElement && snap.y > 0) {
-      scroller.scrollTop = snap.y
+    if (pending && sector && snap.y > 0) {
+      restoreFeedSubTabScroll(snap.tab, snap.y)
       applyFeedReturnHorizontals(snap)
     }
     clearFeedReturnPending()
@@ -874,9 +839,9 @@ function FeedPageInner() {
     if (!listReady && !e2eFeedReturnFixture) return
     const snap = readFeedReturnSnapshot()
     if (!snap || snap.tab !== feedContentTab) return
-    const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
-    if (scroller instanceof HTMLElement && Math.abs(scroller.scrollTop - snap.y) > 5) {
-      scroller.scrollTop = snap.y
+    const sector = readFeedSubTabScroller(snap.tab)
+    if (sector && Math.abs(sector.scrollTop - snap.y) > 5) {
+      sector.scrollTop = snap.y
     }
     applyFeedReturnHorizontals(snap)
   }, [feedLive, listReady, e2eFeedReturnFixture, mixedLyricRows.length, highlightParam, feedContentTab])
@@ -925,11 +890,6 @@ function FeedPageInner() {
       return
     }
     if (feedContentTab !== 'lyrics') return
-    if (lyricsSubTabRestoreDoneRef.current) {
-      lyricsSubTabRestoreDoneRef.current = false
-      restoredScrollRef.current = true
-      return
-    }
     if (!listReady || highlightParam || restoredScrollRef.current) return
     restoreTriesRef.current += 1
     const result = restoreActivePrimaryScroll()
@@ -994,7 +954,7 @@ function FeedPageInner() {
     <StoryFeedAuthorSync authorIds={feedAuthorIds} />
     <FeedPostEvictProvider evict={evictFeedPost}>
     <PullToRefresh
-      enabled={feedContentTab === 'lyrics'}
+      enabled={uiFeedContentTab === 'lyrics'}
       onRefreshingChange={setPtrBusy}
       onRefresh={async () => {
         const [latest] = await Promise.all([
@@ -1006,12 +966,15 @@ function FeedPageInner() {
       }}
     >
     <div style={{
-      minHeight: '100vh',
+      minHeight: '100dvh',
       background: 'var(--bg)',
       position: 'relative',
       overflowX: 'hidden',
       overflowAnchor: 'none',
-      paddingTop: uiFeedContentTab === 'lyrics' ? feedTopChrome : feedTopChrome,
+      paddingTop: feedTopChrome,
+      display: 'flex',
+      flexDirection: 'column',
+      boxSizing: 'border-box',
     }}>
       <FeedFilterLiveRegion message={filterAnnouncement} />
       <FeedContentTabBar
@@ -1037,7 +1000,7 @@ function FeedPageInner() {
             const kind = livePill.active?.kind
             if (kind === 'posts') {
               flushPending()
-              scrollActiveTo(0)
+              scrollFeedSubTabTo('lyrics', 0)
               window.requestAnimationFrame(() => highlightNewItems('[id^="feed-post-"]', 3))
             } else if (kind === 'songs') {
               openSongs()
@@ -1056,9 +1019,10 @@ function FeedPageInner() {
         <div style={{ position: 'absolute', bottom: '-160px', right: '-160px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.03)', borderRadius: '50%', filter: 'blur(80px)' }} />
       </div>
 
-      {uiFeedContentTab === 'memories' && (
+      <div className={`margo-feed-subtab-stack${vibeFilterActive ? ' margo-feed-subtab-stack--vibe' : ''}`}>
+      {sectorMounted('memories') ? (
         <main
-          className="margo-feed-column margo-feed-column--memories-grid"
+          {...feedSubTabPaneProps('memories', 'margo-feed-column margo-feed-column--memories-grid')}
           style={{ position: 'relative', zIndex: 5, padding: '12px 14px var(--margo-page-padding-bottom)' }}
         >
           {searchParams.get('filter') === 'listening' ? (
@@ -1110,27 +1074,32 @@ function FeedPageInner() {
             </>
           )}
         </main>
-      )}
+      ) : null}
 
-      {uiFeedContentTab === 'echoes' && <FeedEchoesTab />}
+      {sectorMounted('echoes') ? (
+        <div {...feedSubTabPaneProps('echoes')}>
+          <FeedEchoesTab fetchEnabled={uiFeedContentTab === 'echoes'} />
+        </div>
+      ) : null}
 
-      {uiFeedContentTab === 'shorts' && (
-        <FeedShortsPager
-          clips={resolvedShortsClips}
-          loading={resolvedShortsLoading}
-          meetsMinimum={resolvedShortsMeetsMinimum}
-          signedIn={!!user?.id}
-          onRequireSignIn={() => requireAuth({ returnTo: '/feed?tab=shorts' })}
-          vibeFilterActive={vibeFilterActive}
-          tabActive={feedLive && feedContentTab === 'shorts'}
-          initialIndex={shortsInitialIndex}
-        />
-      )}
+      {sectorMounted('shorts') ? (
+        <div {...feedSubTabPaneProps('shorts')}>
+          <FeedShortsPager
+            clips={resolvedShortsClips}
+            loading={resolvedShortsLoading}
+            meetsMinimum={resolvedShortsMeetsMinimum}
+            signedIn={!!user?.id}
+            onRequireSignIn={() => requireAuth({ returnTo: '/feed?tab=shorts' })}
+            vibeFilterActive={vibeFilterActive}
+            tabActive={feedLive && uiFeedContentTab === 'shorts'}
+            initialIndex={shortsInitialIndex}
+          />
+        </div>
+      ) : null}
 
       <main
-        className={`margo-feed-column${uiFeedContentTab !== 'lyrics' ? ' margo-feed-lyrics-pane--hidden' : ''}`}
+        {...feedSubTabPaneProps('lyrics', 'margo-feed-column')}
         style={{ position: 'relative', zIndex: 5, padding: '16px 16px var(--margo-page-padding-bottom)' }}
-        aria-hidden={uiFeedContentTab !== 'lyrics'}
       >
         {feedLive && isMobileViewport !== true && (
           <div className="margo-story-ring-tray">
@@ -1299,6 +1268,7 @@ function FeedPageInner() {
           />
         )}
       </main>
+      </div>
 
       <CardExportModal
         open={!!exportPost}

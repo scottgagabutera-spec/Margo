@@ -6970,14 +6970,40 @@ html, body {
   margin: 0;
   line-height: 1.5;
 }
-.margo-feed-lyrics-pane--hidden {
+.margo-feed-subtab-stack {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: calc(100dvh - var(--margo-header-h, var(--nav-height, 72px)) - var(--margo-feed-tab-bar-h, 44px));
+  overflow: hidden;
+}
+.margo-feed-subtab-stack--vibe {
+  min-height: calc(
+    100dvh - var(--margo-header-h, var(--nav-height, 72px)) - var(--margo-feed-tab-bar-h, 44px) -
+      var(--margo-feed-vibe-bar-h, 40px)
+  );
+}
+.margo-feed-subtab-pane {
+  position: absolute;
+  inset: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overflow-anchor: none;
+  overscroll-behavior-y: contain;
   visibility: hidden;
   pointer-events: none;
-  position: absolute;
-  width: 1px;
-  height: 1px;
+}
+.margo-feed-subtab-pane--active {
+  visibility: visible;
+  pointer-events: auto;
+}
+.margo-feed-subtab-pane[data-margo-feed-subtab='shorts'] {
   overflow: hidden;
-  clip: rect(0, 0, 0, 0);
+}
+.margo-feed-subtab-pane[data-margo-feed-subtab='shorts'] .margo-feed-shorts-shell,
+.margo-feed-subtab-pane[data-margo-feed-subtab='shorts'] .margo-feed-shorts-pager {
+  height: 100%;
+  max-height: 100%;
 }
 
 /* Card / send-to sheets own the viewport — hide feed mini-player X behind them */

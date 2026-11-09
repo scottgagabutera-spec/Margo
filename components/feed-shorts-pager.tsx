@@ -440,7 +440,6 @@ export function FeedShortsPager({
       syncFrameMetrics()
       const root = scrollerRef.current
       if (root) {
-        root.scrollTop = 0
         const idx = findSettledSlideIndex(root)
         settledIndexRef.current = idx
         setSettledIndex(idx)
