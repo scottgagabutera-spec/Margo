@@ -142,7 +142,19 @@ export function navBackForPath(pathname: string | null | undefined): NavBackConf
   if (p.startsWith('/memory/')) return { fallbackHref: feedReturnFallbackHref(), preferHistory: true }
   if (p.startsWith('/memories/')) return { fallbackHref: feedReturnFallbackHref(), preferHistory: true }
   if (p.startsWith('/echoes/')) return { fallbackHref: feedReturnFallbackHref(), preferHistory: true }
-  if (p === '/about' || p === '/contact' || p === '/privacy' || p === '/terms' || p === '/dmca' || p === '/data-deletion' || p === '/help' || p.startsWith('/help/') || p === '/faq') {
+  if (p === '/about' || p === '/contact' || p === '/privacy' || p === '/terms' || p === '/dmca' || p === '/data-deletion' || p === '/faq') {
+    return { fallbackHref: '/' }
+  }
+  if (p.startsWith('/help/')) {
+    const parts = p.split('/').filter(Boolean)
+    if (parts.length >= 3) {
+      return { fallbackHref: `/help/${parts[1]}` }
+    }
+    if (parts.length === 2) {
+      return { fallbackHref: '/help' }
+    }
+  }
+  if (p === '/help') {
     return { fallbackHref: '/' }
   }
 

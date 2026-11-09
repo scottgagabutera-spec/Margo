@@ -14,7 +14,7 @@ export function HelpCenterTopic({ topicId }: { topicId: string }) {
   const articles = articlesForTopic(topicId)
 
   return (
-    <HelpContentPageShell title={topic.title} categoryLabel="Help center">
+    <HelpContentPageShell title={topic.title}>
       <p className="margo-content-page__intro">{topic.subtitle}</p>
       {articles.length === 0 ? (
         <p className="margo-content-page__muted">Articles for this topic are coming soon.</p>

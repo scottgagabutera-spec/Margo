@@ -17,6 +17,7 @@ import { navBackForPath, useNavBackOverride } from '@/components/nav-back'
 import { YouTabPortrait } from '@/components/you-tab-portrait'
 import { HelpCenterEntryLink } from '@/components/help-center/help-center-entry-link'
 import { DEPTH_PAGE_TITLE, UI_FONT } from '@/lib/fonts'
+import { isInfoOrHelpPath } from '@/lib/info-page-paths'
 
 const font = UI_FONT
 
@@ -103,6 +104,7 @@ export function MargoNav() {
     return () => mq.removeEventListener('change', sync)
   }, [])
   const isLanding = pathname === '/'
+  const hideSongSearch = isInfoOrHelpPath(pathname)
   // Landing uses app top bar at ≥640px (Stage 3); phone keeps in-page landing nav + bottom tab bar.
   const isProfileRoute =
     !!pathname?.startsWith('/profile') || pathname === '/you'
@@ -167,7 +169,7 @@ export function MargoNav() {
         )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', pointerEvents: 'none' }}>
-          {isLanding ? null : (
+          {isLanding || hideSongSearch ? null : (
             <div data-margo-nav-search style={{ pointerEvents: 'auto' }}><SearchNavLink /></div>
           )}
 
