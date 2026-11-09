@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { MargoSheet } from '@/components/margo-sheet'
+import { MargoMemoryFlowOverlay } from '@/components/margo-memory-centered-dialog'
+import { KeyboardSafeCtaBar } from '@/components/keyboard-safe-cta-bar'
 import { ComposeSearchDropdown, type ComposeSearchHit } from '@/components/compose-search-dropdown'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { MargoSearchInput } from '@/components/margo-search-input'
@@ -64,7 +66,7 @@ export function ListeningMemorySheet({
   const [desktop, setDesktop] = useState(false)
 
   useEffect(() => {
-    const mq = window.matchMedia('(min-width: 768px)')
+    const mq = window.matchMedia('(min-width: 720px)')
     const apply = () => setDesktop(mq.matches)
     apply()
     mq.addEventListener('change', apply)
@@ -260,17 +262,8 @@ export function ListeningMemorySheet({
     )
   }
 
-  return (
-    <MargoSheet
-      open={open}
-      onOpenChange={onOpenChange}
-      title="What are you listening to?"
-      anchor={desktop ? 'top' : 'bottom'}
-      heightMode="fixed"
-      maxHeight={desktop ? 'min(82dvh, 620px)' : 'min(88dvh, 680px)'}
-      bottomInset="none"
-    >
-      <div className="margo-listening-memory">
+  const listeningBody = (
+      <div className="margo-listening-memory margo-listening-memory--flow">
         <div ref={searchWrapRef} className="margo-listening-memory__search" style={{ position: 'relative', zIndex: songSearchOpen ? 60 : 1 }}>
           <MargoSearchInput
             value={query}
@@ -371,21 +364,38 @@ export function ListeningMemorySheet({
           ))}
         </ul>
 
-        <div className="margo-listening-memory__footer">
-          <span className="margo-listening-memory__footer-label" style={{ fontFamily: font }}>
-            {periodType === 'week' ? `Week of ${footerLabel.replace(/^Week of /, '')}` : footerLabel}
-          </span>
-          <button
-            type="button"
-            className="margo-listening-memory__save"
-            aria-label="Save"
-            disabled={!canSave}
-            onClick={() => { void save() }}
-          >
-            <CheckIcon size={16} color="var(--bg)" />
-          </button>
-        </div>
+        <p className="margo-listening-memory__footer-label" style={{ fontFamily: font }}>
+          {periodType === 'week' ? `Week of ${footerLabel.replace(/^Week of /, '')}` : footerLabel}
+        </p>
       </div>
-    </MargoSheet>
+  )
+
+  return (
+    <>
+      <MargoMemoryFlowOverlay
+        open={open}
+        onOpenChange={onOpenChange}
+        title="What are you listening to?"
+        footer={
+          <KeyboardSafeCtaBar pinToLayoutBottom solidBackground bottomGutter={12} zIndex={260} contentMaxWidth={560}>
+            <div className="margo-memory-create__cta-row">
+              <button type="button" className="margo-memory-btn margo-memory-btn--secondary margo-memory-btn--grow" onClick={() => onOpenChange(false)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="margo-memory-btn margo-memory-btn--primary margo-memory-btn--grow"
+                disabled={!canSave}
+                onClick={() => { void save() }}
+              >
+                {saving ? 'Saving…' : 'Done'}
+              </button>
+            </div>
+          </KeyboardSafeCtaBar>
+        }
+      >
+        {listeningBody}
+      </MargoMemoryFlowOverlay>
+    </>
   )
 }

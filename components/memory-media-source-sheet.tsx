@@ -1,10 +1,28 @@
 'use client'
 
 import { useRef, type RefObject } from 'react'
-import { MargoActionSheet } from '@/components/margo-action-sheet'
-import { TYPE, UI_FONT } from '@/lib/fonts'
+import { MargoMemoryCenteredDialog } from '@/components/margo-memory-centered-dialog'
+import { ImagePlusIcon, PlayIcon, LibraryIcon } from '@/components/icons'
 
-const font = UI_FONT
+function MediaOutlineIcon({ kind }: { kind: 'photo' | 'video' | 'gallery' | 'file' }) {
+  const size = 22
+  if (kind === 'photo') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+        <rect x="4" y="7" width="16" height="12" rx="2.5" stroke="var(--gold)" strokeWidth="1.5" />
+        <circle cx="9" cy="11.5" r="1.5" fill="var(--gold)" />
+        <path d="M6 17l4.5-4 3 2.5L18 12" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )
+  }
+  if (kind === 'video') {
+    return <PlayIcon size={size} color="var(--gold)" />
+  }
+  if (kind === 'gallery') {
+    return <ImagePlusIcon size={size} color="var(--gold)" />
+  }
+  return <LibraryIcon size={size} color="var(--gold)" />
+}
 
 export function MemoryMediaSourceSheet({
   open,
@@ -31,20 +49,32 @@ export function MemoryMediaSourceSheet({
     onOpenChange(false)
   }
 
-  const actions = [
-    { id: 'camera', label: 'Take a photo', onSelect: () => cameraRef.current?.click() },
-    { id: 'video', label: 'Record a video', onSelect: () => videoRef.current?.click() },
-    { id: 'gallery', label: 'Choose from gallery', onSelect: () => libraryRef.current?.click() },
-    { id: 'file', label: 'Choose a file', onSelect: () => fileRef.current?.click() },
-    { id: 'cancel', label: 'Cancel', tone: 'cancel' as const, onSelect: () => onOpenChange(false) },
+  const tiles = [
+    { id: 'camera', label: 'Photo', kind: 'photo' as const, onSelect: () => cameraRef.current?.click() },
+    { id: 'video', label: 'Video', kind: 'video' as const, onSelect: () => videoRef.current?.click() },
+    { id: 'gallery', label: 'Gallery', kind: 'gallery' as const, onSelect: () => libraryRef.current?.click() },
+    { id: 'file', label: 'File', kind: 'file' as const, onSelect: () => fileRef.current?.click() },
   ]
 
   return (
     <>
-      <MargoActionSheet open={open} onOpenChange={onOpenChange} title="Add media" actions={actions} />
-      <p style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)', margin: 0, display: 'none' }} aria-hidden>
-        Memory media picker
-      </p>
+      <MargoMemoryCenteredDialog open={open} onOpenChange={onOpenChange} title="Add media" titleId="memory-add-media-title">
+        <div className="margo-memory-add-media__tiles">
+          {tiles.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className="margo-memory-add-media__tile"
+              onClick={t.onSelect}
+            >
+              <span className="margo-memory-add-media__tile-icon" aria-hidden>
+                <MediaOutlineIcon kind={t.kind} />
+              </span>
+              <span className="margo-memory-add-media__tile-label">{t.label}</span>
+            </button>
+          ))}
+        </div>
+      </MargoMemoryCenteredDialog>
       <HiddenInputs libraryRef={libraryRef} cameraRef={cameraRef} videoRef={videoRef} fileRef={fileRef} onPick={pick} />
     </>
   )

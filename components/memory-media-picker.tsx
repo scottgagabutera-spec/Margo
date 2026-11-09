@@ -4,15 +4,21 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { MemoryMediaSourceSheet } from '@/components/memory-media-source-sheet'
 import { PortraitAvatarCropSheet } from '@/components/portrait-avatar-crop-sheet'
+import { CloseIcon, PlayIcon } from '@/components/icons'
 import {
   MAX_MEMORY_MEDIA,
   reorderMemoryPhotos,
   uploadMemoryMediaFile,
   type MemoryDraftPhoto,
 } from '@/lib/memory/client-media-upload'
-import { UI_FONT, TYPE } from '@/lib/fonts'
 
-const font = UI_FONT
+function formatVideoLength(sec?: number | null): string {
+  if (sec == null || !Number.isFinite(sec)) return ''
+  const total = Math.max(0, Math.floor(sec))
+  const m = Math.floor(total / 60)
+  const s = total % 60
+  return `${m}:${String(s).padStart(2, '0')}`
+}
 
 export function MemoryMediaPicker({
   draftOrMemoryId,
@@ -47,68 +53,36 @@ export function MemoryMediaPicker({
     onChange(reorderMemoryPhotos(photos.filter((p) => p.r2Key !== r2Key)))
   }
 
-  const move = (index: number, dir: -1 | 1) => {
-    const next = [...photos]
-    const swap = index + dir
-    if (swap < 0 || swap >= next.length) return
-    ;[next[index], next[swap]] = [next[swap], next[index]]
-    onChange(reorderMemoryPhotos(next))
-  }
-
   return (
     <div className="margo-memory-media-picker">
       <div className="margo-memory-media-picker__head">
-        <p className="margo-memory-media-picker__title" style={{ fontFamily: font }}>
-          Add photos or videos
-        </p>
-        <span style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)' }}>
+        <p className="margo-memory-media-picker__title">Photos or videos</p>
+        <span className="margo-memory-media-picker__count">
           {photos.length}/{MAX_MEMORY_MEDIA}
         </span>
       </div>
-      {status ? (
-        <p style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--gold)', margin: '0 0 8px' }}>{status}</p>
-      ) : null}
+      {status ? <p className="margo-memory-media-picker__status">{status}</p> : null}
       <div className="margo-memory-media-picker__grid">
-        {photos.map((p, index) => (
-          <div
-            key={p.r2Key}
-            className={`margo-memory-media-picker__thumb${index === 0 ? ' margo-memory-media-picker__thumb--cover' : ''}`}
-          >
+        {photos.map((p) => (
+          <div key={p.r2Key} className="margo-memory-media-picker__thumb">
             <img src={p.previewUrl} alt="" />
             {p.mediaType === 'video' ? (
-              <span
-                style={{
-                  position: 'absolute',
-                  left: 4,
-                  bottom: 4,
-                  fontSize: 9,
-                  padding: '2px 4px',
-                  borderRadius: 4,
-                  background: 'rgba(0,0,0,0.6)',
-                  color: '#fff',
-                }}
-              >
-                Video
+              <span className="margo-memory-media-picker__video-badge">
+                <PlayIcon size={10} color="#fff" />
+                {formatVideoLength(p.durationSec)}
               </span>
             ) : null}
-            <div className="margo-memory-media-picker__toolbar">
-              {index > 0 ? (
-                <button type="button" className="margo-memory-media-picker__icon-btn" aria-label="Move earlier" onClick={() => move(index, -1)}>
-                  ‹
-                </button>
-              ) : null}
-              {index < photos.length - 1 ? (
-                <button type="button" className="margo-memory-media-picker__icon-btn" aria-label="Move later" onClick={() => move(index, 1)}>
-                  ›
-                </button>
-              ) : null}
-              <button type="button" className="margo-memory-media-picker__icon-btn" aria-label="Remove" onClick={() => remove(p.r2Key)}>
-                ×
-              </button>
-            </div>
+            <button
+              type="button"
+              className="margo-memory-media-picker__remove"
+              aria-label="Remove"
+              onClick={() => remove(p.r2Key)}
+            >
+              <CloseIcon size={12} color="#fff" />
+            </button>
           </div>
         ))}
-        {photos.length < MAX_MEDIA ? (
+        {photos.length < MAX_MEMORY_MEDIA ? (
           <button
             type="button"
             className="margo-memory-media-picker__add"
@@ -146,5 +120,3 @@ export function MemoryMediaPicker({
     </div>
   )
 }
-
-const MAX_MEDIA = MAX_MEMORY_MEDIA

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import { ComposeSearchDropdown, type ComposeSearchHit } from '@/components/compose-search-dropdown'
 import { MargoSearchInput } from '@/components/margo-search-input'
-import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
+import { KeyboardSafeCtaBar } from '@/components/keyboard-safe-cta-bar'
 import { CloseIcon, ImagePlusIcon, MusicNoteIcon, PenLineIcon } from '@/components/icons'
 import { compactArtworkUrl } from '@/lib/compact-artwork-url'
 import { createClient } from '@/lib/supabase/client'
@@ -50,20 +50,8 @@ type DraftSong = {
 type Step = 1 | 2 | 3 | 4
 type MemoryEntryKind = 'song' | 'media' | 'words'
 
-const btnSecondary: CSSProperties = {
-  flex: 1,
-  minHeight: 'var(--margo-touch-min)',
-  borderRadius: '999px',
-  border: '1px solid var(--border)',
-  background: 'var(--surface-2)',
-  color: 'var(--text)',
-  fontFamily: font,
-  fontSize: TYPE.label,
-  fontWeight: 600,
-  letterSpacing: '0.12em',
-  textTransform: 'uppercase',
-  cursor: 'pointer',
-}
+const btnSecondaryClass = 'margo-memory-btn margo-memory-btn--secondary margo-memory-btn--grow'
+const btnPrimaryClass = 'margo-memory-btn margo-memory-btn--primary margo-memory-btn--grow'
 
 function monthStartIso(y: number, m: number): string {
   const mm = String(m).padStart(2, '0')
@@ -133,7 +121,7 @@ export function MemoryCreateFlow({
   }, [focusStory, step])
 
   useEffect(() => {
-    const mq = window.matchMedia('(min-width: 835px)')
+    const mq = window.matchMedia('(min-width: 720px)')
     const apply = () => setDesktop(mq.matches)
     apply()
     mq.addEventListener('change', apply)
@@ -437,64 +425,18 @@ export function MemoryCreateFlow({
   const showTitleErr = titleTouched && titleErr
 
   return (
-    <div
-      className={panelClass}
-      style={{
-        minHeight: desktop ? undefined : '100dvh',
-        background: 'var(--bg)',
-        paddingBottom: 'var(--margo-page-padding-bottom)',
-      }}
-    >
-      <header
-        style={{
-          padding: 'calc(var(--nav-height, 72px) + 12px) 20px 16px',
-        }}
-      >
-        <p style={{ margin: 0, fontFamily: font, fontSize: TYPE.secondary, fontWeight: 500, color: 'var(--gold)' }}>
-          New memory
-        </p>
-        <p style={{ margin: '4px 0 0', fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)' }}>
-          Step {step} of 4
-        </p>
+    <div className={`${panelClass}${desktop ? ' margo-memory-create--wide' : ''}`}>
+      <header className="margo-memory-create__header">
+        <p className="margo-memory-type-title">{step === 4 ? 'Review' : 'New memory'}</p>
+        <p className="margo-memory-type-step">Step {step} of 4</p>
       </header>
 
-      <div
-        style={{
-          padding: `0 20px ${
-            step === 4
-              ? '200px'
-              : keyboardOpen
-                ? 'calc(160px + var(--margo-keyboard-inset, 0px) + var(--margo-cta-bar-h, 72px))'
-                : 'calc(120px + var(--margo-cta-bar-h, 72px))'
-          }`,
-          maxWidth: 560,
-          margin: '0 auto',
-          width: '100%',
-          boxSizing: 'border-box',
-        }}
-      >
+      <div className="margo-memory-create__body">
         {step === 1 ? (
           <>
             <p style={{ ...labelStyle, marginBottom: 12 }}>What is this memory about?</p>
             {onOpenListening ? (
-              <button
-                type="button"
-                onClick={onOpenListening}
-                style={{
-                  border: '1px solid var(--border)',
-                  borderRadius: 12,
-                  background: 'var(--surface)',
-                  color: 'var(--gold)',
-                  fontFamily: font,
-                  fontSize: TYPE.secondary,
-                  fontWeight: 600,
-                  padding: '10px 14px',
-                  marginBottom: 14,
-                  width: '100%',
-                  cursor: 'pointer',
-                  minHeight: 'var(--margo-touch-min)',
-                }}
-              >
+              <button type="button" className="margo-memory-create__listening-bar" onClick={onOpenListening}>
                 What are you listening to?
               </button>
             ) : null}
@@ -804,18 +746,19 @@ export function MemoryCreateFlow({
         contentMaxWidth={560}
         pinToLayoutBottom
         solidBackground
+        bottomGutter={12}
+        zIndex={60}
       >
-        <div style={{ display: 'flex', gap: 10, padding: '0 4px' }}>
+        <div className="margo-memory-create__cta-row">
           {step < 4 ? (
             <>
-              <button type="button" style={btnSecondary} onClick={goBack}>
+              <button type="button" className={btnSecondaryClass} onClick={goBack}>
                 {step === 1 ? 'Close' : 'Back'}
               </button>
               <button
                 type="button"
+                className={btnPrimaryClass}
                 style={{
-                  ...keyboardSafePrimaryBtnStyle,
-                  flex: 1,
                   opacity: (step === 1 && !canAdvanceStep1) || (step === 2 && !canAdvanceStep2) ? 0.45 : 1,
                 }}
                 disabled={(step === 1 && !canAdvanceStep1) || (step === 2 && !canAdvanceStep2)}
@@ -825,12 +768,7 @@ export function MemoryCreateFlow({
               </button>
             </>
           ) : (
-            <button
-              type="button"
-              style={{ ...keyboardSafePrimaryBtnStyle, width: '100%' }}
-              disabled={submitting}
-              onClick={() => void submit()}
-            >
+            <button type="button" className={`${btnPrimaryClass} margo-memory-btn--full`} disabled={submitting} onClick={() => void submit()}>
               {submitting ? 'Posting…' : 'Post memory'}
             </button>
           )}

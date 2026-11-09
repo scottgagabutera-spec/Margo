@@ -71,20 +71,25 @@ export function KeyboardSafeCtaBar({
     }
   }, [])
 
+  const pageBottom = 'var(--margo-page-bottom, var(--margo-tabbar-h, 0px))'
+  const safeBottom = 'var(--margo-safe-bottom, env(safe-area-inset-bottom, 0px))'
+
   const style: CSSProperties = {
     position: 'fixed',
     left: 0,
     right: 0,
     bottom: pinToLayoutBottom
-      ? 'var(--margo-page-bottom, var(--margo-tabbar-h, 0px))'
+      ? `calc(${bottomGutter}px + ${pageBottom} + ${safeBottom})`
       : 'var(--margo-keyboard-inset, 0px)',
     zIndex,
     paddingTop: '12px',
     paddingLeft: '24px',
     paddingRight: '24px',
-    paddingBottom: pinToLayoutBottom || !keyboardOpen
-      ? `calc(${bottomGutter}px + var(--margo-page-bottom, var(--margo-tabbar-h, 0px)))`
-      : `${bottomGutter}px`,
+    paddingBottom: pinToLayoutBottom
+      ? safeBottom
+      : keyboardOpen
+        ? `${bottomGutter}px`
+        : `calc(${bottomGutter}px + ${pageBottom} + ${safeBottom})`,
     background: solidBackground
       ? 'var(--bg)'
       : 'linear-gradient(to top, var(--bg) 55%, transparent)',
