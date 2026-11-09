@@ -1,4 +1,5 @@
 import { applyFeedContentTab, parseFeedContentTab, type FeedContentTab } from './feed-content-tab.ts'
+import { readActiveFeedSubTabScrollY } from './feed-subtab-scroll.ts'
 
 export const FEED_RETURN_STORAGE_KEY = 'margo-feed-resume'
 
@@ -120,10 +121,10 @@ export function writeFeedReturnSnapshot(patch: Partial<FeedReturnSnapshot> & { y
 }
 
 export function persistFeedReturnBeforeLeave(tab?: FeedContentTab) {
-  const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
-  const y = scroller instanceof HTMLElement ? scroller.scrollTop : 0
   const dom = captureFeedReturnFromDom(tab)
-  writeFeedReturnSnapshot({ y, tab: tab ?? dom.tab })
+  const resolvedTab = tab ?? dom.tab
+  const y = readActiveFeedSubTabScrollY(resolvedTab)
+  writeFeedReturnSnapshot({ y, tab: resolvedTab })
 }
 
 export function applyFeedReturnHorizontals(snap: FeedReturnSnapshot) {

@@ -2,7 +2,11 @@ import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.
 import { alignFeedPrimaryFrozenScroll } from '@/components/primary-tab-shell'
 import { applyFeedContentTab, parseFeedContentTab, type FeedContentTab } from './feed-content-tab.ts'
 import { persistFeedReturnBeforeLeave } from './margo-feed-return.ts'
-import { captureFeedSubTabScroll, restoreFeedSubTabScrollAfterPaint } from './feed-subtab-scroll.ts'
+import {
+  captureFeedSubTabScroll,
+  readFeedSubTabScrollY,
+  restoreFeedSubTabScroll,
+} from './feed-subtab-scroll.ts'
 import type { MemoryPromoKind } from './feed-memory-card.ts'
 
 /** Query keys that open an in-feed mix overlay. Clearing them is Back. */
@@ -84,9 +88,7 @@ function pushFeedSearch(router: AppRouterInstance, params: URLSearchParams) {
   const fromTab = parseFeedContentTab(currentFeedSearch().get('tab'))
   captureFeedSubTabScroll(fromTab)
   persistFeedReturnBeforeLeave(fromTab)
-  const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
-  const y = scroller instanceof HTMLElement ? scroller.scrollTop : 0
-  alignFeedPrimaryFrozenScroll(y)
+  alignFeedPrimaryFrozenScroll(readFeedSubTabScrollY(fromTab))
   try {
     sessionStorage.setItem('margo-feed-return-pending', '1')
   } catch {
@@ -121,7 +123,7 @@ export function openFeedTab(
   // pushFeedSearch saves the current pose first; only then move the pane.
   pushFeedSearch(router, params)
   if (typeof document !== 'undefined') {
-    restoreFeedSubTabScrollAfterPaint(tab)
+    restoreFeedSubTabScroll(tab)
   }
 }
 

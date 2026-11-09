@@ -98,10 +98,25 @@ export function getActivePrimaryScrollEl(): HTMLElement | null {
   )
 }
 
+function feedSectorScrollEl(pane: HTMLElement): HTMLElement {
+  const active = pane.querySelector<HTMLElement>('[data-margo-feed-subtab-pane-active="1"]')
+  if (!active) return pane
+  if (active.getAttribute('data-margo-feed-subtab') === 'shorts') {
+    const pager = active.querySelector<HTMLElement>('.margo-feed-shorts-pager')
+    if (pager) return pager
+  }
+  return active
+}
+
 /** Read scroll position from the active pane, else the window. */
 export function readActiveScrollTop(): number {
   const el = getActivePrimaryScrollEl()
-  if (el) return el.scrollTop
+  if (el) {
+    if (el.getAttribute('data-margo-primary-tab') === 'feed') {
+      return feedSectorScrollEl(el).scrollTop
+    }
+    return el.scrollTop
+  }
   if (typeof window === 'undefined') return 0
   return window.scrollY || document.documentElement.scrollTop || 0
 }
@@ -329,21 +344,22 @@ export function restoreActivePrimaryScroll(): PrimaryScrollRestore {
   const id = el.getAttribute('data-margo-primary-tab') as PrimaryTabId | null
   if (!id) return SCROLL_RESTORE_NONE
   if (id === 'feed') {
+    const surface = feedSectorScrollEl(el)
     const resume = readFeedResume()
     if (resume) {
       if (resume.anchorId) {
         const node = document.getElementById('feed-post-' + resume.anchorId)
         if (node && el.contains(node)) {
-          const delta = node.getBoundingClientRect().top - el.getBoundingClientRect().top
-          el.scrollTop += delta
-          alignFeedPrimaryFrozenScroll(el.scrollTop)
+          const delta = node.getBoundingClientRect().top - surface.getBoundingClientRect().top
+          surface.scrollTop += delta
+          alignFeedPrimaryFrozenScroll(surface.scrollTop)
           return { applied: true, anchored: true, waitingForAnchor: false }
         }
-        if (Math.abs(el.scrollTop - resume.y) > 1) el.scrollTop = resume.y
+        if (Math.abs(surface.scrollTop - resume.y) > 1) surface.scrollTop = resume.y
         alignFeedPrimaryFrozenScroll(resume.y)
         return { applied: true, anchored: false, waitingForAnchor: true }
       }
-      if (Math.abs(el.scrollTop - resume.y) > 1) el.scrollTop = resume.y
+      if (Math.abs(surface.scrollTop - resume.y) > 1) surface.scrollTop = resume.y
       alignFeedPrimaryFrozenScroll(resume.y)
       if (resume.memoriesRowX > 0) {
         const row = el.querySelector('.margo-feed-memories-row__scroller')
@@ -1122,10 +1138,11 @@ export function PrimaryTabShell({
       const cs = getComputedStyle(el)
       if (cs.display === 'none' || Number(cs.opacity) === 0) return
       if (el.scrollLeft !== 0) el.scrollLeft = 0
+      const scrollSurface = tabId === 'feed' ? feedSectorScrollEl(el) : el
       persistScroll(
         frozenScrollRef.current,
         tabId,
-        el.scrollTop,
+        scrollSurface.scrollTop,
         tabId === 'feed' ? feedAnchorFromPane(el) : undefined,
       )
     }
