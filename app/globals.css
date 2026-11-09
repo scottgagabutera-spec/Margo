@@ -12256,21 +12256,23 @@ button.margo-feed-shorts-strip__more {
 .margo-profile-flow-root .margo-profile-block--hero {
   margin: 0;
 }
-/* Header stack: equal gaps (20px total / 3) — preserves prior photo→stats span */
-.margo-profile-flow-root {
-  --margo-profile-header-gap: calc(20px / 3);
-}
+/* Header stack: 6px under photo (via hero block tail), then 8px / 8px */
 .margo-profile-flow-root .margo-profile-block--identity {
-  margin: var(--margo-profile-header-gap) 0 0;
+  margin: 2px 0 0;
 }
 .margo-profile-flow-root .margo-profile-block--bio {
-  margin: var(--margo-profile-header-gap) 0 0;
+  margin: 8px 0 0;
 }
 .margo-profile-flow-root .margo-profile-block--stats {
-  margin: var(--margo-profile-header-gap) 0 0;
+  margin: 8px 0 0;
 }
 .margo-profile-flow-root .margo-profile-block--artist-links {
-  margin: var(--margo-profile-header-gap) 0 0;
+  margin: 10px 0 12px;
+}
+@media (min-width: 768px) {
+  .margo-profile-flow-root .margo-profile-block--identity {
+    margin-top: -11px;
+  }
 }
 .margo-profile-flow-root .margo-profile-block--signature {
   margin: 8px 0 0;
@@ -12594,6 +12596,13 @@ button.margo-feed-shorts-strip__more {
   flex: 1;
   min-width: 0;
 }
+.margo-profile-favorites-inline-search__field .margo-search-wrap__clear {
+  display: none;
+}
+.margo-profile-favorites-inline-search__field .margo-search--profile-favorites::-webkit-search-cancel-button {
+  display: none;
+  -webkit-appearance: none;
+}
 .margo-profile-favorites-inline-search__close {
   display: inline-flex;
   align-items: center;
@@ -12620,17 +12629,6 @@ button.margo-feed-shorts-strip__more {
   position: relative;
   z-index: 2;
   box-sizing: border-box;
-}
-.margo-profile-favorites-inline-search__album-note {
-  margin: 8px 0 0;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
-  font-size: 12px;
-  line-height: 1.3;
-  color: var(--text-muted);
-  text-align: center;
 }
 .margo-profile-memories-strip--reserve {
   min-height: 186px;

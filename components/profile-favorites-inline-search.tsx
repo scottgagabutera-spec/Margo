@@ -1,11 +1,13 @@
 'use client'
 
-import { useEffect, useState, type RefObject } from 'react'
-import { ArtistSearchDropdown } from '@/components/artist-search-dropdown'
+import { useEffect, useMemo, useState, type RefObject } from 'react'
 import type { ComposeSearchHit } from '@/components/compose-search-dropdown'
-import { ComposeSearchDropdown } from '@/components/compose-search-dropdown'
 import { CloseIcon } from '@/components/icons'
 import { MargoSearchInput } from '@/components/margo-search-input'
+import {
+  ProfileFavoritesSearchPanel,
+  type ProfileFavoritesSearchRow,
+} from '@/components/profile-favorites-search-panel'
 import {
   peekArtistSearchCache,
   runArtistSearch,
@@ -45,6 +47,7 @@ export function useProfileFavoritesSearch(kind: ProfileFavoritesSearchKind, acti
     if (!active) return
     if (kind === 'albums') {
       setDropdownOpen(true)
+      setSearching(false)
       return
     }
     const q = query.trim()
@@ -55,8 +58,8 @@ export function useProfileFavoritesSearch(kind: ProfileFavoritesSearchKind, acti
       setDropdownOpen(false)
       return
     }
+    setDropdownOpen(true)
     if (kind === 'artists') {
-      setDropdownOpen(true)
       const cached = peekArtistSearchCache(q)
       if (cached) {
         setArtistResults(cached)
@@ -77,7 +80,6 @@ export function useProfileFavoritesSearch(kind: ProfileFavoritesSearchKind, acti
         .then((r) => (r.ok ? r.json() : { hits: [] }))
         .then((data: { hits?: ComposeSearchHit[] }) => {
           setSongResults((data.hits || []).slice(0, RESULT_LIMIT))
-          setDropdownOpen(true)
         })
         .catch(() => setSongResults([]))
         .finally(() => setSearching(false))
@@ -103,6 +105,11 @@ export function ProfileFavoritesSearchField({
   onClose: () => void
   fieldRef?: RefObject<HTMLDivElement | null>
 }) {
+  const dismiss = () => {
+    setQuery('')
+    onClose()
+  }
+
   return (
     <div ref={fieldRef} className="margo-profile-favorites-inline-search__field">
       <MargoSearchInput
@@ -113,17 +120,39 @@ export function ProfileFavoritesSearchField({
         loading={searching}
         autoFocus
         compact
+        className="margo-search margo-search--profile-favorites"
       />
       <button
         type="button"
         className="margo-profile-favorites-inline-search__close"
-        aria-label="Close search"
-        onClick={onClose}
+        aria-label="Clear search and close"
+        onClick={dismiss}
       >
         <CloseIcon size={14} color="var(--text-secondary)" />
       </button>
     </div>
   )
+}
+
+function artistRows(results: ArtistSearchResult[]): ProfileFavoritesSearchRow[] {
+  return results.map((hit) => ({
+    id: hit.id,
+    title: hit.name,
+    artworkUrl: hit.artworkUrl || hit.previewArtworkUrl,
+    artworkRound: true,
+    badge: hit.onMargo ? 'On Margo' : null,
+  }))
+}
+
+function songRows(results: ComposeSearchHit[]): ProfileFavoritesSearchRow[] {
+  return results.map((hit) => ({
+    id: `${hit.source}-${hit.id}`,
+    title: hit.title,
+    subtitle: hit.artist,
+    artworkUrl: hit.artwork || null,
+    artworkRound: false,
+    badge: hit.source === 'margo' ? 'On Margo' : null,
+  }))
 }
 
 export function ProfileFavoritesSearchResults({
@@ -135,7 +164,6 @@ export function ProfileFavoritesSearchResults({
   songResults,
   onArtistPick,
   onSongPick,
-  onClose,
 }: {
   kind: ProfileFavoritesSearchKind
   query: string
@@ -145,48 +173,46 @@ export function ProfileFavoritesSearchResults({
   songResults: ComposeSearchHit[]
   onArtistPick: (hit: ArtistSearchResult) => void
   onSongPick: (hit: ComposeSearchHit) => void
-  onClose: () => void
 }) {
-  if (kind === 'albums' && dropdownOpen) {
-    return (
-      <p className="margo-profile-favorites-inline-search__album-note">
-        Album search coming soon
-      </p>
-    )
-  }
-  if (kind === 'artists' && dropdownOpen && query.trim().length >= 2) {
-    return (
-      <div
-        className="margo-profile-favorites-inline-search__dropdown"
-        style={{ maxHeight: DROPDOWN_MAX_PX }}
-      >
-        <ArtistSearchDropdown
-          open
-          loading={searching}
-          results={artistResults}
-          onPick={onArtistPick}
-        />
-      </div>
-    )
-  }
-  if (kind === 'songs' && dropdownOpen && query.trim().length >= 2) {
-    return (
-      <div
-        className="margo-profile-favorites-inline-search__dropdown"
-        style={{ maxHeight: DROPDOWN_MAX_PX }}
-      >
-        <ComposeSearchDropdown
-          open
-          loading={searching}
-          results={songResults}
-          highlightQuery={query}
-          onSelect={onSongPick}
-          onClose={onClose}
-          variant="compose"
-          listMaxHeightPx={DROPDOWN_MAX_PX}
-        />
-      </div>
-    )
-  }
-  return null
+  const q = query.trim()
+  const showPanel =
+    kind === 'albums' ? dropdownOpen : dropdownOpen && q.length >= 2
+
+  const rows = useMemo(() => {
+    if (kind === 'artists') return artistRows(artistResults)
+    if (kind === 'songs') return songRows(songResults)
+    return []
+  }, [artistResults, kind, songResults])
+
+  const emptyLabel =
+    kind === 'artists' ? 'No artists found' : kind === 'songs' ? 'No songs found' : 'No results'
+
+  if (!showPanel) return null
+
+  return (
+    <div
+      className="margo-profile-favorites-inline-search__dropdown"
+      style={{ maxHeight: DROPDOWN_MAX_PX }}
+    >
+      <ProfileFavoritesSearchPanel
+        open
+        loading={kind !== 'albums' && searching}
+        rows={rows}
+        highlightQuery={q}
+        emptyLabel={emptyLabel}
+        comingSoon={kind === 'albums'}
+        onPick={(row) => {
+          if (kind === 'artists') {
+            const hit = artistResults.find((h) => h.id === row.id)
+            if (hit) onArtistPick(hit)
+            return
+          }
+          if (kind === 'songs') {
+            const hit = songResults.find((h) => `${h.source}-${h.id}` === row.id)
+            if (hit) onSongPick(hit)
+          }
+        }}
+      />
+    </div>
+  )
 }

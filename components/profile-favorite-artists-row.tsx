@@ -226,7 +226,6 @@ export function ProfileFavoriteArtistsRow({
               songResults={search.songResults}
               onArtistPick={(hit) => { void onArtistPick(hit) }}
               onSongPick={onSongPick}
-              onClose={closeSearch}
             />
           </div>
         ) : (
