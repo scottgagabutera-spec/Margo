@@ -34,19 +34,6 @@ function afterPaintTwice(apply: () => void): void {
   })
 }
 
-/** Zero feed pane scroll for Memories / Shorts / Echoes (DOM only — no resume key). */
-export function resetFeedScrollerForContentSubTab(): void {
-  if (typeof window === 'undefined') return
-  afterPaintTwice(() => {
-    window.scrollTo(0, 0)
-    document.documentElement.scrollTop = 0
-    document.body.scrollTop = 0
-    applyScrollerY(0)
-    const el = readFeedPrimaryScroller()
-    if (el) el.scrollLeft = 0
-  })
-}
-
 export function restoreFeedSubTabScrollAfterPaint(tab: FeedContentTab): void {
   const target = feedSubTabScrollY[tab] ?? 0
   if (typeof window === 'undefined') return

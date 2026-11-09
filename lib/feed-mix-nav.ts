@@ -1,7 +1,7 @@
 import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime'
 import { alignFeedPrimaryFrozenScroll } from '@/components/primary-tab-shell'
 import { applyFeedContentTab, parseFeedContentTab, type FeedContentTab } from './feed-content-tab.ts'
-import { persistFeedReturnBeforeLeave, readFeedReturnSnapshot } from './margo-feed-return.ts'
+import { persistFeedReturnBeforeLeave } from './margo-feed-return.ts'
 import { captureFeedSubTabScroll, restoreFeedSubTabScrollAfterPaint } from './feed-subtab-scroll.ts'
 import type { MemoryPromoKind } from './feed-memory-card.ts'
 
