@@ -2,15 +2,9 @@
  * Profile layout — stream the page immediately; JSON-LD is SEO-only and
  * must not block first paint of the You tab / profile body.
  */
-import { Inter } from 'next/font/google'
 import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
-
-const inter = Inter({
-  subsets: ['latin'],
-  weight: ['400', '500'],
-  display: 'swap',
-})
+import { ProfileFlowRoot } from '@/components/profile-flow-root'
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { isConsumerVisibleUsername } from '@/lib/profile-public-server'
@@ -42,7 +36,7 @@ export default async function ProfileUsernameLayout({
           <ProfileJsonLd username={username} />
         </Suspense>
       ) : null}
-      <div className={`margo-profile-flow-root ${inter.className}`}>{children}</div>
+      <ProfileFlowRoot>{children}</ProfileFlowRoot>
     </>
   )
 }

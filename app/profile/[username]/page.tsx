@@ -127,12 +127,16 @@ function ProfileStat({
   )
   if (href) {
     return (
-      <PendingNavLink href={href} indicator="overlay" ringSize={22} style={style}>
+      <PendingNavLink href={href} indicator="overlay" ringSize={22} style={style} className="margo-profile-stat">
         {inner}
       </PendingNavLink>
     )
   }
-  return <span style={style}>{inner}</span>
+  return (
+    <span style={style} className="margo-profile-stat">
+      {inner}
+    </span>
+  )
 }
 
 type ProfileData = WarmProfileRow
@@ -916,7 +920,7 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
                 "View all" and the Songs stat above both go to the same
                 full discography page. ── */}
             {profile.isArtist && (
-              <div className="margo-profile-discography-preview" style={{ marginBottom: '28px' }}>
+              <div className="margo-profile-discography-preview margo-profile-block--discography" style={{ marginBottom: '28px' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '14px' }}>
                   <div>
                     <p style={{ ...sectionLabelStyle, marginBottom: '2px' }}>Discography</p>
@@ -976,7 +980,7 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
               </div>
             )}
 
-            <div style={{ marginBottom: '28px' }}>
+            <div className="margo-profile-block--feed">
               {profileContentAccess === 'loading' ? (
                 <FeedPostSkeletonList count={2} />
               ) : profileContentAccess === 'blocked' ? (
@@ -993,7 +997,7 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
                 </div>
               ) : (
               <>
-              <div className="margo-profile-tabs-sticky">
+              <div className="margo-profile-tabs-sticky margo-profile-block--tabs">
                 <div
                   role="tablist"
                   aria-label="Profile content"

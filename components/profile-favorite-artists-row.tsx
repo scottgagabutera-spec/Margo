@@ -92,7 +92,7 @@ export function ProfileFavoriteArtistsRow({
                     priority={index < 5}
                   />
                 </span>
-                <span className="margo-profile-favorite-artists__name" style={{ fontFamily: font, fontSize: '0.6875rem' }}>
+                <span className="margo-profile-favorite-artists__name" style={{ fontFamily: font }}>
                   {a.name}
                 </span>
               </>

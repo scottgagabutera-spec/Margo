@@ -12171,30 +12171,59 @@ button.margo-feed-shorts-strip__more {
 }
 @media (min-width: 768px) {
   .margo-profile-flow-root .margo-profile-page {
-    margin-top: calc(var(--nav-height, 72px) + 48px);
-    padding-top: 0;
+    margin-top: var(--nav-height, 72px);
+    padding-top: 48px;
+    padding-left: 16px;
+    padding-right: 16px;
   }
 }
 @media (max-width: 767px) {
   .margo-profile-flow-root .margo-profile-page {
-    padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+    padding-top: calc(env(safe-area-inset-top, 0px) + 6px);
+    padding-left: 14px;
+    padding-right: 14px;
   }
   .margo-profile-flow-root .margo-profile-shell {
-    gap: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .margo-profile-flow-root .margo-profile-shell__left,
+  .margo-profile-flow-root .margo-profile-shell__right {
+    display: contents;
+  }
+  .margo-profile-flow-root .margo-profile-block--header {
+    margin-bottom: 0;
   }
   .margo-profile-flow-root .margo-profile-block--stats {
     margin-top: 2px;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
   }
   .margo-profile-flow-root .margo-profile-block--signature {
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
   .margo-profile-flow-root .margo-profile-block--memories,
   .margo-profile-flow-root .margo-profile-block--favorites {
-    margin-bottom: 6px;
+    margin-bottom: 4px;
+  }
+  .margo-profile-flow-root .margo-profile-block--tabs {
+    order: 9;
+    margin-bottom: 0;
+  }
+  .margo-profile-flow-root .margo-profile-block--feed {
+    order: 10;
+    margin-bottom: 12px;
+  }
+  .margo-profile-flow-root .margo-profile-block--songs-preview {
+    order: 11;
+  }
+  .margo-profile-flow-root .margo-profile-block--discography {
+    display: none !important;
   }
   .margo-profile-flow-root .margo-profile-tabs-sticky {
-    top: calc(env(safe-area-inset-top, 0px) + 0px);
+    position: relative;
+    top: auto;
+    padding-bottom: 0;
   }
 }
 .margo-profile-flow-root .margo-profile-shell .margo-profile-hero__portrait .margo-portrait-avatar {
@@ -12219,29 +12248,37 @@ button.margo-feed-shorts-strip__more {
   height: 32px;
 }
 .margo-profile-flow-root .margo-profile-round-action__label {
-  font-size: 0.6875rem;
+  font-size: 11px;
   font-weight: 500;
   color: var(--gold);
   line-height: 1.1;
 }
-.margo-profile-flow-root .margo-profile-identity__name {
-  font-size: 0.9375rem;
-  font-weight: 500;
+.margo-profile-flow-root .margo-profile-shell .margo-profile-identity__name {
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  line-height: 1.15;
 }
 .margo-profile-flow-root .margo-profile-identity__handle {
-  font-size: 0.75rem;
+  font-size: 12px;
+  line-height: 1.2;
 }
 .margo-profile-flow-root .margo-profile-bio {
-  font-size: 0.75rem;
+  font-size: 12px;
   color: var(--text);
   line-height: 1.35;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 .margo-profile-flow-root .margo-profile-stats {
-  margin: 6px 0 4px;
+  margin: 4px 0 2px;
+  gap: 0;
+}
+.margo-profile-flow-root .margo-profile-stat {
+  min-height: 0 !important;
+  min-width: 0 !important;
+  padding: 2px 10px !important;
 }
 .margo-profile-flow-root .margo-profile-stat__value {
-  font-size: 0.8125rem;
+  font-size: 13px;
   font-weight: 500;
   color: var(--text);
   line-height: 1;
@@ -12250,56 +12287,61 @@ button.margo-feed-shorts-strip__more {
 }
 .margo-profile-flow-root .margo-profile-stat__label {
   margin-top: 2px;
-  font-size: 0.6875rem;
+  font-size: 11px;
   font-weight: 400;
   color: var(--text-muted);
   text-align: center;
   line-height: 1.1;
 }
 .margo-profile-flow-root .margo-profile-signature-pill-wrap {
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 .margo-profile-flow-root .margo-profile-signature-pill {
   min-height: 34px;
   max-height: 34px;
-  padding: 4px 8px 4px 10px;
+  height: 34px;
+  padding: 0 8px 0 10px;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--surface-2);
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
 }
 .margo-profile-flow-root .margo-profile-signature-pill__art {
-  display: none;
+  display: none !important;
 }
 .margo-profile-flow-root .margo-profile-signature-pill__lyric {
-  display: none;
+  display: none !important;
 }
 .margo-profile-flow-root .margo-profile-signature-pill__copy {
   flex-direction: row;
   align-items: center;
   gap: 0;
   min-width: 0;
+  align-self: center;
 }
 .margo-profile-flow-root .margo-profile-signature-pill__copy::before {
   content: '♪';
   flex-shrink: 0;
   margin-right: 6px;
-  font-size: 0.75rem;
+  font-size: 12px;
   font-weight: 500;
   color: var(--gold);
   line-height: 1;
+  font-family: inherit;
 }
 .margo-profile-flow-root .margo-profile-signature-pill__meta {
+  display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 0.75rem;
+  font-family: inherit;
+  font-size: 12px;
   font-weight: 500;
   color: var(--gold);
   line-height: 1.2;
@@ -12309,52 +12351,80 @@ button.margo-feed-shorts-strip__more {
 .margo-profile-flow-root .margo-profile-signature-pill__meta-artist {
   color: var(--gold);
   font-weight: 500;
+  font-family: inherit;
 }
 .margo-profile-flow-root .margo-profile-signature-pill__play {
   flex-shrink: 0;
   margin-left: auto;
+  width: 28px;
+  height: 28px;
 }
 .margo-profile-flow-root .margo-profile-memories-strip__head,
 .margo-profile-flow-root .margo-profile-memories-strip__label {
-  font-size: 0.75rem;
+  font-size: 12px;
   font-weight: 500;
   color: var(--gold);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
+}
+.margo-profile-flow-root .margo-profile-memories-strip__row {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 6px;
+  overflow-x: auto;
 }
 .margo-profile-flow-root .margo-profile-memories-strip__row .margo-profile-memory-tile {
-  flex: 0 0 52px;
-  width: 52px;
-  min-width: 52px;
-  height: 64px;
-  min-height: 64px;
+  flex: 0 0 52px !important;
+  width: 52px !important;
+  min-width: 52px !important;
+  max-width: 52px !important;
+  height: 64px !important;
+  min-height: 64px !important;
+  max-height: 64px !important;
   border-radius: 8px;
 }
 .margo-profile-flow-root .margo-profile-memories-strip__row .margo-profile-memory-tile--captioned {
-  height: 64px;
-  min-height: 64px;
+  height: 64px !important;
+  min-height: 64px !important;
+  max-height: 64px !important;
+}
+.margo-profile-flow-root .margo-profile-memories-strip__row .margo-profile-memory-tile--add-cta {
+  min-width: 52px;
+  padding: 4px;
+}
+.margo-profile-flow-root .margo-profile-memories-strip__row .margo-profile-memory-tile__add-label {
+  display: none;
 }
 .margo-profile-flow-root .margo-profile-memories-strip__row .margo-memory-cover-caption {
-  padding: 8px 3px 3px;
+  padding: 6px 2px 2px;
 }
 .margo-profile-flow-root .margo-profile-memories-strip__row .margo-memory-cover-caption__text {
-  font-size: 0.4375rem;
-  line-height: 1.1;
-  -webkit-line-clamp: 3;
+  font-family: inherit;
+  font-size: 7px;
+  line-height: 1.05;
+  -webkit-line-clamp: 4;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 .margo-profile-flow-root .margo-profile-memories-strip__row .margo-profile-memory-tile--add {
-  min-height: 64px;
+  min-height: 64px !important;
+}
+.margo-profile-flow-root .margo-profile-favorites {
+  width: 100%;
+  min-width: 0;
 }
 .margo-profile-flow-root .margo-profile-favorites__chips {
   display: flex;
+  flex-direction: row;
   flex-wrap: nowrap;
+  align-items: center;
   gap: 8px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+  width: 100%;
 }
 .margo-profile-flow-root .margo-profile-favorites__chips::-webkit-scrollbar {
   display: none;
@@ -12362,14 +12432,16 @@ button.margo-feed-shorts-strip__more {
 .margo-profile-flow-root .margo-profile-favorites__chip {
   flex: 0 0 auto;
   height: 36px;
-  padding: 0 16px;
+  min-width: 72px;
+  padding: 0 14px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--text-secondary);
   font-family: inherit;
-  font-size: 0.75rem;
+  font-size: 12px;
   font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -12381,7 +12453,7 @@ button.margo-feed-shorts-strip__more {
 .margo-profile-flow-root .margo-profile-favorites__panel--empty {
   display: flex;
   justify-content: flex-start;
-  padding: 4px 0 2px;
+  padding: 2px 0;
 }
 .margo-profile-flow-root .margo-profile-favorites__empty-plus {
   display: inline-flex;
@@ -12396,7 +12468,7 @@ button.margo-feed-shorts-strip__more {
 .margo-profile-flow-root .margo-profile-favorites__artists-row {
   flex-wrap: nowrap;
   justify-content: flex-start;
-  gap: 12px;
+  gap: 10px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
@@ -12406,13 +12478,18 @@ button.margo-feed-shorts-strip__more {
   display: none;
 }
 .margo-profile-flow-root .margo-profile-favorite-artists__cell {
-  width: 52px;
+  width: 48px;
   flex-shrink: 0;
 }
 .margo-profile-flow-root .margo-profile-favorite-artists__art-wrap,
 .margo-profile-flow-root .margo-profile-favorite-artists__art {
-  width: 36px;
-  height: 36px;
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 50%;
+}
+.margo-profile-flow-root .margo-profile-favorite-artists__name {
+  font-size: 11px !important;
+  max-width: 48px;
 }
 .margo-profile-flow-root .margo-profile-favorite-artists__more {
   width: 36px;
@@ -12420,14 +12497,16 @@ button.margo-feed-shorts-strip__more {
   flex-shrink: 0;
 }
 .margo-profile-flow-root .margo-profile-content-tabs {
-  gap: 2px;
-  margin-bottom: 8px;
+  gap: 0;
+  margin-bottom: 6px;
+  flex-wrap: nowrap;
 }
 .margo-profile-flow-root .margo-profile-content-tab {
-  font-size: 0.6875rem;
+  font-size: 11px;
   font-weight: 500;
-  min-height: 32px;
+  min-height: 30px;
   padding: 4px 2px;
+  flex: 1 1 0;
 }
 .margo-profile-flow-root .margo-profile-content-tab--active {
   font-weight: 500;
