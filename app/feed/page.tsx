@@ -651,8 +651,10 @@ function FeedPageInner() {
       captureFeedSubTabScroll(feedContentTab)
       persistFeedReturnBeforeLeave(feedContentTab)
       pendingLyricsScrollRestoreRef.current = true
-      restoreFeedSubTabScrollAfterPaint(tab)
-      if (tab === 'lyrics') lyricsSubTabRestoreDoneRef.current = true
+      // Entry reset only: URL still lyrics; defer map restore until feedContentTab commits.
+      if (feedContentTab === 'lyrics' && isFeedContentSubTab(tab)) {
+        restoreFeedSubTabScrollAfterPaint(tab)
+      }
     }
     paintFeedMix(null)
     const params = stripFeedMixParams(applyFeedContentTab(new URLSearchParams(searchParams.toString()), tab))
@@ -849,7 +851,7 @@ function FeedPageInner() {
     if (isFeedContentSubTab(feedContentTab) && !shouldReapplyFeedReturn()) return
     if (!listReady && !e2eFeedReturnFixture) return
     const snap = readFeedReturnSnapshot()
-    if (!snap) return
+    if (!snap || snap.tab !== feedContentTab) return
     const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
     if (scroller instanceof HTMLElement && Math.abs(scroller.scrollTop - snap.y) > 5) {
       scroller.scrollTop = snap.y
