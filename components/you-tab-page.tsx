@@ -6,6 +6,7 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { buildSigninHref } from '@/lib/auth-return'
 import { ProfilePageSkeleton } from '@/components/margo-skeletons'
+import { ProfileFlowRoot } from '@/components/profile-flow-root'
 import ProfilePage from '@/app/profile/[username]/page'
 
 /**
@@ -36,5 +37,9 @@ export function YouTabPage() {
     )
   }
 
-  return <ProfilePage username={identity.username} />
+  return (
+    <ProfileFlowRoot>
+      <ProfilePage username={identity.username} />
+    </ProfileFlowRoot>
+  )
 }
