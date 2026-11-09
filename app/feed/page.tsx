@@ -51,7 +51,7 @@ import {
 import {
   captureFeedSubTabScroll,
   isFeedContentSubTab,
-  resetFeedScrollerForContentSubTab,
+  readFeedSubTabScrollY,
   restoreFeedSubTabScrollAfterPaint,
 } from '@/lib/feed-subtab-scroll'
 import { FeedPeopleStrip } from '@/components/feed-people-strip'
@@ -647,12 +647,14 @@ function FeedPageInner() {
 
   const handleFeedContentTab = (tab: 'lyrics' | 'memories' | 'shorts' | 'echoes') => {
     setPaintedFeedContentTab(tab)
-    if (feedContentTab === 'lyrics' && tab !== 'lyrics') {
-      captureFeedSubTabScroll('lyrics')
-      persistFeedReturnBeforeLeave('lyrics')
+    if (tab !== feedContentTab) {
+      captureFeedSubTabScroll(feedContentTab)
+      persistFeedReturnBeforeLeave(feedContentTab)
+      pendingLyricsScrollRestoreRef.current = true
+      restoreFeedSubTabScrollAfterPaint(tab)
+      if (tab === 'lyrics') lyricsSubTabRestoreDoneRef.current = true
     }
     paintFeedMix(null)
-    if (tab !== 'lyrics') resetFeedScrollerForContentSubTab()
     const params = stripFeedMixParams(applyFeedContentTab(new URLSearchParams(searchParams.toString()), tab))
     const qs = params.toString()
     if (qs === searchParams.toString()) return
@@ -737,6 +739,7 @@ function FeedPageInner() {
   const feedNavViaPopRef = useRef(false)
   const prevFeedContentTabRef = useRef(feedContentTab)
   const lyricsSubTabRestoreDoneRef = useRef(false)
+  const pendingLyricsScrollRestoreRef = useRef(false)
 
   useEffect(() => {
     if (!feedLive) return
@@ -750,13 +753,18 @@ function FeedPageInner() {
       feedNavViaPopRef.current = true
       const snap = readFeedReturnSnapshot()
       if (!snap) return
+      const tab = parseFeedContentTab(new URLSearchParams(window.location.search).get('tab'))
       window.requestAnimationFrame(() => {
+        const mappedY = readFeedSubTabScrollY(tab)
+        const targetY = mappedY > 0 ? mappedY : snap.tab === tab ? snap.y : mappedY
         const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
-        if (scroller instanceof HTMLElement && Math.abs(scroller.scrollTop - snap.y) > 1) {
-          scroller.scrollTop = snap.y
+        if (scroller instanceof HTMLElement && Math.abs(scroller.scrollTop - targetY) > 1) {
+          scroller.scrollTop = targetY
         }
+        restoreFeedSubTabScrollAfterPaint(tab)
         applyFeedReturnHorizontals(snap)
         clearFeedReturnPending()
+        if (tab === 'lyrics') lyricsSubTabRestoreDoneRef.current = true
       })
     }
     window.addEventListener('popstate', onPop)
@@ -768,27 +776,24 @@ function FeedPageInner() {
     const prev = prevFeedContentTabRef.current
     const next = feedContentTab
     if (prev !== next) {
-      if (prev === 'lyrics' && next !== 'lyrics') {
-        captureFeedSubTabScroll('lyrics')
-      }
-      if (next === 'lyrics' && prev !== 'lyrics' && !shouldReapplyFeedReturn()) {
-        restoreFeedSubTabScrollAfterPaint('lyrics')
-        lyricsSubTabRestoreDoneRef.current = true
+      if (!shouldReapplyFeedReturn()) {
+        pendingLyricsScrollRestoreRef.current = true
+        restoreFeedSubTabScrollAfterPaint(next)
+        if (next === 'lyrics') lyricsSubTabRestoreDoneRef.current = true
       }
       prevFeedContentTabRef.current = next
     }
-    if (!isFeedContentSubTab(feedContentTab)) return
-    if (shouldReapplyFeedReturn()) return
-    if (feedNavViaPopRef.current) return
-    resetFeedScrollerForContentSubTab()
   }, [feedLive, feedContentTab])
 
   useEffect(() => {
     if (!feedLive) return
-    if (!isFeedContentSubTab(feedContentTab)) return
+    if (!pendingLyricsScrollRestoreRef.current) return
     if (shouldReapplyFeedReturn()) return
-    resetFeedScrollerForContentSubTab()
-  }, [feedLive, feedContentTab])
+    if (feedContentTab === 'lyrics' && !listReady) return
+    pendingLyricsScrollRestoreRef.current = false
+    restoreFeedSubTabScrollAfterPaint(feedContentTab)
+    if (feedContentTab === 'lyrics') lyricsSubTabRestoreDoneRef.current = true
+  }, [feedLive, feedContentTab, listReady, mixedLyricRows.length])
 
   useLayoutEffect(() => {
     if (!feedLive) {

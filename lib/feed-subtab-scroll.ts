@@ -1,8 +1,5 @@
 import type { FeedContentTab } from '@/lib/feed-content-tab'
-import {
-  alignFeedPrimaryFrozenScroll,
-  clearPrimaryTabScroll,
-} from '@/components/primary-tab-shell'
+import { alignFeedPrimaryFrozenScroll } from '@/components/primary-tab-shell'
 
 /** In-memory scroll per feed sub-tab (session-only; not margo-feed-return). */
 const feedSubTabScrollY: Partial<Record<FeedContentTab, number>> = {}
@@ -10,6 +7,10 @@ const feedSubTabScrollY: Partial<Record<FeedContentTab, number>> = {}
 export function readFeedPrimaryScroller(): HTMLElement | null {
   const el = document.querySelector('[data-margo-primary-tab="feed"]')
   return el instanceof HTMLElement ? el : null
+}
+
+export function readFeedSubTabScrollY(tab: FeedContentTab): number {
+  return feedSubTabScrollY[tab] ?? 0
 }
 
 export function captureFeedSubTabScroll(tab: FeedContentTab): void {
@@ -33,12 +34,9 @@ function afterPaintTwice(apply: () => void): void {
   })
 }
 
-/** Zero feed pane scroll for Memories / Shorts / Echoes without touching return-restore APIs. */
+/** Zero feed pane scroll for Memories / Shorts / Echoes (DOM only — no resume key). */
 export function resetFeedScrollerForContentSubTab(): void {
   if (typeof window === 'undefined') return
-  clearPrimaryTabScroll('feed')
-  alignFeedPrimaryFrozenScroll(0)
-
   afterPaintTwice(() => {
     window.scrollTo(0, 0)
     document.documentElement.scrollTop = 0
