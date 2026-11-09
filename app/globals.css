@@ -12257,19 +12257,19 @@ button.margo-feed-shorts-strip__more {
   margin: 0;
 }
 .margo-profile-flow-root .margo-profile-block--identity {
-  margin: 4px 0 0;
+  margin: 6px 0 0;
 }
 .margo-profile-flow-root .margo-profile-block--bio {
-  margin: 1px 0 0;
+  margin: 6px 0 0;
 }
 .margo-profile-flow-root .margo-profile-block--stats {
-  margin: 6px 0 0;
+  margin: 8px 0 0;
 }
 .margo-profile-flow-root .margo-profile-block--artist-links {
-  margin: 6px 0 0;
+  margin: 8px 0 0;
 }
 .margo-profile-flow-root .margo-profile-block--signature {
-  margin: 6px 0 0;
+  margin: 10px 0 0;
 }
 .margo-profile-flow-root .margo-profile-block--memories {
   margin: 12px 0 0;
@@ -12279,6 +12279,27 @@ button.margo-feed-shorts-strip__more {
 }
 .margo-profile-flow-root .margo-profile-block--tabs {
   margin: 10px 0 0;
+}
+@media (min-width: 768px) {
+  .margo-profile-flow-root .margo-profile-shell .margo-profile-identity,
+  .margo-profile-flow-root .margo-profile-shell .margo-profile-identity__name-row,
+  .margo-profile-flow-root .margo-profile-shell .margo-profile-identity__handle-row,
+  .margo-profile-flow-root .margo-profile-shell .margo-profile-role-third-slot {
+    align-items: center;
+    text-align: center;
+    justify-content: center;
+  }
+  .margo-profile-flow-root .margo-profile-shell .margo-profile-hero {
+    align-items: center;
+    text-align: center;
+  }
+  .margo-profile-flow-root .margo-profile-shell .margo-profile-stats {
+    justify-content: center;
+  }
+  .margo-profile-flow-root .margo-profile-bio-wrap,
+  .margo-profile-flow-root .margo-profile-bio {
+    text-align: center;
+  }
 }
 .margo-profile-flow-root .margo-profile-block--feed {
   margin: 0;
@@ -12323,6 +12344,9 @@ button.margo-feed-shorts-strip__more {
 }
 .margo-profile-flow-root .margo-profile-identity {
   gap: 0;
+}
+.margo-profile-flow-root .margo-profile-identity__handle {
+  margin-top: 2px;
 }
 .margo-profile-flow-root .margo-profile-shell .margo-profile-identity__name {
   font-size: 15px !important;
@@ -12492,9 +12516,61 @@ button.margo-feed-shorts-strip__more {
   justify-content: center;
   width: 36px;
   height: 36px;
+  padding: 0;
   border-radius: 10px;
   border: 1px dashed var(--gold-border);
   background: var(--gold-faint);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.margo-profile-memories-strip--reserve {
+  min-height: 186px;
+}
+.margo-profile-block--favorites--reserve {
+  min-height: 92px;
+}
+.margo-profile-memory-tile--skeleton {
+  flex: 0 0 140px;
+  width: 140px;
+  height: 186px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  animation: discoverHomePulse 1.4s ease-in-out infinite;
+}
+.margo-profile-favorites-search-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(7, 6, 10, 0.72);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: calc(var(--margo-header-h, var(--nav-height, 72px)) + 24px) 16px 24px;
+  box-sizing: border-box;
+}
+.margo-profile-favorites-search-sheet {
+  width: min(100%, 420px);
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-hi);
+  border-radius: 16px;
+  padding: 14px;
+  box-sizing: border-box;
+}
+.margo-profile-favorites-search-sheet__field .margo-search-wrap--standard {
+  width: 100%;
+}
+.margo-profile-favorites-search-sheet__note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+.margo-profile-flow-root .margo-profile-favorite-artists__empty-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
 }
 .margo-profile-flow-root .margo-profile-favorites__artists-row {
   flex-wrap: nowrap;

@@ -7,11 +7,13 @@ import type { MemoryPublic } from '@/lib/memory/types'
 export function ProfileMemoriesStrip({
   memories,
   isOwnProfile,
+  loading,
 }: {
   memories: MemoryPublic[]
   isOwnProfile: boolean
+  loading?: boolean
 }) {
-  if (!isOwnProfile && memories.length === 0) return null
+  if (!isOwnProfile && memories.length === 0 && !loading) return null
 
   const maxVisible = 12
   const row = memories.slice(0, maxVisible)
@@ -22,14 +24,25 @@ export function ProfileMemoriesStrip({
     : (memories[0]?.ownerUsername ? `/profile/${memories[0].ownerUsername}?tab=memories` : '/feed?tab=memories')
 
   return (
-    <div className="margo-profile-memories-strip">
+    <div className="margo-profile-memories-strip margo-profile-memories-strip--reserve">
       <MargoSectionHeader title="Memories" className="margo-profile-memories-strip__head" />
       <div className="margo-profile-memories-strip__row">
-        {isOwnProfile ? <ProfileMemoryAddTile labeled={ownerEmpty} /> : null}
-        {row.map((m, i) => (
-          <ProfileMemoryTile key={m.id} memory={m} priority={i < 6} />
-        ))}
-        {showMore ? <ProfileMemoryMoreTile href={moreHref} label="More" /> : null}
+        {loading && row.length === 0 ? (
+          <>
+            {isOwnProfile ? (
+              <div className="margo-profile-memory-tile margo-profile-memory-tile--skeleton" aria-hidden />
+            ) : null}
+            <div className="margo-profile-memory-tile margo-profile-memory-tile--skeleton" aria-hidden />
+          </>
+        ) : (
+          <>
+            {isOwnProfile ? <ProfileMemoryAddTile labeled={ownerEmpty} /> : null}
+            {row.map((m, i) => (
+              <ProfileMemoryTile key={m.id} memory={m} priority={i < 6} />
+            ))}
+            {showMore ? <ProfileMemoryMoreTile href={moreHref} label="More" /> : null}
+          </>
+        )}
       </div>
     </div>
   )

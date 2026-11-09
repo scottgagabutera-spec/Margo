@@ -450,7 +450,10 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
 
   const [contentTab, setContentTab] = useState<ProfileContentTab>('lyrics')
   const [memoryLayout, setMemoryLayout] = useState<'grid' | 'timeline'>('grid')
-  const { memories: profileMemories } = useProfileMemories(profile?.id ?? null, profile?.username ?? null)
+  const { memories: profileMemories, loading: profileMemoriesLoading } = useProfileMemories(
+    profile?.id ?? null,
+    profile?.username ?? null,
+  )
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
   const [visitorMenuOpen, setVisitorMenuOpen] = useState(false)
   const accountMenuTriggerRef = useRef<HTMLButtonElement>(null)
@@ -698,13 +701,13 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
         .discog-row::-webkit-scrollbar { display: none; }
       `}</style>
 
-      {loading && <ProfilePageSkeleton />}
+      {loading && !profile && <ProfilePageSkeleton />}
 
       {!loading && notFound ? (
         <p className="margo-sr-only">Founding Listener — profile not available.</p>
       ) : null}
 
-      {!loading && profile && (
+      {profile && (
         <div className="margo-profile-page">
           <div className="margo-profile-shell">
             <div className="margo-profile-shell__left">
@@ -806,19 +809,25 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
             ) : null}
             </div>
 
-            {(isOwnProfile || profileMemories.length > 0) ? (
+            {(isOwnProfile || profileMemories.length > 0 || profileMemoriesLoading) ? (
               <div className="margo-profile-block--memories margo-profile-memories--mobile">
-                <ProfileMemoriesStrip memories={profileMemories} isOwnProfile={isOwnProfile} />
+                <ProfileMemoriesStrip
+                  memories={profileMemories}
+                  isOwnProfile={isOwnProfile}
+                  loading={profileMemoriesLoading}
+                />
               </div>
             ) : null}
 
-            <div className="margo-profile-block--favorites">
-              <ProfileFavoriteArtistsRow
-                favorites={favoriteArtists}
-                isOwnProfile={isOwnProfile}
-                showEmptyOwnerLink
-              />
-            </div>
+            {isOwnProfile || favoriteArtists.length > 0 ? (
+              <div className="margo-profile-block--favorites margo-profile-block--favorites--reserve">
+                <ProfileFavoriteArtistsRow
+                  favorites={favoriteArtists}
+                  isOwnProfile={isOwnProfile}
+                  showEmptyOwnerLink
+                />
+              </div>
+            ) : null}
 
             {profile.isArtist ? (
               <div className="margo-profile-block--songs-preview margo-profile-songs-preview--mobile">
@@ -907,9 +916,13 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
                 ) : null}
               </div>
             ) : null}
-            {(isOwnProfile || profileMemories.length > 0) ? (
+            {(isOwnProfile || profileMemories.length > 0 || profileMemoriesLoading) ? (
               <div className="margo-profile-block--memories margo-profile-memories--desktop">
-                <ProfileMemoriesStrip memories={profileMemories} isOwnProfile={isOwnProfile} />
+                <ProfileMemoriesStrip
+                  memories={profileMemories}
+                  isOwnProfile={isOwnProfile}
+                  loading={profileMemoriesLoading}
+                />
               </div>
             ) : null}
             {/* ── Discography preview — a taste, not the whole catalog.

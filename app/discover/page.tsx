@@ -252,31 +252,18 @@ export default function DiscoverPage() {
               --discover-home-header-gap: 40px;
             }
           }
-          @media (min-width: 768px) and (max-width: 1023px) {
-            .discover-home-inner {
-              width: calc(100% / 1.15);
-              max-width: calc(100% / 1.15);
-              transform: scale(1.15);
-              transform-origin: top center;
-              margin-left: auto;
-              margin-right: auto;
-            }
-          }
           .discover-home-inner {
             width: 100%;
             max-width: 100%;
             margin: 0 auto;
             box-sizing: border-box;
+            min-width: 0;
+            overflow-x: clip;
           }
-          @media (min-width: 2560px) {
-            .discover-home-inner {
-              width: calc(1500px / 1.4);
-              max-width: calc(1500px / 1.4);
-              transform: scale(1.4);
-              transform-origin: top center;
-              margin-left: auto;
-              margin-right: auto;
-            }
+          .discover-hscroll-outer {
+            max-width: 100%;
+            min-width: 0;
+            overflow-x: clip;
           }
           .discover-hscroll {
             align-items: stretch;

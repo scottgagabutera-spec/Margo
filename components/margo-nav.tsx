@@ -1,12 +1,9 @@
 'use client'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import MargoLogo from '@/components/MargoLogo'
 import { useIdentity } from '@/hooks/useIdentity'
-import { ProfileAccountMenu } from '@/components/profile-account-menu'
-import { signOutBrowser } from '@/lib/supabase/client'
-import { useAuthGate } from '@/components/supabase-auth-provider'
 import { HubIconButton, SearchNavLink } from '@/components/hub-menu'
 import { LoadingRing } from '@/components/loading-ring'
 import { usePrimaryTab, usePrimaryTabLinkProps } from '@/components/primary-tab-shell'
@@ -69,16 +66,13 @@ const font = UI_FONT
  */
 export function MargoNav() {
   const pathname = usePathname()
-  const router = useRouter()
   const { activeTab, barTab, isTabPending, isTabAcked } = usePrimaryTab()
   const feedLink = usePrimaryTabLinkProps('/feed', 'feed')
   const discoverLink = usePrimaryTabLinkProps('/discover', 'discover')
   const composeLink = usePrimaryTabLinkProps('/compose', 'compose')
-  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false)
-  const avatarMenuTriggerRef = useRef<HTMLButtonElement>(null)
+  const youLink = usePrimaryTabLinkProps('/you', 'you')
   const navElRef = useRef<HTMLElement>(null)
   const { user, identity } = useIdentity()
-  const { rehydrate } = useAuthGate()
   const navBackOverride = useNavBackOverride()
   const pathBack = navBackForPath(pathname)
   const navBack = activeTab === 'you' ? null : (navBackOverride ?? pathBack)
@@ -114,15 +108,6 @@ export function MargoNav() {
     (isMobile && isProfileRoute)
 
   const isSignedIn = !!user && !user.isAnonymous
-  const handleSignOut = async () => {
-    setAvatarMenuOpen(false)
-    await signOutBrowser()
-    await rehydrate()
-    router.push('/')
-  }
-
-  useEffect(() => { setAvatarMenuOpen(false) }, [pathname])
-
   if (shellHidden) return null
 
   return (
@@ -263,38 +248,30 @@ export function MargoNav() {
             ) : null}
 
             {isSignedIn && identity ? (
-              <div className="margo-desktop-nav__avatar" style={{ position: 'relative', marginLeft: '8px' }}>
-                <button
-                  ref={avatarMenuTriggerRef}
-                  type="button"
-                  onClick={() => setAvatarMenuOpen((o) => !o)}
-                  aria-label="Account menu"
-                  aria-expanded={avatarMenuOpen}
-                  aria-haspopup="dialog"
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
-                    flexShrink: 0,
-                    background: 'none', border: 'none',
-                    boxSizing: 'border-box',
-                    cursor: 'pointer', padding: 0,
-                  }}
-                >
-                  <YouTabPortrait
-                    username={identity.username}
-                    displayName={identity.displayName || identity.username}
-                    avatarUrl={identity.avatarUrl}
-                    active={isOnYou || avatarMenuOpen}
-                  />
-                </button>
-                <ProfileAccountMenu
-                  open={avatarMenuOpen}
-                  onOpenChange={setAvatarMenuOpen}
-                  triggerRef={avatarMenuTriggerRef}
-                  showStudio={!!identity.isArtist}
-                  onSignOut={handleSignOut}
+              <Link
+                href="/you"
+                {...youLink}
+                className="margo-desktop-nav__avatar"
+                aria-label="Your profile"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 'var(--margo-touch-min)',
+                  height: 'var(--margo-touch-min)',
+                  flexShrink: 0,
+                  marginLeft: '8px',
+                  boxSizing: 'border-box',
+                  textDecoration: 'none',
+                }}
+              >
+                <YouTabPortrait
+                  username={identity.username}
+                  displayName={identity.displayName || identity.username}
+                  avatarUrl={identity.avatarUrl}
+                  active={isOnYou}
                 />
-              </div>
+              </Link>
             ) : null}
           </div>
         </div>

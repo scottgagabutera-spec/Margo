@@ -4,6 +4,10 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { FavoriteArtistAvatar } from '@/components/favorite-artist-avatar'
 import { PlusIcon } from '@/components/icons'
+import {
+  ProfileFavoritesSearchSheet,
+  type ProfileFavoritesSearchKind,
+} from '@/components/profile-favorites-search-sheet'
 import { UI_FONT } from '@/lib/fonts'
 
 const font = UI_FONT
@@ -20,12 +24,17 @@ export type ProfileFavoriteArtist = {
 
 type FavoritesChip = 'artists' | 'songs' | 'albums'
 
-function FavoritesEmptyPlus() {
+function FavoritesEmptyPlus({ onOpen }: { onOpen: () => void }) {
   return (
     <div className="margo-profile-favorites__panel margo-profile-favorites__panel--empty">
-      <span className="margo-profile-favorites__empty-plus" aria-hidden>
+      <button
+        type="button"
+        className="margo-profile-favorites__empty-plus"
+        aria-label="Add favorite"
+        onClick={onOpen}
+      >
         <PlusIcon size={22} color="var(--gold)" />
-      </span>
+      </button>
     </div>
   )
 }
@@ -40,6 +49,13 @@ export function ProfileFavoriteArtistsRow({
   showEmptyOwnerLink?: boolean
 }) {
   const [chip, setChip] = useState<FavoritesChip>('artists')
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchKind, setSearchKind] = useState<ProfileFavoritesSearchKind>('artists')
+
+  const openSearch = (kind: ProfileFavoritesSearchKind) => {
+    setSearchKind(kind)
+    setSearchOpen(true)
+  }
 
   if (!isOwnProfile && favorites.length === 0) return null
 
@@ -68,15 +84,22 @@ export function ProfileFavoriteArtistsRow({
         })}
       </div>
 
-      {chip === 'songs' || chip === 'albums' ? <FavoritesEmptyPlus /> : null}
+      {chip === 'songs' || chip === 'albums' ? (
+        <FavoritesEmptyPlus onOpen={() => openSearch(chip)} />
+      ) : null}
 
       {chip === 'artists' && ownerArtistsEmpty ? (
-        <Link href="/profile/edit#favorite-artists" className="margo-profile-favorite-artists__empty-cta">
-          <span className="margo-profile-favorite-artists__empty-plus" aria-hidden>
-            <PlusIcon size={20} color="var(--bg)" />
-          </span>
+        <div className="margo-profile-favorite-artists__empty-cta">
+          <button
+            type="button"
+            className="margo-profile-favorites__empty-plus margo-profile-favorite-artists__empty-plus"
+            aria-label="Search for an artist"
+            onClick={() => openSearch('artists')}
+          >
+            <PlusIcon size={20} color="var(--gold)" />
+          </button>
           <span className="margo-profile-favorite-artists__empty-text">Add your favorite artists</span>
-        </Link>
+        </div>
       ) : null}
 
       {chip === 'artists' && favorites.length > 0 ? (
@@ -121,6 +144,12 @@ export function ProfileFavoriteArtistsRow({
           ) : null}
         </div>
       ) : null}
+
+      <ProfileFavoritesSearchSheet
+        open={searchOpen}
+        kind={searchKind}
+        onClose={() => setSearchOpen(false)}
+      />
     </div>
   )
 }
