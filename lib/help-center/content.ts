@@ -37,7 +37,7 @@ export type HelpArticle = {
 
 export const HELP_REPLY_NOTICE = 'We reply in 24 to 48 hours.'
 
-export const HELP_HOME_SUBTITLE = `Short answers. ${HELP_REPLY_NOTICE}`
+export const HELP_HOME_SUBTITLE = HELP_REPLY_NOTICE
 
 export const MEMBER_TOPICS: readonly HelpTopic[] = [
   { id: 'get-started', audience: 'members', title: 'Get started', subtitle: 'Sign in, first post', icon: 'compass' },

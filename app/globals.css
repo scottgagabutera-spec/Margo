@@ -1869,6 +1869,14 @@ html[data-margo-landing-song-flow] .margo-landing-hero-anchor {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
+.margo-landing-nav__trail {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 /* Landing auth entry — desktop only; mobile uses bottom tab Sign In */
 .margo-landing-nav__account {
   display: none;
@@ -11487,30 +11495,36 @@ button.margo-feed-shorts-strip__more {
 }
 
 .margo-help-entry-link {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 10px;
   border: 1px solid var(--gold-border);
   color: var(--gold);
-  background: var(--gold-faint);
+  background: transparent;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 1;
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .margo-help-entry-link--nav {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
   margin-left: 4px;
 }
 
-.margo-landing-nav__trail {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.margo-help-entry-link--landing svg,
+.margo-help-entry-link:not(.margo-help-entry-link--nav) svg {
+  width: 16px;
+  height: 16px;
+}
+
+.margo-help-entry-link--nav svg {
+  width: 13px;
+  height: 13px;
 }
 
 .margo-help-search-wrap {
@@ -11775,16 +11789,3 @@ button.margo-feed-shorts-strip__more {
   color: var(--text-muted);
 }
 
-.margo-footer--static {
-  position: relative;
-  pointer-events: auto;
-  padding: 24px 20px calc(var(--margo-tabbar-h, 80px) + 16px);
-}
-
-.margo-footer__static-inner {
-  width: min(100%, 880px);
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}

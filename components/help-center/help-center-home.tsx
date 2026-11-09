@@ -28,11 +28,11 @@ export function HelpCenterHome() {
           <button
             type="button"
             className="margo-content-page__back"
-            aria-label="Close help center"
+            aria-label="Back"
             onClick={() => router.back()}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M14 6l-6 6 6 6" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
           <h1 className="margo-content-page__title">Help center</h1>
