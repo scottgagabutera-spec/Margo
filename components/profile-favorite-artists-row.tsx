@@ -231,7 +231,7 @@ export function ProfileFavoriteArtistsRow({
         ) : (
           <div
             ref={carouselRef}
-            className={`margo-profile-favorites__carousel${searchActive ? ' margo-profile-favorites__carousel--leaving' : ''}`}
+            className="margo-profile-favorites__carousel"
           >
             {canAdd ? <FavoritesPlusButton onClick={openSearch} label={plusLabel} /> : null}
             {chip === 'artists' &&

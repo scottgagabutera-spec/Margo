@@ -12548,13 +12548,6 @@ button.margo-feed-shorts-strip__more {
   box-sizing: border-box;
   transition: opacity 140ms ease, max-height 180ms ease;
 }
-.margo-profile-flow-root .margo-profile-favorites__carousel--leaving {
-  opacity: 0;
-  max-height: 0;
-  overflow: hidden;
-  padding: 0 14px;
-  margin: 0 -14px;
-}
 @media (min-width: 768px) {
   .margo-profile-flow-root .margo-profile-favorites__carousel {
     margin-left: 0;
