@@ -2,31 +2,45 @@
 
 import { useRef, type RefObject } from 'react'
 import { MargoMemoryCenteredDialog } from '@/components/margo-memory-centered-dialog'
-import { ImagePlusIcon, LibraryIcon } from '@/components/icons'
 
 function MediaOutlineIcon({ kind }: { kind: 'photo' | 'video' | 'gallery' | 'file' }) {
   const size = 22
+  const gold = 'var(--gold)'
   if (kind === 'photo') {
     return (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
-        <rect x="4" y="7" width="16" height="12" rx="2.5" stroke="var(--gold)" strokeWidth="1.5" />
-        <circle cx="9" cy="11.5" r="1.5" fill="var(--gold)" />
-        <path d="M6 17l4.5-4 3 2.5L18 12" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <rect x="5" y="8" width="14" height="11" rx="2" stroke={gold} strokeWidth="1.5" />
+        <circle cx="9.5" cy="12" r="1.25" fill={gold} />
+        <path d="M6 17l3.5-3 2.5 2 3-2.5L18 13" stroke={gold} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M9 5.5h6l1 2.5H8l1-2.5z" stroke={gold} strokeWidth="1.2" strokeLinejoin="round" />
       </svg>
     )
   }
   if (kind === 'video') {
     return (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
-        <rect x="3" y="6" width="13" height="12" rx="2.5" stroke="var(--gold)" strokeWidth="1.5" />
-        <path d="M16 10.5l5-3v9l-5-3v-3z" stroke="var(--gold)" strokeWidth="1.5" strokeLinejoin="round" />
+        <rect x="3" y="7" width="13" height="11" rx="2" stroke={gold} strokeWidth="1.5" />
+        <path d="M16 10.5l5-2.5v8l-5-2.5v-3z" stroke={gold} strokeWidth="1.5" strokeLinejoin="round" />
       </svg>
     )
   }
   if (kind === 'gallery') {
-    return <ImagePlusIcon size={size} color="var(--gold)" />
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+        <rect x="4" y="9" width="12" height="10" rx="2" stroke={gold} strokeWidth="1.5" />
+        <rect x="8" y="5" width="12" height="10" rx="2" stroke={gold} strokeWidth="1.2" opacity="0.85" />
+        <circle cx="9" cy="13" r="1.25" fill={gold} />
+        <path d="M5 17l2.5-2.5 2 1.5L12 13l3 2v4H4v-2z" stroke={gold} strokeWidth="1.2" strokeLinejoin="round" />
+      </svg>
+    )
   }
-  return <LibraryIcon size={size} color="var(--gold)" />
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M7 4h7l3 3v13H7V4z" stroke={gold} strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M14 4v3h3" stroke={gold} strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M9.5 12h5M9.5 15h5" stroke={gold} strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  )
 }
 
 export function MemoryMediaSourceSheet({

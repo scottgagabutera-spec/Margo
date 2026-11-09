@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ComposeSearchDropdown, type ComposeSearchHit } from '@/components/compose-search-dropdown'
 import { MargoSearchInput } from '@/components/margo-search-input'
@@ -25,13 +25,11 @@ import type {
 } from '@/lib/memory/types'
 import { MemoryMediaPicker } from '@/components/memory-media-picker'
 import type { MemoryDraftPhoto } from '@/lib/memory/client-media-upload'
-import { TYPE, UI_FONT } from '@/lib/fonts'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useKeyboardSafeChrome } from '@/hooks/useVisualViewport'
 import { useInlineSearchDropdownMaxHeight } from '@/hooks/useInlineSearchDropdownMaxHeight'
 import { toast } from 'sonner'
 
-const font = UI_FONT
 const supabase = createClient()
 const MAX_SONGS = 30
 const MAX_MEDIA = 10
@@ -330,31 +328,6 @@ export function MemoryCreateFlow({
     ? 'margo-memory-create margo-memory-create--desktop'
     : 'margo-memory-create'
 
-  const inputStyle: CSSProperties = {
-    width: '100%',
-    boxSizing: 'border-box',
-    minHeight: 'var(--margo-touch-min)',
-    borderRadius: '12px',
-    border: '1px solid var(--border)',
-    background: 'var(--surface-2)',
-    color: 'var(--text)',
-    fontFamily: font,
-    fontSize: TYPE.secondary,
-    padding: '12px 14px',
-    outline: 'none',
-  }
-
-  const labelStyle: CSSProperties = {
-    display: 'block',
-    fontFamily: font,
-    fontSize: TYPE.secondary,
-    fontWeight: 500,
-    color: 'var(--gold)',
-    letterSpacing: '-0.01em',
-    textTransform: 'none',
-    marginBottom: '8px',
-  }
-
   const previewMemory = useMemo((): MemoryPublic => {
     const { dateStart, dateEnd } = buildDatePayload()
     const coverFromPhoto = photos[0]?.previewUrl || null
@@ -434,11 +407,37 @@ export function MemoryCreateFlow({
       <div className="margo-memory-create__body">
         {step === 1 ? (
           <>
-            <p style={{ ...labelStyle, marginBottom: 12 }}>What is this memory about?</p>
+            <p className="margo-memory-field-label">What is this memory about?</p>
             {onOpenListening ? (
               <button type="button" className="margo-memory-create__listening-bar" onClick={onOpenListening}>
                 What are you listening to?
               </button>
+            ) : null}
+            {entryKind === 'song' ? (
+              <div
+                ref={songSearchWrapRef}
+                className="margo-memory-song-search"
+                style={{ zIndex: songSearchOpen ? 60 : 1 }}
+              >
+                <MargoSearchInput
+                  value={query}
+                  onChange={setQuery}
+                  hintText={MARGO_SEARCH_HINT_SONGS}
+                  ariaLabel="Search songs"
+                  loading={searchLoading}
+                  stackAboveOverlay={songSearchOpen}
+                />
+                <ComposeSearchDropdown
+                  open={songSearchOpen}
+                  loading={searchLoading}
+                  results={hits}
+                  highlightQuery={query}
+                  onSelect={addSong}
+                  onClose={() => setShowResults(false)}
+                  variant="compose"
+                  listMaxHeightPx={songListMaxH ?? undefined}
+                />
+              </div>
             ) : null}
             <div className="margo-memory-entry-choices">
               {([
@@ -451,7 +450,6 @@ export function MemoryCreateFlow({
                   type="button"
                   className={`margo-memory-entry-choices__btn${entryKind === id ? ' margo-memory-entry-choices__btn--active' : ''}`}
                   onClick={() => setEntryKind(id)}
-                  style={{ fontFamily: font }}
                 >
                   <span className="margo-memory-entry-choices__icon" aria-hidden>
                     <Icon size={22} color="var(--gold)" />
@@ -461,67 +459,27 @@ export function MemoryCreateFlow({
               ))}
             </div>
             {entryKind === 'song' ? (
-            <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', margin: '16px 0' }}>
-              Add up to {MAX_SONGS} songs. Drag to reorder.
-            </p>
+              <p className="margo-memory-type-hint">Add up to {MAX_SONGS} songs. Drag to reorder.</p>
             ) : entryKind === 'media' ? (
-              <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', margin: '16px 0' }}>
-                You will add photos or videos on the next step. Songs are optional.
-              </p>
+              <p className="margo-memory-type-hint">You will add photos or videos on the next step. Songs are optional.</p>
             ) : entryKind === 'words' ? (
-              <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', margin: '16px 0' }}>
-                Write your story and title on the next step. Songs are optional.
-              </p>
+              <p className="margo-memory-type-hint">Write your story and title on the next step. Songs are optional.</p>
             ) : null}
-            {entryKind === 'song' ? (
-            <>
-            <div
-              ref={songSearchWrapRef}
-              style={{ position: 'relative', zIndex: songSearchOpen ? 60 : 1 }}
-            >
-              <MargoSearchInput
-                value={query}
-                onChange={setQuery}
-                hintText={MARGO_SEARCH_HINT_SONGS}
-                ariaLabel="Search songs"
-                loading={searchLoading}
-                stackAboveOverlay={songSearchOpen}
-              />
-              <ComposeSearchDropdown
-                open={songSearchOpen}
-                loading={searchLoading}
-                results={hits}
-                highlightQuery={query}
-                onSelect={addSong}
-                onClose={() => setShowResults(false)}
-                variant="compose"
-                listMaxHeightPx={songListMaxH ?? undefined}
-              />
-            </div>
-            {songs.length > 0 ? (
-              <ul style={{ listStyle: 'none', margin: '20px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {entryKind === 'song' && songs.length > 0 ? (
+              <ul className="margo-memory-song-list">
                 {songs.map((s, index) => (
                   <li
                     key={s.id}
                     draggable
+                    className="margo-memory-song-row"
                     onDragStart={() => setDragIndex(index)}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={() => {
                       if (dragIndex !== null) reorderSongs(dragIndex, index)
                       setDragIndex(null)
                     }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      padding: '8px 10px',
-                      borderRadius: '12px',
-                      border: '1px solid var(--border)',
-                      background: 'var(--surface)',
-                      cursor: 'grab',
-                    }}
                   >
-                    <span style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)', width: 20 }}>{index + 1}</span>
+                    <span className="margo-memory-song-row__index">{index + 1}</span>
                     {s.artwork ? (
                       <img
                         src={compactArtworkUrl(s.artwork, 80)}
@@ -534,19 +492,13 @@ export function MemoryCreateFlow({
                       <span style={{ width: 44, height: 44, borderRadius: 8, background: 'var(--surface-2)', flexShrink: 0 }} />
                     )}
                     <span style={{ flex: 1, minWidth: 0 }}>
-                      <span style={{ display: 'block', fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {s.songTitle}
-                      </span>
-                      <span style={{ display: 'block', fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span className="margo-memory-song-row__title">{s.songTitle}</span>
+                      <span className="margo-memory-song-row__artist">
                         {s.artistName}
                         {s.isLyricOnly ? ' · Lyric only' : ''}
                       </span>
                     </span>
-                    {!s.isLyricOnly ? (
-                      <span className="margo-memory-create__on-margo" style={{ fontFamily: font, fontSize: TYPE.label, color: 'var(--gold)', letterSpacing: '0.06em', textTransform: 'uppercase', flexShrink: 0 }}>
-                        On Margo
-                      </span>
-                    ) : null}
+                    {!s.isLyricOnly ? <span className="margo-memory-create__on-margo">On Margo</span> : null}
                     <button
                       type="button"
                       aria-label="Remove song"
@@ -559,8 +511,6 @@ export function MemoryCreateFlow({
                 ))}
               </ul>
             ) : null}
-            </>
-            ) : null}
           </>
         ) : null}
 
@@ -569,46 +519,44 @@ export function MemoryCreateFlow({
             {entryKind !== 'words' ? (
               <MemoryMediaPicker draftOrMemoryId={draftId.current} photos={photos} onChange={setPhotos} />
             ) : null}
-            <label style={labelStyle}>What does this mean to you?</label>
+            <label className="margo-memory-field-label">What does this mean to you?</label>
             <textarea
               ref={storyRef}
               value={story}
               onChange={(e) => setStory(e.target.value.slice(0, STORY_MAX))}
               rows={5}
               placeholder="Your story"
-              style={{ ...inputStyle, resize: 'vertical', minHeight: 120, lineHeight: 1.45 }}
+              className="margo-memory-field-textarea"
             />
             <MemoryImproveWithAi field="story" text={story} onUseSuggestion={(s) => setStory(s.slice(0, STORY_MAX))} />
-            <p style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)', margin: '6px 0 20px', textAlign: 'right' }}>
+            <p className="margo-memory-field-meta">
               {story.length}/{STORY_MAX}
             </p>
-            <label style={labelStyle}>Title</label>
+            <label className="margo-memory-field-label">Title</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value.slice(0, 80))}
               placeholder={memoryTitlePlaceholder()}
               onBlur={() => setTitleTouched(true)}
-              style={inputStyle}
+              className="margo-memory-field-input"
             />
             <MemorySuggestTitles
               story={story}
               songs={songs.map((s) => `${s.songTitle} · ${s.artistName}`)}
               onPick={(t) => { setTitle(t); setTitleTouched(true) }}
             />
-            <p style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)', margin: '6px 0 0', textAlign: 'right' }}>
+            <p className="margo-memory-field-meta margo-memory-field-meta--tight">
               {title.length}/80
             </p>
-            {showTitleErr ? (
-              <p style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--danger, #e57373)', margin: '6px 0 0' }}>{titleErr}</p>
-            ) : null}
+            {showTitleErr ? <p className="margo-memory-field-error">{titleErr}</p> : null}
           </>
         ) : null}
 
         {step === 3 ? (
           <>
-            <label style={labelStyle}>When</label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+            <label className="margo-memory-field-label">When</label>
+            <div className="margo-memory-when-chips">
               {([
                 ['day', 'A day'],
                 ['month', 'A month'],
@@ -620,28 +568,17 @@ export function MemoryCreateFlow({
                   key={g}
                   type="button"
                   onClick={() => setDateGranularity(g)}
-                  style={{
-                    minHeight: 'var(--margo-touch-min)',
-                    padding: '0 14px',
-                    borderRadius: 999,
-                    border: `1px solid ${dateGranularity === g ? 'var(--gold)' : 'var(--border)'}`,
-                    background: dateGranularity === g ? 'var(--gold-faint)' : 'var(--surface)',
-                    color: dateGranularity === g ? 'var(--gold)' : 'var(--text-secondary)',
-                    fontFamily: font,
-                    fontSize: TYPE.secondary,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
+                  className={`margo-memory-when-chip${dateGranularity === g ? ' margo-memory-when-chip--on' : ''}`}
                 >
                   {label}
                 </button>
               ))}
             </div>
             {dateGranularity === 'day' ? (
-              <input type="date" value={dayValue} onChange={(e) => setDayValue(e.target.value)} style={inputStyle} />
+              <input type="date" value={dayValue} onChange={(e) => setDayValue(e.target.value)} className="margo-memory-field-input" />
             ) : null}
             {dateGranularity === 'month' ? (
-              <input type="month" value={monthValue} onChange={(e) => setMonthValue(e.target.value)} style={inputStyle} />
+              <input type="month" value={monthValue} onChange={(e) => setMonthValue(e.target.value)} className="margo-memory-field-input" />
             ) : null}
             {dateGranularity === 'year' ? (
               <input
@@ -651,33 +588,33 @@ export function MemoryCreateFlow({
                 value={yearValue}
                 onChange={(e) => setYearValue(e.target.value)}
                 placeholder="Year"
-                style={inputStyle}
+                className="margo-memory-field-input"
               />
             ) : null}
             {dateGranularity === 'period' ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <input type="month" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} aria-label="Period start" style={inputStyle} />
-                <input type="month" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} aria-label="Period end (optional)" style={inputStyle} />
+              <div className="margo-memory-period-fields">
+                <input type="month" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} aria-label="Period start" className="margo-memory-field-input" />
+                <input type="month" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} aria-label="Period end (optional)" className="margo-memory-field-input" />
               </div>
             ) : null}
-            <label style={{ ...labelStyle, marginTop: 20, display: 'flex', alignItems: 'center', gap: 10, textTransform: 'none', letterSpacing: 0 }}>
+            <label className="margo-memory-check-row">
               <input type="checkbox" checked={showDatePublicly} onChange={(e) => setShowDatePublicly(e.target.checked)} />
-              <span style={{ fontSize: TYPE.secondary, color: 'var(--text)' }}>Show date publicly</span>
+              <span>Show date publicly</span>
             </label>
-            <label style={{ ...labelStyle, marginTop: 20 }}>Mood</label>
+            <label className="margo-memory-field-label margo-memory-field-label--spaced">Mood</label>
             <input
               type="text"
               value={mood}
               onChange={(e) => setMood(e.target.value.slice(0, 40))}
               placeholder="Optional"
-              style={inputStyle}
+              className="margo-memory-field-input"
             />
           </>
         ) : null}
 
         {step === 4 ? (
           <>
-            <p style={{ ...labelStyle, marginBottom: 12 }}>Preview</p>
+            <p className="margo-memory-field-label">Preview</p>
             <div className="margo-memory-create-preview">
               <div className="margo-memory-create-preview__tile-wrap">
                 <ProfileMemoryTile memory={previewMemory} />
@@ -692,21 +629,17 @@ export function MemoryCreateFlow({
                   ) : null}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <h2 className="margo-memory-detail__hero-title">{previewHeading}</h2>
-                    <p style={{ margin: 0, fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-secondary)' }}>@you</p>
-                    {previewDate ? (
-                      <p style={{ margin: '6px 0 0', fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)' }}>{previewDate}</p>
-                    ) : null}
+                    <p className="margo-memory-preview-meta">@you</p>
+                    {previewDate ? <p className="margo-memory-preview-date">{previewDate}</p> : null}
                   </div>
                 </div>
                 {story.trim() && story.trim() !== previewHeading ? (
-                  <p style={{ margin: 0, fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', lineHeight: 1.45, whiteSpace: 'pre-wrap' }}>
-                    {story.trim()}
-                  </p>
+                  <p className="margo-memory-preview-story">{story.trim()}</p>
                 ) : null}
               </div>
             </div>
-            <label style={labelStyle}>Who can see this?</label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+            <label className="margo-memory-field-label">Who can see this?</label>
+            <div className="margo-memory-visibility-list">
               {([
                 ['public', 'Everyone'],
                 ['followers', 'Followers'],
@@ -716,26 +649,15 @@ export function MemoryCreateFlow({
                   key={v}
                   type="button"
                   onClick={() => setVisibility(v)}
-                  style={{
-                    minHeight: 'var(--margo-touch-min)',
-                    textAlign: 'left',
-                    padding: '12px 14px',
-                    borderRadius: 12,
-                    border: `1px solid ${visibility === v ? 'var(--gold)' : 'var(--border)'}`,
-                    background: visibility === v ? 'var(--gold-faint)' : 'var(--surface)',
-                    color: 'var(--text)',
-                    fontFamily: font,
-                    fontSize: TYPE.secondary,
-                    cursor: 'pointer',
-                  }}
+                  className={`margo-memory-visibility-option${visibility === v ? ' margo-memory-visibility-option--on' : ''}`}
                 >
                   {label}
                 </button>
               ))}
             </div>
-            <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 10, textTransform: 'none', letterSpacing: 0 }}>
+            <label className="margo-memory-check-row">
               <input type="checkbox" checked={showInLyricsFeed} onChange={(e) => setShowInLyricsFeed(e.target.checked)} />
-              <span style={{ fontSize: TYPE.secondary }}>Show in lyrics feed</span>
+              <span>Show in lyrics feed</span>
             </label>
           </>
         ) : null}

@@ -127,22 +127,30 @@ export function MargoMemoryFlowOverlay({
   if (!open || !mounted) return null
 
   return createPortal(
-    <div className="margo-memory-flow-overlay" role="dialog" aria-modal aria-label={title}>
+    <div className="margo-memory-flow-portal" role="presentation">
       <button
         type="button"
-        className="margo-memory-flow-overlay__back"
-        aria-label="Close"
+        className="margo-memory-flow-portal__scrim"
+        aria-label="Dismiss"
         onClick={() => onOpenChange(false)}
-      >
-        <CloseIcon size={18} color="var(--text-secondary)" />
-      </button>
-      <div className="margo-memory-flow-overlay__scroll">
-        <header className="margo-memory-flow-overlay__header">
-          <h1 className="margo-memory-type-title">{title}</h1>
-        </header>
-        {children}
+      />
+      <div className="margo-memory-flow-page margo-memory-flow-root" role="dialog" aria-modal aria-label={title}>
+        <button
+          type="button"
+          className="margo-memory-flow-page__close"
+          aria-label="Close"
+          onClick={() => onOpenChange(false)}
+        >
+          <CloseIcon size={18} color="var(--text-secondary)" />
+        </button>
+        <div className="margo-memory-flow-page__scroll">
+          <header className="margo-memory-flow-page__header">
+            <h1 className="margo-memory-type-title">{title}</h1>
+          </header>
+          {children}
+        </div>
+        {footer ? <div className="margo-memory-flow-page__footer">{footer}</div> : null}
       </div>
-      {footer ? <div className="margo-memory-flow-overlay__footer-slot">{footer}</div> : null}
     </div>,
     document.body,
   )

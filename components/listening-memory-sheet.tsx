@@ -295,36 +295,33 @@ export function ListeningMemorySheet({
               </span>
             )}
             <div className="margo-listening-memory__song-meta">
-              <p className="margo-listening-memory__song-title" style={{ fontFamily: font }}>{selected.songTitle}</p>
-              <p className="margo-listening-memory__song-artist" style={{ fontFamily: font }}>{selected.artistName}</p>
+              <p className="margo-listening-memory__song-title">{selected.songTitle}</p>
+              <p className="margo-listening-memory__song-artist">{selected.artistName}</p>
             </div>
           </div>
         ) : null}
 
         {selected?.songId ? (
           <div className="margo-listening-memory__line-actions">
-            <button type="button" className="margo-listening-memory__line-btn" style={{ fontFamily: font }} onClick={() => { void openLinePicker() }}>
+            <button type="button" className="margo-listening-memory__line-btn" onClick={() => { void openLinePicker() }}>
               {lineExcerpt ? 'Change line' : 'Pick a line'}
             </button>
             {lineExcerpt ? (
-              <p className="margo-listening-memory__line-excerpt" style={{ fontFamily: font }}>{lineExcerpt}</p>
+              <p className="margo-listening-memory__line-excerpt">{lineExcerpt}</p>
             ) : null}
           </div>
         ) : null}
 
-        <label className="margo-listening-memory__words-label" style={{ fontFamily: font }}>
-          A few words
-        </label>
+        <label className="margo-listening-memory__words-label">A few words</label>
         <textarea
           className="margo-listening-memory__words"
           value={story}
           onChange={(e) => setStory(e.target.value.slice(0, STORY_MAX))}
           rows={3}
           placeholder="Optional"
-          style={{ fontFamily: font }}
         />
 
-        <p className="margo-listening-memory__when-label" style={{ fontFamily: font }}>When was this</p>
+        <p className="margo-listening-memory__when-label">When was this</p>
         <div className="margo-listening-memory__segments" role="tablist" aria-label="Period type">
           {(['week', 'month', 'year'] as const).map((t) => (
             <button
@@ -333,7 +330,6 @@ export function ListeningMemorySheet({
               role="tab"
               aria-selected={periodType === t}
               className={`margo-listening-memory__segment${periodType === t ? ' margo-listening-memory__segment--on' : ''}`}
-              style={{ fontFamily: font }}
               onClick={() => setPeriodType(t)}
             >
               {t === 'week' ? 'Week' : t === 'month' ? 'Month' : 'Year'}
@@ -350,8 +346,8 @@ export function ListeningMemorySheet({
                 onClick={() => setChoiceIndex(i)}
               >
                 <span className="margo-listening-memory__choice-copy">
-                  <span className="margo-listening-memory__choice-heading" style={{ fontFamily: font }}>{c.heading}</span>
-                  <span className="margo-listening-memory__choice-sub" style={{ fontFamily: font }}>{c.sub}</span>
+                  <span className="margo-listening-memory__choice-heading">{c.heading}</span>
+                  <span className="margo-listening-memory__choice-sub">{c.sub}</span>
                 </span>
                 <span
                   className={`margo-listening-memory__check${i === choiceIndex ? ' margo-listening-memory__check--on' : ''}`}
@@ -364,7 +360,7 @@ export function ListeningMemorySheet({
           ))}
         </ul>
 
-        <p className="margo-listening-memory__footer-label" style={{ fontFamily: font }}>
+        <p className="margo-listening-memory__footer-label">
           {periodType === 'week' ? `Week of ${footerLabel.replace(/^Week of /, '')}` : footerLabel}
         </p>
       </div>
