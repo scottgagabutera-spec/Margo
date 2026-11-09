@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import {
   HELP_HOME_SUBTITLE,
   POPULAR_QUESTIONS,
@@ -15,7 +14,6 @@ import { HelpCenterContactCard } from '@/components/help-center/help-content-pag
 import { HelpCenterFooter } from '@/components/help-center/help-center-footer'
 
 export function HelpCenterHome() {
-  const router = useRouter()
   const [audience, setAudience] = useState<HelpAudience>('members')
   const [query, setQuery] = useState('')
   const topics = topicsForAudience(audience)
@@ -25,16 +23,6 @@ export function HelpCenterHome() {
     <div className="margo-content-page">
       <div className="margo-content-page__inner">
         <header className="margo-content-page__header margo-content-page__header--home">
-          <button
-            type="button"
-            className="margo-content-page__back"
-            aria-label="Back"
-            onClick={() => router.back()}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path d="M14 6l-6 6 6 6" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
           <h1 className="margo-content-page__title">Help center</h1>
           <p className="margo-content-page__date">{HELP_HOME_SUBTITLE}</p>
         </header>

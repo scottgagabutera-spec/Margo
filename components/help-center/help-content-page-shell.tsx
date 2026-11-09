@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
 import { HelpCenterFooter } from '@/components/help-center/help-center-footer'
 
 export type HelpContentPageShellProps = {
@@ -14,45 +13,15 @@ export type HelpContentPageShellProps = {
   closeOnBack?: boolean
 }
 
-function BackSquare({ onClick, label }: { onClick: () => void; label: string }) {
-  return (
-    <button type="button" className="margo-content-page__back" aria-label={label} onClick={onClick}>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-        <path d="M14 6l-6 6 6 6" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </button>
-  )
-}
-
 export function HelpContentPageShell({
   title,
   dateLine,
-  categoryLabel,
   children,
-  onBack,
-  closeOnBack,
 }: HelpContentPageShellProps) {
-  const router = useRouter()
-  const handleBack = () => {
-    if (onBack) {
-      onBack()
-      return
-    }
-    if (closeOnBack) {
-      router.back()
-      return
-    }
-    router.back()
-  }
-
   return (
     <div className="margo-content-page">
       <div className="margo-content-page__inner">
         <header className="margo-content-page__header">
-          <BackSquare onClick={handleBack} label="Back" />
-          {categoryLabel ? (
-            <p className="margo-content-page__category">{categoryLabel}</p>
-          ) : null}
           <h1 className="margo-content-page__title">{title}</h1>
           {dateLine ? <p className="margo-content-page__date">{dateLine}</p> : null}
         </header>

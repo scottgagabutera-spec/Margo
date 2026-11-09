@@ -11097,17 +11097,7 @@ button.margo-feed-shorts-strip__more {
 }
 
 .margo-content-page__back {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  border: 1px solid var(--border-hi);
-  background: var(--surface);
-  color: var(--text);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  margin-bottom: 16px;
+  display: none;
 }
 
 .margo-content-page__category {
@@ -11151,6 +11141,95 @@ button.margo-feed-shorts-strip__more {
   font-size: 14.5px;
   line-height: 1.65;
   color: var(--text-muted);
+}
+
+.margo-info-prose {
+  font-size: 14.5px;
+  line-height: 1.65;
+  font-weight: 400;
+  color: var(--text);
+}
+
+.margo-info-prose p {
+  margin: 0 0 1.1em;
+}
+
+.margo-info-prose h2 {
+  margin: 28px 0 12px;
+  font-size: 16px;
+  font-weight: 500;
+  font-style: normal;
+  color: var(--gold);
+}
+
+.margo-info-prose ul,
+.margo-info-prose ol {
+  margin: 0 0 1.1em;
+  padding-left: 20px;
+}
+
+.margo-info-prose li {
+  margin-bottom: 0.5em;
+}
+
+.margo-info-prose strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.margo-info-link,
+.margo-info-prose a {
+  color: var(--gold);
+  text-decoration: none;
+}
+
+.margo-contact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 20px 0 8px;
+}
+
+.margo-contact-card {
+  box-sizing: border-box;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 14px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.margo-contact-card--wide {
+  grid-column: 1 / -1;
+}
+
+.margo-contact-card__label {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.margo-contact-card__email {
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--gold);
+  text-decoration: none;
+}
+
+.margo-contact-card__desc {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.margo-contact-card__desc a {
+  color: var(--gold);
+  text-decoration: none;
 }
 
 .margo-help-emph {
