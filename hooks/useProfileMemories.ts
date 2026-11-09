@@ -1,37 +1,34 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { peekProfileSurface } from '@/lib/profile-warm'
+import { patchProfileSurface, peekProfileSurface } from '@/lib/profile-warm'
 import { PROFILE_SURFACE_READY } from '@/lib/profile/surface-ready'
 import type { MemoryPublic } from '@/lib/memory/types'
-
-const PROFILE_MEMORIES_STALE_MS = 90_000
 
 export function useProfileMemories(profileId: string | null, username: string | null) {
   const surfacePeek = username ? peekProfileSurface(username) : null
   const [memories, setMemories] = useState<MemoryPublic[]>(surfacePeek?.memories ?? [])
   const [isOwner, setIsOwner] = useState(surfacePeek?.memoriesIsOwner ?? false)
-  const [loading, setLoading] = useState(!surfacePeek?.memories?.length && !!(profileId || username))
-  const loadedAtRef = useRef(surfacePeek?.memories?.length ? Date.now() : 0)
+  const [loading, setLoading] = useState(!surfacePeek && !!(profileId || username))
+  const surfaceAppliedRef = useRef(!!surfacePeek)
 
   const applyPeek = useCallback((uname: string) => {
     const peek = peekProfileSurface(uname)
-    if (!peek?.memories?.length) return false
+    if (!peek) return false
     setMemories(peek.memories)
     setIsOwner(peek.memoriesIsOwner)
     setLoading(false)
-    loadedAtRef.current = Date.now()
+    surfaceAppliedRef.current = true
     return true
   }, [])
 
-  const refresh = useCallback(async (force = false) => {
+  const refresh = useCallback(async () => {
     if (!profileId && !username) {
       setMemories([])
       setIsOwner(false)
+      setLoading(false)
       return
     }
-    const stale = force || Date.now() - loadedAtRef.current > PROFILE_MEMORIES_STALE_MS
-    if (!stale && loadedAtRef.current > 0) return
     try {
       const qs = profileId
         ? `profileId=${encodeURIComponent(profileId)}`
@@ -39,30 +36,36 @@ export function useProfileMemories(profileId: string | null, username: string | 
       const res = await fetch(`/api/memories?${qs}`)
       if (!res.ok) return
       const data = (await res.json()) as { memories?: MemoryPublic[]; isOwner?: boolean }
-      setMemories(data.memories || [])
+      const next = data.memories || []
+      setMemories(next)
       setIsOwner(!!data.isOwner)
-      loadedAtRef.current = Date.now()
+      if (username) {
+        patchProfileSurface(username, {
+          memories: next,
+          memoriesIsOwner: !!data.isOwner,
+        })
+      }
     } finally {
       setLoading(false)
+      surfaceAppliedRef.current = true
     }
   }, [profileId, username])
 
   useEffect(() => {
     if (!profileId && !username) return
     if (username) applyPeek(username)
-    void refresh(false)
-  }, [profileId, username, refresh, applyPeek])
+  }, [profileId, username, applyPeek])
 
   useEffect(() => {
     if (!username) return
     const onSurface = (e: Event) => {
       const detail = (e as CustomEvent<{ username?: string }>).detail
       if (detail?.username !== username.toLowerCase()) return
-      if (applyPeek(username)) void refresh(true)
+      applyPeek(username)
     }
     window.addEventListener(PROFILE_SURFACE_READY, onSurface)
     return () => window.removeEventListener(PROFILE_SURFACE_READY, onSurface)
-  }, [username, applyPeek, refresh])
+  }, [username, applyPeek])
 
-  return { memories, isOwner, loading, refresh: () => refresh(true) }
+  return { memories, isOwner, loading, refresh }
 }

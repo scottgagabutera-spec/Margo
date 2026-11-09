@@ -77,12 +77,29 @@ export function peekProfileSurface(username: string): {
   memoriesIsOwner: boolean
 } | null {
   const hit = peekProfileCache(username)
-  if (!hit?.surfaceLoadedAt || !hit.favoriteArtists) return null
+  if (!hit?.surfaceLoadedAt) return null
   return {
-    favoriteArtists: hit.favoriteArtists,
+    favoriteArtists: hit.favoriteArtists || [],
     memories: hit.memories || [],
     memoriesIsOwner: !!hit.memoriesIsOwner,
   }
+}
+
+export function patchProfileSurface(
+  username: string,
+  patch: Partial<{
+    favoriteArtists: ProfileFavoriteArtist[]
+    memories: MemoryPublic[]
+    memoriesIsOwner: boolean
+  }>,
+) {
+  const key = username.toLowerCase()
+  const hit = cache.get(key)
+  if (!hit?.data) return
+  if (patch.favoriteArtists) hit.data.favoriteArtists = patch.favoriteArtists
+  if (patch.memories) hit.data.memories = patch.memories
+  if (patch.memoriesIsOwner !== undefined) hit.data.memoriesIsOwner = patch.memoriesIsOwner
+  hit.data.surfaceLoadedAt = hit.data.surfaceLoadedAt ?? Date.now()
 }
 
 async function fetchProfileSurfaceExtras(username: string): Promise<{

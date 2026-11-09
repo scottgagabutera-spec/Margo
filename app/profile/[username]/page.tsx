@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, signOutBrowser } from '@/lib/supabase/client'
@@ -23,6 +23,7 @@ import { ProfileArtistLinks } from '@/components/profile-artist-links'
 import { ProfileImageLightbox } from '@/components/profile-image-lightbox'
 import {
   fetchProfilePeek,
+  patchProfileSurface,
   peekProfileCache,
   warmProfile,
   type WarmProfileRow,
@@ -281,19 +282,6 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
   }, [username])
 
   useEffect(() => {
-    if (!profile?.id) return
-    let active = true
-    void fetch(`/api/profile/favorite-artists?profileId=${encodeURIComponent(profile.id)}`)
-      .then((r) => r.json())
-      .then((data: { favorites?: ProfileFavoriteArtist[] }) => {
-        if (!active || !data.favorites?.length) return
-        setFavoriteArtists(data.favorites)
-      })
-      .catch(() => {})
-    return () => { active = false }
-  }, [profile?.id])
-
-  useEffect(() => {
     if (!profile?.isArtist) {
       setArtistSongs([])
       setArtistStats({ totalPlays: 0, totalResonates: 0 })
@@ -453,6 +441,14 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
   const { memories: profileMemories, loading: profileMemoriesLoading } = useProfileMemories(
     profile?.id ?? null,
     profile?.username ?? null,
+  )
+
+  const handleFavoritesChange = useCallback(
+    (next: ProfileFavoriteArtist[]) => {
+      setFavoriteArtists(next)
+      if (profile?.username) patchProfileSurface(profile.username, { favoriteArtists: next })
+    },
+    [profile?.username],
   )
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
   const [visitorMenuOpen, setVisitorMenuOpen] = useState(false)
@@ -825,7 +821,7 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
                   favorites={favoriteArtists}
                   isOwnProfile={isOwnProfile}
                   showEmptyOwnerLink
-                  onFavoritesChange={setFavoriteArtists}
+                  onFavoritesChange={handleFavoritesChange}
                 />
               </div>
             ) : null}
