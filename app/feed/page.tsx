@@ -48,6 +48,7 @@ import {
   shouldRestoreFeedTabOnNav,
   persistFeedReturnBeforeLeave,
 } from '@/lib/margo-feed-return'
+import { isFeedContentSubTab, resetFeedScrollerForContentSubTab } from '@/lib/feed-subtab-scroll'
 import { FeedPeopleStrip } from '@/components/feed-people-strip'
 import { FeedMemoryPromoCard } from '@/components/feed-memory-promo-card'
 import { FeedShortsStrip } from '@/components/feed-shorts-strip'
@@ -643,8 +644,7 @@ function FeedPageInner() {
     setPaintedFeedContentTab(tab)
     if (feedContentTab === 'lyrics' && tab !== 'lyrics') persistFeedReturnBeforeLeave('lyrics')
     paintFeedMix(null)
-    const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
-    if (scroller instanceof HTMLElement && tab !== 'lyrics') scroller.scrollTop = 0
+    if (tab !== 'lyrics') resetFeedScrollerForContentSubTab()
     const params = stripFeedMixParams(applyFeedContentTab(new URLSearchParams(searchParams.toString()), tab))
     const qs = params.toString()
     if (qs === searchParams.toString()) return
@@ -666,24 +666,7 @@ function FeedPageInner() {
     if (paintedMix === null && !mixFromUrl) paintFeedMix(undefined)
   }, [paintedMix, mixFromUrl])
 
-  useRegisterNavBack(
-    mixSurface
-      ? null
-      : feedContentTab !== 'lyrics'
-        ? {
-            preferHistory: true,
-            fallbackHref: '/feed',
-            onBack: () => {
-              if (typeof window !== 'undefined' && window.history.length > 1) {
-                window.history.back()
-                return true
-              }
-              handleFeedContentTab('lyrics')
-              return true
-            },
-          }
-        : null,
-  )
+  useRegisterNavBack(null)
 
   const handleSelectVibe = (vibe: string) => {
     const next = selectedVibe === vibe ? 'ALL' : vibe
@@ -772,12 +755,17 @@ function FeedPageInner() {
 
   useLayoutEffect(() => {
     if (!feedLive) return
-    const tab = feedContentTab
-    if (tab !== 'memories' && tab !== 'shorts' && tab !== 'echoes') return
+    if (!isFeedContentSubTab(feedContentTab)) return
     if (shouldReapplyFeedReturn()) return
     if (feedNavViaPopRef.current) return
-    const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
-    if (scroller instanceof HTMLElement) scroller.scrollTop = 0
+    resetFeedScrollerForContentSubTab()
+  }, [feedLive, feedContentTab])
+
+  useEffect(() => {
+    if (!feedLive) return
+    if (!isFeedContentSubTab(feedContentTab)) return
+    if (shouldReapplyFeedReturn()) return
+    resetFeedScrollerForContentSubTab()
   }, [feedLive, feedContentTab])
 
   useLayoutEffect(() => {
@@ -831,6 +819,7 @@ function FeedPageInner() {
 
   useLayoutEffect(() => {
     if (!feedLive || highlightParam) return
+    if (isFeedContentSubTab(feedContentTab) && !shouldReapplyFeedReturn()) return
     if (!listReady && !e2eFeedReturnFixture) return
     const snap = readFeedReturnSnapshot()
     if (!snap) return
@@ -884,6 +873,7 @@ function FeedPageInner() {
       restoreTriesRef.current = 0
       return
     }
+    if (feedContentTab !== 'lyrics') return
     if (!listReady || highlightParam || restoredScrollRef.current) return
     restoreTriesRef.current += 1
     const result = restoreActivePrimaryScroll()
@@ -964,6 +954,7 @@ function FeedPageInner() {
       background: 'var(--bg)',
       position: 'relative',
       overflowX: 'hidden',
+      overflowAnchor: 'none',
       paddingTop: uiFeedContentTab === 'lyrics' ? feedTopChrome : feedTopChrome,
     }}>
       <FeedFilterLiveRegion message={filterAnnouncement} />
