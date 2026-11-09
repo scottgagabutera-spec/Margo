@@ -16,3 +16,9 @@ test(':root aliases nav-height to measured header', () => {
   const css = fs.readFileSync('app/globals.css', 'utf8')
   assert.match(css, /--nav-height:\s*var\(--margo-header-h\)/)
 })
+
+test(':root feed tab bar and mobile tab bar have static fallbacks', () => {
+  const css = fs.readFileSync('app/globals.css', 'utf8')
+  assert.match(css, /--margo-feed-tab-bar-h:\s*44px/)
+  assert.match(css, /--margo-tabbar-h:\s*80px/)
+})

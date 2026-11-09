@@ -3,7 +3,7 @@
 import { useLayoutEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { measureMargoHeaderBottom, resolveMargoHeaderBandElement } from '@/lib/margo-header-band'
-import { MARGO_CHROME_SELECTORS, setRootChromePx } from '@/lib/margo-chrome-vars'
+import { MARGO_CHROME_SELECTORS, publishRootChromePx } from '@/lib/margo-chrome-vars'
 
 function chromeBarHeight(el: HTMLElement | null): number {
   if (!el) return 0
@@ -31,9 +31,9 @@ export function MargoChromeInsetsPublisher() {
 
     const publishHeader = () => {
       const { bottom, height } = measureMargoHeaderBottom()
-      setRootChromePx('--margo-header-h', height)
-      setRootChromePx('--nav-height', height)
-      setRootChromePx('--margo-header-bottom', bottom)
+      publishRootChromePx('--margo-header-h', height)
+      publishRootChromePx('--nav-height', height)
+      publishRootChromePx('--margo-header-bottom', bottom)
     }
 
     const bind = (el: Element | null, onMeasure: () => void) => {
@@ -59,7 +59,7 @@ export function MargoChromeInsetsPublisher() {
       bind(el, () => {
         const node = document.querySelector(MARGO_CHROME_SELECTORS.feedTabBar)
         const h = node instanceof HTMLElement && !node.closest('[hidden]') ? chromeBarHeight(node) : 0
-        setRootChromePx('--margo-feed-tab-bar-h', h)
+        publishRootChromePx('--margo-feed-tab-bar-h', h)
       })
     }
 
@@ -67,7 +67,7 @@ export function MargoChromeInsetsPublisher() {
       const el = document.querySelector(MARGO_CHROME_SELECTORS.mobileTabBar)
       bind(el, () => {
         const node = document.querySelector(MARGO_CHROME_SELECTORS.mobileTabBar)
-        setRootChromePx(
+        publishRootChromePx(
           '--margo-tabbar-h',
           mobileTabBarHeight(node instanceof HTMLElement ? node : null),
         )

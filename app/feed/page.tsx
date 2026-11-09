@@ -769,6 +769,17 @@ function FeedPageInner() {
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [feedLive])
+
+  useLayoutEffect(() => {
+    if (!feedLive) return
+    const tab = feedContentTab
+    if (tab !== 'memories' && tab !== 'shorts' && tab !== 'echoes') return
+    if (shouldReapplyFeedReturn()) return
+    if (feedNavViaPopRef.current) return
+    const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
+    if (scroller instanceof HTMLElement) scroller.scrollTop = 0
+  }, [feedLive, feedContentTab])
+
   useLayoutEffect(() => {
     if (!feedLive) {
       feedTabRestoredRef.current = false

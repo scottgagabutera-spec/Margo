@@ -83,10 +83,11 @@
   --feed-type-suggestion-lyric: 0.9375rem;
   --feed-type-lyric-hero: 1.5rem;
   --margo-feed-vibe-bar-h: 40px;
-  /* Published by MargoChromeInsetsPublisher; 44px fallback until measured. */
+  /* MargoChromeInsetsPublisher refines these; static fallbacks match pre-measure layout. */
   --margo-header-h: 72px;
   --nav-height: var(--margo-header-h);
-  --margo-feed-tab-bar-h: 0px;
+  --margo-feed-tab-bar-h: 44px;
+  --margo-tabbar-h: 80px;
   /* Layer scale inside the feed pane (single source, no ad-hoc stacking).
      Nav chrome outside the pane (z 300) always stays on top. */
   --margo-z-feed-vibe: 40;
