@@ -1,5 +1,5 @@
 import MargoLogo from '@/components/MargoLogo'
-import { MargoFooter } from '@/components/footer/margo-footer'
+import { HelpCenterEntryLink } from '@/components/help-center/help-center-entry-link'
 import { LandingAccountNav } from '@/components/stage/landing-account-nav'
 import { StageLandingClientRoot } from '@/components/stage/stage-landing-client-root'
 import { StageLandingSsrHero } from '@/components/stage/stage-landing-ssr-hero'
@@ -11,7 +11,10 @@ export function StageLandingPage() {
         <a href="/" style={{ display: 'inline-flex', overflow: 'visible', textDecoration: 'none' }}>
           <MargoLogo tier="lockup" size={36} rings glow={false} />
         </a>
-        <LandingAccountNav />
+        <div className="margo-landing-nav__trail">
+          <HelpCenterEntryLink className="margo-help-entry-link--landing" />
+          <LandingAccountNav />
+        </div>
       </nav>
 
       <div className="margo-landing-hero-anchor">
@@ -20,8 +23,6 @@ export function StageLandingPage() {
           <StageLandingClientRoot />
         </section>
       </div>
-
-      <MargoFooter />
     </div>
   )
 }

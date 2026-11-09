@@ -33,27 +33,19 @@ test('signed-in landing header uses You link when identity present', () => {
   assert.match(src, /SignInLink/)
 })
 
-test('footer link data includes sheet URLs', () => {
-  const src = fs.readFileSync('components/footer/margo-footer-links.ts', 'utf8')
+test('help footer links cover legal and contact routes', () => {
+  const src = fs.readFileSync('lib/help-center/footer-links.ts', 'utf8')
   for (const href of ['/about', '/help', '/contact', '/privacy', '/terms', '/dmca', '/data-deletion']) {
     assert.ok(src.includes(`'${href}'`), href)
   }
-  assert.ok(src.includes('Help Center'))
-  assert.ok(src.includes('Data deletion'))
+})
+
+test('landing page has no static footer block', () => {
+  const page = fs.readFileSync('components/stage/stage-landing-page.tsx', 'utf8')
+  assert.doesNotMatch(page, /MargoFooter/)
 })
 
 test('layout schema uses shared social config', () => {
   const src = fs.readFileSync('app/layout.tsx', 'utf8')
   assert.match(src, /margoSchemaSameAs\(\)/)
-})
-
-test('footer sheet closes on document scroll while open', () => {
-  const src = fs.readFileSync('components/footer/margo-footer.tsx', 'utf8')
-  assert.match(src, /document\.addEventListener\('scroll'/)
-})
-
-test('footer sheet closes when hero search is tapped', () => {
-  const src = fs.readFileSync('components/footer/margo-footer.tsx', 'utf8')
-  assert.match(src, /addEventListener\('pointerdown', onSearchTap/)
-  assert.match(src, /margo-stage-hero-search/)
 })
