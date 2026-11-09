@@ -6970,6 +6970,23 @@ html, body {
   margin: 0;
   line-height: 1.5;
 }
+.margo-feed-shorts-coming-soon__title {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--gold);
+  margin: 0 0 10px;
+  letter-spacing: -0.01em;
+}
+.margo-feed-shorts-coming-soon__body {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.45;
+  max-width: 18rem;
+}
 .margo-feed-subtab-stack {
   position: relative;
   flex: 1 1 auto;

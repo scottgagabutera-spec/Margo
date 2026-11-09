@@ -71,7 +71,9 @@ import { useMargoMobileViewport } from '@/components/stories/stories-dock'
 import { StoryFeedAuthorSync, StoryRingProvider } from '@/components/stories/story-ring-context'
 import { FeedFilterLiveRegion, FeedVibeFilterBar } from '@/components/feed-vibe-filter-bar'
 import { FeedContentTabBar } from '@/components/feed-content-tab-bar'
+import { FeedShortsComingSoon } from '@/components/feed-shorts-coming-soon'
 import { FeedShortsPager } from '@/components/feed-shorts-pager'
+import { FEED_SHORTS_COMING_SOON } from '@/lib/feed-shorts-pause'
 import { MargoPaneErrorBoundary } from '@/components/margo-pane-error-boundary'
 import { applyFeedContentTab, parseFeedContentTab, type FeedContentTab } from '@/lib/feed-content-tab'
 import { feedListReady } from '@/lib/feed-list-ready'
@@ -351,7 +353,9 @@ function FeedPageInner() {
     clips: shortsClips,
     loading: shortsLoading,
     meetsMinimum: shortsMeetsMinimum,
-  } = useFeedShortsClips({ enabled: feedLive && sectorShown('shorts') })
+  } = useFeedShortsClips({
+    enabled: feedLive && sectorShown('shorts') && !FEED_SHORTS_COMING_SOON,
+  })
 
   const e2eShortsFixture =
     searchParams.get('e2eShorts') === '1' ||
@@ -360,9 +364,15 @@ function FeedPageInner() {
     searchParams.get('e2eFeedReturn') === '1' ||
     (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('e2eFeedReturn') === '1')
 
-  const resolvedShortsClips = e2eShortsFixture ? E2E_SHORTS_FIXTURE_CLIPS : shortsClips
-  const resolvedShortsLoading = e2eShortsFixture ? false : shortsLoading
-  const resolvedShortsMeetsMinimum = e2eShortsFixture || shortsMeetsMinimum
+  const resolvedShortsClips = FEED_SHORTS_COMING_SOON
+    ? []
+    : e2eShortsFixture
+      ? E2E_SHORTS_FIXTURE_CLIPS
+      : shortsClips
+  const resolvedShortsLoading = FEED_SHORTS_COMING_SOON ? false : e2eShortsFixture ? false : shortsLoading
+  const resolvedShortsMeetsMinimum = FEED_SHORTS_COMING_SOON
+    ? false
+    : e2eShortsFixture || shortsMeetsMinimum
 
   const matchesFeedFilters = (p: Post) => {
     const norm = normalizeEmotion(p.emotion || '')
@@ -740,7 +750,8 @@ function FeedPageInner() {
       peoplePool,
       signedIn: !!user?.id,
       promoAnchor,
-      shortsStripAvailable: resolvedShortsMeetsMinimum && shortsStripTiles.length > 0,
+      shortsStripAvailable:
+        !FEED_SHORTS_COMING_SOON && resolvedShortsMeetsMinimum && shortsStripTiles.length > 0,
       echoesBlock,
     })
   }, [
@@ -1095,16 +1106,20 @@ function FeedPageInner() {
 
       {sectorShown('shorts') ? (
         <div {...feedSubTabPaneProps('shorts')}>
-          <FeedShortsPager
-            clips={resolvedShortsClips}
-            loading={resolvedShortsLoading}
-            meetsMinimum={resolvedShortsMeetsMinimum}
-            signedIn={!!user?.id}
-            onRequireSignIn={() => requireAuth({ returnTo: '/feed?tab=shorts' })}
-            vibeFilterActive={vibeFilterActive}
-            tabActive={feedLive && uiFeedContentTab === 'shorts'}
-            initialIndex={shortsInitialIndex}
-          />
+          {FEED_SHORTS_COMING_SOON ? (
+            <FeedShortsComingSoon vibeFilterActive={vibeFilterActive} />
+          ) : (
+            <FeedShortsPager
+              clips={resolvedShortsClips}
+              loading={resolvedShortsLoading}
+              meetsMinimum={resolvedShortsMeetsMinimum}
+              signedIn={!!user?.id}
+              onRequireSignIn={() => requireAuth({ returnTo: '/feed?tab=shorts' })}
+              vibeFilterActive={vibeFilterActive}
+              tabActive={feedLive && uiFeedContentTab === 'shorts'}
+              initialIndex={shortsInitialIndex}
+            />
+          )}
         </div>
       ) : null}
 
