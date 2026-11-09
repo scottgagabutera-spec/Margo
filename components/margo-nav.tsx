@@ -15,6 +15,7 @@ import { SignInLink } from '@/components/signin-link'
 import { BackButton } from '@/components/back-button'
 import { navBackForPath, useNavBackOverride } from '@/components/nav-back'
 import { YouTabPortrait } from '@/components/you-tab-portrait'
+import { HelpCenterEntryLink } from '@/components/help-center/help-center-entry-link'
 import { DEPTH_PAGE_TITLE, UI_FONT } from '@/lib/fonts'
 
 const font = UI_FONT
@@ -226,6 +227,8 @@ export function MargoNav() {
             <div style={{ marginLeft: '4px' }}>
               <HubIconButton />
             </div>
+
+            <HelpCenterEntryLink className="margo-help-entry-link--nav" />
 
             {!isSignedIn ? (
               <SignInLink style={{

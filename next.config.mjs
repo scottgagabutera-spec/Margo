@@ -48,6 +48,21 @@ const nextConfig = {
         destination: '/privacy',
         permanent: true,
       },
+      {
+        source: '/faq',
+        destination: '/help',
+        permanent: false,
+      },
+      {
+        source: '/help/account',
+        destination: '/help/get-started/sign-in',
+        permanent: false,
+      },
+      {
+        source: '/help/artist',
+        destination: '/help/artist-get-started/apply-as-artist',
+        permanent: false,
+      },
     ]
   },
 }

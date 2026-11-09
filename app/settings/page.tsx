@@ -773,6 +773,29 @@ export default function AccountSettingsPage() {
         ) : null}
       </Card>
 
+      <Card>
+        <SectionLabel>Support</SectionLabel>
+        <Link
+          href="/help"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            textDecoration: 'none',
+            minHeight: 'var(--margo-touch-min)',
+            padding: '4px 0',
+          }}
+        >
+          <span style={{ fontFamily: font, fontSize: TYPE.body, color: 'var(--text)' }}>
+            Help center
+          </span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path d="M9 6l6 6-6 6" stroke="var(--text-muted)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </Link>
+      </Card>
+
       {/* Account: hide + delete */}
       <Card>
         <SectionLabel>Account</SectionLabel>
