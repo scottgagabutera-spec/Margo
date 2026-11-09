@@ -929,7 +929,7 @@ export function PrimaryTabShell({
     if (navPending) return
     if (!paintedTab || !routeTab) return
     if (paintedTab === routeTab) {
-      if (ackedTab) setAckedTab(null)
+      if (ackedTab && ackedTab !== routeTab) setAckedTab(null)
       return
     }
     paintedTabRef.current = routeTab
@@ -962,6 +962,16 @@ export function PrimaryTabShell({
       !href.includes('?') &&
       (paintedTabRef.current == null || paintedTabRef.current === id)
     ) {
+      const commitReselect = () => {
+        paintedTabRef.current = id
+        setPaintedTab(id)
+        setNavPending(false)
+      }
+      try {
+        flushSync(commitReselect)
+      } catch {
+        commitReselect()
+      }
       const y = readActiveScrollTop()
       if (y > 24) {
         scrollActiveTo(0, 'smooth')

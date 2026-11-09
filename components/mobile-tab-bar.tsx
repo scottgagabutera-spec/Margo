@@ -75,14 +75,15 @@ export function MobileTabBar() {
   const isLanding = pathname === '/'
 
   const ownProfilePath = identity?.username ? `/profile/${identity.username}` : null
-  const barSelection =
+  const coreSelection =
     selectionTab
     ?? resolvePrimaryTabBarSelection({
-      hubOpen,
+      hubOpen: false,
       paintedTab,
       ackedTab,
       routeTab,
     })
+  const barSelection = hubOpen ? null : coreSelection
   const routeActive = (id: 'feed' | 'discover' | 'compose' | 'you') =>
     primaryTabBarRouteActive(barSelection, id, pathname?.split('?')[0] ?? '', ownProfilePath)
   const isOnFeed = primaryTabBarGold(hubOpen, routeActive('feed'))
