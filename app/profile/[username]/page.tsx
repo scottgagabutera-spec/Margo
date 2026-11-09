@@ -825,6 +825,7 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
                   favorites={favoriteArtists}
                   isOwnProfile={isOwnProfile}
                   showEmptyOwnerLink
+                  onFavoritesChange={setFavoriteArtists}
                 />
               </div>
             ) : null}

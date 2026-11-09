@@ -1,11 +1,15 @@
 'use client'
 
 import Link from 'next/link'
-import { useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { FavoriteArtistAvatar } from '@/components/favorite-artist-avatar'
 import { PlusIcon } from '@/components/icons'
+import type { ComposeSearchHit } from '@/components/compose-search-dropdown'
+import type { ArtistSearchResult } from '@/lib/catalog-artist/search-client'
 import {
-  ProfileFavoritesInlineSearch,
+  ProfileFavoritesSearchField,
+  ProfileFavoritesSearchResults,
+  useProfileFavoritesSearch,
   type ProfileFavoritesSearchKind,
 } from '@/components/profile-favorites-inline-search'
 import { UI_FONT } from '@/lib/fonts'
@@ -41,29 +45,142 @@ export function ProfileFavoriteArtistsRow({
   favorites,
   isOwnProfile,
   showEmptyOwnerLink,
+  onFavoritesChange,
 }: {
   favorites: ProfileFavoriteArtist[]
   isOwnProfile: boolean
   showEmptyOwnerLink?: boolean
+  onFavoritesChange?: (next: ProfileFavoriteArtist[]) => void
 }) {
   const [chip, setChip] = useState<FavoritesChip>('artists')
   const [inlineSearch, setInlineSearch] = useState<ProfileFavoritesSearchKind | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
+  const carouselRef = useRef<HTMLDivElement>(null)
+  const fieldRef = useRef<HTMLDivElement>(null)
+  const searchActive = inlineSearch === chip
+  const search = useProfileFavoritesSearch(chip, searchActive)
 
   if (!isOwnProfile && favorites.length === 0) return null
 
   const shown = favorites.slice(0, 12)
   const extra = favorites.length - shown.length
   const canAdd = isOwnProfile && showEmptyOwnerLink
-  const searchActive = inlineSearch === chip
 
-  const openSearch = () => {
-    setInlineSearch(chip)
-  }
+  const resetCarousel = useCallback(() => {
+    const el = carouselRef.current
+    if (!el) return
+    el.scrollTo({ left: 0, behavior: 'smooth' })
+  }, [])
 
-  const closeSearch = () => {
+  const closeSearch = useCallback(() => {
     setInlineSearch(null)
-  }
+    window.requestAnimationFrame(resetCarousel)
+  }, [resetCarousel])
+
+  const openSearch = useCallback(() => {
+    setInlineSearch(chip)
+  }, [chip])
+
+  useEffect(() => {
+    if (!searchActive) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeSearch()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [searchActive, closeSearch])
+
+  useEffect(() => {
+    if (!searchActive) return
+    const onPointer = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node | null
+      const panel = panelRef.current
+      if (!panel || !target || panel.contains(target)) return
+      closeSearch()
+    }
+    document.addEventListener('mousedown', onPointer)
+    document.addEventListener('touchstart', onPointer)
+    return () => {
+      document.removeEventListener('mousedown', onPointer)
+      document.removeEventListener('touchstart', onPointer)
+    }
+  }, [searchActive, closeSearch])
+
+  const persistArtists = useCallback(
+    async (next: ProfileFavoriteArtist[]) => {
+      onFavoritesChange?.(next)
+      try {
+        await fetch('/api/profile/favorite-artists', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            favorites: next.map((f, index) => ({
+              catalogArtistId: f.id,
+              position: index,
+              artworkUrl: f.artworkUrl,
+            })),
+          }),
+        })
+      } catch {
+        /* keep optimistic UI */
+      }
+    },
+    [onFavoritesChange],
+  )
+
+  const onArtistPick = useCallback(
+    async (hit: ArtistSearchResult) => {
+      if (favorites.some((f) => f.id === hit.id) || favorites.length >= 10) {
+        closeSearch()
+        return
+      }
+      let artworkUrl = hit.artworkUrl || hit.previewArtworkUrl
+      if (!artworkUrl) {
+        try {
+          const res = await fetch('/api/artists/materialize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ catalogArtistId: hit.id }),
+          })
+          if (res.ok) {
+            const data = (await res.json()) as { artist?: { artworkUrl?: string | null } }
+            artworkUrl = data.artist?.artworkUrl ?? null
+          }
+        } catch {
+          /* optional artwork */
+        }
+      }
+      const next: ProfileFavoriteArtist[] = [
+        ...favorites,
+        {
+          id: hit.id,
+          name: hit.name,
+          artworkUrl,
+          fallbackArtworkUrl: hit.previewArtworkUrl,
+          onMargo: hit.onMargo,
+          margoUsername: hit.margoUsername,
+          position: favorites.length,
+        },
+      ]
+      await persistArtists(next)
+      closeSearch()
+    },
+    [closeSearch, favorites, persistArtists],
+  )
+
+  const onSongPick = useCallback(
+    (_hit: ComposeSearchHit) => {
+      closeSearch()
+    },
+    [closeSearch],
+  )
+
+  const plusLabel =
+    chip === 'artists'
+      ? 'Search for an artist'
+      : chip === 'songs'
+        ? 'Search for a song'
+        : 'Search for an album'
 
   return (
     <div className="margo-profile-favorites" ref={panelRef}>
@@ -90,10 +207,36 @@ export function ProfileFavoriteArtistsRow({
       </div>
 
       <div className="margo-profile-favorites__panel">
-        <div className="margo-profile-favorites__carousel">
-          {chip === 'artists' && favorites.length > 0 ? (
-            <>
-              {shown.map((a, index) => {
+        {searchActive ? (
+          <div className="margo-profile-favorites__search-mode">
+            <ProfileFavoritesSearchField
+              kind={chip}
+              query={search.query}
+              setQuery={search.setQuery}
+              searching={search.searching}
+              onClose={closeSearch}
+              fieldRef={fieldRef}
+            />
+            <ProfileFavoritesSearchResults
+              kind={chip}
+              query={search.query}
+              searching={search.searching}
+              dropdownOpen={search.dropdownOpen}
+              artistResults={search.artistResults}
+              songResults={search.songResults}
+              onArtistPick={(hit) => { void onArtistPick(hit) }}
+              onSongPick={onSongPick}
+              onClose={closeSearch}
+            />
+          </div>
+        ) : (
+          <div
+            ref={carouselRef}
+            className={`margo-profile-favorites__carousel${searchActive ? ' margo-profile-favorites__carousel--leaving' : ''}`}
+          >
+            {canAdd ? <FavoritesPlusButton onClick={openSearch} label={plusLabel} /> : null}
+            {chip === 'artists' &&
+              shown.map((a, index) => {
                 const inner = (
                   <>
                     <span className="margo-profile-favorite-artists__art-wrap">
@@ -126,35 +269,13 @@ export function ProfileFavoriteArtistsRow({
                   </div>
                 )
               })}
-              {extra > 0 ? (
-                <div className="margo-profile-favorite-artists__more" aria-label={`${extra} more favorite artists`}>
-                  +{extra}
-                </div>
-              ) : null}
-            </>
-          ) : null}
-
-          {searchActive ? (
-            <div className="margo-profile-favorites__search-cell">
-              <ProfileFavoritesInlineSearch
-                kind={chip}
-                onClose={closeSearch}
-                boundaryRef={panelRef}
-              />
-            </div>
-          ) : canAdd ? (
-            <FavoritesPlusButton
-              onClick={openSearch}
-              label={
-                chip === 'artists'
-                  ? 'Search for an artist'
-                  : chip === 'songs'
-                    ? 'Search for a song'
-                    : 'Search for an album'
-              }
-            />
-          ) : null}
-        </div>
+            {chip === 'artists' && extra > 0 ? (
+              <div className="margo-profile-favorite-artists__more" aria-label={`${extra} more favorite artists`}>
+                +{extra}
+              </div>
+            ) : null}
+          </div>
+        )}
       </div>
     </div>
   )
