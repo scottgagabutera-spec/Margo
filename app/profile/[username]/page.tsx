@@ -121,38 +121,22 @@ function ProfileStat({
   }
   const inner = (
     <>
-      <span style={{
-        fontFamily: font,
-        fontSize: TYPE.secondary,
-        fontWeight: 600,
-        color: 'var(--text)',
-        lineHeight: 1,
-        letterSpacing: '-0.02em',
-        fontVariantNumeric: 'tabular-nums',
-      }}>
-        {display}
-      </span>
-      <span
-        className="margo-profile-ui-label"
-        style={{
-          marginTop: 2,
-          marginBottom: 0,
-          fontSize: '0.8125rem',
-          textAlign: 'center',
-        }}
-      >
-        {label}
-      </span>
+      <span className="margo-profile-stat__value">{display}</span>
+      <span className="margo-profile-stat__label">{label}</span>
     </>
   )
   if (href) {
     return (
-      <PendingNavLink href={href} indicator="overlay" ringSize={22} style={style}>
+      <PendingNavLink href={href} indicator="overlay" ringSize={22} style={style} className="margo-profile-stat">
         {inner}
       </PendingNavLink>
     )
   }
-  return <span style={style}>{inner}</span>
+  return (
+    <span style={style} className="margo-profile-stat">
+      {inner}
+    </span>
+  )
 }
 
 type ProfileData = WarmProfileRow
@@ -466,7 +450,10 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
 
   const [contentTab, setContentTab] = useState<ProfileContentTab>('lyrics')
   const [memoryLayout, setMemoryLayout] = useState<'grid' | 'timeline'>('grid')
-  const { memories: profileMemories } = useProfileMemories(profile?.id ?? null, profile?.username ?? null)
+  const { memories: profileMemories, loading: profileMemoriesLoading } = useProfileMemories(
+    profile?.id ?? null,
+    profile?.username ?? null,
+  )
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
   const [visitorMenuOpen, setVisitorMenuOpen] = useState(false)
   const accountMenuTriggerRef = useRef<HTMLButtonElement>(null)
@@ -714,13 +701,13 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
         .discog-row::-webkit-scrollbar { display: none; }
       `}</style>
 
-      {loading && <ProfilePageSkeleton />}
+      {loading && !profile && <ProfilePageSkeleton />}
 
       {!loading && notFound ? (
         <p className="margo-sr-only">Founding Listener — profile not available.</p>
       ) : null}
 
-      {!loading && profile && (
+      {profile && (
         <div className="margo-profile-page">
           <div className="margo-profile-shell">
             <div className="margo-profile-shell__left">
@@ -822,19 +809,26 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
             ) : null}
             </div>
 
-            {(isOwnProfile || profileMemories.length > 0) ? (
+            {(isOwnProfile || profileMemories.length > 0 || profileMemoriesLoading) ? (
               <div className="margo-profile-block--memories margo-profile-memories--mobile">
-                <ProfileMemoriesStrip memories={profileMemories} isOwnProfile={isOwnProfile} />
+                <ProfileMemoriesStrip
+                  memories={profileMemories}
+                  isOwnProfile={isOwnProfile}
+                  loading={profileMemoriesLoading}
+                />
               </div>
             ) : null}
 
-            <div className="margo-profile-block--favorites">
-              <ProfileFavoriteArtistsRow
-                favorites={favoriteArtists}
-                isOwnProfile={isOwnProfile}
-                showEmptyOwnerLink
-              />
-            </div>
+            {isOwnProfile || favoriteArtists.length > 0 ? (
+              <div className="margo-profile-block--favorites margo-profile-block--favorites--reserve">
+                <ProfileFavoriteArtistsRow
+                  favorites={favoriteArtists}
+                  isOwnProfile={isOwnProfile}
+                  showEmptyOwnerLink
+                  onFavoritesChange={setFavoriteArtists}
+                />
+              </div>
+            ) : null}
 
             {profile.isArtist ? (
               <div className="margo-profile-block--songs-preview margo-profile-songs-preview--mobile">
@@ -923,9 +917,13 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
                 ) : null}
               </div>
             ) : null}
-            {(isOwnProfile || profileMemories.length > 0) ? (
+            {(isOwnProfile || profileMemories.length > 0 || profileMemoriesLoading) ? (
               <div className="margo-profile-block--memories margo-profile-memories--desktop">
-                <ProfileMemoriesStrip memories={profileMemories} isOwnProfile={isOwnProfile} />
+                <ProfileMemoriesStrip
+                  memories={profileMemories}
+                  isOwnProfile={isOwnProfile}
+                  loading={profileMemoriesLoading}
+                />
               </div>
             ) : null}
             {/* ── Discography preview — a taste, not the whole catalog.
@@ -936,7 +934,7 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
                 "View all" and the Songs stat above both go to the same
                 full discography page. ── */}
             {profile.isArtist && (
-              <div className="margo-profile-discography-preview" style={{ marginBottom: '28px' }}>
+              <div className="margo-profile-discography-preview margo-profile-block--discography" style={{ marginBottom: '28px' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '14px' }}>
                   <div>
                     <p style={{ ...sectionLabelStyle, marginBottom: '2px' }}>Discography</p>
@@ -996,24 +994,8 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
               </div>
             )}
 
-            <div style={{ marginBottom: '28px' }}>
-              {profileContentAccess === 'loading' ? (
-                <FeedPostSkeletonList count={2} />
-              ) : profileContentAccess === 'blocked' ? (
-                <div style={{
-                  border: '1px solid var(--border)', borderRadius: '16px', padding: '24px',
-                  textAlign: 'center',
-                }}>
-                  <p style={{ ...emptyLyricStyle, marginBottom: '4px' }}>
-                    This account is private.
-                  </p>
-                  <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', margin: 0 }}>
-                    Follow to view lyrics.
-                  </p>
-                </div>
-              ) : (
-              <>
-              <div className="margo-profile-tabs-sticky">
+            {profileContentAccess !== 'blocked' ? (
+              <div className="margo-profile-tabs-sticky margo-profile-block--tabs">
                 <div
                   role="tablist"
                   aria-label="Profile content"
@@ -1042,7 +1024,25 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
                   })}
                 </div>
               </div>
+            ) : null}
 
+            <div className="margo-profile-block--feed">
+              {profileContentAccess === 'loading' ? (
+                <FeedPostSkeletonList count={2} />
+              ) : profileContentAccess === 'blocked' ? (
+                <div style={{
+                  border: '1px solid var(--border)', borderRadius: '16px', padding: '24px',
+                  textAlign: 'center',
+                }}>
+                  <p style={{ ...emptyLyricStyle, marginBottom: '4px' }}>
+                    This account is private.
+                  </p>
+                  <p style={{ fontFamily: font, fontSize: TYPE.secondary, color: 'var(--text-secondary)', margin: 0 }}>
+                    Follow to view lyrics.
+                  </p>
+                </div>
+              ) : (
+              <>
               {contentTab === 'memories' ? (
                 profileMemories.length === 0 ? (
                   isOwnProfile ? (

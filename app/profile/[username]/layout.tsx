@@ -4,6 +4,7 @@
  */
 import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
+import { ProfileFlowRoot } from '@/components/profile-flow-root'
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { isConsumerVisibleUsername } from '@/lib/profile-public-server'
@@ -35,7 +36,7 @@ export default async function ProfileUsernameLayout({
           <ProfileJsonLd username={username} />
         </Suspense>
       ) : null}
-      {children}
+      <ProfileFlowRoot>{children}</ProfileFlowRoot>
     </>
   )
 }
