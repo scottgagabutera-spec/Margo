@@ -5,34 +5,25 @@ import {
   resolvePrimaryTabBarSelection,
 } from './primary-tab-bar-selection.ts'
 
-test('bar selection prefers painted then acked over route', () => {
+test('selection prefers painted over route', () => {
   assert.equal(
     resolvePrimaryTabBarSelection({
       hubOpen: false,
-      paintedTab: 'feed',
-      ackedTab: 'discover',
-      routeTab: 'discover',
+      paintedTab: 'discover',
+      ackedTab: null,
+      routeTab: 'feed',
     }),
-    'feed',
-  )
-  assert.equal(
-    resolvePrimaryTabBarSelection({
-      hubOpen: false,
-      paintedTab: null,
-      ackedTab: 'feed',
-      routeTab: null,
-    }),
-    'feed',
+    'discover',
   )
 })
 
-test('feed tap on /signin: acked feed wins over signin pathname', () => {
-  const sel = resolvePrimaryTabBarSelection({
-    hubOpen: false,
-    paintedTab: 'feed',
-    ackedTab: 'feed',
-    routeTab: null,
-  })
-  assert.equal(primaryTabBarRouteActive(sel, 'feed', '/signin'), true)
-  assert.equal(primaryTabBarRouteActive(sel, 'discover', '/signin'), false)
+test('route fallback only when selection is null', () => {
+  assert.equal(
+    primaryTabBarRouteActive(null, 'feed', '/feed', null),
+    true,
+  )
+  assert.equal(
+    primaryTabBarRouteActive('discover', 'feed', '/feed', null),
+    false,
+  )
 })

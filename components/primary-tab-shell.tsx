@@ -22,6 +22,7 @@ import { HubDeepNavSkeleton, PrimaryTabPaneSkeleton } from '@/components/margo-s
 import { MARGO_HUB_DEEP_NAV_EVENT, type HubDeepNavDetail } from '@/lib/hub-deep-nav'
 import { warmPrimaryTab } from '@/lib/primary-tab-prefetch'
 import { MARGO_NAV_START } from '@/lib/margo-nav-intent'
+import { resolvePrimaryTabBarSelection } from '@/lib/primary-tab-bar-selection'
 import { clearHubOverlayRestore, peekHubOverlayRestore } from '@/lib/search-scope'
 import {
   FEED_RETURN_STORAGE_KEY,
@@ -382,6 +383,11 @@ interface PrimaryTabContextValue {
   activeTab: PrimaryTabId | null
   /** Instant tab-bar target: painted → acked → route (Hub uses its own slot). */
   barTab: PrimaryTabId | null
+  /** Gold selection for the mobile tab bar (never pathname fallback while a tap is in flight). */
+  selectionTab: PrimaryTabId | null
+  paintedTab: PrimaryTabId | null
+  ackedTab: PrimaryTabId | null
+  routeTab: PrimaryTabId | null
   peekTab: PrimaryTabId | null
   pendingTab: PrimaryTabId | null
   isOnPrimaryTab: boolean
@@ -402,6 +408,10 @@ interface PrimaryTabContextValue {
 const PrimaryTabContext = createContext<PrimaryTabContextValue>({
   activeTab: null,
   barTab: null,
+  selectionTab: null,
+  paintedTab: null,
+  ackedTab: null,
+  routeTab: null,
   peekTab: null,
   pendingTab: null,
   isTabActive: () => false,
@@ -857,7 +867,14 @@ export function PrimaryTabShell({
   const hasCachedTab = useCallback((id: PrimaryTabId) => cacheRef.current.has(id), [])
 
   const acknowledgePrimaryTab = useCallback((id: PrimaryTabId) => {
-    setAckedTab(id)
+    const ack = () => {
+      setAckedTab(id)
+    }
+    try {
+      flushSync(ack)
+    } catch {
+      ack()
+    }
     if (ackClearRef.current != null) window.clearTimeout(ackClearRef.current)
     ackClearRef.current = null
   }, [])
@@ -907,6 +924,25 @@ export function PrimaryTabShell({
     }, TAB_RING_DELAY_MS)
     return () => window.clearTimeout(t)
   }, [navPending, paintedTab])
+
+  useLayoutEffect(() => {
+    if (navPending) return
+    if (!paintedTab || !routeTab) return
+    if (paintedTab === routeTab) {
+      if (ackedTab) setAckedTab(null)
+      return
+    }
+    paintedTabRef.current = routeTab
+    intentHrefRef.current = null
+    setPaintedTab(routeTab)
+    setAckedTab(null)
+    setNavPending(false)
+  }, [navPending, paintedTab, routeTab, ackedTab])
+
+  const selectionTab = useMemo(
+    () => resolvePrimaryTabBarSelection({ hubOpen: false, paintedTab, ackedTab, routeTab }),
+    [paintedTab, ackedTab, routeTab],
+  )
 
   const navigatePrimaryTab = useCallback((href: string, event?: MouseEvent<HTMLAnchorElement>, tabHint?: PrimaryTabId) => {
     if (event && isModifiedClick(event)) return false
@@ -1111,6 +1147,10 @@ export function PrimaryTabShell({
     () => ({
       activeTab,
       barTab,
+      selectionTab,
+      paintedTab,
+      ackedTab,
+      routeTab,
       peekTab,
       pendingTab: navPending ? paintedTab : null,
       isOnPrimaryTab: activeTab !== null,
@@ -1124,7 +1164,7 @@ export function PrimaryTabShell({
       setStripOffset,
       endPeek,
     }),
-    [activeTab, barTab, peekTab, paintedTab, navPending, ackedTab, ringTab, hasCachedTab, acknowledgePrimaryTab, navigatePrimaryTab, beginPeek, setStripOffset, endPeek]
+    [activeTab, barTab, selectionTab, paintedTab, ackedTab, routeTab, peekTab, navPending, ringTab, hasCachedTab, acknowledgePrimaryTab, navigatePrimaryTab, beginPeek, setStripOffset, endPeek]
   )
 
   usePrimaryTabSwipeGesture(enableSwipeGesture, ownProfileHref, {

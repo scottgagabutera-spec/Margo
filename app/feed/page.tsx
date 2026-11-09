@@ -66,8 +66,9 @@ import { FeedFilterLiveRegion, FeedVibeFilterBar } from '@/components/feed-vibe-
 import { FeedContentTabBar } from '@/components/feed-content-tab-bar'
 import { FeedShortsPager } from '@/components/feed-shorts-pager'
 import { MargoPaneErrorBoundary } from '@/components/margo-pane-error-boundary'
-import { applyFeedContentTab, parseFeedContentTab } from '@/lib/feed-content-tab'
+import { applyFeedContentTab, parseFeedContentTab, type FeedContentTab } from '@/lib/feed-content-tab'
 import { feedListReady } from '@/lib/feed-list-ready'
+import { peekFeedPostsCache } from '@/lib/primary-tab-prefetch'
 import { useFeedShortsClips } from '@/hooks/useFeedShortsClips'
 import {
   E2E_SHORTS_FIXTURE_CLIPS,
@@ -307,6 +308,11 @@ function FeedPageInner() {
     () => parseFeedContentTab(searchParams.get('tab')),
     [searchParams],
   )
+  const [paintedFeedContentTab, setPaintedFeedContentTab] = useState<FeedContentTab | null>(null)
+  const uiFeedContentTab = paintedFeedContentTab ?? feedContentTab
+  useEffect(() => {
+    if (paintedFeedContentTab === feedContentTab) setPaintedFeedContentTab(null)
+  }, [feedContentTab, paintedFeedContentTab])
 
   const selectedVibe = useMemo(() => {
     const raw = searchParams.get('vibe')?.trim()
@@ -634,6 +640,7 @@ function FeedPageInner() {
   }
 
   const handleFeedContentTab = (tab: 'lyrics' | 'memories' | 'shorts' | 'echoes') => {
+    setPaintedFeedContentTab(tab)
     if (feedContentTab === 'lyrics' && tab !== 'lyrics') persistFeedReturnBeforeLeave('lyrics')
     paintFeedMix(null)
     const scroller = document.querySelector('[data-margo-primary-tab="feed"]')
@@ -705,8 +712,11 @@ function FeedPageInner() {
   const listReady = feedListReady(seeded, posts.length, loading)
   const lyricsMixGateReady = listReady && (!user?.id || ownMemoryCount !== null)
   const lyricsMixReady = lyricsMixGateReady
+  const cachedFeedPosts = peekFeedPostsCache()
+  const hasCachedFeedPosts = (cachedFeedPosts?.data?.length ?? 0) > 0
   const showFeedSkeleton =
-    (loading && posts.length === 0 && !seeded) || (listReady && !!user?.id && ownMemoryCount === null)
+    ((loading && posts.length === 0 && !seeded && !hasCachedFeedPosts)
+      || (listReady && !!user?.id && ownMemoryCount === null))
 
   const mixedLyricRows = useMemo((): FeedLyricsRow[] => {
     if (feedContentTab !== 'lyrics' || !lyricsMixGateReady) return []
@@ -911,8 +921,9 @@ function FeedPageInner() {
         }}
       >
         <FeedContentTabBar
-          active="lyrics"
+          active={uiFeedContentTab}
           onChange={handleFeedContentTab}
+          onPaintTab={setPaintedFeedContentTab}
           shortsAvailable={resolvedShortsMeetsMinimum}
         />
         <E2eFeedReturnFixture />
@@ -942,12 +953,13 @@ function FeedPageInner() {
       background: 'var(--bg)',
       position: 'relative',
       overflowX: 'hidden',
-      paddingTop: feedContentTab === 'lyrics' ? feedTopChrome : feedTopChrome,
+      paddingTop: uiFeedContentTab === 'lyrics' ? feedTopChrome : feedTopChrome,
     }}>
       <FeedFilterLiveRegion message={filterAnnouncement} />
       <FeedContentTabBar
-        active={feedContentTab}
+        active={uiFeedContentTab}
         onChange={handleFeedContentTab}
+        onPaintTab={setPaintedFeedContentTab}
         shortsAvailable={resolvedShortsMeetsMinimum}
       />
       {vibeFilterActive && (
@@ -986,7 +998,7 @@ function FeedPageInner() {
         <div style={{ position: 'absolute', bottom: '-160px', right: '-160px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.03)', borderRadius: '50%', filter: 'blur(80px)' }} />
       </div>
 
-      {feedContentTab === 'memories' && (
+      {uiFeedContentTab === 'memories' && (
         <main
           className="margo-feed-column margo-feed-column--memories-grid"
           style={{ position: 'relative', zIndex: 5, padding: '12px 14px var(--margo-page-padding-bottom)' }}
@@ -1042,9 +1054,9 @@ function FeedPageInner() {
         </main>
       )}
 
-      {feedContentTab === 'echoes' && <FeedEchoesTab />}
+      {uiFeedContentTab === 'echoes' && <FeedEchoesTab />}
 
-      {feedContentTab === 'shorts' && (
+      {uiFeedContentTab === 'shorts' && (
         <FeedShortsPager
           clips={resolvedShortsClips}
           loading={resolvedShortsLoading}
@@ -1058,9 +1070,9 @@ function FeedPageInner() {
       )}
 
       <main
-        className={`margo-feed-column${feedContentTab !== 'lyrics' ? ' margo-feed-lyrics-pane--hidden' : ''}`}
+        className={`margo-feed-column${uiFeedContentTab !== 'lyrics' ? ' margo-feed-lyrics-pane--hidden' : ''}`}
         style={{ position: 'relative', zIndex: 5, padding: '16px 16px var(--margo-page-padding-bottom)' }}
-        aria-hidden={feedContentTab !== 'lyrics'}
+        aria-hidden={uiFeedContentTab !== 'lyrics'}
       >
         {feedLive && isMobileViewport !== true && (
           <div className="margo-story-ring-tray">

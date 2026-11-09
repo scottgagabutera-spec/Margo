@@ -21,6 +21,10 @@ import {
   primaryTabBarGold,
   primaryTabBarLive,
 } from '@/lib/mobile-tab-bar-highlight'
+import {
+  primaryTabBarRouteActive,
+  resolvePrimaryTabBarSelection,
+} from '@/lib/primary-tab-bar-selection'
 
 const font = 'var(--font-geist-sans), system-ui, sans-serif'
 
@@ -31,7 +35,14 @@ const font = 'var(--font-geist-sans), system-ui, sans-serif'
 export function MobileTabBar() {
   const pathname = usePathname()
   const { user, identity } = useIdentity()
-  const { barTab, isTabPending, isTabAcked } = usePrimaryTab()
+  const {
+    selectionTab,
+    paintedTab,
+    ackedTab,
+    routeTab,
+    isTabPending,
+    isTabAcked,
+  } = usePrimaryTab()
   const { open: hubOpen } = useHub()
   const feedLink = usePrimaryTabLinkProps('/feed', 'feed')
   const discoverLink = usePrimaryTabLinkProps('/discover', 'discover')
@@ -63,23 +74,31 @@ export function MobileTabBar() {
   const stageHidden = useStageChromeHidden()
   const isLanding = pathname === '/'
 
-  const feedRouteActive = barTab === 'feed' || (barTab === null && pathname === '/feed')
-  const discoverRouteActive = barTab === 'discover' || (barTab === null && !!pathname?.startsWith('/discover'))
-  const composeRouteActive = barTab === 'compose' || (barTab === null && pathname === '/compose')
-  const isOnFeed = primaryTabBarGold(hubOpen, feedRouteActive)
-  const isOnDiscover = primaryTabBarGold(hubOpen, discoverRouteActive)
-  const isOnCompose = primaryTabBarGold(hubOpen, composeRouteActive)
+  const ownProfilePath = identity?.username ? `/profile/${identity.username}` : null
+  const barSelection =
+    selectionTab
+    ?? resolvePrimaryTabBarSelection({
+      hubOpen,
+      paintedTab,
+      ackedTab,
+      routeTab,
+    })
+  const routeActive = (id: 'feed' | 'discover' | 'compose' | 'you') =>
+    primaryTabBarRouteActive(barSelection, id, pathname?.split('?')[0] ?? '', ownProfilePath)
+  const isOnFeed = primaryTabBarGold(hubOpen, routeActive('feed'))
+  const isOnDiscover = primaryTabBarGold(hubOpen, routeActive('discover'))
+  const isOnCompose = primaryTabBarGold(hubOpen, routeActive('compose'))
 
   const isSignedIn = !!user && !user.isAnonymous
   const signinHref = useSigninHref()
   const youHref = isSignedIn ? '/you' : signinHref
   const youLink = usePrimaryTabLinkProps(youHref, 'you')
-  const youRouteActive = barTab === 'you' || (barTab === null && !!identity && isSignedIn && pathname === `/profile/${identity.username}`)
-  const isOnProfile = primaryTabBarGold(hubOpen, youRouteActive)
-  const isOnSignInRoute = !isSignedIn && pathname?.split('?')[0] === '/signin'
-  const primaryBarSelected = barTab !== null && barTab !== 'you'
+  const isOnProfile = primaryTabBarGold(hubOpen, routeActive('you'))
+  const onSigninPath = pathname?.split('?')[0] === '/signin'
+  const isOnSignInRoute = !isSignedIn && onSigninPath
+  const primaryBarSelected = barSelection !== null
   const signInTabActive = signInTabActiveOnSigninRoute(isOnSignInRoute, hubOpen, primaryBarSelected)
-  const youAwaitingIdentity = isSignedIn && !identity && barTab !== 'you'
+  const youAwaitingIdentity = isSignedIn && !identity && barSelection !== 'you'
 
   const isMusicActive = engineState.mode !== 'idle'
 
@@ -133,7 +152,11 @@ export function MobileTabBar() {
   if (shellHidden || stageHidden) return null
 
   return (
-    <nav ref={navRef} className={'margo-mobile-tabbar' + (isLanding ? ' margo-mobile-tabbar--landing' : '')} style={{
+    <nav
+      ref={navRef}
+      data-margo-tab-selection={barSelection ?? ''}
+      className={'margo-mobile-tabbar' + (isLanding ? ' margo-mobile-tabbar--landing' : '')}
+      style={{
       position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
       display: 'none',
       gridTemplateColumns: 'repeat(5, 1fr)',
@@ -161,7 +184,7 @@ export function MobileTabBar() {
         )}
         <span style={labelStyle}>Discover</span>
         {tabIndicator((isOnDiscover || tabAcked('discover')) && !tabPending('discover'))}
-        {isMusicActive && !hubOpen && !discoverRouteActive && (
+        {isMusicActive && !hubOpen && !routeActive('discover') && (
           <span style={{
             position: 'absolute', top: '-2px', right: 'calc(50% - 14px)',
             width: '6px', height: '6px', borderRadius: '50%',

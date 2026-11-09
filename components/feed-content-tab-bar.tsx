@@ -6,15 +6,19 @@ import { useTapAck } from '@/hooks/use-tap-ack'
 type Props = {
   active: FeedContentTab
   onChange: (tab: FeedContentTab) => void
+  onPaintTab?: (tab: FeedContentTab) => void
   /** When false, Shorts tab is visible but shows empty state when selected. */
   shortsAvailable?: boolean
 }
 
-export function FeedContentTabBar({ active, onChange, shortsAvailable = true }: Props) {
+export function FeedContentTabBar({ active, onChange, onPaintTab, shortsAvailable = true }: Props) {
   const { ack, isAcked } = useTapAck()
   const tabProps = (tab: FeedContentTab) => ({
     'data-margo-acked': isAcked(tab) && active !== tab ? 1 : undefined,
-    onPointerDown: () => ack(tab),
+    onPointerDown: () => {
+      onPaintTab?.(tab)
+      ack(tab)
+    },
     onClick: () => onChange(tab),
   })
   return (
