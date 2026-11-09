@@ -11904,6 +11904,21 @@ button.margo-feed-shorts-strip__more {
   box-sizing: border-box;
   min-height: 0;
 }
+.margo-memory-flow-page__scroll--with-cta {
+  padding-bottom: calc(
+    var(--margo-cta-bar-h, 72px)
+    + 12px
+    + var(--margo-page-bottom, var(--margo-tabbar-h, 0px))
+    + var(--margo-safe-bottom)
+  );
+}
+.margo-memory-flow-page__footer .margo-memory-flow-page__cta-inner {
+  max-width: 560px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+  padding: 0 24px;
+}
 .margo-memory-flow-page__header {
   margin-bottom: 16px;
   padding-top: 4px;
@@ -12085,17 +12100,64 @@ button.margo-feed-shorts-strip__more {
   font-size: 0.75rem;
   font-weight: 500;
 }
-.margo-listening-memory--flow .margo-listening-memory__choice-heading {
+.margo-listening-memory--flow .margo-listening-memory__choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  border: none;
+  overflow: visible;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.margo-listening-memory--flow .margo-listening-memory__choices li {
+  min-width: 0;
+}
+.margo-listening-memory--flow .margo-listening-memory__choice {
+  width: 100%;
+  min-height: 58px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  cursor: pointer;
+  text-align: left;
+  box-sizing: border-box;
+}
+.margo-listening-memory--flow .margo-listening-memory__choice--on {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold);
+}
+.margo-listening-memory--flow .margo-listening-memory__choice-range {
+  display: block;
   font-size: 0.75rem;
   font-weight: 500;
+  color: var(--text);
+  line-height: 1.2;
 }
-.margo-listening-memory--flow .margo-listening-memory__choice-sub {
+.margo-listening-memory--flow .margo-listening-memory__choice-label {
+  display: block;
   font-size: 0.6875rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  line-height: 1.25;
 }
 .margo-listening-memory--flow .margo-listening-memory__footer-label {
-  margin: 8px 0 0;
-  font-size: 0.6875rem;
-  color: var(--text-muted);
+  margin: 10px 0 0;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--gold) 50%, transparent);
+  background: color-mix(in srgb, var(--gold) 10%, transparent);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--gold);
 }
 .margo-memory-period-fields {
   display: flex;

@@ -97,12 +97,14 @@ export function MargoMemoryFlowOverlay({
   title,
   children,
   footer,
+  scrollClassName,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   title: string
   children: ReactNode
   footer?: ReactNode
+  scrollClassName?: string
 }) {
   const [mounted, setMounted] = useState(false)
 
@@ -143,7 +145,7 @@ export function MargoMemoryFlowOverlay({
         >
           <CloseIcon size={18} color="var(--text-secondary)" />
         </button>
-        <div className="margo-memory-flow-page__scroll">
+        <div className={`margo-memory-flow-page__scroll${scrollClassName ? ` ${scrollClassName}` : ''}`}>
           <header className="margo-memory-flow-page__header">
             <h1 className="margo-memory-type-title">{title}</h1>
           </header>

@@ -342,19 +342,12 @@ export function ListeningMemorySheet({
             <li key={c.id}>
               <button
                 type="button"
-                className="margo-listening-memory__choice"
+                className={`margo-listening-memory__choice${i === choiceIndex ? ' margo-listening-memory__choice--on' : ''}`}
                 onClick={() => setChoiceIndex(i)}
+                aria-pressed={i === choiceIndex}
               >
-                <span className="margo-listening-memory__choice-copy">
-                  <span className="margo-listening-memory__choice-heading">{c.heading}</span>
-                  <span className="margo-listening-memory__choice-sub">{c.sub}</span>
-                </span>
-                <span
-                  className={`margo-listening-memory__check${i === choiceIndex ? ' margo-listening-memory__check--on' : ''}`}
-                  aria-hidden
-                >
-                  {i === choiceIndex ? <CheckIcon size={14} color="var(--bg)" /> : null}
-                </span>
+                <span className="margo-listening-memory__choice-range">{c.sub}</span>
+                <span className="margo-listening-memory__choice-label">{c.heading}</span>
               </button>
             </li>
           ))}
@@ -372,20 +365,23 @@ export function ListeningMemorySheet({
         open={open}
         onOpenChange={onOpenChange}
         title="What are you listening to?"
+        scrollClassName="margo-memory-flow-page__scroll--with-cta"
         footer={
           <KeyboardSafeCtaBar pinToLayoutBottom solidBackground bottomGutter={12} zIndex={260} contentMaxWidth={560}>
-            <div className="margo-memory-create__cta-row">
-              <button type="button" className="margo-memory-btn margo-memory-btn--secondary margo-memory-btn--grow" onClick={() => onOpenChange(false)}>
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="margo-memory-btn margo-memory-btn--primary margo-memory-btn--grow"
-                disabled={!canSave}
-                onClick={() => { void save() }}
-              >
-                {saving ? 'Saving…' : 'Done'}
-              </button>
+            <div className="margo-memory-flow-page__cta-inner">
+              <div className="margo-memory-create__cta-row">
+                <button type="button" className="margo-memory-btn margo-memory-btn--secondary margo-memory-btn--grow" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="margo-memory-btn margo-memory-btn--primary margo-memory-btn--grow"
+                  disabled={!canSave}
+                  onClick={() => { void save() }}
+                >
+                  {saving ? 'Saving…' : 'Done'}
+                </button>
+              </div>
             </div>
           </KeyboardSafeCtaBar>
         }
