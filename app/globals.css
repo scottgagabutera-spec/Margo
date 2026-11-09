@@ -11499,11 +11499,29 @@ button.margo-feed-shorts-strip__more {
 }
 
 /* ── Memory create / listening flow (Inter, chrome between nav + tab bar) ── */
+:root,
+.margo-memory-flow-root,
+.margo-memory-dialog-root,
+.margo-memory-flow-overlay {
+  --margo-memory-viewport-top: calc(
+    var(--nav-height, var(--margo-header-h, 72px))
+    + env(safe-area-inset-top, 0px)
+    + 12px
+    + var(--margo-vv-offset-top, 0px)
+  );
+  --margo-memory-viewport-bottom: calc(
+    12px
+    + var(--margo-safe-bottom)
+    + var(--margo-keyboard-inset, 0px)
+    + var(--margo-page-bottom, var(--margo-tabbar-h, 0px))
+  );
+}
 .margo-memory-flow-root {
   --margo-content-gutter-bottom: 24px;
-  --margo-memory-chrome-top: calc(var(--nav-height, 72px) + 12px);
-  --margo-memory-chrome-bottom: calc(var(--margo-page-bottom, 80px) + var(--margo-safe-bottom) + 12px);
-  --margo-memory-visible-h: calc(100dvh - var(--margo-memory-chrome-top) - var(--margo-memory-chrome-bottom));
+  /* legacy alias used by in-page padding */
+  --margo-memory-chrome-top: var(--margo-memory-viewport-top);
+  --margo-memory-chrome-bottom: var(--margo-memory-viewport-bottom);
+  --margo-memory-visible-h: calc(100dvh - var(--margo-memory-viewport-top) - var(--margo-memory-viewport-bottom));
 }
 
 .margo-memory-type-title {
@@ -11625,34 +11643,43 @@ button.margo-feed-shorts-strip__more {
 .margo-memory-dialog-root {
   position: fixed;
   inset: 0;
-  z-index: 240;
+  z-index: 260;
   pointer-events: none;
+  transform: none;
+  filter: none;
 }
 .margo-memory-dialog-root__dismiss {
-  position: absolute;
+  position: fixed;
   inset: 0;
   border: none;
   background: var(--margo-scrim);
   pointer-events: auto;
   cursor: default;
+  z-index: 0;
 }
 .margo-memory-dialog-root__frame {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: var(--margo-memory-chrome-top);
-  bottom: var(--margo-memory-chrome-bottom);
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  top: var(--margo-memory-viewport-top);
+  bottom: var(--margo-memory-viewport-bottom);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12px 5vw;
+  padding: 0;
   pointer-events: none;
   box-sizing: border-box;
+  z-index: 1;
+  min-height: 0;
 }
 .margo-memory-dialog-root__panel {
   pointer-events: auto;
-  max-height: calc(var(--margo-memory-visible-h) - 24px);
-  overflow: auto;
+  width: min(90vw, 340px);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
   border-radius: 16px;
   border: 1px solid var(--border);
   background: var(--surface);
@@ -11666,6 +11693,12 @@ button.margo-feed-shorts-strip__more {
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 12px;
+  flex-shrink: 0;
+}
+.margo-memory-dialog-root__body {
+  overflow: auto;
+  min-height: 0;
+  flex: 1 1 auto;
 }
 .margo-memory-dialog-root__title {
   margin: 0;
@@ -11748,37 +11781,46 @@ button.margo-feed-shorts-strip__more {
 
 .margo-memory-flow-overlay {
   position: fixed;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  z-index: 220;
+  left: 12px;
+  right: 12px;
+  top: var(--margo-memory-viewport-top);
+  bottom: var(--margo-memory-viewport-bottom);
+  z-index: 250;
   background: var(--bg);
   display: flex;
   flex-direction: column;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+  transform: none;
+  filter: none;
+  min-height: 0;
 }
 .margo-memory-flow-overlay__scroll {
   flex: 1;
   overflow: auto;
-  padding: var(--margo-memory-chrome-top) 20px calc(var(--margo-cta-bar-h, 72px) + 20px);
+  padding: 0 20px calc(var(--margo-cta-bar-h, 72px) + 12px);
   max-width: 560px;
   width: 100%;
   margin: 0 auto;
   box-sizing: border-box;
+  min-height: 0;
 }
 @media (min-width: 720px) {
-  .margo-memory-flow-overlay__scroll {
-    padding-top: calc(var(--nav-height, 72px) + 48px);
+  .margo-memory-flow-overlay {
+    left: max(12px, calc((100vw - 560px) / 2));
+    right: max(12px, calc((100vw - 560px) / 2));
   }
 }
 .margo-memory-flow-overlay__header {
   margin-bottom: 16px;
+  padding-top: 4px;
 }
 .margo-memory-flow-overlay__back {
-  position: fixed;
-  top: calc(var(--nav-height, 72px) + 8px);
-  right: 16px;
-  z-index: 221;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
   border: none;
   background: var(--surface-2);
   border-radius: 999px;

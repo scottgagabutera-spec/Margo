@@ -25,10 +25,17 @@ export function MargoMemoryCenteredDialog({
 
   useEffect(() => {
     if (!open) return
-    const prev = document.body.style.overflow
+    const scrollY = window.scrollY
+    const prevBody = document.body.style.overflow
+    const prevHtml = document.documentElement.style.overflow
     document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+    document.documentElement.setAttribute('data-margo-memory-dialog-open', '1')
     return () => {
-      document.body.style.overflow = prev
+      document.body.style.overflow = prevBody
+      document.documentElement.style.overflow = prevHtml
+      document.documentElement.removeAttribute('data-margo-memory-dialog-open')
+      window.scrollTo(0, scrollY)
     }
   }, [open])
 
@@ -59,7 +66,7 @@ export function MargoMemoryCenteredDialog({
           role="dialog"
           aria-modal
           aria-labelledby={headingId}
-          style={{ width: widthPx, maxWidth: 'min(90vw, 340px)' }}
+          style={widthPx !== 264 ? { width: widthPx, maxWidth: 'min(90vw, 340px)' } : undefined}
           onClick={(e) => e.stopPropagation()}
         >
           <div className="margo-memory-dialog-root__head">
@@ -103,10 +110,17 @@ export function MargoMemoryFlowOverlay({
 
   useEffect(() => {
     if (!open) return
-    const prev = document.body.style.overflow
+    const scrollY = window.scrollY
+    const prevBody = document.body.style.overflow
+    const prevHtml = document.documentElement.style.overflow
     document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+    document.documentElement.setAttribute('data-margo-memory-dialog-open', '1')
     return () => {
-      document.body.style.overflow = prev
+      document.body.style.overflow = prevBody
+      document.documentElement.style.overflow = prevHtml
+      document.documentElement.removeAttribute('data-margo-memory-dialog-open')
+      window.scrollTo(0, scrollY)
     }
   }, [open])
 
