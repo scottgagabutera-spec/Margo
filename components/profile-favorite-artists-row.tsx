@@ -1,13 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { FavoriteArtistAvatar } from '@/components/favorite-artist-avatar'
 import { PlusIcon } from '@/components/icons'
 import {
-  ProfileFavoritesSearchSheet,
+  ProfileFavoritesInlineSearch,
   type ProfileFavoritesSearchKind,
-} from '@/components/profile-favorites-search-sheet'
+} from '@/components/profile-favorites-inline-search'
 import { UI_FONT } from '@/lib/fonts'
 
 const font = UI_FONT
@@ -24,18 +24,16 @@ export type ProfileFavoriteArtist = {
 
 type FavoritesChip = 'artists' | 'songs' | 'albums'
 
-function FavoritesEmptyPlus({ onOpen }: { onOpen: () => void }) {
+function FavoritesPlusButton({ onClick, label }: { onClick: () => void; label: string }) {
   return (
-    <div className="margo-profile-favorites__panel margo-profile-favorites__panel--empty">
-      <button
-        type="button"
-        className="margo-profile-favorites__empty-plus"
-        aria-label="Add favorite"
-        onClick={onOpen}
-      >
-        <PlusIcon size={22} color="var(--gold)" />
-      </button>
-    </div>
+    <button
+      type="button"
+      className="margo-profile-favorites__plus"
+      aria-label={label}
+      onClick={onClick}
+    >
+      <PlusIcon size={18} color="var(--gold)" />
+    </button>
   )
 }
 
@@ -49,22 +47,26 @@ export function ProfileFavoriteArtistsRow({
   showEmptyOwnerLink?: boolean
 }) {
   const [chip, setChip] = useState<FavoritesChip>('artists')
-  const [searchOpen, setSearchOpen] = useState(false)
-  const [searchKind, setSearchKind] = useState<ProfileFavoritesSearchKind>('artists')
-
-  const openSearch = (kind: ProfileFavoritesSearchKind) => {
-    setSearchKind(kind)
-    setSearchOpen(true)
-  }
+  const [inlineSearch, setInlineSearch] = useState<ProfileFavoritesSearchKind | null>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
 
   if (!isOwnProfile && favorites.length === 0) return null
 
-  const shown = favorites.slice(0, 5)
+  const shown = favorites.slice(0, 12)
   const extra = favorites.length - shown.length
-  const ownerArtistsEmpty = isOwnProfile && favorites.length === 0 && showEmptyOwnerLink
+  const canAdd = isOwnProfile && showEmptyOwnerLink
+  const searchActive = inlineSearch === chip
+
+  const openSearch = () => {
+    setInlineSearch(chip)
+  }
+
+  const closeSearch = () => {
+    setInlineSearch(null)
+  }
 
   return (
-    <div className="margo-profile-favorites">
+    <div className="margo-profile-favorites" ref={panelRef}>
       <div className="margo-profile-favorites__chips" role="tablist" aria-label="Favorites">
         {(['artists', 'songs', 'albums'] as const).map((id) => {
           const label = id === 'artists' ? 'Artists' : id === 'songs' ? 'Songs' : 'Albums'
@@ -76,7 +78,10 @@ export function ProfileFavoriteArtistsRow({
               role="tab"
               aria-selected={selected}
               className={`margo-profile-favorites__chip${selected ? ' margo-profile-favorites__chip--on' : ''}`}
-              onClick={() => setChip(id)}
+              onClick={() => {
+                setChip(id)
+                closeSearch()
+              }}
             >
               {label}
             </button>
@@ -84,72 +89,73 @@ export function ProfileFavoriteArtistsRow({
         })}
       </div>
 
-      {chip === 'songs' || chip === 'albums' ? (
-        <FavoritesEmptyPlus onOpen={() => openSearch(chip)} />
-      ) : null}
+      <div className="margo-profile-favorites__panel">
+        <div className="margo-profile-favorites__carousel">
+          {chip === 'artists' && favorites.length > 0 ? (
+            <>
+              {shown.map((a, index) => {
+                const inner = (
+                  <>
+                    <span className="margo-profile-favorite-artists__art-wrap">
+                      <FavoriteArtistAvatar
+                        name={a.name}
+                        artworkUrl={a.artworkUrl}
+                        fallbackArtworkUrl={a.fallbackArtworkUrl}
+                        priority={index < 6}
+                      />
+                    </span>
+                    <span className="margo-profile-favorite-artists__name" style={{ fontFamily: font }}>
+                      {a.name}
+                    </span>
+                  </>
+                )
+                if (a.onMargo && a.margoUsername) {
+                  return (
+                    <Link
+                      key={a.id}
+                      href={`/profile/${a.margoUsername}`}
+                      className="margo-profile-favorite-artists__cell margo-profile-favorite-artists__cell--link"
+                    >
+                      {inner}
+                    </Link>
+                  )
+                }
+                return (
+                  <div key={a.id} className="margo-profile-favorite-artists__cell">
+                    {inner}
+                  </div>
+                )
+              })}
+              {extra > 0 ? (
+                <div className="margo-profile-favorite-artists__more" aria-label={`${extra} more favorite artists`}>
+                  +{extra}
+                </div>
+              ) : null}
+            </>
+          ) : null}
 
-      {chip === 'artists' && ownerArtistsEmpty ? (
-        <div className="margo-profile-favorite-artists__empty-cta">
-          <button
-            type="button"
-            className="margo-profile-favorites__empty-plus margo-profile-favorite-artists__empty-plus"
-            aria-label="Search for an artist"
-            onClick={() => openSearch('artists')}
-          >
-            <PlusIcon size={20} color="var(--gold)" />
-          </button>
-          <span className="margo-profile-favorite-artists__empty-text">Add your favorite artists</span>
-        </div>
-      ) : null}
-
-      {chip === 'artists' && favorites.length > 0 ? (
-        <div className="margo-profile-favorite-artists__row margo-profile-favorites__artists-row">
-          {shown.map((a, index) => {
-            const inner = (
-              <>
-                <span className="margo-profile-favorite-artists__art-wrap">
-                  <FavoriteArtistAvatar
-                    name={a.name}
-                    artworkUrl={a.artworkUrl}
-                    fallbackArtworkUrl={a.fallbackArtworkUrl}
-                    priority={index < 5}
-                  />
-                </span>
-                <span className="margo-profile-favorite-artists__name" style={{ fontFamily: font }}>
-                  {a.name}
-                </span>
-              </>
-            )
-            if (a.onMargo && a.margoUsername) {
-              return (
-                <Link
-                  key={a.id}
-                  href={`/profile/${a.margoUsername}`}
-                  className="margo-profile-favorite-artists__cell margo-profile-favorite-artists__cell--link"
-                >
-                  {inner}
-                </Link>
-              )
-            }
-            return (
-              <div key={a.id} className="margo-profile-favorite-artists__cell">
-                {inner}
-              </div>
-            )
-          })}
-          {extra > 0 ? (
-            <div className="margo-profile-favorite-artists__more" aria-label={`${extra} more favorite artists`}>
-              +{extra}
+          {searchActive ? (
+            <div className="margo-profile-favorites__search-cell">
+              <ProfileFavoritesInlineSearch
+                kind={chip}
+                onClose={closeSearch}
+                boundaryRef={panelRef}
+              />
             </div>
+          ) : canAdd ? (
+            <FavoritesPlusButton
+              onClick={openSearch}
+              label={
+                chip === 'artists'
+                  ? 'Search for an artist'
+                  : chip === 'songs'
+                    ? 'Search for a song'
+                    : 'Search for an album'
+              }
+            />
           ) : null}
         </div>
-      ) : null}
-
-      <ProfileFavoritesSearchSheet
-        open={searchOpen}
-        kind={searchKind}
-        onClose={() => setSearchOpen(false)}
-      />
+      </div>
     </div>
   )
 }
