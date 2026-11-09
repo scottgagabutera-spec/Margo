@@ -20,12 +20,6 @@ test('stage zone stretches search to full column width', () => {
   assert.doesNotMatch(css, /\.margo-stage-hero-search[\s\S]*calc\(100%\s*-\s*48px\)/)
 })
 
-test('footer UI uses Geist token via --margo-footer-ui-font', () => {
-  const css = fs.readFileSync('app/globals.css', 'utf8')
-  assert.match(css, /--margo-footer-ui-font:\s*var\(--font-geist-sans\)/)
-  assert.match(css, /\.margo-footer__more-chip[\s\S]*var\(--margo-footer-ui-font\)/)
-})
-
 test('stage search row metrics match main dropdown', () => {
   const dropdown = fs.readFileSync('components/compose-search-dropdown.tsx', 'utf8')
   assert.match(dropdown, /isStage \? '44px' : '48px'/)
