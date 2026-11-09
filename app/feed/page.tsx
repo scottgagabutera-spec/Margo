@@ -329,6 +329,17 @@ function FeedPageInner() {
     setMountedSectorsEpoch((n) => n + 1)
   }, [])
   const sectorMounted = useCallback((tab: FeedContentTab) => mountedSectorsRef.current.has(tab), [])
+  const sectorShown = useCallback(
+    (tab: FeedContentTab) => uiFeedContentTab === tab || sectorMounted(tab),
+    [uiFeedContentTab, sectorMounted],
+  )
+  const paintFeedSubTab = useCallback(
+    (tab: FeedContentTab) => {
+      ensureSectorMounted(tab)
+      setPaintedFeedContentTab(tab)
+    },
+    [ensureSectorMounted],
+  )
 
   const selectedVibe = useMemo(() => {
     const raw = searchParams.get('vibe')?.trim()
@@ -340,7 +351,7 @@ function FeedPageInner() {
     clips: shortsClips,
     loading: shortsLoading,
     meetsMinimum: shortsMeetsMinimum,
-  } = useFeedShortsClips({ enabled: feedLive && sectorMounted('shorts') })
+  } = useFeedShortsClips({ enabled: feedLive && sectorShown('shorts') })
 
   const e2eShortsFixture =
     searchParams.get('e2eShorts') === '1' ||
@@ -492,7 +503,7 @@ function FeedPageInner() {
     loadingMore: feedGridLoadingMore,
     hasMore: feedGridHasMore,
     loadMore: loadMoreFeedMemories,
-  } = useFeedMemoriesGrid(feedLive && sectorMounted('memories'))
+  } = useFeedMemoriesGrid(feedLive && sectorShown('memories'))
   const feedMemoriesSentinelRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -940,7 +951,7 @@ function FeedPageInner() {
         <FeedContentTabBar
           active={uiFeedContentTab}
           onChange={handleFeedContentTab}
-          onPaintTab={setPaintedFeedContentTab}
+          onPaintTab={paintFeedSubTab}
           shortsAvailable={resolvedShortsMeetsMinimum}
         />
         <E2eFeedReturnFixture />
@@ -980,7 +991,7 @@ function FeedPageInner() {
       <FeedContentTabBar
         active={uiFeedContentTab}
         onChange={handleFeedContentTab}
-        onPaintTab={setPaintedFeedContentTab}
+        onPaintTab={paintFeedSubTab}
         shortsAvailable={resolvedShortsMeetsMinimum}
       />
       {vibeFilterActive && (
@@ -1020,10 +1031,10 @@ function FeedPageInner() {
       </div>
 
       <div className={`margo-feed-subtab-stack${vibeFilterActive ? ' margo-feed-subtab-stack--vibe' : ''}`}>
-      {sectorMounted('memories') ? (
+      {sectorShown('memories') ? (
         <main
           {...feedSubTabPaneProps('memories', 'margo-feed-column margo-feed-column--memories-grid')}
-          style={{ position: 'relative', zIndex: 5, padding: '12px 14px var(--margo-page-padding-bottom)' }}
+          style={{ padding: '12px 14px var(--margo-page-padding-bottom)' }}
         >
           {searchParams.get('filter') === 'listening' ? (
             <div className="margo-feed-memories-filter" style={{ marginBottom: 12 }}>
@@ -1076,13 +1087,13 @@ function FeedPageInner() {
         </main>
       ) : null}
 
-      {sectorMounted('echoes') ? (
+      {sectorShown('echoes') ? (
         <div {...feedSubTabPaneProps('echoes')}>
           <FeedEchoesTab fetchEnabled={uiFeedContentTab === 'echoes'} />
         </div>
       ) : null}
 
-      {sectorMounted('shorts') ? (
+      {sectorShown('shorts') ? (
         <div {...feedSubTabPaneProps('shorts')}>
           <FeedShortsPager
             clips={resolvedShortsClips}
@@ -1099,7 +1110,7 @@ function FeedPageInner() {
 
       <main
         {...feedSubTabPaneProps('lyrics', 'margo-feed-column')}
-        style={{ position: 'relative', zIndex: 5, padding: '16px 16px var(--margo-page-padding-bottom)' }}
+        style={{ padding: '16px 16px var(--margo-page-padding-bottom)' }}
       >
         {feedLive && isMobileViewport !== true && (
           <div className="margo-story-ring-tray">
