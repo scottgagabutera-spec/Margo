@@ -447,6 +447,9 @@ export function usePrimaryTabLinkProps(href: string, tabId?: PrimaryTabId) {
       lastTabPointerSeq += 1
       pointerSeqRef.current = lastTabPointerSeq
       closeHubOverlay()
+      if (typeof document !== 'undefined') {
+        document.querySelector('.margo-mobile-tabbar')?.setAttribute('data-margo-tab-selection', tabId)
+      }
       acknowledgePrimaryTab(tabId)
       const ok = navigatePrimaryTab(href, undefined, tabId)
       if (ok) navigatedSeqRef.current = pointerSeqRef.current
@@ -874,6 +877,9 @@ export function PrimaryTabShell({
       flushSync(ack)
     } catch {
       ack()
+    }
+    if (typeof document !== 'undefined') {
+      document.querySelector('.margo-mobile-tabbar')?.setAttribute('data-margo-tab-selection', id)
     }
     if (ackClearRef.current != null) window.clearTimeout(ackClearRef.current)
     ackClearRef.current = null
