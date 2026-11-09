@@ -11720,33 +11720,50 @@ button.margo-feed-shorts-strip__more {
 
 .margo-memory-add-media__tiles {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 .margo-memory-add-media__tile {
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface-2);
-  padding: 10px 4px 8px;
+  padding: 12px 10px 12px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 6px;
+  align-items: flex-start;
+  gap: 10px;
   cursor: pointer;
+  text-align: left;
+  min-height: 104px;
+  box-sizing: border-box;
 }
 .margo-memory-add-media__tile-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 10px;
   border: 1px solid rgba(232, 197, 71, 0.35);
+  flex-shrink: 0;
 }
-.margo-memory-add-media__tile-label {
-  font-size: 0.6875rem;
+.margo-memory-add-media__tile-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.margo-memory-add-media__tile-title {
+  font-size: 0.75rem;
+  font-weight: 500;
   color: var(--text);
+  line-height: 1.2;
+}
+.margo-memory-add-media__tile-sub {
+  font-size: 0.6875rem;
   font-weight: 400;
+  color: var(--text-muted);
+  line-height: 1.25;
 }
 
 .margo-memory-adjust-photo__hint {
