@@ -48,7 +48,12 @@ import {
   shouldRestoreFeedTabOnNav,
   persistFeedReturnBeforeLeave,
 } from '@/lib/margo-feed-return'
-import { isFeedContentSubTab, resetFeedScrollerForContentSubTab } from '@/lib/feed-subtab-scroll'
+import {
+  captureFeedSubTabScroll,
+  isFeedContentSubTab,
+  resetFeedScrollerForContentSubTab,
+  restoreFeedSubTabScrollAfterPaint,
+} from '@/lib/feed-subtab-scroll'
 import { FeedPeopleStrip } from '@/components/feed-people-strip'
 import { FeedMemoryPromoCard } from '@/components/feed-memory-promo-card'
 import { FeedShortsStrip } from '@/components/feed-shorts-strip'
@@ -642,7 +647,10 @@ function FeedPageInner() {
 
   const handleFeedContentTab = (tab: 'lyrics' | 'memories' | 'shorts' | 'echoes') => {
     setPaintedFeedContentTab(tab)
-    if (feedContentTab === 'lyrics' && tab !== 'lyrics') persistFeedReturnBeforeLeave('lyrics')
+    if (feedContentTab === 'lyrics' && tab !== 'lyrics') {
+      captureFeedSubTabScroll('lyrics')
+      persistFeedReturnBeforeLeave('lyrics')
+    }
     paintFeedMix(null)
     if (tab !== 'lyrics') resetFeedScrollerForContentSubTab()
     const params = stripFeedMixParams(applyFeedContentTab(new URLSearchParams(searchParams.toString()), tab))
@@ -727,6 +735,8 @@ function FeedPageInner() {
 
   const feedTabRestoredRef = useRef(false)
   const feedNavViaPopRef = useRef(false)
+  const prevFeedContentTabRef = useRef(feedContentTab)
+  const lyricsSubTabRestoreDoneRef = useRef(false)
 
   useEffect(() => {
     if (!feedLive) return
@@ -755,6 +765,18 @@ function FeedPageInner() {
 
   useLayoutEffect(() => {
     if (!feedLive) return
+    const prev = prevFeedContentTabRef.current
+    const next = feedContentTab
+    if (prev !== next) {
+      if (prev === 'lyrics' && next !== 'lyrics') {
+        captureFeedSubTabScroll('lyrics')
+      }
+      if (next === 'lyrics' && prev !== 'lyrics' && !shouldReapplyFeedReturn()) {
+        restoreFeedSubTabScrollAfterPaint('lyrics')
+        lyricsSubTabRestoreDoneRef.current = true
+      }
+      prevFeedContentTabRef.current = next
+    }
     if (!isFeedContentSubTab(feedContentTab)) return
     if (shouldReapplyFeedReturn()) return
     if (feedNavViaPopRef.current) return
@@ -874,6 +896,11 @@ function FeedPageInner() {
       return
     }
     if (feedContentTab !== 'lyrics') return
+    if (lyricsSubTabRestoreDoneRef.current) {
+      lyricsSubTabRestoreDoneRef.current = false
+      restoredScrollRef.current = true
+      return
+    }
     if (!listReady || highlightParam || restoredScrollRef.current) return
     restoreTriesRef.current += 1
     const result = restoreActivePrimaryScroll()
