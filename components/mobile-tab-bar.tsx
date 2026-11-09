@@ -117,7 +117,7 @@ export function MobileTabBar() {
     position: 'relative',
     color: live || active ? 'var(--gold)' : 'var(--text-muted)',
     WebkitTapHighlightColor: 'transparent',
-    transition: 'color 80ms var(--ease-out), opacity 80ms var(--ease-out)',
+    transition: 'opacity 80ms var(--ease-out)',
   })
 
   const tabIndicator = (visible: boolean) => visible ? (
@@ -263,6 +263,16 @@ export function MobileTabBar() {
         }
         .margo-mobile-tabbar--landing a[aria-label="Post"] {
           box-shadow: 0 2px 10px var(--gold-glow);
+        }
+        .margo-mobile-tabbar[data-margo-tab-selection="feed"] a[href="/feed"],
+        .margo-mobile-tabbar[data-margo-tab-selection="feed"] a[href="/feed"] span,
+        .margo-mobile-tabbar[data-margo-tab-selection="discover"] a[href="/discover"],
+        .margo-mobile-tabbar[data-margo-tab-selection="discover"] a[href="/discover"] span,
+        .margo-mobile-tabbar[data-margo-tab-selection="compose"] a[href="/compose"],
+        .margo-mobile-tabbar[data-margo-tab-selection="compose"] a[href="/compose"] span,
+        .margo-mobile-tabbar[data-margo-tab-selection="you"] a[href="/you"],
+        .margo-mobile-tabbar[data-margo-tab-selection="you"] a[href="/you"] span {
+          color: var(--gold) !important;
         }
       `}</style>
     </nav>

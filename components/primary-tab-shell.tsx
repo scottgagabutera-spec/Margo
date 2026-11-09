@@ -441,15 +441,15 @@ export function usePrimaryTabLinkProps(href: string, tabId?: PrimaryTabId) {
   return {
     onPointerEnter: warm,
     onPointerDown: (event: PointerEvent<HTMLAnchorElement>) => {
+      if (tabId && typeof document !== 'undefined') {
+        document.querySelector('.margo-mobile-tabbar')?.setAttribute('data-margo-tab-selection', tabId)
+      }
       warm()
       if (!tabId) return
       if (event.button !== 0 && event.pointerType === 'mouse') return
       lastTabPointerSeq += 1
       pointerSeqRef.current = lastTabPointerSeq
       closeHubOverlay()
-      if (typeof document !== 'undefined') {
-        document.querySelector('.margo-mobile-tabbar')?.setAttribute('data-margo-tab-selection', tabId)
-      }
       acknowledgePrimaryTab(tabId)
       const ok = navigatePrimaryTab(href, undefined, tabId)
       if (ok) navigatedSeqRef.current = pointerSeqRef.current
