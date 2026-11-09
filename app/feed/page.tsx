@@ -737,6 +737,28 @@ function FeedPageInner() {
     echoesBlock,
   ])
 
+  const feedSubTabScrollReady = useMemo((): boolean => {
+    switch (feedContentTab) {
+      case 'lyrics':
+        return lyricsMixGateReady
+      case 'memories':
+        return !feedGridLoading || feedGridMemories.length > 0
+      case 'shorts':
+        return !resolvedShortsLoading || resolvedShortsClips.length > 0
+      case 'echoes':
+        return true
+      default:
+        return true
+    }
+  }, [
+    feedContentTab,
+    lyricsMixGateReady,
+    feedGridLoading,
+    feedGridMemories.length,
+    resolvedShortsLoading,
+    resolvedShortsClips.length,
+  ])
+
   const feedTabRestoredRef = useRef(false)
   const feedNavViaPopRef = useRef(false)
   const prevFeedContentTabRef = useRef(feedContentTab)
@@ -791,11 +813,11 @@ function FeedPageInner() {
     if (!feedLive) return
     if (!pendingLyricsScrollRestoreRef.current) return
     if (shouldReapplyFeedReturn()) return
-    if (feedContentTab === 'lyrics' && !listReady) return
+    if (!feedSubTabScrollReady) return
     pendingLyricsScrollRestoreRef.current = false
     restoreFeedSubTabScrollAfterPaint(feedContentTab)
     if (feedContentTab === 'lyrics') lyricsSubTabRestoreDoneRef.current = true
-  }, [feedLive, feedContentTab, listReady, mixedLyricRows.length])
+  }, [feedLive, feedContentTab, feedSubTabScrollReady, mixedLyricRows.length])
 
   useLayoutEffect(() => {
     if (!feedLive) {
