@@ -4,8 +4,11 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   PRIMARY_TAB_STALE_MS,
+  loadMoreSongsDiscoverHome,
   peekSongsCache,
+  peekSongsDiscoverCache,
   warmSongs,
+  warmSongsDiscoverHome,
 } from '@/lib/primary-tab-prefetch'
 import type { AtmosphereId } from '@/lib/atmosphere'
 
@@ -41,39 +44,49 @@ export interface Song {
   lyricUses?: number
   createdAt?: string
   isAiGenerated?: boolean
-  /** Song room feeling. Still when omitted / null. Distinct from line vibes. */
   atmosphere?: AtmosphereId
-  /**
-   * Catalog fetch is light (no embed). Full lines come from `useSong(id)`
-   * or Discover phase-2 `useLyricMoments`. Kept for compatibility; usually [].
-   */
   lyricLines: LyricLine[]
 }
 
 export type UseSongsOptions = {
-  /**
-   * When false (inactive keepalive pane), tear down Realtime but keep
-   * last React state. Default true for non-shell callers.
-   */
   enabled?: boolean
+  /** Full catalog for see-all routes; discover-home loads paged batches. */
+  scope?: 'full' | 'discover-home'
 }
 
 export function useSongs(options: UseSongsOptions = {}) {
   const enabled = options.enabled ?? true
-  const cached = peekSongsCache()
+  const scope = options.scope ?? 'full'
+  const discoverHome = scope === 'discover-home'
+  const cached = discoverHome ? peekSongsDiscoverCache() : peekSongsCache()
   const [songs, setSongs] = useState<Song[]>(cached?.data ?? [])
-  const [loading, setLoading] = useState(!cached?.data)
+  const [loading, setLoading] = useState(!(cached?.data && cached.data.length > 0))
+  const [hasMore, setHasMore] = useState(cached && 'hasMore' in cached ? cached.hasMore : !discoverHome)
   const lastLoadedAtRef = useRef(cached?.loadedAt ?? 0)
   const songsRef = useRef<Song[]>([])
   useEffect(() => { songsRef.current = songs }, [songs])
 
   const fetchSongs = useCallback(async (force = false) => {
-    const mapped = await warmSongs({ force })
+    const mapped = discoverHome
+      ? await warmSongsDiscoverHome({ force })
+      : await warmSongs({ force })
     setSongs(mapped)
+    if (discoverHome) {
+      setHasMore(peekSongsDiscoverCache()?.hasMore ?? true)
+    }
     setLoading(false)
     lastLoadedAtRef.current = Date.now()
     return mapped
-  }, [])
+  }, [discoverHome])
+
+  const loadMore = useCallback(async () => {
+    if (!discoverHome) return songsRef.current
+    const mapped = await loadMoreSongsDiscoverHome()
+    setSongs(mapped)
+    setHasMore(peekSongsDiscoverCache()?.hasMore ?? false)
+    lastLoadedAtRef.current = Date.now()
+    return mapped
+  }, [discoverHome])
 
   useEffect(() => {
     if (!enabled) return
@@ -87,7 +100,6 @@ export function useSongs(options: UseSongsOptions = {}) {
       void fetchSongs(stale && !neverLoaded)
     }
 
-    // Live-update stats only while the tab is enabled (no Realtime on warm).
     try {
       const topic = `song_stats_changes:${crypto.randomUUID()}`
       const next = supabase.channel(topic)
@@ -112,10 +124,10 @@ export function useSongs(options: UseSongsOptions = {}) {
                     resonates: updated.resonate_count,
                     lyricUses: updated.lyric_uses,
                   }
-                : s
-            )
+                : s,
+            ),
           )
-        }
+        },
       )
       next.subscribe()
       channel = next
@@ -129,5 +141,11 @@ export function useSongs(options: UseSongsOptions = {}) {
     }
   }, [enabled, fetchSongs])
 
-  return { songs, loading, refetch: () => fetchSongs(true) }
+  return {
+    songs,
+    loading,
+    hasMore,
+    refetch: () => fetchSongs(true),
+    loadMore,
+  }
 }

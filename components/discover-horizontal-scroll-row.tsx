@@ -4,7 +4,16 @@ import { useRef, type ReactNode } from 'react'
 import { ChevronRightIcon } from '@/components/icons'
 import { ArrowLeftIcon } from '@/components/icons'
 
-export function DiscoverHorizontalScrollRow({ children }: { children: ReactNode }) {
+export function DiscoverHorizontalScrollRow({
+  children,
+  onNearEnd,
+  nearEndTiles = 5,
+}: {
+  children: ReactNode
+  /** Fired when scroll is within ~N tile widths of the row end. */
+  onNearEnd?: () => void
+  nearEndTiles?: number
+}) {
   const scrollerRef = useRef<HTMLDivElement>(null)
 
   const nudge = (dir: -1 | 1) => {
@@ -61,7 +70,19 @@ export function DiscoverHorizontalScrollRow({ children }: { children: ReactNode 
       >
         <ArrowLeftIcon size={16} color="var(--gold)" />
       </button>
-      <div ref={scrollerRef} className="discover-hscroll" data-discover-hscroll>
+      <div
+        ref={scrollerRef}
+        className="discover-hscroll"
+        data-discover-hscroll
+        onScroll={() => {
+          const el = scrollerRef.current
+          if (!el || !onNearEnd) return
+          const first = el.firstElementChild as HTMLElement | null
+          const tileW = first?.offsetWidth ? first.offsetWidth + 10 : 160
+          const remaining = el.scrollWidth - el.scrollLeft - el.clientWidth
+          if (remaining <= tileW * nearEndTiles) onNearEnd()
+        }}
+      >
         {children}
       </div>
       <button
