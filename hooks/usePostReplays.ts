@@ -103,7 +103,28 @@ export function usePostReplays(enabled = true) {
       next.on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'post_replays', filter: `replayer_id=eq.${myId}` },
-        () => { if (!cancelled) void loadMine() },
+        (payload) => {
+          if (cancelled) return
+          const postId =
+            (payload.new as { post_id?: string } | null)?.post_id
+            ?? (payload.old as { post_id?: string } | null)?.post_id
+          if (!postId) return
+          if (inFlightRef.current.has(postId)) return
+          if (payload.eventType === 'INSERT') {
+            const quote = (payload.new as { quote_text?: string | null })?.quote_text ?? null
+            const added = new Set(replayedRef.current)
+            added.add(postId)
+            commit(added, postId)
+            rememberQuote(postId, quote)
+            return
+          }
+          if (payload.eventType === 'DELETE') {
+            const next = new Set(replayedRef.current)
+            next.delete(postId)
+            commit(next, postId)
+            rememberQuote(postId, null)
+          }
+        },
       )
       next.subscribe()
       channel = next
