@@ -25,6 +25,7 @@ import {
   fetchProfilePeek,
   patchProfileSurface,
   peekProfileCache,
+  profileHasRenderableCache,
   warmProfile,
   type WarmProfileRow,
 } from '@/lib/profile-warm'
@@ -181,7 +182,9 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
   const { posts } = usePosts({ enabled: postsLive })
   const cached = username ? peekProfileCache(username) : null
   const [profile, setProfile] = useState<ProfileData | null>(cached?.profile ?? null)
-  const [loading, setLoading] = useState(!cached)
+  const [loading, setLoading] = useState(
+    () => !(username && profileHasRenderableCache(username)),
+  )
   const [notFound, setNotFound] = useState(false)
   const [followerCount, setFollowerCount] = useState<number | null>(cached?.followerCount ?? null)
   const [followingCount, setFollowingCount] = useState<number | null>(cached?.followingCount ?? null)
@@ -191,9 +194,11 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
   const [avatarLightboxOpen, setAvatarLightboxOpen] = useState(false)
   const [signatureReadOpen, setSignatureReadOpen] = useState(false)
   const [previewSong, setPreviewSong] = useState<SongPreviewSeed | null>(null)
-  const [favoriteArtists, setFavoriteArtists] = useState<ProfileFavoriteArtist[]>(
-    () => cached?.favoriteArtists ?? [],
-  )
+  const [favoriteArtists, setFavoriteArtists] = useState<ProfileFavoriteArtist[]>(() => {
+    const c = username ? peekProfileCache(username) : null
+    if (c?.surfaceLoadedAt) return c.favoriteArtists ?? []
+    return []
+  })
 
   // ── Discography — public, live-only catalog for this profile, if
   // they're an artist. Only the total count + a small preview slice are

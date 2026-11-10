@@ -42,6 +42,88 @@ export interface WarmProfileBundle {
 }
 
 const cache = new Map<string, { data: WarmProfileBundle | null; inflight: Promise<WarmProfileBundle | null> | null }>()
+const surfaceInflight = new Map<string, Promise<void>>()
+
+export const PROFILE_SURFACE_STALE_MS = STALE_MS
+
+export function clearProfileWarmCache() {
+  cache.clear()
+  surfaceInflight.clear()
+}
+
+export function profileHasRenderableCache(username: string): boolean {
+  const hit = peekProfileCache(username)
+  return !!hit?.profile
+}
+
+function surfaceIsFresh(bundle: WarmProfileBundle | null | undefined): boolean {
+  return !!(
+    bundle?.surfaceLoadedAt
+    && Date.now() - bundle.surfaceLoadedAt <= STALE_MS
+  )
+}
+
+function mergeSurfaceIntoBundle(
+  bundle: WarmProfileBundle,
+  surface: NonNullable<Awaited<ReturnType<typeof fetchProfileSurfaceExtras>>>,
+) {
+  bundle.favoriteArtists = surface.favoriteArtists
+  bundle.memories = surface.memories
+  bundle.memoriesIsOwner = surface.memoriesIsOwner
+  bundle.surfaceLoadedAt = Date.now()
+  if (surface.viewerFollowStatus !== undefined) {
+    bundle.viewerFollowStatus = surface.viewerFollowStatus
+  }
+}
+
+export function prependProfileMemory(username: string, memory: MemoryPublic) {
+  const peek = peekProfileSurface(username)
+  const prev = peek?.memories ?? []
+  patchProfileSurface(username, { memories: [memory, ...prev.filter((m) => m.id !== memory.id)] })
+}
+
+export function removeProfileMemory(username: string, memoryId: string) {
+  const peek = peekProfileSurface(username)
+  const prev = peek?.memories ?? []
+  patchProfileSurface(username, { memories: prev.filter((m) => m.id !== memoryId) })
+}
+
+export async function revalidateProfileSurface(username: string): Promise<boolean> {
+  const surface = await fetchProfileSurfaceExtras(username)
+  if (!surface) return false
+  const key = username.toLowerCase()
+  const slot = cache.get(key)
+  if (slot?.data) mergeSurfaceIntoBundle(slot.data, surface)
+  else {
+    patchProfileSurface(username, {
+      favoriteArtists: surface.favoriteArtists,
+      memories: surface.memories,
+      memoriesIsOwner: surface.memoriesIsOwner,
+    })
+  }
+  dispatchProfileSurfaceReady(username)
+  return true
+}
+
+export function refreshProfileSurfaceIfStale(username: string): Promise<void> {
+  const key = username.toLowerCase()
+  const existing = surfaceInflight.get(key)
+  if (existing) return existing
+
+  const hit = cache.get(key)?.data
+  if (!hit?.surfaceLoadedAt) {
+    return Promise.resolve()
+  }
+  if (surfaceIsFresh(hit)) return Promise.resolve()
+
+  const p = revalidateProfileSurface(username)
+    .then(() => undefined)
+    .finally(() => {
+      surfaceInflight.delete(key)
+    })
+  surfaceInflight.set(key, p)
+  return p
+}
 
 function mapRow(data: Record<string, unknown>): WarmProfileRow {
   const links = data.artist_links
@@ -214,40 +296,47 @@ export function warmProfile(username: string, opts?: { force?: boolean }): Promi
   const key = username.toLowerCase()
   const force = opts?.force === true
   const existing = cache.get(key)
-  const fresh = existing?.data && Date.now() - existing.data.loadedAt <= STALE_MS
-  if (!force && fresh && existing?.data) return Promise.resolve(existing.data)
-  if (!force && existing?.inflight) return existing.inflight
+  const bundleFresh = existing?.data && Date.now() - existing.data.loadedAt <= STALE_MS
 
-  const mergeSurface = (bundle: WarmProfileBundle, surface: NonNullable<Awaited<ReturnType<typeof fetchProfileSurfaceExtras>>>) => {
-    bundle.favoriteArtists = surface.favoriteArtists
-    bundle.memories = surface.memories
-    bundle.memoriesIsOwner = surface.memoriesIsOwner
-    bundle.surfaceLoadedAt = Date.now()
-    if (surface.viewerFollowStatus !== undefined) {
-      bundle.viewerFollowStatus = surface.viewerFollowStatus
+  if (!force && existing?.data && bundleFresh) {
+    if (surfaceIsFresh(existing.data)) {
+      return Promise.resolve(existing.data)
     }
+    void refreshProfileSurfaceIfStale(username)
+    return Promise.resolve(existing.data)
   }
+
+  if (!force && existing?.inflight) return existing.inflight
 
   const p = fetchProfileBundle(username).then((bundle) => {
     const slot = cache.get(key) || { data: bundle as WarmProfileBundle | null, inflight: null }
     slot.inflight = null
     if (bundle) {
-      slot.data = bundle
+      const prior = slot.data
+      slot.data = {
+        ...bundle,
+        favoriteArtists: prior?.favoriteArtists,
+        memories: prior?.memories,
+        memoriesIsOwner: prior?.memoriesIsOwner,
+        surfaceLoadedAt: prior?.surfaceLoadedAt,
+        viewerFollowStatus: prior?.viewerFollowStatus ?? bundle.viewerFollowStatus,
+      }
       cache.set(key, slot)
+      if (surfaceIsFresh(slot.data)) {
+        return slot.data
+      }
       void fetchProfileSurfaceExtras(username).then((surface) => {
-        if (!bundle || !surface) return
-        mergeSurface(bundle, surface)
+        if (!surface) return
         const current = cache.get(key)
-        if (current?.data) {
-          mergeSurface(current.data, surface)
-          cache.set(key, current)
-        }
+        if (!current?.data) return
+        mergeSurfaceIntoBundle(current.data, surface)
+        cache.set(key, current)
         dispatchProfileSurfaceReady(username)
       })
     } else {
       cache.set(key, slot)
     }
-    return bundle
+    return slot.data ?? bundle
   }).catch((err) => {
     const slot = cache.get(key)
     if (slot) slot.inflight = null

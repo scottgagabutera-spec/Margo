@@ -131,6 +131,12 @@ export function createClient() {
 export async function signOutBrowser() {
   setBrowserAccessToken(null)
   try {
+    const { clearProfileWarmCache } = await import('@/lib/profile-warm')
+    clearProfileWarmCache()
+  } catch {
+    /* profile cache optional */
+  }
+  try {
     await fetch('/api/auth/logout', {
       method: 'POST',
       credentials: 'include',

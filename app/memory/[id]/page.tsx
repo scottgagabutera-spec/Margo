@@ -161,6 +161,10 @@ export default function MemoryDetailPage() {
     try {
       const res = await fetch(`/api/memories/${memory.id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Could not delete')
+      if (memory.ownerUsername) {
+        const { removeProfileMemory } = await import('@/lib/profile-warm')
+        removeProfileMemory(memory.ownerUsername, memory.id)
+      }
       toast('Memory removed', {
         action: {
           label: 'Undo',
@@ -168,6 +172,10 @@ export default function MemoryDetailPage() {
             try {
               const restoreRes = await fetch(`/api/memories/${memory.id}/restore`, { method: 'POST' })
               if (!restoreRes.ok) throw new Error('Could not restore')
+              if (memory.ownerUsername) {
+                const { prependProfileMemory } = await import('@/lib/profile-warm')
+                prependProfileMemory(memory.ownerUsername, memory)
+              }
               toast('Restored')
               void load()
             } catch {
