@@ -33,6 +33,7 @@
   --destructive-faint: color-mix(in oklch, var(--destructive) 14%, transparent);
   --resonate: var(--gold);
   --resonate-faint: rgba(232,197,71,0.08);
+  /* Unread / new activity signals — gold fills only (MARGO_BRAND §4) */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
   --margo-touch-min: 44px;
@@ -4320,6 +4321,39 @@ html[data-margo-hub-sheet-flush-top] .margo-hub-sheet {
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--text-muted);
+}
+.margo-signal-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+.margo-signal-dot--sm {
+  width: 6px;
+  height: 6px;
+}
+.margo-signal-unread-surface {
+  background: color-mix(in srgb, var(--gold) 10%, var(--surface));
+}
+.margo-signal-badge {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--gold);
+  color: var(--text-on-gold);
+  border: none;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--margo-type-l);
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  line-height: 1;
 }
 .margo-hub-tile__badge {
   position: absolute;

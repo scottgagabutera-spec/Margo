@@ -186,12 +186,15 @@ export function MobileTabBar() {
         <span style={labelStyle}>Discover</span>
         {tabIndicator((isOnDiscover || tabAcked('discover')) && !tabPending('discover'))}
         {isMusicActive && !hubOpen && !routeActive('discover') && (
-          <span style={{
-            position: 'absolute', top: '-2px', right: 'calc(50% - 14px)',
-            width: '6px', height: '6px', borderRadius: '50%',
-            background: 'var(--text-muted)',
-            boxShadow: 'none',
-          }} />
+          <span
+            className="margo-signal-dot margo-signal-dot--sm"
+            style={{
+              position: 'absolute',
+              top: '-2px',
+              right: 'calc(50% - 14px)',
+              boxShadow: 'none',
+            }}
+          />
         )}
       </Link>
 
