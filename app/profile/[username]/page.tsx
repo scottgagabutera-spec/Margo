@@ -17,7 +17,7 @@ import { PostCard } from '@/components/post-card'
 import { CardExportModal } from '@/components/card-export-modal'
 import { resolveMargoMomentFromPost } from '@/lib/moment'
 import type { Post } from '@/hooks/usePosts'
-import { usePrimaryTab, usePrimaryTabLinkProps } from '@/components/primary-tab-shell'
+import { getPrimaryTabPaneEl, usePrimaryTab, usePrimaryTabLinkProps } from '@/components/primary-tab-shell'
 import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { ProfileArtistLinks } from '@/components/profile-artist-links'
 import { ProfileImageLightbox } from '@/components/profile-image-lightbox'
@@ -482,6 +482,10 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
   useMargoPageResume({
     pageKey: profileResumeKeyId,
     enabled: !!profileResumeKeyId,
+    scroller: isOwnKeepaliveProfile ? 'element' : 'window',
+    getScroller: isOwnKeepaliveProfile
+      ? () => getPrimaryTabPaneEl('you')
+      : undefined,
     readExtra: () => ({ tab: contentTab }),
     onResume: (entry) => {
       const tab = parseProfileContentTab(entry.tab)

@@ -349,7 +349,7 @@ This is distinct from the marketing header above — it's the persistent bottom 
 
 ### Scroll position memory (product rule)
 
-Every scrollable page keeps its vertical position (and light client state such as the active profile tab or discover grid batch) when the user leaves and returns — bottom tabs, depth back, search close with no query, and feed resume after sign-in. **Restore uses memory plus sessionStorage/localStorage only; it never triggers a new fetch or Supabase request on load.** Feed sub-tab keepalive, pill behavior, and existing 12-hour feed resume stay as-is.
+Every scrollable page saves scroll **continuously** (throttled while scrolling, mirrored to sessionStorage on leave) and restores to the **exact** pixel when shown again — including batched lists (restore visible batch count from memory first, then Y). **Never refetch to restore. Never redirect after paint** to “fix” position; the right pane paints first, then the URL may sync. Deep Discover and profile routes stay alive in a small tab-depth cache (last 5) until the user presses back out; clearing happens on sign-out. Hub overlay scroll is unchanged.
 
 ### Chrome modes (`lib/chrome-mode.ts`)
 

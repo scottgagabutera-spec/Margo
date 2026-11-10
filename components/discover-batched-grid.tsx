@@ -9,6 +9,8 @@ import {
 } from '@/lib/discover-view-more-layout'
 import { useMargoPageResume } from '@/hooks/useMargoPageResume'
 import { pageResumeKeyForPath } from '@/lib/margo-page-resume'
+import { readScrollLive } from '@/lib/margo-scroll-live'
+import { restoreExactWindowScroll } from '@/lib/margo-exact-scroll-restore'
 
 export function DiscoverBatchedGrid<T>({
   kind,
@@ -78,6 +80,14 @@ export function DiscoverBatchedGrid<T>({
 
   const visible = discoverVmVisibleItems(items, visibleCount)
   const hasMore = discoverVmHasMore(items, visibleCount)
+
+  useEffect(() => {
+    if (!rememberPosition || !hadResumeRef.current || loading) return
+    const row = readScrollLive(pageKey)
+    if (row?.y && row.y > 0) {
+      restoreExactWindowScroll(row.y)
+    }
+  }, [visible.length, rememberPosition, loading, pageKey])
 
   useEffect(() => {
     const el = sentinelRef.current

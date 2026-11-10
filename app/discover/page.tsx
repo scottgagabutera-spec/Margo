@@ -32,7 +32,8 @@ import { createClient } from '@/lib/supabase/client'
 import { PullToRefresh } from '@/components/pull-to-refresh'
 import { NewItemsPill } from '@/components/new-items-pill'
 import { useNewItemsBuffer } from '@/hooks/useNewItemsBuffer'
-import { usePrimaryTab } from '@/components/primary-tab-shell'
+import { getPrimaryTabPaneEl, usePrimaryTab } from '@/components/primary-tab-shell'
+import { useMargoExactScroll } from '@/hooks/useMargoExactScroll'
 import { isExcludedDiscoverArtist } from '@/lib/discover-artist-roster'
 import { subscribeAudioEngine, togglePlayPause } from '@/lib/audio-engine'
 
@@ -89,6 +90,12 @@ function TileRowSkeleton({ count = 4 }: { count?: number }) {
 export default function DiscoverPage() {
   const { isTabActive } = usePrimaryTab()
   const discoverLive = isTabActive('discover')
+  useMargoExactScroll({
+    pageKey: 'primary:discover',
+    enabled: discoverLive,
+    scroller: 'element',
+    getScroller: () => getPrimaryTabPaneEl('discover'),
+  })
   const {
     songs,
     loading: songsLoading,
