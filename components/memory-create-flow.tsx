@@ -314,8 +314,13 @@ export function MemoryCreateFlow({
       if (!res.ok) {
         throw new Error((data as { error?: string }).error || 'Could not create memory')
       }
-      const id = (data as { memory?: { id: string } }).memory?.id
+      const created = (data as { memory?: import('@/lib/memory/types').MemoryPublic }).memory
+      const id = created?.id
       if (!id) throw new Error('Could not create memory')
+      if (created?.ownerUsername) {
+        const { prependProfileMemory } = await import('@/lib/profile-warm')
+        prependProfileMemory(created.ownerUsername, created)
+      }
       router.replace(`/memory/${id}`)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not create memory')

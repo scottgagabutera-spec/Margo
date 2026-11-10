@@ -113,8 +113,18 @@ export async function assembleMemoriesPublicBatch(
       .from('profiles')
       .select('id, username, display_name, avatar_url, is_admin')
       .in('id', ownerIds),
-    admin.from('memory_songs').select('*').in('memory_id', memoryIds).order('position'),
-    admin.from('memory_photos').select('*').in('memory_id', memoryIds).order('position'),
+    admin
+      .from('memory_songs')
+      .select(
+        'id, memory_id, position, song_id, song_title, artist_name, lyric_excerpt, is_lyric_only',
+      )
+      .in('memory_id', memoryIds)
+      .order('position'),
+    admin
+      .from('memory_photos')
+      .select('id, memory_id, position, r2_key, width, height, poster_r2_key, duration_sec')
+      .in('memory_id', memoryIds)
+      .order('position'),
     viewerId
       ? admin.from('memory_resonates').select('memory_id').in('memory_id', memoryIds).eq('actor_id', viewerId)
       : Promise.resolve({ data: [] as { memory_id: string }[] }),

@@ -224,35 +224,59 @@ function FeedPageInner() {
   }, [acceptedFollowIds, followedFromStrip])
 
   useEffect(() => {
+    if (!feedLive || posts.length === 0) return
+    const serverCounts: Record<string, number | undefined> = {}
+    setPostStats((prev) => {
+      const map = { ...prev }
+      for (const p of posts) {
+        map[p.id] = {
+          views: prev[p.id]?.views,
+          resonateCount: p.resonates ?? prev[p.id]?.resonateCount ?? 0,
+          echoCount: p.replies ?? prev[p.id]?.echoCount ?? 0,
+          replayCount: p.replays ?? prev[p.id]?.replayCount ?? 0,
+        }
+        serverCounts[p.id] = map[p.id]?.replayCount
+      }
+      return map
+    })
+    reconcile(serverCounts)
+    postStatsLoadedAtRef.current = Date.now()
+  }, [feedLive, posts, reconcile])
+
+  useEffect(() => {
     if (!feedLive) return
 
     let cancelled = false
-    async function loadStats() {
-      const { data, error } = await supabase
-        .from('post_stats')
-        .select('post_id, views, resonate_count, echo_count, replay_count')
-      if (cancelled) return
-      if (error) { console.error('Failed to load post_stats:', error); return }
-      const map: Record<string, { views?: number; resonateCount?: number; echoCount?: number; replayCount?: number }> = {}
-      for (const row of data || []) {
-        map[row.post_id] = { views: row.views, resonateCount: row.resonate_count, echoCount: row.echo_count, replayCount: row.replay_count }
-      }
-      setPostStats(map)
-      const serverCounts: Record<string, number | undefined> = {}
-      for (const id of Object.keys(map)) serverCounts[id] = map[id]?.replayCount
-      reconcile(serverCounts)
-      postStatsLoadedAtRef.current = Date.now()
-    }
-    const neverLoaded = postStatsLoadedAtRef.current === 0
-    const stale = Date.now() - postStatsLoadedAtRef.current > FEED_STALE_MS
-    if (neverLoaded || stale) loadStats()
-
     let channel: ReturnType<typeof supabase.channel> | null = null
     try {
       const next = supabase.channel(`feed-post-stats:${crypto.randomUUID()}`)
-      next.on('postgres_changes', { event: '*', schema: 'public', table: 'post_stats' }, () => {
-        if (!cancelled) loadStats()
-      })
+      next.on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'post_stats' },
+        (payload) => {
+          if (cancelled) return
+          const row = payload.new as {
+            post_id?: string
+            views?: number
+            resonate_count?: number
+            echo_count?: number
+            replay_count?: number
+          } | null
+          const postId = row?.post_id
+          if (!postId) return
+          setPostStats((prev) => {
+            const prior = prev[postId]
+            const nextStats = {
+              views: row?.views ?? prior?.views,
+              resonateCount: row?.resonate_count ?? prior?.resonateCount,
+              echoCount: row?.echo_count ?? prior?.echoCount,
+              replayCount: row?.replay_count ?? prior?.replayCount,
+            }
+            reconcile({ [postId]: nextStats.replayCount })
+            return { ...prev, [postId]: nextStats }
+          })
+        },
+      )
       next.subscribe()
       channel = next
     } catch (err) {

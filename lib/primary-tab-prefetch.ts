@@ -15,6 +15,7 @@ import { isMomentsCurationClientEnabled } from '@/lib/moments/curation-config'
 import { applyPostContentRemoved } from '@/lib/post-content-removed'
 import type { CuratedMomentStored } from '@/lib/moments/curated-types'
 import { bindFeedPostsCache, evictFeedPostFromCache, filterOutDeletedPosts } from '@/lib/feed-post-evict'
+import { DISCOVER_HOME_BATCH } from '@/lib/discover-home-batch'
 
 const supabase = createClient()
 
@@ -277,6 +278,19 @@ export function transformSongRowLight(row: RawSongRow): Song {
 
 const songsCache: CacheEntry<Song[]> = { data: null, loadedAt: 0, inflight: null }
 
+type DiscoverSongsCache = CacheEntry<Song[]> & {
+  nextOffset: number
+  hasMore: boolean
+}
+
+const songsDiscoverCache: DiscoverSongsCache = {
+  data: null,
+  loadedAt: 0,
+  inflight: null,
+  nextOffset: 0,
+  hasMore: true,
+}
+
 export async function fetchSongsLight(): Promise<Song[]> {
   const { data, error } = await supabase
     .from('songs')
@@ -291,6 +305,79 @@ export async function fetchSongsLight(): Promise<Song[]> {
     return []
   }
   return ((data as unknown as RawSongRow[]) || []).map(transformSongRowLight)
+}
+
+export async function fetchSongsLightBatch(offset: number, limit: number): Promise<Song[]> {
+  const { data, error } = await supabase
+    .from('songs')
+    .select(SONGS_SELECT_LIGHT)
+    .is('deleted_at', null)
+    .not('status', 'eq', 'hidden')
+    .not('status', 'eq', 'archived')
+    .order('order', { ascending: true, nullsFirst: false })
+    .range(offset, offset + limit - 1)
+
+  if (error) {
+    console.error('fetchSongsLightBatch: failed', error)
+    return []
+  }
+  return ((data as unknown as RawSongRow[]) || []).map(transformSongRowLight)
+}
+
+export function peekSongsDiscoverCache(): { data: Song[]; loadedAt: number; hasMore: boolean } | null {
+  if (!songsDiscoverCache.data) return null
+  return {
+    data: songsDiscoverCache.data,
+    loadedAt: songsDiscoverCache.loadedAt,
+    hasMore: songsDiscoverCache.hasMore,
+  }
+}
+
+export function warmSongsDiscoverHome(opts?: { force?: boolean }): Promise<Song[]> {
+  const force = opts?.force === true
+  const fresh =
+    songsDiscoverCache.data &&
+    Date.now() - songsDiscoverCache.loadedAt <= PRIMARY_TAB_STALE_MS
+  if (!force && fresh && songsDiscoverCache.data) {
+    return Promise.resolve(songsDiscoverCache.data)
+  }
+  if (!force && songsDiscoverCache.inflight) return songsDiscoverCache.inflight
+
+  const p = fetchSongsLightBatch(0, DISCOVER_HOME_BATCH).then((rows) => {
+    songsDiscoverCache.data = rows
+    songsDiscoverCache.nextOffset = rows.length
+    songsDiscoverCache.hasMore = rows.length >= DISCOVER_HOME_BATCH
+    songsDiscoverCache.loadedAt = Date.now()
+    songsDiscoverCache.inflight = null
+    return rows
+  }).catch((err) => {
+    songsDiscoverCache.inflight = null
+    throw err
+  })
+  songsDiscoverCache.inflight = p
+  return p
+}
+
+export function loadMoreSongsDiscoverHome(): Promise<Song[]> {
+  if (!songsDiscoverCache.hasMore && songsDiscoverCache.data) {
+    return Promise.resolve(songsDiscoverCache.data)
+  }
+  if (songsDiscoverCache.inflight) return songsDiscoverCache.inflight
+  const offset = songsDiscoverCache.nextOffset
+  const p = fetchSongsLightBatch(offset, DISCOVER_HOME_BATCH).then((rows) => {
+    const prev = songsDiscoverCache.data || []
+    songsDiscoverCache.hasMore = rows.length >= DISCOVER_HOME_BATCH
+    songsDiscoverCache.data = [...prev, ...rows]
+    songsDiscoverCache.nextOffset += rows.length
+    songsDiscoverCache.loadedAt = Date.now()
+    songsDiscoverCache.inflight = null
+    return songsDiscoverCache.data
+  }).catch((err) => {
+    songsDiscoverCache.inflight = null
+    throw err
+  })
+  songsDiscoverCache.inflight = p
+  return p
 }
 
 export function peekSongsCache(): { data: Song[]; loadedAt: number } | null {
@@ -394,26 +481,164 @@ async function fetchSongAtomsForMoments(
   return out
 }
 
-export async function fetchLyricMoments(): Promise<LyricMomentRow[]> {
+const LYRIC_MOMENT_LINE_SELECT = `
+  line_index,
+  text,
+  start_sec,
+  end_sec,
+  song_id,
+  lyric_line_vibes!inner ( vibe ),
+  songs!inner (
+    id,
+    title,
+    artist_display_name,
+    artwork_url,
+    audio_url,
+    status,
+    atmosphere
+  )
+`
+
+function mapLyricMomentRows(
+  data: Record<string, unknown>[] | null,
+): { out: LyricMomentRow[]; vibesBySongLine: Map<string, string[]> } {
+  const out: LyricMomentRow[] = []
+  const vibesBySongLine = new Map<string, string[]>()
+  for (const row of data || []) {
+    const song = Array.isArray(row.songs) ? row.songs[0] : row.songs
+    if (!song || (song as { status?: string }).status === 'hidden') continue
+    const vibes = ((row.lyric_line_vibes as { vibe: string }[]) || [])
+      .map((v) => v.vibe)
+      .filter(Boolean)
+    if (vibes.length === 0) continue
+    const songRec = song as {
+      id: string
+      title: string
+      artist_display_name: string
+      artwork_url: string | null
+      audio_url: string | null
+      atmosphere: string | null
+    }
+    vibesBySongLine.set(`${songRec.id}_${row.line_index}`, vibes)
+    out.push({
+      lineIndex: row.line_index as number,
+      text: row.text as string,
+      startSec: Number(row.start_sec),
+      endSec: Number(row.end_sec),
+      songId: songRec.id,
+      songTitle: songRec.title,
+      artist: songRec.artist_display_name,
+      artwork: songRec.artwork_url,
+      audioUrl: songRec.audio_url,
+      vibes,
+      atmosphere: parseAtmosphere(songRec.atmosphere),
+    })
+  }
+  return { out, vibesBySongLine }
+}
+
+async function mergeMomentSongAtoms(
+  songIds: string[],
+  vibesBySongLine: Map<string, string[]>,
+) {
+  if (songIds.length === 0) return
+  const batch = await fetchSongAtomsForMoments(songIds, vibesBySongLine)
+  momentsAtomsCache.data = { ...(momentsAtomsCache.data || {}), ...batch }
+  momentsAtomsCache.loadedAt = Date.now()
+}
+
+type DiscoverMomentsCache = CacheEntry<LyricMomentRow[]> & {
+  nextOffset: number
+  hasMore: boolean
+}
+
+const momentsDiscoverCache: DiscoverMomentsCache = {
+  data: null,
+  loadedAt: 0,
+  inflight: null,
+  nextOffset: 0,
+  hasMore: true,
+}
+
+export async function fetchLyricMomentsPage(offset: number, limit: number): Promise<LyricMomentRow[]> {
   const { data, error } = await supabase
     .from('lyric_lines')
-    .select(`
-      line_index,
-      text,
-      start_sec,
-      end_sec,
-      song_id,
-      lyric_line_vibes!inner ( vibe ),
-      songs!inner (
-        id,
-        title,
-        artist_display_name,
-        artwork_url,
-        audio_url,
-        status,
-        atmosphere
-      )
-    `)
+    .select(LYRIC_MOMENT_LINE_SELECT)
+    .range(offset, offset + limit - 1)
+
+  if (error) {
+    console.error('fetchLyricMomentsPage: failed', error)
+    return []
+  }
+
+  const { out, vibesBySongLine } = mapLyricMomentRows((data as Record<string, unknown>[]) || null)
+  const songIds = [...new Set(out.map((r) => r.songId))]
+  await mergeMomentSongAtoms(songIds, vibesBySongLine)
+  return out
+}
+
+export function peekMomentsDiscoverCache(): {
+  data: LyricMomentRow[]
+  loadedAt: number
+  hasMore: boolean
+} | null {
+  if (!momentsDiscoverCache.data) return null
+  return {
+    data: momentsDiscoverCache.data,
+    loadedAt: momentsDiscoverCache.loadedAt,
+    hasMore: momentsDiscoverCache.hasMore,
+  }
+}
+
+export function warmLyricMomentsDiscoverHome(opts?: { force?: boolean }): Promise<LyricMomentRow[]> {
+  const force = opts?.force === true
+  const fresh =
+    momentsDiscoverCache.data &&
+    Date.now() - momentsDiscoverCache.loadedAt <= PRIMARY_TAB_STALE_MS
+  if (!force && fresh && momentsDiscoverCache.data) {
+    return Promise.resolve(momentsDiscoverCache.data)
+  }
+  if (!force && momentsDiscoverCache.inflight) return momentsDiscoverCache.inflight
+
+  const p = fetchLyricMomentsPage(0, DISCOVER_HOME_BATCH).then((rows) => {
+    momentsDiscoverCache.data = rows
+    momentsDiscoverCache.nextOffset = DISCOVER_HOME_BATCH
+    momentsDiscoverCache.hasMore = rows.length >= DISCOVER_HOME_BATCH
+    momentsDiscoverCache.loadedAt = Date.now()
+    momentsDiscoverCache.inflight = null
+    return rows
+  }).catch((err) => {
+    momentsDiscoverCache.inflight = null
+    throw err
+  })
+  momentsDiscoverCache.inflight = p
+  return p
+}
+
+export function loadMoreLyricMomentsDiscoverHome(): Promise<LyricMomentRow[]> {
+  if (!momentsDiscoverCache.hasMore && momentsDiscoverCache.data) {
+    return Promise.resolve(momentsDiscoverCache.data)
+  }
+  if (momentsDiscoverCache.inflight) return momentsDiscoverCache.inflight
+  const offset = momentsDiscoverCache.nextOffset
+  const p = fetchLyricMomentsPage(offset, DISCOVER_HOME_BATCH).then((rows) => {
+    const prev = momentsDiscoverCache.data || []
+    momentsDiscoverCache.hasMore = rows.length >= DISCOVER_HOME_BATCH
+    momentsDiscoverCache.data = [...prev, ...rows]
+    momentsDiscoverCache.nextOffset += DISCOVER_HOME_BATCH
+    momentsDiscoverCache.loadedAt = Date.now()
+    momentsDiscoverCache.inflight = null
+    return momentsDiscoverCache.data
+  }).catch((err) => {
+    momentsDiscoverCache.inflight = null
+    throw err
+  })
+  momentsDiscoverCache.inflight = p
+  return p
+}
+
+export async function fetchLyricMoments(): Promise<LyricMomentRow[]> {
+  const { data, error } = await supabase.from('lyric_lines').select(LYRIC_MOMENT_LINE_SELECT)
 
   if (error) {
     console.error('fetchLyricMoments: failed', error)
@@ -422,29 +647,7 @@ export async function fetchLyricMoments(): Promise<LyricMomentRow[]> {
     return []
   }
 
-  const out: LyricMomentRow[] = []
-  const vibesBySongLine = new Map<string, string[]>()
-  for (const row of data || []) {
-    const song = Array.isArray(row.songs) ? row.songs[0] : row.songs
-    if (!song || song.status === 'hidden') continue
-    const vibes = (row.lyric_line_vibes || []).map((v: { vibe: string }) => v.vibe).filter(Boolean)
-    if (vibes.length === 0) continue
-    vibesBySongLine.set(`${song.id}_${row.line_index}`, vibes)
-    out.push({
-      lineIndex: row.line_index,
-      text: row.text,
-      startSec: Number(row.start_sec),
-      endSec: Number(row.end_sec),
-      songId: song.id,
-      songTitle: song.title,
-      artist: song.artist_display_name,
-      artwork: song.artwork_url,
-      audioUrl: song.audio_url,
-      vibes,
-      atmosphere: parseAtmosphere(song.atmosphere),
-    })
-  }
-
+  const { out, vibesBySongLine } = mapLyricMomentRows((data as Record<string, unknown>[]) || null)
   const songIds = [...new Set(out.map((r) => r.songId))]
   momentsAtomsCache.data = await fetchSongAtomsForMoments(songIds, vibesBySongLine)
   momentsAtomsCache.loadedAt = Date.now()
@@ -511,9 +714,13 @@ export function warmPrimaryTab(href: string): void {
     void warmFeedPosts()
     return
   }
-  if (href === '/discover' || href.startsWith('/discover')) {
-    void warmSongs()
-    void warmLyricMoments()
+  if (href === '/discover') {
+    void warmSongsDiscoverHome()
+    void warmLyricMomentsDiscoverHome()
+    void warmFeedPosts()
+    return
+  }
+  if (href.startsWith('/discover')) {
     void warmFeedPosts()
     return
   }

@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, signOutBrowser } from '@/lib/supabase/client'
@@ -23,7 +23,9 @@ import { ProfileArtistLinks } from '@/components/profile-artist-links'
 import { ProfileImageLightbox } from '@/components/profile-image-lightbox'
 import {
   fetchProfilePeek,
+  patchProfileSurface,
   peekProfileCache,
+  profileHasRenderableCache,
   warmProfile,
   type WarmProfileRow,
 } from '@/lib/profile-warm'
@@ -180,7 +182,9 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
   const { posts } = usePosts({ enabled: postsLive })
   const cached = username ? peekProfileCache(username) : null
   const [profile, setProfile] = useState<ProfileData | null>(cached?.profile ?? null)
-  const [loading, setLoading] = useState(!cached)
+  const [loading, setLoading] = useState(
+    () => !(username && profileHasRenderableCache(username)),
+  )
   const [notFound, setNotFound] = useState(false)
   const [followerCount, setFollowerCount] = useState<number | null>(cached?.followerCount ?? null)
   const [followingCount, setFollowingCount] = useState<number | null>(cached?.followingCount ?? null)
@@ -190,9 +194,11 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
   const [avatarLightboxOpen, setAvatarLightboxOpen] = useState(false)
   const [signatureReadOpen, setSignatureReadOpen] = useState(false)
   const [previewSong, setPreviewSong] = useState<SongPreviewSeed | null>(null)
-  const [favoriteArtists, setFavoriteArtists] = useState<ProfileFavoriteArtist[]>(
-    () => cached?.favoriteArtists ?? [],
-  )
+  const [favoriteArtists, setFavoriteArtists] = useState<ProfileFavoriteArtist[]>(() => {
+    const c = username ? peekProfileCache(username) : null
+    if (c?.surfaceLoadedAt) return c.favoriteArtists ?? []
+    return []
+  })
 
   // ── Discography — public, live-only catalog for this profile, if
   // they're an artist. Only the total count + a small preview slice are
@@ -279,19 +285,6 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
     window.addEventListener(PROFILE_SURFACE_READY, onSurface)
     return () => window.removeEventListener(PROFILE_SURFACE_READY, onSurface)
   }, [username])
-
-  useEffect(() => {
-    if (!profile?.id) return
-    let active = true
-    void fetch(`/api/profile/favorite-artists?profileId=${encodeURIComponent(profile.id)}`)
-      .then((r) => r.json())
-      .then((data: { favorites?: ProfileFavoriteArtist[] }) => {
-        if (!active || !data.favorites?.length) return
-        setFavoriteArtists(data.favorites)
-      })
-      .catch(() => {})
-    return () => { active = false }
-  }, [profile?.id])
 
   useEffect(() => {
     if (!profile?.isArtist) {
@@ -453,6 +446,14 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
   const { memories: profileMemories, loading: profileMemoriesLoading } = useProfileMemories(
     profile?.id ?? null,
     profile?.username ?? null,
+  )
+
+  const handleFavoritesChange = useCallback(
+    (next: ProfileFavoriteArtist[]) => {
+      setFavoriteArtists(next)
+      if (profile?.username) patchProfileSurface(profile.username, { favoriteArtists: next })
+    },
+    [profile?.username],
   )
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
   const [visitorMenuOpen, setVisitorMenuOpen] = useState(false)
@@ -825,7 +826,7 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
                   favorites={favoriteArtists}
                   isOwnProfile={isOwnProfile}
                   showEmptyOwnerLink
-                  onFavoritesChange={setFavoriteArtists}
+                  onFavoritesChange={handleFavoritesChange}
                 />
               </div>
             ) : null}

@@ -23,6 +23,8 @@ import {
   sortArtistsCatalog,
 } from '@/lib/discover-view-more-logic'
 import { capDiscoverHomeSongs, lyricMomentsStableKey } from '@/lib/discover-home-logic'
+import { DISCOVER_HOME_BATCH, DISCOVER_HOME_NEAR_END_TILES } from '@/lib/discover-home-batch'
+import { useDiscoverCarouselWindow } from '@/hooks/use-discover-carousel-window'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useNotifications } from '@/hooks/useNotifications'
 import { useMessaging } from '@/hooks/useMessaging'
@@ -87,14 +89,22 @@ function TileRowSkeleton({ count = 4 }: { count?: number }) {
 export default function DiscoverPage() {
   const { isTabActive } = usePrimaryTab()
   const discoverLive = isTabActive('discover')
-  const { songs, loading: songsLoading, refetch } = useSongs({ enabled: discoverLive })
+  const {
+    songs,
+    loading: songsLoading,
+    refetch,
+    loadMore: loadMoreSongs,
+    hasMore: songsHasMore,
+  } = useSongs({ enabled: discoverLive, scope: 'discover-home' })
   const {
     moments: momentRows,
     songAtomsBySongId,
     curatedBySongId,
     loading: momentsLoading,
     refetch: refetchMoments,
-  } = useLyricMoments({ enabled: discoverLive })
+    loadMore: loadMoreMoments,
+    hasMore: momentsHasMore,
+  } = useLyricMoments({ enabled: discoverLive, scope: 'discover-home' })
   const { posts: livePosts, loading: postsLoading, reload: reloadPosts } = usePosts({ enabled: discoverLive })
   const {
     items: posts,
@@ -116,38 +126,89 @@ export default function DiscoverPage() {
 
   const [artists, setArtists] = useState<ArtistPreview[]>([])
   const [artistsLoading, setArtistsLoading] = useState(true)
+  const artistsNextOffsetRef = useRef(0)
+  const artistsHasMoreRef = useRef(true)
+  const artistsLoadInflightRef = useRef(false)
 
-  useEffect(() => {
-    if (!discoverLive) return
-    let cancelled = false
-    supabase
-      .from('profiles')
-      .select('id, username, display_name, avatar_url, artist_status')
-      .eq('is_artist', true)
-      .then(({ data, error }) => {
-        if (cancelled) return
-        if (error) { console.error('Failed to load artists:', error); setArtistsLoading(false); return }
-        const visible = (data || []).filter(
-          (p) => p.artist_status !== 'frozen'
-            && p.artist_status !== 'removed'
-            && !isExcludedDiscoverArtist(p.username),
-        )
-        setArtists(sortArtistsCatalog(visible.map(p => ({
-          id: p.id,
-          username: p.username,
-          displayName: p.display_name,
-          avatarUrl: p.avatar_url,
-          artistStatus: p.artist_status ?? null,
-        }))).map(a => ({
+  const mapArtistRows = useCallback((data: {
+    id: string
+    username: string | null
+    display_name: string | null
+    avatar_url: string | null
+    artist_status: string | null
+  }[]) => {
+    const visible = data.filter(
+      (p) => p.artist_status !== 'frozen'
+        && p.artist_status !== 'removed'
+        && !isExcludedDiscoverArtist(p.username),
+    )
+    return sortArtistsCatalog(visible.map(p => ({
+      id: p.id,
+      username: p.username,
+      displayName: p.display_name,
+      avatarUrl: p.avatar_url,
+      artistStatus: p.artist_status ?? null,
+    }))).map(a => ({
+      id: a.id,
+      username: a.username,
+      displayName: a.displayName,
+      avatarUrl: a.avatarUrl,
+    }))
+  }, [])
+
+  const fetchArtistsPage = useCallback(async (append: boolean) => {
+    if (artistsLoadInflightRef.current) return
+    if (append && !artistsHasMoreRef.current) return
+    artistsLoadInflightRef.current = true
+    const offset = append ? artistsNextOffsetRef.current : 0
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, username, display_name, avatar_url, artist_status')
+        .eq('is_artist', true)
+        .order('display_name', { ascending: true, nullsFirst: false })
+        .range(offset, offset + DISCOVER_HOME_BATCH - 1)
+      if (error) {
+        console.error('Failed to load artists:', error)
+        return
+      }
+      const raw = data || []
+      artistsHasMoreRef.current = raw.length >= DISCOVER_HOME_BATCH
+      artistsNextOffsetRef.current = offset + raw.length
+      const mapped = mapArtistRows(raw)
+      setArtists((prev) => {
+        const merged = append ? [...prev, ...mapped] : mapped
+        const byId = new Map(merged.map((a) => [a.id, a] as const))
+        return sortArtistsCatalog([...byId.values()].map((a) => ({
           id: a.id,
           username: a.username,
           displayName: a.displayName,
           avatarUrl: a.avatarUrl,
-        })))
-        setArtistsLoading(false)
+          artistStatus: null,
+        }))).map((a) => ({
+          id: a.id,
+          username: a.username,
+          displayName: a.displayName,
+          avatarUrl: a.avatarUrl,
+        }))
       })
-    return () => { cancelled = true }
-  }, [discoverLive])
+    } finally {
+      artistsLoadInflightRef.current = false
+      if (!append) setArtistsLoading(false)
+    }
+  }, [mapArtistRows])
+
+  const loadMoreArtists = useCallback(() => {
+    void fetchArtistsPage(true)
+  }, [fetchArtistsPage])
+
+  useEffect(() => {
+    if (!discoverLive) return
+    artistsNextOffsetRef.current = 0
+    artistsHasMoreRef.current = true
+    setArtistsLoading(true)
+    void fetchArtistsPage(false)
+  }, [discoverLive, fetchArtistsPage])
 
   useEffect(() => {
     const key = lyricMomentsStableKey(momentRows)
@@ -189,6 +250,34 @@ export default function DiscoverPage() {
     () => filterPostsByVibe(posts, selectedVibe),
     [posts, selectedVibe],
   )
+
+  const onNeedMoreMoments = useCallback(() => {
+    if (momentsHasMore) void loadMoreMoments()
+  }, [loadMoreMoments, momentsHasMore])
+
+  const onNeedMoreSongs = useCallback(() => {
+    if (songsHasMore) void loadMoreSongs()
+  }, [loadMoreSongs, songsHasMore])
+
+  const onNeedMoreArtists = useCallback(() => {
+    if (artistsHasMoreRef.current) void loadMoreArtists()
+  }, [loadMoreArtists])
+
+  const {
+    visible: visibleMoments,
+    onNearEnd: onMomentsNearEnd,
+    nearEndTiles,
+  } = useDiscoverCarouselWindow(filteredMoments, onNeedMoreMoments)
+
+  const {
+    visible: visibleSongs,
+    onNearEnd: onSongsNearEnd,
+  } = useDiscoverCarouselWindow(filteredSongs, onNeedMoreSongs)
+
+  const {
+    visible: visibleArtists,
+    onNearEnd: onArtistsNearEnd,
+  } = useDiscoverCarouselWindow(artists, onNeedMoreArtists)
 
   const toggleOrPlayMoment = useCallback((moment: LyricMoment) => {
     const key = momentPlayingKey(moment)
@@ -341,8 +430,8 @@ export default function DiscoverPage() {
                 />
               )}
             />
-            <DiscoverHorizontalScrollRow>
-              {filteredMoments.map(moment => {
+            <DiscoverHorizontalScrollRow onNearEnd={onMomentsNearEnd} nearEndTiles={nearEndTiles}>
+              {visibleMoments.map(moment => {
                 const key = momentPlayingKey(moment)
                 return (
                   <LyricMomentCard
@@ -374,8 +463,8 @@ export default function DiscoverPage() {
             )}
           >
             <DiscoverSectionHeader title="Songs" viewMoreHref="/discover/songs" />
-            <DiscoverHorizontalScrollRow>
-              {filteredSongs.map(song => (
+            <DiscoverHorizontalScrollRow onNearEnd={onSongsNearEnd} nearEndTiles={DISCOVER_HOME_NEAR_END_TILES}>
+              {visibleSongs.map(song => (
                 <DiscoverHomeSongTile key={song.id} song={song} onSelect={() => setPreview(song)} />
               ))}
             </DiscoverHorizontalScrollRow>
@@ -393,8 +482,8 @@ export default function DiscoverPage() {
             )}
           >
             <DiscoverSectionHeader title="Artists" viewMoreHref="/artists" />
-            <DiscoverHorizontalScrollRow>
-              {artists.map(artist => (
+            <DiscoverHorizontalScrollRow onNearEnd={onArtistsNearEnd} nearEndTiles={DISCOVER_HOME_NEAR_END_TILES}>
+              {visibleArtists.map(artist => (
                 <DiscoverHomeArtistTile
                   key={artist.id}
                   username={artist.username}
