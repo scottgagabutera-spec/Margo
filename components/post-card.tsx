@@ -566,7 +566,6 @@ export function PostCard({
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deletedLocally, setDeletedLocally] = useState(false)
   const [repostSheetOpen, setRepostSheetOpen] = useState(false)
-  const [rowExpanded, setRowExpanded] = useState(false)
   const [avatarBroken, setAvatarBroken] = useState(false)
   const [foundingListenerUsername, setFoundingListenerUsername] = useState<string | null>(null)
   const openFoundingListener = useCallback((username: string) => {
@@ -601,7 +600,7 @@ export function PostCard({
   useEffect(() => { setAvatarBroken(false) }, [post.authorAvatarUrl, post.authorUid])
   // row collapses to a dense one-liner; expand renders the compact card in place
   const isRow = variant === 'row'
-  const isCompact = variant === 'compact' || (isRow && rowExpanded)
+  const isCompact = variant === 'compact'
   const usePortraitHeader = variant === 'feed' && !isCompact
   const avatarPx = isCompact ? '32px' : '36px'
 
@@ -728,12 +727,15 @@ export function PostCard({
     )
   }
 
-  if (isRow && !rowExpanded) {
+  if (isRow) {
     return (
       <button
         type="button"
-        onClick={() => setRowExpanded(true)}
-        aria-label="Expand lyric"
+        onClick={() => {
+          persistActivePrimaryScroll()
+          navigateToPostThread(router, post.id, postLive)
+        }}
+        aria-label="Open lyric post"
         style={{
           display: 'block', width: '100%', textAlign: 'left', boxSizing: 'border-box',
           background: 'transparent', border: 'none', borderBottom: '1px solid var(--border)',
@@ -764,7 +766,7 @@ export function PostCard({
   const cardTapRef = useRef<PreciseTapStart | null>(null)
 
   const goToPost = (e: React.PointerEvent | React.MouseEvent) => {
-    if (disableCardNav || isRow) return
+    if (disableCardNav) return
     const t = e.target as HTMLElement | null
     if (t?.closest?.('a, button, textarea, input, [data-no-card-nav]')) return
     persistActivePrimaryScroll()
@@ -772,14 +774,14 @@ export function PostCard({
   }
 
   const onCardPointerDown = (e: React.PointerEvent) => {
-    if (!disableCardNav && !isRow) {
+    if (!disableCardNav) {
       cardTapRef.current = { x: e.clientX, y: e.clientY, t: Date.now() }
       persistActivePrimaryScroll()
     }
   }
 
   const onCardClick = (e: React.MouseEvent) => {
-    if (disableCardNav || isRow) return
+    if (disableCardNav) return
     if (!isPreciseTap(cardTapRef.current, e.clientX, e.clientY, Date.now())) {
       cardTapRef.current = null
       return
@@ -810,29 +812,10 @@ export function PostCard({
         ...(isTier1 ? { borderColor: 'var(--gold-border)' } : null),
         position: 'relative', overflow: 'visible',
         isolation: 'isolate',
-        cursor: disableCardNav || isRow ? 'default' : 'pointer',
-        ...(isRow ? { margin: '6px 0 10px' } : null),
-        touchAction: disableCardNav || isRow ? undefined : 'pan-y',
+        cursor: disableCardNav ? 'default' : 'pointer',
+        touchAction: disableCardNav ? undefined : 'pan-y',
       }}
     >
-      {isRow && (
-        <button
-          type="button"
-          onClick={() => setRowExpanded(false)}
-          aria-label="Collapse lyric"
-          style={{
-            position: 'absolute', top: '8px', right: '8px', zIndex: 2,
-            width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'transparent', border: 'none', cursor: 'pointer',
-            color: 'var(--text-muted)', padding: 0, WebkitTapHighlightColor: 'transparent',
-          }}
-        >
-          <span style={{ display: 'inline-flex', transform: 'rotate(-90deg)' }}>
-            <ChevronRightIcon size={14} color="var(--text-muted)" />
-          </span>
-        </button>
-      )}
       {usePortraitHeader ? (
         <PostCardPortraitHeader
           post={post}
