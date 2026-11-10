@@ -39,11 +39,14 @@
   --margo-touch-min: 44px;
   /* Button system (MARGO_BRAND §4) — visible heights; min touch 44px via padding */
   --margo-btn-touch: var(--margo-touch-min);
-  --margo-btn-h-primary: 40px;
+  --margo-btn-h-primary: 32px;
+  --margo-btn-h-form: 40px;
+  --margo-btn-h-follow: 28px;
   --margo-btn-h-secondary: 32px;
   --margo-btn-h-chip: 28px;
   --margo-btn-h-icon: 32px;
   --margo-btn-h-icon-accent: 36px;
+  --margo-btn-radius: 8px;
   --margo-btn-font: var(--margo-type-l);
   --margo-btn-weight: 500;
   /* Margo 5-step type scale (lib/fonts.ts MARGO_TYPE) — rem only, 12px floor */
@@ -9918,7 +9921,7 @@ button.margo-feed-memory-card__action:active:not(:disabled) {
   min-width: var(--margo-btn-touch);
   min-height: var(--margo-btn-touch);
   padding: calc((var(--margo-btn-touch) - var(--margo-btn-visible-h, var(--margo-btn-h-secondary))) / 2) 14px;
-  border-radius: 10px;
+  border-radius: var(--margo-btn-radius);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: var(--margo-btn-font);
   font-weight: var(--margo-btn-weight);
@@ -9950,10 +9953,17 @@ button.margo-feed-memory-card__action:active:not(:disabled) {
   min-width: 0;
   padding-left: 12px;
   padding-right: 12px;
-  border-radius: 999px;
+  border-radius: var(--margo-btn-radius);
   background: var(--surface-2);
   color: var(--text-secondary);
   border-color: var(--border);
+}
+.margo-btn--follow {
+  --margo-btn-visible-h: var(--margo-btn-h-follow);
+}
+.margo-btn--form {
+  --margo-btn-visible-h: var(--margo-btn-h-form);
+  width: 100%;
 }
 .margo-btn--chip[aria-pressed='true'],
 .margo-btn--chip--active {

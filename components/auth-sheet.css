@@ -127,12 +127,12 @@
 .margo-auth-primary-btn {
   width: 100%;
   min-height: var(--margo-btn-touch);
-  --margo-btn-visible-h: var(--margo-btn-h-primary);
-  padding: calc((var(--margo-btn-touch) - var(--margo-btn-h-primary)) / 2) 14px;
+  --margo-btn-visible-h: var(--margo-btn-h-form);
+  padding: calc((var(--margo-btn-touch) - var(--margo-btn-h-form)) / 2) 14px;
   background: var(--gold);
   color: var(--text-on-gold, var(--bg));
   border: none;
-  border-radius: 10px;
+  border-radius: var(--margo-btn-radius);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-weight: var(--margo-btn-weight, 500);
   font-size: var(--margo-btn-font, 0.75rem);

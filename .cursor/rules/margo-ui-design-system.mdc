@@ -22,7 +22,7 @@ GIANTS WAY · MODERN · PREMIUM · UNIQUE FOR MARGO · LONG TERM · USER EXPERIE
 
 - Typography: **Geist** all UI; **Lora upright** lyric content only; **Sora** wordmark only — five-step rem scale `MARGO_TYPE` / `--margo-type-*` (12px floor). No italic — see MARGO_BRAND §3
 - Gold **#E8C547** (`var(--gold)`) only: wordmark/logo, active tab, active Resonate heart, primary CTA fill, focus ring, and unread/new signals (Hub dot, notification dot/tint, Messages badge, Discover dot, feed new-items pill). Echoes card open chevron (`margo-feed-memory-card__action`) may stay gold. Links and section chrome use `--text` / `--text-secondary` / `--text-muted`
-- Buttons: use `margo-btn` / `MargoCtaButton` — primary 40px, secondary/chip/icon 32px (Echoes open 36px accent), 44px tap, 0.75rem/500 sentence case. Compose FAB stays 46px.
+- Buttons: `margo-btn` rectangles, 8px radius — primary 32px gold, secondary 32px neutral border, Follow 28px gold / Following neutral, chip-tab 28px neutral selected (no gold fill), form submit 40px full width, 44px tap, 0.75rem/500 sentence case, no letter-spacing. Compose FAB stays 46px circle; cover heart/… stay circles.
 - People: `AuthorMeta` shows @username only unless `showDisplayName` (profile header, DM thread). Song credits keep artist name. Notifications: @username link (profile) separate from row tap (content).
 - Profile Songs row: mobile flow root `order` 7 on `--songs-preview` above tabs — see MARGO_BRAND.
 - No Unicode/emoji as icons — SVG components only
