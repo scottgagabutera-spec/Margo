@@ -107,10 +107,14 @@ export function FeedEchoesTab({ fetchEnabled = true }: { fetchEnabled?: boolean 
             </div>
             {activeSet.latestAnswer ? (
               <div className="margo-feed-echoes-tab__preview">
-                <p className="margo-feed-echoes-tab__preview-name" style={{ fontFamily: font }}>
-                  {activeSet.latestAnswer.displayName}
-                  <span className="margo-feed-echoes-results__time">{activeSet.latestAnswer.timeLabel}</span>
-                </p>
+                <div className="margo-feed-echoes-tab__preview-name" style={{ fontFamily: font }}>
+                  <span className="margo-feed-echoes-tab__preview-display">
+                    {activeSet.latestAnswer.displayName}
+                  </span>
+                  <span className="margo-feed-echoes-tab__preview-time">
+                    {activeSet.latestAnswer.timeLabel}
+                  </span>
+                </div>
                 <EchoesSongStrip payload={activeSet.latestAnswer.payload} />
               </div>
             ) : null}

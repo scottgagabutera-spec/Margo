@@ -78,7 +78,7 @@ export function BackButton({
         }}
         style={iconStyle}
       >
-        <ArrowLeftIcon size={20} color="var(--gold)" />
+        <ArrowLeftIcon size={20} color="var(--text-secondary)" />
       </PendingNavLink>
     )
   }
@@ -106,7 +106,7 @@ export function BackButton({
         marginLeft: '-4px',
       }}
     >
-      <ArrowLeftIcon size={20} color="var(--gold)" />
+      <ArrowLeftIcon size={20} color="var(--text-secondary)" />
     </button>
   )
 }

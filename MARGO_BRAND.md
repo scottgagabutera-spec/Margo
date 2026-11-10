@@ -158,6 +158,12 @@ Gold — The Margo Signature:
 - --gold-glow: rgba(232,197,71,0.12)
 - Use `var(--gold)` as the only gold reference in component code; never hardcode `#E8C547` or any other gold hex.
 
+### Gold budget (product chrome)
+
+**Keep gold on:** wordmark/logo, active primary tab, active Resonate heart, primary CTA fills, focus rings, and **live/unread signals** — Hub menu dot, notification unread dot + row tint, Messages unread badge, Discover tab dot, feed “new songs / new posts” live-update pill.
+
+**Demote to text hierarchy** (`--text`, `--text-secondary`, `--text-muted`): section kickers, back arrows, memory story overlays, profile hero round actions, social link chips, filter chips, Echoes labels, “Next question,” Full song chip, and other decorative chrome. **Exception:** Echoes card gold chevron (`margo-feed-memory-card__action`) stays gold — it is the primary open action on that card.
+
 Emotion colors (Margo unique identity — never remove):
 - Love: #FF6B9D
 - Heartbreak: #ff6060
