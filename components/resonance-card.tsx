@@ -147,16 +147,23 @@ export function ResonanceCard({
                   fontFamily: UI_FONT, fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)',
                   margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                 }}>
-                  {(post.authorDisplayName || post.username || 'listener')} · {post.knowledge?.song || 'Margo'}
+                  <AuthorMeta
+                    authorUid={post.authorUid}
+                    username={post.username || 'listener'}
+                    linkProfile
+                    size="compact"
+                  />
+                  {' · '}
+                  {post.knowledge?.song || 'Margo'}
                 </p>
               ) : (
                 <>
-                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <p style={{ fontFamily: UI_FONT, fontSize: '0.75rem', fontWeight: 500, color: 'var(--text)', textTransform: 'none', letterSpacing: 0, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {post.knowledge?.song || 'Margo'}
                   </p>
                   <AuthorMeta
                     authorUid={post.authorUid}
-                    fallbackName={post.username || 'listener'}
+                    username={post.username || 'listener'}
                     linkProfile={false}
                     size="compact"
                   />
@@ -165,15 +172,15 @@ export function ResonanceCard({
             </div>
           </div>
           {post.audioUrl && (
-            <button type="button" onClick={onPlay} style={{
-              width: isDiscover ? '28px' : 'var(--margo-touch-min)',
-              height: isDiscover ? '28px' : 'var(--margo-touch-min)',
+            <button type="button" onClick={onPlay} className="margo-btn margo-btn--icon" style={{
+              width: isDiscover ? 'var(--margo-btn-touch)' : 'var(--margo-touch-min)',
+              height: isDiscover ? 'var(--margo-btn-touch)' : 'var(--margo-touch-min)',
               borderRadius: '50%', flexShrink: 0,
-              background: isPlaying ? 'rgba(232,197,71,0.2)' : 'rgba(232,197,71,0.1)',
-              border: '1px solid rgba(232,197,71,0.25)', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxSizing: 'border-box',
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border-hi)', cursor: 'pointer',
+              padding: isDiscover ? 'calc((var(--margo-btn-touch) - var(--margo-btn-h-icon)) / 2)' : undefined,
             }}>
-              <PlayPauseIcon playing={isPlaying} buffering={!!isBuffering} size={isDiscover ? 12 : 15} color="var(--gold)" />
+              <PlayPauseIcon playing={isPlaying} buffering={!!isBuffering} size={isDiscover ? 12 : 15} color="var(--text-secondary)" />
             </button>
           )}
         </div>

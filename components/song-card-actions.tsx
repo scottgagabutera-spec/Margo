@@ -73,20 +73,12 @@ export function SongCardActions({
         e.stopPropagation()
         void toggleLike(song.id)
       }}
+      className="margo-btn margo-btn--icon margo-catalog-cover-btn"
       style={{
-        width: 'var(--margo-touch-min)',
-        height: 'var(--margo-touch-min)',
         borderRadius: '50%',
-        border: liked ? '1px solid rgba(232,197,71,0.45)' : '1px solid rgba(255,255,255,0.14)',
-        background: liked ? 'rgba(232,197,71,0.18)' : 'rgba(7,6,10,0.72)',
+        border: liked ? '1px solid var(--border-hi)' : '1px solid var(--border)',
+        background: liked ? 'var(--surface-3)' : 'rgba(7,6,10,0.78)',
         color: liked ? 'var(--gold)' : 'var(--text-secondary)',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 0,
-        boxSizing: 'border-box',
-        flexShrink: 0,
       }}
     >
       <HeartIcon filled={liked} size={14} color="currentColor" />
@@ -107,10 +99,10 @@ export function SongCardActions({
 
   return (
     <>
-      <div style={{ position: 'absolute', top: '6px', right: '6px', zIndex: 3 }}>
-        <CardOverflowMenu items={items} />
+      <div className="margo-catalog-cover-btn margo-catalog-cover-btn--menu" style={{ position: 'absolute', top: '4px', right: '4px', zIndex: 3 }}>
+        <CardOverflowMenu items={items} compact />
       </div>
-      <div style={{ position: 'absolute', bottom: '8px', left: '8px', zIndex: 3 }}>
+      <div style={{ position: 'absolute', top: '4px', left: '4px', zIndex: 3 }}>
         {likeBtn}
       </div>
     </>

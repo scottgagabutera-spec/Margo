@@ -69,24 +69,24 @@ export function DiscoverHomeArtistTile({
     >
       <div className="discover-home-artist-avatar" style={{
         aspectRatio: '1', width: '100%', borderRadius: '18px', overflow: 'hidden',
-        marginBottom: '8px', border: '1px solid rgba(232,197,71,0.25)',
-        background: 'linear-gradient(135deg, rgba(232,197,71,0.2), rgba(232,197,71,0.05))',
+        marginBottom: '8px', border: '1px solid var(--border-hi)',
+        background: 'var(--surface-2)',
       }}>
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={avatarUrl} alt="" loading="lazy" width={84} height={84} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         ) : (
           <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontFamily: UI_FONT, fontSize: '1rem', fontWeight: 700, color: 'var(--gold)' }}>
+            <span style={{ fontFamily: UI_FONT, fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
               {name.charAt(0).toUpperCase()}
             </span>
           </div>
         )}
       </div>
       <p style={{
-        fontFamily: UI_FONT, fontSize: '0.75rem', fontWeight: 500, color: 'var(--text)',
+        fontFamily: UI_FONT, fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)',
         margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-      }}>{name}</p>
+      }}>{username ? `@${username}` : name}</p>
     </Link>
   )
 }
