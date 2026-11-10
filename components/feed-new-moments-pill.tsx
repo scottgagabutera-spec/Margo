@@ -47,7 +47,7 @@ export function FeedNewMomentsPill({ visible, onReveal }: FeedNewMomentsPillProp
           background: 'var(--gold)',
           color: 'var(--text-on-gold, var(--bg))',
           border: '1px solid color-mix(in srgb, var(--gold) 70%, var(--bg))',
-          borderRadius: '50px',
+          borderRadius: 'var(--margo-btn-radius)',
           fontFamily: font,
           fontWeight: 500,
           fontSize: 'var(--margo-type-l)',

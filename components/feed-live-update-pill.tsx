@@ -126,7 +126,7 @@ export function FeedLiveUpdatePill({
           display: 'inline-flex',
           alignItems: 'center',
           gap: '8px',
-          borderRadius: '10px',
+          borderRadius: 'var(--margo-btn-radius)',
           border: '1px solid var(--gold-border)',
           background: 'var(--gold)',
           color: 'var(--text-on-gold)',

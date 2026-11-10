@@ -16,7 +16,7 @@ export function FeedMemoryNudge({ onDismiss }: { onDismiss?: () => void }) {
     <div className="margo-feed-memory-nudge">
       <button
         type="button"
-        className="margo-feed-memory-nudge__dismiss"
+        className="margo-btn margo-btn--icon margo-feed-memory-nudge__dismiss"
         aria-label="Dismiss"
         onClick={dismiss}
       >
