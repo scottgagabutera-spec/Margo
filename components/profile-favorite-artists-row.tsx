@@ -13,6 +13,8 @@ import {
   type ProfileFavoritesSearchKind,
 } from '@/components/profile-favorites-inline-search'
 import { UI_FONT } from '@/lib/fonts'
+import type { ProfileFavoriteSong } from '@/lib/profile/load-favorite-songs'
+import Image from 'next/image'
 
 const font = UI_FONT
 
@@ -43,14 +45,22 @@ function FavoritesPlusButton({ onClick, label }: { onClick: () => void; label: s
 
 export function ProfileFavoriteArtistsRow({
   favorites,
+  favoriteSongs = [],
+  songsReady = false,
+  albumsReady = false,
   isOwnProfile,
   showEmptyOwnerLink,
   onFavoritesChange,
+  onFavoriteSongsChange,
 }: {
   favorites: ProfileFavoriteArtist[]
+  favoriteSongs?: ProfileFavoriteSong[]
+  songsReady?: boolean
+  albumsReady?: boolean
   isOwnProfile: boolean
   showEmptyOwnerLink?: boolean
   onFavoritesChange?: (next: ProfileFavoriteArtist[]) => void
+  onFavoriteSongsChange?: (next: ProfileFavoriteSong[]) => void
 }) {
   const [chip, setChip] = useState<FavoritesChip>('artists')
   const [inlineSearch, setInlineSearch] = useState<ProfileFavoritesSearchKind | null>(null)
@@ -60,9 +70,16 @@ export function ProfileFavoriteArtistsRow({
   const searchActive = inlineSearch === chip
   const search = useProfileFavoritesSearch(chip, searchActive)
 
-  if (!isOwnProfile && favorites.length === 0) return null
+  if (!isOwnProfile && favorites.length === 0 && favoriteSongs.length === 0) return null
+
+  const chipIds = (['artists', 'songs', 'albums'] as const).filter((id) => {
+    if (id === 'songs') return songsReady
+    if (id === 'albums') return albumsReady
+    return true
+  })
 
   const shown = favorites.slice(0, 12)
+  const shownSongs = favoriteSongs.slice(0, 12)
   const extra = favorites.length - shown.length
   const canAdd = isOwnProfile && showEmptyOwnerLink
 
@@ -168,11 +185,77 @@ export function ProfileFavoriteArtistsRow({
     [closeSearch, favorites, persistArtists],
   )
 
+  const persistSongs = useCallback(
+    async (next: ProfileFavoriteSong[]) => {
+      onFavoriteSongsChange?.(next)
+      try {
+        await fetch('/api/profile/favorite-songs', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            favorites: next.map((f, index) => ({
+              catalogSongId: f.id,
+              position: index,
+              artworkUrl: f.artworkUrl,
+            })),
+          }),
+        })
+      } catch {
+        /* optimistic UI */
+      }
+    },
+    [onFavoriteSongsChange],
+  )
+
   const onSongPick = useCallback(
-    (_hit: ComposeSearchHit) => {
+    async (hit: ComposeSearchHit) => {
+      if (!songsReady) {
+        closeSearch()
+        return
+      }
+      if (favoriteSongs.some((f) => f.title === hit.title && f.artistName === hit.artist) || favoriteSongs.length >= 10) {
+        closeSearch()
+        return
+      }
+      const ensureRes = await fetch('/api/catalog/songs/ensure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: hit.id,
+          title: hit.title,
+          artist: hit.artist,
+          artwork: hit.artwork,
+          source: hit.source,
+          margoSongId: hit.margoSongId,
+        }),
+      })
+      if (!ensureRes.ok) {
+        closeSearch()
+        return
+      }
+      const data = (await ensureRes.json()) as {
+        song?: { id: string; title: string; artistName: string; artworkUrl: string | null }
+      }
+      const row = data.song
+      if (!row) {
+        closeSearch()
+        return
+      }
+      const next: ProfileFavoriteSong[] = [
+        ...favoriteSongs,
+        {
+          id: row.id,
+          title: row.title,
+          artistName: row.artistName,
+          artworkUrl: row.artworkUrl,
+          onMargo: hit.source === 'margo',
+          position: favoriteSongs.length,
+        },
+      ]
+      await persistSongs(next)
       closeSearch()
     },
-    [closeSearch],
+    [closeSearch, favoriteSongs, persistSongs, songsReady],
   )
 
   const plusLabel =
@@ -185,7 +268,7 @@ export function ProfileFavoriteArtistsRow({
   return (
     <div className="margo-profile-favorites" ref={panelRef}>
       <div className="margo-profile-favorites__chips" role="tablist" aria-label="Favorites">
-        {(['artists', 'songs', 'albums'] as const).map((id) => {
+        {chipIds.map((id) => {
           const label = id === 'artists' ? 'Artists' : id === 'songs' ? 'Songs' : 'Albums'
           const selected = chip === id
           return (
@@ -268,6 +351,21 @@ export function ProfileFavoriteArtistsRow({
                   </div>
                 )
               })}
+            {chip === 'songs' &&
+              shownSongs.map((s, index) => (
+                <div key={s.id} className="margo-profile-favorite-artists__cell">
+                  <span className="margo-profile-favorite-artists__art-wrap margo-profile-favorite-songs__art-wrap">
+                    {s.artworkUrl ? (
+                      <Image src={s.artworkUrl} alt="" width={64} height={64} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <span className="margo-profile-favorite-songs__art-empty" aria-hidden />
+                    )}
+                  </span>
+                  <span className="margo-profile-favorite-artists__name" style={{ fontFamily: font }}>
+                    {s.title}
+                  </span>
+                </div>
+              ))}
             {chip === 'artists' && extra > 0 ? (
               <div className="margo-profile-favorite-artists__more" aria-label={`${extra} more favorite artists`}>
                 +{extra}

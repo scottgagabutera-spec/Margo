@@ -3,6 +3,7 @@ import { dispatchProfileSurfaceReady } from '@/lib/profile/surface-ready'
 import type { ArtistStatus } from '@/components/artist-badge'
 import type { ArtistApplicationLinks } from '@/lib/artist-music-group'
 import type { ProfileFavoriteArtist } from '@/components/profile-favorite-artists-row'
+import type { ProfileFavoriteSong } from '@/lib/profile/load-favorite-songs'
 import type { MemoryPublic } from '@/lib/memory/types'
 
 const supabase = createClient()
@@ -35,6 +36,9 @@ export interface WarmProfileBundle {
   /** Present when peek RPC includes the viewer's follow row (authenticated). */
   viewerFollowStatus?: 'pending' | 'accepted' | null
   favoriteArtists?: ProfileFavoriteArtist[]
+  favoriteSongs?: ProfileFavoriteSong[]
+  favoriteSongsReady?: boolean
+  favoriteAlbumsReady?: boolean
   memories?: MemoryPublic[]
   memoriesIsOwner?: boolean
   surfaceLoadedAt?: number
@@ -68,6 +72,9 @@ function mergeSurfaceIntoBundle(
   surface: NonNullable<Awaited<ReturnType<typeof fetchProfileSurfaceExtras>>>,
 ) {
   bundle.favoriteArtists = surface.favoriteArtists
+  bundle.favoriteSongs = surface.favoriteSongs
+  bundle.favoriteSongsReady = surface.favoriteSongsReady
+  bundle.favoriteAlbumsReady = surface.favoriteAlbumsReady
   bundle.memories = surface.memories
   bundle.memoriesIsOwner = surface.memoriesIsOwner
   bundle.surfaceLoadedAt = Date.now()
@@ -97,6 +104,7 @@ export async function revalidateProfileSurface(username: string): Promise<boolea
   else {
     patchProfileSurface(username, {
       favoriteArtists: surface.favoriteArtists,
+      favoriteSongs: surface.favoriteSongs,
       memories: surface.memories,
       memoriesIsOwner: surface.memoriesIsOwner,
     })
@@ -155,6 +163,9 @@ export function peekProfileCache(username: string): WarmProfileBundle | null {
 
 export function peekProfileSurface(username: string): {
   favoriteArtists: ProfileFavoriteArtist[]
+  favoriteSongs: ProfileFavoriteSong[]
+  favoriteSongsReady: boolean
+  favoriteAlbumsReady: boolean
   memories: MemoryPublic[]
   memoriesIsOwner: boolean
 } | null {
@@ -162,6 +173,9 @@ export function peekProfileSurface(username: string): {
   if (!hit?.surfaceLoadedAt) return null
   return {
     favoriteArtists: hit.favoriteArtists || [],
+    favoriteSongs: hit.favoriteSongs || [],
+    favoriteSongsReady: !!hit.favoriteSongsReady,
+    favoriteAlbumsReady: !!hit.favoriteAlbumsReady,
     memories: hit.memories || [],
     memoriesIsOwner: !!hit.memoriesIsOwner,
   }
@@ -171,6 +185,7 @@ export function patchProfileSurface(
   username: string,
   patch: Partial<{
     favoriteArtists: ProfileFavoriteArtist[]
+    favoriteSongs: ProfileFavoriteSong[]
     memories: MemoryPublic[]
     memoriesIsOwner: boolean
   }>,
@@ -179,6 +194,7 @@ export function patchProfileSurface(
   const hit = cache.get(key)
   if (!hit?.data) return
   if (patch.favoriteArtists) hit.data.favoriteArtists = patch.favoriteArtists
+  if (patch.favoriteSongs) hit.data.favoriteSongs = patch.favoriteSongs
   if (patch.memories) hit.data.memories = patch.memories
   if (patch.memoriesIsOwner !== undefined) hit.data.memoriesIsOwner = patch.memoriesIsOwner
   hit.data.surfaceLoadedAt = hit.data.surfaceLoadedAt ?? Date.now()
@@ -186,6 +202,9 @@ export function patchProfileSurface(
 
 async function fetchProfileSurfaceExtras(username: string): Promise<{
   favoriteArtists: ProfileFavoriteArtist[]
+  favoriteSongs: ProfileFavoriteSong[]
+  favoriteSongsReady: boolean
+  favoriteAlbumsReady: boolean
   memories: MemoryPublic[]
   memoriesIsOwner: boolean
   viewerFollowStatus?: 'pending' | 'accepted' | null
@@ -197,12 +216,18 @@ async function fetchProfileSurfaceExtras(username: string): Promise<{
     if (!res.ok) return null
     const data = (await res.json()) as {
       favoriteArtists?: ProfileFavoriteArtist[]
+      favoriteSongs?: ProfileFavoriteSong[]
+      favoriteSongsReady?: boolean
+      favoriteAlbumsReady?: boolean
       memories?: MemoryPublic[]
       memoriesIsOwner?: boolean
       viewerFollowStatus?: 'pending' | 'accepted' | null
     }
     return {
       favoriteArtists: data.favoriteArtists || [],
+      favoriteSongs: data.favoriteSongs || [],
+      favoriteSongsReady: !!data.favoriteSongsReady,
+      favoriteAlbumsReady: !!data.favoriteAlbumsReady,
       memories: data.memories || [],
       memoriesIsOwner: !!data.memoriesIsOwner,
       viewerFollowStatus: data.viewerFollowStatus,
