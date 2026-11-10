@@ -41,7 +41,7 @@ export function ProfileFavoriteRemovableCell({
   }, [armed, dismiss])
 
   return (
-    <div className="margo-profile-favorite-artists__cell" {...longPress.handlers}>
+    <div className="margo-profile-favorite-artists__cell margo-profile-favorite-artists__cell--removable" {...longPress.handlers}>
       {children}
       {armed ? (
         <button
