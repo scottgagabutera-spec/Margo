@@ -162,7 +162,15 @@ Gold — The Margo Signature:
 
 **Keep gold on:** wordmark/logo, active primary tab, active Resonate heart, primary CTA fills, focus rings, and **live/unread signals** — Hub menu dot, notification unread dot + row tint, Messages unread badge, Discover tab dot, feed “new songs / new posts” live-update pill.
 
-**Demote to text hierarchy** (`--text`, `--text-secondary`, `--text-muted`): section kickers, back arrows, memory story overlays, profile hero round actions, social link chips, filter chips, Echoes labels, “Next question,” Full song chip, and other decorative chrome. **Exception:** Echoes card gold chevron (`margo-feed-memory-card__action`) stays gold — it is the primary open action on that card.
+**Demote to text hierarchy** (`--text`, `--text-secondary`, `--text-muted`): section kickers, back arrows, memory story overlays, social link chips, filter chips, Echoes labels, “Next question,” Full song chip, and other decorative chrome. **Exception:** Echoes card gold chevron (`margo-feed-memory-card__action`) stays gold — it is the primary open action on that card.
+
+### Profile hero actions (beside portrait)
+
+The profile portrait stays **centered**. **Message / Messages** and **Follow** (or **Edit profile**) are **one small rectangle each**, in the **left and right flanks on the same row as the avatar** — never below the portrait. Identity (`displayName`, `@username`) sits **directly under** the hero row.
+
+- **Own profile:** Messages (left), Edit profile (right).
+- **Another profile:** Message (left), Follow / Following (right) via `MargoFollowButton`.
+- **28px** visible height, hugging label width (`margo-profile-hero-action`), 44px tap, 8px radius; Follow gold, others neutral border.
 
 ### Button standard (`margo-btn` / `MargoCtaButton`)
 

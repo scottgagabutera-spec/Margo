@@ -2669,27 +2669,42 @@ html[data-margo-landing-song-flow] .margo-landing-hero-anchor {
 .margo-profile-block--actions {
   display: none;
 }
-.margo-profile-hero-cluster-wrap {
+.margo-profile-hero-cluster {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-}
-.margo-profile-hero-actions {
-  display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 8px;
   width: 100%;
   max-width: 360px;
   margin: 0 auto 6px;
+  box-sizing: border-box;
 }
-.margo-profile-hero-action {
-  flex: 1 1 auto;
+.margo-profile-hero-cluster__flank {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
   min-width: 0;
+}
+.margo-profile-hero-cluster__flank--start {
+  justify-content: flex-end;
+  padding-right: 4px;
+}
+.margo-profile-hero-cluster__flank--end {
+  justify-content: flex-start;
+  padding-left: 4px;
+}
+.margo-profile-hero-cluster .margo-profile-hero-action.margo-btn {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
   position: relative;
-  gap: 6px;
+  --margo-btn-visible-h: var(--margo-btn-h-follow);
+  padding-left: 10px;
+  padding-right: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .margo-profile-hero-action__badge {
   position: absolute;
@@ -2700,95 +2715,20 @@ html[data-margo-landing-song-flow] .margo-landing-hero-anchor {
   padding: 0 4px;
   font-size: 0.625rem;
 }
-.margo-profile-hero-cluster {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-  margin: 0 auto 6px;
-}
-.margo-profile-hero-cluster__flank {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-.margo-profile-hero-cluster__flank--start {
-  justify-content: flex-end;
-  padding-right: 6px;
-}
-.margo-profile-hero-cluster__flank--end {
-  justify-content: flex-start;
-  padding-left: 6px;
-}
-.margo-profile-round-action {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  min-width: var(--margo-touch-min);
-  min-height: var(--margo-touch-min);
-  padding: 0;
-  border: none;
-  background: none;
-  cursor: pointer;
-  text-decoration: none;
-  -webkit-tap-highlight-color: transparent;
-}
-.margo-profile-round-action__icon-wrap {
-  position: relative;
-  display: inline-flex;
-}
-.margo-profile-round-action__badge {
-  position: absolute;
-  top: -2px;
-  right: -4px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 999px;
-  background: #e24d4d;
-  color: #fff;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: var(--margo-type-l);
-  font-weight: 700;
-  line-height: 16px;
-  text-align: center;
-  box-sizing: border-box;
-}
-.margo-profile-round-action__icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-}
-.margo-profile-round-action--gold .margo-profile-round-action__icon {
-  background: var(--surface-2);
-  border: 1px solid var(--border-hi);
-}
-.margo-profile-round-action--outline .margo-profile-round-action__icon {
-  background: var(--surface-2);
-  border: 1px solid var(--border-hi);
-}
-.margo-profile-round-action--following .margo-profile-round-action__icon {
-  background: var(--surface-2);
-  border: 1px solid var(--border-hi);
-}
-.margo-profile-round-action--disabled {
-  opacity: 0.45;
-  pointer-events: none;
-}
-.margo-profile-round-action__label {
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: var(--margo-type-l);
-  font-weight: 500;
-  color: var(--text-secondary);
-  line-height: 1.1;
-  text-transform: none;
+@media (max-width: 390px) {
+  .margo-profile-hero-cluster {
+    gap: 6px;
+  }
+  .margo-profile-hero-cluster .margo-profile-hero-action.margo-btn {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+  .margo-profile-hero-cluster__flank--start {
+    padding-right: 2px;
+  }
+  .margo-profile-hero-cluster__flank--end {
+    padding-left: 2px;
+  }
 }
 .margo-profile-identity__handle-row {
   display: flex;
@@ -12525,21 +12465,6 @@ button.margo-feed-shorts-strip__more {
     width: 68px !important;
     height: 84px !important;
   }
-}
-.margo-profile-flow-root .margo-profile-round-action {
-  min-width: 0;
-  min-height: 0;
-  gap: 4px;
-}
-.margo-profile-flow-root .margo-profile-round-action__icon {
-  width: 32px;
-  height: 32px;
-}
-.margo-profile-flow-root .margo-profile-round-action__label {
-  font-size: var(--margo-type-l);
-  font-weight: 500;
-  color: var(--gold);
-  line-height: 1.1;
 }
 .margo-profile-flow-root .margo-profile-identity {
   gap: 0;

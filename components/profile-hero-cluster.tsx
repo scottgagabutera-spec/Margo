@@ -5,6 +5,8 @@ import type { ReactNode } from 'react'
 import { MargoPortraitAvatar } from '@/components/margo-portrait-avatar'
 import { MargoFollowButton } from '@/components/margo-follow-button'
 
+const PROFILE_HERO_BTN = 'margo-btn margo-btn--follow margo-profile-hero-action'
+
 type PortraitProps = {
   displayName: string
   username: string
@@ -16,10 +18,12 @@ type PortraitProps = {
 
 export function ProfileHeroCluster({
   portrait,
-  actionsRow,
+  leftFlank,
+  rightFlank,
 }: {
   portrait: PortraitProps
-  actionsRow?: ReactNode
+  leftFlank?: ReactNode
+  rightFlank?: ReactNode
 }) {
   const { displayName, username, avatarUrl, onAvatarClick, avatarBroken, onAvatarError } = portrait
   const hasPhoto = !!avatarUrl?.trim() && !avatarBroken
@@ -37,24 +41,27 @@ export function ProfileHeroCluster({
   )
 
   return (
-    <div className="margo-profile-hero-cluster-wrap">
-      <div className="margo-profile-hero-cluster" data-testid="profile-hero-cluster">
-        <div className="margo-profile-hero__portrait" data-testid="profile-portrait-photo">
-          {hasPhoto && onAvatarClick ? (
-            <button
-              type="button"
-              onClick={onAvatarClick}
-              aria-label={`View ${displayName}'s photo`}
-              className="margo-profile-hero__portrait-btn"
-            >
-              {portraitNode}
-            </button>
-          ) : (
-            portraitNode
-          )}
-        </div>
+    <div className="margo-profile-hero-cluster" data-testid="profile-hero-cluster">
+      <div className="margo-profile-hero-cluster__flank margo-profile-hero-cluster__flank--start">
+        {leftFlank}
       </div>
-      {actionsRow ? <div className="margo-profile-hero-actions">{actionsRow}</div> : null}
+      <div className="margo-profile-hero__portrait" data-testid="profile-portrait-photo">
+        {hasPhoto && onAvatarClick ? (
+          <button
+            type="button"
+            onClick={onAvatarClick}
+            aria-label={`View ${displayName}'s photo`}
+            className="margo-profile-hero__portrait-btn"
+          >
+            {portraitNode}
+          </button>
+        ) : (
+          portraitNode
+        )}
+      </div>
+      <div className="margo-profile-hero-cluster__flank margo-profile-hero-cluster__flank--end">
+        {rightFlank}
+      </div>
     </div>
   )
 }
@@ -69,7 +76,7 @@ function HeroActionLink({
   badgeCount?: number
 }) {
   return (
-    <Link href={href} className="margo-btn margo-btn--secondary margo-profile-hero-action">
+    <Link href={href} className={`${PROFILE_HERO_BTN} margo-btn--secondary`}>
       {children}
       {badgeCount && badgeCount > 0 ? (
         <span className="margo-signal-badge margo-profile-hero-action__badge" aria-hidden>
@@ -82,20 +89,17 @@ function HeroActionLink({
 
 function HeroActionButton({
   children,
-  onClick,
   disabled,
   title,
 }: {
   children: ReactNode
-  onClick?: () => void
   disabled?: boolean
   title?: string
 }) {
   return (
     <button
       type="button"
-      className="margo-btn margo-btn--secondary margo-profile-hero-action"
-      onClick={onClick}
+      className={`${PROFILE_HERO_BTN} margo-btn--secondary`}
       disabled={disabled}
       title={title}
     >
@@ -134,41 +138,44 @@ export function ProfileHeroVisitorActions({
   const following = followAccepted || followLabel === 'Following'
 
   if (signedOut) {
-    return (
-      <MargoFollowButton
-        profileId={profileId}
-        signInReturnTo={signInReturnTo}
-        onToggle={onFollow}
-        following={false}
-        label="Follow"
-      />
-    )
+    return {
+      left: null,
+      right: (
+        <MargoFollowButton
+          profileId={profileId}
+          signInReturnTo={signInReturnTo}
+          onToggle={onFollow}
+          following={false}
+          label="Follow"
+          className="margo-profile-hero-action"
+        />
+      ),
+    }
   }
 
-  return (
-    <>
-      {messageHref ? (
-        <HeroActionLink
-          href={messageHref}
-          badgeCount={messageUnreadCount}
-        >
-          Message
-        </HeroActionLink>
-      ) : (
-        <HeroActionButton disabled={!socialReady || messageDisabled} title={messageTitle}>
-          Message
-        </HeroActionButton>
-      )}
-      <MargoFollowButton
-        profileId={profileId}
-        label={followLabel}
-        following={following}
-        busy={followBusy}
-        disabled={!socialReady || followBusy || followLabel === 'Requested'}
-        onToggle={onFollow}
-      />
-    </>
+  const left = messageHref ? (
+    <HeroActionLink href={messageHref} badgeCount={messageUnreadCount}>
+      Message
+    </HeroActionLink>
+  ) : (
+    <HeroActionButton disabled={!socialReady || messageDisabled} title={messageTitle}>
+      Message
+    </HeroActionButton>
   )
+
+  const right = (
+    <MargoFollowButton
+      profileId={profileId}
+      label={followLabel}
+      following={following}
+      busy={followBusy}
+      disabled={!socialReady || followBusy || followLabel === 'Requested'}
+      onToggle={onFollow}
+      className="margo-profile-hero-action"
+    />
+  )
+
+  return { left, right }
 }
 
 export function ProfileHeroOwnerActions({
@@ -176,14 +183,16 @@ export function ProfileHeroOwnerActions({
 }: {
   messagesUnreadCount?: number
 }) {
-  return (
-    <>
+  return {
+    left: (
       <HeroActionLink href="/messages" badgeCount={messagesUnreadCount}>
         Messages
       </HeroActionLink>
+    ),
+    right: (
       <HeroActionLink href="/profile/edit">
         Edit profile
       </HeroActionLink>
-    </>
-  )
+    ),
+  }
 }
