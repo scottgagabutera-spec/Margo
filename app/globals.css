@@ -2897,35 +2897,26 @@ html[data-margo-landing-song-flow] .margo-landing-hero-anchor {
 .margo-profile-action-btn {
   flex: 0 0 auto;
   width: auto;
-  min-width: 0;
-  height: 32px;
-  min-height: 32px;
-  max-height: 32px;
-  padding: 0 12px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  border-radius: 10px;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  letter-spacing: -0.01em;
+  min-width: var(--margo-btn-touch);
+  min-height: var(--margo-btn-touch);
+  --margo-btn-visible-h: var(--margo-btn-h-secondary);
+  padding: calc((var(--margo-btn-touch) - var(--margo-btn-h-secondary)) / 2) 12px;
+  font-size: var(--margo-btn-font);
+  font-weight: var(--margo-btn-weight);
+  letter-spacing: 0;
   text-transform: none;
-  text-decoration: none;
-  white-space: nowrap;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
 }
 .margo-profile-action-btn--primary {
+  --margo-btn-visible-h: var(--margo-btn-h-primary);
+  padding: calc((var(--margo-btn-touch) - var(--margo-btn-h-primary)) / 2) 14px;
   background: var(--gold);
-  color: var(--bg);
-  border: none;
+  color: var(--text-on-gold);
+  border: 1px solid transparent;
 }
 .margo-profile-action-btn--secondary {
-  background: var(--surface-2);
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border-hi);
 }
 .margo-profile-action-btn--disabled {
   opacity: 0.55;
@@ -9964,6 +9955,21 @@ button.margo-feed-memory-card__action:active:not(:disabled) {
   transform: scale(0.98);
 }
 
+.margo-catalog-cover-btn {
+  position: absolute;
+  z-index: 3;
+  border-radius: 50% !important;
+  --margo-btn-visible-h: 28px;
+}
+.margo-catalog-cover-btn--menu {
+  top: 2px;
+  right: 2px;
+}
+.margo-catalog-cover-btn.margo-catalog-cover-btn--like {
+  top: 2px;
+  left: 2px;
+}
+
 .margo-cta-button {
   display: inline-flex;
   align-items: center;
@@ -10106,31 +10112,12 @@ button.margo-feed-memory-card__action:active:not(:disabled) {
   white-space: nowrap;
 }
 .margo-feed-people-strip__follow {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   gap: 4px;
-  min-height: 32px;
-  padding: 0 10px;
-  border-radius: 10px;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  border: none;
-  cursor: pointer;
+  --margo-btn-visible-h: var(--margo-btn-h-chip);
+  padding: calc((var(--margo-btn-touch) - var(--margo-btn-h-chip)) / 2) 10px;
   text-decoration: none;
-  box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
-}
-.margo-feed-people-strip__follow--gold {
-  background: var(--gold);
-  color: var(--bg);
-  box-shadow: 0 2px 10px var(--gold-glow);
 }
 .margo-feed-people-strip__follow--following {
-  background: rgba(232, 197, 71, 0.12);
-  color: var(--gold);
-  border: 1px solid var(--gold-border);
   cursor: default;
 }
 

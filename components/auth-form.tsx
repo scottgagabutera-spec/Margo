@@ -247,7 +247,7 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
         type="button"
         onClick={() => { void handleSubmit() }}
         disabled={disabled}
-        className="margo-auth-primary-btn"
+        className="margo-btn margo-btn--primary margo-auth-primary-btn"
         style={{
           ...primaryBtnStyle,
           cursor: disabled ? 'not-allowed' : 'pointer',
@@ -734,7 +734,7 @@ export function AuthForm({
             disabled={primaryDisabled}
             aria-disabled={primaryDisabled}
             aria-busy={busy === 'email'}
-            className="margo-auth-primary-btn"
+            className="margo-btn margo-btn--primary margo-auth-primary-btn"
             style={{
               ...primaryBtnStyle,
               cursor: primaryDisabled ? 'not-allowed' : 'pointer',

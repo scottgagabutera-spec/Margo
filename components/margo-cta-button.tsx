@@ -34,6 +34,8 @@ export function MargoCtaButton({
   linkProps?: Omit<ComponentProps<typeof PendingNavLink>, 'href' | 'children'>
 }) {
   const cls = [
+    'margo-btn',
+    variant === 'outline' ? 'margo-btn--secondary' : 'margo-btn--primary',
     baseClass,
     variant === 'outline' ? `${baseClass}--outline` : `${baseClass}--fill`,
     density === 'compact' ? `${baseClass}--compact` : '',

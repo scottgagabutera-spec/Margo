@@ -65,8 +65,9 @@ function FeedPeopleFollowButton({
     <button
       type="button"
       className={[
+        'margo-btn',
         'margo-feed-people-strip__follow',
-        following ? 'margo-feed-people-strip__follow--following' : 'margo-feed-people-strip__follow--gold',
+        following ? 'margo-btn--secondary margo-feed-people-strip__follow--following' : 'margo-btn--primary margo-feed-people-strip__follow--gold',
       ].join(' ')}
       disabled={busy || following}
       onClick={() => void toggle()}
