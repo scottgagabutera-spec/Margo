@@ -120,7 +120,7 @@ export function ResonanceCard({
           <CardOverflowMenu compact={isDiscover} items={overflowItems} />
         </div>
         <p style={{
-          fontFamily: 'var(--font-lora), serif', fontStyle: 'italic',
+          fontFamily: 'var(--font-lora), serif', fontStyle: 'normal',
           fontSize: isDiscover ? '14px' : '0.88rem',
           color: 'var(--text)', lineHeight: isDiscover ? 1.35 : 1.5, margin: 0,
           display: '-webkit-box', WebkitLineClamp: isDiscover ? 3 : 4, WebkitBoxOrient: 'vertical', overflow: 'hidden',
@@ -144,14 +144,14 @@ export function ResonanceCard({
             <div style={{ minWidth: 0 }}>
               {isDiscover ? (
                 <p style={{
-                  fontFamily: UI_FONT, fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)',
+                  fontFamily: UI_FONT, fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)',
                   margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                 }}>
                   {(post.authorDisplayName || post.username || 'listener')} · {post.knowledge?.song || 'Margo'}
                 </p>
               ) : (
                 <>
-                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {post.knowledge?.song || 'Margo'}
                   </p>
                   <AuthorMeta

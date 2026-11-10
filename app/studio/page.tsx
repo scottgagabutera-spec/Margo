@@ -110,7 +110,7 @@ function SheetIcon({ children }: { children: ReactNode }) {
 
 const promoteLinkStyle: React.CSSProperties = {
   fontFamily: font,
-  fontSize: '0.65rem',
+  fontSize: '0.75rem',
   fontWeight: 600,
   letterSpacing: '0.5px',
   textTransform: 'uppercase',
@@ -449,7 +449,7 @@ export default function StudioPage() {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
         <div style={{ maxWidth: '520px', margin: '0 auto', padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)', textAlign: 'center' }}>
-          <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '16px' }}>
+          <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '16px' }}>
             Studio
           </p>
           <h1 style={{ fontFamily: font, fontSize: 'clamp(1.6rem, 5vw, 2.2rem)', color: 'var(--text)', fontWeight: 700, marginBottom: '16px', lineHeight: 1.3 }}>
@@ -462,7 +462,7 @@ export default function StudioPage() {
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             minHeight: '48px', padding: '14px 24px',
             background: 'var(--gold)', color: 'var(--bg)',
-            fontFamily: font, fontWeight: 700, fontSize: '0.7rem',
+            fontFamily: font, fontWeight: 700, fontSize: '0.75rem',
             letterSpacing: '1.5px', textTransform: 'uppercase',
             borderRadius: '50px', textDecoration: 'none',
           }}>
@@ -481,7 +481,7 @@ export default function StudioPage() {
           <div style={{ marginBottom: '24px' }}>
             <PauseCircleIcon />
           </div>
-          <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '16px' }}>
+          <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--text-muted)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '16px' }}>
             Studio
           </p>
           <h1 style={{ fontFamily: font, fontSize: '1.4rem', color: 'var(--text)', fontWeight: 400, marginBottom: '12px' }}>
@@ -526,7 +526,7 @@ export default function StudioPage() {
         onClick={() => setSelectedIds(new Set(selectableLibraryIds))}
         style={{
           padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--surface-2)',
-          color: 'var(--gold)', fontFamily: font, fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.5px',
+          color: 'var(--gold)', fontFamily: font, fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px',
           textTransform: 'uppercase', cursor: 'pointer',
         }}
       >
@@ -538,7 +538,7 @@ export default function StudioPage() {
         onClick={() => { void handleBulkHide() }}
         style={{
           padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--gold-border)', background: 'transparent',
-          color: 'var(--gold)', fontFamily: font, fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.5px',
+          color: 'var(--gold)', fontFamily: font, fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px',
           textTransform: 'uppercase', cursor: 'pointer',
         }}
       >
@@ -550,7 +550,7 @@ export default function StudioPage() {
         onClick={() => setBulkDeleteOpen(true)}
         style={{
           padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(255,96,96,0.35)', background: 'transparent',
-          color: '#ff8a8a', fontFamily: font, fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.5px',
+          color: '#ff8a8a', fontFamily: font, fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px',
           textTransform: 'uppercase', cursor: 'pointer',
         }}
       >
@@ -562,7 +562,7 @@ export default function StudioPage() {
         onClick={exitSelectMode}
         style={{
           padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'transparent',
-          color: 'var(--text-muted)', fontFamily: font, fontSize: '0.62rem', fontWeight: 600, marginLeft: 'auto',
+          color: 'var(--text-muted)', fontFamily: font, fontSize: '0.75rem', fontWeight: 600, marginLeft: 'auto',
           cursor: 'pointer',
         }}
       >
@@ -577,7 +577,7 @@ export default function StudioPage() {
         {bulkBar}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px', flexWrap: 'wrap' }}>
           <div style={{ flex: 1 }}>
-            <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '4px' }}>
+            <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '4px' }}>
               Margo
             </p>
             <h1 style={{ fontFamily: font, fontSize: '1.5rem', color: 'var(--text)', fontWeight: 400 }}>
@@ -628,7 +628,7 @@ export default function StudioPage() {
                 background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px',
               }}>
                 <p style={{ fontFamily: font, fontSize: '1.5rem', fontWeight: 700, color: 'var(--gold)' }}>{val}</p>
-                <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '2px' }}>
+                <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '2px' }}>
                   {label}
                 </p>
               </div>
@@ -664,7 +664,7 @@ export default function StudioPage() {
               }}
             >
               <PlusIcon />
-              <span style={{ fontFamily: font, fontSize: '0.65rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: 700 }}>
+              <span style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: 700 }}>
                 Upload
               </span>
             </button>
@@ -738,7 +738,7 @@ export default function StudioPage() {
                     {label && (
                       <span style={{
                         position: 'absolute', top: '10px', right: '10px',
-                        fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
+                        fontFamily: font, fontSize: '0.75rem', fontWeight: 700,
                         color: 'var(--text)', background: 'rgba(7,6,10,0.7)',
                         padding: '4px 8px', borderRadius: '50px',
                         textTransform: 'uppercase', letterSpacing: '0.5px',
@@ -755,7 +755,7 @@ export default function StudioPage() {
                       }}>
                         {song.title}
                       </p>
-                      <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                         {stat ? `${stat.plays} plays · ${stat.resonate_count} resonates` : '—'}
                       </p>
                     </div>
@@ -788,7 +788,7 @@ export default function StudioPage() {
 
         {!songsLoading && librarySongs.length === 0 && !showUpload && (
           <p style={{
-            fontFamily: font, fontSize: '0.82rem', fontStyle: 'italic', color: 'var(--text-secondary)',
+            fontFamily: font, fontSize: '0.82rem', fontStyle: 'normal', color: 'var(--text-secondary)',
             textAlign: 'center', marginTop: '16px',
           }}>
             No songs yet — upload your first.
@@ -991,11 +991,11 @@ export default function StudioPage() {
 
       <MargoSheet open={trashOpen} onOpenChange={setTrashOpen} title="Trash" anchor="bottom" zIndex={220} heightMode="fixed" maxHeight="min(70dvh, 520px)">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.45 }}>
+          <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.45 }}>
             Songs stay here for 30 days, then they are removed permanently.
           </p>
           {trashSongs.length === 0 ? (
-            <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>Trash is empty.</p>
+            <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', fontStyle: 'normal' }}>Trash is empty.</p>
           ) : (
             trashSongs.map((song) => (
               <button
@@ -1015,7 +1015,7 @@ export default function StudioPage() {
                 )}
                 <div style={{ minWidth: 0 }}>
                   <p style={{ fontFamily: font, fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>{song.title}</p>
-                  <p style={{ fontFamily: font, fontSize: '0.65rem', color: 'var(--gold)', margin: '4px 0 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Tap to restore</p>
+                  <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--gold)', margin: '4px 0 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Tap to restore</p>
                 </div>
               </button>
             ))

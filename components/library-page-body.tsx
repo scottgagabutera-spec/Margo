@@ -79,7 +79,7 @@ function LibraryLyricLines({
   }
   if (windowLines.length === 0) {
     return (
-      <p style={{ fontFamily: LYRIC_FONT, fontStyle: 'italic', color: 'var(--text-secondary)', margin: 0 }}>
+      <p style={{ fontFamily: LYRIC_FONT, fontStyle: 'normal', color: 'var(--text-secondary)', margin: 0 }}>
         No lyric lines yet for this song.
       </p>
     )
@@ -94,7 +94,7 @@ function LibraryLyricLines({
             key={line.lineIndex}
             style={{
               fontFamily: LYRIC_FONT,
-              fontStyle: 'italic',
+              fontStyle: 'normal',
               fontSize: large ? '1.35rem' : '1.05rem',
               lineHeight: 1.45,
               margin: 0,
@@ -229,8 +229,9 @@ function LibraryShelfControls({
               padding: '8px 14px',
               borderRadius: '50px',
               border: '1px solid var(--border)',
-              background: chip === id ? 'var(--gold)' : 'var(--surface-2)',
-              color: chip === id ? 'var(--bg)' : 'var(--text-secondary)',
+              background: chip === id ? 'var(--surface-3)' : 'var(--surface-2)',
+              color: chip === id ? 'var(--text)' : 'var(--text-secondary)',
+              borderColor: chip === id ? 'var(--border-hi)' : 'var(--border)',
               fontFamily: UI_FONT,
               fontSize: LIST_ROW_TYPE.chip,
               fontWeight: 600,

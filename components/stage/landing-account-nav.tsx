@@ -8,7 +8,7 @@ import { useIdentity } from '@/hooks/useIdentity'
 
 const landingAccountLinkStyle: CSSProperties = {
   fontFamily: UI_FONT,
-  fontSize: '0.72rem',
+  fontSize: '0.75rem',
   fontWeight: 600,
   letterSpacing: '0.5px',
   color: 'var(--text-secondary)',
@@ -51,7 +51,7 @@ export function LandingAccountNav() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 background: 'linear-gradient(135deg, var(--gold), var(--gold-2))',
-                fontSize: '0.62rem',
+                fontSize: '0.75rem',
                 fontWeight: 700,
                 color: 'var(--bg)',
               }}

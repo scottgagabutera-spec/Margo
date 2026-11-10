@@ -60,7 +60,7 @@ export class MargoPaneErrorBoundary extends Component<Props, State> {
             Retry
           </button>
           <p style={{
-            fontSize: '0.65rem',
+            fontSize: '0.75rem',
             color: 'var(--text-muted)',
             margin: '14px 0 0',
             fontFamily: 'ui-monospace, monospace',

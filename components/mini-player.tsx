@@ -388,7 +388,7 @@ export function MiniPlayer() {
             <div onClick={() => setExpanded(true)} style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}>
               {currentLine && (
                 <p className="mp-lyric-pulse" style={{
-                  fontFamily: 'var(--font-lora), serif', fontStyle: 'italic',
+                  fontFamily: 'var(--font-lora), serif', fontStyle: 'normal',
                   fontSize: '0.78rem', color: '#E8C547',
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   margin: 0, lineHeight: 1.3,
@@ -618,7 +618,7 @@ export function MiniPlayer() {
                     pointerEvents: 'none',
                   }} />
                   <p className="mp-lyric-pulse" style={{
-                    fontFamily: 'var(--font-lora), serif', fontStyle: 'italic',
+                    fontFamily: 'var(--font-lora), serif', fontStyle: 'normal',
                     fontSize: '1.15rem', color: '#F4F1ED',
                     lineHeight: 1.6, margin: 0, textAlign: 'center',
                     position: 'relative',

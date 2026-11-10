@@ -63,7 +63,7 @@ export function FoundingListenerSheet({
           id="founding-listener-title"
           style={{
             fontFamily: UI_FONT,
-            fontSize: '0.68rem',
+            fontSize: '0.75rem',
             fontWeight: 700,
             letterSpacing: '0.18em',
             textTransform: 'uppercase',

@@ -6,7 +6,7 @@ export function errorReferenceLine(error: { digest?: string; message?: string } 
   const msg = error.message?.trim()
   if (msg) {
     if (/^Cannot read /i.test(msg) || /^undefined is not/i.test(msg)) return 'runtime-error'
-    return msg.slice(0, 12)
+    return msg.length > 200 ? `${msg.slice(0, 200)}…` : msg
   }
   return null
 }

@@ -39,7 +39,7 @@ const inputStyle: React.CSSProperties = {
 }
 
 const labelStyle: React.CSSProperties = {
-  display: 'block', fontFamily: font, fontSize: '0.6rem',
+  display: 'block', fontFamily: font, fontSize: '0.75rem',
   color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase',
   letterSpacing: '1.5px', marginBottom: '6px',
 }
@@ -47,14 +47,14 @@ const labelStyle: React.CSSProperties = {
 const ghostBtn: React.CSSProperties = {
   padding: '0 16px', height: '44px', background: 'transparent', color: 'rgba(255,255,255,0.6)',
   border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px',
-  fontFamily: font, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase',
+  fontFamily: font, fontSize: '0.75rem', letterSpacing: '1px', textTransform: 'uppercase',
   cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
 }
 
 const goldBtn: React.CSSProperties = {
   padding: '0 16px', height: '44px', background: 'var(--gold)', color: 'var(--bg)',
   border: 'none', borderRadius: '10px', fontFamily: font, fontWeight: 700,
-  fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase',
+  fontSize: '0.75rem', letterSpacing: '1px', textTransform: 'uppercase',
   cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
 }
 
@@ -198,7 +198,7 @@ export function ArtistApplicationForm({
   return (
     <div style={{ width: '100%', maxWidth: '460px', margin: '0 auto' }}>
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-        <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>Artist</p>
+        <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--text-muted)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>Artist</p>
         <h1 style={{ fontFamily: font, fontSize: '1.5rem', color: 'var(--text)', fontWeight: 400, marginBottom: '10px' }}>Apply as an Artist</h1>
         <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>
           Tell us who you are so we can verify you and unlock independent song uploads.
@@ -232,11 +232,11 @@ export function ArtistApplicationForm({
             </button>
           </div>
           {linktreeStatus.message && (
-            <p style={{ fontFamily: font, fontSize: '0.65rem', marginTop: '6px', color: linktreeStatus.kind === 'error' ? '#ff6060' : '#4ade80' }}>
+            <p style={{ fontFamily: font, fontSize: '0.75rem', marginTop: '6px', color: linktreeStatus.kind === 'error' ? '#ff6060' : '#4ade80' }}>
               {linktreeStatus.message}
             </p>
           )}
-          <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', marginTop: '6px' }}>
+          <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginTop: '6px' }}>
             No Linktree? Add your links one at a time below.
           </p>
         </div>
@@ -246,7 +246,7 @@ export function ArtistApplicationForm({
             <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--text)', marginBottom: '4px' }}>
               Made your music with Suno? Get approved instantly.
             </p>
-            <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', marginBottom: '12px', lineHeight: 1.5 }}>
+            <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: '12px', lineHeight: 1.5 }}>
               Add your Suno profile, then prove it's yours by pasting a short code into your bio.
             </p>
             <label style={labelStyle}>Suno Profile</label>
@@ -260,12 +260,12 @@ export function ArtistApplicationForm({
                 </button>
               )}
             </div>
-            <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', marginBottom: sunoCode ? '12px' : 0 }}>
+            <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginBottom: sunoCode ? '12px' : 0 }}>
               Just your handle works. No need to paste the full link.
             </p>
             {sunoCode && !sunoVerified && (
               <div>
-                <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text)', marginBottom: '8px', lineHeight: 1.5 }}>
+                <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--text)', marginBottom: '8px', lineHeight: 1.5 }}>
                   Paste this into your Suno bio, then verify:
                 </p>
                 <div style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', marginBottom: '10px' }}>
@@ -278,19 +278,19 @@ export function ArtistApplicationForm({
               </div>
             )}
             {sunoVerified && (
-              <p style={{ fontFamily: font, fontSize: '0.7rem', color: '#4ade80' }}>Found in your bio. Keep it there until you submit. We check again when you apply.</p>
+              <p style={{ fontFamily: font, fontSize: '0.75rem', color: '#4ade80' }}>Found in your bio. Keep it there until you submit. We check again when you apply.</p>
             )}
             {sunoStatus.kind === 'error' && sunoStatus.message && (
-              <p style={{ fontFamily: font, fontSize: '0.65rem', color: '#ff6060', marginTop: '6px' }}>{sunoStatus.message}</p>
+              <p style={{ fontFamily: font, fontSize: '0.75rem', color: '#ff6060', marginTop: '6px' }}>{sunoStatus.message}</p>
             )}
           </div>
         )}
 
         <div style={{ marginTop: '6px' }}>
-          <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '6px' }}>
+          <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '6px' }}>
             Streaming &amp; social (optional)
           </p>
-          <p style={{ fontFamily: font, fontSize: '0.65rem', color: 'rgba(255,255,255,0.45)', marginBottom: '12px', lineHeight: 1.5 }}>
+          <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', marginBottom: '12px', lineHeight: 1.5 }}>
             Share usernames or profile links. We use these to verify you and to link your Margo artist page when fans favorite you. No automatic claim—our team connects accounts manually.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -345,7 +345,7 @@ export function ArtistApplicationForm({
             borderRadius: '10px',
             fontFamily: font,
             fontWeight: 700,
-            fontSize: '0.6rem',
+            fontSize: '0.75rem',
             letterSpacing: '1px',
             textTransform: 'uppercase',
             cursor: loading || submitted ? 'default' : 'pointer',

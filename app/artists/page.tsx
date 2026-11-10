@@ -55,7 +55,7 @@ function ArtistCatalogTile({ artist, songCount }: { artist: ArtistRow; songCount
         justifyContent: 'center',
         gap: '4px',
         fontFamily: UI_FONT,
-        fontSize: '12px',
+        fontSize: '0.75rem',
         fontWeight: 500,
         color: 'var(--text)',
         whiteSpace: 'nowrap',
@@ -69,7 +69,7 @@ function ArtistCatalogTile({ artist, songCount }: { artist: ArtistRow; songCount
       {songCount > 0 ? (
         <p style={{
           fontFamily: UI_FONT,
-          fontSize: '10px',
+          fontSize: '0.75rem',
           color: 'var(--text-muted)',
           letterSpacing: '0.5px',
           textTransform: 'uppercase',

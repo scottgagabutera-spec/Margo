@@ -113,7 +113,7 @@ export default function LibraryPlaylistPage() {
           <div style={{ textAlign: 'center', padding: '32px 0' }}>
             <h1 style={{
               fontFamily: LYRIC_FONT,
-              fontStyle: 'italic',
+              fontStyle: 'normal',
               fontSize: '1.5rem',
               color: 'var(--text)',
               margin: '0 0 16px',
@@ -131,7 +131,7 @@ export default function LibraryPlaylistPage() {
           <div>
             <p style={{
               fontFamily: LYRIC_FONT,
-              fontStyle: 'italic',
+              fontStyle: 'normal',
               color: 'var(--text-secondary)',
               marginBottom: '16px',
             }}>
@@ -139,7 +139,7 @@ export default function LibraryPlaylistPage() {
             </p>
             <Link href="/library" style={{
               fontFamily: UI_FONT,
-              fontSize: '0.7rem',
+              fontSize: '0.75rem',
               fontWeight: 700,
               letterSpacing: '0.8px',
               textTransform: 'uppercase',
@@ -155,7 +155,7 @@ export default function LibraryPlaylistPage() {
               <div style={{ minWidth: 0 }}>
                 <h1 style={{
                   fontFamily: LYRIC_FONT,
-                  fontStyle: 'italic',
+                  fontStyle: 'normal',
                   fontSize: '1.4rem',
                   color: 'var(--text)',
                   margin: 0,
@@ -165,7 +165,7 @@ export default function LibraryPlaylistPage() {
                 {detail.type === 'lyric' && (
                   <p style={{
                     fontFamily: UI_FONT,
-                    fontSize: '0.62rem',
+                    fontSize: '0.75rem',
                     fontWeight: 700,
                     letterSpacing: '1px',
                     textTransform: 'uppercase',
@@ -188,7 +188,7 @@ export default function LibraryPlaylistPage() {
                   background: 'var(--gold-faint)',
                   color: 'var(--gold)',
                   fontFamily: UI_FONT,
-                  fontSize: '0.62rem',
+                  fontSize: '0.75rem',
                   fontWeight: 700,
                   letterSpacing: '1px',
                   textTransform: 'uppercase',

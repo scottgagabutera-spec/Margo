@@ -104,7 +104,7 @@ export function MargoActionSheet({
             {title && (
               <p style={{
                 fontFamily: font,
-                fontSize: '0.62rem',
+                fontSize: '0.75rem',
                 fontWeight: 700,
                 letterSpacing: '0.14em',
                 textTransform: 'uppercase',

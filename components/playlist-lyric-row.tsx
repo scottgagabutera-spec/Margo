@@ -79,7 +79,7 @@ export function PlaylistLyricRow({
       <div style={{ minWidth: 0, flex: 1 }}>
         <p style={{
           fontFamily: LYRIC_FONT,
-          fontStyle: 'italic',
+          fontStyle: 'normal',
           fontSize: '0.9rem',
           color: 'var(--text)',
           margin: 0,
@@ -93,7 +93,7 @@ export function PlaylistLyricRow({
         </p>
         <p style={{
           fontFamily: UI_FONT,
-          fontSize: '0.62rem',
+          fontSize: '0.75rem',
           fontWeight: 700,
           letterSpacing: '0.6px',
           textTransform: 'uppercase',

@@ -245,7 +245,7 @@ export function NotificationsInbox({
               fontFamily: UI_FONT,
               fontSize: LIST_ROW_TYPE.chip,
               fontWeight: 600,
-              color: unreadCount === 0 ? 'var(--text-disabled)' : 'var(--gold)',
+              color: unreadCount === 0 ? 'var(--text-disabled)' : 'var(--text-secondary)',
               padding: '8px 4px',
             }}
           >
@@ -268,7 +268,7 @@ export function NotificationsInbox({
               fontFamily: UI_FONT,
               fontSize: LIST_ROW_TYPE.chip,
               fontWeight: 600,
-              color: unreadCount === 0 ? 'var(--text-disabled)' : 'var(--gold)',
+              color: unreadCount === 0 ? 'var(--text-disabled)' : 'var(--text-secondary)',
             }}
           >
             Mark all read
@@ -286,8 +286,9 @@ export function NotificationsInbox({
               padding: '8px 14px',
               borderRadius: '50px',
               border: '1px solid var(--border)',
-              background: filter === f.id ? 'var(--gold)' : 'var(--surface-2)',
-              color: filter === f.id ? 'var(--bg)' : 'var(--text-secondary)',
+              background: filter === f.id ? 'var(--surface-3)' : 'var(--surface-2)',
+              color: filter === f.id ? 'var(--text)' : 'var(--text-secondary)',
+              borderColor: filter === f.id ? 'var(--border-hi)' : 'var(--border)',
               fontFamily: UI_FONT,
               fontSize: LIST_ROW_TYPE.chip,
               fontWeight: 600,
@@ -355,7 +356,7 @@ export function NotificationsInbox({
                 padding: '12px',
                 background: 'none',
                 border: 'none',
-                color: 'var(--gold)',
+                color: 'var(--text-secondary)',
                 fontFamily: UI_FONT,
                 fontSize: LIST_ROW_TYPE.chip,
                 fontWeight: 600,

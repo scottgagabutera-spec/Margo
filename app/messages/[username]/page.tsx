@@ -219,7 +219,7 @@ export default function ThreadPage() {
         </div>
       ) : loadError ? (
         <p style={{
-          fontFamily: font, fontStyle: 'italic', fontSize: '0.82rem',
+          fontFamily: font, fontStyle: 'normal', fontSize: '0.82rem',
           color: 'var(--text-secondary)', textAlign: 'center', padding: '48px 16px',
         }}>
           {loadError}

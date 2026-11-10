@@ -86,7 +86,7 @@ export function LyricMomentCard({
         />
       </div>
       <p style={{
-        fontFamily: 'var(--font-lora), serif', fontStyle: 'italic',
+        fontFamily: 'var(--font-lora), serif', fontStyle: 'normal',
         fontSize: isCompactCard ? '14px' : '0.88rem',
         color: 'var(--text)', lineHeight: isDiscover ? 1.35 : 1.5, margin: 0, whiteSpace: 'pre-line',
         display: '-webkit-box',
@@ -111,7 +111,7 @@ export function LyricMomentCard({
             {moment.songTitle}{isPlaying && isCompactCard ? ' · PLAYING' : ''}
           </p>
           {!isCompactCard ? (
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--text-muted)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{moment.artist}</p>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{moment.artist}</p>
           ) : null}
         </div>
         <button type="button" onClick={onPlay} style={{

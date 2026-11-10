@@ -28,7 +28,7 @@ export function EarnedTag({ label }: { label: 'Trending' | 'Top' }) {
   return (
     <span style={{
       position: 'absolute', top: '8px', left: '8px',
-      fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.6rem', fontWeight: 400,
+      fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.75rem', fontWeight: 400,
       letterSpacing: 0, textTransform: 'none', padding: 0,
       background: 'none',
       border: 'none', color: 'var(--text-muted)',
@@ -40,7 +40,7 @@ export function EarnedTag({ label }: { label: 'Trending' | 'Top' }) {
 
 const cardTitleStyle: CSSProperties = {
   fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
-  fontSize: '0.95rem',
+  fontSize: '0.9375rem',
   fontWeight: 600,
   marginBottom: '2px',
   lineHeight: 1.3,
@@ -81,10 +81,10 @@ export function SongCatalogCard({
   const openPreview = () => onSelect?.(song)
 
   const titleStyle: CSSProperties = discoverTile
-    ? { ...cardTitleStyle, fontSize: '12px', fontWeight: 500 }
+    ? { ...cardTitleStyle, fontSize: '0.75rem', fontWeight: 500 }
     : cardTitleStyle
   const artistStyle: CSSProperties = discoverTile
-    ? { ...cardArtistStyle, fontSize: '11px', fontWeight: 400 }
+    ? { ...cardArtistStyle, fontSize: '0.75rem', fontWeight: 400 }
     : cardArtistStyle
 
   const coverInner = (
@@ -110,7 +110,7 @@ export function SongCatalogCard({
       }}>
         {isActive && (
           <div aria-hidden="true" style={{
-            width: '32px', height: '32px', borderRadius: '50%', background: 'var(--gold)',
+            width: '32px', height: '32px', borderRadius: '50%', background: 'var(--surface-2)', border: '1px solid var(--border-hi)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <PlayPauseIcon playing={isPlayingThisSong} buffering={isBuffering} size={14} color="var(--bg)" />

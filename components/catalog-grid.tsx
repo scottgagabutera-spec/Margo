@@ -104,7 +104,7 @@ export function CatalogGrid<T>({
           </div>
         ) : items.length === 0 ? (
           <div style={{ padding: '64px 0', textAlign: 'center' }}>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'normal', color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
               {emptyMessage}
             </p>
           </div>

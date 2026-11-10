@@ -374,7 +374,7 @@ function EditProfilePageInner() {
         }}>
           <p style={{
             fontFamily: lyricFont,
-            fontStyle: 'italic',
+            fontStyle: 'normal',
             fontSize: TYPE.lyric,
             color: 'var(--text-secondary)',
             marginBottom: '16px',

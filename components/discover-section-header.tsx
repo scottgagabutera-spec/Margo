@@ -31,8 +31,8 @@ export function DiscoverSectionHeader({
         data-discover-section-title
         style={{
           fontFamily: UI_FONT,
-          fontSize: '16px',
-          fontWeight: 600,
+          fontSize: '0.8125rem',
+          fontWeight: 500,
           color: 'var(--text)',
           margin: 0,
           letterSpacing: '-0.01em',
@@ -60,11 +60,11 @@ export function DiscoverSectionHeader({
           data-discover-more-link
           style={{
             fontFamily: UI_FONT,
-            fontSize: '10px',
-            fontWeight: 600,
+            fontSize: '0.75rem',
+            fontWeight: 500,
             letterSpacing: '0.1em',
             textTransform: 'uppercase',
-            color: 'var(--gold)',
+            color: 'var(--text-secondary)',
             textDecoration: 'none',
             flexShrink: 0,
             whiteSpace: 'nowrap',
@@ -76,7 +76,7 @@ export function DiscoverSectionHeader({
             boxSizing: 'border-box',
           }}
         >
-          More <ChevronRightIcon size={12} color="var(--gold)" />
+          More <ChevronRightIcon size={12} color="var(--text-secondary)" />
         </Link>
       </div>
     </div>
@@ -98,16 +98,16 @@ export function DiscoverPlayAllButton({
       disabled={disabled}
       style={{
         fontFamily: UI_FONT,
-        fontSize: '9px',
-        fontWeight: 600,
+        fontSize: '0.75rem',
+        fontWeight: 500,
         letterSpacing: '0.08em',
         textTransform: 'uppercase',
         padding: '4px 9px',
         minHeight: '44px',
         borderRadius: '8px',
-        border: '1px solid var(--gold)',
+        border: '1px solid var(--border-hi)',
         background: 'transparent',
-        color: 'var(--gold)',
+        color: 'var(--text-secondary)',
         cursor: disabled ? 'default' : 'pointer',
         opacity: disabled ? 0.45 : 1,
         display: 'inline-flex',
@@ -119,7 +119,7 @@ export function DiscoverPlayAllButton({
         lineHeight: 1.2,
       }}
     >
-      <PlayPauseIcon playing={false} size={8} color="var(--gold)" />
+      <PlayPauseIcon playing={false} size={8} color="var(--text-secondary)" />
       Play all
     </button>
   )

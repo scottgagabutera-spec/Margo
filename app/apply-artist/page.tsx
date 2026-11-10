@@ -67,7 +67,7 @@ export default function ApplyArtistPage() {
               borderRadius: '50px',
               color: 'var(--text-secondary)',
               fontFamily: font,
-              fontSize: '0.6rem',
+              fontSize: '0.75rem',
               letterSpacing: '1px',
               textTransform: 'uppercase',
               textDecoration: 'none',

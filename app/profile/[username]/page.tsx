@@ -86,7 +86,7 @@ const sectionLabelStyle: React.CSSProperties = {
 
 const emptyLyricStyle: React.CSSProperties = {
   fontFamily: lyricFont,
-  fontStyle: 'italic',
+  fontStyle: 'normal',
   fontSize: TYPE.lyric,
   color: 'var(--text-secondary)',
   lineHeight: 1.5,
@@ -837,31 +837,6 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
             ) : null}
             </div>
 
-            {(isOwnProfile || profileMemories.length > 0 || profileMemoriesLoading) ? (
-              <div className="margo-profile-block--memories margo-profile-memories--mobile">
-                <ProfileMemoriesStrip
-                  memories={profileMemories}
-                  isOwnProfile={isOwnProfile}
-                  loading={profileMemoriesLoading}
-                />
-              </div>
-            ) : null}
-
-            {isOwnProfile || favoriteArtists.length > 0 || favoriteSongs.length > 0 ? (
-              <div className="margo-profile-block--favorites margo-profile-block--favorites--reserve">
-                <ProfileFavoriteArtistsRow
-                  favorites={favoriteArtists}
-                  favoriteSongs={favoriteSongs}
-                  songsReady={favoriteSongsReady}
-                  albumsReady={favoriteAlbumsReady}
-                  isOwnProfile={isOwnProfile}
-                  showEmptyOwnerLink
-                  onFavoritesChange={handleFavoritesChange}
-                  onFavoriteSongsChange={handleFavoriteSongsChange}
-                />
-              </div>
-            ) : null}
-
             {profile.isArtist ? (
               <div className="margo-profile-block--songs-preview margo-profile-songs-preview--mobile">
                 <p className="margo-profile-ui-label margo-profile-songs-preview__label">Songs</p>
@@ -901,6 +876,31 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
                     )
                   })}
                 </div>
+              </div>
+            ) : null}
+
+            {(isOwnProfile || profileMemories.length > 0 || profileMemoriesLoading) ? (
+              <div className="margo-profile-block--memories margo-profile-memories--mobile">
+                <ProfileMemoriesStrip
+                  memories={profileMemories}
+                  isOwnProfile={isOwnProfile}
+                  loading={profileMemoriesLoading}
+                />
+              </div>
+            ) : null}
+
+            {isOwnProfile || favoriteArtists.length > 0 || favoriteSongs.length > 0 ? (
+              <div className="margo-profile-block--favorites margo-profile-block--favorites--reserve">
+                <ProfileFavoriteArtistsRow
+                  favorites={favoriteArtists}
+                  favoriteSongs={favoriteSongs}
+                  songsReady={favoriteSongsReady}
+                  albumsReady={favoriteAlbumsReady}
+                  isOwnProfile={isOwnProfile}
+                  showEmptyOwnerLink
+                  onFavoritesChange={handleFavoritesChange}
+                  onFavoriteSongsChange={handleFavoriteSongsChange}
+                />
               </div>
             ) : null}
             </div>
@@ -981,7 +981,7 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
                       href={`/profile/${profile.username}/songs`}
                       style={{
                         fontFamily: font, fontSize: TYPE.label, fontWeight: 700,
-                        letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--gold)',
+                        letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-secondary)',
                         textDecoration: 'none', flexShrink: 0, whiteSpace: 'nowrap',
                       }}
                     >View all</Link>

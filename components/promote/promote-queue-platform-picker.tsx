@@ -170,7 +170,7 @@ export function PromoteQueuePlatformPicker({
                 <span style={{
                   display: 'block',
                   fontFamily: font,
-                  fontSize: '0.62rem',
+                  fontSize: '0.75rem',
                   color: 'var(--text-muted)',
                   lineHeight: 1.3,
                   marginTop: '2px',

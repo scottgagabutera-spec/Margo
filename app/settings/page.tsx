@@ -173,7 +173,7 @@ function TierOneButton({
       style={{
         fontFamily: font,
         fontWeight: 700,
-        fontSize: '0.65rem',
+        fontSize: '0.75rem',
         textTransform: 'uppercase',
         letterSpacing: '1.5px',
         padding: '14px 24px',
@@ -536,8 +536,8 @@ export default function AccountSettingsPage() {
       <h1
         style={{
           fontFamily: font,
-          fontSize: '1.5rem',
-          fontWeight: 600,
+          fontSize: '1.0625rem',
+          fontWeight: 500,
           color: 'var(--text)',
           marginBottom: '32px',
         }}

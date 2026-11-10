@@ -216,7 +216,7 @@ export function SongPreviewSheet({
     color: 'var(--text-secondary)',
     cursor: 'pointer',
     fontFamily: UI_FONT,
-    fontSize: '0.7rem',
+    fontSize: '0.75rem',
     fontWeight: 500,
     transition: 'color 150ms ease',
     flexShrink: 0,
@@ -336,7 +336,7 @@ export function SongPreviewSheet({
                 {song.artist}
               </p>
               <p style={{
-                fontFamily: UI_FONT, fontSize: '0.7rem', fontWeight: 400,
+                fontFamily: UI_FONT, fontSize: '0.75rem', fontWeight: 400,
                 color: 'var(--text-muted)', margin: 0, lineHeight: 1.35,
               }}>
                 {formatNum(song.plays || 0)} plays · {formatNum(song.lyricUses || 0)} lyric uses ·{' '}
@@ -388,7 +388,7 @@ export function SongPreviewSheet({
                   onClick={() => setDescExpanded(true)}
                   style={{
                     marginTop: '4px', padding: 0, border: 'none', background: 'none',
-                    fontFamily: UI_FONT, fontSize: '0.7rem', fontWeight: 500,
+                    fontFamily: UI_FONT, fontSize: '0.75rem', fontWeight: 500,
                     color: 'var(--text-muted)', cursor: 'pointer',
                   }}
                 >
@@ -402,7 +402,7 @@ export function SongPreviewSheet({
           {topSharedLine ? (
             <div style={{ marginTop: description ? '10px' : '12px' }}>
               <p style={{
-                fontFamily: UI_FONT, fontSize: '0.65rem', fontWeight: 400,
+                fontFamily: UI_FONT, fontSize: '0.75rem', fontWeight: 400,
                 color: 'var(--text-muted)', margin: '0 0 4px', lineHeight: 1.3,
               }}>
                 Most shared line
@@ -412,7 +412,7 @@ export function SongPreviewSheet({
                 color: 'var(--text-secondary)', lineHeight: 1.45, margin: 0,
                 overflow: 'hidden', display: '-webkit-box',
                 WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                fontStyle: 'italic',
+                fontStyle: 'normal',
               }}>
                 {topSharedLine}
               </p>
@@ -433,7 +433,7 @@ export function SongPreviewSheet({
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
                   padding: '0 18px', height: ACTION_H,
                   background: 'var(--gold)', color: 'var(--bg)',
-                  borderRadius: '50px', fontFamily: UI_FONT, fontWeight: 600, fontSize: '0.7rem',
+                  borderRadius: '50px', fontFamily: UI_FONT, fontWeight: 600, fontSize: '0.75rem',
                   border: 'none', cursor: 'pointer', transition: 'transform 150ms ease, background 150ms ease',
                   flexShrink: 0,
                 }}
@@ -447,7 +447,7 @@ export function SongPreviewSheet({
                 padding: '0 18px', height: ACTION_H,
                 background: 'rgba(255,255,255,0.04)',
                 border: '1px solid var(--border)', borderRadius: '50px',
-                fontFamily: UI_FONT, fontWeight: 600, fontSize: '0.7rem',
+                fontFamily: UI_FONT, fontWeight: 600, fontSize: '0.75rem',
                 color: 'var(--text-muted)',
               }}>
                 {song.comingSoonLabel || 'Coming Soon'}

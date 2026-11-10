@@ -93,7 +93,7 @@ function ConversationRow({ c, active }: { c: Conversation; active: boolean }) {
             background: 'var(--gold)',
             color: 'var(--bg)',
             fontFamily: UI_FONT,
-            fontSize: '0.65rem',
+            fontSize: '0.75rem',
             fontWeight: 700,
             display: 'inline-flex',
             alignItems: 'center',

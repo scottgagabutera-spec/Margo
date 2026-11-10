@@ -106,7 +106,7 @@ export default function ArtistDiscographyPage() {
   if (notFound) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--text-secondary)' }}>No discography here.</p>
+        <p style={{ fontFamily: lyricFont, fontStyle: 'normal', fontSize: TYPE.lyric, color: 'var(--text-secondary)' }}>No discography here.</p>
       </div>
     )
   }

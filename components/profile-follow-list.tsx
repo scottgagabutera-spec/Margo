@@ -72,19 +72,19 @@ export function ProfileFollowListPage({
         {loading && <NotificationRowSkeletonList count={5} />}
 
         {!loading && result && !result.ok && result.error === 'not_found' && (
-          <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
+          <p style={{ fontFamily: lyricFont, fontStyle: 'normal', fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
             No one here by that name.
           </p>
         )}
 
         {!loading && result && !result.ok && result.error === 'private_profile' && (
-          <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
+          <p style={{ fontFamily: lyricFont, fontStyle: 'normal', fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
             This account is private.
           </p>
         )}
 
         {!loading && result && !result.ok && result.error === 'lists_private' && (
-          <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
+          <p style={{ fontFamily: lyricFont, fontStyle: 'normal', fontSize: TYPE.secondary, color: 'var(--text-secondary)' }}>
             They keep this list private.
           </p>
         )}
@@ -92,7 +92,7 @@ export function ProfileFollowListPage({
         {!loading && result?.ok && result.items.length === 0 && (
           <p style={{
             fontFamily: lyricFont,
-            fontStyle: 'italic',
+            fontStyle: 'normal',
             fontSize: TYPE.secondary,
             color: 'var(--text-secondary)',
           }}>
