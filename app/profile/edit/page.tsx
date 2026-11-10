@@ -27,10 +27,8 @@ import {
   USERNAME_MAX_LENGTH,
   validateUsernameChoice,
 } from '@/lib/username-validator'
-import {
-  ProfileFavoriteArtistsRow,
-  type ProfileFavoriteArtist,
-} from '@/components/profile-favorite-artists-row'
+import type { ProfileFavoriteArtist } from '@/components/profile-favorite-artists-row'
+import { ProfileEditFavoritesSections } from '@/components/profile-edit-favorites-sections'
 import type { ProfileFavoriteSong } from '@/lib/profile/load-favorite-songs'
 
 const font = UI_FONT
@@ -508,20 +506,13 @@ function EditProfilePageInner() {
               />
             </div>
 
-            <ProfileFavoriteArtistsRow
-              favorites={favoriteArtists}
+            <ProfileEditFavoritesSections
+              favoriteArtists={favoriteArtists}
               favoriteSongs={favoriteSongs}
               songsReady={favoriteSongsReady}
-              albumsReady={false}
-              isOwnProfile
-              showEmptyOwnerLink
-              writeThrough={false}
-              onFavoritesChange={setFavoriteArtists}
-              onFavoriteSongsChange={setFavoriteSongs}
+              onArtistsChange={setFavoriteArtists}
+              onSongsChange={setFavoriteSongs}
             />
-            <p style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)', margin: '0 0 16px' }}>
-              Up to 10 favorites per category. Tap Save to apply changes.
-            </p>
 
             {identity.isArtist && ARTIST_LINK_FIELDS.map((field) => (
               <div key={field.key}>
