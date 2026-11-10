@@ -36,6 +36,15 @@
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
   --margo-touch-min: 44px;
+  /* Button system (MARGO_BRAND §4) — visible heights; min touch 44px via padding */
+  --margo-btn-touch: var(--margo-touch-min);
+  --margo-btn-h-primary: 40px;
+  --margo-btn-h-secondary: 32px;
+  --margo-btn-h-chip: 28px;
+  --margo-btn-h-icon: 32px;
+  --margo-btn-h-icon-accent: 36px;
+  --margo-btn-font: var(--margo-type-l);
+  --margo-btn-weight: 500;
   /* Margo 5-step type scale (lib/fonts.ts MARGO_TYPE) — rem only, 12px floor */
   --margo-type-t: 1.0625rem;
   --margo-type-h: 0.9375rem;
@@ -8947,8 +8956,9 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   white-space: nowrap;
 }
 .margo-feed-memory-card__action {
-  width: var(--margo-touch-min, 44px);
-  height: var(--margo-touch-min, 44px);
+  width: var(--margo-btn-touch);
+  height: var(--margo-btn-touch);
+  max-width: var(--margo-btn-touch);
   border: none;
   border-radius: 14px;
   background: var(--gold);
@@ -9645,17 +9655,6 @@ button.margo-feed-memory-card__action:active:not(:disabled) {
 .margo-feed-memories-row__head .margo-section-header__title {
   text-transform: none;
 }
-.margo-feed-memories-row__see-all {
-  width: var(--margo-touch-min, 44px);
-  height: var(--margo-touch-min, 44px);
-  border: 1px solid var(--gold-border);
-  border-radius: 12px;
-  background: transparent;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-}
 .margo-feed-memories-row__scroller {
   display: flex;
   gap: 10px;
@@ -9885,19 +9884,102 @@ button.margo-feed-memory-card__action:active:not(:disabled) {
   cursor: pointer;
 }
 
+/* ── Shared button classes (margo-btn) ── */
+.margo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: var(--margo-btn-touch);
+  min-height: var(--margo-btn-touch);
+  padding: calc((var(--margo-btn-touch) - var(--margo-btn-visible-h, var(--margo-btn-h-secondary))) / 2) 14px;
+  border-radius: 10px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--margo-btn-font);
+  font-weight: var(--margo-btn-weight);
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.2;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+.margo-btn--primary {
+  --margo-btn-visible-h: var(--margo-btn-h-primary);
+  background: var(--gold);
+  color: var(--text-on-gold);
+  border-color: transparent;
+  box-shadow: 0 4px 16px var(--gold-glow);
+}
+.margo-btn--secondary {
+  --margo-btn-visible-h: var(--margo-btn-h-secondary);
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border-hi);
+}
+.margo-btn--chip {
+  --margo-btn-visible-h: var(--margo-btn-h-chip);
+  min-width: 0;
+  padding-left: 12px;
+  padding-right: 12px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  border-color: var(--border);
+}
+.margo-btn--chip[aria-pressed='true'],
+.margo-btn--chip--active {
+  background: var(--surface-3);
+  color: var(--text);
+  border-color: var(--border-hi);
+}
+.margo-btn--icon {
+  --margo-btn-visible-h: var(--margo-btn-h-icon);
+  width: var(--margo-btn-touch);
+  max-width: var(--margo-btn-touch);
+  padding: calc((var(--margo-btn-touch) - var(--margo-btn-h-icon)) / 2);
+  border-radius: 12px;
+  background: var(--surface-2);
+  border-color: var(--border-hi);
+  color: var(--text-secondary);
+}
+.margo-btn--icon-accent {
+  --margo-btn-visible-h: var(--margo-btn-h-icon-accent);
+  width: var(--margo-btn-touch);
+  max-width: var(--margo-btn-touch);
+  padding: calc((var(--margo-btn-touch) - var(--margo-btn-h-icon-accent)) / 2);
+  border-radius: 14px;
+  background: var(--gold);
+  border-color: transparent;
+  color: var(--text-on-gold);
+}
+.margo-btn:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+.margo-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
 .margo-cta-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 44px;
-  padding: 0 14px;
-  border-radius: 12px;
+  min-width: var(--margo-btn-touch);
+  min-height: var(--margo-btn-touch);
+  padding: calc((var(--margo-btn-touch) - var(--margo-btn-visible-h, var(--margo-btn-h-primary))) / 2) 14px;
+  border-radius: 10px;
   width: fit-content;
   max-width: 100%;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: var(--margo-btn-font);
+  font-weight: var(--margo-btn-weight);
+  letter-spacing: 0;
+  text-transform: none;
   text-decoration: none;
   border: 1px solid transparent;
   cursor: pointer;
@@ -9906,15 +9988,17 @@ button.margo-feed-memory-card__action:active:not(:disabled) {
   -webkit-tap-highlight-color: transparent;
 }
 .margo-cta-button--fill {
+  --margo-btn-visible-h: var(--margo-btn-h-primary);
   background: var(--gold);
-  color: var(--bg);
+  color: var(--text-on-gold);
   box-shadow: 0 4px 20px var(--gold-glow), 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 .margo-cta-button--outline {
-  background: rgba(232, 197, 71, 0.08);
-  color: var(--gold);
-  border-color: var(--gold-border);
-  box-shadow: 0 0 16px rgba(232, 197, 71, 0.12);
+  --margo-btn-visible-h: var(--margo-btn-h-secondary);
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border-hi);
+  box-shadow: none;
 }
 .margo-cta-button:active {
   transform: scale(0.98);
