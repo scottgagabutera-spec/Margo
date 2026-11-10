@@ -58,7 +58,7 @@ const S: Record<string, any> = {
   btn: {
     padding: '10px 20px', background: 'var(--gold)', color: 'var(--bg)',
     border: 'none', borderRadius: '10px', fontFamily: 'var(--font-lora), serif',
-    fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px',
+    fontWeight: 700, fontSize: '0.75rem', letterSpacing: '1px',
     textTransform: 'uppercase', cursor: 'pointer',
   },
   ghostBtn: {
@@ -205,7 +205,7 @@ function ApplicationsSection() {
       {loading ? (
         <p style={{ fontFamily: 'var(--font-lora), serif', color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: '32px' }}>Loading…</p>
       ) : filtered.length === 0 ? (
-        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.85rem', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic', textAlign: 'center', padding: '32px' }}>
+        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.85rem', color: 'rgba(255,255,255,0.25)', fontStyle: 'normal', textAlign: 'center', padding: '32px' }}>
           No {filter !== 'all' ? filter : ''} applications.
         </p>
       ) : filtered.map(app => {
@@ -250,11 +250,11 @@ function ApplicationsSection() {
                   <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', color: 'var(--text)', marginBottom: '4px' }}>
                     {app.display_artist_name}
                   </p>
-                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '6px' }}>
+                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: '6px' }}>
                     @{app.username || 'unknown'} · submitted {new Date(app.submitted_at).toLocaleDateString()}
                   </p>
                   <p style={{
-                    fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
+                    fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem',
                     color: app.status === 'pending' ? '#ffc847' : app.status === 'approved' ? '#4ade80' : '#ff6060',
                     textTransform: 'uppercase', letterSpacing: '1px',
                   }}>
@@ -262,8 +262,8 @@ function ApplicationsSection() {
                   </p>
                   {!isExpanded && noteSnippet && (
                     <p style={{
-                      fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)',
-                      fontStyle: 'italic', marginTop: '8px',
+                      fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)',
+                      fontStyle: 'normal', marginTop: '8px',
                     }}>
                       &ldquo;{noteSnippet}&rdquo;
                     </p>
@@ -280,24 +280,24 @@ function ApplicationsSection() {
                     href={`/profile/${app.username}`}
                     target="_blank"
                     rel="noreferrer"
-                    style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'var(--gold)', textDecoration: 'none' }}
+                    style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'var(--gold)', textDecoration: 'none' }}
                   >
                     Open Margo profile
                   </a>
                 ) : null}
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.65rem', color: 'rgba(255,255,255,0.45)', margin: '10px 0' }}>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', margin: '10px 0' }}>
                   Account created {app.profile_created_at ? new Date(app.profile_created_at).toLocaleDateString() : '—'}
                   {' · '}{app.follower_count} followers
                   {' · '}{app.applicant_type || 'independent'}
                 </p>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.65rem', color: 'rgba(255,255,255,0.45)', marginBottom: '10px' }}>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', marginBottom: '10px' }}>
                   Verification: {app.verification_method || 'manual'}
                   {app.verification_code ? ` · code ${app.verification_code}` : ''}
                   {app.verified_at ? ` · verified ${new Date(app.verified_at).toLocaleString()}` : ''}
                 </p>
                 <span style={{
                   display: 'inline-block', padding: '4px 10px', borderRadius: '999px', marginBottom: '12px',
-                  fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', letterSpacing: '0.5px',
+                  fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', letterSpacing: '0.5px',
                   border: `1px solid ${linkBadgeColor}`, color: linkBadgeColor,
                 }}>
                   {sunoOk ? 'Suno verified' : `${app.valid_link_count} valid https links`}
@@ -305,23 +305,23 @@ function ApplicationsSection() {
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
                   {(app.link_items?.length ? app.link_items : []).map((item) => (
                     <a key={item.url} href={item.url} target="_blank" rel="noreferrer"
-                      style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--gold)', textDecoration: 'none' }}>
+                      style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'var(--gold)', textDecoration: 'none' }}>
                       {item.label}
                     </a>
                   ))}
                   {!app.link_items?.length && (
-                    <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>
+                    <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'rgba(255,255,255,0.25)', fontStyle: 'normal' }}>
                       No https links
                     </span>
                   )}
                 </div>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', marginBottom: '8px' }}>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', marginBottom: '8px' }}>
                   Rights warranty: {app.rights_agreed ? 'yes' : 'no'}
                 </p>
                 {app.note && (
                   <p style={{
                     fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)',
-                    fontStyle: 'italic', marginBottom: '12px',
+                    fontStyle: 'normal', marginBottom: '12px',
                   }}>
                     &ldquo;{app.note}&rdquo;
                   </p>
@@ -332,7 +332,7 @@ function ApplicationsSection() {
                       Earlier applications
                     </p>
                     {prior.map((p) => (
-                      <p key={p.id} style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.65rem', color: 'rgba(255,255,255,0.45)', margin: '2px 0' }}>
+                      <p key={p.id} style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', margin: '2px 0' }}>
                         {p.status} · {new Date(p.submitted_at).toLocaleDateString()}
                       </p>
                     ))}
@@ -520,7 +520,7 @@ function ModerationSection() {
       )}
 
       {filtered.length === 0 ? (
-        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.85rem', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic', textAlign: 'center', padding: '32px' }}>
+        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.85rem', color: 'rgba(255,255,255,0.25)', fontStyle: 'normal', textAlign: 'center', padding: '32px' }}>
           No {filter !== 'all' ? filter : ''} artists.
         </p>
       ) : filtered.map(artist => {
@@ -552,7 +552,7 @@ function ModerationSection() {
                   <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem' }}>@{artist.username}</span>
                 </p>
                 <p style={{
-                  fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
+                  fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem',
                   color: STATUS_COLOR[artist.artist_status], textTransform: 'uppercase', letterSpacing: '1px',
                 }}>
                   {artist.artist_status}
@@ -644,7 +644,7 @@ export function ArtistApplicationsTab() {
         {(['applications', 'moderation'] as const).map(s => (
           <button key={s} type="button" onClick={() => setSection(s)} style={{
             padding: '8px 20px', background: 'none', border: 'none', cursor: 'pointer',
-            fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700,
+            fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', fontWeight: 700,
             letterSpacing: '2px', textTransform: 'uppercase',
             color: section === s ? 'var(--gold)' : 'rgba(255,255,255,0.35)',
             borderBottom: section === s ? '2px solid var(--gold)' : '2px solid transparent',

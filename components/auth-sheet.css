@@ -97,7 +97,7 @@
 .margo-auth-field-label {
   display: block;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 11px;
+  font-size: var(--margo-type-l);
   font-weight: 500;
   color: var(--text-muted);
   text-transform: uppercase;

@@ -71,7 +71,7 @@ export function ProfileArtistLinks({
 
     const textLink: CSSProperties = {
       fontFamily: font,
-      fontSize: '0.7rem',
+      fontSize: '0.75rem',
       fontWeight: 400,
       color: 'var(--text-secondary)',
       textDecoration: 'none',
@@ -80,7 +80,7 @@ export function ProfileArtistLinks({
 
     const groupLabel: CSSProperties = {
       fontFamily: font,
-      fontSize: '0.65rem',
+      fontSize: '0.75rem',
       fontWeight: 400,
       color: 'var(--text-muted)',
       marginRight: '8px',
@@ -139,7 +139,7 @@ export function ProfileArtistLinks({
           >
             <MargoSymbol size={16} variant="gold" />
             <span style={{
-              fontFamily: font, fontSize: '0.72rem', fontWeight: 500,
+              fontFamily: font, fontSize: '0.75rem', fontWeight: 500,
               color: 'var(--text-secondary)',
             }}>
               Profile on Margo
@@ -229,7 +229,7 @@ export function ProfileArtistLinks({
     <div style={{ marginBottom: resolvedVariant === 'compact' ? 0 : '24px' }}>
       {resolvedVariant === 'default' ? (
         <p style={{
-          fontFamily: font, fontSize: '0.7rem', fontWeight: 500, color: 'var(--gold)',
+          fontFamily: font, fontSize: '0.75rem', fontWeight: 500, color: 'var(--gold)',
           textTransform: 'none', letterSpacing: '-0.01em', marginBottom: '8px',
         }}>Listen &amp; follow</p>
       ) : null}

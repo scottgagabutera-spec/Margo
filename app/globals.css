@@ -31,13 +31,19 @@
   --success-faint: color-mix(in oklch, var(--success) 12%, transparent);
   --destructive: oklch(0.62 0.22 25);
   --destructive-faint: color-mix(in oklch, var(--destructive) 14%, transparent);
-  --resonate: #E8C547;
+  --resonate: var(--gold);
   --resonate-faint: rgba(232,197,71,0.08);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
   --margo-touch-min: 44px;
+  /* Margo 5-step type scale (lib/fonts.ts MARGO_TYPE) — rem only, 12px floor */
+  --margo-type-t: 1.0625rem;
+  --margo-type-h: 0.9375rem;
+  --margo-type-b: 0.875rem;
+  --margo-type-m: 0.8125rem;
+  --margo-type-l: 0.75rem;
   /* Mobile primary tab labels — floor ~11px (Brand §14 readability) */
-  --margo-tab-label-size: 0.6875rem;
+  --margo-tab-label-size: var(--margo-type-l);
   --margo-scrim: rgba(7, 6, 10, 0.97);
   --margo-bar: rgba(10, 9, 13, 0.98);
   --margo-safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -63,24 +69,24 @@
   --stage-moment-to-actions: 22px;
   --margo-feed-max-width: 720px;
   /* Feed post card type scale (lib/fonts.ts FEED_TYPE_SCALE) */
-  --feed-type-lyric: 1.0625rem;
+  --feed-type-lyric: var(--margo-type-h);
   --feed-type-lyric-lh: 1.55;
-  --feed-type-display-name: 0.9375rem;
-  --feed-type-handle: 0.8125rem;
-  --feed-type-date: 0.8125rem;
-  --feed-type-song-title: 0.8125rem;
-  --feed-type-artist: 0.75rem;
-  --feed-type-control-label: 0.8125rem;
-  --feed-type-feed-action-label: 0.75rem;
-  --feed-type-action-count: 0.8125rem;
-  --feed-type-mood-chip: 0.75rem;
-  --feed-type-section-label: 0.75rem;
-  --feed-type-ai-label: 0.75rem;
-  --feed-type-suggestion-lyric: 0.875rem;
+  --feed-type-display-name: var(--margo-type-b);
+  --feed-type-handle: var(--margo-type-m);
+  --feed-type-date: var(--margo-type-m);
+  --feed-type-song-title: var(--margo-type-h);
+  --feed-type-artist: var(--margo-type-m);
+  --feed-type-control-label: var(--margo-type-m);
+  --feed-type-feed-action-label: var(--margo-type-l);
+  --feed-type-action-count: var(--margo-type-m);
+  --feed-type-mood-chip: var(--margo-type-l);
+  --feed-type-section-label: var(--margo-type-l);
+  --feed-type-ai-label: var(--margo-type-l);
+  --feed-type-suggestion-lyric: var(--margo-type-h);
   --margo-post-card-pad: 16px;
   --margo-post-card-gap: 12px;
   --margo-post-card-lyric-margin: 24px;
-  --feed-type-suggestion-lyric: 0.9375rem;
+  --feed-type-suggestion-lyric: var(--margo-type-h);
   --feed-type-lyric-hero: 1.5rem;
   --margo-feed-vibe-bar-h: 40px;
   /* MargoChromeInsetsPublisher refines these; static fallbacks match pre-measure layout. */
@@ -675,8 +681,8 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
 
 .margo-stage-hero__tagline {
   font-family: var(--font-lora), serif;
-  font-size: 13px;
-  font-style: italic;
+  font-size: var(--margo-type-m);
+  font-style: normal;
   line-height: 1.45;
   margin: 0 0 22px;
   color: #B0B0BE;
@@ -708,7 +714,7 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
     font-size: 28px !important;
   }
   .margo-stage-hero__tagline {
-    font-size: 14px;
+    font-size: var(--margo-type-b);
   }
 }
 
@@ -758,7 +764,7 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
 
 .margo-moment-studio__lyric-box textarea {
   font-family: var(--font-lora), serif;
-  font-style: italic;
+  font-style: normal;
   font-weight: 400;
   font-size: 15.2px;
   line-height: 1.5;
@@ -769,7 +775,7 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
   right: 16px;
   bottom: 10px;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 10.4px;
+  font-size: var(--margo-type-l);
   color: var(--text-muted);
 }
 
@@ -845,7 +851,7 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
   background: var(--surface-2);
   color: var(--text-secondary);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 11.5px;
+  font-size: var(--margo-type-l);
   font-weight: 500;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -881,7 +887,7 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
   background: var(--surface-2);
   color: var(--text-secondary);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 11.5px;
+  font-size: var(--margo-type-l);
   font-weight: 500;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -900,7 +906,7 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
 }
 
 .margo-stage-song-chip .margo-stage-song-chip__title {
-  font-size: 13px;
+  font-size: var(--margo-type-m);
   font-weight: 600;
 }
 
@@ -1034,8 +1040,8 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
   box-sizing: border-box;
   color: var(--text);
   font-family: var(--font-lora), serif;
-  font-style: italic;
-  font-size: 15px;
+  font-style: normal;
+  font-size: var(--margo-type-h);
   line-height: 1.4;
   overflow: hidden;
 }
@@ -1070,7 +1076,7 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
   position: static;
   margin: 6px 0 0;
   text-align: right;
-  font-size: 11px;
+  font-size: var(--margo-type-l);
   color: var(--text-muted);
   white-space: nowrap;
   width: 100%;
@@ -1117,7 +1123,7 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
 
 .margo-stage-song-chip--calm .margo-stage-song-chip__song {
   display: block;
-  font-size: 13px;
+  font-size: var(--margo-type-m);
   font-weight: 500;
   color: var(--text);
   line-height: 1.2;
@@ -1129,7 +1135,7 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
 .margo-stage-song-chip--calm .margo-stage-song-chip__artist-line {
   display: block;
   margin-top: 1px;
-  font-size: 12px;
+  font-size: var(--margo-type-l);
   font-weight: 400;
   color: var(--text-muted);
   line-height: 1.2;
@@ -1234,7 +1240,7 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
   border-radius: 50px;
   border: 1px solid var(--gold-border);
   color: var(--gold);
-  font-size: 11px;
+  font-size: var(--margo-type-l);
   font-weight: 600;
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -1253,7 +1259,7 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
   border: 1px solid var(--gold-border);
   background: rgba(7, 6, 10, 0.55);
   color: var(--gold);
-  font-size: 11px;
+  font-size: var(--margo-type-l);
   font-weight: 600;
   line-height: 1.2;
   letter-spacing: 0.02em;
@@ -1309,7 +1315,7 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
 }
 
 .margo-landing-tool__label {
-  font-size: 11px;
+  font-size: var(--margo-type-l);
   color: var(--text-muted);
   line-height: 1.1;
   text-align: center;
@@ -1451,12 +1457,12 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
 }
 
 .margo-landing-vibe-popover__title {
-  font-size: 13px;
+  font-size: var(--margo-type-m);
   color: var(--text);
 }
 
 .margo-landing-vibe-popover__badge {
-  font-size: 11px;
+  font-size: var(--margo-type-l);
   padding: 2px 8px;
   border-radius: 8px;
   border: 1px solid var(--gold-border);
@@ -1476,7 +1482,7 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
   border: 1px solid var(--border-hi);
   background: var(--surface-2);
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--margo-type-l);
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
@@ -1505,7 +1511,7 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
 }
 
 .margo-landing-popover-colors__name {
-  font-size: 11px;
+  font-size: var(--margo-type-l);
   color: var(--text-muted);
 }
 
@@ -1530,7 +1536,7 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
   border-radius: 10px;
   background: var(--surface-2);
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--margo-type-m);
   padding: 8px 6px;
   cursor: pointer;
   text-align: left;
@@ -1549,17 +1555,17 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
 }
 
 .margo-landing-download-pick__title {
-  font-size: 13px;
+  font-size: var(--margo-type-m);
   color: var(--text);
 }
 
 .margo-landing-download-pick__sub {
-  font-size: 11px;
+  font-size: var(--margo-type-l);
   color: var(--text-muted);
 }
 
 .margo-landing-download-pick__progress {
-  font-size: 10px;
+  font-size: var(--margo-type-l);
   color: var(--gold);
   max-width: 72px;
   text-align: right;
@@ -1607,7 +1613,7 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
   border-radius: 10px;
   background: var(--surface-2);
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--margo-type-m);
   padding: 8px 10px;
   cursor: pointer;
   text-align: left;
@@ -1657,12 +1663,12 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
 }
 
 .margo-landing-format-pick__title {
-  font-size: 12px;
+  font-size: var(--margo-type-l);
   color: var(--text);
 }
 
 .margo-landing-format-pick__ratio {
-  font-size: 11px;
+  font-size: var(--margo-type-l);
   color: var(--text-muted);
 }
 
@@ -1680,7 +1686,7 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
   border: none;
   background: none;
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--margo-type-m);
   padding: 6px 4px;
   cursor: pointer;
   text-align: left;
@@ -1711,7 +1717,7 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
   border: 1px solid var(--gold-border);
   background: var(--surface);
   color: var(--text);
-  font-size: 14px;
+  font-size: var(--margo-type-b);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
   pointer-events: none;
 }
@@ -1759,7 +1765,7 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
 .margo-landing-line-picker__title {
   margin: 10px 0 4px;
   font-family: var(--font-lora), serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 18px;
   font-weight: 400;
   line-height: 1.15;
@@ -1768,7 +1774,7 @@ html[data-margo-stage-client-ready] .margo-stage-hero--ssr {
 
 .margo-landing-line-picker__hint {
   margin: 0 0 12px;
-  font-size: 11px;
+  font-size: var(--margo-type-l);
   color: var(--text-muted);
   flex-shrink: 0;
 }
@@ -1886,7 +1892,7 @@ html[data-margo-landing-song-flow] .margo-landing-hero-anchor {
 /* Feed lyric — one size on feed (export/Discover may use --feed-type-lyric-hero). */
 .margo-feed-lyric {
   font-family: var(--font-lora), serif;
-  font-style: italic;
+  font-style: normal;
   font-weight: 400;
   letter-spacing: normal;
   text-transform: none;
@@ -1899,7 +1905,7 @@ html[data-margo-landing-song-flow] .margo-landing-hero-anchor {
 /* Feed Shorts lyric — same tokens as feed post (.margo-feed-lyric), fixed size (no cqw/layout scaling). */
 .margo-feed-shorts-slide__frame .margo-shorts-canvas .margo-feed-lyric {
   font-family: var(--font-lora), serif;
-  font-style: italic;
+  font-style: normal;
   font-weight: 400;
   letter-spacing: normal;
   line-height: var(--feed-type-lyric-lh);
@@ -1915,7 +1921,7 @@ html[data-margo-landing-song-flow] .margo-landing-hero-anchor {
 }
 .margo-feed-lyric--suggestion {
   font-family: var(--font-lora), serif;
-  font-style: italic;
+  font-style: normal;
   font-size: var(--feed-type-suggestion-lyric);
   line-height: 1.45;
   color: var(--text-secondary);
@@ -2701,7 +2707,7 @@ html[data-margo-landing-song-flow] .margo-landing-hero-anchor {
   background: #e24d4d;
   color: #fff;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 10px;
+  font-size: var(--margo-type-l);
   font-weight: 700;
   line-height: 16px;
   text-align: center;
@@ -2734,7 +2740,7 @@ html[data-margo-landing-song-flow] .margo-landing-hero-anchor {
 }
 .margo-profile-round-action__label {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 10px;
+  font-size: var(--margo-type-l);
   font-weight: 500;
   color: var(--text-secondary);
   line-height: 1.1;
@@ -2848,7 +2854,7 @@ html[data-margo-landing-song-flow] .margo-landing-hero-anchor {
   color: var(--text-secondary);
   text-decoration: none;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 14px;
+  font-size: var(--margo-type-b);
   cursor: pointer;
   box-sizing: border-box;
 }
@@ -3017,7 +3023,7 @@ html[data-margo-landing-song-flow] .margo-landing-hero-anchor {
 }
 .margo-profile-signature-pill__lyric {
   font-family: var(--font-lora), Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 0.8125rem;
   line-height: 1.32;
   color: rgba(232, 236, 244, 0.96);
@@ -3083,7 +3089,7 @@ html[data-margo-landing-song-flow] .margo-landing-hero-anchor {
 }
 .margo-profile-signature-sheet__lyric {
   font-family: var(--font-lora), Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 1.05rem;
   color: var(--text);
   line-height: 1.55;
@@ -3262,7 +3268,7 @@ html[data-margo-landing-song-flow] .margo-landing-hero-anchor {
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: var(--margo-type-b);
   line-height: 1;
   cursor: pointer;
   z-index: 1;
@@ -3695,7 +3701,7 @@ html[data-margo-landing-song-flow] .margo-landing-hero-anchor {
 }
 @supports (-webkit-touch-callout: none) {
   .margo-post-report-menu__sheet-note {
-    font-size: 16px;
+    font-size: var(--margo-type-m);
   }
 }
 .margo-post-report-menu__sheet-head {
@@ -4287,7 +4293,7 @@ html[data-margo-hub-sheet-flush-top] .margo-hub-sheet {
 }
 .margo-hub-tile__label {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 12px;
+  font-size: var(--margo-type-l);
   font-weight: 600;
   color: var(--text-secondary);
   line-height: 1.2;
@@ -4307,7 +4313,7 @@ html[data-margo-hub-sheet-flush-top] .margo-hub-sheet {
   border-radius: 12px;
 }
 .margo-hub-panel .margo-hub-tile__label {
-  font-size: 11px;
+  font-size: var(--margo-type-l);
   max-width: 100%;
 }
 .margo-hub-panel .margo-hub-panel-head__title {
@@ -4496,7 +4502,7 @@ html[data-margo-hub-sheet-flush-top] .margo-hub-sheet {
   width: 100%;
   margin: 0;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 13px;
+  font-size: var(--margo-type-m);
   font-weight: 600;
   line-height: 1.25;
   color: var(--text);
@@ -4508,7 +4514,7 @@ html[data-margo-hub-sheet-flush-top] .margo-hub-sheet {
   width: 100%;
   margin: 0;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 12px;
+  font-size: var(--margo-type-l);
   line-height: 1.25;
   color: var(--text-muted);
   white-space: nowrap;
@@ -4555,7 +4561,7 @@ html[data-margo-hub-sheet-flush-top] .margo-hub-sheet {
 .margo-inline-delete-panel__title {
   margin: 0 0 4px;
   font-family: var(--font-lora), serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 0.9375rem;
   line-height: 1.25;
   color: var(--text);
@@ -5089,7 +5095,7 @@ html[data-margo-hub-sheet-flush-top] .margo-hub-sheet {
 .margo-search--lb-panel {
   height: 36px;
   min-height: 36px;
-  font-size: 14px;
+  font-size: var(--margo-type-b);
   padding: 0 32px 0 30px;
   border: 1px solid var(--border-hi);
   border-radius: 999px;
@@ -5111,7 +5117,7 @@ html[data-margo-hub-sheet-flush-top] .margo-hub-sheet {
 @supports (-webkit-touch-callout: none) {
   .margo-search--lb-panel,
   .margo-post-card__lb-compose-input--panel {
-    font-size: 16px;
+    font-size: var(--margo-type-m);
   }
 }
 .margo-lb-focus__scroll {
@@ -5258,7 +5264,7 @@ html[data-margo-hub-sheet-flush-top] .margo-hub-sheet {
   box-sizing: border-box;
 }
 .margo-search-wrap--lb.margo-search-wrap--catalog-hints .margo-search-hint {
-  font-size: 14px;
+  font-size: var(--margo-type-b);
   padding: 0 32px 0 30px;
 }
 .margo-search-hint__done {
@@ -5380,7 +5386,7 @@ html.margo-keyboard-open .margo-mobile-tabbar {
 .margo-post-card__lb-row-lyric {
   margin: 0 0 4px;
   font-family: var(--font-lora), serif;
-  font-style: italic;
+  font-style: normal;
   font-size: var(--feed-type-suggestion-lyric);
   line-height: 1.45;
   color: var(--text-secondary);
@@ -5639,7 +5645,7 @@ html.margo-keyboard-open .margo-mobile-tabbar {
   min-height: 52px;
   max-height: 120px;
   padding: 8px 10px;
-  font-size: 14px;
+  font-size: var(--margo-type-b);
   line-height: 1.35;
   border-radius: 10px;
   resize: none;
@@ -5812,14 +5818,14 @@ html.margo-keyboard-open .margo-mobile-tabbar {
   background: var(--surface);
   color: var(--text);
   font-family: var(--font-lora), serif;
-  font-style: italic;
+  font-style: normal;
   font-size: clamp(1.05rem, 2.4vw, 1.35rem);
   line-height: 1.45;
   outline: none;
 }
 .margo-post-card__lb-compose-input::placeholder {
   color: var(--text-muted);
-  font-style: italic;
+  font-style: normal;
 }
 .margo-feed-action--lb-session {
   cursor: default;
@@ -6650,7 +6656,7 @@ html, body {
 }
 .margo-feed-shorts-empty__body {
   font-family: var(--font-lora), serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 0.9375rem;
   color: var(--text-secondary);
   margin: 0;
@@ -7263,7 +7269,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 .margo-post-thread-root-compact__lyric {
   margin: 0;
   font-family: var(--font-lora), serif;
-  font-style: italic;
+  font-style: normal;
   font-size: var(--feed-type-control-label);
   color: var(--text);
   line-height: 1.4;
@@ -7478,7 +7484,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   border: 1px dashed color-mix(in srgb, var(--border) 80%, var(--post-vibe-border));
   background: var(--surface);
   font-family: var(--font-lora), serif;
-  font-style: italic;
+  font-style: normal;
   font-size: var(--feed-type-suggestion-lyric);
   line-height: 1.5;
   white-space: pre-line;
@@ -7657,7 +7663,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 .margo-post-thread-ancestor-lyric {
   display: block;
   font-family: var(--font-lora), serif;
-  font-style: italic;
+  font-style: normal;
   font-size: var(--feed-type-artist);
   color: var(--text-secondary);
   overflow: hidden;
@@ -7768,7 +7774,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   background: var(--gold-faint);
   color: var(--gold);
   font-family: var(--font-lora), serif;
-  font-style: italic;
+  font-style: normal;
   font-size: var(--feed-type-lyric);
   line-height: var(--feed-type-lyric-lh);
   outline: none;
@@ -8058,7 +8064,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 }
 .margo-profile-memories-strip__label,
 .margo-profile-favorite-artists__label {
-  color: var(--gold);
+  color: var(--text-secondary);
   font-size: 0.8125rem;
   font-weight: 500;
   text-align: left;
@@ -8081,7 +8087,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   -webkit-tap-highlight-color: transparent;
 }
 .margo-profile-content-tab--active {
-  color: var(--gold);
+  color: var(--text);
   border-bottom-color: var(--gold);
 }
 .margo-profile-tabs-sticky {
@@ -8181,7 +8187,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   top: 4px;
   right: 4px;
   z-index: 1;
-  font-size: 8px;
+  font-size: var(--margo-type-l);
   line-height: 1;
   padding: 2px 4px;
   border-radius: 4px;
@@ -8268,7 +8274,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
 }
 .margo-profile-memory-tile__add-label {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 10px;
+  font-size: var(--margo-type-l);
   font-weight: 500;
   color: var(--gold);
   text-align: center;
@@ -9033,7 +9039,7 @@ button.margo-feed-memory-card__action:active:not(:disabled) {
   margin: 0;
   font-size: 0.82rem;
   color: var(--text-secondary);
-  font-style: italic;
+  font-style: normal;
 }
 .margo-listening-memory__words-label,
 .margo-listening-memory__when-label {
@@ -9865,7 +9871,7 @@ button.margo-feed-memory-card__action:active:not(:disabled) {
   font-size: 0.8125rem;
   font-weight: 500;
   letter-spacing: -0.01em;
-  color: var(--gold);
+  color: var(--text-secondary);
 }
 .margo-section-header__action {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
@@ -10971,49 +10977,50 @@ button.margo-feed-shorts-strip__more {
 
 .margo-content-page__category {
   margin: 0 0 6px;
-  font-size: 12.5px;
+  font-size: var(--margo-type-m);
   color: var(--text-muted);
   font-weight: 400;
 }
 
 .margo-content-page__title {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--margo-type-t);
   font-weight: 500;
   line-height: 1.25;
-  color: var(--gold);
+  color: var(--text);
 }
 
 .margo-content-page__date {
   margin: 8px 0 0;
-  font-size: 12.5px;
+  font-size: var(--margo-type-m);
   color: var(--text-muted);
   font-weight: 400;
 }
 
 .margo-content-page__intro {
   margin: 0 0 20px;
-  font-size: 14.5px;
+  font-size: var(--margo-type-b);
   line-height: 1.65;
   color: var(--text);
   font-weight: 400;
 }
 
+/* section */
 .margo-content-page__section-title {
   margin: 28px 0 12px;
-  font-size: 16px;
+  font-size: var(--margo-type-m);
   font-weight: 500;
-  color: var(--gold);
+  color: var(--text);
 }
 
 .margo-content-page__muted {
-  font-size: 14.5px;
+  font-size: var(--margo-type-b);
   line-height: 1.65;
   color: var(--text-muted);
 }
 
 .margo-info-prose {
-  font-size: 14.5px;
+  font-size: var(--margo-type-b);
   line-height: 1.65;
   font-weight: 400;
   color: var(--text);
@@ -11025,10 +11032,10 @@ button.margo-feed-shorts-strip__more {
 
 .margo-info-prose h2 {
   margin: 28px 0 12px;
-  font-size: 16px;
+  font-size: var(--margo-type-m);
   font-weight: 500;
   font-style: normal;
-  color: var(--gold);
+  color: var(--text);
 }
 
 .margo-info-prose ul,
@@ -11048,7 +11055,7 @@ button.margo-feed-shorts-strip__more {
 
 .margo-info-link,
 .margo-info-prose a {
-  color: var(--gold);
+  color: var(--text-secondary);
   text-decoration: none;
 }
 
@@ -11077,20 +11084,20 @@ button.margo-feed-shorts-strip__more {
 
 .margo-contact-card__label {
   margin: 0;
-  font-size: 14.5px;
+  font-size: var(--margo-type-b);
   font-weight: 500;
   color: var(--text);
 }
 
 .margo-contact-card__email {
-  font-size: 14.5px;
+  font-size: var(--margo-type-b);
   font-weight: 500;
   color: var(--gold);
   text-decoration: none;
 }
 
 .margo-contact-card__desc {
-  font-size: 12.5px;
+  font-size: var(--margo-type-m);
   line-height: 1.45;
   color: var(--text-muted);
   font-weight: 400;
@@ -11124,7 +11131,7 @@ button.margo-feed-shorts-strip__more {
   height: 32px;
   border-radius: 10px;
   border: 1px solid var(--gold-border);
-  color: var(--gold);
+  color: var(--text-secondary);
   background: transparent;
   display: inline-flex;
   align-items: center;
@@ -11174,7 +11181,7 @@ button.margo-feed-shorts-strip__more {
   border: 1px solid var(--border-hi);
   background: var(--surface);
   color: var(--text);
-  font-size: 14.5px;
+  font-size: var(--margo-type-b);
   font-weight: 400;
   padding: 0 14px 0 42px;
 }
@@ -11192,7 +11199,7 @@ button.margo-feed-shorts-strip__more {
   border: 1px solid var(--border-hi);
   background: var(--surface);
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: var(--margo-type-b);
   font-weight: 500;
   cursor: pointer;
 }
@@ -11235,13 +11242,13 @@ button.margo-feed-shorts-strip__more {
 }
 
 .margo-help-topic-card__title {
-  font-size: 14px;
+  font-size: var(--margo-type-b);
   font-weight: 500;
-  color: var(--gold);
+  color: var(--text);
 }
 
 .margo-help-topic-card__sub {
-  font-size: 12px;
+  font-size: var(--margo-type-l);
   font-weight: 400;
   color: var(--text-muted);
   line-height: 1.45;
@@ -11267,7 +11274,7 @@ button.margo-feed-shorts-strip__more {
   border-bottom: 1px solid var(--border);
   text-decoration: none;
   color: var(--text);
-  font-size: 14.5px;
+  font-size: var(--margo-type-b);
   line-height: 1.45;
 }
 
@@ -11286,7 +11293,7 @@ button.margo-feed-shorts-strip__more {
   border-bottom: 1px solid var(--border);
   text-decoration: none;
   color: var(--text);
-  font-size: 14.5px;
+  font-size: var(--margo-type-b);
   font-weight: 400;
 }
 
@@ -11311,7 +11318,7 @@ button.margo-feed-shorts-strip__more {
   border-radius: 999px;
   background: var(--gold);
   color: var(--text-on-gold);
-  font-size: 13px;
+  font-size: var(--margo-type-m);
   font-weight: 500;
   display: inline-flex;
   align-items: center;
@@ -11320,7 +11327,7 @@ button.margo-feed-shorts-strip__more {
 }
 
 .margo-help-steps__text {
-  font-size: 14.5px;
+  font-size: var(--margo-type-b);
   line-height: 1.65;
   color: var(--text);
   padding-top: 2px;
@@ -11347,13 +11354,13 @@ button.margo-feed-shorts-strip__more {
 }
 
 .margo-help-contact-card__title {
-  font-size: 14px;
+  font-size: var(--margo-type-b);
   font-weight: 500;
   color: var(--text);
 }
 
 .margo-help-contact-card__sub {
-  font-size: 12.5px;
+  font-size: var(--margo-type-m);
   color: var(--text-muted);
 }
 
@@ -11375,7 +11382,7 @@ button.margo-feed-shorts-strip__more {
 }
 
 .margo-help-footer__link {
-  font-size: 12.5px;
+  font-size: var(--margo-type-m);
   font-weight: 500;
   color: var(--text-muted);
   text-decoration: none;
@@ -11410,7 +11417,7 @@ button.margo-feed-shorts-strip__more {
 
 .margo-help-footer__copy {
   margin: 0;
-  font-size: 12.5px;
+  font-size: var(--margo-type-m);
   color: var(--text-muted);
 }
 
@@ -12361,7 +12368,7 @@ button.margo-feed-shorts-strip__more {
   height: 32px;
 }
 .margo-profile-flow-root .margo-profile-round-action__label {
-  font-size: 11px;
+  font-size: var(--margo-type-l);
   font-weight: 500;
   color: var(--gold);
   line-height: 1.1;
@@ -12373,18 +12380,18 @@ button.margo-feed-shorts-strip__more {
   margin-top: 2px;
 }
 .margo-profile-flow-root .margo-profile-shell .margo-profile-identity__name {
-  font-size: 15px !important;
+  font-size: var(--margo-type-h) !important;
   font-weight: 500 !important;
   line-height: 1.15;
   margin: 0;
 }
 .margo-profile-flow-root .margo-profile-identity__handle {
-  font-size: 12px;
+  font-size: var(--margo-type-l);
   line-height: 1.2;
   margin: 0;
 }
 .margo-profile-flow-root .margo-profile-bio {
-  font-size: 12px;
+  font-size: var(--margo-type-l);
   color: var(--text);
   line-height: 1.2;
   margin: 0;
@@ -12399,7 +12406,7 @@ button.margo-feed-shorts-strip__more {
   padding: 0 8px !important;
 }
 .margo-profile-flow-root .margo-profile-stat__value {
-  font-size: 13px;
+  font-size: var(--margo-type-m);
   font-weight: 500;
   color: var(--text);
   line-height: 1;
@@ -12408,7 +12415,7 @@ button.margo-feed-shorts-strip__more {
 }
 .margo-profile-flow-root .margo-profile-stat__label {
   margin-top: 2px;
-  font-size: 11px;
+  font-size: var(--margo-type-l);
   font-weight: 400;
   color: var(--text-muted);
   text-align: center;
@@ -12448,7 +12455,7 @@ button.margo-feed-shorts-strip__more {
 }
 .margo-profile-flow-root .margo-profile-signature-pill__lyric {
   font-family: var(--font-lora), Georgia, serif;
-  font-size: 12px;
+  font-size: var(--margo-type-l);
   font-weight: 400;
   font-style: normal;
   line-height: 1.25;
@@ -12461,7 +12468,7 @@ button.margo-feed-shorts-strip__more {
 }
 .margo-profile-flow-root .margo-profile-signature-pill__meta {
   font-family: inherit;
-  font-size: 11px;
+  font-size: var(--margo-type-l);
   font-weight: 400;
   line-height: 1.2;
   color: var(--text-muted);
@@ -12481,7 +12488,7 @@ button.margo-feed-shorts-strip__more {
 }
 .margo-profile-flow-root .margo-profile-memories-strip__head,
 .margo-profile-flow-root .margo-profile-memories-strip__label {
-  font-size: 12px;
+  font-size: var(--margo-type-l);
   font-weight: 500;
   color: var(--gold);
   margin: 0 0 6px;
@@ -12518,7 +12525,7 @@ button.margo-feed-shorts-strip__more {
   background: var(--surface-2);
   color: var(--text-secondary);
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--margo-type-l);
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
@@ -12667,7 +12674,7 @@ button.margo-feed-shorts-strip__more {
   border-radius: 50%;
 }
 .margo-profile-flow-root .margo-profile-favorite-artists__name {
-  font-size: 11px !important;
+  font-size: var(--margo-type-l) !important;
   max-width: 52px;
 }
 .margo-profile-flow-root .margo-profile-favorite-artists__more {
@@ -12681,7 +12688,7 @@ button.margo-feed-shorts-strip__more {
   flex-wrap: nowrap;
 }
 .margo-profile-flow-root .margo-profile-content-tab {
-  font-size: 11px;
+  font-size: var(--margo-type-l);
   font-weight: 500;
   min-height: 30px;
   padding: 4px 2px;
@@ -12692,7 +12699,7 @@ button.margo-feed-shorts-strip__more {
 }
 .margo-profile-flow-root .margo-profile-block--feed .margo-feed-lyric {
   font-family: var(--font-lora), Georgia, serif;
-  font-size: 14px;
+  font-size: var(--margo-type-b);
   font-weight: 400;
   font-style: normal;
   line-height: 1.35;
@@ -12700,7 +12707,7 @@ button.margo-feed-shorts-strip__more {
 .margo-profile-flow-root .margo-profile-block--feed .margo-song-meta__title-line,
 .margo-profile-flow-root .margo-profile-block--feed .margo-song-meta__artist-line,
 .margo-profile-flow-root .margo-profile-block--feed .margo-post-card__external-title {
-  font-size: 11px;
+  font-size: var(--margo-type-l);
   font-weight: 400;
   line-height: 1.25;
 }

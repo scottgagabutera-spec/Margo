@@ -27,7 +27,7 @@ function ArtistCreditLine({
     <p style={{
       margin: 0,
       fontFamily: UI_FONT,
-      fontSize: '0.75rem',
+      fontSize: '0.8125rem',
       fontWeight: 400,
       color: 'var(--text-secondary)',
       lineHeight: 1.3,
@@ -64,7 +64,7 @@ export function SongMeta({
     const node = (
       <span style={{
         fontFamily: UI_FONT,
-        fontSize: '0.7rem',
+        fontSize: '0.75rem',
         color: 'var(--text-muted)',
         letterSpacing: '0.2px',
         display: 'block',
@@ -94,7 +94,7 @@ export function SongMeta({
           style={{
             margin: 0,
             fontFamily: UI_FONT,
-            fontSize: '0.95rem',
+            fontSize: '0.9375rem',
             fontWeight: 600,
             color: 'var(--text)',
             lineHeight: 1.3,

@@ -43,7 +43,7 @@ export function DiscoverVibeFilterRow({
                 padding: '5px 9px',
                 borderRadius: '8px',
                 fontFamily: UI_FONT,
-                fontSize: '9px',
+                fontSize: '0.75rem',
                 fontWeight: 600,
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',

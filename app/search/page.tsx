@@ -172,7 +172,7 @@ function LyricCard({ hit }: { hit: MargoSearchHit }) {
         {hit.artworkUrl ? <Cover src={hit.artworkUrl} alt="" size={48} /> : null}
         <div style={{ minWidth: 0, flex: 1 }}>
           <p style={{
-            fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric,
+            fontFamily: lyricFont, fontStyle: 'normal', fontSize: TYPE.lyric,
             color: 'var(--text)', margin: 0, lineHeight: 1.45,
           }}>{primary}</p>
           {secondary ? (

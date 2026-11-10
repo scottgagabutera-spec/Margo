@@ -45,7 +45,7 @@ export function ArtistApplicationStatus({
           Submitted
         </p>
       ) : null}
-      <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '8px' }}>
+      <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '8px' }}>
         Margo
       </p>
       <h1 style={{ fontFamily: font, fontSize: '1.5rem', color: 'var(--text)', fontWeight: 400, marginBottom: '12px' }}>
@@ -79,7 +79,7 @@ export function ArtistApplicationStatus({
               borderRadius: '12px',
               fontFamily: font,
               fontWeight: 700,
-              fontSize: '0.7rem',
+              fontSize: '0.75rem',
               letterSpacing: '1.5px',
               textTransform: 'uppercase',
               cursor: 'pointer',
@@ -103,7 +103,7 @@ export function ArtistApplicationStatus({
             borderRadius: '12px',
             fontFamily: font,
             fontWeight: 700,
-            fontSize: '0.65rem',
+            fontSize: '0.75rem',
             letterSpacing: '1px',
             textTransform: 'uppercase',
             cursor: 'pointer',

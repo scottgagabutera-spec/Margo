@@ -64,30 +64,25 @@ Margo speaks in two voices:
 1. **UI (Geist Sans)** — nav, buttons, handles, timestamps, labels, toasts, chrome, **song title / artist metadata**, account settings / studio / apply forms.
    CSS: `var(--font-geist-sans)` / `lib/fonts.ts` → `UI_FONT`.  
    Loaded via `geist/font/sans` (variable woff2) on the root layout.
-2. **Lyric (Lora)** — posted lyric quotes, signature lyrics, lyric-led marketing lines.
-   CSS: `var(--font-lora)` / `LYRIC_FONT`. Always italic for the star lyric block.
+2. **Lyric (Lora)** — posted lyric quotes, signature lyrics, lyric-led marketing lines only.
+   CSS: `var(--font-lora)` / `LYRIC_FONT`. **Upright only** — no `font-style: italic` in the app.
 3. **Logo (Sora 700)** — MARGO wordmark ONLY via `MargoLogo`. Nothing else uses Sora.
 
 Self-hosted via Next.js font system (`next/font` + `geist`). Do not load Inter.
 
-### Type role grid (canonical — sanity-check new UI against this)
+### Five-step type scale (canonical — `lib/fonts.ts` `MARGO_TYPE`, `:root` `--margo-type-*`)
 
-Pick a **role** first; do not invent one-off rem values.
+**Rem only. Floor 0.75rem (12px).** Merge feed and app scales — no px font sizes.
 
-| Role | Size | Weight | Color | Face | Use |
-|------|------|--------|-------|------|-----|
-| Hero | `clamp(2rem,5vw,3.2rem)` (landing may use larger clamp) | 300–700 | `--text` | Lora or Geist by surface | Marketing / page heroes |
-| Page title | `1.5rem` | 600 | `--text` or `--gold` | Geist | Settings, Edit, Studio gates |
-| Display name | `1.25rem` | 600 | `--text` | Geist | Profile only |
-| Song title | `0.95–1.15rem` | 600 | `--text` | Geist | Stacked metadata |
-| Lyric star | `1.1rem` | 400 italic | `--text` | **Lora** | Posted lyrics, signature lyric |
-| Body | `0.95rem` | 400 | `--text` / `--text-secondary` | Geist | Paragraphs, inputs |
-| Secondary | `0.82rem` | 400 | `--text-secondary` | Geist | Subtitles, help |
-| Artist name | `0.75rem` | 400 | `--text-secondary` | Geist | Under song title |
-| Username / meta | `0.7rem` | 400 | `--text-secondary` / muted | Geist | `@handle`, footer links, timestamps |
-| Label / CTA | `0.6rem` | 600–700 | context | Geist | Uppercase chips, micro-buttons; touch ≥44px |
-| **Micro body / compact explainer** | **`0.65rem`** | **400** | `--text-secondary` | Geist | Landing how-it-works body at &lt;640px; other dense 3-up strips. Line-height **1.25**. Not Body, not Secondary. |
-| Floor | **never &lt; `0.6rem`** | — | — | — | Remap illegal sizes up to Label/CTA or Micro body |
+| Step | Token | Size | Weight | Typical roles |
+|------|--------|------|--------|----------------|
+| **T** | `--margo-type-t` | 1.0625rem | 500 | Page titles (About, Help, Settings, depth headers) |
+| **H** | `--margo-type-h` | 0.9375rem | 500 | Song title, lyric line (Lora), modal title, profile display name |
+| **B** | `--margo-type-b` | 0.875rem | 400 | Body, bio, inputs, list display names |
+| **M** | `--margo-type-m` | 0.8125rem | 400 | @username, artist, timestamps, helpers, section headers |
+| **L** | `--margo-type-l` | 0.75rem | 500 | Buttons, tabs, chips, stat labels, form labels |
+
+Landing/marketing heroes may use larger **clamp** sizes; do not shrink the stage headline tagline in the same pass as the app scale.
 
 Nav links (desktop): `0.75rem` / 700 / uppercase / letter-spacing ~1–2px — still Geist chrome.
 

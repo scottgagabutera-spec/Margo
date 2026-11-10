@@ -79,7 +79,7 @@ function LibraryLyricLines({
   }
   if (windowLines.length === 0) {
     return (
-      <p style={{ fontFamily: LYRIC_FONT, fontStyle: 'italic', color: 'var(--text-secondary)', margin: 0 }}>
+      <p style={{ fontFamily: LYRIC_FONT, fontStyle: 'normal', color: 'var(--text-secondary)', margin: 0 }}>
         No lyric lines yet for this song.
       </p>
     )
@@ -94,7 +94,7 @@ function LibraryLyricLines({
             key={line.lineIndex}
             style={{
               fontFamily: LYRIC_FONT,
-              fontStyle: 'italic',
+              fontStyle: 'normal',
               fontSize: large ? '1.35rem' : '1.05rem',
               lineHeight: 1.45,
               margin: 0,

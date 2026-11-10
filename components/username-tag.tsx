@@ -44,8 +44,8 @@ export function AuthorMeta({
   const displayName = profile?.displayName || fallbackName || 'Margo Listener'
   const username = profile?.username
 
-  const nameSize = size === 'compact' ? '0.75rem' : '0.82rem'
-  const handleSize = size === 'compact' ? '0.6rem' : '0.7rem'
+  const nameSize = size === 'compact' ? '0.875rem' : '0.875rem'
+  const handleSize = size === 'compact' ? '0.75rem' : '0.8125rem'
 
   const handleStyle: CSSProperties = {
     fontFamily: UI_FONT,
@@ -103,7 +103,7 @@ export function AuthorMeta({
         indicator="tint"
         style={handleStyle}
         onClick={(e) => e.stopPropagation()}
-        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--gold)' }}
+        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)' }}
         onMouseLeave={(e) => { if (!e.currentTarget.getAttribute('aria-busy')) e.currentTarget.style.color = 'var(--text-secondary)' }}
       >
         {handleLabel}

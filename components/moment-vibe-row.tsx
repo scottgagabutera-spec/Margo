@@ -70,7 +70,7 @@ export function MomentVibeRow({
         <span
           style={{
             fontFamily: UI_FONT,
-            fontSize: '0.72rem',
+            fontSize: '0.75rem',
             fontWeight: 700,
             color: vibeLabel ? 'var(--text)' : 'var(--text-muted)',
             overflow: 'hidden',
@@ -117,7 +117,7 @@ export function MomentVibeRow({
                   background: selected ? 'var(--gold-faint)' : 'var(--surface-3)',
                   color: selected ? 'var(--gold)' : 'var(--text-secondary)',
                   fontFamily: UI_FONT,
-                  fontSize: '0.62rem',
+                  fontSize: '0.75rem',
                   fontWeight: 600,
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',

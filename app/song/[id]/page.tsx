@@ -358,7 +358,7 @@ function SongPageInner() {
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--gold)', fontSize: '1rem' }}>Loading…</p>
+      <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'normal', color: 'var(--gold)', fontSize: '1rem' }}>Loading…</p>
     </div>
   )
 
@@ -373,7 +373,7 @@ function SongPageInner() {
           <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 40px var(--gold-glow)', marginBottom: '20px' }}>
             <PlayPauseIcon playing={false} size={28} color="var(--bg)" />
           </div>
-          <p style={{ fontFamily: UI_FONT, fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '2px', textTransform: 'uppercase' }}>Tap to play</p>
+          <p style={{ fontFamily: UI_FONT, fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '2px', textTransform: 'uppercase' }}>Tap to play</p>
         </div>
       )}
       <style>{`
@@ -381,7 +381,7 @@ function SongPageInner() {
         .lyric-viewport { -ms-overflow-style: none; scrollbar-width: none; }
         .lyric-line-wrap { width: 100%; min-height: var(--margo-touch-min); display: flex; align-items: center; justify-content: center; padding: 10px 0; cursor: pointer; border: none; background: none; box-sizing: border-box; }
         .lyric-line-wrap:focus { outline: none; }
-        .lyric-text { font-family: var(--font-lora), serif; font-style: italic; text-align: center; margin: 0; line-height: 1.4; transition: color 500ms cubic-bezier(0.4,0,0.2,1), opacity 500ms cubic-bezier(0.4,0,0.2,1), transform 500ms cubic-bezier(0.4,0,0.2,1), font-size 500ms cubic-bezier(0.4,0,0.2,1); will-change: transform, opacity; }
+        .lyric-text { font-family: var(--font-lora), serif; font-style: normal; text-align: center; margin: 0; line-height: 1.4; transition: color 500ms cubic-bezier(0.4,0,0.2,1), opacity 500ms cubic-bezier(0.4,0,0.2,1), transform 500ms cubic-bezier(0.4,0,0.2,1), font-size 500ms cubic-bezier(0.4,0,0.2,1); will-change: transform, opacity; }
         .share-sheet-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(7,6,10,0.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); animation: ss-fade 200ms ease forwards; }
         @media (max-width: 639px) {
           .share-sheet-overlay { background: var(--margo-scrim) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
@@ -438,7 +438,7 @@ function SongPageInner() {
         }}
       >
         {lyrics.length === 0 && (
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '1rem', textAlign: 'center', marginTop: '-40vh' }}>No lyrics available yet.</p>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'normal', color: 'var(--text-secondary)', fontSize: '1rem', textAlign: 'center', marginTop: '-40vh' }}>No lyrics available yet.</p>
         )}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
           {lyrics.map(lyric => {
@@ -474,7 +474,7 @@ function SongPageInner() {
       {/* Tap hint */}
       {!trayOpen && (
         <div style={{ position: 'fixed', bottom: 'var(--margo-player-hint-bottom)', left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 21, pointerEvents: 'none' }}>
-          <p style={{ fontFamily: UI_FONT, fontSize: '0.6rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--gold)', margin: 0, opacity: 0.7 }}>Tap any line to jump</p>
+          <p style={{ fontFamily: UI_FONT, fontSize: '0.75rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--gold)', margin: 0, opacity: 0.7 }}>Tap any line to jump</p>
         </div>
       )}
 
@@ -505,7 +505,7 @@ function SongPageInner() {
             ><PlayPauseIcon playing={isPlaying} buffering={isBuffering} size={20} color="var(--text)" /></button>
             <button
               onClick={() => setShareOpen(true)}
-              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '15px 32px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: UI_FONT, fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', border: 'none', cursor: 'pointer', minHeight: '52px', boxShadow: '0 6px 28px var(--gold-glow)', transition: 'all 150ms ease' }}
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '15px 32px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: UI_FONT, fontWeight: 700, fontSize: '0.75rem', letterSpacing: '1px', textTransform: 'uppercase', border: 'none', cursor: 'pointer', minHeight: '52px', boxShadow: '0 6px 28px var(--gold-glow)', transition: 'all 150ms ease' }}
             >Share This Lyric</button>
           </div>
         </footer>
@@ -517,7 +517,7 @@ function SongPageInner() {
           <div className="share-sheet-overlay" onClick={() => setShareOpen(false)} />
           <div className="share-sheet">
             <div className="share-pill" />
-            <p style={{ fontFamily: LYRIC_FONT, fontStyle: 'italic', fontSize: '1.1rem', color: 'var(--text)', textAlign: 'center', marginBottom: '16px', lineHeight: 1.45 }}>"{currentLyric?.line}"</p>
+            <p style={{ fontFamily: LYRIC_FONT, fontStyle: 'normal', fontSize: '1.1rem', color: 'var(--text)', textAlign: 'center', marginBottom: '16px', lineHeight: 1.45 }}>"{currentLyric?.line}"</p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '0 auto 24px', maxWidth: '280px' }}>
               <div style={{ position: 'relative', width: '48px', height: '48px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: 'var(--surface-2)' }}>
                 {song?.artwork ? (
@@ -534,7 +534,7 @@ function SongPageInner() {
               </div>
               <div>
                 <p style={{ fontFamily: UI_FONT, fontWeight: 600, fontSize: '0.88rem', color: 'var(--text)', margin: 0 }}>Post</p>
-                <p style={{ fontFamily: UI_FONT, fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '3px 0 0' }}>Send this line to someone</p>
+                <p style={{ fontFamily: UI_FONT, fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '3px 0 0' }}>Send this line to someone</p>
               </div>
             </Link>
             <button
@@ -550,7 +550,7 @@ function SongPageInner() {
               </div>
               <div style={{ textAlign: 'left' }}>
                 <p style={{ fontFamily: UI_FONT, fontWeight: 600, fontSize: '0.88rem', color: 'var(--text)', margin: 0 }}>Share as Card</p>
-                <p style={{ fontFamily: UI_FONT, fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '3px 0 0' }}>Export a lyric card — choose theme, shape, save or share</p>
+                <p style={{ fontFamily: UI_FONT, fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '3px 0 0' }}>Export a lyric card — choose theme, shape, save or share</p>
               </div>
             </button>
             <button onClick={() => setShareOpen(false)} style={{ width: '100%', padding: '16px', marginTop: '8px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: UI_FONT, fontSize: '0.75rem', color: 'var(--text-secondary)', letterSpacing: '1px' }}>Cancel</button>

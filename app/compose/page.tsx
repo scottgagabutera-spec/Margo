@@ -152,7 +152,7 @@ const composeToolBtnStyle: React.CSSProperties = {
 }
 const composeToolLabelStyle: React.CSSProperties = {
   fontFamily: font,
-  fontSize: '0.6rem',
+  fontSize: '0.75rem',
   fontWeight: 600,
   letterSpacing: '0.6px',
   textTransform: 'uppercase',
@@ -261,7 +261,7 @@ function ComposeTopBar({
         {compact ? (
           <span style={{
             fontFamily: font,
-            fontStyle: 'italic',
+            fontStyle: 'normal',
             fontSize: '0.95rem',
             color: 'var(--text)',
             marginLeft: '4px',
@@ -281,7 +281,7 @@ function ComposeTopBar({
           className="margo-compose-top-bar__title"
           style={{
           fontFamily: font,
-          fontStyle: 'italic',
+          fontStyle: 'normal',
           fontSize: '1.15rem',
           fontWeight: 400,
           color: 'var(--text)',
@@ -1477,12 +1477,12 @@ function ComposeInner() {
                     <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '8px' }}>
                       <p style={{
                         flex: 1, minWidth: 0,
-                        fontFamily: font, fontStyle: 'italic', fontSize: '0.9rem',
+                        fontFamily: font, fontStyle: 'normal', fontSize: '0.9rem',
                         color: 'var(--text)', margin: 0, lineHeight: 1.4,
                       }}>
                         {i + 1}. &ldquo;{line.lyric}&rdquo;
                         <span style={{
-                          display: 'block', fontStyle: 'normal', fontSize: '0.6rem',
+                          display: 'block', fontStyle: 'normal', fontSize: '0.75rem',
                           color: 'var(--text-muted)', letterSpacing: '1px',
                           textTransform: 'uppercase', marginTop: '4px',
                         }}>
@@ -1497,7 +1497,7 @@ function ComposeInner() {
               {showStep1Resume ? (
                 <div style={{ marginBottom: '28px' }}>
                   <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-                    <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: '8px' }}>
+                    <h1 style={{ fontFamily: font, fontStyle: 'normal', fontSize: '2rem', color: 'var(--text)', marginBottom: '8px' }}>
                       {committedLines.length > 0 ? 'Add another line' : 'Your song'}
                     </h1>
                     <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', margin: 0 }}>
@@ -1506,7 +1506,7 @@ function ComposeInner() {
                   </div>
                   {lyric.trim() ? (
                     <p style={{
-                      fontFamily: font, fontStyle: 'italic', fontSize: '0.9rem', color: 'var(--text)',
+                      fontFamily: font, fontStyle: 'normal', fontSize: '0.9rem', color: 'var(--text)',
                       textAlign: 'center', margin: '0 0 20px', lineHeight: 1.45,
                     }}>
                       &ldquo;{lyric}&rdquo;
@@ -1518,7 +1518,7 @@ function ComposeInner() {
                     style={{
                       width: '100%', minHeight: 'var(--margo-touch-min)', borderRadius: '50px', border: 'none',
                       background: 'var(--gold)', color: 'var(--text-on-gold, var(--bg))',
-                      fontFamily: font, fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px',
+                      fontFamily: font, fontWeight: 700, fontSize: '0.75rem', letterSpacing: '1px',
                       textTransform: 'uppercase', cursor: 'pointer', marginBottom: '10px',
                     }}
                   >Continue</button>
@@ -1528,7 +1528,7 @@ function ComposeInner() {
                     style={{
                       width: '100%', minHeight: 'var(--margo-touch-min)', borderRadius: '50px',
                       border: '1px solid var(--border-hi)', background: 'transparent',
-                      color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.6rem',
+                      color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.75rem',
                       letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
                     }}
                   >Different song</button>
@@ -1538,7 +1538,7 @@ function ComposeInner() {
                   <div style={{ textAlign: 'center', marginBottom: '48px' }}>
                     <h1 style={{
                       fontFamily: font,
-                      fontStyle: 'italic',
+                      fontStyle: 'normal',
                       fontSize: '1.65rem',
                       lineHeight: 1.35,
                       color: 'var(--text)',
@@ -1550,7 +1550,7 @@ function ComposeInner() {
                       {committedLines.length > 0 ? 'Add another line' : MARGO_EXPRESSION_TAGLINE}
                     </h1>
                     {committedLines.length === 0 ? (
-                      <p style={{ fontFamily: UI_FONT, fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.45, margin: '10px 0 0' }}>
+                      <p style={{ fontFamily: UI_FONT, fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.45, margin: '10px 0 0' }}>
                         Find a song, pick your line, send when you&apos;re ready.
                       </p>
                     ) : null}
@@ -1615,7 +1615,7 @@ function ComposeInner() {
                     >
                       <p style={{
                         fontFamily: UI_FONT,
-                        fontSize: '10px',
+                        fontSize: '0.75rem',
                         fontWeight: 600,
                         letterSpacing: '1px',
                         textTransform: 'uppercase',
@@ -1630,8 +1630,8 @@ function ComposeInner() {
                             flex: 1,
                             minWidth: 0,
                             fontFamily: 'var(--font-lora), serif',
-                            fontStyle: 'italic',
-                            fontSize: '14px',
+                            fontStyle: 'normal',
+                            fontSize: '0.875rem',
                             margin: 0,
                             lineHeight: 1.45,
                             color: 'var(--text)',
@@ -1653,10 +1653,10 @@ function ComposeInner() {
                     }}>
                       {!editingName ? (
                         <>
-                          <p style={{ fontFamily: UI_FONT, fontSize: '13px', color: 'var(--text)', margin: '0 0 4px' }}>
+                          <p style={{ fontFamily: UI_FONT, fontSize: '0.8125rem', color: 'var(--text)', margin: '0 0 4px' }}>
                             You&apos;ll share as <strong style={{ color: 'var(--gold)' }}>{identity.displayName}</strong>
                           </p>
-                          <p style={{ fontFamily: UI_FONT, fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 12px', lineHeight: 1.45 }}>
+                          <p style={{ fontFamily: UI_FONT, fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0 0 12px', lineHeight: 1.45 }}>
                             You can change this anytime in settings.
                           </p>
                           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -1672,7 +1672,7 @@ function ComposeInner() {
                                 borderRadius: '10px',
                                 fontFamily: UI_FONT,
                                 fontWeight: 600,
-                                fontSize: '12px',
+                                fontSize: '0.75rem',
                                 border: 'none',
                                 cursor: 'pointer',
                               }}
@@ -1691,7 +1691,7 @@ function ComposeInner() {
                                 border: '1px solid var(--gold-border)',
                                 borderRadius: '10px',
                                 fontFamily: UI_FONT,
-                                fontSize: '12px',
+                                fontSize: '0.75rem',
                                 cursor: 'pointer',
                               }}
                             >
@@ -1701,7 +1701,7 @@ function ComposeInner() {
                         </>
                       ) : (
                         <>
-                          <p style={{ fontFamily: UI_FONT, fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 8px' }}>Display name</p>
+                          <p style={{ fontFamily: UI_FONT, fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0 0 8px' }}>Display name</p>
                           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                             <input
                               type="text"
@@ -1718,7 +1718,7 @@ function ComposeInner() {
                                 borderRadius: '10px',
                                 color: 'var(--text)',
                                 fontFamily: UI_FONT,
-                                fontSize: '14px',
+                                fontSize: '0.875rem',
                                 outline: 'none',
                               }}
                             />
@@ -1740,7 +1740,7 @@ function ComposeInner() {
                                 borderRadius: '10px',
                                 fontFamily: UI_FONT,
                                 fontWeight: 600,
-                                fontSize: '12px',
+                                fontSize: '0.75rem',
                                 border: 'none',
                                 cursor: 'pointer',
                                 opacity: nameInput.trim() ? 1 : 0.4,
@@ -1759,7 +1759,7 @@ function ComposeInner() {
                                 border: '1px solid var(--border-hi)',
                                 borderRadius: '10px',
                                 fontFamily: UI_FONT,
-                                fontSize: '12px',
+                                fontSize: '0.75rem',
                                 cursor: 'pointer',
                               }}
                             >
@@ -1990,15 +1990,15 @@ function ComposeInner() {
       {startOverConfirm && (
         <div role="dialog" aria-modal="true" style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(7,6,10,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '20px', padding: '24px', maxWidth: '360px', width: '100%' }}>
-            <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.1rem', color: 'var(--text)', margin: '0 0 8px' }}>Start over?</p>
+            <p style={{ fontFamily: font, fontStyle: 'normal', fontSize: '1.1rem', color: 'var(--text)', margin: '0 0 8px' }}>Start over?</p>
             <p style={{ fontFamily: font, fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0 0 20px', lineHeight: 1.45 }}>Clears this Moment.</p>
             <div style={{ display: 'flex', gap: '10px' }}>
               <button type="button" onClick={confirmStartOver}
-                style={{ flex: 1, minHeight: 'var(--margo-touch-min)', borderRadius: '50px', border: 'none', background: 'var(--gold)', color: 'var(--bg)', fontFamily: font, fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer' }}>
+                style={{ flex: 1, minHeight: 'var(--margo-touch-min)', borderRadius: '50px', border: 'none', background: 'var(--gold)', color: 'var(--bg)', fontFamily: font, fontWeight: 700, fontSize: '0.75rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer' }}>
                 Start over
               </button>
               <button type="button" onClick={() => setStartOverConfirm(false)}
-                style={{ flex: 1, minHeight: 'var(--margo-touch-min)', borderRadius: '50px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer' }}>
+                style={{ flex: 1, minHeight: 'var(--margo-touch-min)', borderRadius: '50px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.75rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer' }}>
                 Cancel
               </button>
             </div>
@@ -2049,7 +2049,7 @@ function ComposeInner() {
                 marginBottom: '12px',
               }}>
                 <div style={{ flex: '0 0 58%', minWidth: 0 }}>
-                  <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--text-on-gold-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Song</label>
+                  <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.75rem', color: 'var(--text-on-gold-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Song</label>
                   {catalogLinePickOnly ? (
                     <button
                       type="button"
@@ -2074,7 +2074,7 @@ function ComposeInner() {
                   )}
                 </div>
                 <div style={{ flex: '1 1 38%', minWidth: 0 }}>
-                  <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--text-on-gold-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Artist</label>
+                  <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.75rem', color: 'var(--text-on-gold-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Artist</label>
                   {catalogLinePickOnly ? (
                     <button
                       type="button"
@@ -2122,7 +2122,7 @@ function ComposeInner() {
               </div>
 
               <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
-                <span style={{ fontFamily: UI_FONT, fontSize: '0.65rem', color: 'var(--text-on-gold-muted)' }}>{lyric.length}/140</span>
+                <span style={{ fontFamily: UI_FONT, fontSize: '0.75rem', color: 'var(--text-on-gold-muted)' }}>{lyric.length}/140</span>
               </div>
             </ComposeLyricCard>
           </div>

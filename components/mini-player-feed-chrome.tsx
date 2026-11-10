@@ -394,7 +394,7 @@ function FeedPill({
         <span
           style={{
             fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
-            fontSize: '0.72rem',
+            fontSize: '0.75rem',
             fontWeight: 600,
             color: 'var(--text)',
             overflow: 'hidden',
@@ -649,7 +649,7 @@ function ComposePillInner({
         <span
           style={{
             fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
-            fontSize: '0.72rem',
+            fontSize: '0.75rem',
             fontWeight: 600,
             color: 'var(--text)',
             overflow: 'hidden',

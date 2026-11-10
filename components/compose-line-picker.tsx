@@ -301,7 +301,7 @@ function ComposeLineRow({
         className={compact ? 'margo-lb-line-row__text' : undefined}
         style={{
           fontFamily: compact ? UI_FONT : lyricFont,
-          fontStyle: compact ? 'normal' : 'italic',
+          fontStyle: 'normal',
           fontSize: compact ? '14px' : landing ? '14px' : '0.95rem',
           color: 'var(--text)',
           lineHeight: compact ? 1.3 : landing ? 1.35 : 1.45,
@@ -585,7 +585,7 @@ export function ComposeLinePicker({
       <div style={{ textAlign: isStage ? 'left' : 'center', marginBottom: isStage ? '20px' : '28px' }}>
         <h1 style={{
           fontFamily: lyricFont,
-          fontStyle: 'italic',
+          fontStyle: 'normal',
           fontSize: isStage ? 'clamp(1.5rem, 4vw, 1.75rem)' : '2rem',
           color: isStage ? 'var(--text)' : 'var(--gold)',
           marginBottom: '6px',
@@ -611,7 +611,7 @@ export function ComposeLinePicker({
                 : (isStage ? 'Tap the line you mean' : 'Pick the line you want'))}
         </p>
         {!isStage ? (
-          <p style={{ fontFamily: lyricFont, fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+          <p style={{ fontFamily: lyricFont, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
             {artistName} · {songTitle}
           </p>
         ) : null}
@@ -631,7 +631,7 @@ export function ComposeLinePicker({
               background: 'transparent',
               color: 'var(--text-secondary)',
               fontFamily: UI_FONT,
-              fontSize: '0.72rem',
+              fontSize: '0.75rem',
               fontWeight: 600,
               cursor: 'pointer',
             }}
@@ -650,7 +650,7 @@ export function ComposeLinePicker({
               background: canConfirmParagraph ? 'var(--gold)' : 'rgba(232,197,71,0.25)',
               color: canConfirmParagraph ? 'var(--text-on-gold, var(--bg))' : 'var(--text-muted)',
               fontFamily: UI_FONT,
-              fontSize: '0.72rem',
+              fontSize: '0.75rem',
               fontWeight: 700,
               cursor: canConfirmParagraph ? 'pointer' : 'not-allowed',
             }}
@@ -668,7 +668,7 @@ export function ComposeLinePicker({
 
       {!loading && lines.length === 0 && (
         <div style={{ textAlign: isStage ? 'left' : 'center' }}>
-          <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: stickySkip ? 0 : '20px' }}>
+          <p style={{ fontFamily: lyricFont, fontStyle: 'normal', fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: stickySkip ? 0 : '20px' }}>
             No synced lyrics for this song yet.
           </p>
           {onSkip && !stickySkip && (
@@ -679,7 +679,7 @@ export function ComposeLinePicker({
                 minHeight: 'var(--margo-touch-min)', padding: '0 24px',
                 display: 'inline-flex', alignItems: 'center',
                 background: 'var(--gold)', color: 'var(--text-on-gold, var(--bg))', borderRadius: '50px',
-                fontFamily: lyricFont, fontWeight: 700, fontSize: '0.6rem',
+                fontFamily: lyricFont, fontWeight: 700, fontSize: '0.75rem',
                 letterSpacing: '1px', textTransform: 'uppercase', border: 'none', cursor: 'pointer',
               }}
             >Continue without hearing it</button>
@@ -751,7 +751,7 @@ export function ComposeLinePicker({
           <div style={{ marginBottom: '14px' }}>
             <p style={{
               fontFamily: UI_FONT,
-              fontSize: '0.65rem',
+              fontSize: '0.75rem',
               fontWeight: 700,
               letterSpacing: '1.2px',
               textTransform: 'uppercase',
@@ -781,7 +781,7 @@ export function ComposeLinePicker({
                   <p style={{
                     margin: '0 0 6px',
                     fontFamily: lyricFont,
-                    fontStyle: 'italic',
+                    fontStyle: 'normal',
                     fontSize: '0.9rem',
                     color: 'var(--text)',
                     lineHeight: 1.4,
@@ -792,7 +792,7 @@ export function ComposeLinePicker({
                   <p style={{
                     margin: 0,
                     fontFamily: UI_FONT,
-                    fontSize: '0.65rem',
+                    fontSize: '0.75rem',
                     color: 'var(--text-muted)',
                   }}>
                     {formatTime(m.startSec)}–{formatTime(m.endSec)} · {m.primaryVibe}
@@ -802,7 +802,7 @@ export function ComposeLinePicker({
             </div>
             <p style={{
               fontFamily: UI_FONT,
-              fontSize: '0.65rem',
+              fontSize: '0.75rem',
               fontWeight: 700,
               letterSpacing: '1.2px',
               textTransform: 'uppercase',

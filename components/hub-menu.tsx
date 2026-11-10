@@ -64,7 +64,7 @@ const SCROLL_VELOCITY_PX_MS = 0.6
 const TOUCH = 'var(--margo-touch-min)'
 
 function TileIcon({ kind }: { kind: HubTileIconId }) {
-  const color = 'var(--gold)'
+  const color = 'var(--text-secondary)'
   const size = 22
   if (kind === 'library') return <LibraryIcon size={size} color={color} />
   if (kind === 'messages') return <MessagesIcon size={size} color={color} />
@@ -84,7 +84,7 @@ function HubPresenceDot({ visible, top, right }: { visible: boolean; top: string
         width: '8px',
         height: '8px',
         borderRadius: '50%',
-        background: 'var(--gold)',
+        background: 'var(--text-muted)',
       }}
     />
   )
@@ -229,7 +229,7 @@ function HubPanelHeader({ onClose, showBack }: { onClose: () => void; showBack: 
           aria-label="Close Hub"
           onClick={onClose}
         >
-          <ArrowLeftIcon size={20} color="var(--gold)" />
+          <ArrowLeftIcon size={20} color="var(--text-secondary)" />
         </button>
       ) : null}
       <span className="margo-hub-panel-head__title">Hub</span>

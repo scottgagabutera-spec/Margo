@@ -71,14 +71,14 @@ export function ReplayAttribution({
         </div>
         <p style={{
           margin: 0, fontFamily: 'var(--font-lora), serif',
-          fontSize: '0.72rem', color: 'var(--text-muted)',
+          fontSize: '0.75rem', color: 'var(--text-muted)',
         }}>
           Reposted by{' '}
           {username ? (
             <PendingNavLink
               href={`/profile/${username}`}
               indicator="tint"
-              style={{ color: 'var(--gold)', textDecoration: 'none' }}
+              style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
             >
               {label}
             </PendingNavLink>

@@ -126,7 +126,7 @@ function ReadyStageCard({
               <ChevronRightIcon size={14} color="var(--text-secondary)" />
             </span>
           </button>
-          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.62rem', color: 'var(--text-muted)' }}>
+          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
             Line {previewIndex + 1} of {validDrafts.length}
           </span>
           <button

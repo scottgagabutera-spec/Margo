@@ -221,13 +221,13 @@ export default function PostDetailPage() {
     }}>
 
       {loading && !post && (
-        <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-muted)' }} role="status">
+        <p style={{ fontFamily: font, fontStyle: 'normal', color: 'var(--text-muted)' }} role="status">
           Loading…
         </p>
       )}
 
       {!loading && !post && (
-        <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-secondary)' }}>
+        <p style={{ fontFamily: font, fontStyle: 'normal', color: 'var(--text-secondary)' }}>
           This lyric isn&apos;t here anymore.
         </p>
       )}

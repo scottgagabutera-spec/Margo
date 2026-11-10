@@ -129,7 +129,7 @@ export const keyboardSafePrimaryBtnStyle: CSSProperties = {
   borderRadius: '50px',
   fontFamily: 'var(--font-lora), serif',
   fontWeight: 700,
-  fontSize: '0.6rem',
+  fontSize: '0.75rem',
   letterSpacing: '1px',
   textTransform: 'uppercase',
   border: 'none',

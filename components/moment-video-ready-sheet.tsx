@@ -84,8 +84,8 @@ export function MomentVideoReadySheet({
         <p style={{
           margin: 0,
           fontFamily: font,
-          fontSize: '0.72rem',
-          fontStyle: 'italic',
+          fontSize: '0.75rem',
+          fontStyle: 'normal',
           color: 'var(--text)',
           textAlign: 'center',
         }}>
@@ -94,7 +94,7 @@ export function MomentVideoReadySheet({
         <p style={{
           margin: 0,
           fontFamily: font,
-          fontSize: '0.62rem',
+          fontSize: '0.75rem',
           color: 'var(--text-muted)',
           textAlign: 'center',
           lineHeight: 1.4,

@@ -274,7 +274,7 @@ function ResultsList({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '4px',
-                  fontSize: '0.6rem',
+                  fontSize: '0.75rem',
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
                   padding: '2px 8px',

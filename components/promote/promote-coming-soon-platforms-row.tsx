@@ -69,7 +69,7 @@ export function PromoteComingSoonPlatformsRow({ compact = false }: { compact?: b
               <Icon size={20} color="var(--text-muted)" />
               <span style={{
                 fontFamily: font,
-                fontSize: '0.62rem',
+                fontSize: '0.75rem',
                 color: 'var(--text-muted)',
               }}>
                 {p.label}
@@ -79,7 +79,7 @@ export function PromoteComingSoonPlatformsRow({ compact = false }: { compact?: b
         })}
         <span style={{
           fontFamily: font,
-          fontSize: '0.62rem',
+          fontSize: '0.75rem',
           fontWeight: 600,
           color: 'var(--text-muted)',
           marginLeft: 'auto',

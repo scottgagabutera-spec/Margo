@@ -1243,7 +1243,7 @@ function FeedPageInner() {
         {sharedLabel && (
           <p style={{
             fontFamily: 'var(--font-lora), serif',
-            fontStyle: 'italic',
+            fontStyle: 'normal',
             fontSize: '0.92rem',
             color: 'var(--gold)',
             textAlign: 'center',
@@ -1256,7 +1256,7 @@ function FeedPageInner() {
 
         {lyricsMixReady && lyricPostRows.length === 0 && !mixedLyricRows.some((r) => r.kind !== 'post') && (
           <div style={{ textAlign: 'center', padding: '64px 0' }}>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '1rem', marginBottom: '16px' }}>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'normal', color: 'var(--text-secondary)', fontSize: '1rem', marginBottom: '16px' }}>
               {selectedVibe === 'ALL'
                 ? 'Quiet for now.'
                 : `Nothing tagged ${selectedVibe.toLowerCase()} yet.`}
@@ -1264,7 +1264,7 @@ function FeedPageInner() {
             <Link href="/compose" style={{
               padding: '10px 24px', border: '1px solid var(--border)',
               borderRadius: '50px', color: 'var(--text-secondary)',
-              fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
+              fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem',
               letterSpacing: '1px', textTransform: 'uppercase', textDecoration: 'none',
             }}>Share a lyric</Link>
           </div>

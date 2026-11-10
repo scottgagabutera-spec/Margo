@@ -265,7 +265,7 @@ export function StageMomentCard({
     ? stageCardLyricStyle(layout)
     : {
         fontFamily: LYRIC_FONT,
-        fontStyle: 'italic' as const,
+        fontStyle: 'normal' as const,
         fontSize: 'clamp(1.35rem, 4.8vw, 1.85rem)',
         color: theme.ink,
         lineHeight: 1.35,
@@ -577,7 +577,7 @@ export function StageMomentCard({
                     height: 'var(--margo-touch-min)',
                     textDecoration: 'none',
                     fontFamily: UI_FONT,
-                    fontSize: '0.72rem',
+                    fontSize: '0.75rem',
                     fontWeight: 600,
                     letterSpacing: '0.2px',
                     color: theme.ink,

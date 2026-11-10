@@ -414,7 +414,7 @@ export function PromoteQueueCard({
               border: 'none',
               color: 'var(--text-muted)',
               fontFamily: font,
-              fontSize: '0.62rem',
+              fontSize: '0.75rem',
               letterSpacing: '0.08em',
               textTransform: 'uppercase',
               cursor: busy ? 'wait' : 'pointer',
@@ -429,7 +429,7 @@ export function PromoteQueueCard({
       <div style={{ fontFamily: font, fontSize: TYPE.song, fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>
         {item.songTitle}
       </div>
-      <div style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: TYPE.lyric, color: 'var(--text)', marginBottom: '12px', whiteSpace: 'pre-line', lineHeight: 1.5 }}>
+      <div style={{ fontFamily: lyricFont, fontStyle: 'normal', fontSize: TYPE.lyric, color: 'var(--text)', marginBottom: '12px', whiteSpace: 'pre-line', lineHeight: 1.5 }}>
         {item.lyricText}
       </div>
 
@@ -573,7 +573,7 @@ export function PromoteQueueCard({
                   {target.status === 'failed' && target.errorMessage && (
                     <p style={{
                       fontFamily: font,
-                      fontSize: '0.72rem',
+                      fontSize: '0.75rem',
                       color: 'var(--text-muted)',
                       margin: '4px 0 0',
                       lineHeight: 1.35,

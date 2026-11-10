@@ -39,11 +39,11 @@ export function DiscoverHomeSongTile({
           <SongCardActions song={song} placement="cover" />
         </div>
         <p style={{
-          fontFamily: UI_FONT, fontSize: '12px', fontWeight: 500, color: 'var(--text)',
+          fontFamily: UI_FONT, fontSize: '0.75rem', fontWeight: 500, color: 'var(--text)',
           margin: '0 0 2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }}>{song.title}</p>
         <p style={{
-          fontFamily: UI_FONT, fontSize: '11px', fontWeight: 400, color: 'var(--text-muted)',
+          fontFamily: UI_FONT, fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-muted)',
           margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }}>{song.artist}</p>
       </button>
@@ -84,7 +84,7 @@ export function DiscoverHomeArtistTile({
         )}
       </div>
       <p style={{
-        fontFamily: UI_FONT, fontSize: '11px', fontWeight: 500, color: 'var(--text)',
+        fontFamily: UI_FONT, fontSize: '0.75rem', fontWeight: 500, color: 'var(--text)',
         margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
       }}>{name}</p>
     </Link>

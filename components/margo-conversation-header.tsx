@@ -59,7 +59,7 @@ export function MargoConversationHeader({
           width: touch,
           height: touch,
           textDecoration: 'none',
-          color: 'var(--gold)',
+          color: 'var(--text)',
           boxSizing: 'border-box',
           WebkitTapHighlightColor: 'transparent',
         }}

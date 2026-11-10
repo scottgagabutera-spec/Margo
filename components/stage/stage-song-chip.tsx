@@ -80,7 +80,7 @@ export function StageSongChip({
             className="margo-stage-song-chip__title"
             style={{
               fontFamily: UI_FONT,
-              fontSize: '13px',
+              fontSize: '0.8125rem',
               color: 'var(--text)',
               fontWeight: 600,
               overflow: 'hidden',

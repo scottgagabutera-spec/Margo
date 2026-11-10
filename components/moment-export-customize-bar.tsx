@@ -355,7 +355,7 @@ export function MomentExportCustomizeBar(props: MomentExportCustomizeBarProps) {
           <span
             style={{
               fontFamily: UI_FONT,
-              fontSize: '0.72rem',
+              fontSize: '0.75rem',
               fontWeight: 700,
               letterSpacing: '0.3px',
               color: effectMode ? 'var(--gold)' : 'var(--text-muted)',

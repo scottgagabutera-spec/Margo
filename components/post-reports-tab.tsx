@@ -150,9 +150,9 @@ export function PostReportsTab() {
       )}
 
       {loading ? (
-        <p style={{ fontFamily: font, color: 'var(--text-muted)', fontStyle: 'italic' }}>Loading reports…</p>
+        <p style={{ fontFamily: font, color: 'var(--text-muted)', fontStyle: 'normal' }}>Loading reports…</p>
       ) : reports.length === 0 ? (
-        <p style={{ fontFamily: font, color: 'var(--text-muted)', fontStyle: 'italic' }}>No reports in this filter.</p>
+        <p style={{ fontFamily: font, color: 'var(--text-muted)', fontStyle: 'normal' }}>No reports in this filter.</p>
       ) : (
         reports.map(r => {
           const isExpanded = expandedId === r.id
@@ -186,11 +186,11 @@ export function PostReportsTab() {
                       {r.createdAt ? new Date(r.createdAt).toLocaleString() : ''}
                     </span>
                   </div>
-                  <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '0.95rem', color: 'var(--text)', marginBottom: '8px', lineHeight: 1.45 }}>
+                  <p style={{ fontFamily: font, fontStyle: 'normal', fontSize: '0.95rem', color: 'var(--text)', marginBottom: '8px', lineHeight: 1.45 }}>
                     &ldquo;{isExpanded ? (r.postText || '—') : postSnippet}&rdquo;
                   </p>
                   {!isExpanded && (
-                    <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                    <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                       Reason: <span style={{ color: 'var(--text)' }}>{reasonSnippet}</span>
                     </p>
                   )}
@@ -202,7 +202,7 @@ export function PostReportsTab() {
                 <div onClick={(e) => e.stopPropagation()}>
                   {(r.song || r.artist) && (
                     <p style={{
-                      fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)',
+                      fontFamily: font, fontSize: '0.75rem', color: 'var(--text-muted)',
                       textTransform: 'uppercase', letterSpacing: '1px', marginTop: '14px', marginBottom: '8px',
                     }}>
                       {[r.song, r.artist].filter(Boolean).join(' · ')}
@@ -214,7 +214,7 @@ export function PostReportsTab() {
                       <span style={{ color: 'var(--text-muted)' }}> — {r.reasonNote}</span>
                     ) : null}
                   </p>
-                  <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '14px' }}>
+                  <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '14px' }}>
                     Reporter: {r.reporterDisplayName || r.reporterUsername || r.reporterId.slice(0, 8)}
                     {r.postStatus ? ` · post status: ${r.postStatus}` : ''}
                   </p>

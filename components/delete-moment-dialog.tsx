@@ -118,7 +118,7 @@ export function DeleteMomentDialog({
       >
         <p style={{
           fontFamily: font,
-          fontStyle: 'italic',
+          fontStyle: 'normal',
           fontSize: '1.0625rem',
           color: 'var(--text)',
           margin: '0 0 6px',

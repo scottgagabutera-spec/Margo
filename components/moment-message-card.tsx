@@ -26,7 +26,7 @@ export function MomentMessageCard({
       {embedded ? (
         <p style={{
           fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
-          fontSize: '0.65rem',
+          fontSize: '0.75rem',
           fontWeight: 700,
           letterSpacing: '0.08em',
           textTransform: 'uppercase',
@@ -51,7 +51,7 @@ export function MomentMessageCard({
         <p
           style={{
             fontFamily: font,
-            fontStyle: 'italic',
+            fontStyle: 'normal',
             fontSize: embedded ? '0.82rem' : '0.9rem',
             lineHeight: 1.45,
             margin: 0,
@@ -61,7 +61,7 @@ export function MomentMessageCard({
           &ldquo;{moment.lyric}&rdquo;
         </p>
         {(moment.songTitle || moment.artistName) && (
-          <p style={{ fontFamily: font, fontSize: '0.72rem', margin: '8px 0 0', color: muted }}>
+          <p style={{ fontFamily: font, fontSize: '0.75rem', margin: '8px 0 0', color: muted }}>
             {moment.songTitle && <strong style={{ color: ink }}>{moment.songTitle}</strong>}
             {moment.songTitle && moment.artistName ? ' · ' : null}
             {moment.artistName}
@@ -90,7 +90,7 @@ export function MomentMessageCard({
         }}
       >
         Open Moment
-        <span aria-hidden style={{ fontSize: '0.7rem' }}>→</span>
+        <span aria-hidden style={{ fontSize: '0.75rem' }}>→</span>
       </Link>
     </div>
   )
