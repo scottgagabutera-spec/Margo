@@ -1,7 +1,17 @@
 'use client'
 import { toast } from 'sonner'
 import { CloseIcon } from '@/components/icons'
-import { Suspense, useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react'
+import {
+  Suspense,
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useCallback,
+  memo,
+  type ComponentProps,
+} from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
@@ -98,6 +108,31 @@ import { useRegisterNavBack } from '@/components/nav-back'
 
 const supabase = createClient()
 
+type FeedPostCardProps = ComponentProps<typeof PostCard>
+
+function feedPostCardPropsEqual(a: FeedPostCardProps, b: FeedPostCardProps) {
+  return (
+    a.post.id === b.post.id
+    && a.post === b.post
+    && a.resonated === b.resonated
+    && a.resonateCount === b.resonateCount
+    && a.echoCount === b.echoCount
+    && a.replayed === b.replayed
+    && a.replayCount === b.replayCount
+    && a.highlightShared === b.highlightShared
+    && a.openLyricBack === b.openLyricBack
+    && a.isNew === b.isNew
+    && a.isTrending === b.isTrending
+    && a.isTop === b.isTop
+    && a.domId === b.domId
+    && a.variant === b.variant
+    && a.replayNote === b.replayNote
+    && a.onResonate === b.onResonate
+  )
+}
+
+const MemoFeedPostCard = memo(PostCard, feedPostCardPropsEqual)
+
 // Soft-reload Feed-local Realtime payloads after pausing a hidden pane.
 const FEED_STALE_MS = 60_000
 
@@ -136,6 +171,8 @@ function FeedPageInner() {
     flushPending,
     applyImmediate,
   } = useNewItemsBuffer(livePosts, { settleEmpty: !loading })
+  const postsRef = useRef(posts)
+  useEffect(() => { postsRef.current = posts }, [posts])
   const evictFeedPost = useCallback(
     (postId: string) => {
       removePost(postId)
@@ -172,6 +209,7 @@ function FeedPageInner() {
   const { refetch: refetchMessages } = useMessaging()
   const [selectedSort, setSelectedSort] = useState('NEW')
   const [filterAnnouncement, setFilterAnnouncement] = useState('')
+  const resonatedRef = useRef(new Set<string>())
   const [resonated, setResonated] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set()
     try {
@@ -179,6 +217,7 @@ function FeedPageInner() {
       return saved ? new Set(JSON.parse(saved)) : new Set()
     } catch { return new Set() }
   })
+  useEffect(() => { resonatedRef.current = resonated }, [resonated])
   const [resonateCounts, setResonateCounts] = useState<Record<string, number>>({})
   const {
     replayed,
@@ -195,6 +234,7 @@ function FeedPageInner() {
   const [followedFromStrip, setFollowedFromStrip] = useState<Set<string>>(new Set())
   const postStatsLoadedAtRef = useRef(0)
   const resonatesLoadedAtRef = useRef(0)
+  const resonateWriteInflightRef = useRef(new Set<string>())
   const highlightHandledRef = useRef<string | null>(null)
   const [sharedLabel, setSharedLabel] = useState(false)
   const [highlightPostId, setHighlightPostId] = useState<string | null>(null)
@@ -266,9 +306,12 @@ function FeedPageInner() {
           if (!postId) return
           setPostStats((prev) => {
             const prior = prev[postId]
+            const skipResonate = resonateWriteInflightRef.current.has(postId)
             const nextStats = {
               views: row?.views ?? prior?.views,
-              resonateCount: row?.resonate_count ?? prior?.resonateCount,
+              resonateCount: skipResonate
+                ? prior?.resonateCount
+                : (row?.resonate_count ?? prior?.resonateCount),
               echoCount: row?.echo_count ?? prior?.echoCount,
               replayCount: row?.replay_count ?? prior?.replayCount,
             }
@@ -315,7 +358,21 @@ function FeedPageInner() {
       next.on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'post_resonates', filter: `actor_id=eq.${myId}` },
-        () => { if (!cancelled) loadMyResonates() }
+        (payload) => {
+          if (cancelled) return
+          const postId =
+            (payload.new as { post_id?: string } | null)?.post_id
+            ?? (payload.old as { post_id?: string } | null)?.post_id
+          if (!postId) return
+          if (resonateWriteInflightRef.current.has(postId)) return
+          setResonated((prev) => {
+            const next = new Set(prev)
+            if (payload.eventType === 'INSERT') next.add(postId)
+            else if (payload.eventType === 'DELETE') next.delete(postId)
+            try { localStorage.setItem('margoResonated', JSON.stringify([...next])) } catch {}
+            return next
+          })
+        },
       )
       next.subscribe()
       channel = next
@@ -640,7 +697,7 @@ function FeedPageInner() {
     return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0
   })()
 
-  const notifyResonate = async (post: Post) => {
+  const notifyResonate = useCallback(async (post: Post) => {
     if (!user?.id) return
     if (!post.authorUid || post.authorUid === user.id) return
     try {
@@ -655,13 +712,14 @@ function FeedPageInner() {
     } catch (err) {
       console.error('Failed to insert resonate notification:', err)
     }
-  }
+  }, [user?.id])
 
-  const toggleResonate = async (postId: string) => {
+  const toggleResonate = useCallback(async (postId: string) => {
     if (!requireAuth()) return
     if (!user?.id) return
-    const already = resonated.has(postId)
+    const already = resonatedRef.current.has(postId)
     const myId = user.id
+    resonateWriteInflightRef.current.add(postId)
     setResonated(prev => {
       const next = new Set(prev)
       already ? next.delete(postId) : next.add(postId)
@@ -679,7 +737,7 @@ function FeedPageInner() {
         if (error) throw error
       }
       if (!already) {
-        const post = posts.find(p => p.id === postId)
+        const post = postsRef.current.find(p => p.id === postId)
         if (post) void notifyResonate(post)
       }
     } catch {
@@ -689,8 +747,10 @@ function FeedPageInner() {
         return next
       })
       setResonateCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) + (already ? 1 : -1)) }))
+    } finally {
+      resonateWriteInflightRef.current.delete(postId)
     }
-  }
+  }, [notifyResonate, requireAuth, user?.id])
 
   const replayBase = (id: string, fallback = 0) =>
     countFor(id, postStats[id]?.replayCount, fallback)
@@ -1294,7 +1354,7 @@ function FeedPageInner() {
               )
             }
             return (
-              <PostCard
+              <MemoFeedPostCard
                 key={item.key}
                 {...cardProps}
                 domId={`feed-post-${post.id}`}

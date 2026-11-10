@@ -2,6 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { isConsumerVisibleUsername } from '@/lib/profile-public-server'
 import { loadProfileFavoriteArtists } from '@/lib/profile/load-favorite-artists'
+import { loadProfileFavoriteSongs } from '@/lib/profile/load-favorite-songs'
+import { favoriteAlbumsTablesReady, favoriteSongsTablesReady } from '@/lib/favorites/table-ready'
+import type { ProfileFavoriteSong } from '@/lib/profile/load-favorite-songs'
 import { assembleMemoriesPublicBatch } from '@/lib/memory/assemble-batch'
 import { MEMORY_ROW_SELECT } from '@/lib/memory/columns'
 import type { MemoryPublic } from '@/lib/memory/types'
@@ -11,6 +14,9 @@ export type ProfileSurfacePayload = {
   profileId: string
   username: string
   favoriteArtists: ProfileFavoriteArtist[]
+  favoriteSongs: ProfileFavoriteSong[]
+  favoriteSongsReady: boolean
+  favoriteAlbumsReady: boolean
   memories: MemoryPublic[]
   memoriesIsOwner: boolean
   viewerFollowStatus: 'pending' | 'accepted' | null | undefined
@@ -46,8 +52,12 @@ export async function buildProfileSurface(usernameRaw: string): Promise<ProfileS
     viewerFollowStatus = follow ? (follow.status as 'pending' | 'accepted') : null
   }
 
-  const [favoriteArtists, memoryRows] = await Promise.all([
+  const songsReady = await favoriteSongsTablesReady()
+  const albumsReady = await favoriteAlbumsTablesReady()
+
+  const [favoriteArtists, favoriteSongs, memoryRows] = await Promise.all([
     loadProfileFavoriteArtists(profileId),
+    songsReady ? loadProfileFavoriteSongs(profileId) : Promise.resolve([]),
     supabase
       .from('memories')
       .select(MEMORY_ROW_SELECT)
@@ -66,6 +76,9 @@ export async function buildProfileSurface(usernameRaw: string): Promise<ProfileS
     profileId,
     username: prof.username as string,
     favoriteArtists,
+    favoriteSongs,
+    favoriteSongsReady: songsReady,
+    favoriteAlbumsReady: albumsReady,
     memories,
     memoriesIsOwner: isOwner,
     viewerFollowStatus,

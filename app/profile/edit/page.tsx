@@ -10,6 +10,7 @@ import { SignatureSongPicker } from '@/components/signature-song-picker'
 import { CatalogPickLyricField } from '@/components/catalog-pick-lyric-field'
 import { SignInLink } from '@/components/signin-link'
 import { LoadingRing } from '@/components/loading-ring'
+import { CloseIcon } from '@/components/icons'
 import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { ARTIST_LINK_FIELDS, sanitizeArtistLinks } from '@/lib/artist-links'
 import {
@@ -27,7 +28,9 @@ import {
   USERNAME_MAX_LENGTH,
   validateUsernameChoice,
 } from '@/lib/username-validator'
-import { FavoriteArtistsPicker, type FavoriteArtistPick } from '@/components/favorite-artists-picker'
+import type { ProfileFavoriteArtist } from '@/components/profile-favorite-artists-row'
+import { ProfileEditFavoritesSections } from '@/components/profile-edit-favorites-sections'
+import type { ProfileFavoriteSong } from '@/lib/profile/load-favorite-songs'
 
 const font = UI_FONT
 const lyricFont = LYRIC_FONT
@@ -63,11 +66,15 @@ function EditProfilePageInner() {
   const [catalogSongId, setCatalogSongId] = useState<string | null>(null)
   const [isPrivate, setIsPrivateLocal] = useState(false)
   const [artistLinkDraft, setArtistLinkDraft] = useState<Record<string, string>>({})
-  const [favoriteArtists, setFavoriteArtists] = useState<FavoriteArtistPick[]>([])
+  const [favoriteArtists, setFavoriteArtists] = useState<ProfileFavoriteArtist[]>([])
+  const [favoriteSongs, setFavoriteSongs] = useState<ProfileFavoriteSong[]>([])
+  const [favoriteSongsReady, setFavoriteSongsReady] = useState(false)
   const favoriteArtistsInitialRef = useRef<string>('[]')
+  const favoriteSongsInitialRef = useRef<string>('[]')
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false)
   const [signatureSheetOpen, setSignatureSheetOpen] = useState(false)
   const [signatureLinePickerOpen, setSignatureLinePickerOpen] = useState(false)
   const lyricInputRef = useRef<HTMLTextAreaElement>(null)
@@ -96,16 +103,21 @@ function EditProfilePageInner() {
     let active = true
     void fetch(`/api/profile/favorite-artists?profileId=${encodeURIComponent(user.id)}`)
       .then((r) => r.json())
-      .then((data: { favorites?: Array<FavoriteArtistPick & { position?: number }> }) => {
+      .then((data: { favorites?: ProfileFavoriteArtist[] }) => {
         if (!active) return
-        const list = (data.favorites || []).map((f) => ({
-          id: f.id,
-          name: f.name,
-          artworkUrl: f.artworkUrl,
-          onMargo: f.onMargo,
-        }))
+        const list = data.favorites || []
         setFavoriteArtists(list)
         favoriteArtistsInitialRef.current = JSON.stringify(list.map((x) => x.id))
+      })
+      .catch(() => {})
+    void fetch(`/api/profile/favorite-songs?profileId=${encodeURIComponent(user.id)}`)
+      .then((r) => r.json())
+      .then((data: { favorites?: ProfileFavoriteSong[]; ready?: boolean }) => {
+        if (!active) return
+        setFavoriteSongsReady(!!data.ready)
+        const list = data.favorites || []
+        setFavoriteSongs(list)
+        favoriteSongsInitialRef.current = JSON.stringify(list.map((x) => x.id))
       })
       .catch(() => {})
     return () => { active = false }
@@ -183,8 +195,18 @@ function EditProfilePageInner() {
     }
   }, [user?.id, persistDraftNow])
 
+  const favoritesDirty = useMemo(() => {
+    const artistsChanged =
+      JSON.stringify(favoriteArtists.map((f) => f.id)) !== favoriteArtistsInitialRef.current
+    const songsChanged =
+      favoriteSongsReady
+      && JSON.stringify(favoriteSongs.map((f) => f.id)) !== favoriteSongsInitialRef.current
+    return artistsChanged || songsChanged
+  }, [favoriteArtists, favoriteSongs, favoriteSongsReady])
+
   const hasUnsavedChanges = useMemo(() => {
     if (!identity || !formSeededRef.current) return false
+    if (favoritesDirty) return true
     return profileEditHasUnsavedChanges(identity, {
       displayName,
       username,
@@ -196,9 +218,37 @@ function EditProfilePageInner() {
       isPrivate,
       artistLinkDraft,
     })
-  }, [identity, displayName, username, bio, lyric, song, artist, catalogSongId, isPrivate, artistLinkDraft])
+  }, [
+    identity,
+    displayName,
+    username,
+    bio,
+    lyric,
+    song,
+    artist,
+    catalogSongId,
+    isPrivate,
+    artistLinkDraft,
+    favoritesDirty,
+  ])
 
   useProfileEditLeaveGuard(hasUnsavedChanges)
+
+  const leaveEditProfile = useCallback(() => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back()
+      return
+    }
+    router.push('/you')
+  }, [router])
+
+  const handleCloseEdit = useCallback(() => {
+    if (!hasUnsavedChanges) {
+      leaveEditProfile()
+      return
+    }
+    setDiscardConfirmOpen(true)
+  }, [hasUnsavedChanges, leaveEditProfile])
 
   const handleSave = useCallback(async () => {
     if (!identity) return
@@ -251,6 +301,10 @@ function EditProfilePageInner() {
     const favoritesChanged =
       JSON.stringify(favoriteArtists.map((f) => f.id)) !== favoriteArtistsInitialRef.current
 
+    const songsChanged =
+      favoriteSongsReady
+      && JSON.stringify(favoriteSongs.map((f) => f.id)) !== favoriteSongsInitialRef.current
+
     if (favoritesChanged) {
       const favRes = await fetch('/api/profile/favorite-artists', {
         method: 'PUT',
@@ -271,7 +325,27 @@ function EditProfilePageInner() {
       favoriteArtistsInitialRef.current = JSON.stringify(favoriteArtists.map((f) => f.id))
     }
 
-    if (tasks.length === 0 && !favoritesChanged) {
+    if (songsChanged) {
+      const songRes = await fetch('/api/profile/favorite-songs', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          favorites: favoriteSongs.map((f, position) => ({
+            catalogSongId: f.id,
+            position,
+            artworkUrl: f.artworkUrl,
+          })),
+        }),
+      })
+      if (!songRes.ok) {
+        setSaving(false)
+        setError('Could not save favorite songs.')
+        return
+      }
+      favoriteSongsInitialRef.current = JSON.stringify(favoriteSongs.map((f) => f.id))
+    }
+
+    if (tasks.length === 0 && !favoritesChanged && !songsChanged) {
       router.push(`/profile/${destinationUsername}`)
       return
     }
@@ -362,10 +436,35 @@ function EditProfilePageInner() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '16px',
+            gap: '12px',
             minHeight: 'var(--margo-touch-min)',
             margin: '0 0 12px',
           }}>
+            <button
+              type="button"
+              onClick={handleCloseEdit}
+              aria-label="Close edit profile"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                minHeight: 'var(--margo-touch-min)',
+                padding: '0 4px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontFamily: font,
+                fontSize: TYPE.label,
+                fontWeight: 700,
+                letterSpacing: '0.16em',
+                textTransform: 'uppercase',
+                color: 'var(--text-muted)',
+                flexShrink: 0,
+              }}
+            >
+              <CloseIcon size={14} color="var(--text-muted)" />
+              Close
+            </button>
             <h1 style={{
               fontFamily: font,
               fontSize: TYPE.label,
@@ -374,6 +473,8 @@ function EditProfilePageInner() {
               textTransform: 'uppercase',
               color: 'var(--text-muted)',
               margin: 0,
+              flex: 1,
+              textAlign: 'center',
             }}>
               Edit profile
             </h1>
@@ -394,11 +495,81 @@ function EditProfilePageInner() {
                 textTransform: 'uppercase',
                 color: 'var(--gold)',
                 opacity: saving || usernameBlocksSave ? 0.45 : 1,
+                flexShrink: 0,
               }}
             >
               {saving ? 'Saving' : 'Save'}
             </button>
           </div>
+
+          {discardConfirmOpen ? (
+            <div
+              role="dialog"
+              aria-labelledby="edit-discard-title"
+              style={{
+                marginBottom: 12,
+                padding: '12px 14px',
+                borderRadius: 12,
+                border: '1px solid var(--border)',
+                background: 'var(--surface)',
+              }}
+            >
+              <p
+                id="edit-discard-title"
+                style={{
+                  fontFamily: font,
+                  fontSize: TYPE.secondary,
+                  color: 'var(--text)',
+                  margin: '0 0 10px',
+                }}
+              >
+                Discard changes?
+              </p>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => setDiscardConfirmOpen(false)}
+                  style={{
+                    fontFamily: font,
+                    fontSize: TYPE.label,
+                    fontWeight: 600,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    border: '1px solid var(--border)',
+                    background: 'transparent',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Keep editing
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDiscardConfirmOpen(false)
+                    leaveEditProfile()
+                  }}
+                  style={{
+                    fontFamily: font,
+                    fontSize: TYPE.label,
+                    fontWeight: 600,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    border: 'none',
+                    background: 'var(--gold-faint)',
+                    color: 'var(--gold)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Discard
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -472,9 +643,12 @@ function EditProfilePageInner() {
               />
             </div>
 
-            <FavoriteArtistsPicker
-              initial={favoriteArtists}
-              onChange={setFavoriteArtists}
+            <ProfileEditFavoritesSections
+              favoriteArtists={favoriteArtists}
+              favoriteSongs={favoriteSongs}
+              songsReady={favoriteSongsReady}
+              onArtistsChange={setFavoriteArtists}
+              onSongsChange={setFavoriteSongs}
             />
 
             {identity.isArtist && ARTIST_LINK_FIELDS.map((field) => (

@@ -199,6 +199,15 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
     if (c?.surfaceLoadedAt) return c.favoriteArtists ?? []
     return []
   })
+  const [favoriteSongs, setFavoriteSongs] = useState(
+    () => (username ? peekProfileCache(username)?.favoriteSongs : undefined) ?? [],
+  )
+  const [favoriteSongsReady, setFavoriteSongsReady] = useState(
+    () => !!peekProfileCache(username || '')?.favoriteSongsReady,
+  )
+  const [favoriteAlbumsReady, setFavoriteAlbumsReady] = useState(
+    () => !!peekProfileCache(username || '')?.favoriteAlbumsReady,
+  )
 
   // ── Discography — public, live-only catalog for this profile, if
   // they're an artist. Only the total count + a small preview slice are
@@ -231,6 +240,9 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
       setFollowingCount(cachedNow.followingCount)
       setPostsCount(cachedNow.postsCount)
       if (cachedNow.favoriteArtists) setFavoriteArtists(cachedNow.favoriteArtists)
+      if (cachedNow.favoriteSongs) setFavoriteSongs(cachedNow.favoriteSongs)
+      setFavoriteSongsReady(!!cachedNow.favoriteSongsReady)
+      setFavoriteAlbumsReady(!!cachedNow.favoriteAlbumsReady)
       setLoading(false)
       setNotFound(false)
     } else {
@@ -246,6 +258,9 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
         setFollowingCount(bundle.followingCount)
         setPostsCount(bundle.postsCount)
         if (bundle.favoriteArtists) setFavoriteArtists(bundle.favoriteArtists)
+        if (bundle.favoriteSongs) setFavoriteSongs(bundle.favoriteSongs)
+        setFavoriteSongsReady(!!bundle.favoriteSongsReady)
+        setFavoriteAlbumsReady(!!bundle.favoriteAlbumsReady)
         setNotFound(false)
         setLoading(false)
         if (bundle.viewerFollowStatus !== undefined) {
@@ -280,7 +295,11 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
       const detail = (e as CustomEvent<{ username?: string }>).detail
       if (detail?.username !== username.toLowerCase()) return
       const peek = peekProfileCache(username)
-      if (peek?.favoriteArtists) setFavoriteArtists(peek.favoriteArtists)
+      const surface = peekProfileCache(username)
+      if (surface?.favoriteArtists) setFavoriteArtists(surface.favoriteArtists)
+      if (surface?.favoriteSongs) setFavoriteSongs(surface.favoriteSongs)
+      setFavoriteSongsReady(!!surface?.favoriteSongsReady)
+      setFavoriteAlbumsReady(!!surface?.favoriteAlbumsReady)
     }
     window.addEventListener(PROFILE_SURFACE_READY, onSurface)
     return () => window.removeEventListener(PROFILE_SURFACE_READY, onSurface)
@@ -452,6 +471,14 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
     (next: ProfileFavoriteArtist[]) => {
       setFavoriteArtists(next)
       if (profile?.username) patchProfileSurface(profile.username, { favoriteArtists: next })
+    },
+    [profile?.username],
+  )
+
+  const handleFavoriteSongsChange = useCallback(
+    (next: import('@/lib/profile/load-favorite-songs').ProfileFavoriteSong[]) => {
+      setFavoriteSongs(next)
+      if (profile?.username) patchProfileSurface(profile.username, { favoriteSongs: next })
     },
     [profile?.username],
   )
@@ -820,13 +847,17 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
               </div>
             ) : null}
 
-            {isOwnProfile || favoriteArtists.length > 0 ? (
+            {isOwnProfile || favoriteArtists.length > 0 || favoriteSongs.length > 0 ? (
               <div className="margo-profile-block--favorites margo-profile-block--favorites--reserve">
                 <ProfileFavoriteArtistsRow
                   favorites={favoriteArtists}
+                  favoriteSongs={favoriteSongs}
+                  songsReady={favoriteSongsReady}
+                  albumsReady={favoriteAlbumsReady}
                   isOwnProfile={isOwnProfile}
                   showEmptyOwnerLink
                   onFavoritesChange={handleFavoritesChange}
+                  onFavoriteSongsChange={handleFavoriteSongsChange}
                 />
               </div>
             ) : null}

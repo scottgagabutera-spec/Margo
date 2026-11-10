@@ -13,17 +13,22 @@ import { UI_FONT } from '@/lib/fonts'
 
 const font = UI_FONT
 
-const LINK_FIELDS: { key: keyof ArtistApplicationLinks; label: string; placeholder: string }[] = [
-  { key: 'spotify', label: 'Spotify', placeholder: 'open.spotify.com/artist/...' },
-  { key: 'appleMusic', label: 'Apple Music', placeholder: 'music.apple.com/artist/...' },
-  { key: 'youtube', label: 'YouTube', placeholder: 'youtube.com/@yourname' },
-  { key: 'soundcloud', label: 'SoundCloud', placeholder: 'soundcloud.com/yourname' },
-  { key: 'boomplay', label: 'Boomplay', placeholder: 'boomplay.com/artists/...' },
-  { key: 'audiomack', label: 'Audiomack', placeholder: 'audiomack.com/yourname' },
-  { key: 'deezer', label: 'Deezer', placeholder: 'deezer.com/artist/...' },
-  { key: 'instagram', label: 'Instagram', placeholder: 'instagram.com/yourname' },
-  { key: 'tiktok', label: 'TikTok', placeholder: 'tiktok.com/@yourname' },
-  { key: 'other', label: 'Other', placeholder: 'Any other link that helps verify you' },
+const LINK_FIELDS: {
+  key: keyof ArtistApplicationLinks
+  label: string
+  placeholder: string
+  hint: string
+}[] = [
+  { key: 'spotify', label: 'Spotify', placeholder: 'open.spotify.com/artist/...', hint: 'Artist page link or open.spotify.com URL.' },
+  { key: 'appleMusic', label: 'Apple Music', placeholder: 'music.apple.com/artist/...', hint: 'Helps fans and our team match your name in Favorites.' },
+  { key: 'youtube', label: 'YouTube', placeholder: 'youtube.com/@yourname', hint: 'Channel @handle or full link.' },
+  { key: 'soundcloud', label: 'SoundCloud', placeholder: 'soundcloud.com/yourname', hint: 'Optional.' },
+  { key: 'boomplay', label: 'Boomplay', placeholder: 'boomplay.com/artists/...', hint: 'Optional.' },
+  { key: 'audiomack', label: 'Audiomack', placeholder: 'audiomack.com/yourname', hint: 'Optional.' },
+  { key: 'deezer', label: 'Deezer', placeholder: 'deezer.com/artist/...', hint: 'Optional.' },
+  { key: 'instagram', label: 'Instagram', placeholder: 'instagram.com/yourname', hint: '@username or profile link.' },
+  { key: 'tiktok', label: 'TikTok', placeholder: 'tiktok.com/@yourname', hint: 'Optional.' },
+  { key: 'other', label: 'Other', placeholder: 'Any other link that helps verify you', hint: 'Any public profile that shows you are this artist.' },
 ]
 
 const inputStyle: React.CSSProperties = {
@@ -282,14 +287,18 @@ export function ArtistApplicationForm({
         )}
 
         <div style={{ marginTop: '6px' }}>
-          <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '10px' }}>
-            Your links
+          <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '6px' }}>
+            Streaming &amp; social (optional)
+          </p>
+          <p style={{ fontFamily: font, fontSize: '0.65rem', color: 'rgba(255,255,255,0.45)', marginBottom: '12px', lineHeight: 1.5 }}>
+            Share usernames or profile links. We use these to verify you and to link your Margo artist page when fans favorite you. No automatic claim—our team connects accounts manually.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {LINK_FIELDS.map(({ key, label, placeholder }) => (
+            {LINK_FIELDS.map(({ key, label, placeholder, hint }) => (
               <div key={key}>
                 <label style={labelStyle}>{label}</label>
                 <input type="text" value={links[key] || ''} onChange={e => setLink(key, e.target.value)} placeholder={placeholder} style={inputStyle} />
+                <p style={{ fontFamily: font, fontSize: '0.58rem', color: 'rgba(255,255,255,0.32)', margin: '4px 0 0', lineHeight: 1.4 }}>{hint}</p>
               </div>
             ))}
           </div>

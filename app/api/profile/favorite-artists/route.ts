@@ -6,6 +6,7 @@ import {
   favoriteArtworkFromSettings,
   mergeFavoriteArtworkSettings,
 } from '@/lib/profile/favorite-artist-artwork-settings'
+import { replaceProfileFavoriteArtists } from '@/lib/favorites/replace-favorites-rpc'
 
 type FavoriteRow = {
   catalogArtistId: string
@@ -62,21 +63,31 @@ export async function PUT(request: NextRequest) {
   }
 
   const admin = getSupabaseAdmin()
-  const { error: delErr } = await admin.from('profile_favorite_artists').delete().eq('profile_id', userId)
-  if (delErr) {
-    return NextResponse.json({ error: 'Could not save' }, { status: 500 })
-  }
-
-  if (items.length > 0) {
-    const { error: insErr } = await admin.from('profile_favorite_artists').insert(
-      items.map((item) => ({
-        profile_id: userId,
-        catalog_artist_id: item.catalogArtistId,
-        position: item.position,
-      })),
-    )
-    if (insErr) {
-      console.error('[favorite-artists] put', insErr)
+  const rpcRows = items.map((item) => ({
+    catalogArtistId: item.catalogArtistId,
+    position: item.position,
+  }))
+  const replaced = await replaceProfileFavoriteArtists(userId, rpcRows)
+  if (!replaced.ok) {
+    if (replaced.rpcMissing) {
+      const { error: delErr } = await admin.from('profile_favorite_artists').delete().eq('profile_id', userId)
+      if (delErr) {
+        return NextResponse.json({ error: 'Could not save' }, { status: 500 })
+      }
+      if (items.length > 0) {
+        const { error: insErr } = await admin.from('profile_favorite_artists').insert(
+          items.map((item) => ({
+            profile_id: userId,
+            catalog_artist_id: item.catalogArtistId,
+            position: item.position,
+          })),
+        )
+        if (insErr) {
+          console.error('[favorite-artists] put legacy', insErr)
+          return NextResponse.json({ error: 'Could not save' }, { status: 500 })
+        }
+      }
+    } else {
       return NextResponse.json({ error: 'Could not save' }, { status: 500 })
     }
   }

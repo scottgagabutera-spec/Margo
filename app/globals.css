@@ -3137,6 +3137,24 @@ html[data-margo-landing-song-flow] .margo-landing-hero-anchor {
 .margo-profile-favorite-artists__cell--link {
   cursor: pointer;
 }
+.margo-profile-favorites__remove {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--danger, #e57373);
+  cursor: pointer;
+  z-index: 2;
+}
+.margo-profile-favorite-artists__cell:has(.margo-profile-favorites__remove) {
+  position: relative;
+}
 .margo-profile-favorite-artists__art-wrap {
   display: block;
   margin-bottom: 6px;

@@ -17,6 +17,7 @@ import { AuthPasswordField } from '@/components/auth-password-field'
 import { SettingsOnboardingPreference } from '@/components/settings-onboarding-preference'
 import { resolveBecomeArtistSettingsState } from '@/lib/become-artist-settings-row'
 import { MargoCtaButton } from '@/components/margo-cta-button'
+import { ArtistFavoriteMentionsCard } from '@/components/artist-favorite-mentions-card'
 
 const supabase = createClient()
 
@@ -757,9 +758,12 @@ export default function AccountSettingsPage() {
                 </p>
               ) : null}
               {artistRow.kind === 'open_studio' ? (
-                <MargoCtaButton href={artistRow.href} density="compact" style={ctaHeight}>
-                  {artistRow.label}
-                </MargoCtaButton>
+                <>
+                  <MargoCtaButton href={artistRow.href} density="compact" style={ctaHeight}>
+                    {artistRow.label}
+                  </MargoCtaButton>
+                  <ArtistFavoriteMentionsCard enabled />
+                </>
               ) : artistRow.kind === 'pending' || artistRow.kind === 'approved' ? null : (
                 <MargoCtaButton href={artistRow.href} density="compact" style={ctaHeight}>
                   {artistRow.kind === 'not_approved' ? 'Apply as an artist' : artistRow.label}

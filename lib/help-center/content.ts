@@ -231,6 +231,23 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
     updated: 'November 2026',
   },
   {
+    id: 'claim-artist-mentions',
+    topicId: 'artist-account',
+    audience: 'artists',
+    title: 'Claim your artist name and see your mentions',
+    categoryLabel: 'Account and rights',
+    intro:
+      'When members add you to Favorites, Margo counts those mentions on your catalog artist row. Share your public links in the artist application so we can connect that catalog row to your Margo profile.',
+    steps: [
+      'In [[Apply as an artist]], fill in optional streaming and social links (Spotify, Apple Music, YouTube, Instagram, and others).',
+      'Submit the form. Our team reviews links and sets [[margo_profile_id]] on the matching catalog artist when it is clearly you.',
+      'After you are an approved artist, open [[Account settings]] and tap [[See favorite mentions]] to view favorite counts and top favorited songs or albums.',
+      'To claim a name that is not linked yet, contact support from [[Help center]] with your artist name and the same links you use on streaming platforms.',
+    ],
+    goodToKnow: 'There is no self-serve claim button yet—support links your profile after a quick check.',
+    updated: 'November 2026',
+  },
+  {
     id: 'upload-a-song',
     topicId: 'upload-songs',
     audience: 'artists',
