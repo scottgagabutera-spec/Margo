@@ -185,8 +185,10 @@ export function MessagesInbox({ embedded = false }: { embedded?: boolean }) {
               fontFamily: UI_FONT,
               fontSize: LIST_ROW_TYPE.chip,
               fontWeight: 600,
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase',
+              letterSpacing: 0,
+              textTransform: 'none',
+              fontSize: 'var(--margo-type-l)',
+              fontWeight: 500,
               color: tab === t ? 'var(--gold)' : 'var(--text-secondary)',
               borderBottom: tab === t ? '2px solid var(--gold)' : '2px solid transparent',
             }}

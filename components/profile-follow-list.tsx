@@ -50,11 +50,11 @@ export function ProfileFollowListPage({
       }}>
         <p style={{
           fontFamily: font,
-          fontSize: TYPE.label,
-          fontWeight: 700,
-          letterSpacing: '0.16em',
-          textTransform: 'uppercase',
-          color: 'var(--text-muted)',
+          fontSize: 'var(--margo-type-h)',
+          fontWeight: 500,
+          letterSpacing: 0,
+          textTransform: 'none',
+          color: 'var(--text-secondary)',
           margin: '0 0 12px',
         }}>
           {title}

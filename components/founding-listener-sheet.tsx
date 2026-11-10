@@ -63,10 +63,10 @@ export function FoundingListenerSheet({
           id="founding-listener-title"
           style={{
             fontFamily: UI_FONT,
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
+            fontSize: 'var(--margo-type-l)',
+            fontWeight: 500,
+            letterSpacing: 0,
+            textTransform: 'none',
             color: 'var(--gold)',
             margin: 0,
           }}

@@ -330,12 +330,12 @@ export function NotificationsInbox({
                   key={`g-${row.label}-${i}`}
                   style={{
                     fontFamily: UI_FONT,
-                    fontSize: LIST_ROW_TYPE.time,
-                    fontWeight: 600,
+                    fontSize: 'var(--margo-type-l)',
+                    fontWeight: 500,
                     color: 'var(--text-muted)',
                     margin: '12px 0 4px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
+                    textTransform: 'none',
+                    letterSpacing: 0,
                   }}
                 >
                   {row.label}
