@@ -1,92 +1,14 @@
 'use client'
 
-import { useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { MargoPortraitAvatar } from '@/components/margo-portrait-avatar'
 import { MargoSectionHeader } from '@/components/margo-section-header'
-import { CheckIcon, UserPlusIcon } from '@/components/icons'
 import { UI_FONT } from '@/lib/fonts'
 import type { FeedLyricsPeopleSlot } from '@/lib/feed-lyrics-mix'
-import { useAuthGate } from '@/components/supabase-auth-provider'
-import { createClient } from '@/lib/supabase/client'
-import { SignInLink } from '@/components/signin-link'
 import { leaveFeedTo } from '@/lib/feed-exit-nav'
+import { MargoFollowButton } from '@/components/margo-follow-button'
 
 const font = UI_FONT
-const supabase = createClient()
-
-function FeedPeopleFollowButton({
-  profileId,
-  initialFollowing,
-  onFollowed,
-}: {
-  profileId: string
-  initialFollowing: boolean
-  onFollowed: (id: string) => void
-}) {
-  const { user } = useAuthGate()
-  const [following, setFollowing] = useState(initialFollowing)
-  const [busy, setBusy] = useState(false)
-
-  const toggle = useCallback(async () => {
-    if (busy) return
-    if (!user || user.is_anonymous) return
-    setBusy(true)
-    try {
-      if (!following) {
-        const { error } = await supabase.from('follows').insert({
-          follower_id: user.id,
-          followee_id: profileId,
-        })
-        if (!error) {
-          setFollowing(true)
-          onFollowed(profileId)
-        }
-      }
-    } finally {
-      setBusy(false)
-    }
-  }, [busy, following, onFollowed, profileId, user])
-
-  if (!user || user.is_anonymous) {
-    return (
-      <SignInLink
-        returnTo="/feed"
-        className="margo-feed-people-strip__follow margo-feed-people-strip__follow--gold"
-        aria-label="Sign in to follow"
-      >
-        <UserPlusIcon size={16} color="var(--bg)" />
-        <span>Follow</span>
-      </SignInLink>
-    )
-  }
-
-  return (
-    <button
-      type="button"
-      className={[
-        'margo-btn',
-        'margo-feed-people-strip__follow',
-        following ? 'margo-btn--secondary margo-feed-people-strip__follow--following' : 'margo-btn--primary margo-feed-people-strip__follow--gold',
-      ].join(' ')}
-      disabled={busy || following}
-      onClick={() => void toggle()}
-      aria-label={following ? 'Following' : 'Follow'}
-    >
-      {following ? (
-        <>
-          <CheckIcon size={16} color="var(--gold)" />
-          <span>Following</span>
-        </>
-      ) : (
-        <>
-          <UserPlusIcon size={16} color="var(--bg)" />
-          <span>Follow</span>
-        </>
-      )}
-    </button>
-  )
-}
 
 export function FeedPeopleStrip({
   people,
@@ -135,9 +57,11 @@ export function FeedPeopleStrip({
                 @{p.username}
               </span>
             </button>
-            <FeedPeopleFollowButton
+            <MargoFollowButton
               profileId={p.id}
               initialFollowing={followingIds.has(p.id)}
+              signInReturnTo="/feed"
+              className="margo-feed-people-strip__follow"
               onFollowed={onFollowed}
             />
           </div>

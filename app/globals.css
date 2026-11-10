@@ -2669,6 +2669,37 @@ html[data-margo-landing-song-flow] .margo-landing-hero-anchor {
 .margo-profile-block--actions {
   display: none;
 }
+.margo-profile-hero-cluster-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+.margo-profile-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto 6px;
+}
+.margo-profile-hero-action {
+  flex: 1 1 auto;
+  min-width: 0;
+  position: relative;
+  gap: 6px;
+}
+.margo-profile-hero-action__badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 0.625rem;
+}
 .margo-profile-hero-cluster {
   display: flex;
   align-items: center;
@@ -10157,8 +10188,8 @@ button.margo-feed-memory-card__action:active:not(:disabled) {
 }
 .margo-feed-people-strip__follow {
   gap: 4px;
-  --margo-btn-visible-h: var(--margo-btn-h-chip);
-  padding: calc((var(--margo-btn-touch) - var(--margo-btn-h-chip)) / 2) 10px;
+  padding-left: 10px;
+  padding-right: 10px;
   text-decoration: none;
 }
 .margo-feed-people-strip__follow--following {

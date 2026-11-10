@@ -701,26 +701,25 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
     </div>
   )
 
-  const ownerHeroActions =
+  const heroActionsRow =
     profile && isOwnProfile
       ? ProfileHeroOwnerActions({ messagesUnreadCount: inboxUnread })
-      : null
-
-  const visitorHeroActions =
-    profile && !isOwnProfile
-      ? ProfileHeroVisitorActions({
-          signedOut: !user,
-          messageHref: messageEligibility.canOpenThread ? `/messages/${profile.username}` : undefined,
-          messageDisabled: !messageEligibility.canOpenThread,
-          messageTitle: messageEligibility.blockedReason || undefined,
-          followLabel,
-          followAccepted: followStatus === 'accepted',
-          onFollow: handleVisitorFollowClick,
-          followBusy,
-          socialReady: socialActionsReady,
-          messageUnreadCount: partnerUnread,
-        })
-      : null
+      : profile && !isOwnProfile
+        ? ProfileHeroVisitorActions({
+            signedOut: !user,
+            profileId: profile.id,
+            messageHref: messageEligibility.canOpenThread ? `/messages/${profile.username}` : undefined,
+            messageDisabled: !messageEligibility.canOpenThread,
+            messageTitle: messageEligibility.blockedReason || undefined,
+            followLabel,
+            followAccepted: followStatus === 'accepted',
+            onFollow: handleVisitorFollowClick,
+            followBusy,
+            socialReady: socialActionsReady,
+            messageUnreadCount: partnerUnread,
+            signInReturnTo: `/profile/${profile.username}`,
+          })
+        : null
 
   return (
     <main style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
@@ -765,8 +764,7 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
                     avatarUrl: profile.avatarUrl,
                     onAvatarClick: () => setAvatarLightboxOpen(true),
                   }}
-                  leftFlank={ownerHeroActions?.left ?? visitorHeroActions?.left}
-                  rightFlank={ownerHeroActions?.right ?? visitorHeroActions?.right}
+                  actionsRow={heroActionsRow}
                 />
               )}
             </div>

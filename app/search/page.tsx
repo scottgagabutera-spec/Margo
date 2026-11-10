@@ -17,6 +17,7 @@ import {
   sectionVisible,
 } from '@/lib/search-scope'
 import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
+import { MargoFollowButton } from '@/components/margo-follow-button'
 
 const DEBOUNCE_MS = 150
 const font = UI_FONT
@@ -35,8 +36,8 @@ function HitSection({
   return (
     <section style={{ marginBottom: '28px' }}>
       <p style={{
-        fontFamily: font, fontSize: TYPE.label, fontWeight: 700,
-        color: 'var(--text-muted)', letterSpacing: '0.16em', textTransform: 'uppercase',
+        fontFamily: font, fontSize: 'var(--margo-type-l)', fontWeight: 500,
+        color: 'var(--text-secondary)', letterSpacing: 0, textTransform: 'none',
         marginBottom: '12px',
       }}>{title}</p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>{children}</div>
@@ -82,6 +83,12 @@ function Cover({
   )
 }
 
+function resolveProfileId(hit: MargoSearchHit): string {
+  if (hit.profileId) return hit.profileId
+  if (hit.id.startsWith('user:')) return hit.id.slice(5)
+  return hit.id
+}
+
 function PersonCard({ hit, artist }: { hit: MargoSearchHit; artist?: boolean }) {
   const handle = hit.username ? `@${hit.username.replace(/^@/, '')}` : hit.title || ''
   return (
@@ -109,6 +116,14 @@ function PersonCard({ hit, artist }: { hit: MargoSearchHit; artist?: boolean }) 
           ) : null}
         </div>
       </Link>
+      {!artist && hit.username ? (
+        <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'flex-end' }}>
+          <MargoFollowButton
+            profileId={resolveProfileId(hit)}
+            signInReturnTo="/search"
+          />
+        </div>
+      ) : null}
       {artist && hit.relatedSongs && hit.relatedSongs.length > 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px', paddingLeft: '62px' }}>
           {hit.relatedSongs.map((song) => (
