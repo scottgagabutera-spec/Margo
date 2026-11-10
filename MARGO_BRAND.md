@@ -166,15 +166,48 @@ Gold — The Margo Signature:
 
 ### Button standard (`margo-btn` / `MargoCtaButton`)
 
-Tokens in `:root`: `--margo-btn-h-primary` 40px, `--margo-btn-h-secondary` / chip / icon 32px (icon-accent 36px for Echoes open), `--margo-btn-touch` 44px, label `0.75rem` weight 500, sentence case, no letter-spacing.
+Small **concise rectangles** — **8px radius** (`--margo-btn-radius`). No circles or pills except cover-art heart / **…**, and the compose FAB.
 
-- **Primary** (`.margo-btn--primary`, `MargoCtaButton` fill): gold fill, `--text-on-gold`.
-- **Secondary** (`.margo-btn--secondary`, outline): 1px `--border-hi`, `--text`, no gold border.
-- **Chip** (`.margo-btn--chip`): 28px visible, 44px tap; selected = neutral surface/text.
-- **Icon** (`.margo-btn--icon`): 32px visible in 44px tap; **icon-accent** = gold fill for Echoes card primary only.
-- **Compose FAB** (mobile tab bar): **46×46px** gold circle — unchanged.
+Tokens in `:root`: `--margo-btn-h-primary` **32px**, `--margo-btn-h-form` **40px** (full-width auth submit), `--margo-btn-h-follow` **28px**, secondary/chip/icon **32px** / chip **28px**, icon-accent **36px**, `--margo-btn-touch` **44px**, label **`0.75rem` weight 500**, sentence case, **no letter-spacing**.
 
-`MargoCtaButton` includes `margo-btn` + `--primary` / `--secondary`; auth submit uses the same tokens via `margo-auth-primary-btn`. Profile round icon actions (Message / Follow) keep the stacked icon layout but labels follow sentence case.
+- **Primary** (`.margo-btn--primary`): gold fill, `--text-on-gold`.
+- **Secondary** (`.margo-btn--secondary`): transparent, 1px neutral (`--border-hi`), `--text`.
+- **Follow** (`.margo-btn--primary.margo-btn--follow`): gold 28px rectangle; **Following** uses secondary neutral rectangle.
+- **Chip / tab** (`.margo-btn--chip`): 28px, 8px radius; selected = neutral surface/text — **no gold fill**.
+- **Form submit** (`.margo-btn--form` / `margo-auth-primary-btn`): full-width, 40px visible height.
+- **Icon** (`.margo-btn--icon` / `--icon-accent`): square in 44px tap; accent = gold for Echoes card primary only.
+- **Compose FAB**: **46×46px** gold circle — unchanged.
+
+`MargoCtaButton` = `margo-btn` + `--primary` / `--secondary`.
+
+#### Button types (reference)
+
+| Type | Classes | Shape | Height | Radius | Colors |
+|------|---------|-------|--------|--------|--------|
+| Primary CTA | `margo-btn margo-btn--primary` | Rectangle | 32px | 8px | `var(--gold)` / `var(--text-on-gold)` |
+| Full-width submit | `margo-btn margo-btn--primary margo-btn--form` | Rectangle | 40px | 8px | Gold fill |
+| Secondary | `margo-btn margo-btn--secondary` | Rectangle | 32px | 8px | Transparent, `--border-hi`, `--text` |
+| Follow | `margo-btn margo-btn--primary margo-btn--follow` | Rectangle | 28px | 8px | Gold fill |
+| Following | `margo-btn margo-btn--secondary margo-btn--follow` | Rectangle | 28px | 8px | Neutral |
+| Chip / filter | `margo-btn margo-btn--chip` | Rectangle | 28px | 8px | Surface; selected = `--surface-3` |
+| Icon | `margo-btn margo-btn--icon` | Square | 32px | 8px | `--surface-2` |
+| Icon accent | `margo-btn margo-btn--icon-accent` | Square | 36px | 8px | Gold |
+| Compose FAB | (mobile tab bar) | Circle | 46px | 50% | Gold |
+
+#### Vibe & emotion colors
+
+| Vibe | Token / hex | Role |
+|------|-------------|------|
+| Love | `#FF6B9D` | Emotion tag |
+| Heartbreak | `#ff6060` | Emotion tag |
+| Hope | `#7B9FFF` | Emotion tag |
+| Nostalgia | `var(--gold)` | Emotion tag |
+| Healing | `#4ade80` | Emotion tag |
+| Joy | `#ffc847` | Emotion tag |
+| Rage | `#FF6440` | Emotion tag |
+| Loneliness | `#a0a0ff` | Emotion tag |
+| Send It | `#00e5c8` | Emotion tag |
+| Let Out | `#c864ff` | Emotion tag |
 
 ### Profile artist Songs row
 
