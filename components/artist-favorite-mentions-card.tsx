@@ -31,10 +31,7 @@ export function ArtistFavoriteMentionsCard({ enabled }: { enabled: boolean }) {
         setError(data.error || 'Could not load mentions.')
         return
       }
-      const empty =
-        !data.ready
-        || (data.artistFavoriteCount === 0 && data.topSongs.length === 0 && data.topAlbums.length === 0)
-      if (empty) {
+      if (!data.ready) {
         setVisible(false)
         return
       }
@@ -93,7 +90,7 @@ export function ArtistFavoriteMentionsCard({ enabled }: { enabled: boolean }) {
               <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text)', margin: '0 0 10px' }}>
                 {stats.artistFavoriteCount} {stats.artistFavoriteCount === 1 ? 'person has' : 'people have'} you in their favorite artists.
               </p>
-              {stats.topSongs.length > 0 ? (
+              {stats.topSongs?.length > 0 ? (
                 <div style={{ marginBottom: 10 }}>
                   <p style={{ fontFamily: font, fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 6px' }}>
                     Top favorited songs
@@ -107,7 +104,7 @@ export function ArtistFavoriteMentionsCard({ enabled }: { enabled: boolean }) {
                   </ul>
                 </div>
               ) : null}
-              {stats.topAlbums.length > 0 ? (
+              {stats.topAlbums?.length > 0 ? (
                 <div style={{ marginBottom: 10 }}>
                   <p style={{ fontFamily: font, fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 6px' }}>
                     Top favorited albums

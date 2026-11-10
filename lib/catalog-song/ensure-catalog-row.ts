@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { favoriteSongsTablesReady } from '@/lib/favorites/table-ready'
+import { resolveCatalogArtistIdForTrack } from '@/lib/catalog-song/resolve-catalog-artist-link'
 
 export type SongSearchMaterialize = {
   id: string
@@ -29,6 +30,15 @@ export async function ensureCatalogSongFromSearchHit(
     .maybeSingle()
 
   if (found?.id) {
+    const margoSongId = source === 'margo' ? sourceId : null
+    const linkId = await resolveCatalogArtistIdForTrack(artistName, margoSongId)
+    if (linkId) {
+      await admin
+        .from('catalog_songs')
+        .update({ catalog_artist_id: linkId })
+        .eq('id', found.id as string)
+        .is('catalog_artist_id', null)
+    }
     return {
       id: found.id as string,
       title: found.title as string,
@@ -38,6 +48,7 @@ export async function ensureCatalogSongFromSearchHit(
   }
 
   const margoSongId = source === 'margo' ? sourceId : null
+  const catalogArtistId = await resolveCatalogArtistIdForTrack(artistName, margoSongId)
   const { data: inserted, error } = await admin
     .from('catalog_songs')
     .insert({
@@ -47,6 +58,7 @@ export async function ensureCatalogSongFromSearchHit(
       source_id: sourceId,
       artwork_url: hit.artwork?.trim() || null,
       margo_song_id: margoSongId,
+      catalog_artist_id: catalogArtistId,
     })
     .select('id, title, artist_name, artwork_url')
     .single()
@@ -59,6 +71,13 @@ export async function ensureCatalogSongFromSearchHit(
       .eq('source_id', sourceId)
       .maybeSingle()
     if (again?.id) {
+      if (catalogArtistId) {
+        await admin
+          .from('catalog_songs')
+          .update({ catalog_artist_id: catalogArtistId })
+          .eq('id', again.id as string)
+          .is('catalog_artist_id', null)
+      }
       return {
         id: again.id as string,
         title: again.title as string,

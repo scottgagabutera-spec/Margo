@@ -9,6 +9,7 @@ create table if not exists public.catalog_songs (
   source_id text not null,
   artwork_url text,
   margo_song_id uuid references public.songs (id) on delete set null,
+  catalog_artist_id uuid references public.catalog_artists (id) on delete set null,
   favorite_mention_count integer not null default 0 check (favorite_mention_count >= 0),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -27,11 +28,20 @@ create table if not exists public.catalog_albums (
   source text not null check (source in ('apple', 'deezer')),
   source_id text not null,
   artwork_url text,
+  catalog_artist_id uuid references public.catalog_artists (id) on delete set null,
   favorite_mention_count integer not null default 0 check (favorite_mention_count >= 0),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint catalog_albums_source_unique unique (source, source_id)
 );
+
+create index if not exists catalog_songs_catalog_artist_id_idx
+  on public.catalog_songs (catalog_artist_id)
+  where catalog_artist_id is not null;
+
+create index if not exists catalog_albums_catalog_artist_id_idx
+  on public.catalog_albums (catalog_artist_id)
+  where catalog_artist_id is not null;
 
 -- ── Artist mention counter on existing catalog_artists ────────────────
 alter table public.catalog_artists
@@ -153,3 +163,198 @@ drop trigger if exists profile_favorite_albums_mention_incr on public.profile_fa
 create trigger profile_favorite_albums_mention_incr
   after insert or delete on public.profile_favorite_albums
   for each row execute function public.bump_catalog_album_mention();
+
+-- ── Atomic favorites replace (single transaction; rollback on failure) ───
+create or replace function public._validate_favorite_items(p_items jsonb)
+returns void
+language plpgsql
+set search_path = public
+as $$
+declare
+  elem jsonb;
+  pos int;
+  cid uuid;
+  seen_pos int[] := '{}';
+  seen_id uuid[] := '{}';
+  n int;
+begin
+  if p_items is null or jsonb_typeof(p_items) <> 'array' then
+    raise exception 'invalid items';
+  end if;
+  n := jsonb_array_length(p_items);
+  if n > 10 then
+    raise exception 'too many favorites';
+  end if;
+  for elem in select value from jsonb_array_elements(p_items)
+  loop
+    pos := (elem ->> 'position')::int;
+    cid := (elem ->> 'catalog_id')::uuid;
+    if cid is null or pos is null or pos < 0 or pos > 9 then
+      raise exception 'invalid item';
+    end if;
+    if pos = any(seen_pos) then
+      raise exception 'duplicate position';
+    end if;
+    if cid = any(seen_id) then
+      raise exception 'duplicate catalog row';
+    end if;
+    seen_pos := array_append(seen_pos, pos);
+    seen_id := array_append(seen_id, cid);
+  end loop;
+end;
+$$;
+
+create or replace function public.replace_profile_favorite_artists(
+  p_profile_id uuid,
+  p_items jsonb
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  jwt_role text := coalesce(auth.jwt() ->> 'role', '');
+  elem jsonb;
+begin
+  if p_profile_id is null then
+    raise exception 'profile_id required';
+  end if;
+  if jwt_role <> 'service_role' and (auth.uid() is null or auth.uid() <> p_profile_id) then
+    raise exception 'permission denied' using errcode = '42501';
+  end if;
+  perform public._validate_favorite_items(p_items);
+
+  delete from public.profile_favorite_artists where profile_id = p_profile_id;
+
+  for elem in select value from jsonb_array_elements(p_items)
+  loop
+    insert into public.profile_favorite_artists (profile_id, catalog_artist_id, position)
+    values (
+      p_profile_id,
+      (elem ->> 'catalog_id')::uuid,
+      (elem ->> 'position')::int
+    );
+  end loop;
+end;
+$$;
+
+create or replace function public.replace_profile_favorite_songs(
+  p_profile_id uuid,
+  p_items jsonb
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  jwt_role text := coalesce(auth.jwt() ->> 'role', '');
+  elem jsonb;
+begin
+  if p_profile_id is null then
+    raise exception 'profile_id required';
+  end if;
+  if jwt_role <> 'service_role' and (auth.uid() is null or auth.uid() <> p_profile_id) then
+    raise exception 'permission denied' using errcode = '42501';
+  end if;
+  perform public._validate_favorite_items(p_items);
+
+  delete from public.profile_favorite_songs where profile_id = p_profile_id;
+
+  for elem in select value from jsonb_array_elements(p_items)
+  loop
+    insert into public.profile_favorite_songs (profile_id, catalog_song_id, position)
+    values (
+      p_profile_id,
+      (elem ->> 'catalog_id')::uuid,
+      (elem ->> 'position')::int
+    );
+  end loop;
+end;
+$$;
+
+create or replace function public.replace_profile_favorite_albums(
+  p_profile_id uuid,
+  p_items jsonb
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  jwt_role text := coalesce(auth.jwt() ->> 'role', '');
+  elem jsonb;
+begin
+  if p_profile_id is null then
+    raise exception 'profile_id required';
+  end if;
+  if jwt_role <> 'service_role' and (auth.uid() is null or auth.uid() <> p_profile_id) then
+    raise exception 'permission denied' using errcode = '42501';
+  end if;
+  perform public._validate_favorite_items(p_items);
+
+  delete from public.profile_favorite_albums where profile_id = p_profile_id;
+
+  for elem in select value from jsonb_array_elements(p_items)
+  loop
+    insert into public.profile_favorite_albums (profile_id, catalog_album_id, position)
+    values (
+      p_profile_id,
+      (elem ->> 'catalog_id')::uuid,
+      (elem ->> 'position')::int
+    );
+  end loop;
+end;
+$$;
+
+grant execute on function public.replace_profile_favorite_artists(uuid, jsonb) to service_role;
+grant execute on function public.replace_profile_favorite_songs(uuid, jsonb) to service_role;
+grant execute on function public.replace_profile_favorite_albums(uuid, jsonb) to service_role;
+
+-- ── Idempotent mention counter backfill (recount; safe to re-run) ───────
+update public.catalog_artists ca
+set favorite_mention_count = src.cnt
+from (
+  select catalog_artist_id, count(*)::int as cnt
+  from public.profile_favorite_artists
+  group by catalog_artist_id
+) src
+where ca.id = src.catalog_artist_id;
+
+update public.catalog_artists ca
+set favorite_mention_count = 0
+where not exists (
+  select 1 from public.profile_favorite_artists p where p.catalog_artist_id = ca.id
+);
+
+update public.catalog_songs cs
+set favorite_mention_count = src.cnt
+from (
+  select catalog_song_id, count(*)::int as cnt
+  from public.profile_favorite_songs
+  group by catalog_song_id
+) src
+where cs.id = src.catalog_song_id;
+
+update public.catalog_songs cs
+set favorite_mention_count = 0
+where not exists (
+  select 1 from public.profile_favorite_songs p where p.catalog_song_id = cs.id
+);
+
+update public.catalog_albums ca
+set favorite_mention_count = src.cnt
+from (
+  select catalog_album_id, count(*)::int as cnt
+  from public.profile_favorite_albums
+  group by catalog_album_id
+) src
+where ca.id = src.catalog_album_id;
+
+update public.catalog_albums ca
+set favorite_mention_count = 0
+where not exists (
+  select 1 from public.profile_favorite_albums p where p.catalog_album_id = ca.id
+);

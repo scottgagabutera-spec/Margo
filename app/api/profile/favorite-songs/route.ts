@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { favoriteSongsTablesReady } from '@/lib/favorites/table-ready'
 import { loadProfileFavoriteSongs } from '@/lib/profile/load-favorite-songs'
+import { replaceProfileFavoriteSongs } from '@/lib/favorites/replace-favorites-rpc'
 
 type FavoriteRow = {
   catalogSongId: string
@@ -65,23 +66,18 @@ export async function PUT(request: NextRequest) {
   }
 
   const admin = getSupabaseAdmin()
-  const { error: delErr } = await admin.from('profile_favorite_songs').delete().eq('profile_id', userId)
-  if (delErr) {
+  const replaced = await replaceProfileFavoriteSongs(
+    userId,
+    items.map((item) => ({ catalogSongId: item.catalogSongId, position: item.position })),
+  )
+  if (!replaced.ok) {
+    if (replaced.rpcMissing) {
+      return NextResponse.json({ error: 'Feature not available', ready: false }, { status: 503 })
+    }
     return NextResponse.json({ error: 'Could not save' }, { status: 500 })
   }
 
   if (items.length > 0) {
-    const { error: insErr } = await admin.from('profile_favorite_songs').insert(
-      items.map((item) => ({
-        profile_id: userId,
-        catalog_song_id: item.catalogSongId,
-        position: item.position,
-      })),
-    )
-    if (insErr) {
-      console.error('[favorite-songs] put', insErr)
-      return NextResponse.json({ error: 'Could not save' }, { status: 500 })
-    }
     for (const item of items) {
       const url = item.artworkUrl?.trim()
       if (!url) continue

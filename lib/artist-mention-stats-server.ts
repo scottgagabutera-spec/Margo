@@ -25,28 +25,23 @@ export async function loadArtistMentionStats(profileId: string): Promise<ArtistM
 
   const { data: catalogArtist, error: caErr } = await admin
     .from('catalog_artists')
-    .select('id, name, favorite_mention_count')
+    .select('id, favorite_mention_count')
     .eq('margo_profile_id', profileId)
     .maybeSingle()
 
   if (caErr && columnMissing(caErr)) return empty
 
+  const catalogArtistId = catalogArtist?.id as string | undefined
   const artistFavoriteCount = Math.max(0, (catalogArtist?.favorite_mention_count as number) ?? 0)
 
-  const { data: ownedSongs } = await admin
-    .from('songs')
-    .select('id, title, artist_display_name')
-    .eq('owner_profile_id', profileId)
-    .eq('status', 'live')
-
-  const ownedIds = (ownedSongs || []).map((s) => s.id as string)
   let topSongs: ArtistMentionStats['topSongs'] = []
+  let topAlbums: ArtistMentionStats['topAlbums'] = []
 
-  if (ownedIds.length > 0) {
+  if (catalogArtistId) {
     const { data: songRows, error: songErr } = await admin
       .from('catalog_songs')
       .select('title, artist_name, favorite_mention_count')
-      .in('margo_song_id', ownedIds)
+      .eq('catalog_artist_id', catalogArtistId)
       .gt('favorite_mention_count', 0)
       .order('favorite_mention_count', { ascending: false })
       .limit(5)
@@ -58,19 +53,11 @@ export async function loadArtistMentionStats(profileId: string): Promise<ArtistM
         count: r.favorite_mention_count as number,
       }))
     }
-  }
 
-  const displayName =
-    (ownedSongs?.[0]?.artist_display_name as string | undefined) ||
-    (catalogArtist?.name as string | undefined) ||
-    ''
-
-  let topAlbums: ArtistMentionStats['topAlbums'] = []
-  if (displayName.trim()) {
     const { data: albumRows, error: albumErr } = await admin
       .from('catalog_albums')
       .select('title, artist_name, favorite_mention_count')
-      .ilike('artist_name', displayName.trim())
+      .eq('catalog_artist_id', catalogArtistId)
       .gt('favorite_mention_count', 0)
       .order('favorite_mention_count', { ascending: false })
       .limit(5)
@@ -84,13 +71,8 @@ export async function loadArtistMentionStats(profileId: string): Promise<ArtistM
     }
   }
 
-  const hasData = artistFavoriteCount > 0 || topSongs.length > 0 || topAlbums.length > 0
-  if (!hasData) {
-    return { ...empty, ready: !caErr }
-  }
-
   return {
-    ready: true,
+    ready: !caErr,
     artistFavoriteCount,
     topSongs,
     topAlbums,

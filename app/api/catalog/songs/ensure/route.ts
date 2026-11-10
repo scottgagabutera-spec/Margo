@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ensureCatalogSongFromSearchHit } from '@/lib/catalog-song/ensure-catalog-row'
+import { validateCatalogEnsureFields } from '@/lib/catalog-song/ensure-validation'
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
@@ -27,10 +28,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Incomplete song' }, { status: 400 })
   }
 
+  const id = body.id.trim()
+  const title = body.title.trim()
+  const artist = body.artist.trim()
+  const fieldErr = validateCatalogEnsureFields({
+    id,
+    title,
+    artist,
+    artwork: body.artwork,
+  })
+  if (fieldErr) {
+    return NextResponse.json({ error: fieldErr }, { status: 400 })
+  }
+
   const song = await ensureCatalogSongFromSearchHit({
-    id: body.id.trim(),
-    title: body.title.trim(),
-    artist: body.artist.trim(),
+    id,
+    title,
+    artist,
     artwork: body.artwork,
     source: body.source,
     margoSongId: body.margoSongId,
