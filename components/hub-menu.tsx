@@ -53,6 +53,7 @@ import {
   markHubNavFromTile,
   clearHubNavFromTile,
 } from '@/lib/search-scope'
+import { freezeSearchUnderlay } from '@/lib/margo-search-underlay'
 import {
   hubTileBadgeLabel,
   type HubTileIconId,
@@ -726,9 +727,17 @@ export function SearchNavLink() {
   const href = searchHrefForPath(pathname, open ? '/hub' : null)
   const scope = searchScopeForPath(open ? '/hub' : pathname)
   const active = pathname === '/search'
+  const from =
+    typeof href === 'string' && href.includes('from=')
+      ? new URLSearchParams(href.split('?')[1] || '').get('from')
+      : scope.backHref
   return (
     <PendingNavLink
       href={href}
+      onClick={() => {
+        persistActivePrimaryScroll()
+        freezeSearchUnderlay(from ?? pathname)
+      }}
       aria-label={scope.placeholder}
       ringSize={18}
       style={{

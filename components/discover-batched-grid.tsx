@@ -1,11 +1,16 @@
 'use client'
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { usePathname } from 'next/navigation'
 import {
   discoverVmHasMore,
   discoverVmVisibleItems,
   type DiscoverVmGridKind,
 } from '@/lib/discover-view-more-layout'
+import { useMargoPageResume } from '@/hooks/useMargoPageResume'
+import { pageResumeKeyForPath } from '@/lib/margo-page-resume'
+import { readScrollLive } from '@/lib/margo-scroll-live'
+import { restoreExactWindowScroll } from '@/lib/margo-exact-scroll-restore'
 
 export function DiscoverBatchedGrid<T>({
   kind,
@@ -17,6 +22,7 @@ export function DiscoverBatchedGrid<T>({
   getKey,
   renderItem,
   emptyMessage = 'Nothing here yet.',
+  rememberPosition = true,
 }: {
   kind: DiscoverVmGridKind
   items: T[]
@@ -28,12 +34,43 @@ export function DiscoverBatchedGrid<T>({
   getKey: (item: T) => string
   renderItem: (item: T) => ReactNode
   emptyMessage?: string
+  /** Keep scroll and loaded batch when leaving and returning. */
+  rememberPosition?: boolean
 }) {
+  const pathname = usePathname() ?? ''
+  const pageKey = pageResumeKeyForPath(pathname)
   const [visibleCount, setVisibleCount] = useState(batchSize)
   const gridTopRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
+  const prevResetRef = useRef<string | null>(null)
+  const hadResumeRef = useRef(false)
+
+  useMargoPageResume({
+    pageKey,
+    enabled: rememberPosition && !loading,
+    readExtra: () => ({ n: visibleCount }),
+    onResume: (entry) => {
+      hadResumeRef.current = true
+      if (typeof entry.n === 'number' && entry.n > batchSize) {
+        setVisibleCount((c) => Math.max(c, Math.min(entry.n!, items.length || entry.n!)))
+      }
+    },
+  })
 
   useEffect(() => {
+    if (prevResetRef.current === null) {
+      prevResetRef.current = resetKey
+      if (!hadResumeRef.current) {
+        setVisibleCount(batchSize)
+        if (typeof window !== 'undefined') {
+          window.scrollTo({ top: 0, behavior: 'auto' })
+        }
+      }
+      return
+    }
+    if (prevResetRef.current === resetKey) return
+    prevResetRef.current = resetKey
+    hadResumeRef.current = false
     setVisibleCount(batchSize)
     gridTopRef.current?.scrollIntoView({ block: 'start' })
     if (typeof window !== 'undefined') {
@@ -43,6 +80,14 @@ export function DiscoverBatchedGrid<T>({
 
   const visible = discoverVmVisibleItems(items, visibleCount)
   const hasMore = discoverVmHasMore(items, visibleCount)
+
+  useEffect(() => {
+    if (!rememberPosition || !hadResumeRef.current || loading) return
+    const row = readScrollLive(pageKey)
+    if (row?.y && row.y > 0) {
+      restoreExactWindowScroll(row.y)
+    }
+  }, [visible.length, rememberPosition, loading, pageKey])
 
   useEffect(() => {
     const el = sentinelRef.current

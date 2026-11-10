@@ -57,6 +57,7 @@ import {
   shouldReapplyFeedReturn,
   shouldRestoreFeedTabOnNav,
   persistFeedReturnBeforeLeave,
+  writeFeedReturnSnapshot,
 } from '@/lib/margo-feed-return'
 import {
   isFeedContentSubTab,
@@ -64,7 +65,10 @@ import {
   resetFeedSubTabScroll,
   restoreFeedSubTabScroll,
   scrollFeedSubTabTo,
+  readFeedSubTabScrollY,
+  captureFeedSubTabScroll,
 } from '@/lib/feed-subtab-scroll'
+import { writeScrollLive } from '@/lib/margo-scroll-live'
 import { FeedPeopleStrip } from '@/components/feed-people-strip'
 import { FeedMemoryPromoCard } from '@/components/feed-memory-promo-card'
 import { FeedShortsStrip } from '@/components/feed-shorts-strip'
@@ -398,6 +402,25 @@ function FeedPageInner() {
     () => parseFeedContentTab(searchParams.get('tab')),
     [searchParams],
   )
+
+  useEffect(() => {
+    if (!feedLive) return
+    const sector = readFeedSubTabScroller(feedContentTab)
+    if (!sector) return
+    let raf = 0
+    const onScroll = () => {
+      if (raf) return
+      raf = window.requestAnimationFrame(() => {
+        raf = 0
+        captureFeedSubTabScroll(feedContentTab)
+        const y = readFeedSubTabScrollY(feedContentTab)
+        writeScrollLive(`feed:subtab:${feedContentTab}`, { y })
+        writeFeedReturnSnapshot({ y, tab: feedContentTab })
+      })
+    }
+    sector.addEventListener('scroll', onScroll, { passive: true })
+    return () => sector.removeEventListener('scroll', onScroll)
+  }, [feedLive, feedContentTab])
   const [paintedFeedContentTab, setPaintedFeedContentTab] = useState<FeedContentTab | null>(null)
   const uiFeedContentTab = paintedFeedContentTab ?? feedContentTab
   useEffect(() => {

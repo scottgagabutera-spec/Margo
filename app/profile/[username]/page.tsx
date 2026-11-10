@@ -17,7 +17,7 @@ import { PostCard } from '@/components/post-card'
 import { CardExportModal } from '@/components/card-export-modal'
 import { resolveMargoMomentFromPost } from '@/lib/moment'
 import type { Post } from '@/hooks/usePosts'
-import { usePrimaryTab, usePrimaryTabLinkProps } from '@/components/primary-tab-shell'
+import { getPrimaryTabPaneEl, usePrimaryTab, usePrimaryTabLinkProps } from '@/components/primary-tab-shell'
 import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { ProfileArtistLinks } from '@/components/profile-artist-links'
 import { ProfileImageLightbox } from '@/components/profile-image-lightbox'
@@ -63,6 +63,8 @@ import { ProfileMemoriesStrip } from '@/components/profile-memories-strip'
 import { MemoryCard } from '@/components/memory-card'
 import { useProfileMemories } from '@/hooks/useProfileMemories'
 import { memoryTimelineYear } from '@/lib/memory/date-label'
+import { useMargoPageResume } from '@/hooks/useMargoPageResume'
+import { profileResumeKey } from '@/lib/margo-page-resume'
 
 const supabase = createClient()
 
@@ -154,6 +156,19 @@ interface ArtistSongRow {
 
 type ProfileContentTab = 'lyrics' | 'memories' | 'reposts' | 'backs' | 'private'
 
+function parseProfileContentTab(raw: string | undefined | null): ProfileContentTab | null {
+  if (
+    raw === 'lyrics' ||
+    raw === 'memories' ||
+    raw === 'reposts' ||
+    raw === 'backs' ||
+    raw === 'private'
+  ) {
+    return raw
+  }
+  return null
+}
+
 type FollowRelationState = {
   ready: boolean
   status: FollowStatus
@@ -174,6 +189,7 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
   const { isTabActive } = usePrimaryTab()
   const composeTabLink = usePrimaryTabLinkProps('/compose', 'compose')
   const username = (usernameProp || (typeof params.username === 'string' ? params.username : '')).trim()
+  const profileResumeKeyId = username ? profileResumeKey(username) : ''
   // Own profile is a keepalive "you" pane — pause posts Realtime while hidden.
   // Other profiles are full navigations (enabled stays true).
   const isOwnKeepaliveProfile =
@@ -462,6 +478,20 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
 
   const [contentTab, setContentTab] = useState<ProfileContentTab>('lyrics')
   const [memoryLayout, setMemoryLayout] = useState<'grid' | 'timeline'>('grid')
+
+  useMargoPageResume({
+    pageKey: profileResumeKeyId,
+    enabled: !!profileResumeKeyId,
+    scroller: isOwnKeepaliveProfile ? 'element' : 'window',
+    getScroller: isOwnKeepaliveProfile
+      ? () => getPrimaryTabPaneEl('you')
+      : undefined,
+    readExtra: () => ({ tab: contentTab }),
+    onResume: (entry) => {
+      const tab = parseProfileContentTab(entry.tab)
+      if (tab) setContentTab(tab)
+    },
+  })
   const { memories: profileMemories, loading: profileMemoriesLoading } = useProfileMemories(
     profile?.id ?? null,
     profile?.username ?? null,

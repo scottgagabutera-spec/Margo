@@ -73,7 +73,7 @@ export function SongCardActions({
         e.stopPropagation()
         void toggleLike(song.id)
       }}
-      className="margo-btn margo-btn--icon margo-catalog-cover-btn"
+      className="margo-btn margo-btn--icon margo-card-corner-menu__btn"
       style={{
         borderRadius: '50%',
         border: liked ? '1px solid var(--border-hi)' : '1px solid var(--border)',
@@ -98,14 +98,14 @@ export function SongCardActions({
   }
 
   return (
-    <>
-      <div className="margo-catalog-cover-btn margo-catalog-cover-btn--menu">
-        <CardOverflowMenu items={items} compact />
-      </div>
-      <div className="margo-catalog-cover-btn margo-catalog-cover-btn--like">
-        {likeBtn}
-      </div>
-    </>
+  <>
+    <div className="margo-card-corner-menu" aria-hidden={false}>
+      <CardOverflowMenu items={items} corner />
+    </div>
+    <div className="margo-card-corner-menu margo-card-corner-menu--like" aria-hidden={false}>
+      {likeBtn}
+    </div>
+  </>
   )
 }
 

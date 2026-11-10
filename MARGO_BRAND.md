@@ -347,6 +347,10 @@ This is distinct from the marketing header above — it's the persistent bottom 
 
 `music` as a standalone nav destination is retired. `next.config.mjs` permanently redirects `/music` → `/discover` and `/music/player` → `/song/[id]`. There is no live Music page in the tree. Do not add nav references to "Music"; use "Discover."
 
+### Scroll position memory (product rule)
+
+Every scrollable page saves scroll **continuously** (throttled while scrolling, mirrored to sessionStorage on leave) and restores to the **exact** pixel when shown again — including batched lists (restore visible batch count from memory first, then Y). **Never refetch to restore. Never redirect after paint** to “fix” position; the right pane paints first, then the URL may sync. Deep Discover and profile routes stay alive in a small tab-depth cache (last 5) until the user presses back out; clearing happens on sign-out. Hub overlay scroll is unchanged.
+
 ### Chrome modes (`lib/chrome-mode.ts`)
 
 | Mode | Path | MargoNav | MobileTabBar |

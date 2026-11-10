@@ -24,6 +24,7 @@ export function CardOverflowMenu({
   icon = 'more',
   label,
   compact = false,
+  corner = false,
 }: {
   items: CardOverflowItem[]
   ariaLabel?: string
@@ -34,6 +35,8 @@ export function CardOverflowMenu({
   label?: string
   /** Slightly smaller trigger for compact toolbars (e.g. song preview). */
   compact?: boolean
+  /** Fixed corner chip on cards (28px visible / 44px touch) — use with .margo-card-corner-menu wrapper. */
+  corner?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
@@ -88,7 +91,7 @@ export function CardOverflowMenu({
 
   const TriggerIcon = icon === 'library' ? LibraryIcon : MoreIcon
   const isPill = !!label
-  const touchSize = compact ? 'var(--margo-btn-touch)' : 'var(--margo-touch-min)'
+  const touchSize = corner ? 'var(--margo-touch-min)' : compact ? 'var(--margo-btn-touch)' : 'var(--margo-touch-min)'
 
   const panel = open && typeof document !== 'undefined'
     ? createPortal(
@@ -172,7 +175,13 @@ export function CardOverflowMenu({
           e.stopPropagation()
           setOpen(o => !o)
         }}
-        className={isPill ? undefined : `margo-btn margo-btn--icon${compact ? ' margo-catalog-cover-btn' : ''}`}
+        className={
+          isPill
+            ? undefined
+            : corner
+              ? 'margo-card-corner-menu__btn'
+              : 'margo-btn margo-btn--icon'
+        }
         style={{
           width: isPill ? 'auto' : touchSize,
           height: touchSize,
@@ -180,9 +189,11 @@ export function CardOverflowMenu({
           minHeight: touchSize,
           padding: isPill
             ? (compact ? '0 12px' : '0 14px')
-            : compact
-              ? 'calc((var(--margo-btn-touch) - var(--margo-btn-h-icon)) / 2)'
-              : 0,
+            : corner
+              ? undefined
+              : compact
+                ? 'calc((var(--margo-btn-touch) - var(--margo-btn-h-icon)) / 2)'
+                : 0,
           borderRadius: isPill ? '50px' : '50%',
           border: '1px solid var(--border-hi)',
           background: 'var(--margo-bar)',

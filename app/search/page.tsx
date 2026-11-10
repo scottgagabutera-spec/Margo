@@ -18,6 +18,7 @@ import {
 } from '@/lib/search-scope'
 import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { MargoFollowButton } from '@/components/margo-follow-button'
+import { markSearchQueryRan } from '@/lib/margo-search-underlay'
 
 const DEBOUNCE_MS = 150
 const font = UI_FONT
@@ -236,6 +237,10 @@ function SearchPageInner() {
     const t = window.setTimeout(() => setDebounced(query.trim()), DEBOUNCE_MS)
     return () => window.clearTimeout(t)
   }, [query])
+
+  useEffect(() => {
+    if (debounced.length >= 2) markSearchQueryRan()
+  }, [debounced])
 
   const runSearch = useCallback(async (q: string) => {
     if (q.length < 2) {

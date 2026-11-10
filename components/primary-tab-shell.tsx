@@ -31,6 +31,16 @@ import {
   readFeedReturnSnapshot,
   type FeedReturnSnapshot,
 } from '@/lib/margo-feed-return'
+import { persistFeedReturnBeforeLeave } from '@/lib/margo-feed-return'
+import { restoreExactElementScroll } from '@/lib/margo-exact-scroll-restore'
+import { writeScrollLive, flushScrollLive } from '@/lib/margo-scroll-live'
+import {
+  captureTabDepthKeepalive,
+  isTabDepthKeepalivePath,
+  peekNewestDepthForTab,
+  clearTabDepthKeepalive,
+} from '@/lib/margo-depth-keepalive'
+import { clearDiscoverDepth } from '@/lib/margo-discover-depth'
 import { isFeedStackPath } from '@/lib/feed-stack-routes'
 import {
   MARGO_FEED_STACK_PIN_EVENT,
@@ -95,6 +105,13 @@ export function getActivePrimaryScrollEl(): HTMLElement | null {
   if (typeof document === 'undefined') return null
   return document.querySelector<HTMLElement>(
     '[data-margo-primary-tab][data-margo-primary-tab-active="1"]'
+  )
+}
+
+export function getPrimaryTabPaneEl(id: PrimaryTabId): HTMLElement | null {
+  if (typeof document === 'undefined') return null
+  return document.querySelector<HTMLElement>(
+    `[data-margo-primary-tab="${id}"][data-margo-primary-tab-shown="1"]`,
   )
 }
 
@@ -283,9 +300,10 @@ export function persistActivePrimaryScroll() {
   if (!el) return
   const id = el.getAttribute('data-margo-primary-tab') as PrimaryTabId | null
   if (!id) return
+  const scrollY = id === 'feed' ? feedSectorScrollEl(el).scrollTop : el.scrollTop
   if (id === 'feed') {
     const dom = captureFeedReturnFromDom()
-    writeFeedResume(el.scrollTop, feedAnchorFromPane(el) ?? null)
+    writeFeedResume(scrollY, feedAnchorFromPane(el) ?? null)
     try {
       const prev = readFeedResume()
       if (prev) {
@@ -294,7 +312,7 @@ export function persistActivePrimaryScroll() {
           JSON.stringify({
             ...prev,
             ...dom,
-            y: el.scrollTop,
+            y: scrollY,
             anchorId: feedAnchorFromPane(el) ?? prev.anchorId ?? null,
             at: Date.now(),
           } satisfies FeedReturnSnapshot),
@@ -307,7 +325,7 @@ export function persistActivePrimaryScroll() {
   persistScroll(
     frozenScrollLive,
     id,
-    el.scrollTop,
+    scrollY,
     id === 'feed' ? feedAnchorFromPane(el) : undefined,
   )
 }
@@ -357,7 +375,7 @@ export function restoreActivePrimaryScroll(): PrimaryScrollRestore {
         }
         if (Math.abs(surface.scrollTop - resume.y) > 1) surface.scrollTop = resume.y
         alignFeedPrimaryFrozenScroll(resume.y)
-        return { applied: true, anchored: false, waitingForAnchor: true }
+        return { applied: true, anchored: false, waitingForAnchor: false }
       }
       if (Math.abs(surface.scrollTop - resume.y) > 1) surface.scrollTop = resume.y
       alignFeedPrimaryFrozenScroll(resume.y)
@@ -586,6 +604,13 @@ export function PrimaryTabShell({
   const [, setCacheVersion] = useState(0)
   const [peekTab, setPeekTabState] = useState<PrimaryTabId | null>(null)
   const [feedStackPinned, setFeedStackPinned] = useState(false)
+  const [tabDepthOverlay, setTabDepthOverlay] = useState<{
+    path: string
+    primaryTab: PrimaryTabId
+    node: ReactNode
+  } | null>(null)
+  const childrenRef = useRef(children)
+  childrenRef.current = children
 
   const intentDeepPath = deepNavHref ? normalizeTabPath(deepNavHref) : ''
   const currentPath = normalizeTabPath(pathname)
@@ -1005,11 +1030,39 @@ export function PrimaryTabShell({
     endPeek()
     intentGenRef.current += 1
     let pushHref: string | null = href
+    const leaving = activeTabRef.current
+    const curPath = normalizeTabPath(pathname)
+    if (isTabDepthKeepalivePath(curPath)) {
+      captureTabDepthKeepalive(curPath, childrenRef.current)
+    }
+    if (leaving && leaving !== id) {
+      flushScrollLive()
+      persistActivePrimaryScroll()
+      if (leaving === 'feed') persistFeedReturnBeforeLeave()
+    }
+  if (id === 'discover' && normalizeTabPath(href) === '/discover') {
+    const kept = peekNewestDepthForTab('discover')
+    if (kept) {
+      setTabDepthOverlay(kept)
+      pushHref = kept.path
+    } else {
+      setTabDepthOverlay((o) => (o?.primaryTab === 'discover' ? null : o))
+    }
+  }
     if (id === 'you') {
       // Static /you is the tab destination — never wait on /profile/[username].
       if (path === '/you' || path === '#' || !path) pushHref = '/you'
       else if (path.startsWith('/profile/')) pushHref = path
       else pushHref = '/you'
+    }
+    if (id === 'you' && pushHref === '/you') {
+      const kept = peekNewestDepthForTab('you')
+      if (kept) {
+        setTabDepthOverlay(kept)
+        pushHref = kept.path
+      } else {
+        setTabDepthOverlay((o) => (o?.primaryTab === 'you' ? null : o))
+      }
     }
     intentHrefRef.current = pushHref ? normalizeTabPath(pushHref) : null
     paintedTabRef.current = id
@@ -1027,11 +1080,23 @@ export function PrimaryTabShell({
     }
     if (pushHref) {
       const leavingSignin = normalizeTabPath(pathname) === '/signin'
+      const tabDest = normalizeTabPath(href)
+      const routeDest = pushHref ? normalizeTabPath(pushHref) : ''
       if (leavingSignin) router.replace(pushHref, { scroll: false })
+      else if (routeDest && routeDest !== tabDest) router.replace(pushHref, { scroll: false })
       else router.push(pushHref, { scroll: false })
     }
     return true
   }, [ownProfileHref, routeTab, pathname, router, endPeek, acknowledgePrimaryTab])
+
+  useEffect(() => {
+    const p = normalizeTabPath(pathname)
+    if (p === '/discover') {
+      clearDiscoverDepth()
+      clearTabDepthKeepalive('/discover/songs')
+      setTabDepthOverlay((o) => (o?.primaryTab === 'discover' ? null : o))
+    }
+  }, [pathname])
 
   useEffect(() => {
     if (!ownProfileHref && cacheRef.current.has('you')) {
@@ -1070,7 +1135,8 @@ export function PrimaryTabShell({
     if (prev && prev !== activeTab) {
       const el = paneElsRef.current.get(prev)
       const prior = frozen[prev]
-      const live = el?.scrollTop ?? 0
+      const surface = el && prev === 'feed' ? feedSectorScrollEl(el) : el
+      const live = surface?.scrollTop ?? el?.scrollTop ?? 0
       const y = prior != null ? (live === 0 ? prior : live) : live
       persistScroll(
         frozen,
@@ -1078,7 +1144,10 @@ export function PrimaryTabShell({
         y,
         prev === 'feed' && el && live > 0 ? feedAnchorFromPane(el) : undefined,
       )
-      if (el && Math.abs(el.scrollTop - y) > 1) {
+      if (prev === 'feed' && el) {
+        const sector = feedSectorScrollEl(el)
+        if (Math.abs(sector.scrollTop - y) > 1) sector.scrollTop = y
+      } else if (el && Math.abs(el.scrollTop - y) > 1) {
         el.scrollTop = y
       }
     }
@@ -1087,21 +1156,25 @@ export function PrimaryTabShell({
       const el = paneElsRef.current.get(activeTab)
       if (el) {
         if (activeTab === 'feed') {
+          const surface = feedSectorScrollEl(el)
+          const target = frozen[activeTab] ?? readStoredScrollMap()[activeTab] ?? surface.scrollTop
+          restoreExactElementScroll(surface, target)
           restoreActivePrimaryScroll()
-          frozen[activeTab] = el.scrollTop
+          frozen[activeTab] = surface.scrollTop
           requestAnimationFrame(() => {
+            restoreExactElementScroll(surface, target)
             restoreActivePrimaryScroll()
           })
         } else {
           const target =
             frozen[activeTab] ?? readStoredScrollMap()[activeTab] ?? el.scrollTop
           if (target != null && Math.abs(el.scrollTop - target) > 1) {
-            el.scrollTop = target
+            restoreExactElementScroll(el, target)
           }
           frozen[activeTab] = target
           requestAnimationFrame(() => {
             if (Math.abs(el.scrollTop - target) > 1) {
-              el.scrollTop = target
+              restoreExactElementScroll(el, target)
             }
           })
         }
@@ -1117,6 +1190,31 @@ export function PrimaryTabShell({
 
     prevTabRef.current = activeTab
   }, [activeTab, pathname])
+
+  useEffect(() => {
+    if (!activeTab || !onPrimarySurface) return
+    const el = paneElsRef.current.get(activeTab)
+    if (!el) return
+    let raf = 0
+    const onScroll = () => {
+      if (raf) return
+      raf = window.requestAnimationFrame(() => {
+        raf = 0
+        const surface = activeTab === 'feed' ? feedSectorScrollEl(el) : el
+        const y = surface.scrollTop
+        frozenScrollRef.current[activeTab] = y
+        writeScrollLive(`primary:${activeTab}`, { y })
+        persistScroll(
+          frozenScrollRef.current,
+          activeTab,
+          y,
+          activeTab === 'feed' && y > 0 ? feedAnchorFromPane(el) : undefined,
+        )
+      })
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [activeTab, onPrimarySurface])
 
   useLayoutEffect(() => {
     if (!peekTab) return
@@ -1208,6 +1306,16 @@ export function PrimaryTabShell({
     prepareTab: (id) => {
       closeHubOverlay()
       endPeek()
+      const curPath = normalizeTabPath(pathname)
+      if (isTabDepthKeepalivePath(curPath)) {
+        captureTabDepthKeepalive(curPath, childrenRef.current)
+      }
+      const leaving = activeTabRef.current
+      if (leaving && leaving !== id) {
+        flushScrollLive()
+        persistActivePrimaryScroll()
+        if (leaving === 'feed') persistFeedReturnBeforeLeave()
+      }
       intentGenRef.current += 1
       intentHrefRef.current =
         id === 'you' ? '/you' : '/' + id
@@ -1264,7 +1372,7 @@ export function PrimaryTabShell({
                 zIndex: feedUnderStack ? 2 : committed ? 2 : painted ? 1 : 0,
               }}
             >
-              {node}
+              {tabDepthOverlay?.primaryTab === id ? tabDepthOverlay.node : node}
             </div>
           </Activity>
         )
