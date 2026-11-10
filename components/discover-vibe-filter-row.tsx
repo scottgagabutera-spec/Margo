@@ -13,49 +13,28 @@ export function DiscoverVibeFilterRow({
   return (
     <div
       data-discover-vibe-row
+      className="margo-discover-vibe-row"
       style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '2px', scrollbarWidth: 'none' }}
     >
       {DISCOVER_VIBES.map(vibe => {
         const active = selected === vibe
-        const color = vibe === 'ALL' ? 'var(--gold)' : discoverVibeColor(vibe)
+        const color = vibe === 'ALL' ? 'var(--text-secondary)' : discoverVibeColor(vibe)
         return (
           <button
             key={vibe}
             type="button"
             data-vibe-chip={vibe}
+            className={`margo-btn margo-btn--chip margo-discover-vibe-chip${active ? ' margo-discover-vibe-chip--active' : ''}`}
+            aria-pressed={active}
             onClick={() => onSelect(vibe)}
             style={{
               flexShrink: 0,
-              minHeight: '44px',
-              padding: '9px 4px',
-              border: 'none',
-              background: 'transparent',
-              cursor: 'pointer',
-              boxSizing: 'border-box',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              fontFamily: UI_FONT,
+              borderColor: active ? 'var(--border-hi)' : color,
+              color: active ? 'var(--text)' : color,
             }}
           >
-            <span
-              data-vibe-chip-face={vibe}
-              style={{
-                padding: '5px 9px',
-                borderRadius: '8px',
-                fontFamily: UI_FONT,
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                lineHeight: 1.2,
-                boxSizing: 'border-box',
-                background: active ? 'var(--gold)' : 'transparent',
-                border: `1px solid ${active ? 'var(--gold)' : color}`,
-                color: active ? 'var(--bg)' : color,
-              }}
-            >
-              {vibe}
-            </span>
+            {vibe === 'ALL' ? 'All' : vibe.charAt(0) + vibe.slice(1).toLowerCase()}
           </button>
         )
       })}

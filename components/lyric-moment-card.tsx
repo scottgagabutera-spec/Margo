@@ -38,6 +38,7 @@ export function LyricMomentCard({
   const isDiscover = variant === 'discover'
   const isCompactCard = isCatalogGrid || isDiscover
   const playSize = isCompactCard ? 28 : undefined
+  const lineText = moment.line.replace(/^\s*♪\s*/, '')
   return (
     <div
       ref={cardRef}
@@ -93,36 +94,36 @@ export function LyricMomentCard({
         WebkitLineClamp: isCompactCard ? 3 : 4,
         WebkitBoxOrient: 'vertical', overflow: 'hidden',
         minHeight: isCompactCard ? 'calc(14px * 1.35 * 3)' : '4.2em',
-      }}>&ldquo;{moment.line}&rdquo;</p>
+      }}>&ldquo;{lineText}&rdquo;</p>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
         <div style={{ minWidth: 0 }}>
           <p style={{
-            fontFamily: isCompactCard ? UI_FONT : 'var(--font-lora), serif',
-            fontSize: isCompactCard ? '10px' : '0.6rem',
-            fontWeight: isDiscover ? 500 : 700,
-            color: isPlaying && isCompactCard ? 'var(--gold)' : 'var(--text-muted)',
-            textTransform: 'uppercase',
-            letterSpacing: isDiscover ? '0.08em' : '0.6px',
+            fontFamily: UI_FONT,
+            fontSize: '0.75rem',
+            fontWeight: 500,
+            color: 'var(--text)',
+            textTransform: 'none',
+            letterSpacing: 0,
             margin: 0,
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
           }}>
-            {moment.songTitle}{isPlaying && isCompactCard ? ' · PLAYING' : ''}
+            {moment.songTitle}{isPlaying && isCompactCard ? ' · Playing' : ''}
           </p>
           {!isCompactCard ? (
             <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{moment.artist}</p>
           ) : null}
         </div>
-        <button type="button" onClick={onPlay} style={{
-          width: playSize ?? 'var(--margo-touch-min)',
-          height: playSize ?? 'var(--margo-touch-min)',
+        <button type="button" onClick={onPlay} className="margo-btn margo-btn--icon" style={{
+          width: playSize ? 'var(--margo-btn-touch)' : 'var(--margo-touch-min)',
+          height: playSize ? 'var(--margo-btn-touch)' : 'var(--margo-touch-min)',
           borderRadius: '50%', flexShrink: 0,
-          background: isPlaying ? 'rgba(232,197,71,0.2)' : 'rgba(232,197,71,0.1)',
-          border: '1px solid rgba(232,197,71,0.25)', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxSizing: 'border-box',
+          background: 'var(--surface-2)',
+          border: '1px solid var(--border-hi)', cursor: 'pointer',
+          padding: playSize ? 'calc((var(--margo-btn-touch) - var(--margo-btn-h-icon)) / 2)' : undefined,
         }}>
-          <PlayPauseIcon playing={isPlaying} buffering={!!isBuffering} size={isCompactCard ? 12 : 15} color="var(--gold)" />
+          <PlayPauseIcon playing={isPlaying} buffering={!!isBuffering} size={isCompactCard ? 12 : 15} color="var(--text-secondary)" />
         </button>
       </div>
     </div>
