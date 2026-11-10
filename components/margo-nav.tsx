@@ -195,7 +195,7 @@ export function MargoNav() {
             ))}
 
             <Link href="/compose" {...composeLink} style={{
-              fontSize: '0.6rem', fontFamily: font,
+              fontSize: '0.75rem', fontFamily: font,
               fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase',
               textDecoration: 'none', color: 'var(--bg)',
               background: 'var(--gold)', borderRadius: '50px',
@@ -219,7 +219,7 @@ export function MargoNav() {
 
             {!isSignedIn ? (
               <SignInLink style={{
-                fontSize: '0.65rem', fontFamily: font,
+                fontSize: '0.75rem', fontFamily: font,
                 fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase',
                 textDecoration: 'none',
                 color: isOnSignin ? 'var(--gold)' : 'rgba(255,255,255,0.35)',

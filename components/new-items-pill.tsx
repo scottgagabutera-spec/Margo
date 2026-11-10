@@ -46,7 +46,7 @@ export function NewItemsPill({ count, onReveal, noun = 'new lyrics' }: NewItemsP
         borderRadius: '50px',
         fontFamily: font,
         fontWeight: 700,
-        fontSize: '0.6rem',
+        fontSize: '0.75rem',
         letterSpacing: '1.2px',
         textTransform: 'uppercase',
         cursor: 'pointer',

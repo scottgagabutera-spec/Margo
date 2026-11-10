@@ -31,7 +31,7 @@ export function SessionQueueList({
       <p
         style={{
           fontFamily: 'var(--font-lora), serif',
-          fontStyle: 'italic',
+          fontStyle: 'normal',
           fontSize: '0.82rem',
           color: 'var(--text-muted)',
           textAlign: 'center',
@@ -48,7 +48,7 @@ export function SessionQueueList({
       <p
         style={{
           fontFamily: font,
-          fontSize: '0.6rem',
+          fontSize: '0.75rem',
           fontWeight: 700,
           letterSpacing: '1.5px',
           textTransform: 'uppercase',
@@ -134,7 +134,7 @@ export function SessionQueueList({
               <p
                 style={{
                   fontFamily: font,
-                  fontSize: '0.68rem',
+                  fontSize: '0.75rem',
                   color: 'var(--text-secondary)',
                   margin: 0,
                   overflow: 'hidden',

@@ -78,7 +78,7 @@ export function CatalogPickLyricField({
           padding: '14px 16px',
           resize: 'none',
           fontFamily: LYRIC_FONT,
-          fontStyle: 'italic',
+          fontStyle: 'normal',
           fontSize: 'clamp(1rem, 2.2vw, 1.25rem)',
           color: 'var(--gold)',
           lineHeight: 1.5,

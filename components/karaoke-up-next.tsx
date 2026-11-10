@@ -51,7 +51,7 @@ export function KaraokeUpNextTray({
         <div style={{ textAlign: 'center', marginBottom: '16px' }}>
           <p style={{
             fontFamily: UI_FONT,
-            fontSize: '0.6rem',
+            fontSize: '0.75rem',
             fontWeight: 700,
             color: 'var(--text-muted)',
             letterSpacing: '1.5px',
@@ -73,7 +73,7 @@ export function KaraokeUpNextTray({
       ) : (
         <p style={{
           fontFamily: UI_FONT,
-          fontSize: '0.6rem',
+          fontSize: '0.75rem',
           fontWeight: 700,
           color: 'var(--gold)',
           letterSpacing: '1.5px',
@@ -125,7 +125,7 @@ export function KaraokeUpNextTray({
               {i === 0 ? (
                 <p style={{
                   fontFamily: UI_FONT,
-                  fontSize: '0.6rem',
+                  fontSize: '0.75rem',
                   fontWeight: 700,
                   letterSpacing: '1px',
                   textTransform: 'uppercase',
@@ -169,7 +169,7 @@ export function KaraokeUpNextTray({
             color: 'var(--text)',
             cursor: 'pointer',
             fontFamily: UI_FONT,
-            fontSize: '0.6rem',
+            fontSize: '0.75rem',
             fontWeight: 700,
             letterSpacing: '1px',
             textTransform: 'uppercase',
@@ -194,7 +194,7 @@ export function KaraokeUpNextTray({
             color: 'var(--text-secondary)',
             cursor: 'pointer',
             fontFamily: UI_FONT,
-            fontSize: '0.6rem',
+            fontSize: '0.75rem',
             fontWeight: 700,
             letterSpacing: '1px',
             textTransform: 'uppercase',
@@ -208,7 +208,7 @@ export function KaraokeUpNextTray({
       {songEnded ? (
         <p style={{
           fontFamily: UI_FONT,
-          fontSize: '0.6rem',
+          fontSize: '0.75rem',
           color: 'var(--text-muted)',
           textAlign: 'center',
           margin: '12px 0 0',

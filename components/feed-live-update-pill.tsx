@@ -131,7 +131,7 @@ export function FeedLiveUpdatePill({
           background: '#E8C547',
           color: '#07060A',
           fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
-          fontSize: '0.72rem',
+          fontSize: '0.75rem',
           fontWeight: 600,
           letterSpacing: '-0.01em',
           boxShadow: '0 0 0 1px rgba(255, 240, 180, 0.35), 0 6px 20px rgba(232, 197, 71, 0.35)',

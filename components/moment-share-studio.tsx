@@ -496,7 +496,7 @@ export function MomentShareStudio({
                   <ChevronRightIcon size={14} color="var(--text-secondary)" />
                 </span>
               </button>
-              <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.62rem', color: 'var(--text-muted)' }}>
+              <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                 Line {lineIndex + 1} of {momentLines.length}
               </span>
               <button
@@ -608,8 +608,8 @@ export function MomentShareStudio({
       style={{
         margin: 0,
         fontFamily: 'var(--font-lora), serif',
-        fontSize: '0.68rem',
-        fontStyle: 'italic',
+        fontSize: '0.75rem',
+        fontStyle: 'normal',
         color: 'var(--text-secondary)',
         textAlign: 'center',
         lineHeight: 1.4,
@@ -659,7 +659,7 @@ export function MomentShareStudio({
                   <ChevronRightIcon size={14} color="var(--text-secondary)" />
                 </span>
               </button>
-              <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.62rem', color: 'var(--text-muted)' }}>
+              <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                 Line {lineIndex + 1} of {momentLines.length}
               </span>
               <button

@@ -81,7 +81,7 @@ export async function GET(
             style={{
               margin: 0,
               fontSize: lyric.length > 80 ? '52px' : '64px',
-              fontStyle: 'italic',
+              fontStyle: 'normal',
               lineHeight: 1.2,
               color: INK,
               maxWidth: '1000px',

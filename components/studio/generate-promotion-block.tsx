@@ -21,7 +21,7 @@ interface GeneratePromotionBlockProps {
 const labelStyle: React.CSSProperties = {
   display: 'block',
   fontFamily: font,
-  fontSize: '0.6rem',
+  fontSize: '0.75rem',
   color: 'var(--text-muted)',
   textTransform: 'uppercase',
   letterSpacing: '1.5px',
@@ -150,7 +150,7 @@ export function GeneratePromotionBlock(props: GeneratePromotionBlockProps) {
       <div style={{ marginBottom: '12px' }}>
         <p style={{
           fontFamily: font,
-          fontSize: '0.65rem',
+          fontSize: '0.75rem',
           color: 'var(--gold)',
           textTransform: 'uppercase',
           letterSpacing: '1.5px',
@@ -314,7 +314,7 @@ export function GeneratePromotionBlock(props: GeneratePromotionBlockProps) {
 
       <p style={{
         fontFamily: font,
-        fontSize: '0.7rem',
+        fontSize: '0.75rem',
         color: 'var(--text-muted)',
         margin: '12px 0 0',
         lineHeight: 1.5,

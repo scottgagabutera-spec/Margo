@@ -39,9 +39,9 @@ function ConversationRow({ c, active }: { c: Conversation; active: boolean }) {
         padding: '10px 12px',
         textDecoration: 'none',
         background: active
-          ? 'var(--gold-faint)'
+          ? 'var(--surface-2)'
           : c.unreadCount > 0
-            ? 'rgba(232,197,71,0.06)'
+            ? 'var(--surface)'
             : 'transparent',
         borderRadius: '12px',
       }}
@@ -90,10 +90,11 @@ function ConversationRow({ c, active }: { c: Conversation; active: boolean }) {
             height: '18px',
             padding: '0 5px',
             borderRadius: '9px',
-            background: 'var(--gold)',
-            color: 'var(--bg)',
+            background: 'var(--surface-2)',
+            color: 'var(--text)',
+            border: '1px solid var(--border-hi)',
             fontFamily: UI_FONT,
-            fontSize: '0.65rem',
+            fontSize: '0.75rem',
             fontWeight: 700,
             display: 'inline-flex',
             alignItems: 'center',

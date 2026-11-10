@@ -189,8 +189,8 @@ export function MobileTabBar() {
           <span style={{
             position: 'absolute', top: '-2px', right: 'calc(50% - 14px)',
             width: '6px', height: '6px', borderRadius: '50%',
-            background: 'var(--gold)',
-            boxShadow: '0 0 6px rgba(232,197,71,0.7)',
+            background: 'var(--text-muted)',
+            boxShadow: 'none',
           }} />
         )}
       </Link>

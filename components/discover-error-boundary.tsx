@@ -48,7 +48,7 @@ export class DiscoverErrorBoundary extends Component<Props, State> {
           <p
             style={{
               fontFamily: font,
-              fontStyle: 'italic',
+              fontStyle: 'normal',
               fontSize: '1rem',
               color: 'var(--text-secondary)',
               marginBottom: '8px',
@@ -80,7 +80,7 @@ export class DiscoverErrorBoundary extends Component<Props, State> {
                 color: 'var(--text-on-gold, var(--bg))',
                 fontFamily: font,
                 fontWeight: 700,
-                fontSize: '0.6rem',
+                fontSize: '0.75rem',
                 letterSpacing: '1px',
                 textTransform: 'uppercase',
                 cursor: 'pointer',
@@ -100,7 +100,7 @@ export class DiscoverErrorBoundary extends Component<Props, State> {
                 border: '1px solid var(--border)',
                 color: 'var(--text-secondary)',
                 fontFamily: font,
-                fontSize: '0.6rem',
+                fontSize: '0.75rem',
                 letterSpacing: '1px',
                 textTransform: 'uppercase',
                 textDecoration: 'none',

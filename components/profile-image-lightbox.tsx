@@ -91,7 +91,7 @@ export function ProfileImageLightbox({ open, onClose, src, alt }: ProfileImageLi
         textAlign: 'center',
         margin: 0,
         fontFamily: UI_FONT,
-        fontSize: '0.7rem',
+        fontSize: '0.75rem',
         color: 'var(--text-muted)',
         pointerEvents: 'none',
       }}>

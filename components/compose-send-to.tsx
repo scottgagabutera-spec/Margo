@@ -40,7 +40,7 @@ function PersonAvatar({ person, size = 40 }: { person: Person; size?: number }) 
       {person.avatarUrl ? (
         <img src={person.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
-        <span style={{ fontFamily: font, fontSize: '0.68rem', fontWeight: 700, color: 'var(--bg)' }}>
+        <span style={{ fontFamily: font, fontSize: '0.75rem', fontWeight: 700, color: 'var(--bg)' }}>
           {(person.displayName || person.username || '??').slice(0, 2).toUpperCase()}
         </span>
       )}
@@ -91,7 +91,7 @@ function PersonRow({
           {person.displayName}
         </p>
         <p style={{
-          fontFamily: UI_FONT, fontSize: '0.72rem', color: 'var(--text-secondary)',
+          fontFamily: UI_FONT, fontSize: '0.75rem', color: 'var(--text-secondary)',
           margin: '2px 0 0', lineHeight: 1.2,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
@@ -110,7 +110,7 @@ function PersonRow({
         justifyContent: 'center',
       }}>
         {selected ? (
-          <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--bg)', lineHeight: 1 }}>✓</span>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--bg)', lineHeight: 1 }}>✓</span>
         ) : null}
       </div>
     </button>
@@ -147,7 +147,7 @@ function SelectedPersonChip({
           {person.displayName}
         </p>
         <p style={{
-          fontFamily: UI_FONT, fontSize: '0.68rem', color: 'var(--text-secondary)',
+          fontFamily: UI_FONT, fontSize: '0.75rem', color: 'var(--text-secondary)',
           margin: '1px 0 0', lineHeight: 1.2,
         }}>
           Tap again in the list to change
@@ -229,7 +229,7 @@ function SendToPanel({
 
       {error ? (
         <p style={{
-          fontFamily: font, fontStyle: 'italic', fontSize: '0.75rem',
+          fontFamily: font, fontStyle: 'normal', fontSize: '0.75rem',
           color: '#ff8a8a', textAlign: 'center',
           margin: '0 16px 8px',
         }}>
@@ -256,7 +256,7 @@ function SendToPanel({
 
         {showSearch && searching && list.length === 0 ? (
           <p style={{
-            fontFamily: font, fontStyle: 'italic', fontSize: '0.75rem',
+            fontFamily: font, fontStyle: 'normal', fontSize: '0.75rem',
             color: 'var(--text-secondary)', textAlign: 'center', padding: '24px 8px',
           }}>
             Searching…
@@ -265,7 +265,7 @@ function SendToPanel({
 
         {list.length === 0 && !searching ? (
           <p style={{
-            fontFamily: font, fontStyle: 'italic', fontSize: '0.75rem',
+            fontFamily: font, fontStyle: 'normal', fontSize: '0.75rem',
             color: 'var(--text-secondary)', textAlign: 'center', padding: '24px 12px', lineHeight: 1.5,
           }}>
             {showSearch
@@ -555,7 +555,7 @@ export function ComposeSendTo({
       </div>
       <p style={{
         fontFamily: font,
-        fontStyle: 'italic',
+        fontStyle: 'normal',
         fontSize: '1.05rem',
         color: 'var(--text)',
         margin: 0,

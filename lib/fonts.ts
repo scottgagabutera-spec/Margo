@@ -1,61 +1,78 @@
 /**
- * Dual type system (Brand §3):
- * - UI_FONT — Geist Sans for chrome, chrome labels, nav, meta
- * - LYRIC_FONT — Lora for posted lyrics / lyric-led marketing copy
- * - Sora remains logo-only via MargoLogo / --font-sora
+ * Margo type system (Brand §3):
+ * - UI_FONT — Geist Sans for all UI chrome
+ * - LYRIC_FONT — Lora upright for lyric content only
+ * - Sora — wordmark only (MargoLogo)
  *
- * Feed post cards: use FEED_TYPE CSS variables (see globals.css) — not ad hoc rem.
+ * Five rem steps — 12px floor (L = 0.75rem). Use CSS vars in globals.css or MARGO_TYPE below.
  */
 export const UI_FONT = 'var(--font-geist-sans), system-ui, sans-serif'
 export const LYRIC_FONT = 'var(--font-lora), serif'
 
-/** Depth pages opened from Hub (Messages, Notifications, Music Library). */
+/** Canonical 5-step scale (matches :root --margo-type-*). */
+export const MARGO_TYPE = {
+  t: 'var(--margo-type-t)',
+  h: 'var(--margo-type-h)',
+  b: 'var(--margo-type-b)',
+  m: 'var(--margo-type-m)',
+  l: 'var(--margo-type-l)',
+} as const
+
+export const MARGO_TYPE_PX = {
+  t: '1.0625rem',
+  h: '0.9375rem',
+  b: '0.875rem',
+  m: '0.8125rem',
+  l: '0.75rem',
+} as const
+
+/** Depth pages (Messages, Notifications, Library). */
 export const DEPTH_PAGE_TITLE = {
   fontFamily: UI_FONT,
-  fontSize: '1rem',
+  fontSize: MARGO_TYPE_PX.t,
   fontWeight: 500,
   color: 'var(--text)',
   margin: 0,
   letterSpacing: '-0.01em',
 } as const
 
+/** List rows: name B, preview M, time L (messages, notifications). */
 export const LIST_ROW_TYPE = {
-  name: '0.9375rem',
-  preview: '0.8125rem',
-  time: '0.75rem',
-  chip: '0.8125rem',
+  name: MARGO_TYPE_PX.b,
+  preview: MARGO_TYPE_PX.m,
+  time: MARGO_TYPE_PX.l,
+  chip: MARGO_TYPE_PX.m,
 } as const
 
-/** App-wide TYPE roles (non-feed). */
+/** @deprecated Use MARGO_TYPE_PX — kept for gradual migration */
 export const TYPE = {
-  pageTitle: '1.5rem',
-  displayName: '1.25rem',
-  song: '0.95rem',
-  lyric: '1.1rem',
-  body: '0.95rem',
-  secondary: '0.82rem',
-  artist: '0.75rem',
-  meta: '0.7rem',
-  label: '0.6rem',
+  pageTitle: MARGO_TYPE_PX.t,
+  displayName: MARGO_TYPE_PX.h,
+  song: MARGO_TYPE_PX.h,
+  lyric: MARGO_TYPE_PX.h,
+  body: MARGO_TYPE_PX.b,
+  secondary: MARGO_TYPE_PX.m,
+  artist: MARGO_TYPE_PX.m,
+  meta: MARGO_TYPE_PX.m,
+  label: MARGO_TYPE_PX.l,
 } as const
 
-/** Feed post card typography scale (min 0.75rem on card chrome). */
+/** Feed card tokens — alias unified scale (see :root --feed-type-*). */
 export const FEED_TYPE_SCALE = {
-  lyric: '1.0625rem',
+  lyric: MARGO_TYPE_PX.h,
   lyricLineHeight: '1.55',
-  displayName: '0.9375rem',
-  handle: '0.8125rem',
-  date: '0.8125rem',
-  songTitle: '0.8125rem',
-  artist: '0.75rem',
-  controlLabel: '0.8125rem',
-  feedActionLabel: '0.75rem',
-  actionCount: '0.8125rem',
-  moodChip: '0.75rem',
-  sectionLabel: '0.75rem',
-  aiLabel: '0.75rem',
-  suggestionLyric: '0.9375rem',
-  /** Export / Discover hero lyric — not used on feed card moment body. */
+  displayName: MARGO_TYPE_PX.b,
+  handle: MARGO_TYPE_PX.m,
+  date: MARGO_TYPE_PX.m,
+  songTitle: MARGO_TYPE_PX.h,
+  artist: MARGO_TYPE_PX.m,
+  controlLabel: MARGO_TYPE_PX.m,
+  feedActionLabel: MARGO_TYPE_PX.l,
+  actionCount: MARGO_TYPE_PX.m,
+  moodChip: MARGO_TYPE_PX.l,
+  sectionLabel: MARGO_TYPE_PX.l,
+  aiLabel: MARGO_TYPE_PX.l,
+  suggestionLyric: MARGO_TYPE_PX.h,
   lyricHero: '1.5rem',
 } as const
 

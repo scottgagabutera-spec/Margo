@@ -45,7 +45,7 @@ export function DiscoverSongsSortSwitch({
               border: 'none',
               cursor: 'pointer',
               fontFamily: UI_FONT,
-              fontSize: '10px',
+              fontSize: '0.75rem',
               fontWeight: 600,
               letterSpacing: '0.08em',
               textTransform: 'uppercase',

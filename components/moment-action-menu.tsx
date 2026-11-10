@@ -254,8 +254,8 @@ export function MomentActionMenu({
               {!hideItemHints && item.hint ? (
                 <span style={{
                   fontFamily: font,
-                  fontStyle: 'italic',
-                  fontSize: '0.62rem',
+                  fontStyle: 'normal',
+                  fontSize: '0.75rem',
                   color: 'var(--text-muted)',
                   lineHeight: 1.3,
                 }}>

@@ -143,7 +143,7 @@ export function MemoryReplyComposer({
           disabled={busy || !text.trim() || (mode === 'lyric' && !pick)}
           onClick={() => void submit()}
         >
-          <span aria-hidden style={{ color: 'var(--bg)', fontSize: '0.72rem', fontWeight: 700 }}>↑</span>
+          <span aria-hidden style={{ color: 'var(--bg)', fontSize: '0.75rem', fontWeight: 700 }}>↑</span>
         </button>
       </div>
     </section>

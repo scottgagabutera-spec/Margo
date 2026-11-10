@@ -23,7 +23,7 @@ export default function GlobalError({
           </p>
           {error.digest ? (
             <p style={{
-              fontSize: '0.65rem',
+              fontSize: '0.75rem',
               lineHeight: 1.4,
               color: 'rgba(255,255,255,0.45)',
               margin: '12px 0 0',

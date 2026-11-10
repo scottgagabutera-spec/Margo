@@ -92,7 +92,7 @@ export function ArtistFavoriteMentionsCard({ enabled }: { enabled: boolean }) {
               </p>
               {stats.topSongs?.length > 0 ? (
                 <div style={{ marginBottom: 10 }}>
-                  <p style={{ fontFamily: font, fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 6px' }}>
+                  <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 6px' }}>
                     Top favorited songs
                   </p>
                   <ul style={{ margin: 0, paddingLeft: 18, fontFamily: font, fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
@@ -106,7 +106,7 @@ export function ArtistFavoriteMentionsCard({ enabled }: { enabled: boolean }) {
               ) : null}
               {stats.topAlbums?.length > 0 ? (
                 <div style={{ marginBottom: 10 }}>
-                  <p style={{ fontFamily: font, fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 6px' }}>
+                  <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 6px' }}>
                     Top favorited albums
                   </p>
                   <ul style={{ margin: 0, paddingLeft: 18, fontFamily: font, fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
@@ -118,7 +118,7 @@ export function ArtistFavoriteMentionsCard({ enabled }: { enabled: boolean }) {
                   </ul>
                 </div>
               ) : null}
-              <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.45 }}>
+              <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.45 }}>
                 <Link href="/help/artist-account/claim-artist-mentions" style={{ color: 'var(--gold)', textDecoration: 'none' }}>
                   Claim your artist name
                 </Link>

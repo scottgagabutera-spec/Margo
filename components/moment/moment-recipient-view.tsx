@@ -98,7 +98,7 @@ export function MomentRecipientView({
           <span
             style={{
               fontFamily: UI_FONT,
-              fontSize: '0.72rem',
+              fontSize: '0.75rem',
               fontWeight: 600,
               letterSpacing: '0.14em',
               textTransform: 'uppercase',
@@ -134,7 +134,7 @@ export function MomentRecipientView({
         <p
           style={{
             fontFamily: LYRIC_FONT,
-            fontStyle: 'italic',
+            fontStyle: 'normal',
             fontSize: 'clamp(1.45rem, 5.2vw, 2rem)',
             color: 'var(--text-on-gold)',
             lineHeight: 1.35,
@@ -271,7 +271,7 @@ export function MomentRecipientView({
               <p
                 style={{
                   fontFamily: LYRIC_FONT,
-                  fontStyle: 'italic',
+                  fontStyle: 'normal',
                   fontSize: '1.05rem',
                   color: 'var(--text)',
                   margin: 0,
@@ -283,7 +283,7 @@ export function MomentRecipientView({
               <p
                 style={{
                   fontFamily: UI_FONT,
-                  fontSize: '0.72rem',
+                  fontSize: '0.75rem',
                   color: 'var(--text-muted)',
                   margin: '8px 0 0',
                 }}
@@ -319,7 +319,7 @@ export function MomentRecipientView({
         <p
           style={{
             fontFamily: UI_FONT,
-            fontSize: '0.68rem',
+            fontSize: '0.75rem',
             color: 'var(--text-muted)',
             textAlign: 'center',
             margin: '12px 0 0',

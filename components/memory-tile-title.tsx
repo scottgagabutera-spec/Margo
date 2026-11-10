@@ -50,7 +50,7 @@ export function MemoryTileTitle({
       className="margo-memory-tile-title"
       style={{
         fontFamily: useLora ? LYRIC_FONT : UI_FONT,
-        fontStyle: useLora ? 'italic' : 'normal',
+        fontStyle: 'normal',
         fontWeight: useLora ? 400 : 500,
         fontSize,
         color,

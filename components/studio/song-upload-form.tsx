@@ -54,7 +54,7 @@ const inputStyle: React.CSSProperties = {
 
 const labelStyle: React.CSSProperties = {
   display: 'block', fontFamily: font,
-  fontSize: '0.6rem', color: 'var(--text-muted)',
+  fontSize: '0.75rem', color: 'var(--text-muted)',
   textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '6px',
 }
 
@@ -778,10 +778,10 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
                 alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '16px', textAlign: 'center',
               }}>
                 <UploadIcon />
-                <span style={{ fontFamily: font, fontSize: '0.65rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: 700 }}>
+                <span style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: 700 }}>
                   Add Artwork
                 </span>
-                <span style={{ fontFamily: font, fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                <span style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                   {isEdit ? 'Optional · drag and drop or tap' : 'Required · drag and drop or tap'}
                 </span>
               </div>
@@ -802,7 +802,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
                   }}>
                     {title.trim() || 'Untitled'}
                   </p>
-                  <p style={{ fontFamily: font, fontSize: '0.65rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px' }}>
                     {(artistName || artistDisplayName).trim() || '—'}
                   </p>
                 </div>
@@ -829,7 +829,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
             />
             <p style={{
               fontFamily: font,
-              fontSize: '0.7rem',
+              fontSize: '0.75rem',
               color: 'var(--text-muted)',
               margin: '8px 0 0',
               lineHeight: 1.4,
@@ -846,7 +846,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
               minHeight: '44px', padding: '0 16px',
               background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '50px',
-              fontFamily: font, fontSize: '0.7rem', fontWeight: 600,
+              fontFamily: font, fontSize: '0.75rem', fontWeight: 600,
               letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--text-2)',
               cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1,
             }}>
@@ -869,12 +869,12 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
               />
             </label>
             {audioFile && (
-              <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '8px' }}>
+              <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '8px' }}>
                 {audioFile.name}
               </p>
             )}
             {isEdit && !audioFile && existingAudioUrl && (
-              <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '8px' }}>
+              <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '8px' }}>
                 Current audio stays unless you replace it.
               </p>
             )}
@@ -896,7 +896,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
         <label style={labelStyle}>Atmosphere (optional)</label>
         <p style={{
           fontFamily: font,
-          fontSize: '0.7rem',
+          fontSize: '0.75rem',
           color: 'var(--text-muted)',
           margin: '0 0 10px',
           lineHeight: 1.5,
@@ -927,7 +927,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
                   background: selected ? 'var(--gold-faint)' : 'transparent',
                   color: selected ? 'var(--gold)' : 'var(--text-secondary)',
                   fontFamily: font,
-                  fontSize: '0.7rem',
+                  fontSize: '0.75rem',
                   fontWeight: selected ? 600 : 400,
                   letterSpacing: '0.6px',
                   cursor: busy ? 'default' : 'pointer',
@@ -941,7 +941,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
         </div>
         <p style={{
           fontFamily: font,
-          fontSize: '0.7rem',
+          fontSize: '0.75rem',
           color: 'var(--text-muted)',
           margin: '10px 0 0',
           lineHeight: 1.5,
@@ -1039,7 +1039,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
             style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6, minHeight: '160px' }}
             disabled={busy}
           />
-          <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '8px', lineHeight: 1.5 }}>
+          <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '8px', lineHeight: 1.5 }}>
             Editing a line keeps its timing. New lines append; removed trailing lines are dropped.
             Replacing audio or regenerating lyrics rebuilds this list from Whisper.
           </p>
@@ -1094,7 +1094,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
             />
           </div>
         </div>
-        <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '10px', lineHeight: 1.5 }}>
+        <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '10px', lineHeight: 1.5 }}>
           {isEdit
             ? 'Whisper reads the audio already on this song. You do not need to upload it again. Zulu, Xhosa, Kinyarwanda, and Igbo have no Whisper language code. Margo auto-detects them and uses your lyric hint.'
             : 'Whisper AI reads the audio and tags every line with a vibe automatically once you publish.'}
@@ -1114,7 +1114,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
               borderRadius: '50px',
               fontFamily: font,
               fontWeight: 700,
-              fontSize: '0.7rem',
+              fontSize: '0.75rem',
               letterSpacing: '1.5px',
               textTransform: 'uppercase',
               cursor: busy ? 'default' : 'pointer',
@@ -1144,7 +1144,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           background: 'transparent', border: '1px solid var(--border)', borderRadius: '10px',
           padding: '11px 16px', color: 'var(--text-2)',
-          fontFamily: font, fontSize: '0.7rem',
+          fontFamily: font, fontSize: '0.75rem',
           textTransform: 'uppercase', letterSpacing: '1px', cursor: 'pointer',
           minHeight: '44px',
         }}
@@ -1218,7 +1218,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
             style={{
               minHeight: '48px', padding: '14px 24px', background: 'var(--gold)', color: 'var(--bg)',
               border: 'none', borderRadius: '50px', fontFamily: font,
-              fontWeight: 700, fontSize: '0.7rem', letterSpacing: '1.5px',
+              fontWeight: 700, fontSize: '0.75rem', letterSpacing: '1.5px',
               textTransform: 'uppercase', cursor: 'pointer',
             }}
           >
@@ -1232,7 +1232,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
               minHeight: '48px', padding: '14px 24px',
               background: 'var(--gold)', color: 'var(--bg)', border: 'none',
               borderRadius: '50px', fontFamily: font,
-              fontWeight: 700, fontSize: '0.7rem', letterSpacing: '1.5px',
+              fontWeight: 700, fontSize: '0.75rem', letterSpacing: '1.5px',
               textTransform: 'uppercase', cursor: busy ? 'default' : 'pointer',
               opacity: busy || (isEdit && stage === 'done') ? 0.6 : 1,
             }}
@@ -1246,7 +1246,7 @@ export function SongUploadForm({ artistDisplayName, artistUsername = null, onCom
           style={{
             minHeight: '44px', padding: '11px 16px', background: 'transparent',
             color: 'var(--text-2)', border: '1px solid var(--border)', borderRadius: '50px',
-            fontFamily: font, fontSize: '0.7rem',
+            fontFamily: font, fontSize: '0.75rem',
             letterSpacing: '1px', textTransform: 'uppercase', cursor: busy ? 'default' : 'pointer',
             opacity: busy ? 0.5 : 1,
           }}

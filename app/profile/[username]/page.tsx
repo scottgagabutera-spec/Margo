@@ -86,7 +86,7 @@ const sectionLabelStyle: React.CSSProperties = {
 
 const emptyLyricStyle: React.CSSProperties = {
   fontFamily: lyricFont,
-  fontStyle: 'italic',
+  fontStyle: 'normal',
   fontSize: TYPE.lyric,
   color: 'var(--text-secondary)',
   lineHeight: 1.5,

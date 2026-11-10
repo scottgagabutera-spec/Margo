@@ -138,7 +138,7 @@ export function PromotePlatformPicker({
 
   if (loading) {
     return (
-      <p style={{ fontFamily: font, fontSize: '0.68rem', color: 'var(--text-muted)', margin: 0 }}>
+      <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
         Loading platforms…
       </p>
     )
@@ -148,7 +148,7 @@ export function PromotePlatformPicker({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
       <p style={{
         fontFamily: font,
-        fontSize: '0.68rem',
+        fontSize: '0.75rem',
         color: 'var(--text-muted)',
         margin: 0,
         lineHeight: 1.4,
@@ -201,7 +201,7 @@ export function PromotePlatformPicker({
                 <span style={{
                   display: 'block',
                   fontFamily: font,
-                  fontSize: '0.72rem',
+                  fontSize: '0.75rem',
                   fontWeight: 600,
                   color: isChecked ? 'var(--gold)' : 'var(--text)',
                 }}>
@@ -211,7 +211,7 @@ export function PromotePlatformPicker({
                   <span style={{
                     display: 'block',
                     fontFamily: font,
-                    fontSize: '0.62rem',
+                    fontSize: '0.75rem',
                     color: 'var(--text-muted)',
                     lineHeight: 1.3,
                     marginTop: '2px',
@@ -257,7 +257,7 @@ export function PromotePlatformPicker({
         }}>
           <p style={{
             fontFamily: font,
-            fontSize: '0.72rem',
+            fontSize: '0.75rem',
             color: 'var(--text)',
             margin: '0 0 10px',
             lineHeight: 1.45,

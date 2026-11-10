@@ -45,7 +45,7 @@ export function ComposeLyricCard({ children, className, style }: ComposeLyricCar
 /** Same voice as the exported card's Margo Gold theme — the one Lora italic text. */
 export const composeLyricTextStyle: CSSProperties = {
   fontFamily: LYRIC_FONT,
-  fontStyle: 'italic',
+  fontStyle: 'normal',
   fontSize: 'clamp(1.1rem, 2.4vw, 1.5rem)',
   color: 'var(--text-on-gold)',
   lineHeight: 1.45,
