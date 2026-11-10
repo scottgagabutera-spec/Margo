@@ -31,7 +31,7 @@ import {
   readFeedReturnSnapshot,
   type FeedReturnSnapshot,
 } from '@/lib/margo-feed-return'
-import { resolveDiscoverPrimaryHref } from '@/lib/margo-discover-depth'
+import { persistFeedReturnBeforeLeave } from '@/lib/margo-feed-return'
 import { isFeedStackPath } from '@/lib/feed-stack-routes'
 import {
   MARGO_FEED_STACK_PIN_EVENT,
@@ -284,9 +284,10 @@ export function persistActivePrimaryScroll() {
   if (!el) return
   const id = el.getAttribute('data-margo-primary-tab') as PrimaryTabId | null
   if (!id) return
+  const scrollY = id === 'feed' ? feedSectorScrollEl(el).scrollTop : el.scrollTop
   if (id === 'feed') {
     const dom = captureFeedReturnFromDom()
-    writeFeedResume(el.scrollTop, feedAnchorFromPane(el) ?? null)
+    writeFeedResume(scrollY, feedAnchorFromPane(el) ?? null)
     try {
       const prev = readFeedResume()
       if (prev) {
@@ -295,7 +296,7 @@ export function persistActivePrimaryScroll() {
           JSON.stringify({
             ...prev,
             ...dom,
-            y: el.scrollTop,
+            y: scrollY,
             anchorId: feedAnchorFromPane(el) ?? prev.anchorId ?? null,
             at: Date.now(),
           } satisfies FeedReturnSnapshot),
@@ -308,7 +309,7 @@ export function persistActivePrimaryScroll() {
   persistScroll(
     frozenScrollLive,
     id,
-    el.scrollTop,
+    scrollY,
     id === 'feed' ? feedAnchorFromPane(el) : undefined,
   )
 }
@@ -1006,8 +1007,10 @@ export function PrimaryTabShell({
     endPeek()
     intentGenRef.current += 1
     let pushHref: string | null = href
-    if (id === 'discover' && normalizeTabPath(href) === '/discover') {
-      pushHref = resolveDiscoverPrimaryHref('/discover')
+    const leaving = activeTabRef.current
+    if (leaving && leaving !== id) {
+      persistActivePrimaryScroll()
+      if (leaving === 'feed') persistFeedReturnBeforeLeave()
     }
     if (id === 'you') {
       // Static /you is the tab destination — never wait on /profile/[username].
@@ -1074,7 +1077,8 @@ export function PrimaryTabShell({
     if (prev && prev !== activeTab) {
       const el = paneElsRef.current.get(prev)
       const prior = frozen[prev]
-      const live = el?.scrollTop ?? 0
+      const surface = el && prev === 'feed' ? feedSectorScrollEl(el) : el
+      const live = surface?.scrollTop ?? el?.scrollTop ?? 0
       const y = prior != null ? (live === 0 ? prior : live) : live
       persistScroll(
         frozen,
@@ -1082,7 +1086,10 @@ export function PrimaryTabShell({
         y,
         prev === 'feed' && el && live > 0 ? feedAnchorFromPane(el) : undefined,
       )
-      if (el && Math.abs(el.scrollTop - y) > 1) {
+      if (prev === 'feed' && el) {
+        const sector = feedSectorScrollEl(el)
+        if (Math.abs(sector.scrollTop - y) > 1) sector.scrollTop = y
+      } else if (el && Math.abs(el.scrollTop - y) > 1) {
         el.scrollTop = y
       }
     }
@@ -1212,6 +1219,11 @@ export function PrimaryTabShell({
     prepareTab: (id) => {
       closeHubOverlay()
       endPeek()
+      const leaving = activeTabRef.current
+      if (leaving && leaving !== id) {
+        persistActivePrimaryScroll()
+        if (leaving === 'feed') persistFeedReturnBeforeLeave()
+      }
       intentGenRef.current += 1
       intentHrefRef.current =
         id === 'you' ? '/you' : '/' + id

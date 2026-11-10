@@ -9977,19 +9977,54 @@ button.margo-feed-memory-card__action:active:not(:disabled) {
   transform: scale(0.98);
 }
 
-.margo-catalog-cover-btn {
+/* Shared ⋯ on catalog / moment / resonance cards: 28px chip, 44px hit, inside top corner */
+.margo-card-corner-menu {
   position: absolute;
-  z-index: 3;
-  border-radius: 50% !important;
+  z-index: 4;
+  top: 6px;
+  right: 6px;
+  width: var(--margo-touch-min);
+  height: var(--margo-touch-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+.margo-card-corner-menu--like {
+  right: auto;
+  left: 6px;
+}
+.margo-card-corner-menu .margo-card-corner-menu__btn {
   --margo-btn-visible-h: 28px;
+  width: var(--margo-touch-min);
+  height: var(--margo-touch-min);
+  min-width: var(--margo-touch-min);
+  min-height: var(--margo-touch-min);
+  max-width: var(--margo-touch-min);
+  padding: calc((var(--margo-touch-min) - 28px) / 2);
+  border-radius: 50%;
+  border: 1px solid var(--border-hi);
+  background: var(--margo-bar);
+  color: var(--text-secondary);
+  box-sizing: border-box;
 }
-.margo-catalog-cover-btn--menu {
-  top: 2px;
-  right: 2px;
+.margo-card-corner-menu .margo-card-corner-menu__btn svg {
+  width: 16px;
+  height: 16px;
 }
-.margo-catalog-cover-btn.margo-catalog-cover-btn--like {
-  top: 2px;
-  left: 2px;
+.margo-card--has-corner-menu .margo-card-corner-menu-host {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+}
+.margo-card--has-corner-menu .margo-card-vibe-row {
+  padding-right: calc(var(--margo-touch-min) + 2px);
+  position: relative;
+  z-index: 1;
 }
 
 .margo-cta-button {

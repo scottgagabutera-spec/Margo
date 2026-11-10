@@ -81,7 +81,10 @@ export function ResonanceCard({
     <div ref={cardRef} style={{ position: 'relative' }}>
       <PendingNavLink
         href={`/feed?highlight=${encodeURIComponent(post.id)}&openLb=1`}
-        className={isDiscover ? 'discover-home-resonance-card' : undefined}
+        className={[
+          isDiscover ? 'discover-home-resonance-card' : '',
+          isCompactCard ? 'margo-card--has-corner-menu' : '',
+        ].filter(Boolean).join(' ') || undefined}
         style={{
           flexShrink: variant === 'row' || isDiscover ? 0 : undefined,
           width: variant === 'row' ? '240px' : isDiscover ? undefined : '100%',
@@ -107,7 +110,17 @@ export function ResonanceCard({
             l.songId ? [{ songId: l.songId, lineText: l.text }] : []
           ))}
         />
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+        {isCompactCard ? (
+          <div className="margo-card-corner-menu-host">
+            <div className="margo-card-corner-menu">
+              <CardOverflowMenu corner items={overflowItems} />
+            </div>
+          </div>
+        ) : null}
+        <div
+          className={isCompactCard ? 'margo-card-vibe-row' : undefined}
+          style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}
+        >
           <div style={{ minWidth: 0, flex: 1 }}>
             {hasVibeTag && (
               <VibeTagPill
@@ -117,7 +130,9 @@ export function ResonanceCard({
               />
             )}
           </div>
-          <CardOverflowMenu compact={isDiscover} items={overflowItems} />
+          {!isCompactCard ? (
+            <CardOverflowMenu items={overflowItems} />
+          ) : null}
         </div>
         <p style={{
           fontFamily: 'var(--font-lora), serif', fontStyle: 'normal',

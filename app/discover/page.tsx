@@ -202,13 +202,17 @@ export default function DiscoverPage() {
     void fetchArtistsPage(true)
   }, [fetchArtistsPage])
 
+  const artistsLoadedRef = useRef(false)
   useEffect(() => {
     if (!discoverLive) return
+    if (artistsLoadedRef.current && artists.length > 0) return
     artistsNextOffsetRef.current = 0
     artistsHasMoreRef.current = true
-    setArtistsLoading(true)
-    void fetchArtistsPage(false)
-  }, [discoverLive, fetchArtistsPage])
+    setArtistsLoading(artists.length === 0)
+    void fetchArtistsPage(false).then(() => {
+      artistsLoadedRef.current = true
+    })
+  }, [discoverLive, fetchArtistsPage, artists.length])
 
   useEffect(() => {
     const key = lyricMomentsStableKey(momentRows)
