@@ -43,7 +43,10 @@ export function LyricMomentCard({
     <div
       ref={cardRef}
       onClick={onClick}
-      className={isDiscover ? 'moment-card discover-home-moment-card' : 'moment-card'}
+      className={
+        (isDiscover ? 'moment-card discover-home-moment-card' : 'moment-card')
+        + (isCompactCard ? ' margo-card--has-corner-menu' : '')
+      }
       style={{
         flexShrink: variant === 'row' || isDiscover ? 0 : undefined,
         width: variant === 'row' ? '240px' : isDiscover ? undefined : '100%',
@@ -67,7 +70,24 @@ export function LyricMomentCard({
       }}
     >
       <AtmosphereLayer variant="card" songId={moment.songId} lineText={moment.line} />
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+      {isCompactCard ? (
+        <div className="margo-card-corner-menu-host">
+          <div className="margo-card-corner-menu">
+            <CardOverflowMenu
+              corner
+              items={buildSnippetQueueOverflowItems({
+                canQueue: !!moment.audioUrl,
+                onPlayNext,
+                onAdd: onAddQueue,
+              })}
+            />
+          </div>
+        </div>
+      ) : null}
+      <div
+        className={isCompactCard ? 'margo-card-vibe-row' : undefined}
+        style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}
+      >
         <div style={{ minWidth: 0, flex: 1 }}>
           {primaryVibe && (
             <VibeTagPill
@@ -77,14 +97,15 @@ export function LyricMomentCard({
             />
           )}
         </div>
-        <CardOverflowMenu
-          compact={isDiscover}
-          items={buildSnippetQueueOverflowItems({
-            canQueue: !!moment.audioUrl,
-            onPlayNext,
-            onAdd: onAddQueue,
-          })}
-        />
+        {!isCompactCard ? (
+          <CardOverflowMenu
+            items={buildSnippetQueueOverflowItems({
+              canQueue: !!moment.audioUrl,
+              onPlayNext,
+              onAdd: onAddQueue,
+            })}
+          />
+        ) : null}
       </div>
       <p style={{
         fontFamily: 'var(--font-lora), serif', fontStyle: 'normal',
