@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { CheckIcon, EditIcon, MessagesIcon, UserPlusIcon } from '@/components/icons'
 import { MargoPortraitAvatar } from '@/components/margo-portrait-avatar'
+import { MargoFollowButton } from '@/components/margo-follow-button'
 
 type PortraitProps = {
   displayName: string
@@ -16,12 +16,10 @@ type PortraitProps = {
 
 export function ProfileHeroCluster({
   portrait,
-  leftFlank,
-  rightFlank,
+  actionsRow,
 }: {
   portrait: PortraitProps
-  leftFlank?: ReactNode
-  rightFlank?: ReactNode
+  actionsRow?: ReactNode
 }) {
   const { displayName, username, avatarUrl, onAvatarClick, avatarBroken, onAvatarError } = portrait
   const hasPhoto = !!avatarUrl?.trim() && !avatarBroken
@@ -39,96 +37,76 @@ export function ProfileHeroCluster({
   )
 
   return (
-    <div className="margo-profile-hero-cluster" data-testid="profile-hero-cluster">
-      <div className="margo-profile-hero-cluster__flank margo-profile-hero-cluster__flank--start">{leftFlank}</div>
-      <div className="margo-profile-hero__portrait" data-testid="profile-portrait-photo">
-        {hasPhoto && onAvatarClick ? (
-          <button
-            type="button"
-            onClick={onAvatarClick}
-            aria-label={`View ${displayName}'s photo`}
-            className="margo-profile-hero__portrait-btn"
-          >
-            {portraitNode}
-          </button>
-        ) : (
-          portraitNode
-        )}
+    <div className="margo-profile-hero-cluster-wrap">
+      <div className="margo-profile-hero-cluster" data-testid="profile-hero-cluster">
+        <div className="margo-profile-hero__portrait" data-testid="profile-portrait-photo">
+          {hasPhoto && onAvatarClick ? (
+            <button
+              type="button"
+              onClick={onAvatarClick}
+              aria-label={`View ${displayName}'s photo`}
+              className="margo-profile-hero__portrait-btn"
+            >
+              {portraitNode}
+            </button>
+          ) : (
+            portraitNode
+          )}
+        </div>
       </div>
-      <div className="margo-profile-hero-cluster__flank margo-profile-hero-cluster__flank--end">{rightFlank}</div>
+      {actionsRow ? <div className="margo-profile-hero-actions">{actionsRow}</div> : null}
     </div>
   )
 }
 
-function unreadBadgeLabel(count: number): string {
-  if (count <= 0) return ''
-  return count > 9 ? '9+' : String(count)
+function HeroActionLink({
+  href,
+  children,
+  badgeCount,
+}: {
+  href: string
+  children: ReactNode
+  badgeCount?: number
+}) {
+  return (
+    <Link href={href} className="margo-btn margo-btn--secondary margo-profile-hero-action">
+      {children}
+      {badgeCount && badgeCount > 0 ? (
+        <span className="margo-signal-badge margo-profile-hero-action__badge" aria-hidden>
+          {badgeCount > 9 ? '9+' : badgeCount}
+        </span>
+      ) : null}
+    </Link>
+  )
 }
 
-function RoundFlankAction({
-  label,
-  ariaLabel,
+function HeroActionButton({
+  children,
   onClick,
-  href,
   disabled,
   title,
-  tone,
-  badgeCount,
-  children,
 }: {
-  label: string
-  ariaLabel: string
+  children: ReactNode
   onClick?: () => void
-  href?: string
   disabled?: boolean
   title?: string
-  tone: 'gold' | 'outline' | 'following'
-  badgeCount?: number
-  children: ReactNode
 }) {
-  const className = `margo-profile-round-action margo-profile-round-action--${tone}${
-    disabled ? ' margo-profile-round-action--disabled' : ''
-  }`
-
-  const badge = unreadBadgeLabel(badgeCount ?? 0)
-  const inner = (
-    <>
-      <span className="margo-profile-round-action__icon-wrap">
-        <span className="margo-profile-round-action__icon">{children}</span>
-        {badge ? (
-          <span className="margo-profile-round-action__badge" aria-hidden>
-            {badge}
-          </span>
-        ) : null}
-      </span>
-      <span className="margo-profile-round-action__label">{label}</span>
-    </>
-  )
-
-  if (href && !disabled) {
-    return (
-      <Link href={href} className={className} aria-label={ariaLabel}>
-        {inner}
-      </Link>
-    )
-  }
-
   return (
     <button
       type="button"
-      className={className}
-      aria-label={ariaLabel}
+      className="margo-btn margo-btn--secondary margo-profile-hero-action"
+      onClick={onClick}
       disabled={disabled}
       title={title}
-      onClick={onClick}
     >
-      {inner}
+      {children}
     </button>
   )
 }
 
 export function ProfileHeroVisitorActions({
   signedOut,
+  profileId,
   messageHref,
   messageDisabled,
   messageTitle,
@@ -138,8 +116,10 @@ export function ProfileHeroVisitorActions({
   followBusy,
   socialReady,
   messageUnreadCount,
+  signInReturnTo,
 }: {
   signedOut?: boolean
+  profileId: string
   messageHref?: string
   messageDisabled?: boolean
   messageTitle?: string
@@ -149,55 +129,46 @@ export function ProfileHeroVisitorActions({
   followBusy: boolean
   socialReady: boolean
   messageUnreadCount?: number
+  signInReturnTo?: string
 }) {
-  if (signedOut) {
-    return {
-      left: null,
-      right: (
-        <RoundFlankAction
-          label="Follow"
-          ariaLabel="Follow"
-          onClick={onFollow}
-          tone="gold"
-        >
-          <UserPlusIcon size={18} color="var(--text-secondary)" />
-        </RoundFlankAction>
-      ),
-    }
-  }
   const following = followAccepted || followLabel === 'Following'
-  const rightLabel =
-    followLabel === 'Follow back' ? 'Follow back' : following ? 'Following' : 'Follow'
-  return {
-    left: (
-      <RoundFlankAction
-        label="Message"
-        ariaLabel="Message"
-        href={messageHref}
-        disabled={!socialReady || messageDisabled || !messageHref}
-        title={messageTitle}
-        tone="outline"
-        badgeCount={messageUnreadCount}
-      >
-        <MessagesIcon size={18} color="var(--text-secondary)" />
-      </RoundFlankAction>
-    ),
-    right: (
-      <RoundFlankAction
-        label={rightLabel}
-        ariaLabel={rightLabel}
-        onClick={onFollow}
-        disabled={!socialReady || followBusy}
-        tone={following ? 'following' : 'gold'}
-      >
-        {following ? (
-          <CheckIcon size={18} color="var(--text-secondary)" />
-        ) : (
-          <UserPlusIcon size={18} color="var(--text-secondary)" />
-        )}
-      </RoundFlankAction>
-    ),
+
+  if (signedOut) {
+    return (
+      <MargoFollowButton
+        profileId={profileId}
+        signInReturnTo={signInReturnTo}
+        onToggle={onFollow}
+        following={false}
+        label="Follow"
+      />
+    )
   }
+
+  return (
+    <>
+      {messageHref ? (
+        <HeroActionLink
+          href={messageHref}
+          badgeCount={messageUnreadCount}
+        >
+          Message
+        </HeroActionLink>
+      ) : (
+        <HeroActionButton disabled={!socialReady || messageDisabled} title={messageTitle}>
+          Message
+        </HeroActionButton>
+      )}
+      <MargoFollowButton
+        profileId={profileId}
+        label={followLabel}
+        following={following}
+        busy={followBusy}
+        disabled={!socialReady || followBusy || followLabel === 'Requested'}
+        onToggle={onFollow}
+      />
+    </>
+  )
 }
 
 export function ProfileHeroOwnerActions({
@@ -205,22 +176,14 @@ export function ProfileHeroOwnerActions({
 }: {
   messagesUnreadCount?: number
 }) {
-  return {
-    left: (
-      <RoundFlankAction
-        label="Messages"
-        ariaLabel="Messages"
-        href="/messages"
-        tone="outline"
-        badgeCount={messagesUnreadCount}
-      >
-        <MessagesIcon size={18} color="var(--text-secondary)" />
-      </RoundFlankAction>
-    ),
-    right: (
-      <RoundFlankAction label="Edit profile" ariaLabel="Edit profile" href="/profile/edit" tone="outline">
-        <EditIcon size={18} color="var(--text-secondary)" />
-      </RoundFlankAction>
-    ),
-  }
+  return (
+    <>
+      <HeroActionLink href="/messages" badgeCount={messagesUnreadCount}>
+        Messages
+      </HeroActionLink>
+      <HeroActionLink href="/profile/edit">
+        Edit profile
+      </HeroActionLink>
+    </>
+  )
 }
