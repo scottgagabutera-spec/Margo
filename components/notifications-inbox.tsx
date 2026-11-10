@@ -53,6 +53,7 @@ function SystemWelcomeNotificationRow({
         void markNotificationRead(n.id)
         router.push(`/notifications/tip/${n.id}`)
       }}
+      className={unread ? 'margo-signal-unread-surface' : undefined}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -61,7 +62,7 @@ function SystemWelcomeNotificationRow({
         textAlign: 'left',
         padding: '16px',
         borderRadius: '16px',
-        background: unread ? 'var(--surface)' : 'var(--surface-2)',
+        background: unread ? undefined : 'var(--surface-2)',
         border: '1px solid var(--border)',
         cursor: 'pointer',
       }}
@@ -91,14 +92,7 @@ function SystemWelcomeNotificationRow({
           </p>
         </div>
         {unread ? (
-          <span style={{
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            background: 'var(--text-muted)',
-            flexShrink: 0,
-            marginTop: '6px',
-          }} />
+          <span className="margo-signal-dot" style={{ marginTop: '6px' }} />
         ) : null}
       </div>
     </button>
@@ -153,6 +147,7 @@ function NotificationRow({
     <button
       type="button"
       onClick={openContent}
+      className={unread && !postSelected ? 'margo-signal-unread-surface' : undefined}
       style={{
         display: 'flex',
         alignItems: 'flex-start',
@@ -166,7 +161,7 @@ function NotificationRow({
         background: postSelected
           ? 'var(--surface-2)'
           : unread
-            ? 'var(--surface)'
+            ? undefined
             : 'transparent',
         WebkitTapHighlightColor: 'transparent',
       }}
@@ -210,14 +205,7 @@ function NotificationRow({
         </p>
       </div>
       {unread ? (
-        <span style={{
-          width: '8px',
-          height: '8px',
-          borderRadius: '50%',
-          background: 'var(--text-muted)',
-          flexShrink: 0,
-          marginTop: '6px',
-        }} />
+        <span className="margo-signal-dot" style={{ marginTop: '6px' }} />
       ) : null}
     </button>
   )

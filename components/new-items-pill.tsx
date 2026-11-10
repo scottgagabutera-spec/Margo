@@ -40,7 +40,7 @@ export function NewItemsPill({ count, onReveal, noun = 'new lyrics' }: NewItemsP
         gap: '6px',
         boxSizing: 'border-box',
         /* Feed EarnedTag recipe: gold-tint fill, thin gold border, gold type — not solid CTA gold */
-        background: 'rgba(232,197,71,0.1)',
+        background: 'var(--gold-faint)',
         color: 'var(--gold)',
         border: '1px solid var(--gold-border)',
         borderRadius: '50px',

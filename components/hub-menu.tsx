@@ -77,14 +77,11 @@ function HubPresenceDot({ visible, top, right }: { visible: boolean; top: string
   return (
     <span
       aria-hidden
+      className="margo-signal-dot"
       style={{
         position: 'absolute',
         top,
         right,
-        width: '8px',
-        height: '8px',
-        borderRadius: '50%',
-        background: 'var(--text-muted)',
       }}
     />
   )

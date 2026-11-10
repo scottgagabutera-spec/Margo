@@ -33,6 +33,7 @@ function ConversationRow({ c, active }: { c: Conversation; active: boolean }) {
   return (
     <PendingNavLink
       href={`/messages/${c.otherUser.username}`}
+      className={c.unreadCount > 0 && !active ? 'margo-signal-unread-surface' : undefined}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -42,7 +43,7 @@ function ConversationRow({ c, active }: { c: Conversation; active: boolean }) {
         background: active
           ? 'var(--surface-2)'
           : c.unreadCount > 0
-            ? 'var(--surface)'
+            ? undefined
             : 'transparent',
         borderRadius: '12px',
       }}
@@ -83,21 +84,7 @@ function ConversationRow({ c, active }: { c: Conversation; active: boolean }) {
           style={{ fontFamily: UI_FONT, fontSize: LIST_ROW_TYPE.time, color: 'var(--text-muted)' }}
         />
         {c.unreadCount > 0 ? (
-          <span style={{
-            minWidth: '18px',
-            height: '18px',
-            padding: '0 5px',
-            borderRadius: '9px',
-            background: 'var(--surface-2)',
-            color: 'var(--text)',
-            border: '1px solid var(--border-hi)',
-            fontFamily: UI_FONT,
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
+          <span className="margo-signal-badge">
             {c.unreadCount > 9 ? '9+' : c.unreadCount}
           </span>
         ) : null}
