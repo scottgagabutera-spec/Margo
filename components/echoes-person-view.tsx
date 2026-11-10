@@ -11,6 +11,7 @@ import { feedReturnFallbackHref } from '@/lib/feed-exit-nav'
 import { playFull, togglePlayPause } from '@/lib/audio-engine'
 import { useIsPlaying } from '@/hooks/useAudioEngine'
 import { FEED_TYPE_SCALE, TYPE, UI_FONT } from '@/lib/fonts'
+import { AuthorMeta } from '@/components/username-tag'
 import { toast } from 'sonner'
 
 const font = UI_FONT
@@ -85,14 +86,7 @@ export function EchoesPersonView({ setId, profileId }: { setId: string; profileI
       <header className="margo-echoes-person__identity">
         <MargoAvatar size="lg" imageUrl={avatarUrl} username={username} displayName={displayName} />
         <div className="margo-echoes-person__who">
-          <p className="margo-echoes-person__name" style={{ fontFamily: font, fontSize: TYPE.displayName }}>
-            {displayName}
-          </p>
-          {username ? (
-            <p className="margo-echoes-person__handle" style={{ fontFamily: font, fontSize: FEED_TYPE_SCALE.handle }}>
-              @{username}
-            </p>
-          ) : null}
+          <AuthorMeta username={username || displayName} size="default" />
         </div>
       </header>
       <p className="margo-echoes-person__question" style={{ fontFamily: font, fontSize: TYPE.body }}>

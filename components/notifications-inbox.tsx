@@ -16,7 +16,8 @@ import { MargoAvatar } from '@/components/margo-avatar'
 import { LIST_ROW_TYPE, UI_FONT } from '@/lib/fonts'
 import { signedOutGateBenefitStyle, signedOutGateSignInStyle } from '@/lib/signed-out-gate-styles'
 import { isMargoBrandUsername } from '@/lib/margo-brand-account'
-import { messageFor } from '@/lib/notifications/copy'
+import { messageFor, notificationActionFor } from '@/lib/notifications/copy'
+import { AuthorMeta } from '@/components/username-tag'
 import {
   welcomeSeriesBodyFromNotification,
   welcomeSeriesCopy,
@@ -107,12 +108,14 @@ function SystemWelcomeNotificationRow({
 function NotificationRow({
   n,
   text,
+  grouped,
   desktop,
   selectedPostId,
   onOpenDesktop,
 }: {
   n: Notification
   text: string
+  grouped?: boolean
   desktop: boolean
   selectedPostId: string | null
   onOpenDesktop: (n: Notification) => void
@@ -124,18 +127,32 @@ function NotificationRow({
   const brandMark = actor?.username ? isMargoBrandUsername(actor.username) : false
   const href = notificationHref(n)
   const postSelected = n.postId && selectedPostId === n.postId
+  const artistSelfTypes: Notification['type'][] = [
+    'artist_submitted',
+    'artist_approved',
+    'artist_rejected',
+    'warned',
+    'frozen',
+    'removed',
+    'restored',
+    'system_welcome',
+  ]
+  const systemBody = !actor || artistSelfTypes.includes(n.type) || grouped
+  const actionText = systemBody ? text : notificationActionFor(n)
+
+  const openContent = () => {
+    void markNotificationRead(n.id)
+    if (desktop && (n.type === 'resonate' || n.type === 'lyric_back') && n.postId) {
+      onOpenDesktop(n)
+      return
+    }
+    router.push(href)
+  }
 
   return (
     <button
       type="button"
-      onClick={() => {
-        void markNotificationRead(n.id)
-        if (desktop && (n.type === 'resonate' || n.type === 'lyric_back') && n.postId) {
-          onOpenDesktop(n)
-          return
-        }
-        router.push(href)
-      }}
+      onClick={openContent}
       style={{
         display: 'flex',
         alignItems: 'flex-start',
@@ -173,7 +190,23 @@ function NotificationRow({
           margin: 0,
           lineHeight: 1.4,
         }}>
-          {text}
+          {systemBody ? (
+            text
+          ) : (
+            <>
+              {actor?.username ? (
+                <AuthorMeta
+                  username={actor.username}
+                  authorUid={actor.id}
+                  size="compact"
+                  linkProfile
+                />
+              ) : (
+                'Someone'
+              )}{' '}
+              {actionText}
+            </>
+          )}
         </p>
       </div>
       {unread ? (
@@ -335,6 +368,7 @@ export function NotificationsInbox({
                 key={row.notification.id}
                 n={row.notification}
                 text={text}
+                grouped={!!row.groupedText}
                 desktop={desktop}
                 selectedPostId={selectedPostId}
                 onOpenDesktop={(n) => onSelectPost?.(n.postId)}

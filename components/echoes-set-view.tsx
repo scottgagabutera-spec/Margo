@@ -21,6 +21,7 @@ import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useTapAck } from '@/hooks/use-tap-ack'
 import { useRegisterNavBack } from '@/components/nav-back'
 import { FEED_TYPE_SCALE, TYPE, UI_FONT } from '@/lib/fonts'
+import { AuthorMeta } from '@/components/username-tag'
 
 const font = UI_FONT
 
@@ -174,13 +175,16 @@ export function EchoesSetView({ setId }: { setId: string }) {
                   <div className="margo-echoes-set-page__identity">
                     <MargoAvatar size="md" imageUrl={row.avatarUrl} username={row.username} displayName={row.displayName} />
                     <div className="margo-echoes-set-page__who">
-                      <p className="margo-echoes-set-page__name" style={{ fontFamily: font, fontSize: FEED_TYPE_SCALE.displayName }}>
-                        {row.isOwn ? 'You' : row.displayName}
-                      </p>
-                      <p className="margo-echoes-set-page__handle" style={{ fontFamily: font, fontSize: FEED_TYPE_SCALE.handle }}>
-                        @{row.username}
-                        <span className="margo-echoes-set-page__time">{row.timeLabel}</span>
-                      </p>
+                      <AuthorMeta
+                        username={row.username}
+                        size="compact"
+                        metaAfterHandle={
+                          <span className="margo-echoes-set-page__time" style={{ fontFamily: font, fontSize: FEED_TYPE_SCALE.handle }}>
+                            {row.isOwn ? 'You · ' : ''}
+                            {row.timeLabel}
+                          </span>
+                        }
+                      />
                     </div>
                   </div>
                   <EchoesSongStrip payload={row.payload} />

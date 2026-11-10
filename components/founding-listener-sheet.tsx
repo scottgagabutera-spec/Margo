@@ -7,11 +7,11 @@ import { UI_FONT } from '@/lib/fonts'
 export function FoundingListenerSheet({
   open,
   onClose,
-  displayName,
+  username,
 }: {
   open: boolean
   onClose: () => void
-  displayName?: string | null
+  username?: string | null
 }) {
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
@@ -73,17 +73,17 @@ export function FoundingListenerSheet({
         >
           Founding Listener
         </p>
-        {displayName ? (
+        {username ? (
           <p
             style={{
               fontFamily: UI_FONT,
-              fontSize: '0.95rem',
-              fontWeight: 600,
-              color: 'var(--text)',
+              fontSize: '0.8125rem',
+              fontWeight: 500,
+              color: 'var(--text-secondary)',
               margin: '10px 0 0',
             }}
           >
-            {displayName}
+            @{username.replace(/^@/, '')}
           </p>
         ) : null}
         <p

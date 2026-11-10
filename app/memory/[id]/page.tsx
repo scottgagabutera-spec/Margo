@@ -23,7 +23,7 @@ import { MemoryReplyComposer } from '@/components/memory-reply-composer'
 import { MemoryRepliesList } from '@/components/memory-replies-list'
 import type { MemoryReplyRow } from '@/app/api/memories/[id]/replies/route'
 import { memoryCaptionTitle } from '@/lib/memory/display-caption'
-import { MargoAvatar } from '@/components/margo-avatar'
+import { AuthorMeta } from '@/components/username-tag'
 
 const font = UI_FONT
 
@@ -261,10 +261,9 @@ export default function MemoryDetailPage() {
       <div style={{ position: 'relative', marginBottom: 12 }}>
         <h1 className="margo-memory-detail__hero-title" style={{ fontFamily: LYRIC_FONT }}>{heading}</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-          <Link href={`/profile/${memory.ownerUsername}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: font, fontSize: '0.8125rem', color: 'var(--text-secondary)', textDecoration: 'none' }}>
-            <MargoAvatar size="xs" imageUrl={memory.ownerAvatarUrl} username={memory.ownerUsername} displayName={memory.ownerDisplayName} />
-            <span>@{memory.ownerUsername}</span>
-          </Link>
+          <span onClick={(e) => e.stopPropagation()}>
+            <AuthorMeta username={memory.ownerUsername} size="compact" linkProfile />
+          </span>
           {dateChip ? (
             <span style={{ fontFamily: font, fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{dateChip}</span>
           ) : null}

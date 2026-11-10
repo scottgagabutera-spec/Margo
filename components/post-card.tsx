@@ -194,7 +194,7 @@ function PostCardPortraitHeader({
   onAvatarError: () => void
   isTier1: boolean
   storyRing: StoryRingCtx
-  onFoundingListener?: (displayName: string) => void
+  onFoundingListener?: (username: string) => void
   portraitFallbackSeed: string
 }) {
   const dim = feedPortraitDimensions('feed')
@@ -258,9 +258,9 @@ function PostCardPortraitHeader({
       data-testid="feed-portrait-avatar"
       onClick={(e) => {
         e.stopPropagation()
-        onFoundingListener(displayLabel)
+        onFoundingListener(profileUsername)
       }}
-      aria-label={`${displayLabel}, Founding Listener`}
+      aria-label={`@${profileUsername}, Founding Listener`}
     >
       {portraitCore}
     </button>
@@ -293,7 +293,7 @@ function PostCardHeaderIdentity({
   authorProfile: AuthorProfile | null
   feedCardHeader?: boolean
   portraitLayout?: boolean
-  onFoundingListener?: (displayName: string) => void
+  onFoundingListener?: (username: string) => void
 }) {
   const profileUsername = (authorProfile?.username || post.username || '').replace(/^@/, '')
   const profileHref = profileHrefForAuthor(authorProfile, post.authorUid || null)
@@ -318,9 +318,9 @@ function PostCardHeaderIdentity({
         className="margo-post-card__header-identity-link"
         onClick={(e) => {
           e.stopPropagation()
-          onFoundingListener(displayLabel)
+          onFoundingListener(profileUsername)
         }}
-        aria-label={`${displayLabel}, Founding Listener`}
+        aria-label={`@${profileUsername}, Founding Listener`}
       >
         {nameBlock}
       </button>
@@ -568,9 +568,9 @@ export function PostCard({
   const [repostSheetOpen, setRepostSheetOpen] = useState(false)
   const [rowExpanded, setRowExpanded] = useState(false)
   const [avatarBroken, setAvatarBroken] = useState(false)
-  const [foundingListenerName, setFoundingListenerName] = useState<string | null>(null)
-  const openFoundingListener = useCallback((displayName: string) => {
-    setFoundingListenerName(displayName)
+  const [foundingListenerUsername, setFoundingListenerUsername] = useState<string | null>(null)
+  const openFoundingListener = useCallback((username: string) => {
+    setFoundingListenerUsername(username)
   }, [])
   const [suggestionsOpen, setSuggestionsOpen] = useState(false)
   const [echoCountLive, setEchoCountLive] = useState(echoCount)
@@ -998,9 +998,9 @@ export function PostCard({
       ) : null}
 
       <FoundingListenerSheet
-        open={foundingListenerName != null}
-        displayName={foundingListenerName}
-        onClose={() => setFoundingListenerName(null)}
+        open={foundingListenerUsername != null}
+        username={foundingListenerUsername}
+        onClose={() => setFoundingListenerUsername(null)}
       />
 
     </div>

@@ -87,7 +87,7 @@ export function buildNotificationDisplayRows(list: Notification[]): Notification
 }
 
 function groupedResonateCopy(bucket: Notification[]): string {
-  const first = bucket[0].actor?.displayName || bucket[0].actor?.username || 'Someone'
+  const first = bucket[0].actor?.username ? `@${bucket[0].actor.username}` : 'Someone'
   const others = bucket.length - 1
   if (others <= 0) return `${first} resonated with your lyric`
   return `${first} and ${others} other${others === 1 ? '' : 's'} resonated with your lyric`

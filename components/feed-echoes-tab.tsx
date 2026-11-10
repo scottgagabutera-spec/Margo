@@ -9,6 +9,7 @@ import type { EchoSongPayload } from '@/lib/echoes/types'
 import { openFeedEchoesSet } from '@/lib/feed-mix-nav'
 import { useTapAck } from '@/hooks/use-tap-ack'
 import { UI_FONT } from '@/lib/fonts'
+import { AuthorMeta } from '@/components/username-tag'
 
 const font = UI_FONT
 
@@ -108,12 +109,15 @@ export function FeedEchoesTab({ fetchEnabled = true }: { fetchEnabled?: boolean 
             {activeSet.latestAnswer ? (
               <div className="margo-feed-echoes-tab__preview">
                 <div className="margo-feed-echoes-tab__preview-name" style={{ fontFamily: font }}>
-                  <span className="margo-feed-echoes-tab__preview-display">
-                    {activeSet.latestAnswer.displayName}
-                  </span>
-                  <span className="margo-feed-echoes-tab__preview-time">
-                    {activeSet.latestAnswer.timeLabel}
-                  </span>
+                  <AuthorMeta
+                    username={activeSet.latestAnswer.username || activeSet.latestAnswer.displayName}
+                    size="compact"
+                    metaAfterHandle={
+                      <span className="margo-feed-echoes-tab__preview-time">
+                        {activeSet.latestAnswer.timeLabel}
+                      </span>
+                    }
+                  />
                 </div>
                 <EchoesSongStrip payload={activeSet.latestAnswer.payload} />
               </div>

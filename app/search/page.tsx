@@ -83,7 +83,7 @@ function Cover({
 }
 
 function PersonCard({ hit, artist }: { hit: MargoSearchHit; artist?: boolean }) {
-  const name = hit.title || hit.username || ''
+  const handle = hit.username ? `@${hit.username.replace(/^@/, '')}` : hit.title || ''
   return (
     <div style={{
       padding: '12px 14px',
@@ -92,20 +92,21 @@ function PersonCard({ hit, artist }: { hit: MargoSearchHit; artist?: boolean }) 
       border: '1px solid var(--border)',
     }}>
       <Link href={`/profile/${hit.username}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '14px' }}>
-        <Cover src={hit.artworkUrl} alt={name} round size={48} />
+        <Cover src={hit.artworkUrl} alt={handle} round size={48} />
         <div style={{ minWidth: 0, flex: 1 }}>
           <p style={{
-            fontFamily: font, fontSize: TYPE.song, fontWeight: 600,
-            color: 'var(--text)', margin: 0, lineHeight: 1.3,
+            fontFamily: font, fontSize: TYPE.song, fontWeight: 500,
+            color: 'var(--text-secondary)', margin: 0, lineHeight: 1.3,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>{name}</p>
-          <p style={{
-            fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)',
-            margin: '4px 0 0', letterSpacing: '0.02em',
-          }}>
-            {hit.subtitle || (hit.username ? `@${hit.username}` : '')}
-            {artist ? ' · Artist' : ''}
-          </p>
+          }}>{handle}</p>
+          {artist ? (
+            <p style={{
+              fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)',
+              margin: '4px 0 0', letterSpacing: '0.02em',
+            }}>
+              Artist
+            </p>
+          ) : null}
         </div>
       </Link>
       {artist && hit.relatedSongs && hit.relatedSongs.length > 0 ? (
@@ -161,7 +162,7 @@ function SongCard({ hit }: { hit: MargoSearchHit }) {
 function LyricCard({ hit }: { hit: MargoSearchHit }) {
   const href = hit.postId ? `/post/${hit.postId}` : (hit.songId ? `/song/${hit.songId}` : '/feed')
   const primary = hit.text || hit.title || ''
-  const secondary = [hit.subtitle, hit.username ? `@${hit.username}` : ''].filter(Boolean).join(' · ')
+  const secondary = hit.username ? `@${hit.username.replace(/^@/, '')}` : hit.subtitle || ''
   return (
     <Link href={href} style={{ textDecoration: 'none' }}>
       <div style={{
