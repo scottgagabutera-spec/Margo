@@ -2723,16 +2723,16 @@ html[data-margo-landing-song-flow] .margo-landing-hero-anchor {
   box-sizing: border-box;
 }
 .margo-profile-round-action--gold .margo-profile-round-action__icon {
-  background: var(--gold);
-  border: 1px solid var(--gold);
+  background: var(--surface-2);
+  border: 1px solid var(--border-hi);
 }
 .margo-profile-round-action--outline .margo-profile-round-action__icon {
   background: var(--surface-2);
-  border: 1px solid var(--gold-border);
+  border: 1px solid var(--border-hi);
 }
 .margo-profile-round-action--following .margo-profile-round-action__icon {
   background: var(--surface-2);
-  border: 2px solid var(--gold);
+  border: 1px solid var(--border-hi);
 }
 .margo-profile-round-action--disabled {
   opacity: 0.45;
@@ -2765,8 +2765,8 @@ html[data-margo-landing-song-flow] .margo-landing-hero-anchor {
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  border: 1px solid var(--gold-border);
-  background: var(--gold-faint);
+  border: 1px solid var(--border-hi);
+  background: var(--surface-2);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3479,8 +3479,8 @@ html[data-margo-landing-song-flow] .margo-landing-hero-anchor {
   white-space: nowrap;
 }
 .margo-role-line--brand {
-  color: var(--gold);
-  opacity: 0.88;
+  color: var(--text-muted);
+  opacity: 1;
 }
 .margo-post-card__mood--word {
   height: auto;
@@ -4730,9 +4730,9 @@ html[data-margo-hub-sheet-flush-top] .margo-hub-sheet {
   height: 28px;
   padding: 0 10px;
   border-radius: 8px;
-  border: 1px solid var(--post-vibe-border);
+  border: 1px solid var(--border);
   background: transparent;
-  color: var(--post-vibe-text);
+  color: var(--text-secondary);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 0.75rem;
   font-weight: 600;
@@ -7936,7 +7936,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   overflow: hidden;
 }
 .margo-memory-card__see-more {
-  color: var(--gold);
+  color: var(--text-secondary);
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -7986,7 +7986,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   margin: 0;
 }
 .margo-profile-memories-strip__add {
-  color: var(--gold);
+  color: var(--text-secondary);
   text-decoration: none;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -8221,7 +8221,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   line-height: 1.15;
   letter-spacing: -0.01em;
   text-transform: none;
-  color: var(--gold);
+  color: var(--text-secondary);
   display: block;
   word-break: break-word;
 }
@@ -8261,8 +8261,8 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   display: none;
 }
 .margo-profile-memory-tile--add {
-  border: 1px dashed var(--gold-border);
-  background: var(--gold-faint);
+  border: 1px dashed var(--border-hi);
+  background: var(--surface-2);
   min-height: var(--margo-touch-min);
 }
 .margo-profile-memory-tile--add-cta {
@@ -8276,7 +8276,7 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: var(--margo-type-l);
   font-weight: 500;
-  color: var(--gold);
+  color: var(--text-secondary);
   text-align: center;
   line-height: 1.2;
 }
@@ -10304,7 +10304,7 @@ button.margo-feed-memory-card__action:active:not(:disabled) {
   margin: 0 0 4px;
   font-size: 0.75rem;
   font-weight: 500;
-  color: var(--gold);
+  color: var(--text-muted);
 }
 .margo-feed-echoes-tab__title {
   margin: 0;
@@ -10321,9 +10321,26 @@ button.margo-feed-memory-card__action:active:not(:disabled) {
   margin-top: 10px;
 }
 .margo-feed-echoes-tab__preview-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
   margin: 0 0 6px;
-  font-size: 0.75rem;
+  font-size: var(--margo-type-b);
   color: var(--text-secondary);
+}
+.margo-feed-echoes-tab__preview-display {
+  font-weight: 500;
+  color: var(--text);
+}
+.margo-feed-echoes-tab__preview-time {
+  font-size: var(--margo-type-l);
+  color: var(--text-muted);
+}
+.margo-feed-echoes-tab__preview-time::before {
+  content: '·';
+  margin-right: 6px;
+  color: var(--text-muted);
 }
 .margo-feed-echoes-tab__card--skeleton .margo-feed-echoes-tab__sk-title,
 .margo-feed-echoes-tab__card--skeleton .margo-feed-echoes-tab__sk-meta,
@@ -10367,7 +10384,7 @@ button.margo-feed-memory-card__action:active:not(:disabled) {
   margin: 0;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--gold);
+  color: var(--text);
 }
 .margo-feed-echoes-tab__future-line {
   margin: 6px 0 0;
@@ -10385,7 +10402,7 @@ button.margo-feed-memory-card__action:active:not(:disabled) {
   margin: 0 0 4px;
   font-size: 0.75rem;
   font-weight: 500;
-  color: var(--gold);
+  color: var(--text-muted);
 }
 .margo-echoes-set-page__title {
   margin: 0;
@@ -10790,7 +10807,7 @@ button.margo-feed-memory-card__action:active:not(:disabled) {
   margin: 0;
   font-size: 0.75rem;
   font-weight: 500;
-  color: var(--gold);
+  color: var(--text-muted);
 }
 .margo-feed-echoes-results__title {
   margin: 2px 0 0;
@@ -11005,10 +11022,9 @@ button.margo-feed-shorts-strip__more {
   font-weight: 400;
 }
 
-/* section */
 .margo-content-page__section-title {
   margin: 28px 0 12px;
-  font-size: var(--margo-type-m);
+  font-size: var(--margo-type-h);
   font-weight: 500;
   color: var(--text);
 }
@@ -11032,7 +11048,7 @@ button.margo-feed-shorts-strip__more {
 
 .margo-info-prose h2 {
   margin: 28px 0 12px;
-  font-size: var(--margo-type-m);
+  font-size: var(--margo-type-h);
   font-weight: 500;
   font-style: normal;
   color: var(--text);
@@ -11056,7 +11072,8 @@ button.margo-feed-shorts-strip__more {
 .margo-info-link,
 .margo-info-prose a {
   color: var(--text-secondary);
-  text-decoration: none;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .margo-contact-grid {

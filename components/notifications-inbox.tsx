@@ -60,7 +60,7 @@ function SystemWelcomeNotificationRow({
         textAlign: 'left',
         padding: '16px',
         borderRadius: '16px',
-        background: unread ? 'var(--surface)' : 'var(--surface-2)',
+        background: unread ? 'rgba(232,197,71,0.08)' : 'var(--surface-2)',
         border: '1px solid var(--border)',
         cursor: 'pointer',
       }}
@@ -94,7 +94,7 @@ function SystemWelcomeNotificationRow({
             width: '8px',
             height: '8px',
             borderRadius: '50%',
-            background: 'var(--text-muted)',
+            background: 'var(--gold)',
             flexShrink: 0,
             marginTop: '6px',
           }} />
@@ -147,9 +147,9 @@ function NotificationRow({
         borderRadius: '12px',
         cursor: 'pointer',
         background: postSelected
-          ? 'var(--surface-2)'
+          ? 'var(--gold-faint)'
           : unread
-            ? 'var(--surface)'
+            ? 'rgba(232,197,71,0.08)'
             : 'transparent',
         WebkitTapHighlightColor: 'transparent',
       }}
@@ -181,7 +181,7 @@ function NotificationRow({
           width: '8px',
           height: '8px',
           borderRadius: '50%',
-          background: 'var(--text-muted)',
+          background: 'var(--gold)',
           flexShrink: 0,
           marginTop: '6px',
         }} />

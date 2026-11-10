@@ -84,7 +84,7 @@ function HubPresenceDot({ visible, top, right }: { visible: boolean; top: string
         width: '8px',
         height: '8px',
         borderRadius: '50%',
-        background: 'var(--text-muted)',
+        background: 'var(--gold)',
       }}
     />
   )

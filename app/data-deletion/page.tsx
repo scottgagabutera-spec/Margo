@@ -5,8 +5,7 @@ import { InfoPageShell } from '@/components/info/info-page-shell'
 export default function DataDeletionPage() {
   return (
     <InfoPageShell title="Data deletion" subtitle="Last updated: September 2026">
-      <p>Account &amp;</p>
-      <p>data deletion.</p>
+      <p>Account &amp; data deletion.</p>
       <p>
                     This page explains how to request deletion of your personal account data on Margo.
                     It is <strong>not</strong> for copyright
