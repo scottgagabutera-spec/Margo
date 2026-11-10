@@ -53,6 +53,7 @@ export function ProfileFavoriteArtistsRow({
   showEmptyOwnerLink,
   onFavoritesChange,
   onFavoriteSongsChange,
+  writeThrough = true,
 }: {
   favorites: ProfileFavoriteArtist[]
   favoriteSongs?: ProfileFavoriteSong[]
@@ -62,6 +63,8 @@ export function ProfileFavoriteArtistsRow({
   showEmptyOwnerLink?: boolean
   onFavoritesChange?: (next: ProfileFavoriteArtist[]) => void
   onFavoriteSongsChange?: (next: ProfileFavoriteSong[]) => void
+  /** When false, only update local/cache callbacks (e.g. Edit profile Save). */
+  writeThrough?: boolean
 }) {
   const [chip, setChip] = useState<FavoritesChip>('artists')
   const [inlineSearch, setInlineSearch] = useState<ProfileFavoritesSearchKind | null>(null)
@@ -127,6 +130,7 @@ export function ProfileFavoriteArtistsRow({
   const persistArtists = useCallback(
     async (next: ProfileFavoriteArtist[]) => {
       onFavoritesChange?.(next)
+      if (!writeThrough) return
       try {
         await fetch('/api/profile/favorite-artists', {
           method: 'PUT',
@@ -143,7 +147,7 @@ export function ProfileFavoriteArtistsRow({
         /* keep optimistic UI */
       }
     },
-    [onFavoritesChange],
+    [onFavoritesChange, writeThrough],
   )
 
   const onArtistPick = useCallback(
@@ -189,6 +193,7 @@ export function ProfileFavoriteArtistsRow({
   const persistSongs = useCallback(
     async (next: ProfileFavoriteSong[]) => {
       onFavoriteSongsChange?.(next)
+      if (!writeThrough) return
       try {
         await fetch('/api/profile/favorite-songs', {
           method: 'PUT',
@@ -205,7 +210,7 @@ export function ProfileFavoriteArtistsRow({
         /* optimistic UI */
       }
     },
-    [onFavoriteSongsChange],
+    [onFavoriteSongsChange, writeThrough],
   )
 
   const onSongPick = useCallback(

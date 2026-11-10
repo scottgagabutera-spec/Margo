@@ -27,7 +27,11 @@ import {
   USERNAME_MAX_LENGTH,
   validateUsernameChoice,
 } from '@/lib/username-validator'
-import { FavoriteArtistsPicker, type FavoriteArtistPick } from '@/components/favorite-artists-picker'
+import {
+  ProfileFavoriteArtistsRow,
+  type ProfileFavoriteArtist,
+} from '@/components/profile-favorite-artists-row'
+import type { ProfileFavoriteSong } from '@/lib/profile/load-favorite-songs'
 
 const font = UI_FONT
 const lyricFont = LYRIC_FONT
@@ -63,8 +67,11 @@ function EditProfilePageInner() {
   const [catalogSongId, setCatalogSongId] = useState<string | null>(null)
   const [isPrivate, setIsPrivateLocal] = useState(false)
   const [artistLinkDraft, setArtistLinkDraft] = useState<Record<string, string>>({})
-  const [favoriteArtists, setFavoriteArtists] = useState<FavoriteArtistPick[]>([])
+  const [favoriteArtists, setFavoriteArtists] = useState<ProfileFavoriteArtist[]>([])
+  const [favoriteSongs, setFavoriteSongs] = useState<ProfileFavoriteSong[]>([])
+  const [favoriteSongsReady, setFavoriteSongsReady] = useState(false)
   const favoriteArtistsInitialRef = useRef<string>('[]')
+  const favoriteSongsInitialRef = useRef<string>('[]')
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -96,16 +103,21 @@ function EditProfilePageInner() {
     let active = true
     void fetch(`/api/profile/favorite-artists?profileId=${encodeURIComponent(user.id)}`)
       .then((r) => r.json())
-      .then((data: { favorites?: Array<FavoriteArtistPick & { position?: number }> }) => {
+      .then((data: { favorites?: ProfileFavoriteArtist[] }) => {
         if (!active) return
-        const list = (data.favorites || []).map((f) => ({
-          id: f.id,
-          name: f.name,
-          artworkUrl: f.artworkUrl,
-          onMargo: f.onMargo,
-        }))
+        const list = data.favorites || []
         setFavoriteArtists(list)
         favoriteArtistsInitialRef.current = JSON.stringify(list.map((x) => x.id))
+      })
+      .catch(() => {})
+    void fetch(`/api/profile/favorite-songs?profileId=${encodeURIComponent(user.id)}`)
+      .then((r) => r.json())
+      .then((data: { favorites?: ProfileFavoriteSong[]; ready?: boolean }) => {
+        if (!active) return
+        setFavoriteSongsReady(!!data.ready)
+        const list = data.favorites || []
+        setFavoriteSongs(list)
+        favoriteSongsInitialRef.current = JSON.stringify(list.map((x) => x.id))
       })
       .catch(() => {})
     return () => { active = false }
@@ -251,6 +263,10 @@ function EditProfilePageInner() {
     const favoritesChanged =
       JSON.stringify(favoriteArtists.map((f) => f.id)) !== favoriteArtistsInitialRef.current
 
+    const songsChanged =
+      favoriteSongsReady
+      && JSON.stringify(favoriteSongs.map((f) => f.id)) !== favoriteSongsInitialRef.current
+
     if (favoritesChanged) {
       const favRes = await fetch('/api/profile/favorite-artists', {
         method: 'PUT',
@@ -271,7 +287,27 @@ function EditProfilePageInner() {
       favoriteArtistsInitialRef.current = JSON.stringify(favoriteArtists.map((f) => f.id))
     }
 
-    if (tasks.length === 0 && !favoritesChanged) {
+    if (songsChanged) {
+      const songRes = await fetch('/api/profile/favorite-songs', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          favorites: favoriteSongs.map((f, position) => ({
+            catalogSongId: f.id,
+            position,
+            artworkUrl: f.artworkUrl,
+          })),
+        }),
+      })
+      if (!songRes.ok) {
+        setSaving(false)
+        setError('Could not save favorite songs.')
+        return
+      }
+      favoriteSongsInitialRef.current = JSON.stringify(favoriteSongs.map((f) => f.id))
+    }
+
+    if (tasks.length === 0 && !favoritesChanged && !songsChanged) {
       router.push(`/profile/${destinationUsername}`)
       return
     }
@@ -472,10 +508,20 @@ function EditProfilePageInner() {
               />
             </div>
 
-            <FavoriteArtistsPicker
-              initial={favoriteArtists}
-              onChange={setFavoriteArtists}
+            <ProfileFavoriteArtistsRow
+              favorites={favoriteArtists}
+              favoriteSongs={favoriteSongs}
+              songsReady={favoriteSongsReady}
+              albumsReady={false}
+              isOwnProfile
+              showEmptyOwnerLink
+              writeThrough={false}
+              onFavoritesChange={setFavoriteArtists}
+              onFavoriteSongsChange={setFavoriteSongs}
             />
+            <p style={{ fontFamily: font, fontSize: TYPE.meta, color: 'var(--text-muted)', margin: '0 0 16px' }}>
+              Up to 10 favorites per category. Tap Save to apply changes.
+            </p>
 
             {identity.isArtist && ARTIST_LINK_FIELDS.map((field) => (
               <div key={field.key}>
