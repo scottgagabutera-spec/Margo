@@ -282,17 +282,11 @@ export function NotificationsInbox({
             key={f.id}
             type="button"
             onClick={() => setFilter(f.id)}
+            className={`margo-btn margo-btn--chip${filter === f.id ? ' margo-btn--chip--active' : ''}`}
             style={{
-              padding: '8px 14px',
-              borderRadius: '50px',
-              border: '1px solid var(--border)',
-              background: filter === f.id ? 'var(--surface-3)' : 'var(--surface-2)',
-              color: filter === f.id ? 'var(--text)' : 'var(--text-secondary)',
-              borderColor: filter === f.id ? 'var(--border-hi)' : 'var(--border)',
               fontFamily: UI_FONT,
-              fontSize: LIST_ROW_TYPE.chip,
-              fontWeight: 600,
               cursor: 'pointer',
+              minWidth: 0,
             }}
           >
             {f.label}

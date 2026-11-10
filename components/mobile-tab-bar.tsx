@@ -142,9 +142,9 @@ export function MobileTabBar() {
   const labelStyle: CSSProperties = {
     fontFamily: font,
     fontSize: 'var(--margo-tab-label-size)',
-    fontWeight: 600,
-    letterSpacing: '0.35px',
-    textTransform: 'uppercase',
+    fontWeight: 500,
+    letterSpacing: 0,
+    textTransform: 'none',
     whiteSpace: 'nowrap',
     lineHeight: 1.1,
     maxWidth: '100%',

@@ -225,17 +225,11 @@ function LibraryShelfControls({
             key={id}
             type="button"
             onClick={() => setChip(id)}
+            className={`margo-btn margo-btn--chip${chip === id ? ' margo-btn--chip--active' : ''}`}
             style={{
-              padding: '8px 14px',
-              borderRadius: '50px',
-              border: '1px solid var(--border)',
-              background: chip === id ? 'var(--surface-3)' : 'var(--surface-2)',
-              color: chip === id ? 'var(--text)' : 'var(--text-secondary)',
-              borderColor: chip === id ? 'var(--border-hi)' : 'var(--border)',
               fontFamily: UI_FONT,
-              fontSize: LIST_ROW_TYPE.chip,
-              fontWeight: 600,
               cursor: 'pointer',
+              minWidth: 0,
             }}
           >
             {label}

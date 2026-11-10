@@ -25,7 +25,7 @@ export function FeedMemoriesRow({
         action={
           <button
             type="button"
-            className="margo-feed-memories-row__see-all"
+            className="margo-feed-memories-row__see-all margo-btn margo-btn--icon"
             aria-label="See all memories"
             onClick={() => openFeedTab(router, 'memories')}
           >
@@ -40,7 +40,7 @@ export function FeedMemoriesRow({
         {hasMore ? (
           <button
             type="button"
-            className="margo-feed-memories-row__peek"
+            className="margo-feed-memories-row__peek margo-btn margo-btn--icon"
             aria-label="More memories"
             onClick={() => openFeedTab(router, 'memories')}
           >

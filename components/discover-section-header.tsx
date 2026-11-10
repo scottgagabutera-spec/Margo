@@ -58,25 +58,17 @@ export function DiscoverSectionHeader({
         <Link
           href={viewMoreHref}
           data-discover-more-link
+          className="margo-btn margo-btn--secondary"
           style={{
             fontFamily: UI_FONT,
-            fontSize: '0.75rem',
-            fontWeight: 500,
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase',
-            color: 'var(--text-secondary)',
-            textDecoration: 'none',
             flexShrink: 0,
             whiteSpace: 'nowrap',
-            display: 'inline-flex',
-            alignItems: 'center',
             gap: '2px',
-            minHeight: '44px',
-            padding: '0 4px',
-            boxSizing: 'border-box',
+            paddingLeft: '10px',
+            paddingRight: '10px',
           }}
         >
-          More <ChevronRightIcon size={12} color="var(--text-secondary)" />
+          More <ChevronRightIcon size={12} color="currentColor" />
         </Link>
       </div>
     </div>
@@ -94,29 +86,17 @@ export function DiscoverPlayAllButton({
     <button
       type="button"
       data-discover-play-all
+      className="margo-btn margo-btn--secondary"
       onClick={onClick}
       disabled={disabled}
       style={{
         fontFamily: UI_FONT,
-        fontSize: '0.75rem',
-        fontWeight: 500,
-        letterSpacing: '0.08em',
-        textTransform: 'uppercase',
-        padding: '4px 9px',
-        minHeight: '44px',
-        borderRadius: '8px',
-        border: '1px solid var(--border-hi)',
-        background: 'transparent',
-        color: 'var(--text-secondary)',
-        cursor: disabled ? 'default' : 'pointer',
         opacity: disabled ? 0.45 : 1,
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '4px',
         flexShrink: 0,
-        boxSizing: 'border-box',
-        lineHeight: 1.2,
+        cursor: disabled ? 'default' : 'pointer',
+        gap: '4px',
+        paddingLeft: '10px',
+        paddingRight: '10px',
       }}
     >
       <PlayPauseIcon playing={false} size={8} color="var(--text-secondary)" />
