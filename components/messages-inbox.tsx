@@ -12,6 +12,7 @@ import { useMessaging, type Conversation } from '@/hooks/useMessaging'
 import { formatMessagePreview } from '@/lib/moment/message-format'
 import { MARGO_SEARCH_HINT_PEOPLE } from '@/lib/margo-search-hints'
 import { LIST_ROW_TYPE, UI_FONT } from '@/lib/fonts'
+import { AuthorMeta } from '@/components/username-tag'
 import { isMargoBrandUsername } from '@/lib/margo-brand-account'
 import { signedOutGateBenefitStyle, signedOutGateSignInStyle } from '@/lib/signed-out-gate-styles'
 
@@ -55,15 +56,12 @@ function ConversationRow({ c, active }: { c: Conversation; active: boolean }) {
         separationRingColor="var(--bg)"
       />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{
-          fontFamily: UI_FONT,
-          fontSize: LIST_ROW_TYPE.name,
-          color: 'var(--text)',
-          margin: 0,
-          fontWeight: c.unreadCount > 0 ? 600 : 500,
-        }}>
-          {c.otherUser.displayName}
-        </p>
+        <AuthorMeta
+          username={c.otherUser.username}
+          linkProfile
+          size="compact"
+          layout="inline"
+        />
         <p style={{
           fontFamily: UI_FONT,
           fontSize: LIST_ROW_TYPE.preview,

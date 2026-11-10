@@ -164,6 +164,22 @@ Gold — The Margo Signature:
 
 **Demote to text hierarchy** (`--text`, `--text-secondary`, `--text-muted`): section kickers, back arrows, memory story overlays, profile hero round actions, social link chips, filter chips, Echoes labels, “Next question,” Full song chip, and other decorative chrome. **Exception:** Echoes card gold chevron (`margo-feed-memory-card__action`) stays gold — it is the primary open action on that card.
 
+### Button standard (`margo-btn` / `MargoCtaButton`)
+
+Tokens in `:root`: `--margo-btn-h-primary` 40px, `--margo-btn-h-secondary` / chip / icon 32px (icon-accent 36px for Echoes open), `--margo-btn-touch` 44px, label `0.75rem` weight 500, sentence case, no letter-spacing.
+
+- **Primary** (`.margo-btn--primary`, `MargoCtaButton` fill): gold fill, `--text-on-gold`.
+- **Secondary** (`.margo-btn--secondary`, outline): 1px `--border-hi`, `--text`, no gold border.
+- **Chip** (`.margo-btn--chip`): 28px visible, 44px tap; selected = neutral surface/text.
+- **Icon** (`.margo-btn--icon`): 32px visible in 44px tap; **icon-accent** = gold fill for Echoes card primary only.
+- **Compose FAB** (mobile tab bar): **46×46px** gold circle — unchanged.
+
+### People / handles (`AuthorMeta`)
+
+Default person label is **@username** linking to `/profile/{username}` — never display name in lists, cards, Discover, Echoes, Lyric Back rows, follow lists, or feed chrome.
+
+**Exceptions:** profile header and Messages thread header show display name plus @username; song credits keep artist **name** (not @handle). No @mention parser in lyric/post body in this release.
+
 Emotion colors (Margo unique identity — never remove):
 - Love: #FF6B9D
 - Heartbreak: #ff6060

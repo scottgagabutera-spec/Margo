@@ -303,6 +303,7 @@ function PostCardHeaderIdentity({
     <div className="margo-post-card__header-identity" data-testid="feed-header-identity">
       <UsernameTag
         authorUid={post.authorUid || null}
+        username={post.username}
         fallbackName={post.username}
         linkProfile={false}
         layout="stacked"
@@ -485,6 +486,7 @@ function PostCardHeaderLegacy({
     <div style={{ minWidth: 0, flex: 1 }}>
       <UsernameTag
         authorUid={post.authorUid || null}
+        username={post.username}
         fallbackName={post.username}
         linkProfile={false}
         layout="stacked"

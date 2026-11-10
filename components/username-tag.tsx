@@ -7,7 +7,11 @@ import { UI_FONT } from '@/lib/fonts'
 
 export interface AuthorMetaProps {
   authorUid?: string | null
+  /** When profile is not loaded yet, prefer explicit @username over displayName. */
+  username?: string | null
   fallbackName?: string | null
+  /** Profile header & DM thread only — show display name above @handle. Default false. */
+  showDisplayName?: boolean
   /** When false, handle is not a link (e.g. card already wrapped in Link). Default true. */
   linkProfile?: boolean
   /** default = Feed header; compact = Resonance / dense rows */
@@ -19,19 +23,21 @@ export interface AuthorMetaProps {
    * Used when the parent owns a unified profile Link.
    */
   metaAfterHandle?: ReactNode
-  /** stacked = name on first line, @handle · meta on second (PostCard). */
+  /** stacked = optional name line, then @handle · meta (PostCard). */
   layout?: 'inline' | 'stacked'
-  /** Feed post portrait header — FEED_TYPE tokens, tight name/handle stack. */
+  /** Feed post portrait header — FEED_TYPE tokens, tight handle stack. */
   feedCardHeader?: boolean
 }
 
 /**
- * Shared author identity: display name + @handle (+ artist badge).
- * Use on Feed, Discover Resonance, Lyric Back — one size/color system.
+ * Shared person identity: @username links to profile by default.
+ * Song credits and profile/DM headers pass showDisplayName where required.
  */
 export function AuthorMeta({
   authorUid,
+  username: usernameProp,
   fallbackName,
+  showDisplayName = false,
   linkProfile = true,
   size = 'default',
   handlePrefix = '',
@@ -41,10 +47,9 @@ export function AuthorMeta({
 }: AuthorMetaProps) {
   const profile = useAuthorProfile(authorUid)
 
+  const username = (usernameProp || profile?.username || fallbackName || '').replace(/^@/, '')
   const displayName = profile?.displayName || fallbackName || 'Margo Listener'
-  const username = profile?.username
 
-  const nameSize = size === 'compact' ? '0.875rem' : '0.875rem'
   const handleSize = size === 'compact' ? '0.75rem' : '0.8125rem'
 
   const handleStyle: CSSProperties = {
@@ -60,41 +65,41 @@ export function AuthorMeta({
     transition: 'color 150ms ease',
   }
 
-  const handleLabel = `${handlePrefix}${username ? '@' + username : ''}`
+  const handleLabel = username ? `${handlePrefix}@${username}` : handlePrefix ? handlePrefix.trim() : ''
 
-  const nameRow = (
-    <span
-      className={feedCardHeader ? 'margo-post-card__header-name-row' : undefined}
-      data-testid={feedCardHeader ? 'feed-header-name-line' : undefined}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', minWidth: 0 }}
-    >
+  const nameRow =
+    showDisplayName && displayName ? (
       <span
-        style={{
-          fontFamily: UI_FONT,
-          fontSize: nameSize,
-          fontWeight: 600,
-          color: 'var(--text)',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}
+        className={feedCardHeader ? 'margo-post-card__header-name-row' : undefined}
+        data-testid={feedCardHeader ? 'feed-header-name-line' : undefined}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', minWidth: 0 }}
       >
-        {displayName}
+        <span
+          style={{
+            fontFamily: UI_FONT,
+            fontSize: '0.875rem',
+            fontWeight: 600,
+            color: 'var(--text)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {displayName}
+        </span>
+        {feedCardHeader ? (
+          <span className="margo-feed-author-role-slot" data-testid="feed-author-role-slot" aria-hidden />
+        ) : null}
+        {!feedCardHeader && profile ? (
+          <ArtistBadge
+            isArtist={profile.isArtist}
+            artistStatus={profile.artistStatus}
+            size={size === 'compact' ? 11 : 13}
+            presentation="seal"
+          />
+        ) : null}
       </span>
-      {feedCardHeader ? (
-        // Future: 18px round role badge (Artist / Producer / Label) — empty slot adds no width today.
-        <span className="margo-feed-author-role-slot" data-testid="feed-author-role-slot" aria-hidden />
-      ) : null}
-      {!feedCardHeader && profile ? (
-        <ArtistBadge
-          isArtist={profile.isArtist}
-          artistStatus={profile.artistStatus}
-          size={size === 'compact' ? 11 : 13}
-          presentation="seal"
-        />
-      ) : null}
-    </span>
-  )
+    ) : null
 
   const handleNode = username ? (
     linkProfile ? (
@@ -103,8 +108,12 @@ export function AuthorMeta({
         indicator="tint"
         style={handleStyle}
         onClick={(e) => e.stopPropagation()}
-        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)' }}
-        onMouseLeave={(e) => { if (!e.currentTarget.getAttribute('aria-busy')) e.currentTarget.style.color = 'var(--text-secondary)' }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.color = 'var(--text)'
+        }}
+        onMouseLeave={(e) => {
+          if (!e.currentTarget.getAttribute('aria-busy')) e.currentTarget.style.color = 'var(--text-secondary)'
+        }}
       >
         {handleLabel}
       </PendingNavLink>
@@ -113,12 +122,20 @@ export function AuthorMeta({
     )
   ) : null
 
-  const handleRow = (username || metaAfterHandle) ? (
+  const handleRow = username || metaAfterHandle ? (
     <span
       className={feedCardHeader ? 'margo-feed-header-handle-row' : undefined}
       style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}
     >
       {handleNode}
+      {!showDisplayName && profile ? (
+        <ArtistBadge
+          isArtist={profile.isArtist}
+          artistStatus={profile.artistStatus}
+          size={size === 'compact' ? 11 : 13}
+          presentation="seal"
+        />
+      ) : null}
       {metaAfterHandle}
     </span>
   ) : null
