@@ -19,7 +19,9 @@ Margo is a music-first social platform where people communicate through song lyr
 - Rule: Never recolor or redraw. Always use `components/MargoLogo.tsx` — never inline Sora “Margo” text as a logo
 - Wordmark **scales with symbol size** (`0.5 × size` in px) so lockups stay proportional
 - Letter-spacing is **2px** (locked; do not reopen 3–5px)
-- Face is **Sora 700** — wordmark only; no Syne/Geist/Satoshi for MARGO
+- Face is **Sora 700** — wordmark only; Geist/Satoshi/Lora must not be used on the MARGO logotype
+
+**Fonts:** Sora wordmark only, Geist for all UI, Lora upright for lyric content only. No Inter. No italic.
 
 ### The 3 Tiers
 
@@ -951,7 +953,7 @@ width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
 - **4.7 (Aug 2026):** Wordmark weight **Syne 600** (was 800) at **2px** tracking — still Syne, no Geist/Satoshi. **Lockup placement:** full wordmark on Feed + landing only; mark/symbol-only on other tabs and detail; karaoke neither. Discover: no page-level “DISCOVER” H1. Landing “There’s more where that came from” section removed.
 - **4.6 (Aug 2026):** Wordmark tracking **2px** (tighter; 5px was doc-sync error that worsened stretch). Canonical **type role grid** with Micro body / compact explainer (`0.65rem`). Landing how-it-works stays 3-up on mobile with compact title+body. Footer pad/gap tightened.
 - **4.5 (Aug 2026):** Wordmark letter-spacing synced to 5px and scales with symbol size. Canonical display-name / @username and song-title / artist stacks. Landing keeps MobileTabBar (marketing mode). Profile nav clearance + avatar lightbox. Account surfaces (settings / edit / studio / apply) use Geist chrome. Footer two-column + social icons. Type floor enforced at 0.6rem.
-- **4.4 (Aug 2026):** Dual type system — Geist Sans for UI chrome, Lora retained for lyric quotes / signature lyrics / lyric-led marketing. Syne remains wordmark-only. Helpers in `lib/fonts.ts` (`UI_FONT`, `LYRIC_FONT`).
+- **4.4 (Aug 2026):** Dual type system — Geist Sans for UI chrome, Lora retained for lyric quotes / signature lyrics / lyric-led marketing. Sora remains wordmark-only. Helpers in `lib/fonts.ts` (`UI_FONT`, `LYRIC_FONT`).
 - **4.3 (Aug 2026):** Fixed version-number mismatch (header now matches footer). Finalized `--text-2`/`--text-3` deprecation status per `feat/fix-text-3-contrast` migration — no remaining product call sites. Resolved Section 10/Section 4 contradiction (Tier 2/5 button colors now reference named tokens, not deprecated aliases). Added missing Tier 4 placeholder in Section 10. Resolved the three-way conflict between Section 10 button font sizes, Section 14 Rule 3, and Section 15's permanent design rule — added explicit cross-references so Rule 3 alone doesn't read as contradicting Section 10/15. Updated Section 9 nav references from "Music" to "Discover"; documented the in-app bottom tab bar (previously undefined in Section 9, only implied by Section 4B). Aligned Section 13's heart-icon guidance with Section 4B (prefer `@/components/icons`, `heart-icon.tsx` is legacy). Documented "Coming Soon" pill and emotion-fallback-color resolutions from the `--text-3` classification decisions.
 - **4.2 (May 2026):** Added Section 15 Mobile Responsiveness Rules (Patterns 1–4).
 - **4.0 (May 2026):** Added Section 4B Icon System, Section 14 Permanent Enforcement Rules from full codebase audit.
