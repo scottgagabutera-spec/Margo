@@ -85,10 +85,10 @@ function friendlyError(e: { message?: string }): string {
 const fieldLabelStyle: React.CSSProperties = {
   display: 'block',
   fontFamily: ui,
-  fontSize: '0.75rem',
+  fontSize: 'var(--margo-type-l)',
   color: 'var(--text-muted)',
-  textTransform: 'uppercase',
-  letterSpacing: '0.08em',
+  textTransform: 'none',
+  letterSpacing: 0,
   marginBottom: '6px',
   fontWeight: 500,
 }

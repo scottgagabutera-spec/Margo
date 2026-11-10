@@ -977,10 +977,12 @@ function ProfilePageInner({ username: usernameProp }: { username?: string } = {}
                   {artistSongs.length > 0 && (
                     <Link
                       href={`/profile/${profile.username}/songs`}
+                      className="margo-section-header__action"
                       style={{
-                        fontFamily: font, fontSize: TYPE.label, fontWeight: 700,
-                        letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-secondary)',
-                        textDecoration: 'none', flexShrink: 0, whiteSpace: 'nowrap',
+                        fontFamily: font,
+                        textDecoration: 'none',
+                        flexShrink: 0,
+                        whiteSpace: 'nowrap',
                       }}
                     >View all</Link>
                   )}
