@@ -29,7 +29,7 @@ export function FeedMemoriesRow({
             aria-label="See all memories"
             onClick={() => openFeedTab(router, 'memories')}
           >
-            <ChevronRightIcon size={16} color="var(--gold)" />
+            <ChevronRightIcon size={16} color="var(--text-secondary)" />
           </button>
         }
       />
@@ -44,7 +44,7 @@ export function FeedMemoriesRow({
             aria-label="More memories"
             onClick={() => openFeedTab(router, 'memories')}
           >
-            <ChevronRightIcon size={18} color="var(--gold)" />
+            <ChevronRightIcon size={18} color="var(--text-secondary)" />
           </button>
         ) : null}
       </div>

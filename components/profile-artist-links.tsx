@@ -177,7 +177,7 @@ export function ProfileArtistLinks({
               aria-label={item.label}
               className="margo-profile-artist-icon-row__btn"
             >
-              <Icon size={16} color="var(--gold)" />
+              <Icon size={16} color="var(--text-secondary)" />
             </a>
           )
         })}
@@ -195,7 +195,7 @@ export function ProfileArtistLinks({
               aria-label={item.label}
               className="margo-profile-artist-icon-row__btn"
             >
-              <Icon size={16} color="var(--gold)" />
+              <Icon size={16} color="var(--text-secondary)" />
             </a>
           )
         })}
@@ -217,9 +217,9 @@ export function ProfileArtistLinks({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: '8px',
-    border: '1px solid var(--gold-border)',
-    background: 'var(--gold-faint)',
-    color: 'var(--gold)',
+    border: '1px solid var(--border-hi)',
+    background: 'var(--surface-2)',
+    color: 'var(--text-secondary)',
     textDecoration: 'none',
     WebkitTapHighlightColor: 'transparent',
     flexShrink: 0,
@@ -229,7 +229,7 @@ export function ProfileArtistLinks({
     <div style={{ marginBottom: resolvedVariant === 'compact' ? 0 : '24px' }}>
       {resolvedVariant === 'default' ? (
         <p style={{
-          fontFamily: font, fontSize: '0.75rem', fontWeight: 500, color: 'var(--gold)',
+          fontFamily: font, fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)',
           textTransform: 'none', letterSpacing: '-0.01em', marginBottom: '8px',
         }}>Listen &amp; follow</p>
       ) : null}
@@ -246,7 +246,7 @@ export function ProfileArtistLinks({
               title={item.label}
               style={linkStyle(btnSize)}
             >
-              <Icon size={iconSize} color="var(--gold)" />
+              <Icon size={iconSize} color="var(--text-secondary)" />
             </a>
           )
         })}

@@ -160,7 +160,7 @@ export function ProfileHeroVisitorActions({
           onClick={onFollow}
           tone="gold"
         >
-          <UserPlusIcon size={18} color="var(--bg)" />
+          <UserPlusIcon size={18} color="var(--text-secondary)" />
         </RoundFlankAction>
       ),
     }
@@ -179,7 +179,7 @@ export function ProfileHeroVisitorActions({
         tone="outline"
         badgeCount={messageUnreadCount}
       >
-        <MessagesIcon size={18} color="var(--gold)" />
+        <MessagesIcon size={18} color="var(--text-secondary)" />
       </RoundFlankAction>
     ),
     right: (
@@ -191,9 +191,9 @@ export function ProfileHeroVisitorActions({
         tone={following ? 'following' : 'gold'}
       >
         {following ? (
-          <CheckIcon size={18} color="var(--gold)" />
+          <CheckIcon size={18} color="var(--text-secondary)" />
         ) : (
-          <UserPlusIcon size={18} color="var(--bg)" />
+          <UserPlusIcon size={18} color="var(--text-secondary)" />
         )}
       </RoundFlankAction>
     ),
@@ -214,12 +214,12 @@ export function ProfileHeroOwnerActions({
         tone="outline"
         badgeCount={messagesUnreadCount}
       >
-        <MessagesIcon size={18} color="var(--gold)" />
+        <MessagesIcon size={18} color="var(--text-secondary)" />
       </RoundFlankAction>
     ),
     right: (
       <RoundFlankAction label="Edit profile" ariaLabel="Edit profile" href="/profile/edit" tone="outline">
-        <EditIcon size={18} color="var(--gold)" />
+        <EditIcon size={18} color="var(--text-secondary)" />
       </RoundFlankAction>
     ),
   }
