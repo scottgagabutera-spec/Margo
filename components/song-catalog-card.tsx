@@ -2,9 +2,7 @@
 import { PendingNavLink } from '@/components/pending-nav-link'
 import Image from 'next/image'
 import { useRef, type CSSProperties } from 'react'
-import { useIsPlaying, useIsBuffering } from '@/hooks/useAudioEngine'
 import { useWarmAudioUrlOnVisible } from '@/hooks/useWarmAudioUrl'
-import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { SongCardActions } from '@/components/song-card-actions'
 /**
  * Minimal shape SongCatalogCard actually needs — deliberately NOT the
@@ -74,8 +72,6 @@ export function SongCatalogCard({
 }) {
   const cardRef = useRef<HTMLDivElement>(null)
   const isActive = song.status === 'live' || song.status === 'active'
-  const isPlayingThisSong = useIsPlaying(song.id)
-  const isBuffering = useIsBuffering(song.id)
   useWarmAudioUrlOnVisible(song.audioUrl, cardRef, isActive && !!song.audioUrl)
 
   const openPreview = () => onSelect?.(song)
@@ -102,21 +98,15 @@ export function SongCatalogCard({
       ) : (
         <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, rgba(232,197,71,0.08), rgba(255,255,255,0.03))' }} />
       )}
-      <div style={{
-        position: 'absolute', inset: 0,
-        background: 'linear-gradient(to top, rgba(7,6,10,0.85) 0%, transparent 55%)',
-        display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', padding: '10px',
-        pointerEvents: 'none',
-      }}>
-        {isActive && (
-          <div aria-hidden="true" style={{
-            width: '32px', height: '32px', borderRadius: '50%', background: 'var(--surface-2)', border: '1px solid var(--border-hi)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <PlayPauseIcon playing={isPlayingThisSong} buffering={isBuffering} size={14} color="var(--bg)" />
-          </div>
-        )}
-      </div>
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(to top, rgba(7,6,10,0.55) 0%, transparent 45%)',
+          pointerEvents: 'none',
+        }}
+        aria-hidden
+      />
     </>
   )
 
