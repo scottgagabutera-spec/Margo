@@ -9999,6 +9999,10 @@ button.margo-feed-memory-card__action:active:not(:disabled) {
   --margo-btn-visible-h: var(--margo-btn-h-form);
   width: 100%;
 }
+.margo-settings-btn--danger {
+  color: var(--destructive);
+  border-color: color-mix(in srgb, var(--destructive) 40%, var(--border-hi));
+}
 .margo-btn--chip[aria-pressed='true'],
 .margo-btn--chip--active {
   background: var(--surface-3);
@@ -10056,7 +10060,7 @@ button.margo-feed-memory-card__action:active:not(:disabled) {
   min-width: var(--margo-btn-touch);
   min-height: var(--margo-btn-touch);
   padding: calc((var(--margo-btn-touch) - var(--margo-btn-visible-h, var(--margo-btn-h-primary))) / 2) 14px;
-  border-radius: 10px;
+  border-radius: var(--margo-btn-radius);
   width: fit-content;
   max-width: 100%;
   font-family: var(--font-geist-sans), system-ui, sans-serif;

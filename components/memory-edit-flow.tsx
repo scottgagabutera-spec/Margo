@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { MemoryMediaPicker } from '@/components/memory-media-picker'
-import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
+import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnClass, keyboardSafePrimaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
 import { ArrowLeftIcon } from '@/components/icons'
 import type { MemoryPublic } from '@/lib/memory/types'
 import type { MemoryDraftPhoto } from '@/lib/memory/client-media-upload'
@@ -139,7 +139,13 @@ export function MemoryEditFlow({
       {titleErr ? <p style={{ color: 'var(--danger, #e57373)', fontSize: TYPE.meta, fontFamily: font }}>{titleErr}</p> : null}
 
       <KeyboardSafeCtaBar>
-        <button type="button" style={{ ...keyboardSafePrimaryBtnStyle, opacity: canSave ? 1 : 0.45 }} disabled={!canSave || busy} onClick={() => void save()}>
+        <button
+          type="button"
+          className={keyboardSafePrimaryBtnClass}
+          style={{ ...keyboardSafePrimaryBtnStyle, opacity: canSave ? 1 : 0.45 }}
+          disabled={!canSave || busy}
+          onClick={() => void save()}
+        >
           {busy ? 'Saving…' : 'Save'}
         </button>
       </KeyboardSafeCtaBar>

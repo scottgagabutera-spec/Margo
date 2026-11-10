@@ -32,7 +32,13 @@ import { ComposeStickySongRow } from '@/components/compose-sticky-song-row'
 import { MargoSearchInput } from '@/components/margo-search-input'
 import { MARGO_SEARCH_HINT_CATALOG } from '@/lib/margo-search-hints'
 import { MargoSheet } from '@/components/margo-sheet'
-import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle, keyboardSafeSecondaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
+import {
+  KeyboardSafeCtaBar,
+  keyboardSafePrimaryBtnClass,
+  keyboardSafePrimaryBtnStyle,
+  keyboardSafeSecondaryBtnClass,
+  keyboardSafeSecondaryBtnStyle,
+} from '@/components/keyboard-safe-cta-bar'
 import { useKeyboardSafeChrome } from '@/hooks/useVisualViewport'
 import { useComposeSearchLayout } from '@/hooks/useComposeSearchLayout'
 import { resetComposeSearchLayoutState } from '@/lib/compose-search-layout-reset'
@@ -1838,6 +1844,7 @@ function ComposeInner() {
         <KeyboardSafeCtaBar keyboardOpen={keyboardOpen} zIndex={85}>
           <button
             type="button"
+            className={keyboardSafePrimaryBtnClass}
             onClick={() => {
               setSnippetStart(null)
               setSnippetEnd(null)
@@ -1930,6 +1937,7 @@ function ComposeInner() {
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               type="button"
+              className={keyboardSafePrimaryBtnClass}
               onClick={handleLyricComplete}
               disabled={lyric.trim().length === 0}
               style={{
@@ -1945,6 +1953,7 @@ function ComposeInner() {
             {committedLines.length + 1 < POST_LINES_MAX && (
               <button
                 type="button"
+                className={keyboardSafeSecondaryBtnClass}
                 onClick={handleAddAnotherLine}
                 aria-label="Add another line"
                 disabled={lyric.trim().length === 0 || !songName.trim() || !artistName.trim()}
@@ -1993,12 +2002,20 @@ function ComposeInner() {
             <p style={{ fontFamily: font, fontStyle: 'normal', fontSize: '1.1rem', color: 'var(--text)', margin: '0 0 8px' }}>Start over?</p>
             <p style={{ fontFamily: font, fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0 0 20px', lineHeight: 1.45 }}>Clears this Moment.</p>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button type="button" onClick={confirmStartOver}
-                style={{ flex: 1, minHeight: 'var(--margo-touch-min)', borderRadius: '50px', border: 'none', background: 'var(--gold)', color: 'var(--bg)', fontFamily: font, fontWeight: 700, fontSize: '0.75rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer' }}>
+              <button
+                type="button"
+                className="margo-btn margo-btn--primary margo-btn--form"
+                onClick={confirmStartOver}
+                style={{ flex: 1 }}
+              >
                 Start over
               </button>
-              <button type="button" onClick={() => setStartOverConfirm(false)}
-                style={{ flex: 1, minHeight: 'var(--margo-touch-min)', borderRadius: '50px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.75rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer' }}>
+              <button
+                type="button"
+                className="margo-btn margo-btn--secondary margo-btn--form"
+                onClick={() => setStartOverConfirm(false)}
+                style={{ flex: 1 }}
+              >
                 Cancel
               </button>
             </div>

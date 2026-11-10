@@ -168,24 +168,15 @@ function TierOneButton({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={disabled}
-      style={{
-        fontFamily: font,
-        fontWeight: 700,
-        fontSize: '0.75rem',
-        textTransform: 'uppercase',
-        letterSpacing: '1.5px',
-        padding: '14px 24px',
-        borderRadius: 50,
-        minHeight: 48,
-        border: 'none',
-        cursor: disabled ? 'default' : 'pointer',
-        opacity: disabled ? 0.5 : 1,
-        background: danger ? '#ff6060' : 'var(--gold)',
-        color: danger ? 'var(--text)' : 'var(--bg)',
-        transition: 'transform 150ms ease, opacity 150ms ease',
-      }}
+      className={[
+        'margo-btn',
+        danger ? 'margo-btn--secondary margo-settings-btn--danger' : 'margo-btn--primary',
+        'margo-btn--form',
+      ].join(' ')}
+      style={{ opacity: disabled ? 0.5 : 1, cursor: disabled ? 'default' : 'pointer' }}
     >
       {children}
     </button>
@@ -203,23 +194,11 @@ function TierTwoButton({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={disabled}
-      style={{
-        fontFamily: font,
-        fontWeight: 600,
-        fontSize: TYPE.label,
-        textTransform: 'uppercase',
-        letterSpacing: '1px',
-        padding: '11px 16px',
-        borderRadius: 50,
-        minHeight: 44,
-        border: '1px solid var(--border)',
-        background: 'var(--surface-2)',
-        color: 'var(--text-secondary)',
-        cursor: disabled ? 'default' : 'pointer',
-        opacity: disabled ? 0.5 : 1,
-      }}
+      className="margo-btn margo-btn--secondary"
+      style={{ opacity: disabled ? 0.5 : 1, cursor: disabled ? 'default' : 'pointer' }}
     >
       {children}
     </button>

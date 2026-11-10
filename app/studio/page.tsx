@@ -522,49 +522,34 @@ export default function StudioPage() {
       </span>
       <button
         type="button"
+        className="margo-btn margo-btn--chip"
         disabled={actionBusy || selectableLibraryIds.length === 0 || selectedCount === selectableLibraryIds.length}
         onClick={() => setSelectedIds(new Set(selectableLibraryIds))}
-        style={{
-          padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--surface-2)',
-          color: 'var(--gold)', fontFamily: font, fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px',
-          textTransform: 'uppercase', cursor: 'pointer',
-        }}
       >
         Select all
       </button>
       <button
         type="button"
+        className="margo-btn margo-btn--secondary"
         disabled={actionBusy || selectedCount === 0}
         onClick={() => { void handleBulkHide() }}
-        style={{
-          padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--gold-border)', background: 'transparent',
-          color: 'var(--gold)', fontFamily: font, fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px',
-          textTransform: 'uppercase', cursor: 'pointer',
-        }}
       >
         Hide
       </button>
       <button
         type="button"
+        className="margo-btn margo-btn--secondary margo-settings-btn--danger"
         disabled={actionBusy || selectedCount === 0}
         onClick={() => setBulkDeleteOpen(true)}
-        style={{
-          padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(255,96,96,0.35)', background: 'transparent',
-          color: '#ff8a8a', fontFamily: font, fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px',
-          textTransform: 'uppercase', cursor: 'pointer',
-        }}
       >
         Delete
       </button>
       <button
         type="button"
+        className="margo-btn margo-btn--secondary"
         disabled={actionBusy}
         onClick={exitSelectMode}
-        style={{
-          padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'transparent',
-          color: 'var(--text-muted)', fontFamily: font, fontSize: '0.75rem', fontWeight: 600, marginLeft: 'auto',
-          cursor: 'pointer',
-        }}
+        style={{ marginLeft: 'auto' }}
       >
         Cancel
       </button>

@@ -116,32 +116,16 @@ export function KeyboardSafeCtaBar({
   )
 }
 
+export const keyboardSafePrimaryBtnClass = 'margo-btn margo-btn--primary margo-btn--form'
+
+export const keyboardSafeSecondaryBtnClass = 'margo-btn margo-btn--secondary margo-btn--form'
+
+/** Layout-only overrides for full-width compose CTAs (classes carry tokens). */
 export const keyboardSafePrimaryBtnStyle: CSSProperties = {
-  minHeight: 'var(--margo-touch-min)',
-  padding: '0 28px',
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  boxSizing: 'border-box',
   width: '100%',
-  background: 'var(--gold)',
-  color: 'var(--text-on-gold, var(--bg))',
-  borderRadius: '50px',
-  fontFamily: 'var(--font-lora), serif',
-  fontWeight: 700,
-  fontSize: '0.75rem',
-  letterSpacing: '1px',
-  textTransform: 'uppercase',
-  border: 'none',
-  cursor: 'pointer',
-  boxShadow: '0 6px 28px rgba(232,197,71,0.28)',
+  boxSizing: 'border-box',
 }
 
 export const keyboardSafeSecondaryBtnStyle: CSSProperties = {
   ...keyboardSafePrimaryBtnStyle,
-  background: 'transparent',
-  color: 'var(--text-secondary)',
-  border: '1px solid var(--border-hi)',
-  boxShadow: 'none',
-  fontWeight: 600,
 }
