@@ -6,7 +6,7 @@ import { CardOverflowMenu } from '@/components/card-overflow-menu'
 import { VibeTagPill } from '@/components/vibe-tag-pill'
 import { buildSnippetQueueOverflowItems } from '@/components/song-card-actions'
 import { useWarmAudioUrlOnVisible } from '@/hooks/useWarmAudioUrl'
-import type { LyricMoment } from '@/lib/lyric-moments-board'
+import { normalizeMomentLineText, type LyricMoment } from '@/lib/lyric-moments-board'
 import { AtmosphereLayer } from '@/components/atmosphere-layer'
 import { UI_FONT } from '@/lib/fonts'
 
@@ -38,7 +38,7 @@ export function LyricMomentCard({
   const isDiscover = variant === 'discover'
   const isCompactCard = isCatalogGrid || isDiscover
   const playSize = isCompactCard ? 28 : undefined
-  const lineText = moment.line.replace(/^\s*♪\s*/, '')
+  const lineText = normalizeMomentLineText(moment.line)
   return (
     <div
       ref={cardRef}

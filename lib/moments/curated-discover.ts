@@ -1,5 +1,5 @@
 import type { CuratedMomentStored } from '@/lib/moments/curated-types'
-import type { LyricMoment } from '@/lib/lyric-moments-board'
+import { normalizeMomentLineText, type LyricMoment } from '@/lib/lyric-moments-board'
 import type { AtmosphereId } from '@/lib/atmosphere'
 
 export type CuratedSongMeta = {
@@ -17,7 +17,7 @@ export function lyricMomentsFromCurated(
   moments: CuratedMomentStored[],
 ): LyricMoment[] {
   return moments.map((m) => ({
-    line: m.text,
+    line: normalizeMomentLineText(m.text),
     start: m.startSec,
     end: m.endSec,
     lineId: m.startLineIndex,
