@@ -117,7 +117,7 @@ export function ProfileFollowListPage({
 }
 
 function FollowRow({ person }: { person: FollowListPerson }) {
-  const name = person.displayName || person.username
+  const handle = person.username
   return (
     <li>
       <PendingNavLink
@@ -162,7 +162,7 @@ function FollowRow({ person }: { person: FollowListPerson }) {
               fontWeight: 700,
               color: 'var(--bg)',
             }}>
-              {name.slice(0, 2).toUpperCase()}
+              {handle.slice(0, 2).toUpperCase()}
             </span>
           )}
         </span>
@@ -181,22 +181,21 @@ function FollowRow({ person }: { person: FollowListPerson }) {
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
             }}>
-              {name}
+              @{handle}
             </span>
             <ArtistBadge isArtist={person.isArtist} artistStatus={null} size={11} />
           </span>
-          <span style={{
-            display: 'block',
-            fontFamily: font,
-            fontSize: TYPE.meta,
-            color: 'var(--text-secondary)',
-            marginTop: '1px',
-          }}>
-            @{person.username}
-            {person.isPrivate ? (
-              <span style={{ marginLeft: '8px', color: 'var(--text-muted)' }}>Private</span>
-            ) : null}
-          </span>
+          {person.isPrivate ? (
+            <span style={{
+              display: 'block',
+              fontFamily: font,
+              fontSize: TYPE.meta,
+              color: 'var(--text-muted)',
+              marginTop: '1px',
+            }}>
+              Private
+            </span>
+          ) : null}
         </span>
       </PendingNavLink>
     </li>

@@ -77,13 +77,6 @@ function echoToPrefill(echo: Echo): LyricBackPanelPrefill {
 
 function authorLabels(echo: Echo): { display: string; handle: string | null } {
   const handleRaw = (echo.username || '').replace(/^@/, '').trim()
-  const display = (echo.displayName || '').trim()
-  if (display) {
-    return {
-      display,
-      handle: handleRaw ? `@${handleRaw}` : null,
-    }
-  }
   if (handleRaw) {
     return { display: `@${handleRaw}`, handle: null }
   }

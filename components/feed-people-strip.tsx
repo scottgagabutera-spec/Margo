@@ -130,9 +130,6 @@ export function FeedPeopleStrip({
                 className="margo-feed-people-strip__portrait"
                 separationRingColor="var(--surface)"
               />
-              <span className="margo-feed-people-strip__display" style={{ fontFamily: font }}>
-                {p.displayName}
-              </span>
               <span className="margo-feed-people-strip__handle" style={{ fontFamily: font }}>
                 @{p.username}
               </span>
