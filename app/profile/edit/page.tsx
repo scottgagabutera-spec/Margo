@@ -10,6 +10,7 @@ import { SignatureSongPicker } from '@/components/signature-song-picker'
 import { CatalogPickLyricField } from '@/components/catalog-pick-lyric-field'
 import { SignInLink } from '@/components/signin-link'
 import { LoadingRing } from '@/components/loading-ring'
+import { CloseIcon } from '@/components/icons'
 import { TYPE, UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { ARTIST_LINK_FIELDS, sanitizeArtistLinks } from '@/lib/artist-links'
 import {
@@ -73,6 +74,7 @@ function EditProfilePageInner() {
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false)
   const [signatureSheetOpen, setSignatureSheetOpen] = useState(false)
   const [signatureLinePickerOpen, setSignatureLinePickerOpen] = useState(false)
   const lyricInputRef = useRef<HTMLTextAreaElement>(null)
@@ -193,8 +195,18 @@ function EditProfilePageInner() {
     }
   }, [user?.id, persistDraftNow])
 
+  const favoritesDirty = useMemo(() => {
+    const artistsChanged =
+      JSON.stringify(favoriteArtists.map((f) => f.id)) !== favoriteArtistsInitialRef.current
+    const songsChanged =
+      favoriteSongsReady
+      && JSON.stringify(favoriteSongs.map((f) => f.id)) !== favoriteSongsInitialRef.current
+    return artistsChanged || songsChanged
+  }, [favoriteArtists, favoriteSongs, favoriteSongsReady])
+
   const hasUnsavedChanges = useMemo(() => {
     if (!identity || !formSeededRef.current) return false
+    if (favoritesDirty) return true
     return profileEditHasUnsavedChanges(identity, {
       displayName,
       username,
@@ -206,9 +218,37 @@ function EditProfilePageInner() {
       isPrivate,
       artistLinkDraft,
     })
-  }, [identity, displayName, username, bio, lyric, song, artist, catalogSongId, isPrivate, artistLinkDraft])
+  }, [
+    identity,
+    displayName,
+    username,
+    bio,
+    lyric,
+    song,
+    artist,
+    catalogSongId,
+    isPrivate,
+    artistLinkDraft,
+    favoritesDirty,
+  ])
 
   useProfileEditLeaveGuard(hasUnsavedChanges)
+
+  const leaveEditProfile = useCallback(() => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back()
+      return
+    }
+    router.push('/you')
+  }, [router])
+
+  const handleCloseEdit = useCallback(() => {
+    if (!hasUnsavedChanges) {
+      leaveEditProfile()
+      return
+    }
+    setDiscardConfirmOpen(true)
+  }, [hasUnsavedChanges, leaveEditProfile])
 
   const handleSave = useCallback(async () => {
     if (!identity) return
@@ -396,10 +436,35 @@ function EditProfilePageInner() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '16px',
+            gap: '12px',
             minHeight: 'var(--margo-touch-min)',
             margin: '0 0 12px',
           }}>
+            <button
+              type="button"
+              onClick={handleCloseEdit}
+              aria-label="Close edit profile"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                minHeight: 'var(--margo-touch-min)',
+                padding: '0 4px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontFamily: font,
+                fontSize: TYPE.label,
+                fontWeight: 700,
+                letterSpacing: '0.16em',
+                textTransform: 'uppercase',
+                color: 'var(--text-muted)',
+                flexShrink: 0,
+              }}
+            >
+              <CloseIcon size={14} color="var(--text-muted)" />
+              Close
+            </button>
             <h1 style={{
               fontFamily: font,
               fontSize: TYPE.label,
@@ -408,6 +473,8 @@ function EditProfilePageInner() {
               textTransform: 'uppercase',
               color: 'var(--text-muted)',
               margin: 0,
+              flex: 1,
+              textAlign: 'center',
             }}>
               Edit profile
             </h1>
@@ -428,11 +495,81 @@ function EditProfilePageInner() {
                 textTransform: 'uppercase',
                 color: 'var(--gold)',
                 opacity: saving || usernameBlocksSave ? 0.45 : 1,
+                flexShrink: 0,
               }}
             >
               {saving ? 'Saving' : 'Save'}
             </button>
           </div>
+
+          {discardConfirmOpen ? (
+            <div
+              role="dialog"
+              aria-labelledby="edit-discard-title"
+              style={{
+                marginBottom: 12,
+                padding: '12px 14px',
+                borderRadius: 12,
+                border: '1px solid var(--border)',
+                background: 'var(--surface)',
+              }}
+            >
+              <p
+                id="edit-discard-title"
+                style={{
+                  fontFamily: font,
+                  fontSize: TYPE.secondary,
+                  color: 'var(--text)',
+                  margin: '0 0 10px',
+                }}
+              >
+                Discard changes?
+              </p>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => setDiscardConfirmOpen(false)}
+                  style={{
+                    fontFamily: font,
+                    fontSize: TYPE.label,
+                    fontWeight: 600,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    border: '1px solid var(--border)',
+                    background: 'transparent',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Keep editing
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDiscardConfirmOpen(false)
+                    leaveEditProfile()
+                  }}
+                  style={{
+                    fontFamily: font,
+                    fontSize: TYPE.label,
+                    fontWeight: 600,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    border: 'none',
+                    background: 'var(--gold-faint)',
+                    color: 'var(--gold)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Discard
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
