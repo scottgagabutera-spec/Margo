@@ -347,6 +347,10 @@ This is distinct from the marketing header above — it's the persistent bottom 
 
 `music` as a standalone nav destination is retired. `next.config.mjs` permanently redirects `/music` → `/discover` and `/music/player` → `/song/[id]`. There is no live Music page in the tree. Do not add nav references to "Music"; use "Discover."
 
+### Scroll position memory (product rule)
+
+Every scrollable page keeps its vertical position (and light client state such as the active profile tab or discover grid batch) when the user leaves and returns — bottom tabs, depth back, search close with no query, and feed resume after sign-in. **Restore uses memory plus sessionStorage/localStorage only; it never triggers a new fetch or Supabase request on load.** Feed sub-tab keepalive, pill behavior, and existing 12-hour feed resume stay as-is.
+
 ### Chrome modes (`lib/chrome-mode.ts`)
 
 | Mode | Path | MargoNav | MobileTabBar |

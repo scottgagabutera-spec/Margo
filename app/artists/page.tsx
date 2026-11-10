@@ -10,6 +10,10 @@ import { isExcludedDiscoverArtist } from '@/lib/discover-artist-roster'
 import { DISCOVER_VM_BATCH } from '@/lib/discover-view-more-layout'
 import { countSongsByOwnerProfile, sortArtistsCatalog, type ArtistRow } from '@/lib/discover-view-more-logic'
 import { UI_FONT } from '@/lib/fonts'
+import {
+  peekArtistsCatalogCache,
+  writeArtistsCatalogCache,
+} from '@/lib/artists-catalog-cache'
 
 const supabase = createClient()
 
@@ -83,11 +87,15 @@ function ArtistCatalogTile({ artist, songCount }: { artist: ArtistRow; songCount
 }
 
 export default function ArtistsCatalogPage() {
-  const [artists, setArtists] = useState<ArtistRow[]>([])
-  const [songCountByProfileId, setSongCountByProfileId] = useState<Map<string, number>>(() => new Map())
-  const [loading, setLoading] = useState(true)
+  const cached = peekArtistsCatalogCache()
+  const [artists, setArtists] = useState<ArtistRow[]>(cached?.artists ?? [])
+  const [songCountByProfileId, setSongCountByProfileId] = useState<Map<string, number>>(
+    () => cached?.songCountByProfileId ?? new Map(),
+  )
+  const [loading, setLoading] = useState(!(cached?.artists && cached.artists.length > 0))
 
   useEffect(() => {
+    if (cached?.artists && cached.artists.length > 0) return
     let cancelled = false
     supabase
       .from('profiles')
@@ -101,20 +109,26 @@ export default function ArtistsCatalogPage() {
             && p.artist_status !== 'removed'
             && !isExcludedDiscoverArtist(p.username),
         )
-        setArtists(visible.map(p => ({
+        const rows = visible.map(p => ({
           id: p.id,
           username: p.username,
           displayName: p.display_name,
           avatarUrl: p.avatar_url,
           artistStatus: p.artist_status ?? null,
-        })))
+        }))
+        setArtists(rows)
         setLoading(false)
+        writeArtistsCatalogCache({
+          artists: rows,
+          songCountByProfileId: peekArtistsCatalogCache()?.songCountByProfileId ?? new Map(),
+        })
       })
     return () => { cancelled = true }
-  }, [])
+  }, [cached?.artists])
 
   useEffect(() => {
     if (artists.length === 0) return
+    if (cached?.songCountByProfileId && cached.songCountByProfileId.size > 0) return
     let cancelled = false
     const ids = artists.map(a => a.id)
     supabase
@@ -128,10 +142,12 @@ export default function ArtistsCatalogPage() {
           console.error('Failed to load artist song counts:', error)
           return
         }
-        setSongCountByProfileId(countSongsByOwnerProfile(data || []))
+        const counts = countSongsByOwnerProfile(data || [])
+        setSongCountByProfileId(counts)
+        writeArtistsCatalogCache({ artists, songCountByProfileId: counts })
       })
     return () => { cancelled = true }
-  }, [artists])
+  }, [artists, cached?.songCountByProfileId])
 
   const sortedArtists = useMemo(() => sortArtistsCatalog(artists), [artists])
   const resetKey = `artists:${sortedArtists.length}`

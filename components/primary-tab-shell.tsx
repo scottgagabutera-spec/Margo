@@ -31,6 +31,7 @@ import {
   readFeedReturnSnapshot,
   type FeedReturnSnapshot,
 } from '@/lib/margo-feed-return'
+import { resolveDiscoverPrimaryHref } from '@/lib/margo-discover-depth'
 import { isFeedStackPath } from '@/lib/feed-stack-routes'
 import {
   MARGO_FEED_STACK_PIN_EVENT,
@@ -357,7 +358,7 @@ export function restoreActivePrimaryScroll(): PrimaryScrollRestore {
         }
         if (Math.abs(surface.scrollTop - resume.y) > 1) surface.scrollTop = resume.y
         alignFeedPrimaryFrozenScroll(resume.y)
-        return { applied: true, anchored: false, waitingForAnchor: true }
+        return { applied: true, anchored: false, waitingForAnchor: false }
       }
       if (Math.abs(surface.scrollTop - resume.y) > 1) surface.scrollTop = resume.y
       alignFeedPrimaryFrozenScroll(resume.y)
@@ -1005,6 +1006,9 @@ export function PrimaryTabShell({
     endPeek()
     intentGenRef.current += 1
     let pushHref: string | null = href
+    if (id === 'discover' && normalizeTabPath(href) === '/discover') {
+      pushHref = resolveDiscoverPrimaryHref('/discover')
+    }
     if (id === 'you') {
       // Static /you is the tab destination — never wait on /profile/[username].
       if (path === '/you' || path === '#' || !path) pushHref = '/you'

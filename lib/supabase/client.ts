@@ -137,6 +137,18 @@ export async function signOutBrowser() {
     /* profile cache optional */
   }
   try {
+    const { clearAllPageResumes } = await import('@/lib/margo-page-resume')
+    const { clearDiscoverDepth } = await import('@/lib/margo-discover-depth')
+    const { clearSearchUnderlayFreeze } = await import('@/lib/margo-search-underlay')
+    const { clearArtistsCatalogCache } = await import('@/lib/artists-catalog-cache')
+    clearAllPageResumes()
+    clearDiscoverDepth()
+    clearSearchUnderlayFreeze()
+    clearArtistsCatalogCache()
+  } catch {
+    /* optional */
+  }
+  try {
     await fetch('/api/auth/logout', {
       method: 'POST',
       credentials: 'include',
