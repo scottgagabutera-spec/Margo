@@ -8,6 +8,11 @@ import { lyricMomentsFromCurated } from '@/lib/moments/curated-discover'
 const MIN_MOMENT_WORDS = 4
 const SHORT_LINE_WORDS = 3
 
+/** Strip leading music-symbol prefix some lyric sources store in line text. */
+export function normalizeMomentLineText(text: string): string {
+  return text.replace(/^\s*♪\s*/, '')
+}
+
 export type LyricMoment = {
   line: string
   start: number
@@ -92,7 +97,7 @@ export function buildLyricMomentsFromRows(
     seenRanges.add(rangeKey)
 
     moments.push({
-      line: unit.text,
+      line: normalizeMomentLineText(unit.text),
       lineId: unit.centerLineIndex,
       start: unit.startSec,
       end: unit.endSec,

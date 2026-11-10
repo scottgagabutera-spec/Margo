@@ -174,6 +174,12 @@ Tokens in `:root`: `--margo-btn-h-primary` 40px, `--margo-btn-h-secondary` / chi
 - **Icon** (`.margo-btn--icon`): 32px visible in 44px tap; **icon-accent** = gold fill for Echoes card primary only.
 - **Compose FAB** (mobile tab bar): **46×46px** gold circle — unchanged.
 
+`MargoCtaButton` includes `margo-btn` + `--primary` / `--secondary`; auth submit uses the same tokens via `margo-auth-primary-btn`. Profile round icon actions (Message / Follow) keep the stacked icon layout but labels follow sentence case.
+
+### Profile artist Songs row
+
+On mobile (`margo-profile-flow-root`), the Songs preview uses flex `order` on `.margo-profile-block--songs-preview` — **order 7**, directly after signature (`6`) and **before** content tabs (`10`) and feed (`11`). DOM placement in `app/profile/[username]/page.tsx` is not enough without this order stack.
+
 ### People / handles (`AuthorMeta`)
 
 Default person label is **@username** linking to `/profile/{username}` — never display name in lists, cards, Discover, Echoes, Lyric Back rows, follow lists, or feed chrome.
