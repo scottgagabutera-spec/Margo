@@ -11414,7 +11414,7 @@ button.margo-feed-shorts-strip__more {
   color: var(--text-muted);
 }
 
-/* ── Memory create / listening flow (Inter, chrome between nav + tab bar) ── */
+/* ── Memory create / listening flow (Geist UI, chrome between nav + tab bar) ── */
 :root,
 .margo-memory-flow-root,
 .margo-memory-dialog-root,

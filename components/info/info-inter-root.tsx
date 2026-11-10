@@ -1,12 +1,6 @@
-import { Inter } from 'next/font/google'
 import type { ReactNode } from 'react'
 
-const inter = Inter({
-  subsets: ['latin'],
-  weight: ['400', '500'],
-  display: 'swap',
-})
-
+/** Help / legal content shell — inherits Geist from root layout (`var(--font-geist-sans)`). */
 export function InfoInterRoot({ children }: { children: ReactNode }) {
-  return <div className={`margo-help-root ${inter.className}`}>{children}</div>
+  return <div className="margo-help-root">{children}</div>
 }
