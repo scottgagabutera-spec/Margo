@@ -84,15 +84,8 @@ function PersonRow({
       <PersonAvatar person={person} size={42} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{
-          fontFamily: UI_FONT, fontSize: '0.88rem', fontWeight: 600,
-          color: 'var(--text)', margin: 0, lineHeight: 1.2,
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>
-          {person.displayName}
-        </p>
-        <p style={{
-          fontFamily: UI_FONT, fontSize: '0.75rem', color: 'var(--text-secondary)',
-          margin: '2px 0 0', lineHeight: 1.2,
+          fontFamily: UI_FONT, fontSize: '0.8125rem', fontWeight: 500,
+          color: 'var(--text-secondary)', margin: 0, lineHeight: 1.2,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           @{person.username}

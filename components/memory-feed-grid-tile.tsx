@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { AuthorMeta } from '@/components/username-tag'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { MargoAvatar } from '@/components/margo-avatar'
@@ -67,14 +68,8 @@ export function MemoryFeedGridTile({ memory: initial }: { memory: MemoryPublic }
         ) : null}
       </span>
       <span className="margo-feed-memory-grid-tile__meta">
-        <span className="margo-feed-memory-grid-tile__author">
-          <MargoAvatar
-            size="xs"
-            imageUrl={memory.ownerAvatarUrl}
-            username={memory.ownerUsername}
-            displayName={memory.ownerDisplayName}
-          />
-          <span className="margo-feed-memory-grid-tile__name">@{memory.ownerUsername}</span>
+        <span className="margo-feed-memory-grid-tile__author" onClick={(e) => e.stopPropagation()}>
+          <AuthorMeta username={memory.ownerUsername} size="compact" linkProfile />
         </span>
         <span className="margo-feed-memory-grid-tile__stats">
           <span className="margo-feed-memory-grid-tile__song">
