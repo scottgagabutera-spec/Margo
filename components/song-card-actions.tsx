@@ -99,10 +99,10 @@ export function SongCardActions({
 
   return (
     <>
-      <div className="margo-catalog-cover-btn margo-catalog-cover-btn--menu" style={{ position: 'absolute', top: '4px', right: '4px', zIndex: 3 }}>
+      <div className="margo-catalog-cover-btn margo-catalog-cover-btn--menu">
         <CardOverflowMenu items={items} compact />
       </div>
-      <div style={{ position: 'absolute', top: '4px', left: '4px', zIndex: 3 }}>
+      <div className="margo-catalog-cover-btn margo-catalog-cover-btn--like">
         {likeBtn}
       </div>
     </>

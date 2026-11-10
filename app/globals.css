@@ -12325,9 +12325,6 @@ button.margo-feed-shorts-strip__more {
   .margo-profile-flow-root .margo-profile-block--discography {
     display: none !important;
   }
-  .margo-profile-flow-root .margo-profile-block--songs-preview {
-    order: 11;
-  }
   .margo-profile-flow-root .margo-profile-tabs-sticky {
     position: relative;
     top: auto;
@@ -12361,19 +12358,19 @@ button.margo-feed-shorts-strip__more {
   .margo-profile-flow-root .margo-profile-block--signature {
     order: 6;
   }
-  .margo-profile-flow-root .margo-profile-block--memories {
+  .margo-profile-flow-root .margo-profile-block--songs-preview {
     order: 7;
   }
-  .margo-profile-flow-root .margo-profile-block--favorites {
+  .margo-profile-flow-root .margo-profile-block--memories {
     order: 8;
   }
-  .margo-profile-flow-root .margo-profile-block--tabs {
+  .margo-profile-flow-root .margo-profile-block--favorites {
     order: 9;
   }
-  .margo-profile-flow-root .margo-profile-block--feed {
+  .margo-profile-flow-root .margo-profile-block--tabs {
     order: 10;
   }
-  .margo-profile-flow-root .margo-profile-block--songs-preview {
+  .margo-profile-flow-root .margo-profile-block--feed {
     order: 11;
   }
 }
